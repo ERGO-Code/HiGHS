@@ -6,16 +6,7 @@
 #include "instance.hpp"
 #include "settings.hpp"
 #include "statistics.hpp"
-
-enum class ProblemStatus {
-  INDETERMINED,
-  OPTIMAL,
-  UNBOUNDED,
-  INFEASIBLE,
-  ITERATIONLIMIT,
-  TIMELIMIT,
-  ERROR
-};
+#include "qpsolver/qpconst.hpp"
 
 struct Runtime {
   Instance instance;
@@ -32,7 +23,10 @@ struct Runtime {
   Vector rowactivity;
   Vector dualvar;
   Vector dualcon;
-  ProblemStatus status = ProblemStatus::INDETERMINED;
+  QpModelStatus status = QpModelStatus::INDETERMINED;
+
+  std::vector<BasisStatus> status_var;
+  std::vector<BasisStatus> status_con;
 
   Runtime(Instance& inst, HighsTimer& ht)
       : instance(inst),
@@ -40,7 +34,9 @@ struct Runtime {
         primal(Vector(instance.num_var)),
         rowactivity(Vector(instance.num_con)),
         dualvar(instance.num_var),
-        dualcon(instance.num_con) {}
+        dualcon(instance.num_con),
+        status_var(instance.num_var),
+        status_con(instance.num_con) {}
 };
 
 #endif

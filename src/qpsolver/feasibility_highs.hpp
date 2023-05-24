@@ -70,7 +70,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
 
   HighsStatus status = highs.run();
   if (status != HighsStatus::kOk) {
-    runtime.status = ProblemStatus::ERROR;
+    runtime.status = QpModelStatus::ERROR;
     return;
   }
 
@@ -78,7 +78,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
-    runtime.status = ProblemStatus::INFEASIBLE;
+    runtime.status = QpModelStatus::INFEASIBLE;
     return;
   }
 
