@@ -80,6 +80,7 @@ HiGHS is installed using the command
 
     cmake --install .
 
+
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
 Interfaces
