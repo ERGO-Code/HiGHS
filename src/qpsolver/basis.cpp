@@ -20,7 +20,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
   }
   for (size_t i=0; i<inactive.size(); i++) {
     nonactiveconstraintsidx.push_back(inactive[i]);
-    basisstatus[activeconstraintidx[i]] = BasisStatus::InactiveInBasis;
+    basisstatus[nonactiveconstraintsidx[i]] = BasisStatus::InactiveInBasis;
   }
 
   Atran = rt.instance.A.t();
