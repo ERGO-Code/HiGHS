@@ -103,7 +103,6 @@ class CholeskyFactor {
     double mu = gyp * yp;
     l.resparsify();
     double lambda = mu - l.norm2();
-
     if (lambda > 0.0) {
       if (current_k_max <= current_k + 1) {
         resize(current_k_max * 2);
@@ -116,6 +115,7 @@ class CholeskyFactor {
 
       current_k++;
     } else {
+      printf("lambda = %lf\n", lambda);
       return QpSolverStatus::NOTPOSITIVDEFINITE;
 
       //     |LL' 0|

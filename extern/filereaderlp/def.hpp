@@ -5,9 +5,9 @@
 #include <string>
 
 void inline lpassert(bool condition) {
-   if (!condition) {
-      throw std::invalid_argument("File not existent or illegal file format.");
-   }
+  if (!condition) {
+    throw std::invalid_argument("File not existent or illegal file format.");
+  }
 }
 
 const std::string LP_KEYWORD_INF[] = {"infinity", "inf"};

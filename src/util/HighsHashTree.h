@@ -11,6 +11,8 @@
 #ifndef HIGHS_UTIL_HASH_TREE_H_
 #define HIGHS_UTIL_HASH_TREE_H_
 
+#include <stdexcept>
+
 #include "util/HighsHash.h"
 
 using std::memcpy;

@@ -196,13 +196,16 @@ static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
 }
 
 static void regularize(Runtime& rt) {
+  if (!rt.settings.hessianregularization) {
+   return;
+  }
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
     for (HighsInt index = rt.instance.Q.mat.start[i];
          index < rt.instance.Q.mat.start[i + 1]; index++) {
       if (rt.instance.Q.mat.index[index] == i) {
         rt.instance.Q.mat.value[index] +=
-            rt.settings.semidefiniteregularization;
+            rt.settings.hessianregularizationfactor;
       }
     }
   }
@@ -244,7 +247,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
       runtime.status = ProblemStatus::ITERATIONLIMIT;
-      break;
+      break; 
     }
 
     // check time limit
@@ -304,7 +307,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
 
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0) {
+        maxsteplength == 0.0 || fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold) {
       atfsep = true;
     } else {
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);

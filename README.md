@@ -15,7 +15,7 @@
 *   [Example](#google-colab-example)
 *   [Reference](#reference)
 
-About HiGHS 
+About HiGHS
 -----------
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
@@ -53,13 +53,19 @@ HiGHS uses CMake as build system, and requires at least version 3.15. First setu
 
     mkdir build
     cd build
-    cmake -DFAST_BUILD=ON ..
+    cmake ..
 
 Then compile the code using
 
-    cmake --build . 
+    cmake --build .
 
 This installs the executable `bin/highs`.
+
+As an alternative it is also possible to let cmake create the build folder and thus build everything from the HiGHS directory, as follows
+
+    cmake -S . -B build
+    cmake --build build
+
 
 To test whether the compilation was successful, run
 
@@ -69,14 +75,14 @@ HiGHS can read MPS files and (CPLEX) LP files, and the following command
 solves the model in `ml.mps`
 
     highs ml.mps
-    
+
 HiGHS is installed using the command
 
     cmake --install .
 
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
-Interfaces 
+Interfaces
 ----------
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
@@ -86,11 +92,11 @@ We are happy to give a reasonable level of support via email sent to highsopt@gm
 Python
 ------
 
-There are two ways to build the Python interface to HiGHS. 
+There are two ways to build the Python interface to HiGHS.
 
 __From PyPi__
 
-HiGHS has been added to PyPi, so should be installable using the command 
+HiGHS has been added to PyPi, so should be installable using the command
 
     pip install highspy
 
@@ -108,7 +114,7 @@ The installation can be tested using the example [minimal.py](https://github.com
     Objective value     :  1.0000000000e+00
     HiGHS run time      :          0.00
 
-or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py). 
+or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py).
 
 __Directly__
 

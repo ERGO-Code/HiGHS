@@ -92,6 +92,16 @@ endif()
 
 include(CTest)
 
+if(MSVC)
+	# This option is only available when building with MSVC. By default, highs
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
+	#
+	# If you are writing a CLR program and want to link to highs, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	option( STDCALL			"Build highs with the __stdcall convention"   OFF  )
+endif()
+
 option(FAST_BUILD "Fast build: " ON)
 
 # By default only build the C++ library.
@@ -236,7 +246,7 @@ endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)" AND NOT APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
 else()
   message("FLAG_MPOPCNT_SUPPORTED is not available on this architecture")
@@ -259,6 +269,11 @@ if(MSVC)
     add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
     add_definitions(/MP)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    if (STDCALL)
+	# /Gz - stdcall calling convention
+        add_definitions(/Gz)
+    endif()
+
 #
 # This fouls up building HiGHS as part of a larger CMake project: see #1129.
 # Setting it will speed up run-time in debug (and compile-time?)
@@ -483,6 +498,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 
 # static build for windows
 if (NOT UNIX)
