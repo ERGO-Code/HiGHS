@@ -57,7 +57,7 @@ void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
 
   // HighsModelStatus phase1stat = highs.getModelStatus();
   // if (phase1stat == HighsModelStatus::kInfeasible) {
-  //   runtime.status = ProblemStatus::INFEASIBLE;
+  //   runtime.status = QpModelStatus::INFEASIBLE;
   //   return;
   // }
 
