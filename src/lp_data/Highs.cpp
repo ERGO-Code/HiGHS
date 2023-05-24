@@ -3186,7 +3186,7 @@ HighsStatus Highs::callSolveQp() {
   basis_.col_status.resize(lp.num_col_);
   basis_.row_status.resize(lp.num_row_);
 
-  for (HighsInt i=0; i < lp.num_col_; i++) {
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
     if (runtime.status_var[i] == BasisStatus::ActiveAtLower) {
       basis_.col_status[i] = HighsBasisStatus::kLower;
     } else if (runtime.status_var[i] == BasisStatus::ActiveAtUpper) {
@@ -3198,7 +3198,7 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  for (HighsInt i=0; i < lp.num_row_; i++) {
+  for (HighsInt i = 0; i < lp.num_row_; i++) {
     if (runtime.status_con[i] == BasisStatus::ActiveAtLower) {
       basis_.row_status[i] = HighsBasisStatus::kLower;
     } else if (runtime.status_con[i] == BasisStatus::ActiveAtUpper) {
