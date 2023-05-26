@@ -828,7 +828,7 @@ void Reader::splittokens() {
         // Current section is non-trivial, so mark its end, using the
         // value of currentsection to indicate that there is no open
         // section
-        assert(debug_open_section);
+        lpassert(debug_open_section);
         sectiontokens[currentsection].second = it;
         debug_open_section = false;
         currentsection = LpSectionKeyword::NONE;
@@ -846,12 +846,12 @@ void Reader::splittokens() {
       // the current section
       if (currentsection != LpSectionKeyword::NONE &&
           currentsection != next->keyword) {
-        assert(debug_open_section);
+        lpassert(debug_open_section);
         sectiontokens[currentsection].second = it;
         debug_open_section = false;
       }
       currentsection = LpSectionKeyword::NONE;
-      assert(!debug_open_section);
+      lpassert(!debug_open_section);
       continue;
     }
     // Next section is non-empty
@@ -862,16 +862,16 @@ void Reader::splittokens() {
       lpassert(sectiontokens.count(currentsection) == 0);
       // Remember the beginning of the new section: its the token
       // following the current one
-      assert(!debug_open_section);
+      lpassert(!debug_open_section);
       sectiontokens[currentsection].first = next;
       debug_open_section = true;
     }
     // Always ends with either an open section or a section type of
     // LpSectionKeyword::NONE
-    assert(debug_open_section != (currentsection == LpSectionKeyword::NONE));
+    lpassert(debug_open_section != (currentsection == LpSectionKeyword::NONE));
   }
   // Check that the last section has been closed
-  assert(currentsection == LpSectionKeyword::NONE);
+  lpassert(currentsection == LpSectionKeyword::NONE);
 }
 
 void Reader::processtokens() {
