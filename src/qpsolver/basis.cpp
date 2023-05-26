@@ -4,17 +4,23 @@
 #include <memory>
 
 Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
-             std::vector<BasisStatus> lower, std::vector<HighsInt> inactive)
+             std::vector<BasisStatus> status, std::vector<HighsInt> inactive)
     : runtime(rt),
       buffer_column_aq(rt.instance.num_var),
       buffer_row_ep(rt.instance.num_var) {
   buffer_vec2hvec.setup(rt.instance.num_var);
+
+  for (HighsInt i=0; i<runtime.instance.num_var + runtime.instance.num_con; i++) {
+    basisstatus[i] = BasisStatus::Inactive;
+  }
+
   for (size_t i = 0; i < active.size(); i++) {
     activeconstraintidx.push_back(active[i]);
-    basisstatus[activeconstraintidx[i]] = lower[i];
+    basisstatus[activeconstraintidx[i]] = status[i];
   }
-  for (HighsInt i : inactive) {
-    nonactiveconstraintsidx.push_back(i);
+  for (size_t i=0; i<inactive.size(); i++) {
+    nonactiveconstraintsidx.push_back(inactive[i]);
+    basisstatus[nonactiveconstraintsidx[i]] = BasisStatus::InactiveInBasis;
   }
 
   Atran = rt.instance.A.t();
@@ -99,16 +105,17 @@ void Basis::report() {
 void Basis::deactivate(HighsInt conid) {
   // printf("deact %" HIGHSINT_FORMAT "\n", conid);
   assert(contains(activeconstraintidx, conid));
-  basisstatus.erase(conid);
+  basisstatus[conid] = BasisStatus::InactiveInBasis;
   remove(activeconstraintidx, conid);
   nonactiveconstraintsidx.push_back(conid);
 }
 
-QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisStatus atlower,
+QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisStatus newstatus,
                                HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(activeconstraintidx, (HighsInt)conid)) {
-    basisstatus[conid] = atlower;
+    basisstatus[nonactivetoremove] = BasisStatus::Inactive;
+    basisstatus[conid] = newstatus;
     activeconstraintidx.push_back(conid);
   } else {
     printf("Degeneracy? constraint %" HIGHSINT_FORMAT " already in basis\n",

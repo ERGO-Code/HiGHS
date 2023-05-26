@@ -3150,17 +3150,18 @@ HighsStatus Highs::callSolveQp() {
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = runtime.status == ProblemStatus::OPTIMAL
+  model_status_ = runtime.status == QpModelStatus::OPTIMAL
                       ? HighsModelStatus::kOptimal
-                  : runtime.status == ProblemStatus::UNBOUNDED
+                  : runtime.status == QpModelStatus::UNBOUNDED
                       ? HighsModelStatus::kUnbounded
-                  : runtime.status == ProblemStatus::INFEASIBLE
+                  : runtime.status == QpModelStatus::INFEASIBLE
                       ? HighsModelStatus::kInfeasible
-                  : runtime.status == ProblemStatus::ITERATIONLIMIT
+                  : runtime.status == QpModelStatus::ITERATIONLIMIT
                       ? HighsModelStatus::kIterationLimit
-                  : runtime.status == ProblemStatus::TIMELIMIT
+                  : runtime.status == QpModelStatus::TIMELIMIT
                       ? HighsModelStatus::kTimeLimit
                       : HighsModelStatus::kNotset;
+  // extract variable values
   solution_.col_value.resize(lp.num_col_);
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
@@ -3169,6 +3170,7 @@ HighsStatus Highs::callSolveQp() {
     solution_.col_dual[iCol] =
         objective_multiplier * runtime.dualvar.value[iCol];
   }
+  // extract constraint activity
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
   // Negate the vector and Hessian
@@ -3179,6 +3181,35 @@ HighsStatus Highs::callSolveQp() {
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
+
+  // extract basis status
+  basis_.col_status.resize(lp.num_col_);
+  basis_.row_status.resize(lp.num_row_);
+
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
+    if (runtime.status_var[i] == BasisStatus::ActiveAtLower) {
+      basis_.col_status[i] = HighsBasisStatus::kLower;
+    } else if (runtime.status_var[i] == BasisStatus::ActiveAtUpper) {
+      basis_.col_status[i] = HighsBasisStatus::kUpper;
+    } else if (runtime.status_var[i] == BasisStatus::InactiveInBasis) {
+      basis_.col_status[i] = HighsBasisStatus::kNonbasic;
+    } else {
+      basis_.col_status[i] = HighsBasisStatus::kBasic;
+    }
+  }
+
+  for (HighsInt i = 0; i < lp.num_row_; i++) {
+    if (runtime.status_con[i] == BasisStatus::ActiveAtLower) {
+      basis_.row_status[i] = HighsBasisStatus::kLower;
+    } else if (runtime.status_con[i] == BasisStatus::ActiveAtUpper) {
+      basis_.row_status[i] = HighsBasisStatus::kUpper;
+    } else if (runtime.status_con[i] == BasisStatus::InactiveInBasis) {
+      basis_.row_status[i] = HighsBasisStatus::kNonbasic;
+    } else {
+      basis_.row_status[i] = HighsBasisStatus::kBasic;
+    }
+  }
+
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);
   getKktFailures(options_, model_, solution_, basis_, info_);

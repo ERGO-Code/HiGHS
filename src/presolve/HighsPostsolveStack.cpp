@@ -568,7 +568,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
 void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
                                                 HighsSolution& solution,
                                                 HighsBasis& basis) const {
-  const bool debug_report = true;
+  const bool debug_report = false;
   const double mergeVal = solution.col_value[col];
 
   auto okResidual = [&](const double x, const double y) {
@@ -986,7 +986,7 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
       options.primal_feasibility_tolerance;
   std::vector<double>& col_value = solution.col_value;
   const bool allow_assert = false;
-  const bool debug_report = true;
+  const bool debug_report = false;
   //=============================================================================================
 
   auto isInteger = [&](const double v) {
