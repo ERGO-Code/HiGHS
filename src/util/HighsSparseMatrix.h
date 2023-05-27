@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsSparseMatrix.h
@@ -69,6 +67,8 @@ class HighsSparseMatrix {
                      const std::string matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value);
+  void assessSmallValues(const HighsLogOptions& log_options,
+                         const double small_matrix_value);
   bool hasLargeValue(const double large_matrix_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);

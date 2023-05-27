@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualMulti.cpp
@@ -89,9 +87,9 @@ void HEkkDual::majorChooseRow() {
 
     // Call the hyper-graph method, but partSwitch=0 so just uses
     // choose_multi_global
-    dualRHS.chooseMultiHyperGraphAuto(&choiceIndex[0], &initialCount,
+    dualRHS.chooseMultiHyperGraphAuto(choiceIndex.data(), &initialCount,
                                       multi_num);
-    // dualRHS.chooseMultiGlobal(&choiceIndex[0], &initialCount, multi_num);
+    // dualRHS.chooseMultiGlobal(choiceIndex.data(), &initialCount, multi_num);
     if (initialCount == 0 && dualRHS.workCutoff == 0) {
       // OPTIMAL
       return;
@@ -587,7 +585,7 @@ void HEkkDual::majorUpdateFtranPrepare() {
     // Update this buffer by previous Row_ep
     for (HighsInt jFn = iFn - 1; jFn >= 0; jFn--) {
       MFinish* jFinish = &multi_finish[jFn];
-      double* jRow_epArray = &jFinish->row_ep->array[0];
+      double* jRow_epArray = jFinish->row_ep->array.data();
       double pivotX = 0;
       for (HighsInt k = 0; k < Vec->count; k++) {
         HighsInt iRow = Vec->index[k];
@@ -702,12 +700,12 @@ void HEkkDual::majorUpdateFtranFinal() {
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       multi_finish[iFn].col_aq->count = -1;
       multi_finish[iFn].row_ep->count = -1;
-      double* myCol = &multi_finish[iFn].col_aq->array[0];
-      double* myRow = &multi_finish[iFn].row_ep->array[0];
+      double* myCol = multi_finish[iFn].col_aq->array.data();
+      double* myRow = multi_finish[iFn].row_ep->array.data();
       for (HighsInt jFn = 0; jFn < iFn; jFn++) {
         HighsInt pivotRow = multi_finish[jFn].row_out;
         const double pivotAlpha = multi_finish[jFn].alpha_row;
-        const double* pivotArray = &multi_finish[jFn].col_aq->array[0];
+        const double* pivotArray = multi_finish[jFn].col_aq->array.data();
         double pivotX1 = myCol[pivotRow];
         double pivotX2 = myRow[pivotRow];
 
@@ -772,8 +770,8 @@ void HEkkDual::majorUpdatePrimal() {
   if (updatePrimal_inDense) {
     // Dense update of primal values, infeasibility list and
     // non-pivotal edge weights
-    const double* mixArray = &col_BFRT.array[0];
-    double* local_work_infeasibility = &dualRHS.work_infeasibility[0];
+    const double* mixArray = col_BFRT.array.data();
+    double* local_work_infeasibility = dualRHS.work_infeasibility.data();
     // #pragma omp parallel for schedule(static)
     highs::parallel::for_each(
         0, solver_num_row,
@@ -800,10 +798,10 @@ void HEkkDual::majorUpdatePrimal() {
         // multi_finish[iFn].EdWt has already been transformed to correspond to
         // the new basis
         const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
-        const double* colArray = &multi_finish[iFn].col_aq->array[0];
+        const double* colArray = multi_finish[iFn].col_aq->array.data();
         if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
           // Update steepest edge weights
-          const double* dseArray = &multi_finish[iFn].row_ep->array[0];
+          const double* dseArray = multi_finish[iFn].row_ep->array.data();
           const double Kai = -2 / multi_finish[iFn].alpha_row;
           // #pragma omp parallel for schedule(static)
           highs::parallel::for_each(
@@ -850,7 +848,7 @@ void HEkkDual::majorUpdatePrimal() {
         double Kai = -2 / finish->alpha_row;
         ekk_instance_.updateDualSteepestEdgeWeights(row_out, variable_in, Col,
                                                     new_pivotal_edge_weight,
-                                                    Kai, &Row->array[0]);
+                                                    Kai, Row->array.data());
       } else if (edge_weight_mode == EdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
@@ -876,12 +874,12 @@ void HEkkDual::majorUpdatePrimal() {
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       const HighsInt iRow = multi_finish[iFn].row_out;
       const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
-      const double* colArray = &multi_finish[iFn].col_aq->array[0];
+      const double* colArray = multi_finish[iFn].col_aq->array.data();
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
       if (edge_weight_mode == EdgeWeightMode::kSteepestEdge) {
         // Steepest edge
-        const double* dseArray = &multi_finish[iFn].row_ep->array[0];
+        const double* dseArray = multi_finish[iFn].row_ep->array.data();
         double Kai = -2 / multi_finish[iFn].alpha_row;
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
           HighsInt jRow = multi_finish[jFn].row_out;

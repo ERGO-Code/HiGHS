@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsSymmetry.cpp
@@ -1379,7 +1377,7 @@ bool HighsSymmetryDetection::compareCurrentGraph(
     for (HighsInt j = Gstart[i]; j != Gend[i]; ++j)
       if (!otherGraph.find(std::make_tuple(vertexToCell[Gedge[j].first],
                                            colCell, Gedge[j].second))) {
-        // return which cell does not match in its neighborhood as this should
+        // return which cell does not match in its neighbourhood as this should
         // have been detected with the hashing it can very rarely happen due to
         // a hash collision. In such a case we want to backtrack to the last
         // time where we targeted this particular cell. Otherwise we could spent
@@ -1794,7 +1792,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           } else {
             // This case can be caused by a hash collision which was now
             // detected in the graph comparison call. The graph comparison call
-            // will return the cell where the vertex neighborhood caused a
+            // will return the cell where the vertex neighbourhood caused a
             // mismatch on the edges. This would have been detected by
             // an exact partition refinement when we targeted that cell the last
             // time, so that is where we can backtrack to.

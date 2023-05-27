@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsLpRelaxation.h"
@@ -1010,9 +1008,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (resolve_on_error) {
       // still an error: now try to solve with presolve from scratch
       lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyDual);
-      lpsolver.setOptionValue("presolve", "on");
+      lpsolver.setOptionValue("presolve", kHighsOnString);
       auto retval = run(false);
-      lpsolver.setOptionValue("presolve", "off");
+      lpsolver.setOptionValue("presolve", kHighsOffString);
 
       return retval;
     }

@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsDomain.h"
@@ -1108,7 +1106,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
   debugCheckObjectiveLower();
 
   const double upperLimit = domain->mipsolver->mipdata_->upper_limit;
-  if (objectiveLower > upperLimit) {
+  if (numInfObjLower == 0 && objectiveLower > upperLimit) {
     domain->infeasible_ = true;
     domain->infeasible_pos = domain->domchgstack_.size();
     domain->infeasible_reason = Reason::objective();

@@ -16,18 +16,20 @@ struct Settings {
 
   PricingStrategy pricing = PricingStrategy::Devex;
 
-  double pnorm_zero_threshold = 10E-12;
-  double d_zero_threshold = 10E-13;
-  double lambda_zero_threshold = 10E-10;
+  double pnorm_zero_threshold = 10E-12; // if ||p|| < this threshold, p is determined to not be an improving search direction
+  double improvement_zero_threshold = 10E-5; // if p^t gradient < this threshold, p is determined to not be an improving search direction
+  double d_zero_threshold = 10E-13; // minimal value for pivot, will declare degeneracy if no larger pivot is found
+  double lambda_zero_threshold = 10E-10; // used for pricing / optimality checking
 
-  double semidefiniteregularization = 1E-7;
+  bool hessianregularization = false; // if true, a small multiple of the identity matrix will be added to the Hessian
+  double hessianregularizationfactor = 1E-7; // multiple of identity matrix added to hessian in case of regularization
 
   Phase1Strategy phase1strategy = Phase1Strategy::HIGHS;
   bool phase1movefreevarsbasic = false;
   bool phase1boundfreevars = false;
 
   OutputLevel outputlevel = OutputLevel::LIGHT;
-  HighsInt reportingfequency = 100;
+  HighsInt reportingfequency = 1;
 
   HighsInt reinvertfrequency = 100;
   HighsInt gradientrecomputefrequency = 1;

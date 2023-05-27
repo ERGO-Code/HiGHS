@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HSimplexNla.cpp
@@ -38,10 +36,10 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* basic_index,
   this->report_ = false;
   this->factor_.setupGeneral(
       this->lp_->num_col_, this->lp_->num_row_, this->lp_->num_row_,
-      &factor_a_matrix->start_[0], &factor_a_matrix->index_[0],
-      &factor_a_matrix->value_[0], this->basic_index_, factor_pivot_threshold,
-      this->options_->factor_pivot_tolerance, this->options_->highs_debug_level,
-      &(this->options_->log_options));
+      factor_a_matrix->start_.data(), factor_a_matrix->index_.data(),
+      factor_a_matrix->value_.data(), this->basic_index_,
+      factor_pivot_threshold, this->options_->factor_pivot_tolerance,
+      this->options_->highs_debug_level, &(this->options_->log_options));
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
@@ -487,9 +485,9 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
   const double* factor_Avalue = factor_.getAvalue();
 
   if (scale_ == NULL) {
-    if (factor_Astart != &(lp_->a_matrix_.start_[0])) error0_found = true;
-    if (factor_Aindex != &(lp_->a_matrix_.index_[0])) error1_found = true;
-    if (factor_Avalue != &(lp_->a_matrix_.value_[0])) error2_found = true;
+    if (factor_Astart != lp_->a_matrix_.start_.data()) error0_found = true;
+    if (factor_Aindex != lp_->a_matrix_.index_.data()) error1_found = true;
+    if (factor_Avalue != lp_->a_matrix_.value_.data()) error2_found = true;
     error_found = error0_found || error1_found || error2_found;
     if (error_found) {
       highsLogUser(options_->log_options, HighsLogType::kError,
@@ -498,7 +496,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
                    message.c_str(), scale_status.c_str());
       if (error0_found)
         printf("a_matrix_.start_ pointer error: %p vs %p\n",
-               (void*)factor_Astart, (void*)&(lp_->a_matrix_.start_[0]));
+               (void*)factor_Astart, (void*)lp_->a_matrix_.start_.data());
       if (error1_found) printf("a_matrix_.index pointer error\n");
       if (error2_found) printf("a_matrix_.value pointer error\n");
       assert(!error_found);

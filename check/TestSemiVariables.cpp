@@ -170,7 +170,8 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   double coeff = 1e6;
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {-1, coeff};
-  REQUIRE(highs.addRow(0, 0, 2, &index[0], &value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRow(0, 0, 2, index.data(), value.data()) ==
+          HighsStatus::kOk);
   // Problem is no longer unbounded due to equation linking the
   // semi-variable to the continuous variable. However, optimal value
   // of semi-variable should be 1e6, so it is active at the modified upper
@@ -231,6 +232,37 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
+}
+
+TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {1};
+  lp.col_upper_ = {-1};
+  lp.a_matrix_.start_ = {0, 0};
+  lp.integrality_ = {semi_continuous};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getSolution().col_value[0] == 0);
+  // Ensure that inconsistent bounds with negative lower are still
+  // accepted
+  lp.col_lower_[0] = -1;
+  lp.col_upper_[0] = -2;
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getSolution().col_value[0] == 0);
+  // Ensure that continuous variables with inconsistent bounds yield
+  // infeasibility
+  highs.setOptionValue("solve_relaxation", true);
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
 void semiModel0(HighsLp& lp) {

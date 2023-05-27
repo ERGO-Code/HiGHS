@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef MIP_HIGHS_MIP_SOLVER_H_
@@ -37,6 +35,10 @@ class HighsMipSolver {
   double primal_bound_;
   double gap_;
   int64_t node_count_;
+  int64_t total_lp_iterations_;
+
+  FILE* improving_solution_file_;
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
   const HighsBasis* rootbasis;
@@ -86,6 +88,10 @@ class HighsMipSolver {
 
   mutable HighsTimer timer_;
   void cleanupSolve();
+
+  void runPresolve();
+  const HighsLp& getPresolvedModel() const;
+  HighsPresolveStatus getPresolveStatus() const;
 };
 
 #endif

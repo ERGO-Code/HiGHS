@@ -53,7 +53,8 @@ TEST_CASE("LP-717-od", "[highs_data]") {
           HighsStatus::kOk);
   std::vector<HighsInt> index = {0};
   std::vector<double> value = {1.0};
-  REQUIRE(highs.addRow(2.0, inf, 1, &index[0], &value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRow(2.0, inf, 1, index.data(), value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
           HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -136,14 +137,14 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   }
   row_block_num_nz = row_block_index.size();
 
-  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
-                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
-                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(row_block_num_col, row_block_col_cost.data(),
+                        row_block_col_lower.data(), row_block_col_upper.data(),
+                        0, nullptr, nullptr, nullptr) == HighsStatus::kOk);
 
-  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
-                        &row_block_row_upper[0], row_block_num_nz,
-                        &row_block_start[0], &row_block_index[0],
-                        &row_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(row_block_num_row, row_block_row_lower.data(),
+                        row_block_row_upper.data(), row_block_num_nz,
+                        row_block_start.data(), row_block_index.data(),
+                        row_block_value.data()) == HighsStatus::kOk);
 
   if (dev_run)
     printf("After adding a row-wise matrix, LP matrix has format %d\n",
@@ -155,11 +156,11 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
   std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
-  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
-                        &col_block_col_lower[0], &col_block_col_upper[0],
-                        col_block_num_nz, &col_block_start[0],
-                        &col_block_index[0],
-                        &col_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(col_block_num_col, col_block_col_cost.data(),
+                        col_block_col_lower.data(), col_block_col_upper.data(),
+                        col_block_num_nz, col_block_start.data(),
+                        col_block_index.data(),
+                        col_block_value.data()) == HighsStatus::kOk);
   if (dev_run)
     printf("After adding a column-wise matrix, LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
@@ -248,14 +249,14 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   }
   row_block_num_nz = row_block_index.size();
 
-  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
-                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
-                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(row_block_num_col, row_block_col_cost.data(),
+                        row_block_col_lower.data(), row_block_col_upper.data(),
+                        0, nullptr, nullptr, nullptr) == HighsStatus::kOk);
 
-  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
-                        &row_block_row_upper[0], row_block_num_nz,
-                        &row_block_start[0], &row_block_index[0],
-                        &row_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(row_block_num_row, row_block_row_lower.data(),
+                        row_block_row_upper.data(), row_block_num_nz,
+                        row_block_start.data(), row_block_index.data(),
+                        row_block_value.data()) == HighsStatus::kOk);
 
   if (dev_run)
     printf("After adding a row-wise matrix, LP matrix has format %d\n",
@@ -267,11 +268,11 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
   std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
-  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
-                        &col_block_col_lower[0], &col_block_col_upper[0],
-                        col_block_num_nz, &col_block_start[0],
-                        &col_block_index[0],
-                        &col_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(col_block_num_col, col_block_col_cost.data(),
+                        col_block_col_lower.data(), col_block_col_upper.data(),
+                        col_block_num_nz, col_block_start.data(),
+                        col_block_index.data(),
+                        col_block_value.data()) == HighsStatus::kOk);
   if (dev_run)
     printf("After adding a column-wise matrix, LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
@@ -368,14 +369,14 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
   }
   row_block_num_nz = row_block_index.size();
 
-  REQUIRE(highs.addCols(row_block_num_col, &row_block_col_cost[0],
-                        &row_block_col_lower[0], &row_block_col_upper[0], 0,
-                        nullptr, nullptr, nullptr) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(row_block_num_col, row_block_col_cost.data(),
+                        row_block_col_lower.data(), row_block_col_upper.data(),
+                        0, nullptr, nullptr, nullptr) == HighsStatus::kOk);
 
-  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
-                        &row_block_row_upper[0], row_block_num_nz,
-                        &row_block_start[0], &row_block_index[0],
-                        &row_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(row_block_num_row, row_block_row_lower.data(),
+                        row_block_row_upper.data(), row_block_num_nz,
+                        row_block_start.data(), row_block_index.data(),
+                        row_block_value.data()) == HighsStatus::kOk);
 
   if (dev_run)
     printf("After adding a row-wise matrix, LP matrix has format %d\n",
@@ -387,19 +388,19 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
   std::vector<double> col_block_value = {-1, 1, -2, 2, -3, 3};
-  REQUIRE(highs.addCols(col_block_num_col, &col_block_col_cost[0],
-                        &col_block_col_lower[0], &col_block_col_upper[0],
-                        col_block_num_nz, &col_block_start[0],
-                        &col_block_index[0],
-                        &col_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(col_block_num_col, col_block_col_cost.data(),
+                        col_block_col_lower.data(), col_block_col_upper.data(),
+                        col_block_num_nz, col_block_start.data(),
+                        col_block_index.data(),
+                        col_block_value.data()) == HighsStatus::kOk);
   if (dev_run)
     printf("After adding a column-wise matrix, LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  REQUIRE(highs.addRows(row_block_num_row, &row_block_row_lower[0],
-                        &row_block_row_upper[0], row_block_num_nz,
-                        &row_block_start[0], &row_block_index[0],
-                        &row_block_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(row_block_num_row, row_block_row_lower.data(),
+                        row_block_row_upper.data(), row_block_num_nz,
+                        row_block_start.data(), row_block_index.data(),
+                        row_block_value.data()) == HighsStatus::kOk);
 
   if (dev_run)
     printf("After adding a row-wise matrix, LP matrix has format %d\n",
@@ -467,11 +468,12 @@ TEST_CASE("LP-modification", "[highs_data]") {
                     return_status);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              0, NULL, NULL, NULL) == HighsStatus::kOk);
-  REQUIRE(avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                              &ARstart[0], &ARindex[0],
-                              &ARvalue[0]) == HighsStatus::kOk);
+  REQUIRE(avgas_highs.addCols(num_col, colCost.data(), colLower.data(),
+                              colUpper.data(), 0, NULL, NULL,
+                              NULL) == HighsStatus::kOk);
+  REQUIRE(avgas_highs.addRows(num_row, rowLower.data(), rowUpper.data(),
+                              num_row_nz, ARstart.data(), ARindex.data(),
+                              ARvalue.data()) == HighsStatus::kOk);
 
   //  return_status = avgas_highs.writeModel("");
 
@@ -494,22 +496,23 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::kModelEmpty);
 
   // Adding column vectors and matrix to model with no rows returns an error
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                        num_col_nz, &Astart[0], &Aindex[0],
-                        &Avalue[0]) == HighsStatus::kError);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), num_col_nz, Astart.data(),
+                        Aindex.data(), Avalue.data()) == HighsStatus::kError);
 
   // Adding column vectors to model with no rows returns OK
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), 0, NULL, NULL,
+                        NULL) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   //  return_status = highs.writeModel("");
 
   // Adding row vectors and matrix to model with columns returns OK
-  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                        &ARstart[0], &ARindex[0],
-                        &ARvalue[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(num_row, rowLower.data(), rowUpper.data(), num_row_nz,
+                        ARstart.data(), ARindex.data(),
+                        ARvalue.data()) == HighsStatus::kOk);
 
   //  return_status = highs.writeModel("");
 
@@ -593,15 +596,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding column vectors to model with no rows returns OK
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), 0, NULL, NULL,
+                        NULL) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding row vectors and matrix to model with columns returns OK
-  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                        &ARstart[0], &ARindex[0],
-                        &ARvalue[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(num_row, rowLower.data(), rowUpper.data(), num_row_nz,
+                        ARstart.data(), ARindex.data(),
+                        ARvalue.data()) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -677,8 +681,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding column vectors to model with no rows returns OK
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), 0, NULL, NULL,
+                        NULL) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -863,15 +868,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding column vectors to model with no rows returns OK
-  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
+                        colUpper.data(), 0, NULL, NULL,
+                        NULL) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding row vectors and matrix to model with columns returns OK
-  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                        &ARstart[0], &ARindex[0],
-                        &ARvalue[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(num_row, rowLower.data(), rowUpper.data(), num_row_nz,
+                        ARstart.data(), ARindex.data(),
+                        ARvalue.data()) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -941,17 +947,17 @@ TEST_CASE("LP-modification", "[highs_data]") {
                                  col1357_upper) == HighsStatus::kOk);
 
   // Return the LP to its original state with a mask
-  REQUIRE(highs.changeColsCost(col1357_col_mask, &colCost[0]) ==
+  REQUIRE(highs.changeColsCost(col1357_col_mask, colCost.data()) ==
           HighsStatus::kOk);
 
   REQUIRE(highs.changeColBounds(2, colLower[2], colUpper[2]) ==
           HighsStatus::kOk);
 
-  REQUIRE(highs.changeColsBounds(col1357_col_mask, &colLower[0],
-                                 &colUpper[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeColsBounds(col1357_col_mask, colLower.data(),
+                                 colUpper.data()) == HighsStatus::kOk);
 
-  REQUIRE(highs.changeRowsBounds(row0135789_row_mask, &rowLower[0],
-                                 &rowUpper[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeRowsBounds(row0135789_row_mask, rowLower.data(),
+                                 rowUpper.data()) == HighsStatus::kOk);
 
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]) ==
           HighsStatus::kOk);
@@ -1165,18 +1171,18 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col2345_cost[1] = 3.0;
   set_col2345_cost[2] = 4.0;
   set_col2345_cost[3] = 5.0;
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0],
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, og_col2345_cost.data(),
                         NULL, NULL, get_num_nz, NULL, NULL,
                         NULL) == HighsStatus::kOk);
-  REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]) ==
+  REQUIRE(highs.changeColsCost(from_col, to_col, set_col2345_cost.data()) ==
           HighsStatus::kOk);
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0],
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, get_col2345_cost.data(),
                         NULL, NULL, get_num_nz, NULL, NULL,
                         NULL) == HighsStatus::kOk);
   REQUIRE(get_num_col == set_num_col);
   for (HighsInt usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col2345_cost[usr_col] == set_col2345_cost[usr_col]);
-  REQUIRE(highs.changeColsCost(from_col, to_col, &og_col2345_cost[0]) ==
+  REQUIRE(highs.changeColsCost(from_col, to_col, og_col2345_cost.data()) ==
           HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
@@ -1204,18 +1210,18 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col01234_lower[3] = 3.0;
   set_col01234_lower[4] = 4.0;
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
-                        &og_col01234_lower[0], &og_col01234_upper[0],
+                        og_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
-  REQUIRE(highs.changeColsBounds(from_col, to_col, &set_col01234_lower[0],
-                                 &og_col01234_upper[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeColsBounds(from_col, to_col, set_col01234_lower.data(),
+                                 og_col01234_upper.data()) == HighsStatus::kOk);
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
-                        &get_col01234_lower[0], &og_col01234_upper[0],
+                        get_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(get_num_col == set_num_col);
   for (HighsInt usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col01234_lower[usr_col] == set_col01234_lower[usr_col]);
-  REQUIRE(highs.changeColsBounds(from_col, to_col, &og_col01234_lower[0],
-                                 &og_col01234_upper[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeColsBounds(from_col, to_col, og_col01234_lower.data(),
+                                 og_col01234_upper.data()) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -1241,19 +1247,19 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_row56789_lower[2] = 7.0;
   set_row56789_lower[3] = 8.0;
   set_row56789_lower[4] = 9.0;
-  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &og_row56789_lower[0],
-                        &og_row56789_upper[0], get_num_nz, NULL, NULL,
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row, og_row56789_lower.data(),
+                        og_row56789_upper.data(), get_num_nz, NULL, NULL,
                         NULL) == HighsStatus::kOk);
-  REQUIRE(highs.changeRowsBounds(from_row, to_row, &set_row56789_lower[0],
-                                 &og_row56789_upper[0]) == HighsStatus::kOk);
-  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &get_row56789_lower[0],
-                        &og_row56789_upper[0], get_num_nz, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, set_row56789_lower.data(),
+                                 og_row56789_upper.data()) == HighsStatus::kOk);
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row,
+                        get_row56789_lower.data(), og_row56789_upper.data(),
+                        get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(get_num_row == set_num_row);
   for (HighsInt usr_row = 0; usr_row < get_num_row; usr_row++)
     REQUIRE(get_row56789_lower[usr_row] == set_row56789_lower[usr_row]);
-  REQUIRE(highs.changeRowsBounds(from_row, to_row, &og_row56789_lower[0],
-                                 &og_row56789_upper[0]) == HighsStatus::kOk);
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, og_row56789_lower.data(),
+                                 og_row56789_upper.data()) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -1332,22 +1338,24 @@ TEST_CASE("LP-delete", "[highs_data]") {
   get_value.resize(num_nz);
 
   // Get the set of cols to be removed - so that they can be reintroduced
-  REQUIRE(highs.getCols(&mask[0], get_num_col, &get_cost[0], &get_lower[0],
-                        &get_upper[0], get_num_nz, &get_start[0], &get_index[0],
-                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.getCols(mask.data(), get_num_col, get_cost.data(),
+                        get_lower.data(), get_upper.data(), get_num_nz,
+                        get_start.data(), get_index.data(),
+                        get_value.data()) == HighsStatus::kOk);
   REQUIRE(get_num_col == rm_num_col);
   get_index.resize(get_num_nz);
   get_value.resize(get_num_nz);
 
   // Remove the set of cols
-  REQUIRE(highs.deleteCols(&mask[0]) == HighsStatus::kOk);
+  REQUIRE(highs.deleteCols(mask.data()) == HighsStatus::kOk);
   REQUIRE(mask == mask_check);
   REQUIRE(lp.num_col_ == num_col - rm_num_col);
 
   // Replace the set of cols
-  REQUIRE(highs.addCols(get_num_col, &get_cost[0], &get_lower[0], &get_upper[0],
-                        get_num_nz, &get_start[0], &get_index[0],
-                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addCols(get_num_col, get_cost.data(), get_lower.data(),
+                        get_upper.data(), get_num_nz, get_start.data(),
+                        get_index.data(),
+                        get_value.data()) == HighsStatus::kOk);
   REQUIRE(lp.num_col_ == num_col);
 
   callRun(highs, log_options, "highs.run()", HighsStatus::kOk);
@@ -1389,22 +1397,23 @@ TEST_CASE("LP-delete", "[highs_data]") {
   get_value.resize(num_nz);
 
   // Get the set of rows to be removed - so that they can be reintroduced
-  REQUIRE(highs.getRows(&mask[0], get_num_row, &get_lower[0], &get_upper[0],
-                        get_num_nz, &get_start[0], &get_index[0],
-                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.getRows(mask.data(), get_num_row, get_lower.data(),
+                        get_upper.data(), get_num_nz, get_start.data(),
+                        get_index.data(),
+                        get_value.data()) == HighsStatus::kOk);
   REQUIRE(get_num_row == rm_num_row);
   get_index.resize(get_num_nz);
   get_value.resize(get_num_nz);
 
   // Remove the set of rows
-  REQUIRE(highs.deleteRows(&mask[0]) == HighsStatus::kOk);
+  REQUIRE(highs.deleteRows(mask.data()) == HighsStatus::kOk);
   REQUIRE(mask == mask_check);
   REQUIRE(lp.num_row_ == num_row - rm_num_row);
 
   // Replace the set of rows
-  REQUIRE(highs.addRows(get_num_row, &get_lower[0], &get_upper[0], get_num_nz,
-                        &get_start[0], &get_index[0],
-                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(highs.addRows(get_num_row, get_lower.data(), get_upper.data(),
+                        get_num_nz, get_start.data(), get_index.data(),
+                        get_value.data()) == HighsStatus::kOk);
   REQUIRE(lp.num_row_ == num_row);
 
   callRun(highs, log_options, "highs.run()", HighsStatus::kOk);
@@ -1630,21 +1639,21 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
     HighsInt lp0_num_nz = lp0.a_matrix_.start_[lp0.num_col_];
     HighsInt lp1_num_nz = lp1.a_matrix_.start_[lp1.num_col_];
     return_bool = areLpColEqual(
-        lp0.num_col_, &lp0.col_cost_[0], &lp0.col_lower_[0], &lp0.col_upper_[0],
-        lp0_num_nz, &lp0.a_matrix_.start_[0], &lp0.a_matrix_.index_[0],
-        &lp0.a_matrix_.value_[0], lp1.num_col_, &lp1.col_cost_[0],
-        &lp1.col_lower_[0], &lp1.col_upper_[0], lp1_num_nz,
-        &lp1.a_matrix_.start_[0], &lp1.a_matrix_.index_[0],
-        &lp1.a_matrix_.value_[0], infinite_bound);
+        lp0.num_col_, lp0.col_cost_.data(), lp0.col_lower_.data(),
+        lp0.col_upper_.data(), lp0_num_nz, lp0.a_matrix_.start_.data(),
+        lp0.a_matrix_.index_.data(), lp0.a_matrix_.value_.data(), lp1.num_col_,
+        lp1.col_cost_.data(), lp1.col_lower_.data(), lp1.col_upper_.data(),
+        lp1_num_nz, lp1.a_matrix_.start_.data(), lp1.a_matrix_.index_.data(),
+        lp1.a_matrix_.value_.data(), infinite_bound);
     if (!return_bool) return return_bool;
   }
   if (lp0.num_row_ > 0 && lp1.num_row_ > 0) {
     HighsInt lp0_num_nz = 0;
     HighsInt lp1_num_nz = 0;
     return_bool = areLpRowEqual(
-        lp0.num_row_, &lp0.row_lower_[0], &lp0.row_upper_[0], lp0_num_nz, NULL,
-        NULL, NULL, lp1.num_row_, &lp1.row_lower_[0], &lp1.row_upper_[0],
-        lp1_num_nz, NULL, NULL, NULL, infinite_bound);
+        lp0.num_row_, lp0.row_lower_.data(), lp0.row_upper_.data(), lp0_num_nz,
+        NULL, NULL, NULL, lp1.num_row_, lp1.row_lower_.data(),
+        lp1.row_upper_.data(), lp1_num_nz, NULL, NULL, NULL, infinite_bound);
   }
   return return_bool;
 }
@@ -1777,7 +1786,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   log_to_console = true;
   log_dev_level = kHighsLogDevLevelVerbose;
   log_options.output_flag = &output_flag;
-  log_options.log_file_stream = NULL;
+  log_options.log_stream = NULL;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
   highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
@@ -1792,7 +1801,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   bool output_flag = true;
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
-  log_options.log_file_stream = stdout;
+  log_options.log_stream = stdout;
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;

@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsUtils.cpp
@@ -18,6 +16,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -190,9 +189,59 @@ void writeModelBoundSolution(
   }
 }
 
-void writeModelSolution(FILE* file, const HighsLp& lp,
+void writeModelObjective(FILE* file, const HighsModel& model,
+                         const std::vector<double>& primal_solution) {
+  HighsCDouble objective_value =
+      model.lp_.objectiveCDoubleValue(primal_solution);
+  objective_value += model.hessian_.objectiveCDoubleValue(primal_solution);
+  writeObjectiveValue(file, (double)objective_value);
+}
+
+void writeLpObjective(FILE* file, const HighsLp& lp,
+                      const std::vector<double>& primal_solution) {
+  HighsCDouble objective_value = lp.objectiveCDoubleValue(primal_solution);
+  writeObjectiveValue(file, (double)objective_value);
+}
+
+void writeObjectiveValue(FILE* file, const double objective_value) {
+  std::array<char, 32> objStr = highsDoubleToString(
+      objective_value, kHighsSolutionValueToStringTolerance);
+  fprintf(file, "Objective %s\n", objStr.data());
+}
+
+void writePrimalSolution(FILE* file, const HighsLp& lp,
+                         const std::vector<double>& primal_solution,
+                         const bool sparse) {
+  std::stringstream ss;
+  HighsInt num_nonzero_primal_value = 0;
+  const bool have_col_names = lp.col_names_.size() > 0;
+  if (sparse) {
+    // Determine the number of nonzero primal solution values
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      if (primal_solution[iCol]) num_nonzero_primal_value++;
+  }
+  // Indicate the number of column values to be written out, depending
+  // on whether format is sparse: either lp.num_col_ if not sparse, or
+  // the negation of the number of nonzero values, if sparse
+  fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n",
+          sparse ? -num_nonzero_primal_value : lp.num_col_);
+  for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
+    if (sparse && !primal_solution[ix]) continue;
+    std::array<char, 32> valStr = highsDoubleToString(
+        primal_solution[ix], kHighsSolutionValueToStringTolerance);
+    // Create a column name
+    ss.str(std::string());
+    ss << "C" << ix;
+    const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
+    fprintf(file, "%-s %s", name.c_str(), valStr.data());
+    if (sparse) fprintf(file, " %d", int(ix));
+    fprintf(file, "\n");
+  }
+}
+void writeModelSolution(FILE* file, const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
                         const bool sparse) {
+  const HighsLp& lp = model.lp_;
   const bool have_col_names = lp.col_names_.size() > 0;
   const bool have_row_names = lp.row_names_.size() > 0;
   const bool have_primal = solution.value_valid;
@@ -210,12 +259,6 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
     assert((int)solution.row_dual.size() >= lp.num_row_);
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
-  HighsInt num_nonzero_primal_value = 0;
-  if (sparse && have_primal) {
-    // Determine the number of nonzero primal solution values
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      if (solution.col_value[iCol]) num_nonzero_primal_value++;
-  }
   fprintf(file, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     fprintf(file, "None\n");
@@ -226,30 +269,8 @@ void writeModelSolution(FILE* file, const HighsLp& lp,
       assert(info.primal_solution_status == kSolutionStatusInfeasible);
       fprintf(file, "Infeasible\n");
     }
-    HighsCDouble objective_function_value = lp.offset_;
-    for (HighsInt i = 0; i < lp.num_col_; ++i)
-      objective_function_value += lp.col_cost_[i] * solution.col_value[i];
-    std::array<char, 32> objStr = highsDoubleToString(
-        (double)objective_function_value, kHighsSolutionValueToStringTolerance);
-    fprintf(file, "Objective %s\n", objStr.data());
-    // Indicate the number of column values to be written out,
-    // depending on whether format is sparse: either lp.num_col_ if
-    // not sparse, or the negation of the number of nonzero values, if
-    // sparse
-    fprintf(file, "# Columns %" HIGHSINT_FORMAT "\n",
-            sparse ? -num_nonzero_primal_value : lp.num_col_);
-    for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-      if (sparse && !solution.col_value[ix]) continue;
-      std::array<char, 32> valStr = highsDoubleToString(
-          solution.col_value[ix], kHighsSolutionValueToStringTolerance);
-      // Create a column name
-      ss.str(std::string());
-      ss << "C" << ix;
-      const std::string name = have_col_names ? lp.col_names_[ix] : ss.str();
-      fprintf(file, "%-s %s", name.c_str(), valStr.data());
-      if (sparse) fprintf(file, " %d", int(ix));
-      fprintf(file, "\n");
-    }
+    writeModelObjective(file, model, solution.col_value);
+    writePrimalSolution(file, model.lp_, solution.col_value, sparse);
     if (sparse) return;
     fprintf(file, "# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
@@ -377,12 +398,10 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
   } else if (style == kSolutionStylePretty) {
-    const HighsVarType* integrality_ptr =
-        lp.integrality_.size() > 0 ? &lp.integrality_[0] : NULL;
-    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
-                            lp.col_upper_, lp.col_names_, have_primal,
-                            solution.col_value, have_dual, solution.col_dual,
-                            have_basis, basis.col_status, integrality_ptr);
+    writeModelBoundSolution(
+        file, true, lp.num_col_, lp.col_lower_, lp.col_upper_, lp.col_names_,
+        have_primal, solution.col_value, have_dual, solution.col_dual,
+        have_basis, basis.col_status, lp.integrality_.data());
     writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
@@ -404,7 +423,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     assert(style == kSolutionStyleRaw || sparse);
     fprintf(file, "Model status\n");
     fprintf(file, "%s\n", utilModelStatusToString(model_status).c_str());
-    writeModelSolution(file, lp, solution, info, sparse);
+    writeModelSolution(file, model, solution, info, sparse);
   }
 }
 
@@ -442,7 +461,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const bool have_value = solution.value_valid;
   const bool have_dual = solution.dual_valid;
   const bool have_basis = basis.valid;
-  if (!have_value) return;
   const double kGlpsolHighQuality = 1e-9;
   const double kGlpsolMediumQuality = 1e-6;
   const double kGlpsolLowQuality = 1e-3;
@@ -457,6 +475,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     if (lp.col_cost_[iCol]) num_nz++;
   const bool empty_cost_row = num_nz == lp.a_matrix_.numNz();
   const bool has_objective = !empty_cost_row || model.hessian_.dim_;
+  // Writes the solution using the GLPK raw style (defined in
+  // api/wrsol.c) or pretty style (defined in api/prsol.c)
+  //
   // When writing out the row information (and hence the number of
   // rows and nonzeros), the case of the cost row is tricky
   // (particularly if it's empty) if HiGHS is to be able to reproduce
@@ -581,38 +602,52 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
             (int)num_binary);
   fprintf(file, "\n");
   fprintf(file, "%s%-12s%d\n", line_prefix.c_str(), "Non-zeros:", (int)num_nz);
-  std::string model_status_text = "";
-  std::string model_status_char = "";  // Just for raw MIP solution
+  // Use model_status to define the GLPK model_status_text and
+  // solution_status_char, where the former is used to specify the
+  // model status. GLPK uses a single character to specify the
+  // solution status, and for LPs this is deduced from the primal and
+  // dual solution status. However, for MIPs, it is defined according
+  // to the model status, so only set solution_status_char for MIPs
+  std::string model_status_text = "???";
+  std::string solution_status_char = "?";
   switch (model_status) {
     case HighsModelStatus::kOptimal:
-      if (is_mip) model_status_text = "INTEGER ";
-      model_status_text += "OPTIMAL";
-      model_status_char = "o";
+      if (is_mip) {
+        model_status_text = "INTEGER OPTIMAL";
+        solution_status_char = "o";
+      } else {
+        model_status_text = "OPTIMAL";
+      }
       break;
     case HighsModelStatus::kInfeasible:
       if (is_mip) {
-        model_status_text = "INTEGER INFEASIBLE";
+        model_status_text = "INTEGER EMPTY";
+        solution_status_char = "n";
       } else {
         model_status_text = "INFEASIBLE (FINAL)";
       }
-      model_status_char = "n";
-      break;
-    case HighsModelStatus::kUnboundedOrInfeasible:
-      model_status_text += "INFEASIBLE (INTERMEDIATE)";
-      model_status_char = "?";  // Glpk has no equivalent
       break;
     case HighsModelStatus::kUnbounded:
-      if (is_mip) model_status_text = "INTEGER ";
-      model_status_text += "UNBOUNDED";
-      model_status_char = "u";  // Glpk has no equivalent
+      // No apparent case in wrmip.c
+      model_status_text = "UNBOUNDED";
+      if (is_mip) solution_status_char = "u";
       break;
     default:
-      model_status_text = "????";
-      model_status_char = "?";
+      if (info.primal_solution_status == kSolutionStatusFeasible) {
+        if (is_mip) {
+          model_status_text = "INTEGER NON-OPTIMAL";
+          solution_status_char = "f";
+        } else {
+          model_status_text = "FEASIBLE";
+        }
+      } else {
+        model_status_text = "UNDEFINED";
+        if (is_mip) solution_status_char = "u";
+      }
       break;
   }
-  assert(model_status_text != "");
-  assert(model_status_char != "");
+  assert(model_status_text != "???");
+  if (is_mip) assert(solution_status_char != "?");
   fprintf(file, "%s%-12s%s\n", line_prefix.c_str(),
           "Status:", model_status_text.c_str());
   // If info is not valid, then cannot write more
@@ -642,7 +677,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     fprintf(file, "s %s %d %d ", is_mip ? "mip" : "bas", (int)glpsol_num_row,
             (int)num_col);
     if (is_mip) {
-      fprintf(file, "%s", model_status_char.c_str());
+      fprintf(file, "%s", solution_status_char.c_str());
     } else {
       if (info.primal_solution_status == kSolutionStatusNone) {
         fprintf(file, "u");
@@ -669,6 +704,9 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
         highsDoubleToString(double_value, kHighsSolutionValueToStringTolerance);
     fprintf(file, " %s\n", double_string.data());
   }
+  // GLPK puts out i 1 b 0 0 etc if there's no primal point, but
+  // that's meaningless at best, so HiGHS returns in that case
+  if (!have_value) return;
   if (!raw) {
     fprintf(file,
             "   No.   Row name   %s   Activity     Lower bound  "
@@ -697,7 +735,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
       fprintf(file, "i %d ", (int)row_id);
       if (is_mip) {
         // Complete the line if for a MIP
-        double double_value = solution.row_value[iRow];
+        double double_value = have_value ? solution.row_value[iRow] : 0;
         std::array<char, 32> double_string = highsDoubleToString(
             double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s\n", double_string.data());
@@ -715,7 +753,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
-    const double value = solution.row_value[iRow];
+    const double value = have_value ? solution.row_value[iRow] : 0;
     const double dual = have_dual ? solution.row_dual[iRow] : 0;
     std::string status_text = "  ";
     std::string status_char = "";
@@ -746,7 +784,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     if (raw) {
       fprintf(file, "%s ", status_char.c_str());
-      double double_value = solution.row_value[iRow];
+      double double_value = have_value ? solution.row_value[iRow] : 0;
       std::array<char, 32> double_string = highsDoubleToString(
           double_value, kHighsSolutionValueToStringTolerance);
       fprintf(file, "%s ", double_string.data());
@@ -812,7 +850,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     if (raw) {
       fprintf(file, "%s%d ", line_prefix.c_str(), (int)(iCol + 1));
       if (is_mip) {
-        double double_value = solution.col_value[iCol];
+        double double_value = have_value ? solution.col_value[iCol] : 0;
         std::array<char, 32> double_string = highsDoubleToString(
             double_value, kHighsSolutionValueToStringTolerance);
         fprintf(file, "%s\n", double_string.data());
@@ -830,7 +868,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     const double lower = lp.col_lower_[iCol];
     const double upper = lp.col_upper_[iCol];
-    const double value = solution.col_value[iCol];
+    const double value = have_value ? solution.col_value[iCol] : 0;
     const double dual = have_dual ? solution.col_dual[iCol] : 0;
     std::string status_text = "  ";
     std::string status_char = "";
@@ -864,7 +902,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     }
     if (raw) {
       fprintf(file, "%s ", status_char.c_str());
-      double double_value = solution.col_value[iCol];
+      double double_value = have_value ? solution.col_value[iCol] : 0;
       std::array<char, 32> double_string = highsDoubleToString(
           double_value, kHighsSolutionValueToStringTolerance);
       fprintf(file, "%s ", double_string.data());
@@ -1358,3 +1396,32 @@ std::string findModelObjectiveName(const HighsLp* lp,
   assert(objective_name != "");
   return objective_name;
 }
+
+/*
+void print_map(std::string comment, const std::map<std::string, HighsInt>& m)
+{
+    std::cout << comment;
+
+  for (const auto& n : m)
+      std::cout << n.first << " = " << n.second << "; ";
+    std::cout << '\n';
+}
+*/
+
+/*
+bool repeatedNames(const std::vector<std::string> name) {
+  const HighsInt num_name = name.size();
+  // With no names, cannot have any repeated
+  if (num_name == 0) return false;
+  std::map<std::string, HighsInt> name_map;
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    auto search = name_map.find(name[ix]);
+    if (search != name_map.end()) return true;
+    //    printf("Search for %s yields %d\n", name[ix].c_str(),
+    //    int(search->second));
+    name_map.insert({name[ix], ix});
+    //    print_map("Map\n", name_map);
+  }
+  return false;
+}
+*/

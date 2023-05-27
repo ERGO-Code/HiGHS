@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipSolver.h"
@@ -106,6 +104,10 @@ void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
+  improving_solution_file_ = nullptr;
+  if (!submip && options_mip_->mip_improving_solution_file != "")
+    improving_solution_file_ =
+        fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
@@ -503,6 +505,7 @@ void HighsMipSolver::cleanupSolve() {
   dual_bound_ += model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
+  total_lp_iterations_ = mipdata_->total_lp_iterations;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
 
   // adjust objective sense in case of maximization problem
@@ -607,4 +610,18 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
+}
+
+void HighsMipSolver::runPresolve() {
+  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  mipdata_->init();
+  mipdata_->runPresolve();
+}
+
+const HighsLp& HighsMipSolver::getPresolvedModel() const {
+  return mipdata_->presolvedModel;
+}
+
+HighsPresolveStatus HighsMipSolver::getPresolveStatus() const {
+  return mipdata_->presolve_status;
 }

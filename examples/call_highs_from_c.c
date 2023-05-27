@@ -301,6 +301,12 @@ void minimal_api_mps() {
 }
 
 void full_api() {
+  printf("\nHiGHS version %s\n", Highs_version());
+  printf("      Major version %d\n", Highs_versionMajor());
+  printf("      Minor version %d\n", Highs_versionMinor());
+  printf("      Patch version %d\n", Highs_versionPatch());
+  printf("      Githash %s\n", Highs_githash());
+  printf("      compilation date %s\n", Highs_compilationDate());
   // This example does exactly the same as the minimal example above,
   // but illustrates the full C API.  It first forms and solves the LP
   //
@@ -514,6 +520,14 @@ void full_api() {
   assert(model_status == kHighsModelStatusOptimal);
 
   printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
+
+  // Check what type of info values are
+  int info_type;
+  const char* info_string = "objective_function_value";
+  run_status = Highs_getInfoType(highs, info_string, &info_type);
+  printf("Info %s is of type %d\n", info_string, info_type);
+  assert(run_status == kHighsStatusOk);
+  assert(info_type == kHighsInfoTypeDouble);
 
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);

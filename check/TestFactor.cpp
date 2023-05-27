@@ -32,7 +32,7 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   highs.run();
   basic_set.resize(num_row);
   // Get the optimal set of basic variables
-  highs.getBasicVariables(&basic_set[0]);
+  highs.getBasicVariables(basic_set.data());
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
     basic_set[iRow] =
         basic_set[iRow] < 0 ? num_col - basic_set[iRow] + 1 : basic_set[iRow];
@@ -351,7 +351,7 @@ bool testSolveDense() {
     unit[iCol] = 1.0;
     rhs_dense.clear();
     for (HighsInt iCol = 0; iCol < num_row; iCol++)
-      rhs_dense[iCol] = lp.a_matrix_.computeDot(unit, basic_set[iCol]);
+      rhs_dense.push_back(lp.a_matrix_.computeDot(unit, basic_set[iCol]));
     factor.btranCall(rhs_dense);
     error_norm = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
@@ -369,7 +369,7 @@ bool testSolveDense() {
     // Dense BTRAN
     rhs_dense.clear();
     for (HighsInt iCol = 0; iCol < num_row; iCol++)
-      rhs_dense[iCol] = lp.a_matrix_.computeDot(solution, basic_set[iCol]);
+      rhs_dense.push_back(lp.a_matrix_.computeDot(solution, basic_set[iCol]));
     factor.btranCall(rhs_dense);
     error_norm = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++)

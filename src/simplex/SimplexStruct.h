@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexStruct.h
@@ -44,7 +42,7 @@ struct SimplexBasis {
 struct HighsSimplexStatus {
   // Status of LP solved by the simplex method and its data
   bool initialised_for_new_lp = false;
-  bool is_dualised = false;
+  bool is_dualized = false;
   bool is_permuted = false;
   bool initialised_for_solve = false;
   bool has_basis = false;      // The simplex LP has a valid simplex basis
@@ -220,6 +218,14 @@ struct HighsSimplexInfo {
   HighsInt primal_phase1_iteration_count = 0;
   HighsInt primal_phase2_iteration_count = 0;
   HighsInt primal_bound_swap = 0;
+
+  // Starting values for use in reportSimplexPhaseIterations
+  HighsInt iteration_count0 = 0;
+  HighsInt dual_phase1_iteration_count0 = 0;
+  HighsInt dual_phase2_iteration_count0 = 0;
+  HighsInt primal_phase1_iteration_count0 = 0;
+  HighsInt primal_phase2_iteration_count0 = 0;
+  HighsInt primal_bound_swap0 = 0;
 
   HighsInt min_concurrency = 1;
   HighsInt num_concurrency = 1;

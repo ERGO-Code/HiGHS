@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.h
@@ -24,8 +22,8 @@
 #include <string>
 #include <utility>
 
-#include "HighsPostsolveStack.h"
 #include "lp_data/HighsLp.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsComponent.h"
 #include "util/HighsTimer.h"
 
@@ -34,13 +32,6 @@
 
 // The structure of component is general, of the presolve component - presolve
 // specific.
-
-enum class HighsPostsolveStatus {
-  kNotPresolved = -1,
-  kNoPrimalSolutionError,
-  kSolutionRecovered,
-  kBasisError
-};
 
 struct PresolveComponentData : public HighsComponentData {
   HighsLp reduced_lp_;
@@ -70,27 +61,10 @@ struct PresolveComponentInfo : public HighsComponentInfo {
   HighsInt n_cols_removed = 0;
   HighsInt n_nnz_removed = 0;
 
-  double init_time = 0;
   double presolve_time = 0;
-  double solve_time = 0;
   double postsolve_time = 0;
-  double cleanup_time = 0;
 
   virtual ~PresolveComponentInfo() = default;
-};
-
-// HighsComponentOptions is a placeholder for options specific to this component
-struct PresolveComponentOptions : public HighsComponentOptions {
-  bool is_valid = false;
-  // presolve options later when needed.
-
-  std::string iteration_strategy = "smart";
-  HighsInt max_iterations = 0;
-
-  double time_limit = -1;
-  bool dev = false;
-
-  virtual ~PresolveComponentOptions() = default;
 };
 
 class PresolveComponent : public HighsComponent {
@@ -104,13 +78,7 @@ class PresolveComponent : public HighsComponent {
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
   HighsPresolveLog& getPresolveLog() { return data_.presolve_log_; }
 
-  HighsStatus setOptions(const HighsOptions& options);
-  std::string presolveStatusToString(const HighsPresolveStatus presolve_status);
-
-  void negateReducedLpColDuals(bool reduced);
-  void negateReducedLpCost();
-
-  //  bool has_run_ = false;
+  void negateReducedLpColDuals();
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;
@@ -122,10 +90,4 @@ class PresolveComponent : public HighsComponent {
 
   virtual ~PresolveComponent() = default;
 };
-
-namespace presolve {
-
-bool checkOptions(const PresolveComponentOptions& options);
-}
-
 #endif

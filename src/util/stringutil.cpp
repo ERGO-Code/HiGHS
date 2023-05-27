@@ -2,15 +2,15 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
-/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "util/stringutil.h"
+
+#include <cassert>
 
 void strRemoveWhitespace(char* str) {
   char* dest = str;
@@ -101,8 +101,12 @@ int first_word_end(std::string& str, int start) {
 }
 
 std::string first_word(std::string& str, int start) {
+  // If start is (at least) the length of str, then next_word_start is
+  // negative, so there's no word, so return ""
+  if (start >= int(str.length())) return "";
   const std::string chars = "\t\n\v\f\r ";
   int next_word_start = str.find_first_not_of(chars, start);
   int next_word_end = str.find_first_of(chars, next_word_start);
+  assert(next_word_start >= 0);
   return str.substr(next_word_start, next_word_end - next_word_start);
 }

@@ -74,9 +74,13 @@ class CholeskyFactor {
     std::vector<double> L_old = L;
     L.clear();
     L.resize((new_k_max) * (new_k_max));
+    const HighsInt l_size = L.size();
+    // Driven by #958, changes made in following lines to avoid array
+    // bound error when new_k_max < current_k_max
     HighsInt min_k_max = min(new_k_max, current_k_max);
     for (HighsInt i = 0; i < min_k_max; i++) {
-      for (HighsInt j = 0; j < current_k_max; j++) {
+      for (HighsInt j = 0; j < min_k_max; j++) {
+	assert(i * (new_k_max) + j < l_size);
         L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
       }
     }
@@ -99,7 +103,6 @@ class CholeskyFactor {
     double mu = gyp * yp;
     l.resparsify();
     double lambda = mu - l.norm2();
-
     if (lambda > 0.0) {
       if (current_k_max <= current_k + 1) {
         resize(current_k_max * 2);
@@ -112,6 +115,7 @@ class CholeskyFactor {
 
       current_k++;
     } else {
+      printf("lambda = %lf\n", lambda);
       return QpSolverStatus::NOTPOSITIVDEFINITE;
 
       //     |LL' 0|

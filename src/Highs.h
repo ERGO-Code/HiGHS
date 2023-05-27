@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
@@ -26,9 +24,9 @@
 #include "presolve/PresolveComponent.h"
 
 /**
- * @brief Return the version as a string
+ * @brief Return the version
  */
-std::string highsVersion();
+const char* highsVersion();
 
 /**
  * @brief Return detailed version information, githash and compilation
@@ -37,8 +35,8 @@ std::string highsVersion();
 HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
-std::string highsGithash();
-std::string highsCompilationDate();
+const char* highsGithash();
+const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -47,12 +45,42 @@ class Highs {
  public:
   Highs();
   virtual ~Highs() {
-    FILE* log_file_stream = options_.log_options.log_file_stream;
-    if (log_file_stream != nullptr) {
-      assert(log_file_stream != stdout);
-      fclose(log_file_stream);
+    FILE* log_stream = options_.log_options.log_stream;
+    if (log_stream != nullptr) {
+      assert(log_stream != stdout);
+      fclose(log_stream);
     }
   }
+
+  /**
+   * @brief Return the version as a string
+   */
+  std::string version() const { return highsVersion(); }
+
+  /**
+   * @brief Return major version
+   */
+  HighsInt versionMajor() const { return highsVersionMajor(); }
+
+  /**
+   * @brief Return minor version
+   */
+  HighsInt versionMinor() const { return highsVersionMinor(); }
+
+  /**
+   * @brief Return patch version
+   */
+  HighsInt versionPatch() const { return highsVersionPatch(); }
+
+  /**
+   * @brief Return githash
+   */
+  std::string githash() const { return highsGithash(); }
+
+  /**
+   * @brief Return compilation date
+   */
+  std::string compilationDate() const { return highsCompilationDate(); }
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -126,6 +154,15 @@ class Highs {
   HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
+  /**
+   * @brief Pass a column name to the incumbent model
+   */
+  HighsStatus passColName(const HighsInt col, const std::string& name);
+
+  /**
+   * @brief Pass a row name to the incumbent model
+   */
+  HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
    * @brief Read in a model
@@ -216,21 +253,34 @@ class Highs {
   /**
    * @brief Gets an option value as bool/HighsInt/double/string and, for
    * bool/int/double, only if it's of the correct type.
+   *
+   * NB Deprecate in v2.0, in order to replace with more general
+   * get*OptionValues
    */
-  HighsStatus getOptionValue(const std::string& option, bool& value) const;
+  HighsStatus getOptionValue(const std::string& option, bool& value) const {
+    return this->getBoolOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const;
+  HighsStatus getOptionValue(const std::string& option, HighsInt& value) const {
+    return this->getIntOptionValues(option, &value);
+  }
 
-  HighsStatus getOptionValue(const std::string& option, double& value) const;
+  HighsStatus getOptionValue(const std::string& option, double& value) const {
+    return this->getDoubleOptionValues(option, &value);
+  }
 
   HighsStatus getOptionValue(const std::string& option,
-                             std::string& value) const;
+                             std::string& value) const {
+    return this->getStringOptionValues(option, &value);
+  }
 
   /**
    * @brief Get the type expected by an option
    */
   HighsStatus getOptionType(const std::string& option,
-                            HighsOptionType& type) const;
+                            HighsOptionType& type) const {
+    return this->getOptionType(option, &type);
+  }
 
   /**
    * @brief Reset the options to the default values
@@ -244,6 +294,56 @@ class Highs {
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
                            const bool report_only_deviations = false) const;
+
+  /**
+   * @brief Returns the number of user-settable options
+   */
+  HighsInt getNumOptions() const {
+    return this->options_.num_user_settable_options_;
+  }
+
+  /**
+   * @brief Get the number of user-settable options
+   */
+  HighsStatus getOptionName(const HighsInt index, std::string* name) const;
+
+  /**
+   * @brief Get the type of an option
+   */
+  HighsStatus getOptionType(const std::string& option,
+                            HighsOptionType* type) const;
+
+  /**
+   * @brief Get the current and default values of a bool option
+   */
+  HighsStatus getBoolOptionValues(const std::string& option,
+                                  bool* current_value = nullptr,
+                                  bool* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of an int option
+   */
+  HighsStatus getIntOptionValues(const std::string& option,
+                                 HighsInt* current_value = nullptr,
+                                 HighsInt* min_value = nullptr,
+                                 HighsInt* max_value = nullptr,
+                                 HighsInt* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current, min, max and default values of a double option
+   */
+  HighsStatus getDoubleOptionValues(const std::string& option,
+                                    double* current_value = nullptr,
+                                    double* min_value = nullptr,
+                                    double* max_value = nullptr,
+                                    double* default_value = nullptr) const;
+
+  /**
+   * @brief Get the current and default values of a string option
+   */
+  HighsStatus getStringOptionValues(const std::string& option,
+                                    std::string* current_value = nullptr,
+                                    std::string* default_value = nullptr) const;
 
   /**
    * @brief Get a const reference to the internal info values
@@ -264,12 +364,14 @@ class Highs {
 
   HighsStatus getInfoValue(const std::string& info, double& value) const;
 
+  HighsStatus getInfoType(const std::string& info, HighsInfoType& type) const;
+
   /**
    * @brief Write info values to a file, with the extension ".html"
    * producing HTML, otherwise using the standard format used to read
    * options from a file.
    */
-  HighsStatus writeInfo(const std::string& filename) const;
+  HighsStatus writeInfo(const std::string& filename = "") const;
 
   /**
    * @brief Get the value of infinity used by HiGHS
@@ -316,6 +418,16 @@ class Highs {
    */
   const HighsSolution& getSolution() const { return solution_; }
 
+  /**
+   * @brief Return a const reference to the internal HighsSolution instance
+   */
+  const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
+    return saved_objective_and_solution_;
+  }
+
+  /**
+   * @brief Return a const reference to the internal ICrash info instance
+   */
   const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
@@ -355,10 +467,8 @@ class Highs {
                            double* primal_ray_value = nullptr);
 
   /**
-   * @brief Get the ranging information for the current LP, possibly
-   * returning it, as well as holding it internally
+   * @brief Get the ranging information for the current LP
    */
-  HighsStatus getRanging();
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
@@ -378,15 +488,6 @@ class Highs {
   bool hasInvert() const;
 
   /**
-   * @brief Gets the internal basic variable index array in the order
-   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
-   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
-   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
-   * num_col+num_row) are (num_col+row_index).
-   */
-  const HighsInt* getBasicVariablesArray() const;
-
-  /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
    * getBasisTransposeSolve, getReducedRow and
@@ -394,15 +495,6 @@ class Highs {
    * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(HighsInt* basic_variables);
-
-  /**
-   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
-   * returning the result in the given HVector buffer which is
-   * expected to be setup with dimension num_row. The buffers
-   * previous contents will be overwritten.
-   */
-  HighsStatus getBasisInverseRowSparse(const HighsInt row,
-                                       HVector& row_ep_buffer);
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -547,6 +639,22 @@ class Highs {
   );
 
   /**
+   * @brief Get a column name from the incumbent model
+   */
+  HighsStatus getColName(const HighsInt col, std::string& name) const;
+
+  /**
+   * @brief Get column index corresponding to name
+   */
+  HighsStatus getColByName(const std::string& name, HighsInt& col);
+
+  /**
+   * @brief Get a column integrality from the incumbent model
+   */
+  HighsStatus getColIntegrality(const HighsInt col,
+                                HighsVarType& integrality) const;
+
+  /**
    * @brief Get multiple rows from the model given by an interval [from_row,
    * to_row]
    */
@@ -601,6 +709,16 @@ class Highs {
   );
 
   /**
+   * @brief Get a row name from the incumbent model
+   */
+  HighsStatus getRowName(const HighsInt row, std::string& name) const;
+
+  /**
+   * @brief Get row index corresponding to name
+   */
+  HighsStatus getRowByName(const std::string& name, HighsInt& row);
+
+  /**
    * @brief Get a matrix coefficient
    */
   HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value);
@@ -608,12 +726,12 @@ class Highs {
   /**
    * @brief Write out the incumbent model to a file
    */
-  HighsStatus writeModel(const std::string& filename);
+  HighsStatus writeModel(const std::string& filename = "");
 
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename);
+  HighsStatus writeBasis(const std::string& filename = "");
 
   /**
    * Methods for incumbent model modification
@@ -890,9 +1008,10 @@ class Highs {
   /**
    * @brief Set the callback method and user data to use for logging
    */
-  HighsStatus setLogCallback(void (*log_callback)(HighsLogType, const char*,
-                                                  void*),
-                             void* log_callback_data = nullptr);
+  HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
+                                                       const char*, void*),
+                             void* deprecated = nullptr  // V2.0 remove
+  );
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -921,6 +1040,8 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string presolveStatusToString(
+      const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
   std::string solutionStatusToString(const HighsInt solution_status) const;
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
@@ -1001,9 +1122,24 @@ class Highs {
                : nullptr;
   }
 
-#ifdef OSI_FOUND
-  friend class OsiHiGHSSolverInterface;
-#endif
+  /**
+   * @brief Gets the internal basic variable index array in the order
+   * corresponding to calls to getBasisInverseRow, getBasisInverseCol,
+   * getBasisSolve, getBasisTransposeSolve, getReducedRow and getReducedColumn.
+   * Entries are indices of columns if in [0,num_col), and entries in [num_col,
+   * num_col+num_row) are (num_col+row_index).
+   */
+  const HighsInt* getBasicVariablesArray() const;
+
+  /**
+   * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
+   * returning the result in the given HVector buffer which is
+   * expected to be setup with dimension num_row. The buffers
+   * previous contents will be overwritten.
+   */
+  HighsStatus getBasisInverseRowSparse(const HighsInt row,
+                                       HVector& row_ep_buffer);
+
   // Start of deprecated methods
 
   HighsInt getNumCols() const {
@@ -1114,6 +1250,8 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
+  std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
+
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
@@ -1150,7 +1288,7 @@ class Highs {
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
-                            FILE*& file, bool& html) const;
+                            FILE*& file, HighsFileType& file_type) const;
 
   void reportModel();
   void newHighsBasis();
@@ -1278,6 +1416,7 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
+  HighsStatus getRangingInterface();
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();

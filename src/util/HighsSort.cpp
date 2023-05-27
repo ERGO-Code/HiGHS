@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsSort.cpp
@@ -332,8 +330,8 @@ void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
   vector<HighsInt> sort_set_vec(1 + num_entries);
   vector<HighsInt> perm_vec(1 + num_entries);
 
-  HighsInt* sort_set = &sort_set_vec[0];
-  HighsInt* perm = &perm_vec[0];
+  HighsInt* sort_set = sort_set_vec.data();
+  HighsInt* perm = perm_vec.data();
 
   for (HighsInt ix = 0; ix < num_entries; ix++) {
     sort_set[1 + ix] = set[ix];
@@ -354,8 +352,8 @@ void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
   vector<HighsInt> sort_set_vec(1 + num_entries);
   vector<HighsInt> perm_vec(1 + num_entries);
 
-  HighsInt* sort_set = &sort_set_vec[0];
-  HighsInt* perm = &perm_vec[0];
+  HighsInt* sort_set = sort_set_vec.data();
+  HighsInt* perm = perm_vec.data();
 
   for (HighsInt ix = 0; ix < num_entries; ix++) {
     sort_set[1 + ix] = set[ix];

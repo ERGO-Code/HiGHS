@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderLp.cpp
@@ -25,7 +23,7 @@
 #include "lp_data/HighsLpUtils.h"
 
 const bool original_double_format = false;
-const bool allow_model_names = false;
+const bool allow_model_names = true;
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   const std::string filename,
@@ -283,9 +281,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   ar_matrix.ensureRowwise();
 
   const bool has_col_names =
-      allow_model_names && lp.col_names_.size() == lp.num_col_;
+      allow_model_names && HighsInt(lp.col_names_.size()) == lp.num_col_;
   const bool has_row_names =
-      allow_model_names && lp.row_names_.size() == lp.num_row_;
+      allow_model_names && HighsInt(lp.row_names_.size()) == lp.num_row_;
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -359,6 +357,10 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFileValue(file, lp.row_lower_[iRow], true);
       this->writeToFileLineend(file);
     } else {
+      // Need to distinguish the names when writing out boxed
+      // constraint row as two single-sided constraints
+      const bool boxed =
+          lp.row_lower_[iRow] > -kHighsInf && lp.row_upper_[iRow] < kHighsInf;
       if (lp.row_lower_[iRow] > -kHighsInf) {
         // Has a lower bound
         if (has_row_names) {
@@ -366,7 +368,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         } else {
           this->writeToFileCon(file, iRow);
         }
-        this->writeToFile(file, "lo:");
+        if (boxed) {
+          this->writeToFile(file, "lo:");
+        } else {
+          this->writeToFile(file, ":");
+        }
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " >=");
         this->writeToFileValue(file, lp.row_lower_[iRow], true);
@@ -379,7 +385,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         } else {
           this->writeToFileCon(file, iRow);
         }
-        this->writeToFile(file, "up:");
+        if (boxed) {
+          this->writeToFile(file, "up:");
+        } else {
+          this->writeToFile(file, ":");
+        }
         this->writeToFileMatrixRow(file, iRow, ar_matrix, lp.col_names_);
         this->writeToFile(file, " <=");
         this->writeToFileValue(file, lp.row_upper_[iRow], true);

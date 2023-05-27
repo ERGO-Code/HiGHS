@@ -46,11 +46,11 @@ void assertLogical(const char* name, const HighsInt is) {
 void version_api() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
-    printf("HiGHS version major %d\n", Highs_version_major());
-    printf("HiGHS version minor %d\n", Highs_version_minor());
-    printf("HiGHS version patch %d\n", Highs_version_patch());
+    printf("HiGHS version major %"HIGHSINT_FORMAT"\n", Highs_versionMajor());
+    printf("HiGHS version minor %"HIGHSINT_FORMAT"\n", Highs_versionMinor());
+    printf("HiGHS version patch %"HIGHSINT_FORMAT"\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    printf("HiGHS compilation date %s\n", Highs_compilation_date());
+    printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 
@@ -417,7 +417,239 @@ void full_api() {
   return_status = Highs_run(highs);
   assert( return_status == kHighsStatusOk );
 
+  char* col_prefix = "Col";
+  char* row_prefix = "Row";
+  // Check index out of bounds
+  return_status = Highs_passColName(highs, -1, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passColName(highs, num_col, col_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, -1, row_prefix);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_passRowName(highs, num_row, row_prefix);
+  assert( return_status == kHighsStatusError );
+
+  // Define all column names to be the same
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    return_status = Highs_passColName(highs, iCol, col_prefix);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusError );
+
+  // Define all column names to be different
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    const char suffix = iCol + '0';
+    const char* suffix_p = &suffix;
+    char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
+    sprintf(name, "%s%" HIGHSINT_FORMAT "", col_prefix, iCol);
+    const char* name_p = name;
+    return_status = Highs_passColName(highs, iCol, name_p);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusOk );
+
+  // Check that the columns can be found by name
+  HighsInt ck_iCol;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    char name[5];
+    return_status = Highs_getColName(highs, iCol, name);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_getColByName(highs, name, &ck_iCol);
+    assert( return_status == kHighsStatusOk );
+    assert( ck_iCol == iCol );
+  }
+  return_status = Highs_getColByName(highs, "FRED", &ck_iCol);
+  assert( return_status == kHighsStatusError );
+  
+  // Define all row names to be the same
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    return_status = Highs_passRowName(highs, iRow, row_prefix);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusError );
+  
+  // Define all row names to be different
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    const char suffix = iRow + '0';
+    const char* suffix_p = &suffix;
+    char name[5];  // 3 chars prefix, 1 char iCol, 1 char 0-terminator
+    sprintf(name, "%s%" HIGHSINT_FORMAT "", row_prefix, iRow);
+    const char* name_p = name;
+    return_status = Highs_passRowName(highs, iRow, name_p);
+    assert( return_status == kHighsStatusOk );
+  }
+  return_status = Highs_writeModel(highs, "");
+  assert( return_status == kHighsStatusOk );
+  
+  // Check that the rows can be found by name
+  HighsInt ck_iRow;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    char name[5];
+    return_status = Highs_getRowName(highs, iRow, name);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_getRowByName(highs, name, &ck_iRow);
+    assert( return_status == kHighsStatusOk );
+    assert( ck_iRow == iRow );
+  }
+  return_status = Highs_getRowByName(highs, "FRED", &ck_iRow);
+  assert( return_status == kHighsStatusError );
+  
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    char name[5];
+    char* name_p = name;
+    return_status = Highs_getColName(highs, iCol, name_p);
+    assert( return_status == kHighsStatusOk );
+    if (dev_run) printf("Column %" HIGHSINT_FORMAT " has name %s\n", iCol, name_p);
+  }
+  
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    char name[5];
+    char* name_p = name;
+    return_status = Highs_getRowName(highs, iRow, name_p);
+    assert( return_status == kHighsStatusOk );
+    if (dev_run) printf("Row    %" HIGHSINT_FORMAT " has name %s\n", iRow, name_p);
+  }
+
   Highs_destroy(highs);
+}
+
+void full_api_options() {
+  void* highs;
+
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+
+  const double kHighsInf = Highs_getInfinity(highs);
+  HighsInt simplex_scale_strategy;
+  HighsInt return_status;
+  return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("simplex_scale_strategy = %"HIGHSINT_FORMAT": setting it to 3\n", simplex_scale_strategy);
+  simplex_scale_strategy = 3;
+  return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+
+  const HighsInt presolve_index = 0;
+  char* name = NULL;
+  return_status = Highs_getOptionName(highs, presolve_index, &name);
+  if (dev_run) printf("option %"HIGHSINT_FORMAT" has name %s\n", presolve_index, name);
+  const char* presolve = "presolve";
+  assert( *name == *presolve );
+  free(name);
+
+  HighsInt check_simplex_scale_strategy;
+  HighsInt min_simplex_scale_strategy;
+  HighsInt max_simplex_scale_strategy;
+  HighsInt default_simplex_scale_strategy;
+  return_status = Highs_getIntOptionValues(highs, "scale_strategy", NULL, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getDoubleOptionValues(highs, "simplex_scale_strategy", NULL, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getIntOptionValues(highs, "simplex_scale_strategy",
+					   &check_simplex_scale_strategy,
+					   &min_simplex_scale_strategy,
+					   &max_simplex_scale_strategy,
+					   &default_simplex_scale_strategy);
+  assert( return_status == kHighsStatusOk );
+  assert( check_simplex_scale_strategy == simplex_scale_strategy );
+  assert( min_simplex_scale_strategy ==  0 );
+  assert( max_simplex_scale_strategy ==  5 );
+  assert( default_simplex_scale_strategy == 1 );
+
+
+  // There are some functions to check what type of option value you should
+  // provide.
+  HighsInt option_type;
+  return_status = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
+  assert( return_status == kHighsStatusOk );
+  assert( option_type == kHighsOptionTypeInt );
+  return_status = Highs_getOptionType(highs, "bad_option", &option_type);
+  assert( return_status == kHighsStatusError );
+
+  double primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  assert( return_status == kHighsStatusOk );
+  if (dev_run)
+    printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
+  primal_feasibility_tolerance = 1e-6;
+  return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
+  assert( return_status == kHighsStatusOk );
+
+  double check_primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValues(highs, "primal_feasibility_tolerance",
+  					      &check_primal_feasibility_tolerance, NULL, NULL, NULL);
+  assert( return_status == kHighsStatusOk );
+  assert( check_primal_feasibility_tolerance == primal_feasibility_tolerance );
+  double default_primal_feasibility_tolerance;
+  double min_primal_feasibility_tolerance;
+  double max_primal_feasibility_tolerance;
+  return_status = Highs_getDoubleOptionValues(highs, "primal_feasibility_tolerance",
+  					      &check_primal_feasibility_tolerance,
+  					      &min_primal_feasibility_tolerance,
+  					      &max_primal_feasibility_tolerance,
+  					      &default_primal_feasibility_tolerance);
+  assert( min_primal_feasibility_tolerance == 1e-10 );
+  assert( max_primal_feasibility_tolerance == kHighsInf );
+  assert( default_primal_feasibility_tolerance ==  1e-7 );
+
+  Highs_setStringOptionValue(highs, "presolve", "off");
+
+  return_status = Highs_getStringOptionValues(highs, "pre-solve", NULL, NULL);
+  assert( return_status == kHighsStatusError );
+  //  char check_presolve_value[kHighsMaximumStringLength];
+  char check_presolve_value[512];
+  return_status = Highs_getStringOptionValues(highs, "presolve", check_presolve_value, NULL);
+  assert( return_status == kHighsStatusOk );
+
+  // const HighsInt output_flag = 1;
+  // return_status = Highs_setBoolOptionValue(highs, "output_flag", output_flag);
+  return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
+
+  assert( return_status == kHighsStatusOk );
+
+  HighsInt check_output_flag, default_output_flag;
+  return_status = Highs_getBoolOptionValues(highs, "output_flag", NULL, NULL);
+  assert( return_status == kHighsStatusOk );
+  return_status = Highs_getBoolOptionValues(highs, "output_flag",
+					    &check_output_flag, NULL);
+  assert( return_status == kHighsStatusOk );
+  //    assert( check_output_flag == output_flag );
+  assert( check_output_flag == 1 );
+  return_status = Highs_getBoolOptionValues(highs, "output_flag",
+					    &check_output_flag,
+					    &default_output_flag);
+  assert( return_status == kHighsStatusOk );
+  //    assert( default_output_flag == output_flag );
+  assert( default_output_flag == 1 );
+  
+  HighsInt num_string_option = 0;
+  char* option = NULL;
+  HighsInt type;
+  HighsInt num_options = Highs_getNumOptions(highs);
+  char current_string_value[512];
+ 
+  if (dev_run)
+    printf("\nString options are:\n");
+  for (HighsInt index = 0; index < num_options; index++) {
+    Highs_getOptionName(highs, index, &option);
+    Highs_getOptionType(highs, option, &type);
+    if (type != kHighsOptionTypeString) {
+      free(option);
+      continue;
+    }
+    Highs_getStringOptionValues(highs, option, current_string_value, NULL);
+    num_string_option++;
+    if (dev_run)
+      printf("%"HIGHSINT_FORMAT": %-24s \"%s\"\n",
+	     num_string_option, option, current_string_value);    
+    free(option);
+  }
+
+  Highs_destroy(highs);
+
 }
 
 void full_api_lp() {
@@ -431,12 +663,11 @@ void full_api_lp() {
   void* highs;
 
   highs = Highs_create();
-  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
 
   const HighsInt num_col = 2;
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
-  HighsInt i;
 
   // Define the column costs, lower bounds and upper bounds
   double col_cost[2] = {2.0, 3.0};
@@ -487,31 +718,66 @@ void full_api_lp() {
     printf("LP problem has old objective sense = %"HIGHSINT_FORMAT"\n", sense);
   assert( sense == kHighsObjSenseMinimize );
 
-  HighsInt simplex_scale_strategy;
-  return_status = Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("simplex_scale_strategy = %"HIGHSINT_FORMAT": setting it to 3\n", simplex_scale_strategy);
-  simplex_scale_strategy = 3;
-  return_status = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
-  // There are some functions to check what type of option value you should
-  // provide.
-  HighsInt option_type;
-  return_status = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
-  assert( return_status == kHighsStatusOk );
-  assert( option_type == kHighsOptionTypeInt );
-  return_status = Highs_getOptionType(highs, "bad_option", &option_type);
-  assert( return_status == kHighsStatusError );
 
-  double primal_feasibility_tolerance;
-  return_status = Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
-  assert( return_status == kHighsStatusOk );
-  if (dev_run)
-    printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
-  primal_feasibility_tolerance = 1e-6;
-  return_status = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
-  assert( return_status == kHighsStatusOk );
+  // fetch column data (just first column)
+  {
+    const HighsInt get_col = 0;
+    const HighsInt num_get_col = 1;
+    HighsInt get_num_col = 0;
+    double* get_costs = (double*)malloc(sizeof(double) * num_get_col);
+    double* get_lower = (double*)malloc(sizeof(double) * num_get_col);
+    double* get_upper = (double*)malloc(sizeof(double) * num_get_col);
+    HighsInt get_num_nz = 0;
+
+    return_status = Highs_getColsByRange(highs, get_col, get_col,
+					 &get_num_col, get_costs, get_lower, get_upper, &get_num_nz,
+					 NULL, NULL, NULL);
+    assert( return_status == kHighsStatusOk );
+
+    assertIntValuesEqual("getCols get_num_col", get_num_col, num_get_col);
+    assertDoubleValuesEqual("getCols get_costs", get_costs[0], col_cost[get_col]);
+    assertDoubleValuesEqual("getCols get_lower", get_lower[0], col_lower[get_col]);
+    assertDoubleValuesEqual("getCols get_upper", get_upper[0], col_upper[get_col]);
+    assertIntValuesEqual("getCols get_num_nz", get_num_nz, 2);
+
+      // could also check coefficients by calling again...
+
+    free(get_upper);
+    free(get_lower);
+    free(get_costs);
+  }
+
+  // fetch row data (just 2nd row: 10 <=  x_0 + 2x_1 <= 14)
+  {
+    const HighsInt get_row = 1;
+    const HighsInt num_get_row = 1;
+    HighsInt get_num_row = 0;
+    double* get_lower = (double*)malloc(sizeof(double) * num_get_row);
+    double* get_upper = (double*)malloc(sizeof(double) * num_get_row);
+    HighsInt get_num_nz = 0;
+
+    assertIntValuesEqual("getNumRows", Highs_getNumRows(highs), num_row);
+
+    return_status = Highs_getRowsByRange(highs, get_row, get_row,
+					 &get_num_row, get_lower, get_upper, &get_num_nz,
+					 NULL, NULL, NULL);
+    assert( return_status == kHighsStatusOk );
+
+    assertIntValuesEqual("getRows get_num_row", get_num_row, num_get_row);
+    assertDoubleValuesEqual("getRows get_lower", get_lower[0], row_lower[get_row]);
+    assertDoubleValuesEqual("getRows get_upper", get_upper[0], row_upper[get_row]);
+    assertIntValuesEqual("getRows get_num_nz", get_num_nz, 2);
+
+      // could also check coefficients by calling again...
+
+    free(get_upper);
+    free(get_lower);
+  }
+
+  
+
+
 
   return_status = Highs_setBoolOptionValue(highs, "output_flag", 0);
   assert( return_status == kHighsStatusOk );
@@ -521,8 +787,6 @@ void full_api_lp() {
   assert( return_status == kHighsStatusOk );
   if (dev_run)
     printf("Running loudly...\n");
-  return_status = Highs_setBoolOptionValue(highs, "output_flag", 1);
-  assert( return_status == kHighsStatusOk );
 
   // Get the model status
   HighsInt model_status = Highs_getModelStatus(highs);
@@ -554,13 +818,13 @@ void full_api_lp() {
       return_status = Highs_getBasis(highs, col_basis_status, row_basis_status);
       assert( return_status == kHighsStatusOk );
       // Report the column primal and dual values, and basis status
-      for (i = 0; i < num_col; i++)
+      for (HighsInt iCol = 0; iCol < num_col; iCol++)
 	printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, col_value[i], col_dual[i], col_basis_status[i]);
+	       iCol, col_value[iCol], col_dual[iCol], col_basis_status[iCol]);
       // Report the row primal and dual values, and basis status
-      for (i = 0; i < num_row; i++)
+      for (HighsInt iRow = 0; iRow < num_row; iRow++)
 	printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
-	       i, row_value[i], row_dual[i], row_basis_status[i]);
+	       iRow, row_value[iRow], row_dual[iRow], row_basis_status[iRow]);
     }
   }
   free(col_value);
@@ -592,6 +856,7 @@ void full_api_lp() {
   assert( model_status == kHighsModelStatusOptimal );
   if (dev_run)
     printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", return_status, model_status);
+
   Highs_destroy(highs);
 }
 
@@ -653,6 +918,23 @@ void full_api_mip() {
   assert( return_status == kHighsStatusOk );
   assert( mip_node_count == 1 );
 
+  // Test Highs_getColIntegrality
+  HighsInt col_integrality;
+  return_status = Highs_getColIntegrality(highs, -1, &col_integrality);
+  assert( return_status == kHighsStatusError );
+  return_status = Highs_getColIntegrality(highs, num_col, &col_integrality);
+  assert( return_status == kHighsStatusError );
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    return_status = Highs_getColIntegrality(highs, iCol, &col_integrality);
+    assert( return_status == kHighsStatusOk );
+    assert( col_integrality == 1 );
+  }
+
+  Highs_destroy(highs);
+
+  free(col_value);
+  free(row_value);
+
 }
 
 void full_api_qp() {
@@ -682,9 +964,9 @@ void full_api_qp() {
   HighsInt q_dim = 1;
   HighsInt q_num_nz = 1;
   HighsInt q_format = kHighsHessianFormatTriangular;
-  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
-  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
-  double* q_value = (double*)malloc(sizeof(double) * q_num_nz);
+  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt*) * q_dim);
+  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt*) * q_num_nz);
+  double* q_value = (double*)malloc(sizeof(double*) * q_num_nz);
   q_start[0] = 0;
   q_index[0] = 0;
   q_value[0] = 2.0;
@@ -722,10 +1004,13 @@ void full_api_qp() {
   model_status = Highs_getModelStatus(highs);
   assertIntValuesEqual("Model status for 2-d QP with illegal Hessian", model_status, 2);
 
+  free(q_start);
+  free(q_index);
+  free(q_value);
+
   // Pass the new Hessian
   q_dim = 2;
   q_num_nz = 2;
-  q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
   q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
   q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
   q_value = (double*)malloc(sizeof(double) * q_num_nz);
@@ -750,6 +1035,7 @@ void full_api_qp() {
   objective_function_value = Highs_getObjectiveValue(highs);
   assertDoubleValuesEqual("Objective", objective_function_value, required_objective_function_value);
 
+  free(col_solution);
   col_solution = (double*)malloc(sizeof(double) * num_col);
 
   return_status = Highs_getSolution(highs, col_solution, NULL, NULL, NULL);
@@ -816,6 +1102,14 @@ void full_api_qp() {
   model_status = Highs_getModelStatus(highs);
   assertIntValuesEqual("Model status for infeasible 2-d QP", model_status, 8);
   assert( model_status == kHighsModelStatusInfeasible );
+
+  Highs_destroy(highs);
+
+  free(q_start);
+  free(q_index);
+  free(q_value);
+  free(col_solution);
+
 }
 
 void options() {
@@ -838,6 +1132,7 @@ void options() {
   assert( primal_feasibility_tolerance == 2.0 );
 
   Highs_destroy(highs);
+
 }
 
 void test_getColsByRange() {
@@ -871,6 +1166,7 @@ void test_getColsByRange() {
   assert( matrix_index[1] == 0 );
   assert( matrix_value[0] == 1.0 );
   assert( matrix_value[1] == -1.0 );
+
   Highs_destroy(highs);
 }
 
@@ -898,7 +1194,132 @@ void test_passHessian() {
   assertDoubleValuesEqual("Objective", objective_value, optimal_objective_value);
   assertDoubleValuesEqual("Primal", col_value[0], primal);
   assertDoubleValuesEqual("Dual", col_dual[0], dual);
+
   Highs_destroy(highs);
+}
+
+void test_ranging() {
+
+  void* highs = Highs_create();
+  if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
+  //
+  // Set up
+  //        min y
+  //        s.t.
+  //        -x + y >= 2
+  //        x + y >= 0
+  //
+  double inf = Highs_getInfinity(highs);
+  Highs_addVar(highs, -inf, inf);
+  Highs_addVar(highs, -inf, inf);
+  Highs_changeColCost(highs, 0, 0);
+  Highs_changeColCost(highs, 1, 1);
+  HighsInt index[2] = {0.0, 1.0};
+  double value[2] = {-1, 1};
+  Highs_addRow(highs, 2, inf, 2, index, value);
+  value[0] = 1.0;
+  Highs_addRow(highs, 0, inf, 2, index, value);
+  // Cost ranging
+  // c0 2 -1 1 0
+  // c1 0 0 inf inf
+  // 
+  // Bound ranging
+  // Columns
+  // c0 1 -inf inf 1
+  // c1 1 1 inf 1
+  // Rows
+  // r0 -inf -inf inf inf
+  // r1 -inf -inf inf inf
+  Highs_run(highs);
+  HighsInt num_col = Highs_getNumCol(highs);
+  HighsInt num_row = Highs_getNumRow(highs);
+  double* col_cost_up_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_cost_up_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_cost_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_cost_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_cost_dn_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_cost_dn_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_cost_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_cost_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_bound_up_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_bound_up_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_bound_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_bound_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* col_bound_dn_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_bound_dn_objective = (double*)malloc(sizeof(double) * num_col);
+  HighsInt* col_bound_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  HighsInt* col_bound_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
+  double* row_bound_up_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_bound_up_objective = (double*)malloc(sizeof(double) * num_row);
+  HighsInt* row_bound_up_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt* row_bound_up_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  double* row_bound_dn_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_bound_dn_objective = (double*)malloc(sizeof(double) * num_row);
+  HighsInt* row_bound_dn_in_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt* row_bound_dn_ou_var = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
+  HighsInt status = 
+  Highs_getRanging(highs,
+		   //
+		   col_cost_up_value, col_cost_up_objective, col_cost_up_in_var, col_cost_up_ou_var, 
+		   col_cost_dn_value, col_cost_dn_objective, col_cost_dn_in_var, col_cost_dn_ou_var, 
+		   col_bound_up_value, col_bound_up_objective, col_bound_up_in_var, col_bound_up_ou_var, 
+		   col_bound_dn_value, col_bound_dn_objective, col_bound_dn_in_var, col_bound_dn_ou_var, 
+		   row_bound_up_value, row_bound_up_objective, row_bound_up_in_var, row_bound_up_ou_var, 
+		   row_bound_dn_value, row_bound_dn_objective, row_bound_dn_in_var, row_bound_dn_ou_var);
+  assert(status == kHighsStatusOk);
+
+  assertDoubleValuesEqual("col_cost_dn_objective[0]", col_cost_dn_objective[0], 2);
+  assertDoubleValuesEqual("col_cost_dn_value[0]", col_cost_dn_value[0], -1);
+  assertDoubleValuesEqual("col_cost_up_value[0]", col_cost_up_value[0], 1);
+  assertDoubleValuesEqual("col_cost_up_objective[0]", col_cost_up_objective[0], 0);
+  assertDoubleValuesEqual("col_cost_dn_objective[1]", col_cost_dn_objective[1], 0);
+  assertDoubleValuesEqual("col_cost_dn_value[1]", col_cost_dn_value[1], 0);
+  assertDoubleValuesEqual("col_cost_up_value[1]", col_cost_up_value[1], inf);
+  assertDoubleValuesEqual("col_cost_up_objective[1]", col_cost_up_objective[1], inf);
+
+  assertDoubleValuesEqual("col_bound_dn_objective[0]", col_bound_dn_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[0]", col_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("col_bound_up_value[0]", col_bound_up_value[0], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[0]", col_bound_up_objective[0], 1);
+  assertDoubleValuesEqual("col_bound_dn_objective[1]", col_bound_dn_objective[1], 1);
+  assertDoubleValuesEqual("col_bound_dn_value[1]", col_bound_dn_value[1], 1);
+  assertDoubleValuesEqual("col_bound_up_value[1]", col_bound_up_value[1], inf);
+  assertDoubleValuesEqual("col_bound_up_objective[1]", col_bound_up_objective[1], 1);
+
+  assertDoubleValuesEqual("row_bound_dn_objective[0]", row_bound_dn_objective[0], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[0]", row_bound_dn_value[0], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[0]", row_bound_up_value[0], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[0]", row_bound_up_objective[0], inf);
+  assertDoubleValuesEqual("row_bound_dn_objective[1]", row_bound_dn_objective[1], -inf);
+  assertDoubleValuesEqual("row_bound_dn_value[1]", row_bound_dn_value[1], -inf);
+  assertDoubleValuesEqual("row_bound_up_value[1]", row_bound_up_value[1], inf);
+  assertDoubleValuesEqual("row_bound_up_objective[1]", row_bound_up_objective[1], inf);
+
+  free(col_cost_up_value);
+  free(col_cost_up_objective);
+  free(col_cost_up_in_var);
+  free(col_cost_up_ou_var);
+  free(col_cost_dn_value);
+  free(col_cost_dn_objective);
+  free(col_cost_dn_in_var);
+  free(col_cost_dn_ou_var);
+  free(col_bound_up_value);
+  free(col_bound_up_objective);
+  free(col_bound_up_in_var);
+  free(col_bound_up_ou_var);
+  free(col_bound_dn_value);
+  free(col_bound_dn_objective);
+  free(col_bound_dn_in_var);
+  free(col_bound_dn_ou_var);
+  free(row_bound_up_value);
+  free(row_bound_up_objective);
+  free(row_bound_up_in_var);
+  free(row_bound_up_ou_var);
+  free(row_bound_dn_value);
+  free(row_bound_dn_objective);
+  free(row_bound_dn_in_var);
+  free(row_bound_dn_ou_var);
+
 }
 
 /*
@@ -943,6 +1364,7 @@ void test_setSolution() {
   printf("Iteration counts are %d and %d\n", iteration_count0, iteration_count1);
   assertLogical("Dual", logic);
   
+  Highs_destroy(highs);
 }
 */
 int main() {
@@ -952,12 +1374,14 @@ int main() {
   minimal_api_lp();
   minimal_api_mip();
   minimal_api_qp();
+  full_api_options();
   full_api_lp();
   full_api_mip();
   full_api_qp();
   options();
   test_getColsByRange();
   test_passHessian();
+  test_ranging();
   //  test_setSolution();
   return 0;
 }

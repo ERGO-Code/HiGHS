@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 
 #include "Highs.h"
@@ -7,7 +8,7 @@
 const bool dev_run = false;
 
 // No commas in test case name.
-TEST_CASE("HighsModel", "[highs_model]") {
+TEST_CASE("highs-model", "[highs_model]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   HighsStatus status;
@@ -73,4 +74,55 @@ TEST_CASE("HighsModel", "[highs_model]") {
   REQUIRE(status == HighsStatus::kOk);
   status = highs.run();
   REQUIRE(status == HighsStatus::kError);
+}
+
+TEST_CASE("highs-integrality", "[highs_model]") {
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  lp.model_name_ = "distillation";
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  require_model_status = HighsModelStatus::kOptimal;
+  optimal_objective = 31.2;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsVarType integrality;
+  REQUIRE(highs.getColIntegrality(-1, integrality) == HighsStatus::kError);
+  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kError);
+  REQUIRE(highs.getColIntegrality(lp.num_col_, integrality) ==
+          HighsStatus::kError);
+
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous};
+  highs.passModel(lp);
+
+  REQUIRE(highs.getColIntegrality(-1, integrality) == HighsStatus::kError);
+  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kOk);
+  REQUIRE(integrality == HighsVarType::kContinuous);
+  REQUIRE(highs.getColIntegrality(lp.num_col_, integrality) ==
+          HighsStatus::kError);
+
+  highs.run();
+  REQUIRE(highs.getModelStatus() == require_model_status);
+  REQUIRE(std::abs(highs.getInfo().objective_function_value -
+                   optimal_objective) < 1e-5);
+
+  REQUIRE(highs.changeColIntegrality(0, HighsVarType::kInteger) ==
+          HighsStatus::kOk);
+
+  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kOk);
+  REQUIRE(integrality == HighsVarType::kInteger);
 }

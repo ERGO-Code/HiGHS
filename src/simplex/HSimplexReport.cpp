@@ -2,12 +2,10 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2022 at the University of Edinburgh    */
+/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
-/*                                                                       */
-/*    Authors: Julian Hall, Ivet Galabova, Leona Gottwald and Michael    */
-/*    Feldmeier                                                          */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HSimplexDebug.cpp
@@ -20,35 +18,30 @@
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
                                   const HighsInt iteration_count,
-                                  const HighsSimplexInfo& info,
+                                  HighsSimplexInfo& info,
                                   const bool initialise) {
   if (info.run_quiet) return;
-  static HighsInt iteration_count0 = 0;
-  static HighsInt dual_phase1_iteration_count0 = 0;
-  static HighsInt dual_phase2_iteration_count0 = 0;
-  static HighsInt primal_phase1_iteration_count0 = 0;
-  static HighsInt primal_phase2_iteration_count0 = 0;
-  static HighsInt primal_bound_swap0 = 0;
   if (initialise) {
-    iteration_count0 = iteration_count;
-    dual_phase1_iteration_count0 = info.dual_phase1_iteration_count;
-    dual_phase2_iteration_count0 = info.dual_phase2_iteration_count;
-    primal_phase1_iteration_count0 = info.primal_phase1_iteration_count;
-    primal_phase2_iteration_count0 = info.primal_phase2_iteration_count;
-    primal_bound_swap0 = info.primal_bound_swap;
+    info.iteration_count0 = iteration_count;
+    info.dual_phase1_iteration_count0 = info.dual_phase1_iteration_count;
+    info.dual_phase2_iteration_count0 = info.dual_phase2_iteration_count;
+    info.primal_phase1_iteration_count0 = info.primal_phase1_iteration_count;
+    info.primal_phase2_iteration_count0 = info.primal_phase2_iteration_count;
+    info.primal_bound_swap0 = info.primal_bound_swap;
     return;
   }
-  const HighsInt delta_iteration_count = iteration_count - iteration_count0;
+  const HighsInt delta_iteration_count =
+      iteration_count - info.iteration_count0;
   const HighsInt delta_dual_phase1_iteration_count =
-      info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
+      info.dual_phase1_iteration_count - info.dual_phase1_iteration_count0;
   const HighsInt delta_dual_phase2_iteration_count =
-      info.dual_phase2_iteration_count - dual_phase2_iteration_count0;
+      info.dual_phase2_iteration_count - info.dual_phase2_iteration_count0;
   const HighsInt delta_primal_phase1_iteration_count =
-      info.primal_phase1_iteration_count - primal_phase1_iteration_count0;
+      info.primal_phase1_iteration_count - info.primal_phase1_iteration_count0;
   const HighsInt delta_primal_phase2_iteration_count =
-      info.primal_phase2_iteration_count - primal_phase2_iteration_count0;
+      info.primal_phase2_iteration_count - info.primal_phase2_iteration_count0;
   const HighsInt delta_primal_bound_swap =
-      info.primal_bound_swap - primal_bound_swap0;
+      info.primal_bound_swap - info.primal_bound_swap0;
 
   HighsInt check_delta_iteration_count =
       delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
