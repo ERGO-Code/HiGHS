@@ -767,7 +767,7 @@ HighsStatus ipxSolutionToHighsSolution(
       double dual_infeasibility = 0;
       double residual = std::fabs(std::max(lower - value, value - upper));
       double var_range = upper - lower;
-      double residual_rate = residual/var_range;
+      double residual_rate = residual / var_range;
       residual = std::max(residual, residual_rate);
       double new_value = value;
       double new_dual = dual;
