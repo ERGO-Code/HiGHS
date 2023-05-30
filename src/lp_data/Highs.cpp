@@ -3136,8 +3136,9 @@ HighsStatus Highs::callSolveQp() {
   });
 
   runtime.settings.timelimit = options_.time_limit;
-  runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-
+  runtime.settings.iterationlimit = options_.simplex_iteration_limit;
+  runtime.settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
+  
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
