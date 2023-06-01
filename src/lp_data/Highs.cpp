@@ -1846,9 +1846,9 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
                                                             const char*, void*),
-                                  void* deprecated  // V2.0 remove
-) {
+                                  void* log_user_callback_data) {
   options_.log_options.log_user_callback = log_user_callback;
+  options_.log_options.log_user_callback_data = log_user_callback_data;
   return HighsStatus::kOk;
 }
 
