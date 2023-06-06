@@ -707,7 +707,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  " but there is no guarantee\n",
                  min_semi_variable_margin);
   }
-  return num_active_modified_upper;
+  return (num_active_modified_upper != 0);
 }
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
@@ -1391,7 +1391,7 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
-  bool have_names = lp.col_names_.size();
+  bool have_names = (lp.col_names_.size() != 0);
   if (have_names) lp.col_names_.resize(new_num_col);
   for (HighsInt new_col = 0; new_col < num_new_col; new_col++) {
     HighsInt iCol = lp.num_col_ + new_col;
@@ -1411,7 +1411,7 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
-  bool have_names = lp.row_names_.size();
+  bool have_names = (lp.row_names_.size() != 0);
   if (have_names) lp.row_names_.resize(new_num_row);
 
   for (HighsInt new_row = 0; new_row < num_new_row; new_row++) {
@@ -1450,7 +1450,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
-  bool have_names = lp.col_names_.size();
+  bool have_names = (lp.col_names_.size() != 0);
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -1868,8 +1868,8 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   std::string type;
   HighsInt count;
-  bool have_integer_columns = getNumInt(lp);
-  bool have_col_names = lp.col_names_.size();
+  bool have_integer_columns = (getNumInt(lp) != 0);
+  bool have_col_names = (lp.col_names_.size() != 0);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -1911,7 +1911,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_row_ <= 0) return;
   std::string type;
   vector<HighsInt> count;
-  bool have_row_names = lp.row_names_.size();
+  bool have_row_names = (lp.row_names_.size() != 0);
 
   count.resize(lp.num_row_, 0);
   if (lp.num_col_ > 0) {
@@ -2331,7 +2331,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       options.primal_feasibility_tolerance;  // 1e-12;
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution.col_value[iCol];
@@ -2860,8 +2860,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool has_col_names = lp.col_names_.size();
-  const bool has_row_names = lp.row_names_.size();
+  const bool has_col_names = (lp.col_names_.size() != 0);
+  const bool has_row_names = (lp.row_names_.size() != 0);
   const bool has_solution = solution.value_valid;
   if (has_solution) {
     // Create zeroed row values for the new rows

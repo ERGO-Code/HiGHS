@@ -154,7 +154,7 @@ class HighsPseudocost {
 
       d = unit_gain - cost_total;
       ++nsamplestotal;
-      cost_total += d / nsamplestotal;
+      cost_total += d / double(nsamplestotal);
     } else {
       double unit_gain = -objdelta / delta;
       double d = unit_gain - pseudocostdown[col];
@@ -163,7 +163,7 @@ class HighsPseudocost {
 
       d = unit_gain - cost_total;
       ++nsamplestotal;
-      cost_total += d / nsamplestotal;
+      cost_total += d / double(nsamplestotal);
     }
   }
 
@@ -171,7 +171,7 @@ class HighsPseudocost {
                                bool upbranch) {
     double d = ninferences - inferences_total;
     ++ninferencestotal;
-    inferences_total += d / ninferencestotal;
+    inferences_total += d / double(ninferencestotal);
     if (upbranch) {
       d = ninferences - inferencesup[col];
       ninferencesup[col] += 1;
@@ -257,12 +257,12 @@ class HighsPseudocost {
 
     double cutOffScoreUp =
         ncutoffsup[col] /
-        std::max(1.0, double(ncutoffsup[col] + nsamplesup[col]));
+        std::max(1.0, double(ncutoffsup[col]) + double(nsamplesup[col]));
     double cutOffScoreDown =
         ncutoffsdown[col] /
         std::max(1.0, double(ncutoffsdown[col] + nsamplesdown[col]));
     double avgCutoffs =
-        ncutoffstotal / std::max(1.0, double(ncutoffstotal + nsamplestotal));
+        double(ncutoffstotal) / std::max(1.0, double(ncutoffstotal + nsamplestotal));
 
     double cutoffScore = std::max(cutOffScoreUp, 1e-6) *
                          std::max(cutOffScoreDown, 1e-6) /
@@ -271,7 +271,7 @@ class HighsPseudocost {
     double conflictScoreUp = conflictscoreup[col] / conflict_weight;
     double conflictScoreDown = conflictscoredown[col] / conflict_weight;
     double conflictScoreAvg =
-        conflict_avg_score / (conflict_weight * conflictscoreup.size());
+        conflict_avg_score / (conflict_weight * double(conflictscoreup.size()));
     double conflictScore = std::max(conflictScoreUp, 1e-6) *
                            std::max(conflictScoreDown, 1e-6) /
                            std::max(1e-6, conflictScoreAvg * conflictScoreAvg);
@@ -299,13 +299,13 @@ class HighsPseudocost {
         ncutoffsup[col] /
         std::max(1.0, double(ncutoffsup[col] + nsamplesup[col]));
     double avgCutoffs =
-        ncutoffstotal / std::max(1.0, double(ncutoffstotal + nsamplestotal));
+        double(ncutoffstotal) / std::max(1.0, double(ncutoffstotal + nsamplestotal));
 
     double cutoffScore = cutOffScoreUp / std::max(1e-6, avgCutoffs);
 
     double conflictScoreUp = conflictscoreup[col] / conflict_weight;
     double conflictScoreAvg =
-        conflict_avg_score / (conflict_weight * conflictscoreup.size());
+        conflict_avg_score / (conflict_weight * double(conflictscoreup.size()));
     double conflictScore = conflictScoreUp / std::max(1e-6, conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
@@ -325,13 +325,13 @@ class HighsPseudocost {
         ncutoffsdown[col] /
         std::max(1.0, double(ncutoffsdown[col] + nsamplesdown[col]));
     double avgCutoffs =
-        ncutoffstotal / std::max(1.0, double(ncutoffstotal + nsamplestotal));
+        double(ncutoffstotal) / std::max(1.0, double(ncutoffstotal + nsamplestotal));
 
     double cutoffScore = cutOffScoreDown / std::max(1e-6, avgCutoffs);
 
     double conflictScoreDown = conflictscoredown[col] / conflict_weight;
     double conflictScoreAvg =
-        conflict_avg_score / (conflict_weight * conflictscoredown.size());
+        conflict_avg_score / (conflict_weight * double(conflictscoredown.size()));
     double conflictScore = conflictScoreDown / std::max(1e-6, conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };

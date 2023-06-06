@@ -159,7 +159,7 @@ class HighsCliqueTable {
 
   HighsCliqueTable(HighsInt ncols) {
     invertedHashList.resize(2 * ncols);
-    invertedHashListSizeTwo.resize(2 * ncols);
+    invertedHashListSizeTwo.resize(2 * size_t(ncols));
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);

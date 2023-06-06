@@ -542,7 +542,7 @@ class HighsPostsolveStack {
   }
 
   bool isColLinearlyTransformable(HighsInt col) const {
-    return linearlyTransformable[col];
+    return (linearlyTransformable[col] != 0);
   }
 
   /// undo presolve steps for primal dual solution and basis

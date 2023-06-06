@@ -171,7 +171,7 @@ restart:
     HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
                                        mipdata_->avgrootlpiters);
     iterlimit = std::max({HighsInt{10000}, iterlimit,
-                          HighsInt(1.5 * mipdata_->firstrootlpiters)});
+                          HighsInt((mipdata_->firstrootlpiters / 2) * 3)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
@@ -334,7 +334,7 @@ restart:
         }
 
         int64_t minHugeTreeOffset =
-            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
+            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
         int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
             activeIntegerRatio * (10 + minHugeTreeOffset) *
             std::pow(1.5, nTreeRestarts));

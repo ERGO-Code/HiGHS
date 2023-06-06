@@ -819,7 +819,7 @@ HighsStatus HEkk::undualize() {
     const double cost = original_col_cost_[iCol];
     const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     HighsInt dual_variable = dual_num_col + iCol;
     bool dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
     if (lower == upper) {
@@ -874,7 +874,7 @@ HighsStatus HEkk::undualize() {
   for (HighsInt iRow = 0; iRow < original_num_row_; iRow++) {
     double lower = original_row_lower_[iRow];
     double upper = original_row_upper_[iRow];
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     HighsInt dual_variable = iRow;
     bool dual_basic = dual_nonbasic_flag[dual_variable] == kNonbasicFlagFalse;
     if (lower == upper) {
@@ -1159,7 +1159,7 @@ HighsStatus HEkk::setBasis() {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp_.col_lower_[iCol];
     double upper = lp_.col_upper_[iCol];
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       move = kNonbasicMoveZe;
@@ -1906,8 +1906,8 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 bool HEkk::getBacktrackingBasis() {
   if (!info_.valid_backtracking_basis_) return false;
   basis_ = info_.backtracking_basis_;
-  info_.costs_shifted = info_.backtracking_basis_costs_shifted_;
-  info_.costs_perturbed = info_.backtracking_basis_costs_perturbed_;
+  info_.costs_shifted = (info_.backtracking_basis_costs_shifted_ != 0);
+  info_.costs_perturbed = (info_.backtracking_basis_costs_perturbed_ != 0);
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++)
@@ -2359,7 +2359,7 @@ void HEkk::setNonbasicMove() {
       lower = -lp_.row_upper_[iRow];
       upper = -lp_.row_lower_[iRow];
     }
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       move = kNonbasicMoveZe;
@@ -2736,9 +2736,9 @@ void HEkk::initialiseNonbasicValueAndMove() {
     // Nonbasic variable
     const double lower = info_.workLower_[iVar];
     const double upper = info_.workUpper_[iVar];
-    const HighsInt original_move = basis_.nonbasicMove_[iVar];
+    const int8_t original_move = basis_.nonbasicMove_[iVar];
     double value;
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       value = lower;

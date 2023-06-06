@@ -88,8 +88,11 @@ class HighsTaskExecutor {
   void run_worker(int workerId) {
     // spin until the global executor pointer is set up
     ExecutorHandle* executor;
-    while (!(executor = mainWorkerHandle.load(std::memory_order_acquire)))
+    while (true) {
+      executor = mainWorkerHandle.load(std::memory_order_acquire);
+      if (executor != nullptr) break;
       HighsSpinMutex::yieldProcessor();
+    }
     // now acquire a reference count of the global executor
     threadLocalExecutorHandle() = *executor;
     HighsSplitDeque* localDeque = workerDeques[workerId].get();

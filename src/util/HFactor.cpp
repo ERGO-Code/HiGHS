@@ -807,8 +807,8 @@ void HFactor::buildSimple() {
     if (nworkLast == nwork) break;
   }
   if (report_anything) reportLu(kReportLuBoth, false);
-  t2_store_l = l_index.size() - t2_store_l;
-  t2_store_u = u_index.size() - t2_store_u;
+  t2_store_l = double(l_index.size()) - t2_store_l;
+  t2_store_u = double(u_index.size()) - t2_store_u;
   t2_store_p = t2_store_p - nwork;
 
   build_synthetic_tick +=

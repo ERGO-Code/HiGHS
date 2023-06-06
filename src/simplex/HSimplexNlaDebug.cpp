@@ -57,7 +57,7 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   // Make sure that this isn't called between the matrix and LP resizing
   assert(num_row == this->lp_->a_matrix_.num_row_);
   assert(num_col == this->lp_->a_matrix_.num_col_);
-  const bool report = options->log_dev_level;
+  const bool report = (options->log_dev_level != 0);
 
   highsLogDev(options->log_options, HighsLogType::kInfo, "\nCheckINVERT: %s\n",
               message.c_str());

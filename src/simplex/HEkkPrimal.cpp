@@ -1565,7 +1565,7 @@ void HEkkPrimal::hyperChooseColumn() {
     if (workDual[max_changed_measure_column])
       variable_in = max_changed_measure_column;
   }
-  const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
+  const bool consider_nonbasic_free_column = (nonbasic_free_col_set.count() != 0);
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {
       HighsInt iCol = hyper_chuzc_candidate[iEntry];

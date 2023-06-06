@@ -141,7 +141,7 @@ class RbTree {
   }
 
   void setColor(LinkType node, HighsUInt color) {
-    static_cast<Impl*>(this)->getRbTreeLinks(node).setColor(color);
+    static_cast<Impl*>(this)->getRbTreeLinks(node).setColor(color != 0);
   }
 
   HighsUInt getColor(LinkType node) const {

@@ -466,8 +466,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
   const HighsLp& lp = model.lp_;
-  const bool have_col_names = lp.col_names_.size();
-  const bool have_row_names = lp.row_names_.size();
+  const bool have_col_names = (lp.col_names_.size() != 0);
+  const bool have_row_names = (lp.row_names_.size() != 0);
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
   HighsInt num_nz = lp.a_matrix_.numNz();
@@ -1362,7 +1362,7 @@ std::string findModelObjectiveName(const HighsLp* lp,
   if (!has_objective && hessian) {
     // Zero cost vector, so only chance of an objective comes from any
     // Hessian
-    has_objective = hessian->dim_;
+    has_objective = (hessian->dim_ != 0);
   }
   HighsInt pass = 0;
   for (;;) {
