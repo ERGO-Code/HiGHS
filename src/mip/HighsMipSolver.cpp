@@ -171,7 +171,7 @@ restart:
     HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
                                        mipdata_->avgrootlpiters);
     iterlimit = std::max({HighsInt{10000}, iterlimit,
-                          HighsInt((mipdata_->firstrootlpiters / 2) * 3)});
+                          HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
 

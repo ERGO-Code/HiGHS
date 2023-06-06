@@ -977,7 +977,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if (5 * intcols.size() / mipsolver.numCol() >= 1)
+    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", "on");
     else
       lprelax.getLpSolver().setBasis(
