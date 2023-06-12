@@ -266,12 +266,12 @@ void BasicLu::_pivottol(double new_pivottol) {
 }
 
 void BasicLu::Reallocate() {
-    assert(Li_.size() == (size_t)xstore_[BASICLU_MEMORYL]);
-    assert(Lx_.size() == (size_t)xstore_[BASICLU_MEMORYL]);
-    assert(Ui_.size() == (size_t)xstore_[BASICLU_MEMORYU]);
-    assert(Ux_.size() == (size_t)xstore_[BASICLU_MEMORYU]);
-    assert(Wi_.size() == (size_t)xstore_[BASICLU_MEMORYW]);
-    assert(Wx_.size() == (size_t)xstore_[BASICLU_MEMORYW]);
+    assert(Li_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Lx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Ui_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Ux_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Wi_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
+    assert(Wx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
 
     if (xstore_[BASICLU_ADD_MEMORYL] > 0) {
         Int new_size = xstore_[BASICLU_MEMORYL] + xstore_[BASICLU_ADD_MEMORYL];

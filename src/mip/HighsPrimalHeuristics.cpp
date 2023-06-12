@@ -224,7 +224,7 @@ class HeuristicNeighbourhood {
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
 
-    return numTotal ? double(fixedCols.size()) / double(numTotal) : 0.0;
+    return numTotal ? static_cast<double>(fixedCols.size()) / static_cast<double>(numTotal) : 0.0;
   }
 
   void backtracked() {

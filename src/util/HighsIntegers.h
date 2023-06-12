@@ -117,8 +117,8 @@ class HighsIntegers {
     m[1] += m[0] * ai;
     m[3] += m[2] * ai;
 
-    double x0 = double(m[0]) / double(m[2]);
-    double x1 = double(m[1]) / double(m[3]);
+    double x0 = static_cast<double>(m[0]) / static_cast<double>(m[2]);
+    double x1 = static_cast<double>(m[1]) / static_cast<double>(m[3]);
     x = std::abs(x);
     double err0 = std::abs(x - x0);
     double err1 = std::abs(x - x1);
@@ -203,7 +203,7 @@ class HighsIntegers {
       }
     }
 
-    return double(denom) / double(currgcd);
+    return static_cast<double>(denom) / static_cast<double>(currgcd);
   }
 
   static double integralScale(const std::vector<double>& vals, double deltadown,

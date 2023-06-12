@@ -3175,7 +3175,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             if (x1Cand != -1) {
               HighsInt x1Pos = rowpositions[x1Cand];
               HighsInt x1 = Acol[x1Pos];
-              double rhs2 = rhs / double(d);
+              double rhs2 = rhs / static_cast<double>(d);
               if (std::abs(std::round(rhs2) - rhs2) <=
                   mipsolver->mipdata_->epsilon) {
                 // the right hand side is integral, so we can substitute
@@ -3206,8 +3206,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 // we directly fix x1 instead of first substituting with d * z +
                 // b.
                 double zLower =
-                    std::ceil((model->col_lower_[x1] - b) / double(d) - primal_feastol);
-                double zUpper = std::floor((model->col_upper_[x1] - b) / double(d) +
+                    std::ceil((model->col_lower_[x1] - b) / static_cast<double>(d) - primal_feastol);
+                double zUpper = std::floor((model->col_upper_[x1] - b) / static_cast<double>(d) +
                                            primal_feastol);
 
                 if (zLower == zUpper) {
