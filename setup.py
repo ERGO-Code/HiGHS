@@ -2,15 +2,32 @@ from setuptools import setup, find_packages
 import pybind11.setup_helpers
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 import os
-# find_library and capture_output in test_log_callback seem to be the
-# reasons for including pyomo
-from pyomo.common.fileutils import find_library
+import ctypes.util
+import sys
+
+# Simplified version of the pyomo utility
+# https://github.com/Pyomo/pyomo/blob/afc9ee5346eabbdfaf8d3802746cfba95682fe91/pyomo/common/fileutils.py#LL309C1-L380C49
+def find_library(libname):
+    ext = (os.path.splitext(libname)[1]).lower()
+    if ext:
+        return ctypes.util.find_library(libname)
+    if sys.platform.startswith('win'):
+        ext = '.dll'
+    elif sys.platform.startswith('darwin'):
+        ext = '.dylib'
+    else:
+        ext = '.so'
+    full_libname = libname
+    if not full_libname.startswith('lib'):
+        full_libname = 'lib' + full_libname
+    full_libname += ext
+    return ctypes.util.find_library(full_libname)
 
 original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
 pybind11.setup_helpers.MACOS = False
 
 try:
-    highs_lib = find_library('highs', include_PATH=False)
+    highs_lib = find_library('highs')
     if highs_lib is None:
         raise RuntimeError('Could not find HiGHS library; Please make sure it is in the LD_LIBRARY_PATH environment variable')
     highs_lib_dir = os.path.dirname(highs_lib)
