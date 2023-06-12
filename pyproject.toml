@@ -1,12 +1,22 @@
-[build-system]
-# Minimum requirements for the build system to execute.
-requires = [
-  "setuptools>=45",
-  "pybind11>=2.4",
-  "wheel>=0.2",
-] 
+[project]
+name = "highspy"
+version = "1.5.3"
+description = "A thin set of pybind11 wrappers to HiGHS"
+authors = [
+    {name = "HiGHS developers", email = "highsopt@gmail.com"},
+]
+dependencies = []
+requires-python = ">=3.7"
+readme = "README.md"
+license = {text = "MIT"}
 
-build-backend = "setuptools.build_meta"
+[project.urls]
+"Source Code" = "https://github.com/ERGO-Code/HiGHS"
+"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+
+[build-system]
+requires = ["pybind11", "meson-python"]
+build-backend = "mesonpy"
 
 [tool.cibuildwheel]
 build = "*"
@@ -46,3 +56,29 @@ archs = ["AMD64"]
 # Use delvewheel on windows
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux2014"
+manylinux-i686-image = "manylinux2014"
+environment = { RUNNER_OS="Linux" }
+test-command = "echo 'installed'"
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+# Openblas for musllinux is painful, so don't install / test
+test-skip = "*-musllinux*"
+
+[tool.cibuildwheel.macos]
+environment = { RUNNER_OS="macOS" }
+before-all = "brew install gfortran && brew unlink gfortran && brew link gfortran"
+
+[tool.pdm.dev-dependencies]
+lint = [
+    "black>=23.1.0",
+]
+
+[tool.pdm.scripts]
+lint = "black"
+all = {composite = ["lint pypotlib/"]}
+
+[tool.black]
+line-length = 80
+target-version = ['py310']

@@ -269,3 +269,4 @@ bazel*
 
 # webdemo
 build_webdemo
+.pdm-python
