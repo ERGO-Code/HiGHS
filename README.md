@@ -129,7 +129,6 @@ from the HiGHS directory.
 You may also require
 
 * `pip install pybind11`
-* `pip install pyomo`
 
 The Python interface can then be tested as above.
 
