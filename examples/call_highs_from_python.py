@@ -160,7 +160,7 @@ options = h1.getOptions()
 options.presolve = 'off'
 options.solver = 'ipm'
 h1.passOptions(options)
-h1.writeOptions("", True)
+h1.writeOptions("")
 h1.run()
 solution = h1.getSolution()
 basis = h1.getBasis()
