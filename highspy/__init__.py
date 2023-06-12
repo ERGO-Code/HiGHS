@@ -1,4 +1,4 @@
-from .highs import (
+from .highs_bindings import (
     # enum classes
     ObjSense,
     MatrixFormat,
