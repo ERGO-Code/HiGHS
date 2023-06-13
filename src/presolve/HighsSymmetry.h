@@ -80,10 +80,10 @@ struct HighsOrbitopeMatrix {
   std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
-  HighsInt& entry(HighsInt i, HighsInt j) { return matrix[i + size_t(j) * numRows]; }
+  HighsInt& entry(HighsInt i, HighsInt j) { return matrix[i + static_cast<size_t>(j) * numRows]; }
 
   const HighsInt& entry(HighsInt i, HighsInt j) const {
-    return matrix[i + size_t(j) * numRows];
+    return matrix[i + static_cast<size_t>(j) * numRows];
   }
 
   HighsInt& operator()(HighsInt i, HighsInt j) { return entry(i, j); }

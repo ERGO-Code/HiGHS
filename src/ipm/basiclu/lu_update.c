@@ -464,7 +464,7 @@ lu_int lu_update(struct lu *this, double xtbl)
 
     lu_int i, j, jnext, n, nz, t, put, pos, end, where, room, grow, used,need,M;
     lu_int have_diag, intersect, istriangular, nz_roweta, nz_spike;
-    lu_int nreach, *col_reach, *row_reach;
+    lu_int nreach, *col_reach = NULL, *row_reach = NULL;
     double spike_diag, newpiv, piverr;
 
     assert(nforrest < m);
@@ -640,8 +640,6 @@ lu_int lu_update(struct lu *this, double xtbl)
     /* ------------------ */
     /* Test triangularity */
     /* ------------------ */
-    row_reach = NULL;
-    col_reach = NULL;
     if (have_diag)
     {
         /*
