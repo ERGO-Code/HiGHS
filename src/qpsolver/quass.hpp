@@ -12,8 +12,6 @@ struct Quass {
 
   void solve(const Vector& x0, const Vector& ra, Basis& b0);
 
-  void solve();
-
  private:
   Runtime& runtime;
 

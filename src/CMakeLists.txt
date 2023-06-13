@@ -131,6 +131,8 @@ set(sources
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
+    qpsolver/a_asm.cpp
+    qpsolver/a_quass.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -245,6 +247,8 @@ set(headers
     qpsolver/vector.hpp
     qpsolver/scaling.hpp
     qpsolver/perturbation.hpp
+    qpsolver/a_quass.hpp
+    qpsolver/a_asm.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h

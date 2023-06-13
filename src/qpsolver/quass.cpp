@@ -22,20 +22,6 @@
 #include "qpsolver/scaling.hpp"
 #include "qpsolver/perturbation.hpp"
 
-void Quass::solve() {
-  scale(runtime);
-  runtime.instance = runtime.scaled;
-  perturb(runtime);
-  runtime.instance = runtime.perturbed;
-  CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
-  computestartingpoint(runtime, crash);
-  if (runtime.status != QpModelStatus::INDETERMINED) {
-    return;
-  }
-  Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
-  solve(crash.primal, crash.rowact, basis);
-}
-
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
 void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
@@ -211,6 +197,43 @@ static void regularize(Runtime& rt) {
   }
 }
 
+double compute_primal_violation(Runtime& rt) {
+  double maxviolation = 0.0;
+  Vector rowact = rt.instance.A.mat_vec(rt.primal);
+  for (HighsInt i = 0; i < rt.instance.num_con; i++) {
+    double violation = rt.instance.con_lo[i] - rowact.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = rowact.value[i] - rt.instance.con_up[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  for (HighsInt i = 0; i < rt.instance.num_var; i++) {
+    double violation = rt.instance.var_lo[i] - rt.primal.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = rt.primal.value[i] - rt.instance.var_up[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  return maxviolation;
+}
+
+double compute_dual_violation(Runtime& rt) {
+  double maxviolation = 0.0;
+  Vector rowact = rt.instance.A.mat_vec(rt.primal);
+  for (HighsInt i = 0; i < rt.instance.num_con; i++) {
+    // multiplier of lower bound has to be <= 0
+    double violation = rt.dualcon.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = -rt.dualcon.value[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  for (HighsInt i = 0; i < rt.instance.num_var; i++) {
+    double violation = rt.dualvar.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = -rt.dualvar.value[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  return maxviolation;
+}
+
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
@@ -261,7 +284,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
             runtime.settings.reportingfequency ==
         0) {
       loginformation(runtime, basis, factor);
-      runtime.endofiterationevent.fire(runtime);
+      runtime.settings.endofiterationevent.fire(runtime.statistics);
     }
     runtime.statistics.num_iterations++;
 
@@ -360,7 +383,10 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   }
 
   loginformation(runtime, basis, factor);
-  runtime.endofiterationevent.fire(runtime);
+  runtime.settings.endofiterationevent.fire(runtime.statistics);
+
+  printf("max primal violation = %.20lf\n", compute_primal_violation(runtime));
+  printf("max dual   violation = %.20lf\n", compute_dual_violation(runtime));
 
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));

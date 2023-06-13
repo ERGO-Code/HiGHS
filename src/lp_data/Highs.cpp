@@ -28,7 +28,8 @@
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/quass.hpp"
+#include "qpsolver/a_quass.hpp"
+#include "qpsolver/runtime.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -3122,44 +3123,50 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  Runtime runtime(instance, timer_);
+  Settings settings;
+  Statistics stats;
 
-  runtime.settings.reportingfequency = 1000;
-  runtime.endofiterationevent.subscribe([this](Runtime& rt) {
-    int rep = rt.statistics.iteration.size() - 1;
+  settings.reportingfequency = 1000;
+
+
+  settings.endofiterationevent.subscribe([this](Statistics& stats) {
+    int rep = stats.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 rt.statistics.iteration[rep], rt.statistics.time[rep],
-                 rt.statistics.objval[rep],
-                 rt.statistics.nullspacedimension[rep]);
+                 stats.iteration[rep], stats.time[rep],
+                 stats.objval[rep],
+                 stats.nullspacedimension[rep]);
   });
 
-  runtime.settings.timelimit = options_.time_limit;
-  runtime.settings.iterationlimit = options_.simplex_iteration_limit;
-  runtime.settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
+  settings.timelimit = options_.time_limit;
+  settings.iterationlimit = options_.simplex_iteration_limit;
+  settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
   
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
 
-  Quass qpsolver(runtime);
-  qpsolver.solve();
+  QpModelStatus qp_model_status;
+
+  QpSolution qp_solution(instance);
+
+  QpAsmStatus qpstatus = solveqp(instance, settings, stats, qp_model_status, qp_solution);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = runtime.status == QpModelStatus::OPTIMAL
+  model_status_ = qp_model_status == QpModelStatus::OPTIMAL
                       ? HighsModelStatus::kOptimal
-                  : runtime.status == QpModelStatus::UNBOUNDED
+                  : qp_model_status == QpModelStatus::UNBOUNDED
                       ? HighsModelStatus::kUnbounded
-                  : runtime.status == QpModelStatus::INFEASIBLE
+                  : qp_model_status == QpModelStatus::INFEASIBLE
                       ? HighsModelStatus::kInfeasible
-                  : runtime.status == QpModelStatus::ITERATIONLIMIT
+                  : qp_model_status == QpModelStatus::ITERATIONLIMIT
                       ? HighsModelStatus::kIterationLimit
-                  : runtime.status == QpModelStatus::TIMELIMIT
+                  : qp_model_status == QpModelStatus::TIMELIMIT
                       ? HighsModelStatus::kTimeLimit
                       : HighsModelStatus::kNotset;
   // extract variable values
@@ -3167,18 +3174,18 @@ HighsStatus Highs::callSolveQp() {
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    solution_.col_value[iCol] = runtime.primal.value[iCol];
+    solution_.col_value[iCol] = qp_solution.primal.value[iCol];
     solution_.col_dual[iCol] =
-        objective_multiplier * runtime.dualvar.value[iCol];
+        objective_multiplier * qp_solution.dualvar.value[iCol];
   }
   // extract constraint activity
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
   // Negate the vector and Hessian
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
+    solution_.row_value[iRow] = qp_solution.rowactivity.value[iRow];
     solution_.row_dual[iRow] =
-        objective_multiplier * runtime.dualcon.value[iRow];
+        objective_multiplier * qp_solution.dualcon.value[iRow];
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
@@ -3188,11 +3195,11 @@ HighsStatus Highs::callSolveQp() {
   basis_.row_status.resize(lp.num_row_);
 
   for (HighsInt i = 0; i < lp.num_col_; i++) {
-    if (runtime.status_var[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
       basis_.col_status[i] = HighsBasisStatus::kLower;
-    } else if (runtime.status_var[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
       basis_.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (runtime.status_var[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
       basis_.col_status[i] = HighsBasisStatus::kNonbasic;
     } else {
       basis_.col_status[i] = HighsBasisStatus::kBasic;
@@ -3200,11 +3207,11 @@ HighsStatus Highs::callSolveQp() {
   }
 
   for (HighsInt i = 0; i < lp.num_row_; i++) {
-    if (runtime.status_con[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
       basis_.row_status[i] = HighsBasisStatus::kLower;
-    } else if (runtime.status_con[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
       basis_.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (runtime.status_con[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
       basis_.row_status[i] = HighsBasisStatus::kNonbasic;
     } else {
       basis_.row_status[i] = HighsBasisStatus::kBasic;
@@ -3215,8 +3222,8 @@ HighsStatus Highs::callSolveQp() {
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);
   getKktFailures(options_, model_, solution_, basis_, info_);
   // Set the QP-specific values of info_
-  info_.simplex_iteration_count += runtime.statistics.phase1_iterations;
-  info_.qp_iteration_count += runtime.statistics.num_iterations;
+  info_.simplex_iteration_count += stats.phase1_iterations;
+  info_.qp_iteration_count += stats.num_iterations;
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("QP", return_status);
