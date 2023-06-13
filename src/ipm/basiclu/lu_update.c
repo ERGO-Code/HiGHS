@@ -883,7 +883,7 @@ lu_int lu_update(struct lu *this, double xtbl)
         assert(nz == Unz);
     }
 
-    /* compress W if used memory is shrinked suficiently */
+    /* compress W if used memory is shrinked sufficiently */
     used = Wbegin[m];
     need = Unz + stretch*Unz + m*pad;
     if ((used-need) > this->compress_thres * used)
