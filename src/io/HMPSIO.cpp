@@ -872,36 +872,66 @@ HighsStatus writeMps(
         fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
       } else {
         if (discrete) {
+	  // Warn if writing non-integer bounds for integer or semi-integer variables
+	  if (integrality[c_n] == HighsVarType::kInteger ||
+	      integrality[c_n] == HighsVarType::kSemiInteger) {
+	    if (lb > -kHighsInf) {
+	      HighsInt i_lb = static_cast<HighsInt>(lb);
+	      double dl = lb - i_lb;
+	      if (dl)
+		highsLogUser(log_options, HighsLogType::kWarning,
+			     "Lower bound for integer or semi-integer column \"%s\" is %g: not integer\n",
+			     col_names[c_n].c_str(), lb);
+	    }
+	    if (ub < kHighsInf) {
+	      HighsInt i_ub = static_cast<HighsInt>(ub);
+	      double dl = ub - i_ub;
+	      if (dl)
+		highsLogUser(log_options, HighsLogType::kWarning,
+			     "Upper bound for integer or semi-integer column \"%s\" is %g: not integer\n",
+			     col_names[c_n].c_str(), ub);
+	    }
+	  }
           if (integrality[c_n] == HighsVarType::kInteger) {
             if (lb == 0 && ub == 1) {
               // Binary
               fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
             } else {
-              assert(write_no_cost_zero_columns);
-              // No cost zero columns have a presence in the COLUMNS
-              // section, so no need to indicate integrality using LI
-              // or UI bounds. Avoids need for integer-valued bounds
-              if (!highs_isInfinity(-lb) && lb) {
-                // Finite, nonzero lower bound.
-                fprintf(file, " LO BOUND     %-8s  %.15g\n",
-                        col_names[c_n].c_str(), lb);
+              if (!highs_isInfinity(-lb)) {
+                // Finite lower bound. No need to state this if LB is
+                // zero unless UB is infinte
+                if (lb || highs_isInfinity(ub))
+                  fprintf(file, " LI BOUND     %-8s  %.15g\n",
+                          col_names[c_n].c_str(), lb);
               }
               if (!highs_isInfinity(ub)) {
                 // Finite upper bound
-                fprintf(file, " UP BOUND     %-8s  %.15g\n",
+                fprintf(file, " UI BOUND     %-8s  %.15g\n",
                         col_names[c_n].c_str(), ub);
               }
             }
-          } else if (integrality[c_n] == HighsVarType::kSemiInteger) {
-            fprintf(file, " SI BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    ub);
+          } else if (integrality[c_n] == HighsVarType::kSemiInteger ||
+		     integrality[c_n] == HighsVarType::kSemiContinuous) {
+	    // Have to use lb and ub to define semi-variables: lb is
+	    // naturally finite, but what if ub is infinite?
+	    if (std::fabs(lb) >= kHighsInf)
+	      highsLogUser(log_options, HighsLogType::kWarning,
+			   "Lower bound for semi-variable \"%s\" is %g\n",
+			   col_names[c_n].c_str(), lb);
+	    if (std::fabs(ub) >= kHighsInf)
+	      highsLogUser(log_options, HighsLogType::kWarning,
+			   "Upper bound for semi-variable \"%s\" is %g\n",
+			   col_names[c_n].c_str(), ub);
             fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
                     lb);
-          } else if (integrality[c_n] == HighsVarType::kSemiContinuous) {
-            fprintf(file, " SC BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    ub);
-            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+	    if (integrality[c_n] == HighsVarType::kSemiInteger) {
+	      fprintf(file, " SI BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+		      ub);
+	    } else {
+	      // Semi-continuous
+	      fprintf(file, " SC BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+		      ub);
+	    }
           }
         } else {
           if (!highs_isInfinity(-lb)) {
