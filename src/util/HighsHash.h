@@ -253,7 +253,7 @@ struct HighsHashHelpers {
     u64 result = u64(a) * u64(b);
     result = (result >> 31) + (result & M31());
     if (result >= M31()) result -= M31();
-    return result;
+    return static_cast<u32>(result);
   }
 
   static u32 modexp_M31(u32 a, u64 e) {
@@ -391,10 +391,12 @@ struct HighsHashHelpers {
     u32 a = c[index & 63] & M31();
     HighsInt degree = (index >> 6) + 1;
 
-    hash += multiply_modM31(value, modexp_M31(a, degree));
-    hash = (hash >> 31) + (hash & M31());
-    if (hash >= M31()) hash -= M31();
-    assert(hash < M31());
+    u64 myhash = hash;
+    myhash += multiply_modM31(value, modexp_M31(a, degree));
+    myhash = (myhash >> 31) + (myhash & M31());
+    if (myhash >= M31()) myhash -= M31();
+    assert(myhash < M31());
+    hash = static_cast<u32>(myhash);
   }
 
   static void sparse_inverse_combine32(u32& hash, HighsInt index, u64 value) {
@@ -413,10 +415,12 @@ struct HighsHashHelpers {
     HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M31() - hashvalue) instead of the hash value
     // itself
-    hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
-    hash = (hash >> 31) + (hash & M31());
-    if (hash >= M31()) hash -= M31();
-    assert(hash < M31());
+    u64 myhash = hash;
+    myhash += M31() - multiply_modM31(value, modexp_M31(a, degree));
+    myhash = (myhash >> 31) + (myhash & M31());
+    if (myhash >= M31()) myhash -= M31();
+    assert(myhash < M31());
+    hash = static_cast<u32>(myhash);
   }
 
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
@@ -982,7 +986,7 @@ class HighsHashTable {
   HighsHashTable() { makeEmptyTable(128); }
   HighsHashTable(u64 minCapacity) {
     u64 initCapacity = u64{1} << (u64)std::ceil(
-                           std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
+                           std::log2(std::max(128.0, 8 * static_cast<double>(minCapacity) / 7)));
     makeEmptyTable(initCapacity);
   }
 
