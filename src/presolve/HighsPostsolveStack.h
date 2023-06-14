@@ -595,7 +595,7 @@ class HighsPostsolveStack {
     for (size_t i = reductions.size(); i > 0; --i) {
       if (report_col >= 0)
         printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
-               int(i - 1), int(reductions[i].first), int(report_col),
+               int(i - 1), int(reductions[i - 1].first), int(report_col),
                solution.col_value[report_col]);
       switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
