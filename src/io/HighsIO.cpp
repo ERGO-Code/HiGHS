@@ -135,7 +135,8 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, log_options_.log_user_callback_data);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }
@@ -184,7 +185,8 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, log_options_.log_user_callback_data);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }

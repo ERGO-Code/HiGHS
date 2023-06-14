@@ -490,15 +490,17 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
 TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
+  // Introduced due to #1325 observing that LI and UI are needed
   HighsLp lp;
   lp.num_col_ = 6;
   lp.num_row_ = 3;
   lp.col_cost_ = {1, 1, 1, 2, 2, 2};
   lp.col_lower_ = {0, 0, 0, 0, 0, 0};
-  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf, kHighsInf, kHighsInf};
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
-		     HighsVarType::kInteger, HighsVarType::kContinuous,
-		     HighsVarType::kContinuous, HighsVarType::kContinuous};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf,
+                   kHighsInf, kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger,    HighsVarType::kInteger,
+                     HighsVarType::kInteger,    HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kContinuous};
   const double rhs = 10.99;
   lp.row_lower_ = {rhs, rhs, rhs};
   lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf};
@@ -509,20 +511,22 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
   lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   highs.run();
   const double obj0 = highs.getObjectiveValue();
-  printf("Optimum at first run: %g\n", obj0);
-  // now write out to MPS and load again 
+  if (dev_run) printf("Optimum at first run: %g\n", obj0);
+  // now write out to MPS and load again
   const std::string test_mps = "test.mps";
   highs.writeModel(test_mps);
   highs.readModel(test_mps);
   highs.run();
   const double obj1 = highs.getObjectiveValue();
-  printf("Optimum at second run (after writing and loading again): %g\n", obj1);
+  if (dev_run)
+    printf("Optimum at second run (after writing and loading again): %g\n",
+           obj1);
   REQUIRE(obj0 == obj1);
-  //  std::remove(test_mps.c_str());
+  std::remove(test_mps.c_str());
 }
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
