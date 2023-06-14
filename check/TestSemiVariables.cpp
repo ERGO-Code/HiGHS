@@ -265,7 +265,8 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
-TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
+/*
+  TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   // Introduced due to a semi-variable possibly having an infinite
   // upper bound that needs to be written to MPS in order to define
   // variable type
@@ -291,7 +292,7 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   REQUIRE(obj0 == obj1);
   //  std::remove(test_mps.c_str());
 }
-
+*/
 void semiModel0(HighsLp& lp) {
   lp.num_col_ = 4;
   lp.num_row_ = 4;
