@@ -289,7 +289,7 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
     printf("Optimum at second run (after writing and loading again): %g\n",
            obj1);
   REQUIRE(obj0 == obj1);
-  //  std::remove(test_mps.c_str());
+  std::remove(test_mps.c_str());
 }
 
 void semiModel0(HighsLp& lp) {
