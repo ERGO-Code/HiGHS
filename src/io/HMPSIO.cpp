@@ -920,23 +920,35 @@ HighsStatus writeMps(
                      integrality[c_n] == HighsVarType::kSemiContinuous) {
             // Have to use lb and ub to define semi-variables: lb is
             // naturally finite, but what if ub is infinite?
-            if (std::fabs(lb) >= kHighsInf)
-              highsLogUser(log_options, HighsLogType::kWarning,
-                           "Lower bound for semi-variable \"%s\" is %g\n",
-                           col_names[c_n].c_str(), lb);
-            if (std::fabs(ub) >= kHighsInf)
-              highsLogUser(log_options, HighsLogType::kWarning,
-                           "Upper bound for semi-variable \"%s\" is %g\n",
-                           col_names[c_n].c_str(), ub);
+            //
+            // writing "inf" is fine, except for with mingw, it
+            // appears, so use something bigger than the infinite
+            // bounds value - since options.infinite_bound is
+            // unavailable
+            const double infinite_bound = 1e30;
+            const bool inf_lb = lb <= -kHighsInf;
+            const double use_lb = inf_lb ? -infinite_bound : lb;
+            const bool inf_ub = ub >= kHighsInf;
+            const double use_ub = inf_ub ? infinite_bound : ub;
+            if (inf_lb)
+              highsLogUser(
+                  log_options, HighsLogType::kWarning,
+                  "Lower bound for semi-variable \"%s\" is %g but writing %g\n",
+                  col_names[c_n].c_str(), lb, use_lb);
+            if (inf_ub)
+              highsLogUser(
+                  log_options, HighsLogType::kWarning,
+                  "Upper bound for semi-variable \"%s\" is %g but writing %g\n",
+                  col_names[c_n].c_str(), ub, use_ub);
             fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+                    use_lb);
             if (integrality[c_n] == HighsVarType::kSemiInteger) {
               fprintf(file, " SI BOUND     %-8s  %.15g\n",
-                      col_names[c_n].c_str(), ub);
+                      col_names[c_n].c_str(), use_ub);
             } else {
               // Semi-continuous
               fprintf(file, " SC BOUND     %-8s  %.15g\n",
-                      col_names[c_n].c_str(), ub);
+                      col_names[c_n].c_str(), use_ub);
             }
           }
         } else {
