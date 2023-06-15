@@ -17,7 +17,7 @@ endif()
 # endif()
 
 if(BUILD_CXX_EXAMPLE)
-  file(GLOB C "*.c")
+  file(GLOB C_SRCS "*.c")
   foreach(FILE_NAME IN LISTS C_SRCS)
     add_c_example(${FILE_NAME})
   endforeach()

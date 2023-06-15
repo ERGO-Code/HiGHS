@@ -561,6 +561,7 @@ endif()
 option(JULIA "Build library and executable for Julia" OFF)
 
 include(cpp-highs)
+include(c-highs)
 
 if (PYTHON)
   include(python-highs)
