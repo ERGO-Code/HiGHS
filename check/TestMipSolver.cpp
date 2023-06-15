@@ -489,7 +489,6 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
-/*
 TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   // Introduced due to #1325 observing that LI and UI are needed
   HighsLp lp;
@@ -529,7 +528,6 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
 }
-*/
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
   const std::string model = "flugpl";
