@@ -94,24 +94,32 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (test_m1) {
     HighsSolution starting_solution = optimal_solution;
     if (dev_run)
-      printf("\n***************************\nSolving from partial integer solution\n");
+      printf(
+          "\n***************************\nSolving from partial integer "
+          "solution\n");
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
     HighsInt k = 0;
+    // Set every other integer variable to a fractional value
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
       if (k == 0) {
-	starting_solution.col_value[iCol] = 0.5;
-	k++;
+        starting_solution.col_value[iCol] = 0.5;
+        k++;
       } else {
-	k = 0;
+        k = 0;
       }
+    }
     return_status = highs.setSolution(starting_solution);
     REQUIRE(return_status == HighsStatus::kOk);
-      
-    }
+    highs.run();
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
   }
 
-
-  const bool test0 = false;
+  const bool other_tests = false;
+  const bool test0 = other_tests;
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
@@ -131,7 +139,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = false;
+  const bool test1 = other_tests;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -150,7 +158,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = false;
+  const bool test2 = other_tests;
   if (test2) {
     if (dev_run)
       printf(
@@ -180,7 +188,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test3 = false;
+  const bool test3 = other_tests;
   if (test3) {
     if (dev_run)
       printf(
@@ -203,7 +211,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test4 = false;
+  const bool test4 = other_tests;
   if (test4) {
     if (dev_run)
       printf(

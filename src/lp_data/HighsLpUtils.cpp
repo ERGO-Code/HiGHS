@@ -2308,6 +2308,37 @@ bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
   return true;
 }
 
+void assessColPrimalSolution(const HighsOptions& options, const double primal,
+                             const double lower, const double upper,
+                             const HighsVarType type, double& col_infeasibility,
+                             double& integer_infeasibility) {
+  // @primal_infeasibility calculation
+  col_infeasibility = 0;
+  if (primal < lower - options.primal_feasibility_tolerance) {
+    col_infeasibility = lower - primal;
+  } else if (primal > upper + options.primal_feasibility_tolerance) {
+    col_infeasibility = primal - upper;
+  }
+  integer_infeasibility = 0;
+  if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+    double nearest_integer = std::floor(primal + 0.5);
+    integer_infeasibility = std::fabs(primal - nearest_integer);
+  }
+  if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                type == HighsVarType::kSemiInteger)) {
+    // Semi-variables at zero will have positive col
+    // infeasibility, so possibly zero this
+    if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+      col_infeasibility = 0;
+    // If there is (still) column infeasibility due to value being
+    // off zero or below lower bound, then this counts as an integer
+    // infeasibility
+    if (col_infeasibility && primal < upper)
+      integer_infeasibility =
+          std::max(col_infeasibility, integer_infeasibility);
+  }
+}
+
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2339,31 +2370,12 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     const double upper = lp.col_upper_[iCol];
     const HighsVarType type =
         have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
-    // @primal_infeasibility calculation
+
     double col_infeasibility = 0;
-    if (primal < lower - options.primal_feasibility_tolerance) {
-      col_infeasibility = lower - primal;
-    } else if (primal > upper + options.primal_feasibility_tolerance) {
-      col_infeasibility = primal - upper;
-    }
     double integer_infeasibility = 0;
-    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-      double nearest_integer = std::floor(primal + 0.5);
-      integer_infeasibility = std::fabs(primal - nearest_integer);
-    }
-    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
-                                  type == HighsVarType::kSemiInteger)) {
-      // Semi-variables at zero will have positive col
-      // infeasibility, so possibly zero this
-      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
-        col_infeasibility = 0;
-      // If there is (still) column infeasibility due to value being
-      // off zero or below lower bound, then this counts as an integer
-      // infeasibility
-      if (col_infeasibility && primal < upper)
-        integer_infeasibility =
-            std::max(col_infeasibility, integer_infeasibility);
-    }
+
+    assessColPrimalSolution(options, primal, lower, upper, type,
+                            col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
       if (col_infeasibility > options.primal_feasibility_tolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
