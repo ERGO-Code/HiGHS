@@ -207,7 +207,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
 
     if (10 * (baseRowInds.size() - fracvar.row_ep.size()) >
-        10000 + mip.numCol()) {
+        10000 + static_cast<size_t>(mip.numCol())) {
       lpAggregator.clear();
       continue;
     }
