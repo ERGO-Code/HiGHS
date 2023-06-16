@@ -88,6 +88,11 @@ class HighsTaskExecutor {
   void run_worker(int workerId) {
     // spin until the global executor pointer is set up
     ExecutorHandle* executor;
+    // Following yields warning C4706: assignment within conditional
+    // expression when building libhighs on Windows (/W4):
+    //
+    //    while (!(executor = mainWorkerHandle.load(std::memory_order_acquire)))
+    //      HighsSpinMutex::yieldProcessor();
     while (true) {
       executor = mainWorkerHandle.load(std::memory_order_acquire);
       if (executor != nullptr) break;
