@@ -544,6 +544,15 @@ class HighsPostsolveStack {
   bool isColLinearlyTransformable(HighsInt col) const {
     return linearlyTransformable[col];
   }
+  
+  template <typename T>
+  void undoIterateBackwards(std::vector<T>& values,
+                            const std::vector<HighsInt>& index) {
+    for (size_t i = index.size(); i > 0; --i) {
+      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
+      values[index[i - 1]] = values[i - 1];
+    }
+  }
 
   /// undo presolve steps for primal dual solution and basis
   void undo(const HighsOptions& options, HighsSolution& solution,
@@ -557,38 +566,28 @@ class HighsPostsolveStack {
 
     // expand solution to original index space
     solution.col_value.resize(origNumCol);
-    for (size_t i = origColIndex.size(); i > 0; --i) {
-      assert(static_cast<size_t>(origColIndex[i - 1]) >= i - 1);
-      solution.col_value[origColIndex[i - 1]] = solution.col_value[i - 1];
-    }
+    undoIterateBackwards(solution.col_value, origColIndex);
 
     solution.row_value.resize(origNumRow);
-    for (size_t i = origRowIndex.size(); i > 0; --i) {
-      assert(static_cast<size_t>(origRowIndex[i - 1]) >= i - 1);
-      solution.row_value[origRowIndex[i - 1]] = solution.row_value[i - 1];
-    }
+    undoIterateBackwards(solution.row_value, origRowIndex);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
-      for (size_t i = origColIndex.size(); i > 0; --i)
-        solution.col_dual[origColIndex[i - 1]] = solution.col_dual[i - 1];
+      undoIterateBackwards(solution.col_dual, origColIndex);
 
       solution.row_dual.resize(origNumRow);
-      for (size_t i = origRowIndex.size(); i > 0; --i)
-        solution.row_dual[origRowIndex[i - 1]] = solution.row_dual[i - 1];
+      undoIterateBackwards(solution.row_dual, origRowIndex);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       basis.col_status.resize(origNumCol);
-      for (size_t i = origColIndex.size(); i > 0; --i)
-        basis.col_status[origColIndex[i - 1]] = basis.col_status[i - 1];
+      undoIterateBackwards(basis.col_status, origColIndex);
 
       basis.row_status.resize(origNumRow);
-      for (size_t i = origRowIndex.size(); i > 0; --i)
-        basis.row_status[origRowIndex[i - 1]] = basis.row_status[i - 1];
+      undoIterateBackwards(basis.row_status, origRowIndex);
     }
 
     // now undo the changes
@@ -745,38 +744,28 @@ class HighsPostsolveStack {
 
     // expand solution to original index space
     solution.col_value.resize(origNumCol);
-    for (size_t i = origColIndex.size(); i > 0; --i) {
-      assert(static_cast<size_t>(origColIndex[i - 1]) >= i - 1);
-      solution.col_value[origColIndex[i - 1]] = solution.col_value[i - 1];
-    }
+    undoIterateBackwards(solution.col_value, origColIndex);
 
     solution.row_value.resize(origNumRow);
-    for (size_t i = origRowIndex.size(); i > 0; --i) {
-      assert(static_cast<size_t>(origRowIndex[i - 1]) >= i - 1);
-      solution.row_value[origRowIndex[i - 1]] = solution.row_value[i - 1];
-    }
+    undoIterateBackwards(solution.row_value, origRowIndex);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
-      for (size_t i = origColIndex.size(); i > 0; --i)
-        solution.col_dual[origColIndex[i - 1]] = solution.col_dual[i - 1];
+      undoIterateBackwards(solution.col_dual, origColIndex);
 
       solution.row_dual.resize(origNumRow);
-      for (size_t i = origRowIndex.size(); i > 0; --i)
-        solution.row_dual[origRowIndex[i - 1]] = solution.row_dual[i - 1];
+      undoIterateBackwards(solution.row_dual, origRowIndex);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       basis.col_status.resize(origNumCol);
-      for (size_t i = origColIndex.size(); i > 0; --i)
-        basis.col_status[origColIndex[i - 1]] = basis.col_status[i - 1];
+      undoIterateBackwards(basis.col_status, origColIndex);
 
       basis.row_status.resize(origNumRow);
-      for (size_t i = origRowIndex.size(); i > 0; --i)
-        basis.row_status[origRowIndex[i - 1]] = basis.row_status[i - 1];
+      undoIterateBackwards(basis.row_status, origRowIndex);
     }
 
     // now undo the changes
