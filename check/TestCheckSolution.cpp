@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status,
@@ -90,7 +90,28 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
-  const bool test0 = true;
+  const bool test_m1 = true;
+  if (test_m1) {
+    HighsSolution starting_solution = optimal_solution;
+    if (dev_run)
+      printf("\n***************************\nSolving from partial integer solution\n");
+    HighsInt k = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
+      if (k == 0) {
+	starting_solution.col_value[iCol] = 0.5;
+	k++;
+      } else {
+	k = 0;
+      }
+    return_status = highs.setSolution(starting_solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+      
+    }
+  }
+
+
+  const bool test0 = false;
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
@@ -110,7 +131,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = true;
+  const bool test1 = false;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -129,7 +150,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = true;
+  const bool test2 = false;
   if (test2) {
     if (dev_run)
       printf(
@@ -159,7 +180,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test3 = true;
+  const bool test3 = false;
   if (test3) {
     if (dev_run)
       printf(
@@ -182,7 +203,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test4 = true;
+  const bool test4 = false;
   if (test4) {
     if (dev_run)
       printf(
