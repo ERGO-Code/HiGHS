@@ -543,7 +543,7 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h, const std::string name
 }
 
 
-PYBIND11_MODULE(highs_bindings, m)
+PYBIND11_MODULE(highspy, m)
 {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")

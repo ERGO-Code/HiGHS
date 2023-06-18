@@ -35,7 +35,7 @@ _deps += [dependency('python3'),
 
 # highs_bindings, for the bindings to potlib
 py.extension_module(
-  'highs_bindings',
+  'highspy',
   sources : [
     'highspy/highs_bindings.cpp',
   ],
@@ -43,13 +43,4 @@ py.extension_module(
   # link_with: _linkto,
   cpp_args : _args,
   install: true,
-  subdir: 'highspy/'
-)
-
-# highspy, main package
-py.install_sources([
-    'highspy/__init__.py',
-  ],
-  pure: false, # install next to compiled extension
-  subdir: 'highspy'
 )
