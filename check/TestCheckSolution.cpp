@@ -72,8 +72,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   const HighsInfo& info = highs.getInfo();
   //  const HighsInfo& info = highs.getInfo();
   if (dev_run) printf("\n********************\nSolving from scratch\n");
-  highs.setOptionValue("output_flag", dev_run);
-
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", false);
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
 

@@ -3015,8 +3015,7 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   // If the current solution is feasible, then solution can be used by
   // MIP solver to get a primal bound
   if (feasible) return HighsStatus::kOk;
-  if (!integral)
-    return HighsStatus::kOk;  // TEMP FOR CHECKING NOTHIONG IS BROKEN
+  //  if (!integral) return HighsStatus::kOk;  // TEMP FOR CHECKING NOTHIONG IS BROKEN
   // Save the column bounds and integrality in preparation for fixing
   // the non-continuous variables when user-supplied values are
   // integer
