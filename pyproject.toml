@@ -28,21 +28,6 @@ test-skip = ""
 [tool.cibuildwheel.linux]
 archs = ["x86_64 i686 aarch64 ppc64le s390x"]
 
-before-all = [
-  "cd /project && ls"
-]
-
-before-build = [
-  "rm -rf build",
-  "mkdir -p build && cd build",
-  "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
-  "make -j && make install",
-]
-
-[tool.cibuildwheel.linux.environment]
-DYLD_LIBRARY_PATH = "$DYLD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
-LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
-
 [tool.cibuildwheel.macos]
 archs = ["x86_64 arm64"]
 repair-wheel-command = [

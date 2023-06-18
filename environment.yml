@@ -1,0 +1,17 @@
+# To use:
+#
+#   $ conda env create -f environment.yml  # `mamba` works too for this command
+#   $ conda activate hzsite
+#
+name: highsdev
+channels:
+  - conda-forge
+dependencies:
+  - python==3.10
+  - pytest
+  - numpy
+  - ninja
+  - pybind11
+  - cmake
+  - openblas
+  - clang

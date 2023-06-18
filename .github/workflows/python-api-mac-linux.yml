@@ -1,0 +1,57 @@
+name: python-api-mac-linux
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.7", "3.8", "3.9"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Conda environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: highsdev
+          create-args: >-
+            python==${{matrix.python-version}}
+            pytest
+            numpy
+            pybind11
+            cmake
+            pkgconfig
+            compilers
+            openblas
+          cache-environment: true
+          init-shell: >-
+            bash
+            zsh
+
+      - name: Set up Python version ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Configure CMake
+        shell: bash -l {0}
+        run: cmake -S . -B build -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX
+
+      - name: Build and install
+        shell: bash -l {0}
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Test Python Interface
+        shell: bash -l {0}
+        run: |
+          CC=$(which clang) CXX=$(which clang++) pip install .
+          pytest -v ./highspy/tests/
