@@ -58,4 +58,27 @@ the incumbent model since it was last solved.
 #### LP
 
 To run HiGHS from a user-defined solution or basis, this is passed to HiGHS
-using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis).
+using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis). The basis passed to HiGHS need not be complete
+
+* There can be more basic variables then the number of rows in the
+  model. HiGHS will identify a set of basic variables of the correct
+  dimension by making some basic variables nonbasic
+
+* There can be fewer basic variables then the number of rows in the
+  model.  HiGHS will identify a set of basic variables of the correct
+  dimension by adding basic variables corresponding to slacks.
+
+* For nonbasic variables, it is unnecessary to specify whether they
+  are at their lower or upper bound unless they are "boxed" variables.
+
+#### MIP
+
+If a (partial) feasible assignment of the integer variables is known,
+this can be passed to HiGHS via [setSolution](@ref Set-solution). If
+integer variables are set to integer values, HiGHS will solve the LP
+with these integer variables fixed (or MIP if the assignment of the
+integer variables is not complete). If a feasible solution is
+obtained, it will be used to provide the MIP solver with an initial
+primal bound when it run to solve for all integer variables.
+
+

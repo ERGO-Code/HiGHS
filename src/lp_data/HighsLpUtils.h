@@ -216,6 +216,11 @@ bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
 
+void assessColPrimalSolution(const HighsOptions& options, const double primal,
+                             const double lower, const double upper,
+                             const HighsVarType type, double& col_infeasibility,
+                             double& integer_infeasibility);
+
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
