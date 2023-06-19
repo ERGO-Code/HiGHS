@@ -629,6 +629,11 @@ double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
+HighsInt Highs_zeroAllClocks(const void* highs) {
+  ((Highs*)highs)->zeroAllClocks();
+  return (HighsInt)HighsStatus::kOk;
+}
+
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
                       const HighsInt* index, const double* value) {
