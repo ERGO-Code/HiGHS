@@ -3233,6 +3233,8 @@ HighsStatus Highs::callSolveQp() {
       basis_.row_status[i] = HighsBasisStatus::kBasic;
     }
   }
+  basis_.valid = true;
+  basis_.alien = false;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);
