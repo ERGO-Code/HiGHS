@@ -419,6 +419,11 @@ class Highs {
   const HighsSolution& getSolution() const { return solution_; }
 
   /**
+   * @brief Zero all clocks in the internal HighsTimer instance
+   */
+  void zeroAllClocks() { timer_.zeroAllClocks(); };
+
+  /**
    * @brief Return a const reference to the internal HighsSolution instance
    */
   const std::vector<HighsObjectiveSolution>& getSavedMipSolutions() const {
@@ -1010,8 +1015,7 @@ class Highs {
    */
   HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
                                                        const char*, void*),
-                             void* deprecated = nullptr  // V2.0 remove
-  );
+                             void* log_user_callback_data = nullptr);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis

@@ -754,6 +754,9 @@ HighsStatus writeMps(
   // spaces.
 
   fprintf(file, "NAME        %s\n", model_name.c_str());
+  const bool use_objsense = true;
+  const HighsInt use_sense = use_objsense ? 1 : (HighsInt)sense;
+  if (sense == ObjSense::kMaximize) fprintf(file, "OBJSENSE\n  MAX\n");
   fprintf(file, "ROWS\n");
   fprintf(file, " N  %-8s\n", objective_name.c_str());
   for (HighsInt r_n = 0; r_n < num_row; r_n++) {
@@ -802,7 +805,7 @@ HighsStatus writeMps(
       }
     }
     if (col_cost[c_n] != 0) {
-      double v = (HighsInt)sense * col_cost[c_n];
+      double v = use_sense * col_cost[c_n];
       fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
               objective_name.c_str(), v);
     }
@@ -824,7 +827,7 @@ HighsStatus writeMps(
     fprintf(file, "RHS\n");
     if (offset) {
       // Handle the objective offset as a RHS entry for the cost row
-      double v = -(HighsInt)sense * offset;
+      double v = -use_sense * offset;
       fprintf(file, "    RHS_V     %-8s  %.15g\n", objective_name.c_str(), v);
     }
     for (HighsInt r_n = 0; r_n < num_row; r_n++) {
@@ -872,36 +875,81 @@ HighsStatus writeMps(
         fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
       } else {
         if (discrete) {
+          // Warn if writing non-integer bounds for integer or semi-integer
+          // variables
+          if (integrality[c_n] == HighsVarType::kInteger ||
+              integrality[c_n] == HighsVarType::kSemiInteger) {
+            if (lb > -kHighsInf) {
+              HighsInt i_lb = static_cast<HighsInt>(lb);
+              double dl = lb - i_lb;
+              if (dl)
+                highsLogUser(log_options, HighsLogType::kWarning,
+                             "Lower bound for integer or semi-integer column "
+                             "\"%s\" is %g: not integer\n",
+                             col_names[c_n].c_str(), lb);
+            }
+            if (ub < kHighsInf) {
+              HighsInt i_ub = static_cast<HighsInt>(ub);
+              double dl = ub - i_ub;
+              if (dl)
+                highsLogUser(log_options, HighsLogType::kWarning,
+                             "Upper bound for integer or semi-integer column "
+                             "\"%s\" is %g: not integer\n",
+                             col_names[c_n].c_str(), ub);
+            }
+          }
           if (integrality[c_n] == HighsVarType::kInteger) {
             if (lb == 0 && ub == 1) {
               // Binary
               fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
             } else {
-              assert(write_no_cost_zero_columns);
-              // No cost zero columns have a presence in the COLUMNS
-              // section, so no need to indicate integrality using LI
-              // or UI bounds. Avoids need for integer-valued bounds
-              if (!highs_isInfinity(-lb) && lb) {
-                // Finite, nonzero lower bound.
-                fprintf(file, " LO BOUND     %-8s  %.15g\n",
-                        col_names[c_n].c_str(), lb);
+              if (!highs_isInfinity(-lb)) {
+                // Finite lower bound. No need to state this if LB is
+                // zero unless UB is infinte
+                if (lb || highs_isInfinity(ub))
+                  fprintf(file, " LI BOUND     %-8s  %.15g\n",
+                          col_names[c_n].c_str(), lb);
               }
               if (!highs_isInfinity(ub)) {
                 // Finite upper bound
-                fprintf(file, " UP BOUND     %-8s  %.15g\n",
+                fprintf(file, " UI BOUND     %-8s  %.15g\n",
                         col_names[c_n].c_str(), ub);
               }
             }
-          } else if (integrality[c_n] == HighsVarType::kSemiInteger) {
-            fprintf(file, " SI BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    ub);
+          } else if (integrality[c_n] == HighsVarType::kSemiInteger ||
+                     integrality[c_n] == HighsVarType::kSemiContinuous) {
+            // Have to use lb and ub to define semi-variables: lb is
+            // naturally finite, but what if ub is infinite?
+            //
+            // writing "inf" is fine, except for with mingw, it
+            // appears, so use something bigger than the infinite
+            // bounds value - since options.infinite_bound is
+            // unavailable
+            const double infinite_bound = 1e30;
+            const bool inf_lb = lb <= -kHighsInf;
+            const double use_lb = inf_lb ? -infinite_bound : lb;
+            const bool inf_ub = ub >= kHighsInf;
+            const double use_ub = inf_ub ? infinite_bound : ub;
+            if (inf_lb)
+              highsLogUser(
+                  log_options, HighsLogType::kWarning,
+                  "Lower bound for semi-variable \"%s\" is %g but writing %g\n",
+                  col_names[c_n].c_str(), lb, use_lb);
+            if (inf_ub)
+              highsLogUser(
+                  log_options, HighsLogType::kWarning,
+                  "Upper bound for semi-variable \"%s\" is %g but writing %g\n",
+                  col_names[c_n].c_str(), ub, use_ub);
             fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
-          } else if (integrality[c_n] == HighsVarType::kSemiContinuous) {
-            fprintf(file, " SC BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    ub);
-            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+                    use_lb);
+            if (integrality[c_n] == HighsVarType::kSemiInteger) {
+              fprintf(file, " SI BOUND     %-8s  %.15g\n",
+                      col_names[c_n].c_str(), use_ub);
+            } else {
+              // Semi-continuous
+              fprintf(file, " SC BOUND     %-8s  %.15g\n",
+                      col_names[c_n].c_str(), use_ub);
+            }
           }
         } else {
           if (!highs_isInfinity(-lb)) {
@@ -938,7 +986,7 @@ HighsStatus writeMps(
         // May have explicit zeroes on the diagonal
         if (q_value[el])
           fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                  col_names[row].c_str(), (HighsInt)sense * q_value[el]);
+                  col_names[row].c_str(), use_sense * q_value[el]);
       }
     }
   }

@@ -642,6 +642,9 @@ lu_int lu_update(struct lu *this, double xtbl)
     /* Test triangularity */
     /* ------------------ */
 
+    row_reach = NULL;
+    col_reach = NULL;
+
     if (have_diag)
     {
         /*
@@ -853,12 +856,6 @@ lu_int lu_update(struct lu *this, double xtbl)
     if (this->pivotlen + nreach > 2*m)
     {
         lu_garbage_perm(this);
-    }
-
-    // warning C4703: potentially uninitialized local pointer variable 'row_reach' and 'col_reach' used
-    if (nreach > 0) {
-      assert(&row_reach[0] != NULL);
-      assert(&col_reach[0] != NULL);
     }
 
     /* append row indices row_reach[0..nreach-1] to end of pivot sequence */

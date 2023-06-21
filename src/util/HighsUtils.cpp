@@ -900,7 +900,7 @@ bool initialiseScatterData(const HighsInt max_num_point,
 
 bool updateScatterData(const double value0, const double value1,
                        HighsScatterData& scatter_data) {
-  if (value0 <= 0 || value0 <= 0) return false;
+  if (value0 <= 0 || value1 <= 0) return false;
   scatter_data.num_point_++;
   scatter_data.last_point_++;
   if (scatter_data.last_point_ == scatter_data.max_num_point_)

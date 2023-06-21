@@ -1847,9 +1847,9 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
                                                             const char*, void*),
-                                  void* deprecated  // V2.0 remove
-) {
+                                  void* log_user_callback_data) {
   options_.log_options.log_user_callback = log_user_callback;
+  options_.log_options.log_user_callback_data = log_user_callback_data;
   return HighsStatus::kOk;
 }
 
@@ -3008,32 +3008,57 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
   bool valid, integral, feasible;
+  // Determine whether this solution is feasible, or just integer feasible
   HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
                                                      valid, integral, feasible);
   assert(return_status != HighsStatus::kError);
   assert(valid);
-  // If the current non-continuous solution values are not integral,
-  // then no point in trying to assign values to continous variables
-  // to achieve a feasible solution.
-  if (!integral || feasible) return HighsStatus::kOk;
+  // If the current solution is feasible, then solution can be used by
+  // MIP solver to get a primal bound
+  if (feasible) return HighsStatus::kOk;
+  //  if (!integral) return HighsStatus::kOk;  // TEMP FOR CHECKING NOTHIONG IS
+  //  BROKEN
   // Save the column bounds and integrality in preparation for fixing
-  // the non-continuous variables at user-supplied values
+  // the non-continuous variables when user-supplied values are
+  // integer
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
+  const bool have_integrality = lp.integrality_.size();
+  bool is_integer = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
-    lp.col_lower_[iCol] = solution_.col_value[iCol];
-    lp.col_upper_[iCol] = solution_.col_value[iCol];
+    // Fix non-continuous variable if it has integer value
+    const double primal = solution_.col_value[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const HighsVarType type =
+        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    double col_infeasibility = 0;
+    double integer_infeasibility = 0;
+    assessColPrimalSolution(options_, primal, lower, upper, type,
+                            col_infeasibility, integer_infeasibility);
+    if (integer_infeasibility > options_.mip_feasibility_tolerance) {
+      // Variable is not integer feasible, so record that a MIP will
+      // have to be solved
+      is_integer = false;
+    } else {
+      // Variable is integer feasible, so fix it at this value and
+      // remove its integrality
+      lp.col_lower_[iCol] = solution_.col_value[iCol];
+      lp.col_upper_[iCol] = solution_.col_value[iCol];
+      lp.integrality_[iCol] = HighsVarType::kContinuous;
+    }
   }
-  lp.integrality_.clear();
+  // If the solution is integer valued, only an LP needs to be solved,
+  // so clear all integrality
+  if (is_integer) lp.integrality_.clear();
   solution_.clear();
   basis_.clear();
   // Solve the model
-  assert(!model_.isMip());
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Attempting to find feasible solution of continuous variables "
-               "for user-supplied values of discrete variables\n");
+               "Attempting to find feasible solution "
+               "for (partial) user-supplied values of discrete variables\n");
   return_status = this->run();
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
@@ -3042,8 +3067,7 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   // Handle the error return
   if (return_status == HighsStatus::kError) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::run() error trying to find feasible solution of "
-                 "continuous variables\n");
+                 "Highs::run() error trying to find feasible solution\n");
     return HighsStatus::kError;
   }
   return HighsStatus::kOk;
@@ -3217,6 +3241,8 @@ HighsStatus Highs::callSolveQp() {
       basis_.row_status[i] = HighsBasisStatus::kBasic;
     }
   }
+  basis_.valid = true;
+  basis_.alien = false;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

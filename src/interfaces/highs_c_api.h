@@ -1070,6 +1070,24 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
 double Highs_getRunTime(const void* highs);
 
 /**
+ * Reset the clocks in a `highs` model.
+ *
+ * Each `highs` model contains a single instance of clock that records how much
+ * time is spent in various parts of the algorithm. This clock is not reset on
+ * entry to `Highs_run`, so repeated calls to `Highs_run` report the cumulative
+ * time spent in the algorithm. A side-effect is that this will trigger a time
+ * limit termination once the cumulative run time exceeds the time limit, rather
+ * than the run time of each individual call to `Highs_run`.
+ *
+ * As a work-around, call `Highs_zeroAllClocks` before each call to `Highs_run`.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_zeroAllClocks(const void* highs);
+
+/**
  * Add a new column (variable) to the model.
  *
  * @param highs         A pointer to the Highs instance.

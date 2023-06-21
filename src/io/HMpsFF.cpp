@@ -1330,11 +1330,11 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     double value = atof(word.c_str());
     if (is_integral) {
       assert(is_lb || is_ub || is_semi);
-      // Must be LI or UI, and value should be integer
+      // Must be LI, UI or SI, and value should be integer
       HighsInt i_value = static_cast<HighsInt>(value);
       double dl = value - i_value;
       if (dl)
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "Bound for LI/UI/SI column \"%s\" is %g: not integer\n",
                      marker.c_str(), value);
       if (is_semi) {
