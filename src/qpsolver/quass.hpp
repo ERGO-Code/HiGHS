@@ -15,7 +15,6 @@ struct Quass {
  private:
   Runtime& runtime;
 
-  void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor);
 };
 
 #endif

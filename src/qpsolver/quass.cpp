@@ -10,7 +10,6 @@
 #include "qpsolver/devexharrispricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"
-#include "qpsolver/feasibility.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
 #include "lp_data/HighsAnalysis.h"
@@ -24,12 +23,12 @@
 
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
+void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
   rt.statistics.objval.push_back(rt.instance.objval(rt.primal));
-  rt.statistics.time.push_back(runtime.timer.readRunHighsClock());
+  rt.statistics.time.push_back(rt.timer.readRunHighsClock());
   SumNum sm =
       rt.instance.sumnumprimalinfeasibilities(rt.primal, rt.rowactivity);
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
@@ -217,18 +216,13 @@ double compute_primal_violation(Runtime& rt) {
 
 double compute_dual_violation(Runtime& rt) {
   double maxviolation = 0.0;
-  Vector rowact = rt.instance.A.mat_vec(rt.primal);
-  for (HighsInt i = 0; i < rt.instance.num_con; i++) {
-    // multiplier of lower bound has to be <= 0
-    double violation = rt.dualcon.value[i];
-    maxviolation = max(violation, maxviolation);
-    violation = -rt.dualcon.value[i];
-    maxviolation = max(violation, maxviolation);
-  }
+
+  Vector residuals = rt.instance.Q.mat_vec(rt.primal) + rt.instance.c + rt.instance.A.vec_mat(rt.dualcon) + rt.dualvar;
+
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
-    double violation = rt.dualvar.value[i];
+    double violation = residuals.value[i];
     maxviolation = max(violation, maxviolation);
-    violation = -rt.dualvar.value[i];
+    violation = -residuals.value[i];
     maxviolation = max(violation, maxviolation);
   }
   return maxviolation;
