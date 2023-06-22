@@ -399,11 +399,11 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
   // extract basis status
   for (HighsInt i=0; i<runtime.instance.num_var; i++) {
-    runtime.status_var[i] = basis.getstatus(i);
+    runtime.status_var[i] = basis.getstatus(runtime.instance.num_con + i);
   }
 
   for (HighsInt i=0; i<runtime.instance.num_con; i++) {
-    runtime.status_con[i] = basis.getstatus(runtime.instance.num_var + i);
+    runtime.status_con[i] = basis.getstatus(i);
   }
 
   if (basis.getnumactive() == runtime.instance.num_var) {
