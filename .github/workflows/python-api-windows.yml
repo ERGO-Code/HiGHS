@@ -40,13 +40,13 @@ jobs:
 
       - name: Configure CMake
         shell: pwsh
-        run: cmake -S . -B build -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$env:CONDA_PREFIX
+        run: cmake -S . -B build -DFAST_BUILD=OFF -DBUILD_SHARED_LIBS=ON -DHIGHSINT64=on
 
       - name: Build and install
         shell: pwsh
         # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: |
-          cmake --build build --parallel
+          cmake --build build --parallel --config Release
           cmake --install build
 
       - name: Test Python Interface
