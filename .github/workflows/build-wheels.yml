@@ -9,6 +9,8 @@ jobs:
     strategy:
       matrix:
         os: [macOS-12] #  windows-2019 ubuntu-20.04,
+        python-version: ["3.8"] # 3.7 doesn't work on macos
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v3
@@ -40,7 +42,7 @@ jobs:
 
       - name: Configure CMake
         shell: bash -l {0}
-        run: cmake -S . -B build -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX
+        run: cmake -S . -B build -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON
 
       - name: Build and install
         shell: bash -l {0}
@@ -50,23 +52,20 @@ jobs:
           cmake --install build
 
       - name: Build wheels
-        shell: bash -l {0}
         run: |
           cd  $GITHUB_WORKSPACE
-          export REPAIR_LIBRARY_PATH=$CONDA_PREFIX/lib
           export LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
           export DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
-          CC=$(which clang) CXX=$(which clang++) pip install .
+          ls $REPAIR_LIBRARY_PATH
           pip install cibuildwheel
           python -m cibuildwheel --output-dir wheelhouse
 
         # to supply options, put them in 'env', like:
 
-        env:
-          CIBW_ENVIRONMENT: REPAIR_LIBRARY_PATH=$CONDA_PREFIX/lib LD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel} &&
-            DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
+        # env:
+        #   CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+        #     DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel} &&
+        #     DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
 
       - uses: actions/upload-artifact@v2
         with:
