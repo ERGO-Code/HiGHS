@@ -40,7 +40,7 @@ jobs:
 
       - name: Configure CMake
         shell: pwsh
-        run: cmake -S . -B build -DFAST_BUILD=OFF -DBUILD_SHARED_LIBS=ON -DHIGHSINT64=on
+        run: cmake -S . -B build -DFAST_BUILD=OFF -DBUILD_SHARED_LIBS=ON -DHIGHSINT64=on -DCMAKE_INSTALL_PREFIX=C:\Users\runneradmin\micromamba\envs\highsdev
 
       - name: Build and install
         shell: pwsh
