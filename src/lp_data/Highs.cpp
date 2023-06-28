@@ -3152,21 +3152,19 @@ HighsStatus Highs::callSolveQp() {
 
   settings.reportingfequency = 1000;
 
-
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 stats.iteration[rep], stats.time[rep],
-                 stats.objval[rep],
+                 stats.iteration[rep], stats.time[rep], stats.objval[rep],
                  stats.nullspacedimension[rep]);
   });
 
   settings.timelimit = options_.time_limit;
   settings.iterationlimit = options_.simplex_iteration_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
-  
+
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
@@ -3175,7 +3173,8 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  QpAsmStatus qpstatus = solveqp(instance, settings, stats, qp_model_status, qp_solution);
+  QpAsmStatus qpstatus = 
+      solveqp(instance, settings, stats, qp_model_status, qp_solution);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
