@@ -1,15 +1,14 @@
-name: test-python-platforms 
+name: test-python-api
 
-on: [pull_request]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python: [3.7, 3.8, 3.9]
-
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python: [3.9]
     steps:
       - uses: actions/checkout@v3
       - name: Install correct python version
@@ -21,4 +20,4 @@ jobs:
         run: |
           pip install .
           pip install pytest
-          pytest -v ./HiGHS
+          pytest -v ./highspy/tests/
