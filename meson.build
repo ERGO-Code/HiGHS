@@ -114,3 +114,8 @@ if get_option('with_tests')
   subdir('check')
   _deps += dependency('catch2', required: true)
 endif
+
+# --------------------- Bindings
+if get_option('with_pybind11')
+  subdir('highspy')
+endif
