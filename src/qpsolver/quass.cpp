@@ -196,6 +196,38 @@ static void regularize(Runtime& rt) {
   }
 }
 
+void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dual_con, Vector& dual_var) {
+  for (auto e : basis.getactive()) {
+    HighsInt indexinbasis = basis.getindexinfactor()[e];
+    BasisStatus status = basis.getstatus(e);
+    if (e >= rt.instance.num_con) {
+      // active variable bound
+      HighsInt var = e - rt.instance.num_con;
+
+      if (status == BasisStatus::ActiveAtUpper) {
+        dual_var.value[var] = -lambda.value[indexinbasis];
+      } else if (status == BasisStatus::ActiveAtLower) {
+        dual_var.value[var] = lambda.value[indexinbasis];
+      } else {
+        assert(lambda.value[indexinbasis] == 0);
+        dual_var.value[var];
+      }
+        
+    } else {
+      if (status == BasisStatus::ActiveAtUpper) {
+        dual_con.value[e] = -lambda.value[indexinbasis];
+      } else if (status == BasisStatus::ActiveAtLower) {
+        dual_con.value[e] = lambda.value[indexinbasis];
+      } else {
+        assert(lambda.value[indexinbasis] == 0);
+        dual_con.value[e] = 0;
+      }
+    }
+  }
+  dual_con.resparsify();
+  dual_var.resparsify();
+}
+
 double compute_primal_violation(Runtime& rt) {
   double maxviolation = 0.0;
   Vector rowact = rt.instance.A.mat_vec(rt.primal);
@@ -214,12 +246,12 @@ double compute_primal_violation(Runtime& rt) {
   return maxviolation;
 }
 
-double compute_dual_violation(Runtime& rt) {
+double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_con, Vector& dual_var) {
   double maxviolation = 0.0;
 
-  Vector residuals = rt.instance.Q.mat_vec(rt.primal) + rt.instance.c + rt.instance.A.vec_mat(rt.dualcon) + rt.dualvar;
+  Vector residuals = instance.Q.mat_vec(primal) + instance.c + instance.A.t().mat_vec(dual_con) + dual_var;
 
-  for (HighsInt i = 0; i < rt.instance.num_var; i++) {
+  for (HighsInt i = 0; i < instance.num_var; i++) {
     double violation = residuals.value[i];
     maxviolation = max(violation, maxviolation);
     violation = -residuals.value[i];
@@ -379,15 +411,13 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   loginformation(runtime, basis, factor);
   runtime.settings.endofiterationevent.fire(runtime.statistics);
 
-  printf("max primal violation = %.20lf\n", compute_primal_violation(runtime));
-  printf("max dual   violation = %.20lf\n", compute_dual_violation(runtime));
-
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
 
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
+    BasisStatus status = basis.getstatus(e);
     if (e >= runtime.instance.num_con) {
       // active variable bound
       HighsInt var = e - runtime.instance.num_con;
@@ -396,6 +426,14 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       runtime.dualcon.value[e] = lambda.value[indexinbasis];
     }
   }
+  runtime.dualcon.resparsify();
+  runtime.dualvar.resparsify();
+
+  //Vector actual_dual_var(runtime.instance.num_var);
+  //Vector actual_dual_con(runtime.instance.num_con);
+  //compute_actual_duals(runtime, basis, redcosts.getReducedCosts(), actual_dual_con, actual_dual_var);
+  //printf("max primal violation = %.20lf\n", compute_primal_violation(runtime));
+  //printf("max dual   violation = %.20lf\n", compute_dual_violation(runtime.instance, runtime.primal, actual_dual_con, actual_dual_var));
 
   // extract basis status
   for (HighsInt i=0; i<runtime.instance.num_var; i++) {

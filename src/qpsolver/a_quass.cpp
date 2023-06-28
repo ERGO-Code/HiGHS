@@ -17,6 +17,9 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, Q
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   HighsTimer qp_timer = HighsTimer();
   computestartingpoint_highs(instance, settings, stats, modelstatus, startinfo, qp_timer);
+  if (modelstatus == QpModelStatus::INFEASIBLE) {
+    return QpAsmStatus::OK;
+  }
 
   // solve
   QpAsmStatus status = solveqp_actual(instance, settings, startinfo, stats, modelstatus, solution);
