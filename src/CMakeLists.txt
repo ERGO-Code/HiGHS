@@ -651,7 +651,7 @@ set(headers_fast_build_
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
     qpsolver/a_asm.hpp
-    qpsolver/q_quass.hpp
+    qpsolver/a_quass.hpp
     qpsolver/quass.hpp
     qpsolver/vector.hpp
     qpsolver/scaling.hpp
