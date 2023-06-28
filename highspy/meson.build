@@ -9,7 +9,7 @@ _deps += pyb11_dep
 highs_dep = declare_dependency(link_with: _linkto,
                                dependencies: _deps)
 highspyext = py.extension_module(
-  '_highs',
+  'highspy',
   sources : [
     'highs_bindings.cpp',
   ],
@@ -18,13 +18,4 @@ highspyext = py.extension_module(
   include_directories: _incdirs,
   cpp_args : _args,
   install: true,
-  subdir: 'highspy/',
-)
-
-# highspy, main package
-py.install_sources([
-    '__init__.py',
-  ],
-  pure: false, # install next to compiled extension
-  subdir: 'highspy'
 )
