@@ -3173,7 +3173,7 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  QpAsmStatus qpstatus = 
+  QpAsmStatus qpstatus =
       solveqp(instance, settings, stats, qp_model_status, qp_solution);
 
   HighsStatus call_status = HighsStatus::kOk;
