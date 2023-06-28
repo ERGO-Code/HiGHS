@@ -491,6 +491,7 @@ target_sources(highs PRIVATE
     presolve/HPresolve.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/PresolveComponent.cpp
+    qpsolver/a_quass.cpp
     qpsolver/basis.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
@@ -648,6 +649,7 @@ set(headers_fast_build_
     parallel/HighsSplitDeque.h
     parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
+    qpsolver/q_quass.hpp
     qpsolver/quass.hpp
     qpsolver/vector.hpp
     qpsolver/scaling.hpp
