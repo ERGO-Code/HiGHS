@@ -20,5 +20,5 @@ jobs:
         shell: bash
         run: |
           pip install .
-          pip install pytest
+          pip install pytest numpy
           pytest -v ./HiGHS
