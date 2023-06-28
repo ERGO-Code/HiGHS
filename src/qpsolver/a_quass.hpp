@@ -1,4 +1,4 @@
-#ifndef __SRC_LIB_QPSOLVER_ASM_HPP__
+#ifndef __SRC_LIB_QPSOLVER_QUASS_HPP__
 #define __SRC_LIB_QPSOLVER_QUASS_HPP__
 
 #include "qpsolver/instance.hpp"
