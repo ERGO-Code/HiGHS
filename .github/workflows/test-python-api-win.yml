@@ -1,4 +1,4 @@
-name: test-python-api
+name: test-python-api-win
 
 on: [push, pull_request]
 
