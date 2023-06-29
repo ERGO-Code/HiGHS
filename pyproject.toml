@@ -21,9 +21,10 @@ requires = ["pybind11", "meson-python"]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
-setup = ['-Duse_zlib=False',
+setup = ['-Duse_zlib=False', # Hard to get on windows
         '-Dwith_pybind11=True',
         '-Dhighsint64=False',
+        '--vsenv', # Only does something on windows
         # '--default-library=shared',
         ]
 dist = ['--include-subprojects']
