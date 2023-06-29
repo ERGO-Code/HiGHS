@@ -7,14 +7,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [windows-latest]
         python: [3.9]
+    env:
+      CC: cl.exe
+      CXX: cl.exe
+      LD: link.exe
     steps:
       - uses: actions/checkout@v3
       - name: Install correct python version
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python }}
+      - name: Setup compiler
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_64
       - name: Test Python Interface
         shell: bash
         run: |

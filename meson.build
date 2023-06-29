@@ -38,6 +38,11 @@ if cpu_family in ['x86_64', 'i686']
 endif
 if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
     add_project_arguments('-mpopcntd', language: 'cpp')
+
+if is_mingw
+  # For mingw-w64, link statically against the UCRT and don't use LTO
+  gcc_link_args = ['-lucrt', '-static', '-fno-use-linker-plugin']
+  add_project_link_arguments(gcc_link_args, language: ['c', 'cpp'])
 endif
 
 # --------------------- Dependencies
