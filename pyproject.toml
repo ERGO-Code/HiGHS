@@ -26,8 +26,6 @@ setup = ['-Duse_zlib=True',
         '-Dhighsint64=False',
         # '--default-library=shared',
         ]
-compile = ['-j4']
-# install = ['--tags=bindings']
 dist = ['--include-subprojects']
 
 [tool.cibuildwheel]

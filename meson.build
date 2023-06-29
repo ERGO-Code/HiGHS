@@ -1,6 +1,6 @@
 project('highs', 'cpp',
   version : '1.5.3',
-  default_options : ['warning_level=3', 'cpp_std=c++17'])
+  default_options : ['warning_level=1', 'cpp_std=c++17'])
 
 
 # Add C++ compiler options
