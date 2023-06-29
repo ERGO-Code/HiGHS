@@ -13,8 +13,7 @@ highspyext = py.extension_module(
   sources : [
     'highs_bindings.cpp',
   ],
-  dependencies: _deps,
-  link_with: _linkto,
+  dependencies: highs_dep,
   include_directories: _incdirs,
   cpp_args : _args,
   install: true,
