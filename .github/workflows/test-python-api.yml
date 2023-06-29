@@ -18,6 +18,6 @@ jobs:
       - name: Test Python Interface
         shell: bash
         run: |
-          pip install .
+          pip install -vvv .
           pip install pytest numpy
           pytest -v ./highspy/tests/
