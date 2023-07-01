@@ -26,6 +26,13 @@ if host_system == 'linux'
   _args += '-Wno-unused-const-variable'
 endif
 
+if cppc.get_id() == 'msvc'
+  add_project_arguments(cppc.get_supported_arguments('/W4'), language : 'cpp')
+  add_project_arguments('/wd4018', '/wd4061', '/wd4100', '/wd4101', '/wd4127', '/wd4189', '/wd4244', '/wd4245', '/wd4267', '/wd4324', '/wd4365', '/wd4389', '/wd4456', '/wd4457', '/wd4458', '/wd4459', '/wd4514', '/wd4701', '/wd4820', language: 'cpp')
+  add_project_arguments('/MP', language: 'cpp')
+  _args += '-D_CRT_SECURE_NO_WARNINGS'
+endif
+
 # --------------------- Dependencies
 # libm for Unix systems
 m_dep = cppc.find_library('m', required: false)
@@ -55,12 +62,17 @@ _incdirs += include_directories([
 
 # Optional arguments
 if get_option('fast_build')
-  add_project_arguments(cc.get_supported_arguments('-fno-omit-frame-pointer'), language : 'c')
-  add_project_arguments(cppc.get_supported_arguments('-fno-omit-frame-pointer'), language : 'cpp')
+  add_project_arguments(cc.get_supported_arguments('-fno-omit-frame-pointer'), language : ['c', 'cpp'])
 endif
 
 if get_option('debug_sol')
   _args += ['-DHIGHS_DEBUGSOL']
+endif
+
+if cppc.get_id() == 'msvc'
+  if get_option('with_stdcall')
+    add_project_arguments(cppc.get_supported_arguments('/Gz'), language : ['cpp', 'c'])
+  endif
 endif
 
 # --------------------- Library

@@ -16,3 +16,6 @@ option('with_csharp',
 option('debug_sol',
       type: 'boolean',
       value: false)
+option('with_stdcall',
+      type: 'boolean',
+      value: false)
