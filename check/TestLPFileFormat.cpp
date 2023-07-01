@@ -1,5 +1,5 @@
-
 #include "Highs.h"
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "filereaderlp/reader.hpp"
 

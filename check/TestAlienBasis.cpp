@@ -1,9 +1,9 @@
-#include <sstream>
-
-#include "Highs.h"
 #include "catch.hpp"
+#include <sstream>
 #include "util/HFactor.h"
 #include "util/HighsRandom.h"
+#include "HCheckConfig.h"
+#include "Highs.h"
 
 const double inf = kHighsInf;
 const bool dev_run = false;

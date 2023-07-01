@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 
 #if 0
 #include <omp.h>

@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include "Highs.h"
+#include "HCheckConfig.h"
 #include "catch.hpp"
 
 const bool dev_run = false;

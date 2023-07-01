@@ -1,4 +1,5 @@
 #include "Highs.h"
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "util/HFactor.h"
 

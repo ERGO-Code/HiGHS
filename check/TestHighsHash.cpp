@@ -1,4 +1,4 @@
-
+#include "HCheckConfig.h"
 #include <numeric>
 
 #include "catch.hpp"

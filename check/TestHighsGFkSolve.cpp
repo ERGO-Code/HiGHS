@@ -1,9 +1,9 @@
-
 #include <numeric>
 
 #include "catch.hpp"
 #include "mip/HighsGFkSolve.h"
 #include "util/HighsRandom.h"
+#include "HCheckConfig.h"
 
 const bool dev_run = false;
 
