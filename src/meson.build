@@ -247,7 +247,7 @@ if get_option('with_fortran')
   _fsrcs = [
     'interfaces/highs_fortran_api.f90'
   ]
-  fortran_exec = library('FortranHighs',
+  fortran_lib = library('FortranHighs',
                         _fsrcs,
                         dependencies: _deps,
                         cpp_args: _args,
@@ -258,3 +258,18 @@ if get_option('with_fortran')
 endif
 
 # C# is not supported by Meson
+
+if get_option('with_csharp')
+  add_languages('cs', required: true)
+  _cs_srcs = [
+    'interfaces/highs_csharp_api.cs'
+  ]
+  cs_lib = library('HighsCsharp',
+                        _cs_srcs,
+                        dependencies: _deps,
+                        cpp_args: _args,
+                        link_with: [ _linkto, highslib ],
+                        include_directories: _incdirs,
+                        pic: true,
+                        install: true)
+endif
