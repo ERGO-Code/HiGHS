@@ -33,6 +33,15 @@ if cppc.get_id() == 'msvc'
   _args += '-D_CRT_SECURE_NO_WARNINGS'
 endif
 
+cpu_family = host_machine.cpu_family()
+
+if cpu_family in ['x86_64', 'i686']
+    add_project_arguments('-mpopcnt', language: 'cpp')
+endif
+if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
+    add_project_arguments('-mpopcntd', language: 'cpp')
+endif
+
 # --------------------- Dependencies
 # libm for Unix systems
 m_dep = cppc.find_library('m', required: false)
