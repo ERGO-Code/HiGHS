@@ -69,7 +69,6 @@ endforeach
 
 test('test_capi',
     executable('capi_unit_tests', 'TestCAPI.c',
-  link_with: [highslib],
   include_directories: _incdirs,
   link_with : _linkto ,
 ))

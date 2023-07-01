@@ -82,6 +82,17 @@ HiGHS is installed using the command
 
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
+Meson
+-----
+
+HiGHs can also use the `meson` build interface:
+
+``` sh
+meson setup bbdir -Dwith_tests=True
+meson test -C bbdir
+```
+
+
 Interfaces
 ----------
 

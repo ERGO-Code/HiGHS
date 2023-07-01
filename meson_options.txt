@@ -18,6 +18,7 @@ option('debug_sol',
       value: false)
 option('with_stdcall',
       type: 'boolean',
+      description: 'Build highs with the __stdcall convention',
       value: false)
 option('with_tests',
       type: 'boolean',
