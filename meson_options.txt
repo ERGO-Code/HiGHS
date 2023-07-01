@@ -15,8 +15,10 @@ option('bitscan_reverse',
        type : 'boolean',
        value : false)
 option('use_zlib',
+       type : 'feature')
+option('with_fortran',
        type : 'boolean',
        value : false)
-option('with_fortran',
+option('with_csharp',
        type : 'boolean',
        value : false)

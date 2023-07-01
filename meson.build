@@ -40,8 +40,6 @@ zlib_dep = dependency('zlib',
 if zlib_dep.found()
   _deps += zlib_dep
   _incdirs += include_directories(['extern/zstr'])
-else
-    message('Couldn\'t find zlib')
 endif
 
 # Include Sources

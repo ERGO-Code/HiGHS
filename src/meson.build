@@ -5,10 +5,14 @@ commit_hash_cmd = run_command('git', 'rev-parse',
 commit_hash = commit_hash_cmd.stdout().strip()
 python_getdate = '''
 import datetime
+import os
+import time
 
-today = datetime.date.today()
-today_str = today.strftime('%Y-%m-%d')
-print(today_str)
+build_date = datetime.datetime.utcfromtimestamp(
+    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+)
+build_date_str = build_date.strftime('%Y-%m-%d')
+print(build_date_str)
 '''
 today_cmd = run_command('python3', '-c',
                         python_getdate,
