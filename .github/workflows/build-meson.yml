@@ -28,15 +28,15 @@ jobs:
       - name: Build
         shell: bash -l {0}
         run: |
-          meson setup bbdir -Duse_zlib=True --prefix $CONDA_PREFIX
+          meson setup bbdir -Duse_zlib=enabled --prefix $CONDA_PREFIX
           meson install -C bbdir
       - name: Build Fast
         shell: bash -l {0}
         run: |
-          meson setup bbdir_fast -Duse_zlib=True -Dfast_build=True --prefix $CONDA_PREFIX
+          meson setup bbdir_fast -Dfast_build=True --prefix $CONDA_PREFIX
           meson install -C bbdir_fast
       - name: Build Static
         shell: bash -l {0}
         run: |
-          meson setup bbdir_static -Duse_zlib=True --default-library static --prefix $CONDA_PREFIX
+          meson setup bbdir_static --default-library static --prefix $CONDA_PREFIX
           meson install -C bbdir_static
