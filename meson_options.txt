@@ -5,15 +5,6 @@ option('fast_build',
 option('highsint64',
        type : 'boolean',
        value : true)
-option('mm_pause',
-       type : 'boolean',
-       value : false)
-option('builtin_clz',
-       type : 'boolean',
-       value : true)
-option('bitscan_reverse',
-       type : 'boolean',
-       value : false)
 option('use_zlib',
        type : 'feature')
 option('with_fortran',

@@ -12,7 +12,11 @@ _incdirs = [] # All the includes
 add_languages('c', required: true)
 cc = meson.get_compiler('c')
 cppc = meson.get_compiler('cpp')
+
+# Platform detection
 host_system = host_machine.system()
+is_windows = host_system == 'windows'
+is_mingw = is_windows and cc.get_id() == 'gcc'
 
 # Conditional arguments
 if host_system == 'linux'

@@ -1,8 +1,25 @@
 # -------------------------- Configuration
+conf_data = configuration_data()
+conf_data.set('FAST_BUILD',
+              get_option('fast_build'))
+conf_data.set('HIGHS_VERSION_MAJOR',
+              meson.project_version().split('.')[0])
+conf_data.set('HIGHS_VERSION_MINOR',
+              meson.project_version().split('.')[1])
+conf_data.set('HIGHS_VERSION_PATCH',
+              meson.project_version().split('.')[2])
+conf_data.set('ZLIB_FOUND',
+              zlib_dep.found())
+conf_data.set('HIGHSINT64',
+              get_option('highsint64'))
+# Commit hash
 commit_hash_cmd = run_command('git', 'rev-parse',
                               '--short', 'HEAD',
                              check: true)
 commit_hash = commit_hash_cmd.stdout().strip()
+conf_data.set_quoted('HIGHS_GITHASH',
+                     commit_hash)
+# Date
 python_getdate = '''
 import datetime
 import os
@@ -18,30 +35,54 @@ today_cmd = run_command('python3', '-c',
                         python_getdate,
                        check: true)
 today_str = today_cmd.stdout().strip()
-
-conf_data = configuration_data()
-conf_data.set('FAST_BUILD',
-              get_option('fast_build'))
-conf_data.set('ZLIB_FOUND',
-              zlib_dep.found())
-conf_data.set('HIGHSINT64',
-              get_option('highsint64'))
-conf_data.set('HIGHS_HAVE_MM_PAUSE',
-              get_option('mm_pause'))
-conf_data.set('HIGHS_HAVE_BUILTIN_CLZ',
-              get_option('builtin_clz'))
-conf_data.set('HIGHS_HAVE_BITSCAN_REVERSE',
-              get_option('bitscan_reverse'))
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
                      today_str)
-conf_data.set_quoted('HIGHS_GITHASH',
-                     commit_hash)
-conf_data.set('HIGHS_VERSION_MAJOR',
-              meson.project_version().split('.')[0])
-conf_data.set('HIGHS_VERSION_MINOR',
-              meson.project_version().split('.')[1])
-conf_data.set('HIGHS_VERSION_PATCH',
-              meson.project_version().split('.')[2])
+
+# Conditional compiler options
+_mm_pause_code = '''
+#include <immintrin.h>
+int main(){
+  _mm_pause();
+  return 0;
+}
+'''
+_have_mm_pause = cppc.compiles(_mm_pause_code,
+                              name: 'mm_pause check')
+conf_data.set('HIGHS_HAVE_MM_PAUSE',
+              _have_mm_pause)
+
+if cppc.get_id() == 'msvc'
+  _bitscan_rev_code = '''
+  #include <intrin.h>
+  #pragma intrinsic(_BitScanReverse)
+  #pragma intrinsic(_BitScanReverse64)
+  int main () {
+   unsigned long x = 5;
+   unsigned long y;
+   _BitScanReverse(&y, x);
+   _BitScanReverse64(&x, y);
+   return 0;
+   }
+   '''
+  _have_bitscan_reverse = cppc.compiles(_bitscan_rev_code,
+                                       name: 'bitscan_rev check')
+  conf_data.set('HIGHS_HAVE_BITSCAN_REVERSE',
+                _have_bitscan_reverse)
+else
+  _builtin_clz_code = '''
+  #include <cstdint>
+  int main(){
+    unsigned int x = 5;
+    unsigned long long y = __builtin_clz(x);
+    x = __builtin_clzll(y);
+    return 0;
+  }
+  '''
+  _have_builtin_clz = cppc.compiles(_builtin_clz_code,
+                                       name: 'builtin_clz check')
+  conf_data.set('HIGHS_HAVE_BUILTIN_CLZ',
+                _have_builtin_clz)
+endif
 
 configure_file(
   input: 'HConfig.h.meson.in',
@@ -257,8 +298,7 @@ if get_option('with_fortran')
                         install: true)
 endif
 
-# C# is not supported by Meson
-
+# C#
 if get_option('with_csharp')
   add_languages('cs', required: true)
   _cs_srcs = [
