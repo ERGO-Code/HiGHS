@@ -40,3 +40,8 @@ jobs:
         run: |
           meson setup bbdir_static --default-library static --prefix $CONDA_PREFIX
           meson install -C bbdir_static
+      - name: Build and test
+        shell: bash -l {0}
+        run: |
+          meson setup bbdir_test -Duse_zlib=enabled -Dwith_tests=True --prefix $CONDA_PREFIX
+          meson test -C bbdir
