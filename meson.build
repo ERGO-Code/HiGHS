@@ -59,6 +59,10 @@ if get_option('fast_build')
   add_project_arguments(cppc.get_supported_arguments('-fno-omit-frame-pointer'), language : 'cpp')
 endif
 
+if get_option('debug_sol')
+  _args += ['-DHIGHS_DEBUGSOL']
+endif
+
 # --------------------- Library
 
 subdir('src') # defines highslib

@@ -13,3 +13,6 @@ option('with_fortran',
 option('with_csharp',
        type : 'boolean',
        value : false)
+option('debug_sol',
+      type: 'boolean',
+      value: false)
