@@ -19,3 +19,6 @@ option('debug_sol',
 option('with_stdcall',
       type: 'boolean',
       value: false)
+option('with_tests',
+      type: 'boolean',
+      value: false)

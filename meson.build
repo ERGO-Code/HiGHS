@@ -88,3 +88,10 @@ endif
 
 subdir('src') # defines highslib
 _linkto += highslib
+
+# --------------------- Tests
+
+if get_option('with_tests')
+  subdir('check')
+  _deps += dependency('catch2', required: true)
+endif
