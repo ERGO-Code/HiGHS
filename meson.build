@@ -27,9 +27,7 @@ if host_system == 'linux'
 endif
 
 if cppc.get_id() == 'msvc'
-  add_project_arguments(cppc.get_supported_arguments('/W4'), language : 'cpp')
   add_project_arguments('/wd4018', '/wd4061', '/wd4100', '/wd4101', '/wd4127', '/wd4189', '/wd4244', '/wd4245', '/wd4267', '/wd4324', '/wd4365', '/wd4389', '/wd4456', '/wd4457', '/wd4458', '/wd4459', '/wd4514', '/wd4701', '/wd4820', language: 'cpp')
-  add_project_arguments('/MP', language: 'cpp')
   _args += '-D_CRT_SECURE_NO_WARNINGS'
 endif
 
