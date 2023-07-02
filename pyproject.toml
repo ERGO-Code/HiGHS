@@ -47,5 +47,5 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.windows]
 # Use delvewheel on windows, and install the project
-before-build = "pip install delvewheel meson && meson setup bbdir && meson install -C bbdir"
+before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
 repair-wheel-command = "delvewheel repair --add-path bbdir -w {dest_dir} {wheel}"
