@@ -23,8 +23,16 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x86_64
-      - name: Test Python Interface
+      - name: Get meson
+        run: python -m pip install meson ninja
+      - name: Build and install highs
         run: |
-          pip install -vvv .
+          meson setup bbdir
+          meson install -C bbdir
+      - name: Install python interface
+        run: |
+          python -m pip install -vvv .
+      - name: Run tests
+        run: |
           pip install pytest numpy
           pytest -v ./highspy/tests/
