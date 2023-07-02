@@ -34,16 +34,12 @@ test-skip = ""
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
 manylinux-i686-image = "manylinux2014"
-environment = { RUNNER_OS="Linux" }
-test-command = "echo 'installed'"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64 arm64"]
-# repair-wheel-command = [
-#   "delocate-listdeps {wheel}",
-#   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-# ]
+environment = { RUNNER_OS="macOS" }
+before-all = "brew install pkg-config && brew install pybind11"
 
 # [tool.cibuildwheel.windows]
 # archs = ["AMD64"]
