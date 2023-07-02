@@ -3,7 +3,10 @@ on: [push, pull_request]
 
 jobs:
   buildmeson:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -17,30 +20,13 @@ jobs:
             python==3.8
             meson
             pkgconfig
-            openblas
             ninja
             zlib
-            gfortran
             catch2
           cache-environment: true
           init-shell: >-
             bash
             zsh
-      # - name: Build
-      #   shell: bash -l {0}
-      #   run: |
-      #     meson setup bbdir -Duse_zlib=enabled --prefix $CONDA_PREFIX
-      #     meson install -C bbdir
-      # - name: Build Fast
-      #   shell: bash -l {0}
-      #   run: |
-      #     meson setup bbdir_fast -Dfast_build=True --prefix $CONDA_PREFIX
-      #     meson install -C bbdir_fast
-      # - name: Build Static
-      #   shell: bash -l {0}
-      #   run: |
-      #     meson setup bbdir_static --default-library static --prefix $CONDA_PREFIX
-      #     meson install -C bbdir_static
       - name: Build and test
         shell: bash -l {0}
         run: |
