@@ -35,7 +35,7 @@ endif
 
 cpu_family = host_machine.cpu_family()
 
-if cpu_family in ['x86_64', 'i686']
+if cpu_family in ['x86_64', 'i686'] and not is_windows
     add_project_arguments('-mpopcnt', language: 'cpp')
 endif
 if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
@@ -44,8 +44,9 @@ endif
 
 if is_mingw
   # For mingw-w64, don't use LTO
-  gcc_link_args = ['-fno-use-linker-plugin']
-  add_project_link_arguments(gcc_link_args, language: ['c', 'cpp'])
+  add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
+  # Link statically against the UCRT [kanged, numpy]
+  add_project_link_arguments(['-lucrt', '-static'] , language:['c', 'cpp'])
 endif
 
 # --------------------- Dependencies
