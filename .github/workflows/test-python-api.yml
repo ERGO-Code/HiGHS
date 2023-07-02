@@ -18,6 +18,8 @@ jobs:
       - name: Test Python Interface
         shell: bash
         run: |
+          # No need to separately install highs,
+          # shared library lookups are good enough
           pip install -vvv .
           pip install pytest numpy
           pytest -v ./highspy/tests/
