@@ -64,7 +64,7 @@ if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
 endif
 
 if is_mingw
-  # For mingw-w64, don't use LTO
+  # For mingw-w64, don't use LTO 
   add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
 endif
 
@@ -107,6 +107,9 @@ if get_option('debug_sol')
 endif
 
 if cppc.get_id() == 'msvc'
+  # Don't depend on VCRUNTIME140_1.dll
+  # https://cibuildwheel.readthedocs.io/en/stable/faq/#windows-importerror-dll-load-failed-the-specific-module-could-not-be-found
+  add_project_arguments('/d2FH4-', language : ['cpp', 'c'])
   if get_option('with_stdcall')
     add_project_arguments(cppc.get_supported_arguments('/Gz'), language : ['cpp', 'c'])
   endif
