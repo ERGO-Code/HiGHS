@@ -23,6 +23,7 @@ build-backend = "mesonpy"
 [tool.meson-python.args]
 setup = ['-Dwith_pybind11=True',
         '-Dhighsint64=False',
+        '-Dwrap_mode=forcefallback'
         ]
 dist = ['--include-subprojects']
 
@@ -39,7 +40,6 @@ repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 [tool.cibuildwheel.macos]
 archs = ["x86_64 arm64"]
 environment = { RUNNER_OS="macOS" }
-before-all = "brew install pkg-config && brew install pybind11"
 
 # [tool.cibuildwheel.windows]
 # archs = ["AMD64"]

@@ -1,6 +1,8 @@
 project('highs', 'cpp',
   version : '1.5.3',
-  default_options : ['warning_level=1', 'cpp_std=c++17'])
+  default_options : ['warning_level=1',
+                     'cpp_std=c++17',
+                     'wrap_mode=forcefallback'])
 
 
 # Add C++ compiler options
@@ -103,7 +105,7 @@ if get_option('with_tests')
 endif
 
 # --------------------- Bindings
+
 if get_option('with_pybind11')
-  subproject('pybind11')
   subdir('highspy')
 endif

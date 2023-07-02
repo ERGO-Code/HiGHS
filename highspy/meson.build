@@ -2,8 +2,7 @@ py_mod = import('python')
 py = py_mod.find_installation(pure: false)
 pyb11_dep = [
   py.dependency(),
-  dependency('pybind11',
-            required: true)
+  dependency('pybind11')
 ]
 _deps += pyb11_dep
 
