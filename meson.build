@@ -45,8 +45,6 @@ endif
 if is_mingw
   # For mingw-w64, don't use LTO
   add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
-  # Link statically against the UCRT [kanged, numpy]
-  add_project_link_arguments(['-lucrt', '-static'] , language:['c', 'cpp'])
 endif
 
 # --------------------- Dependencies
