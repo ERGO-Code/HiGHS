@@ -21,11 +21,8 @@ requires = ["pybind11", "meson-python"]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
-setup = ['-Duse_zlib=False', # Hard to get on windows
-        '-Dwith_pybind11=True',
+setup = ['-Dwith_pybind11=True',
         '-Dhighsint64=False',
-        '--vsenv', # Only does something on windows
-        # '--default-library=shared',
         ]
 dist = ['--include-subprojects']
 
@@ -35,22 +32,24 @@ skip = "cp36-*"
 test-skip = ""
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64 i686 aarch64 ppc64le s390x"]
+manylinux-x86_64-image = "manylinux2014"
+manylinux-i686-image = "manylinux2014"
+environment = { RUNNER_OS="Linux" }
+test-command = "echo 'installed'"
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
-[tool.cibuildwheel.linux.environment]
+# [tool.cibuildwheel.macos]
+# archs = ["x86_64 arm64"]
+# repair-wheel-command = [
+#   "delocate-listdeps {wheel}",
+#   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
+# ]
 
-[tool.cibuildwheel.macos]
-archs = ["x86_64 arm64"]
-repair-wheel-command = [
-  "delocate-listdeps {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-]
+# [tool.cibuildwheel.windows]
+# archs = ["AMD64"]
+# # Only build on CPython 3.9
+# # build = "cp39-*"
 
-[tool.cibuildwheel.windows]
-archs = ["AMD64"]
-# Only build on CPython 3.9
-# build = "cp39-*"
-
-# Use delvewheel on windows
-before-build = "pip install delvewheel"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+# # Use delvewheel on windows
+# before-build = "pip install delvewheel"
+# repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
