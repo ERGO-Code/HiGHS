@@ -29,7 +29,28 @@ if host_system == 'linux'
 endif
 
 if cppc.get_id() == 'msvc'
-  add_project_arguments('/wd4018', '/wd4061', '/wd4100', '/wd4101', '/wd4127', '/wd4189', '/wd4244', '/wd4245', '/wd4267', '/wd4324', '/wd4365', '/wd4389', '/wd4456', '/wd4457', '/wd4458', '/wd4459', '/wd4514', '/wd4701', '/wd4820', language: 'cpp')
+  add_project_arguments(
+      '/wd4018',  # Disable warning: 'expression' : signed/unsigned mismatch
+      '/wd4061',  # Disable warning: enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
+      '/wd4100',  # Disable warning: 'identifier' : unreferenced formal parameter
+      '/wd4101',  # Disable warning: 'identifier' : unreferenced local variable
+      '/wd4127',  # Disable warning: conditional expression is constant
+      '/wd4189',  # Disable warning: 'identifier' : local variable is initialized but not referenced
+      '/wd4244',  # Disable warning: 'conversion' conversion from 'type1' to 'type2', possible loss of data
+      '/wd4245',  # Disable warning: 'conversion' conversion from 'type1' to 'type2', signed/unsigned mismatch
+      '/wd4267',  # Disable warning: 'conversion' conversion from 'size_t' to 'type', possible loss of data
+      '/wd4324',  # Disable warning: 'structure' structure was padded due to alignment specifier
+      '/wd4365',  # Disable warning: 'action' : conversion from 'type_1' to 'type_2', signed/unsigned mismatch
+      '/wd4389',  # Disable warning: 'modifier' : signed/unsigned mismatch
+      '/wd4456',  # Disable warning: declaration of 'identifier' hides previous local declaration
+      '/wd4457',  # Disable warning: declaration of 'identifier' hides function parameter
+      '/wd4458',  # Disable warning: declaration of 'identifier' hides class member
+      '/wd4459',  # Disable warning: declaration of 'identifier' hides global declaration
+      '/wd4514',  # Disable warning: 'function' : unreferenced inline function has been removed
+      '/wd4701',  # Disable warning: potentially uninitialized local variable 'name' used
+      '/wd4820',  # Disable warning: 'bytes' bytes padding added after construct 'member_name'
+      language: 'cpp',
+  )
   _args += '-D_CRT_SECURE_NO_WARNINGS'
 endif
 
