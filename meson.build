@@ -104,5 +104,6 @@ endif
 
 # --------------------- Bindings
 if get_option('with_pybind11')
+  subproject('pybind11')
   subdir('highspy')
 endif
