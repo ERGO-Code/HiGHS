@@ -23,7 +23,8 @@ build-backend = "mesonpy"
 [tool.meson-python.args]
 setup = ['-Dwith_pybind11=True',
         '-Dhighsint64=False',
-        '-Dwrap_mode=forcefallback'
+        '-Dwrap_mode=forcefallback',
+        '--vsenv',
         ]
 dist = ['--include-subprojects']
 
