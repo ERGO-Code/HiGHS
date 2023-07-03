@@ -2,6 +2,7 @@
 #include <cassert>
 
 #include "Highs.h"
+#include "HCheckConfig.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
 

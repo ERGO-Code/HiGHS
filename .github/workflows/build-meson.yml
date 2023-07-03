@@ -1,0 +1,34 @@
+name: Meson Builds with Conda
+on: [push, pull_request]
+
+jobs:
+  buildmeson:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest] # windows-latest takes to long
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+      - name: Install Conda environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: highsdev
+          create-args: >-
+            python==3.8
+            meson
+            pkgconfig
+            ninja
+            zlib
+            catch2
+          cache-environment: true
+          init-shell: >-
+            bash
+            zsh
+      - name: Build and test
+        shell: bash -l {0}
+        run: |
+          meson setup bbdir_test -Duse_zlib=enabled -Dwith_tests=True --prefix $CONDA_PREFIX
+          meson test -C bbdir_test

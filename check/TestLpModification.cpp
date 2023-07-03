@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Avgas.h"
 #include "Highs.h"
 #include "catch.hpp"

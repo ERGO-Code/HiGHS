@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "catch.hpp"
+#include "HCheckConfig.h"
 #include "lp_data/HConst.h"
 #include "util/HighsRandom.h"
 #include "util/HighsSort.h"

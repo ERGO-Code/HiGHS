@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"

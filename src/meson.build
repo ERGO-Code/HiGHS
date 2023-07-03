@@ -1,0 +1,315 @@
+# -------------------------- Configuration
+conf_data = configuration_data()
+conf_data.set('FAST_BUILD',
+              get_option('fast_build'))
+conf_data.set('HIGHS_VERSION_MAJOR',
+              meson.project_version().split('.')[0])
+conf_data.set('HIGHS_VERSION_MINOR',
+              meson.project_version().split('.')[1])
+conf_data.set('HIGHS_VERSION_PATCH',
+              meson.project_version().split('.')[2])
+conf_data.set('ZLIB_FOUND',
+              zlib_dep.found())
+conf_data.set('HIGHSINT64',
+              get_option('highsint64'))
+# Commit hash
+commit_hash_cmd = run_command('git', 'rev-parse',
+                              '--short', 'HEAD',
+                             check: true)
+commit_hash = commit_hash_cmd.stdout().strip()
+conf_data.set_quoted('HIGHS_GITHASH',
+                     commit_hash)
+# Date
+python_getdate = '''
+import datetime
+import os
+import time
+
+build_date = datetime.datetime.utcfromtimestamp(
+    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+)
+build_date_str = build_date.strftime('%Y-%m-%d')
+print(build_date_str)
+'''
+today_cmd = run_command('python3', '-c',
+                        python_getdate,
+                       check: true)
+today_str = today_cmd.stdout().strip()
+conf_data.set_quoted('HIGHS_COMPILATION_DATE',
+                     today_str)
+
+# Conditional compiler options
+_mm_pause_code = '''
+#include <immintrin.h>
+int main(){
+  _mm_pause();
+  return 0;
+}
+'''
+_have_mm_pause = cppc.compiles(_mm_pause_code,
+                              name: 'mm_pause check')
+conf_data.set('HIGHS_HAVE_MM_PAUSE',
+              _have_mm_pause)
+
+if cppc.get_id() == 'msvc'
+  _bitscan_rev_code = '''
+  #include <intrin.h>
+  #pragma intrinsic(_BitScanReverse)
+  #pragma intrinsic(_BitScanReverse64)
+  int main () {
+   unsigned long x = 5;
+   unsigned long y;
+   _BitScanReverse(&y, x);
+   _BitScanReverse64(&x, y);
+   return 0;
+   }
+   '''
+  _have_bitscan_reverse = cppc.compiles(_bitscan_rev_code,
+                                       name: 'bitscan_rev check')
+  conf_data.set('HIGHS_HAVE_BITSCAN_REVERSE',
+                _have_bitscan_reverse)
+else
+  _builtin_clz_code = '''
+  #include <cstdint>
+  int main(){
+    unsigned int x = 5;
+    unsigned long long y = __builtin_clz(x);
+    x = __builtin_clzll(y);
+    return 0;
+  }
+  '''
+  _have_builtin_clz = cppc.compiles(_builtin_clz_code,
+                                       name: 'builtin_clz check')
+  conf_data.set('HIGHS_HAVE_BUILTIN_CLZ',
+                _have_builtin_clz)
+endif
+
+configure_file(
+  input: 'HConfig.h.meson.in',
+  output: 'HConfig.h',
+  configuration: conf_data
+)
+
+_incdirs += include_directories('.')
+
+# --------------------- Libraries
+
+_basiclu_srcs = [
+    'ipm/basiclu/basiclu_factorize.c',
+    'ipm/basiclu/basiclu_solve_dense.c',
+    'ipm/basiclu/lu_build_factors.c',
+    'ipm/basiclu/lu_factorize_bump.c',
+    'ipm/basiclu/lu_initialize.c',
+    'ipm/basiclu/lu_markowitz.c',
+    'ipm/basiclu/lu_setup_bump.c',
+    'ipm/basiclu/lu_solve_sparse.c',
+    'ipm/basiclu/basiclu_get_factors.c',
+    'ipm/basiclu/basiclu_solve_for_update.c',
+    'ipm/basiclu/lu_condest.c',
+    'ipm/basiclu/lu_file.c',
+    'ipm/basiclu/lu_internal.c',
+    'ipm/basiclu/lu_matrix_norm.c',
+    'ipm/basiclu/lu_singletons.c',
+    'ipm/basiclu/lu_solve_symbolic.c',
+    'ipm/basiclu/lu_update.c',
+    'ipm/basiclu/basiclu_initialize.c',
+    'ipm/basiclu/basiclu_solve_sparse.c',
+    'ipm/basiclu/lu_pivot.c',
+    'ipm/basiclu/lu_solve_dense.c',
+    'ipm/basiclu/lu_solve_triangular.c',
+    'ipm/basiclu/basiclu_object.c',
+    'ipm/basiclu/basiclu_update.c',
+    'ipm/basiclu/lu_dfs.c',
+    'ipm/basiclu/lu_garbage_perm.c',
+    'ipm/basiclu/lu_residual_test.c',
+    'ipm/basiclu/lu_solve_for_update.c',
+]
+
+_ipx_srcs = [
+    'ipm/ipx/basiclu_kernel.cc',
+    'ipm/ipx/basiclu_wrapper.cc',
+    'ipm/ipx/basis.cc',
+    'ipm/ipx/conjugate_residuals.cc',
+    'ipm/ipx/control.cc',
+    'ipm/ipx/crossover.cc',
+    'ipm/ipx/diagonal_precond.cc',
+    'ipm/ipx/forrest_tomlin.cc',
+    'ipm/ipx/guess_basis.cc',
+    'ipm/ipx/indexed_vector.cc',
+    'ipm/ipx/info.cc',
+    'ipm/ipx/ipm.cc',
+    'ipm/ipx/ipx_c.cc',
+    'ipm/ipx/iterate.cc',
+    'ipm/ipx/kkt_solver.cc',
+    'ipm/ipx/kkt_solver_basis.cc',
+    'ipm/ipx/kkt_solver_diag.cc',
+    'ipm/ipx/linear_operator.cc',
+    'ipm/ipx/lp_solver.cc',
+    'ipm/ipx/lu_factorization.cc',
+    'ipm/ipx/lu_update.cc',
+    'ipm/ipx/maxvolume.cc',
+    'ipm/ipx/model.cc',
+    'ipm/ipx/normal_matrix.cc',
+    'ipm/ipx/sparse_matrix.cc',
+    'ipm/ipx/sparse_utils.cc',
+    'ipm/ipx/splitted_normal_matrix.cc',
+    'ipm/ipx/starting_basis.cc',
+    'ipm/ipx/symbolic_invert.cc',
+    'ipm/ipx/timer.cc',
+    'ipm/ipx/utils.cc',
+]
+
+_srcs = [
+    '../extern/filereaderlp/reader.cpp',
+    'io/Filereader.cpp',
+    'io/FilereaderLp.cpp',
+    'io/FilereaderEms.cpp',
+    'io/FilereaderMps.cpp',
+    'io/HighsIO.cpp',
+    'io/HMPSIO.cpp',
+    'io/HMpsFF.cpp',
+    'io/LoadOptions.cpp',
+    'lp_data/Highs.cpp',
+    'lp_data/HighsDebug.cpp',
+    'lp_data/HighsInfo.cpp',
+    'lp_data/HighsInfoDebug.cpp',
+    'lp_data/HighsDeprecated.cpp',
+    'lp_data/HighsInterface.cpp',
+    'lp_data/HighsLp.cpp',
+    'lp_data/HighsLpUtils.cpp',
+    'lp_data/HighsModelUtils.cpp',
+    'lp_data/HighsRanging.cpp',
+    'lp_data/HighsSolution.cpp',
+    'lp_data/HighsSolutionDebug.cpp',
+    'lp_data/HighsSolve.cpp',
+    'lp_data/HighsStatus.cpp',
+    'lp_data/HighsOptions.cpp',
+    'mip/HighsMipSolver.cpp',
+    'mip/HighsMipSolverData.cpp',
+    'mip/HighsDomain.cpp',
+    'mip/HighsDynamicRowMatrix.cpp',
+    'mip/HighsLpRelaxation.cpp',
+    'mip/HighsSeparation.cpp',
+    'mip/HighsSeparator.cpp',
+    'mip/HighsTableauSeparator.cpp',
+    'mip/HighsModkSeparator.cpp',
+    'mip/HighsPathSeparator.cpp',
+    'mip/HighsCutGeneration.cpp',
+    'mip/HighsSearch.cpp',
+    'mip/HighsConflictPool.cpp',
+    'mip/HighsCutPool.cpp',
+    'mip/HighsCliqueTable.cpp',
+    'mip/HighsGFkSolve.cpp',
+    'mip/HighsTransformedLp.cpp',
+    'mip/HighsLpAggregator.cpp',
+    'mip/HighsDebugSol.cpp',
+    'mip/HighsImplications.cpp',
+    'mip/HighsPrimalHeuristics.cpp',
+    'mip/HighsPseudocost.cpp',
+    'mip/HighsRedcostFixing.cpp',
+    'mip/HighsNodeQueue.cpp',
+    'mip/HighsObjectiveFunction.cpp',
+    'model/HighsHessian.cpp',
+    'model/HighsHessianUtils.cpp',
+    'model/HighsModel.cpp',
+    'parallel/HighsTaskExecutor.cpp',
+    'presolve/ICrash.cpp',
+    'presolve/ICrashUtil.cpp',
+    'presolve/ICrashX.cpp',
+    'presolve/HighsPostsolveStack.cpp',
+    'presolve/HighsSymmetry.cpp',
+    'presolve/HPresolve.cpp',
+    'presolve/HPresolveAnalysis.cpp',
+    'presolve/PresolveComponent.cpp',
+    'qpsolver/basis.cpp',
+    'qpsolver/quass.cpp',
+    'qpsolver/ratiotest.cpp',
+    'qpsolver/scaling.cpp',
+    'qpsolver/perturbation.cpp',
+    'simplex/HEkk.cpp',
+    'simplex/HEkkControl.cpp',
+    'simplex/HEkkDebug.cpp',
+    'simplex/HEkkPrimal.cpp',
+    'simplex/HEkkDual.cpp',
+    'simplex/HEkkDualRHS.cpp',
+    'simplex/HEkkDualRow.cpp',
+    'simplex/HEkkDualMulti.cpp',
+    'simplex/HEkkInterface.cpp',
+    'simplex/HighsSimplexAnalysis.cpp',
+    'simplex/HSimplex.cpp',
+    'simplex/HSimplexDebug.cpp',
+    'simplex/HSimplexNla.cpp',
+    'simplex/HSimplexNlaDebug.cpp',
+    'simplex/HSimplexNlaFreeze.cpp',
+    'simplex/HSimplexNlaProductForm.cpp',
+    'simplex/HSimplexReport.cpp',
+    'test/DevKkt.cpp',
+    'test/KktCh2.cpp',
+    'util/HFactor.cpp',
+    'util/HFactorDebug.cpp',
+    'util/HFactorExtend.cpp',
+    'util/HFactorRefactor.cpp',
+    'util/HFactorUtils.cpp',
+    'util/HighsHash.cpp',
+    'util/HighsLinearSumBounds.cpp',
+    'util/HighsMatrixPic.cpp',
+    'util/HighsMatrixUtils.cpp',
+    'util/HighsSort.cpp',
+    'util/HighsSparseMatrix.cpp',
+    'util/HighsUtils.cpp',
+    'util/HSet.cpp',
+    'util/HVectorBase.cpp',
+    'util/stringutil.cpp',
+    'interfaces/highs_c_api.cpp',
+]
+
+highslib_srcs = [
+  _srcs,
+  'ipm/IpxWrapper.cpp',
+  _basiclu_srcs,
+  _ipx_srcs
+]
+
+
+highslib = library('highs',
+                   highslib_srcs,
+                   dependencies: _deps,
+                   cpp_args: _args,
+                   link_with: _linkto,
+                   include_directories: _incdirs,
+                   pic: true,
+                   install: true)
+
+# --------------- Interfaces
+
+# Fortran
+if get_option('with_fortran')
+  add_languages('fortran', required: true)
+  _fsrcs = [
+    'interfaces/highs_fortran_api.f90'
+  ]
+  fortran_lib = library('FortranHighs',
+                        _fsrcs,
+                        dependencies: _deps,
+                        cpp_args: _args,
+                        link_with: [ _linkto, highslib ],
+                        include_directories: _incdirs,
+                        pic: true,
+                        install: true)
+endif
+
+# C#
+if get_option('with_csharp')
+  add_languages('cs', required: true)
+  _cs_srcs = [
+    'interfaces/highs_csharp_api.cs'
+  ]
+  cs_lib = library('HighsCsharp',
+                        _cs_srcs,
+                        dependencies: _deps,
+                        cpp_args: _args,
+                        link_with: [ _linkto, highslib ],
+                        include_directories: _incdirs,
+                        pic: true,
+                        install: true)
+endif

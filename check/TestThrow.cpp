@@ -1,4 +1,5 @@
 // #include "Highs.h"
+#include "HCheckConfig.h"
 #include <iostream>
 #include <stdexcept>  //Used in HiGHS
 
