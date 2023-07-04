@@ -7,6 +7,6 @@
 #include "qpsolver/settings.hpp"
 
 
-QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpSolution& solution);
+QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpSolution& solution, HighsTimer& qp_timer);
 
 #endif

@@ -10,7 +10,7 @@
 struct Quass {
   Quass(Runtime& rt);
 
-  void solve(const Vector& x0, const Vector& ra, Basis& b0);
+  void solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer);
 
  private:
   Runtime& runtime;

@@ -14,9 +14,6 @@ struct Runtime {
   Settings settings;
   Statistics statistics;
 
-  HighsTimer& timer;
-
-
   Vector primal;
   Vector rowactivity;
   Vector dualvar;
@@ -26,9 +23,8 @@ struct Runtime {
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;
 
-  Runtime(Instance& inst, HighsTimer& ht)
+  Runtime(Instance& inst)
       : instance(inst),
-        timer(ht),
         primal(Vector(instance.num_var)),
         rowactivity(Vector(instance.num_con)),
         dualvar(instance.num_var),

@@ -5,6 +5,7 @@
 #include "qpsolver/statistics.hpp"
 #include "qpsolver/qpconst.hpp"
 #include "qpsolver/settings.hpp"
+#include "util/HighsTimer.h"
 
 enum class QpAsmStatus {
   OK,
@@ -50,6 +51,6 @@ struct QpHotstartInformation {
 // 5) start from a qp solution and cleanup after recomputing basis and reduced hessian factorization
 
 
-QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution);
+QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer);
 
 #endif

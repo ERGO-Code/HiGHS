@@ -1,16 +1,15 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/quass.hpp"
 
-QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution) {
-  HighsTimer qp_timer = HighsTimer();
-  Runtime rt(instance, qp_timer);
+QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer) {
+  Runtime rt(instance);
   rt.statistics = stats;
   rt.settings = settings;
   Quass quass(rt);
 
   Basis basis(rt, startinfo.active, startinfo.status, startinfo.inactive);
 
-  quass.solve(startinfo.primal, startinfo.rowact, basis);
+  quass.solve(startinfo.primal, startinfo.rowact, basis, qp_timer);
 
   status = rt.status;
 

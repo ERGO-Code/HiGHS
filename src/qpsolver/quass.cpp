@@ -23,12 +23,12 @@
 
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
+void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, HighsTimer& timer) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
   rt.statistics.objval.push_back(rt.instance.objval(rt.primal));
-  rt.statistics.time.push_back(rt.timer.readRunHighsClock());
+  rt.statistics.time.push_back(timer.readRunHighsClock());
   SumNum sm =
       rt.instance.sumnumprimalinfeasibilities(rt.primal, rt.rowactivity);
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
@@ -260,7 +260,7 @@ double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_c
   return maxviolation;
 }
 
-void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
+void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;
@@ -300,7 +300,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
 
     // check time limit
-    if (runtime.timer.readRunHighsClock() >= runtime.settings.timelimit) {
+    if (timer.readRunHighsClock() >= runtime.settings.timelimit) {
       runtime.status = QpModelStatus::TIMELIMIT;
       break;
     }
@@ -309,7 +309,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
         0) {
-      loginformation(runtime, basis, factor);
+      loginformation(runtime, basis, factor, timer);
       runtime.settings.endofiterationevent.fire(runtime.statistics);
     }
     runtime.statistics.num_iterations++;
@@ -408,7 +408,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
   }
 
-  loginformation(runtime, basis, factor);
+  loginformation(runtime, basis, factor, timer);
   runtime.settings.endofiterationevent.fire(runtime.statistics);
 
   runtime.instance.sumnumprimalinfeasibilities(
