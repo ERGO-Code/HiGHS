@@ -17,13 +17,14 @@ license = {text = "MIT"}
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["pybind11", "meson-python"]
+requires = ["meson-python"]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
 setup = ['-Dwith_pybind11=True',
         '-Dhighsint64=False',
         '-Dwrap_mode=forcefallback',
+         # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
         ]
 dist = ['--include-subprojects']
 
