@@ -1,4 +1,9 @@
-#################
+### Meson ###
+# subproject directories
+/subprojects/*
+!/subprojects/*.wrap
+
+# #################
 ## Eclipse
 #################
 

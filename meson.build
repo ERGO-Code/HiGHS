@@ -1,6 +1,8 @@
 project('highs', 'cpp',
   version : '1.5.3',
-  default_options : ['warning_level=3', 'cpp_std=c++17'])
+  default_options : ['warning_level=1',
+                     'cpp_std=c++17',
+                     'wrap_mode=forcefallback'])
 
 
 # Add C++ compiler options
@@ -54,19 +56,26 @@ endif
 
 cpu_family = host_machine.cpu_family()
 
-if cpu_family in ['x86_64', 'i686']
+if cpu_family in ['x86_64', 'i686'] and not is_windows
     add_project_arguments('-mpopcnt', language: 'cpp')
 endif
 if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
     add_project_arguments('-mpopcntd', language: 'cpp')
 endif
 
+if is_mingw
+  # For mingw-w64, don't use LTO 
+  add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
+endif
+
 # --------------------- Dependencies
-# libm for Unix systems
-m_dep = cppc.find_library('m', required: false)
-_deps += m_dep
-# For building with clang
-_deps += [declare_dependency(link_args: '-lstdc++')]
+if not is_windows
+  # libm for Unix systems
+  m_dep = cppc.find_library('m', required: false)
+  _deps += m_dep
+  # For building with clang
+  _deps += [declare_dependency(link_args: '-lstdc++')]
+endif
 
 # Required
 threads_dep = dependency('threads',
@@ -98,6 +107,9 @@ if get_option('debug_sol')
 endif
 
 if cppc.get_id() == 'msvc'
+  # Don't depend on VCRUNTIME140_1.dll
+  # https://cibuildwheel.readthedocs.io/en/stable/faq/#windows-importerror-dll-load-failed-the-specific-module-could-not-be-found
+  add_project_arguments('/d2FH4-', language : ['cpp', 'c'])
   if get_option('with_stdcall')
     add_project_arguments(cppc.get_supported_arguments('/Gz'), language : ['cpp', 'c'])
   endif
@@ -113,4 +125,10 @@ _linkto += highslib
 if get_option('with_tests')
   subdir('check')
   _deps += dependency('catch2', required: true)
+endif
+
+# --------------------- Bindings
+
+if get_option('with_pybind11')
+  subdir('highspy')
 endif
