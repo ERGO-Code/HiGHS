@@ -1,8 +1,8 @@
 #include <cassert>
 #include <sstream>
 
-#include "Highs.h"
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 
 const bool dev_run = false;

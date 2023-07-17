@@ -1,6 +1,6 @@
-#include "HCheckConfig.h"
 #include <numeric>
 
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
