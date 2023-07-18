@@ -882,7 +882,7 @@ PYBIND11_MODULE(highspy, m) {
       .def("deleteCols", &highs_deleteCols)
       .def("deleteVars", &highs_deleteVars)
       .def("deleteRows", &highs_deleteRows)
-      .def("writeInfo", &Highs::writeInfo)
+      .def("setSolution", &Highs::setSolution)
       .def("modelStatusToString", &Highs::modelStatusToString)
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)
