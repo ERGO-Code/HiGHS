@@ -1,7 +1,7 @@
 #include <cstdio>
 
-#include "Highs.h"
 #include "HCheckConfig.h"
+#include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"

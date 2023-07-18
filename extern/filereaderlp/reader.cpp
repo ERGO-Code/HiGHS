@@ -1272,7 +1272,7 @@ bool Reader::readnexttoken(RawToken& t) {
       return false;
 
     case '\0':  // empty line
-      assert(this->linebufferpos == this->linebuffer.size());
+      lpassert(this->linebufferpos == this->linebuffer.size());
       return false;
   }
 
