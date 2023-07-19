@@ -16,6 +16,8 @@
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 
+#include <cctype>
+
 // convert string to lower-case, modifies string
 static inline void tolower(std::string& s) {
   std::transform(s.begin(), s.end(), s.begin(),
