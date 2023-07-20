@@ -84,6 +84,8 @@ class HighsSparseMatrix {
                    const HighsInt to_col);
   void createColwise(const HighsSparseMatrix& matrix);
   void createRowwise(const HighsSparseMatrix& matrix);
+  void product(const double alpha, const std::vector<double>& x,
+               std::vector<double>& y, const bool transpose = false) const;
   void productQuad(vector<double>& result, const vector<double>& row,
                    const HighsInt debug_report = kDebugReportOff) const;
   void productTransposeQuad(

@@ -1,13 +1,32 @@
-[build-system]
-# Minimum requirements for the build system to execute.
-requires = [
-  "setuptools>=45",
-  "pybind11>=2.4",
-  "pyomo>=6.0",
-  "wheel>=0.2",
-] 
+[tool.pdm]
 
-build-backend = "setuptools.build_meta"
+[project]
+name = "highspy"
+version = "1.5.3"
+description = "A thin set of pybind11 wrappers to HiGHS"
+authors = [
+    {name = "HiGHS developers", email = "highsopt@gmail.com"},
+]
+dependencies = []
+requires-python = ">=3.8"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.urls]
+"Source Code" = "https://github.com/ERGO-Code/HiGHS"
+"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+
+[build-system]
+requires = ["meson-python"]
+build-backend = "mesonpy"
+
+[tool.meson-python.args]
+setup = ['-Dwith_pybind11=True',
+        '-Dhighsint64=False',
+        '-Dwrap_mode=forcefallback',
+         # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
+        ]
+dist = ['--include-subprojects']
 
 [tool.cibuildwheel]
 build = "*"
@@ -15,35 +34,19 @@ skip = "cp36-*"
 test-skip = ""
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64 i686 aarch64 ppc64le s390x"]
-
-before-all = [
-  "cd /project && ls"
-]
-
-before-build = [
-  "rm -rf build",
-  "mkdir -p build && cd build",
-  "cmake -DFAST_BUILD=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/project/installs/highs ..",
-  "make -j && make install",
-]
-
-[tool.cibuildwheel.linux.environment]
-DYLD_LIBRARY_PATH = "$DYLD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
-LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/project/installs/highs/lib:/project/installs/highs/lib64"
+manylinux-x86_64-image = "manylinux2014"
+manylinux-i686-image = "manylinux2014"
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64 arm64"]
+environment = { RUNNER_OS="macOS" }
 repair-wheel-command = [
-  "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",
-  "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
+  "delocate-listdeps {wheel}",
+  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
 ]
 
 [tool.cibuildwheel.windows]
-archs = ["AMD64"]
-# Only build on CPython 3.9
-# build = "cp39-*"
-
-# Use delvewheel on windows
-before-build = "pip install delvewheel"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+# Use delvewheel on windows, and install the project so delvewheel can find it
+before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
+repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"

@@ -1028,6 +1028,24 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
   this->num_row_ = num_row;
 }
 
+void HighsSparseMatrix::product(const double alpha,
+                                const std::vector<double>& x,
+                                std::vector<double>& y,
+                                const bool transpose) const {
+  assert(int(x.size()) == transpose ? this->num_row_ : this->num_col_);
+  assert(int(y.size()) == transpose ? this->num_col_ : this->num_row_);
+  assert(this->isColwise());
+  if (transpose) {
+    for (int iCol = 0; iCol < this->num_col_; iCol++)
+      for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+        y[iCol] += alpha * this->value_[iEl] * x[this->index_[iEl]];
+  } else {
+    for (int iCol = 0; iCol < this->num_col_; iCol++)
+      for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+        y[this->index_[iEl]] += alpha * this->value_[iEl] * x[iCol];
+  }
+}
+
 void HighsSparseMatrix::productQuad(vector<double>& result,
                                     const vector<double>& row,
                                     const HighsInt debug_report) const {

@@ -1,4 +1,4 @@
-name: build-lunix
+name: build-linux
 
 on: [push, pull_request]
 

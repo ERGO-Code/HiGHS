@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"

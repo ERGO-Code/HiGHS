@@ -1427,6 +1427,7 @@ class Highs {
   HighsStatus checkOptimality(const std::string& solver_type,
                               HighsStatus return_status);
   HighsStatus invertRequirementError(std::string method_name);
+  HighsStatus lpInvertRequirementError(std::string method_name);
 };
 
 #endif
