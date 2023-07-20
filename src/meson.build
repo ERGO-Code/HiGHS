@@ -221,6 +221,8 @@ _srcs = [
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAnalysis.cpp',
     'presolve/PresolveComponent.cpp',
+    'qpsolver/a_quass.cpp',
+    'qpsolver/a_asm.cpp',
     'qpsolver/basis.cpp',
     'qpsolver/quass.cpp',
     'qpsolver/ratiotest.cpp',
