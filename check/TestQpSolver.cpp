@@ -5,7 +5,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -43,6 +43,15 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   required_x0 = 1.4;
   required_x1 = 1.7;
 
+  const double required_col_dual0 = 0;
+  const double required_col_dual1 = 0;
+  const double required_row_dual0 = 0.8;
+  const double required_row_dual1 = 0;
+  const double required_row_dual2 = 0;
+
+  // At the optimal solution g-Qx = [0.8, -1.6] with only constraint 0
+  // active. It has normal [1, -2], so dual of 0.8 is correct
+
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const HighsModel& model = highs.getModel();
@@ -65,6 +74,19 @@ TEST_CASE("qpsolver", "[qpsolver]") {
           double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
+
+  REQUIRE(fabs(solution.col_dual[0] - required_col_dual0) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_dual[1] - required_col_dual1) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.row_dual[0] - required_row_dual0) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.row_dual[1] - required_row_dual1) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.row_dual[1] - required_row_dual1) <
+          double_equal_tolerance);
+
+  highs.writeSolution("", 1);
 
   // Check with qjh.mps
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
