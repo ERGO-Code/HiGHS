@@ -1029,35 +1029,36 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
 }
 
 void HighsSparseMatrix::alphaProductPlusY(const double alpha,
-					  const std::vector<double>& x,
-					  std::vector<double>& y,
-					  const bool transpose) const {
+                                          const std::vector<double>& x,
+                                          std::vector<double>& y,
+                                          const bool transpose) const {
   assert(int(x.size()) >= transpose ? this->num_row_ : this->num_col_);
   assert(int(y.size()) >= transpose ? this->num_col_ : this->num_row_);
   if (this->isColwise()) {
     if (transpose) {
       for (int iCol = 0; iCol < this->num_col_; iCol++)
-	for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-	  y[iCol] += alpha * this->value_[iEl] * x[this->index_[iEl]];
+        for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+          y[iCol] += alpha * this->value_[iEl] * x[this->index_[iEl]];
     } else {
       for (int iCol = 0; iCol < this->num_col_; iCol++)
-	for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-	  y[this->index_[iEl]] += alpha * this->value_[iEl] * x[iCol];
+        for (int iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+          y[this->index_[iEl]] += alpha * this->value_[iEl] * x[iCol];
     }
   } else {
     if (transpose) {
       for (int iRow = 0; iRow < this->num_row_; iRow++)
-	for (int iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-	  y[this->index_[iEl]] += alpha * this->value_[iEl] * x[iRow];
+        for (int iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
+          y[this->index_[iEl]] += alpha * this->value_[iEl] * x[iRow];
     } else {
       for (int iRow = 0; iRow < this->num_row_; iRow++)
-	for (int iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-	  y[iRow] += alpha * this->value_[iEl] * x[this->index_[iEl]];
+        for (int iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
+          y[iRow] += alpha * this->value_[iEl] * x[this->index_[iEl]];
     }
   }
 }
 
-void HighsSparseMatrix::product(vector<double>& result, const vector<double>& row) const {
+void HighsSparseMatrix::product(vector<double>& result,
+                                const vector<double>& row) const {
   assert(this->formatOk());
   assert((int)row.size() >= this->num_col_);
   result.assign(this->num_row_, 0.0);
@@ -1076,7 +1077,8 @@ void HighsSparseMatrix::product(vector<double>& result, const vector<double>& ro
   }
 }
 
-void HighsSparseMatrix::productTranspose(vector<double>& result, const vector<double>& col) const {
+void HighsSparseMatrix::productTranspose(vector<double>& result,
+                                         const vector<double>& col) const {
   assert(this->formatOk());
   assert((int)col.size() >= this->num_row_);
   result.assign(this->num_col_, 0.0);
@@ -1115,16 +1117,15 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
       HighsCDouble value = 0.0;
       for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
            iEl++)
-         value += row[this->index_[iEl]] * this->value_[iEl];
+        value += row[this->index_[iEl]] * this->value_[iEl];
       result[iRow] = double(value);
     }
   }
 }
 
-void HighsSparseMatrix::productTransposeQuad(vector<double>& result_value,
-					     vector<HighsInt>& result_index,
-					     const HVector& column,
-					     const HighsInt debug_report) const {
+void HighsSparseMatrix::productTransposeQuad(
+    vector<double>& result_value, vector<HighsInt>& result_index,
+    const HVector& column, const HighsInt debug_report) const {
   if (debug_report >= kDebugReportAll)
     printf("\nHighsSparseMatrix::productTranspose:\n");
   if (this->isColwise()) {
