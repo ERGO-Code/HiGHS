@@ -35,6 +35,7 @@ test_array = [
   ['test_highsrbtree', 'TestHighsRbTree.cpp'],
   ['test_highshessian', 'TestHighsHessian.cpp'],
   ['test_highsmodel', 'TestHighsModel.cpp'],
+  ['test_highssparsematrix', 'TestHighsSparseMatrix.cpp'],
   ['test_hset', 'TestHSet.cpp'],
   ['test_icrash', 'TestICrash.cpp'],
   ['test_logging', 'TestLogging.cpp'],

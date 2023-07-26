@@ -127,6 +127,8 @@ double highsRelativeDifference(const double v0, const double v1);
  * @brief Analyse the values of a vector, assessing how many are in
  * each power of ten, and possibly analyse the distribution of
  * different values
+ *
+ * NB If log_options is a null pointer then printf is used
  */
 void analyseVectorValues(
     const HighsLogOptions* log_options,
