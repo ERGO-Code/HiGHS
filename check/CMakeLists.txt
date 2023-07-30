@@ -40,6 +40,7 @@ set(TEST_SOURCES
     TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
+    TestHighsSparseMatrix.cpp
     TestHSet.cpp
     TestICrash.cpp
     TestLogging.cpp
