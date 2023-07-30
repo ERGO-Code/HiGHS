@@ -16,9 +16,11 @@
 #define UTIL_HIGHS_DATA_STACK_H_
 
 #include <cstring>
+#include <string>
 #include <type_traits>
 #include <vector>
 
+#include "util/HighsExceptions.h"
 #include "util/HighsInt.h"
 
 #if __GNUG__ && __GNUC__ < 5 && !defined(__clang__)
@@ -37,11 +39,19 @@ class HighsDataStack {
   template <typename T,
             typename std::enable_if<IS_TRIVIALLY_COPYABLE(T), int>::type = 0>
   void push(const T& r) {
-    std::size_t dataSize = data.size();
-    data.resize(dataSize + sizeof(T));
+    HighsInt dataSize = data.size();
+    HighsInt newSize = dataSize + sizeof(T);
+    try {
+      data.resize(newSize);
+    } catch (const std::length_error& e) {
+      throw DataStackOverflow(
+          "Failed to resize the vector. Requested new size: " +
+          std::to_string(newSize) + ". Size to add is " +
+          std::to_string(sizeof(T)) + "for "+
+          ". Current size: " + std::to_string(data.size()) + ".");
+    }
     std::memcpy(data.data() + dataSize, &r, sizeof(T));
   }
-
   template <typename T,
             typename std::enable_if<IS_TRIVIALLY_COPYABLE(T), int>::type = 0>
   void pop(T& r) {

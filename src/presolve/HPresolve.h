@@ -31,6 +31,7 @@
 #include "util/HighsHash.h"
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsMatrixSlice.h"
+#include "util/HighsExceptions.h"
 
 namespace presolve {
 
