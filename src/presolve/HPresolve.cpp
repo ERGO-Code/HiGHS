@@ -4057,10 +4057,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     try {
       HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
     } catch (const DataStackOverflow& e) {
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "Problem is too large to be presolved\n");
       // Here we re-throw the error
-      throw;
+      throw PresolveTooLarge(e.what());
     }
 
     HighsInt numParallelRowColCalls = 0;

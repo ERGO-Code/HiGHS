@@ -385,7 +385,7 @@ class HighsPostsolveStack {
       reductionAdded(ReductionType::kFixedCol);
     } catch (const DataStackOverflow& e) {
       std::cerr << "Memory allocation failed while processing fixedColAtLower: "
-                << e.what() << std::endl;
+                << std::endl;
       // Rethrow.
       throw;
     }
