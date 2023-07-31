@@ -1974,6 +1974,8 @@ HighsInt Highs_getRanging(
  */
 void Highs_resetGlobalScheduler(const HighsInt blocking);
 
+void* Highs_mallocOrExit(size_t size, const char* var_name);
+
 // *********************
 // * Deprecated methods*
 // *********************

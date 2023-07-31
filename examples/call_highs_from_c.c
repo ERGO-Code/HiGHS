@@ -83,13 +83,13 @@ void minimal_api() {
   const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
 
   double objective_value;
-  double* col_value = (double*)malloc(sizeof(double) * num_col);
-  double* col_dual = (double*)malloc(sizeof(double) * num_col);
-  double* row_value = (double*)malloc(sizeof(double) * num_row);
-  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+  double* col_value = (double*)Highs_mallocOrExit(sizeof(double) * num_col, "col_value");
+  double* col_dual = (double*)Highs_mallocOrExit(sizeof(double) * num_col, "col_dual");
+  double* row_value = (double*)Highs_mallocOrExit(sizeof(double) * num_row, "row_value");
+  double* row_dual = (double*)Highs_mallocOrExit(sizeof(double) * num_row, "row_dual");
 
-  int* col_basis_status = (int*)malloc(sizeof(int) * num_col);
-  int* row_basis_status = (int*)malloc(sizeof(int) * num_row);
+  int* col_basis_status = (int*)Highs_mallocOrExit(sizeof(int) * num_col, "col_basis_status");
+  int* row_basis_status = (int*)Highs_mallocOrExit(sizeof(int) * num_row, "row_basis_status");
 
   int model_status;
   int run_status;
@@ -215,13 +215,13 @@ void minimal_api_qp() {
   const double q_value[4] = {2.0, -1.0, 0.2, 2.0};
 
   double objective_value;
-  double* col_value = (double*)malloc(sizeof(double) * num_col);
-  double* col_dual = (double*)malloc(sizeof(double) * num_col);
-  double* row_value = (double*)malloc(sizeof(double) * num_row);
-  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+  double* col_value = (double*)Highs_mallocOrExit(sizeof(double) * num_col, "col_value");
+  double* col_dual = (double*)Highs_mallocOrExit(sizeof(double) * num_col, "col_dual");
+  double* row_value = (double*)Highs_mallocOrExit(sizeof(double) * num_row, "row_value");
+  double* row_dual = (double*)Highs_mallocOrExit(sizeof(double) * num_row, "row_dual");
 
-  int* col_basis_status = (int*)malloc(sizeof(int) * num_col);
-  int* row_basis_status = (int*)malloc(sizeof(int) * num_row);
+  int* col_basis_status = (int*)Highs_mallocOrExit(sizeof(int) * num_col, "col_basis_status");
+  int* row_basis_status = (int*)Highs_mallocOrExit(sizeof(int) * num_row, "row_basis_status");
 
   int model_status;
   int run_status;
