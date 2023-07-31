@@ -1199,24 +1199,14 @@ void Highs_resetGlobalScheduler(HighsInt blocking) {
 }
 
 
-/**
- * Allocate memory of a given size. If allocation fails, print an error message
- * and terminate the program.
- *
- * This function tries to allocate memory of the given size using malloc. If the
- * allocation fails (i.e., malloc returns NULL), it prints an error message to
- * stderr indicating which variable it was trying to allocate memory for and
- * then calls exit to terminate the program.
- *
- * @param size      The number of bytes to allocate.
- * @param var_name  The name of the variable for which memory is being allocated.
- *                  This is used in the error message if the allocation fails.
- *                  This should be NULL terminated.
- *
- * @returns A pointer to the allocated memory. If the allocation fails, this
- *          function does not return.
- */
-void* Highs_mallocOrExit(size_t size, const char* var_name);
+void* Highs_mallocOrExit(unsigned long long size, const char* var_name) {
+    void* ptr = malloc(size);
+    if (ptr == NULL) {
+        fprintf(stderr, "Out of memory when allocating %s\n", var_name);
+        exit(EXIT_FAILURE);
+    }
+    return ptr;
+}
 
 // *********************
 // * Deprecated methods*
