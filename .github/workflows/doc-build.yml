@@ -8,6 +8,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1.6'
+          version: '1.9'
       - name: Build
         run: julia --project=docs/ docs/make_build.jl
