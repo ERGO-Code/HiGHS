@@ -210,7 +210,7 @@ static void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vect
         dual_var.value[var] = lambda.value[indexinbasis];
       } else {
         assert(lambda.value[indexinbasis] == 0);
-        dual_var.value[var];
+        (void) dual_var.value[var];
       }
         
     } else {
