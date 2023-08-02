@@ -103,13 +103,7 @@ void debugReportRankDeficientASM(
     const vector<HighsInt>& row_with_no_pivot) {
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (rank_deficiency > 10) return;
-  double* ASM;
-  ASM = (double*)malloc(sizeof(double) * rank_deficiency * rank_deficiency);
-  for (HighsInt i = 0; i < rank_deficiency; i++) {
-    for (HighsInt j = 0; j < rank_deficiency; j++) {
-      ASM[i + j * rank_deficiency] = 0;
-    }
-  }
+  std::vector<double> ASM(rank_deficiency * rank_deficiency, 0);
   for (HighsInt j = 0; j < rank_deficiency; j++) {
     HighsInt ASMcol = col_with_no_pivot[j];
     HighsInt start = mc_start[ASMcol];
@@ -162,7 +156,6 @@ void debugReportRankDeficientASM(
     }
     highsLogDev(log_options, HighsLogType::kWarning, "\n");
   }
-  free(ASM);
 }
 
 void debugReportMarkSingC(const HighsInt call_id,
