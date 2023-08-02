@@ -196,6 +196,7 @@ static void regularize(Runtime& rt) {
   }
 }
 
+#if 0
 static void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dual_con, Vector& dual_var) {
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
@@ -259,6 +260,7 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
   }
   return maxviolation;
 }
+#endif
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
