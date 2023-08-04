@@ -574,6 +574,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
       rowCount[Aindex[el]]++;
   }
   analyseVectorValues(&log_options, "Column counts", numCol, colCount);
+  analyseVectorValues(&log_options, "Row counts", numRow, rowCount);
 
   const HighsInt maxCat = 10;
   std::vector<HighsInt> CatV;
