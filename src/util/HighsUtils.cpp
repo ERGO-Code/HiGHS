@@ -484,178 +484,77 @@ void analyseVectorValues(const HighsLogOptions* log_options,
                          std::string model_name) {
   const bool analyseValueList = true;
   if (vecDim == 0) return;
-  double log10 = log(10.0);
-  const HighsInt nVK = 20;
-  HighsInt nNz = 0;
-  HighsInt nPosInfV = 0;
-  HighsInt nNegInfV = 0;
-  std::vector<HighsInt> posVK;
-  std::vector<HighsInt> negVK;
-  posVK.resize(nVK + 1, 0);
-  negVK.resize(nVK + 1, 0);
-
   const HighsInt VLsMxZ = 10;
   std::vector<HighsInt> VLsK;
-  std::vector<double> VLsV;
+  std::vector<HighsInt> VLsV;
   VLsK.resize(VLsMxZ, 0);
   VLsV.resize(VLsMxZ, 0);
   // Ensure that 1.0 and -1.0 are counted
   const HighsInt PlusOneIx = 0;
   const HighsInt MinusOneIx = 1;
   bool excessVLsV = false;
-  HighsInt VLsZ = 2;
-  VLsV[PlusOneIx] = 1.0;
-  VLsV[MinusOneIx] = -1.0;
-  double min_abs_value = kHighsInf;
-  double max_abs_value = 0;
+  HighsInt VLsZ = 0;
+  HighsInt min_value = kHighsIInf;
+  HighsInt max_value = 0;
+  HighsInt nNz = 0;
+
   for (HighsInt ix = 0; ix < vecDim; ix++) {
-    double v = vec[ix];
-    double absV = std::fabs(v);
-    if (absV) {
-      min_abs_value = std::min(absV, min_abs_value);
-      max_abs_value = std::max(absV, max_abs_value);
-    }
-    HighsInt log10V;
-    if (absV > 0) {
-      // Nonzero value
-      nNz++;
-      if (highs_isInfinity(-v)) {
-        //-Inf value
-        nNegInfV++;
-      } else if (highs_isInfinity(v)) {
-        //+Inf value
-        nPosInfV++;
-      } else {
-        // Finite nonzero value
-        if (absV == 1) {
-          log10V = 0;
-        } else if (absV == 10) {
-          log10V = 1;
-        } else if (absV == 100) {
-          log10V = 2;
-        } else if (absV == 1000) {
-          log10V = 3;
-        } else {
-          log10V = log(absV) / log10;
-        }
-        if (log10V >= 0) {
-          HighsInt k = std::min(log10V, nVK);
-          posVK[k]++;
-        } else {
-          HighsInt k = std::min(-log10V, nVK);
-          negVK[k]++;
-        }
-      }
-    }
-    if (analyseValueList) {
-      if (v == 1.0) {
-        VLsK[PlusOneIx]++;
-      } else if (v == -1.0) {
-        VLsK[MinusOneIx]++;
-      } else {
-        HighsInt fdIx = -1;
-        for (HighsInt ix = 2; ix < VLsZ; ix++) {
-          if (v == VLsV[ix]) {
-            fdIx = ix;
-            break;
-          }
-        }
-        if (fdIx == -1) {
-          // New value
-          if (VLsZ < VLsMxZ) {
-            fdIx = VLsZ;
-            VLsV[fdIx] = v;
-            VLsK[fdIx]++;
-            VLsZ++;
-          } else {
-            excessVLsV = true;
-          }
-        } else {
-          // Existing value
-          VLsK[fdIx]++;
-        }
-      }
-    }
-  }  // for (HighsInt ix = 0; ix < vecDim; ix++)
-  // If there are no nonzeros, min_abs_value retains its starting
-  // value of inf
-  if (!nNz) min_abs_value = 0;
-  highsReportDevInfo(
-      log_options,
-      highsFormatToString(
-          "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
-          " nonzeros (%3" HIGHSINT_FORMAT "%%) in [%11.4g, %11.4g]\n",
-          message.c_str(), vecDim, nNz, 100 * nNz / vecDim, min_abs_value,
-          max_abs_value));
-  if (nNegInfV > 0)
-    highsReportDevInfo(
-        log_options, highsFormatToString(
-                         "%12" HIGHSINT_FORMAT " values are -Inf\n", nNegInfV));
-  if (nPosInfV > 0)
-    highsReportDevInfo(
-        log_options, highsFormatToString(
-                         "%12" HIGHSINT_FORMAT " values are +Inf\n", nPosInfV));
-  HighsInt k = nVK;
-  HighsInt vK = posVK[k];
-  if (vK > 0)
-    highsReportDevInfo(log_options, highsFormatToString(
-                                        "%12" HIGHSINT_FORMAT
-                                        " values satisfy 10^(%3" HIGHSINT_FORMAT
-                                        ") <= v < Inf\n",
-                                        vK, k));
-  for (HighsInt k = nVK - 1; k >= 0; k--) {
-    HighsInt vK = posVK[k];
-    if (vK > 0)
-      highsReportDevInfo(
-          log_options,
-          highsFormatToString("%12" HIGHSINT_FORMAT
-                              " values satisfy 10^(%3" HIGHSINT_FORMAT
-                              ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                              vK, k, k + 1));
-  }
-  for (HighsInt k = 1; k <= nVK; k++) {
-    HighsInt vK = negVK[k];
-    if (vK > 0)
-      highsReportDevInfo(
-          log_options,
-          highsFormatToString("%12" HIGHSINT_FORMAT
-                              " values satisfy 10^(%3" HIGHSINT_FORMAT
-                              ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                              vK, -k, 1 - k));
-  }
-  vK = vecDim - nNz;
-  if (vK > 0)
-    highsReportDevInfo(
-        log_options,
-        highsFormatToString("%12" HIGHSINT_FORMAT " values are zero\n", vK));
-  if (analyseValueList) {
-    highsReportDevInfo(log_options,
-                       highsFormatToString("           Value distribution:"));
-    if (excessVLsV)
-      highsReportDevInfo(
-          log_options,
-          highsFormatToString(
-              " More than %" HIGHSINT_FORMAT " different values", VLsZ));
-    highsReportDevInfo(
-        log_options, highsFormatToString("\n            Value        Count\n"));
+    HighsInt v = vec[ix];
+    min_value = std::min(v, min_value);
+    max_value = std::max(v, max_value);
+    if (v != 0) nNz++;
+
+    HighsInt fdIx = -1;
     for (HighsInt ix = 0; ix < VLsZ; ix++) {
-      if (!VLsK[ix]) continue;
-      HighsInt pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
-      highsReportDevInfo(log_options,
-                         highsFormatToString("     %12g %12" HIGHSINT_FORMAT
-                                             " (%3" HIGHSINT_FORMAT "%%)\n",
-                                             VLsV[ix], VLsK[ix], pct));
+      if (v == VLsV[ix]) {
+	fdIx = ix;
+	break;
+      }
     }
-    highsReportDevInfo(
-        log_options,
-        highsFormatToString("grep_value_distrib,%s,%" HIGHSINT_FORMAT "",
-                            model_name.c_str(), VLsZ));
-    highsReportDevInfo(log_options, highsFormatToString(","));
-    if (excessVLsV) highsReportDevInfo(log_options, highsFormatToString("!"));
-    for (HighsInt ix = 0; ix < VLsZ; ix++)
-      highsReportDevInfo(log_options, highsFormatToString(",%g", VLsV[ix]));
-    highsReportDevInfo(log_options, highsFormatToString("\n"));
+    if (fdIx == -1) {
+      // New value
+      if (VLsZ < VLsMxZ) {
+	fdIx = VLsZ;
+	VLsV[fdIx] = v;
+	VLsK[fdIx]++;
+	VLsZ++;
+      } else {
+	excessVLsV = true;
+      }
+    } else {
+      // Existing value
+      VLsK[fdIx]++;
+    }
   }
+  highsReportDevInfo(log_options,
+		     highsFormatToString(
+					 "%s of dimension %d with %d nonzeros (%3d%%) in [%d, %d]\n",
+					 message.c_str(), int(vecDim), int(nNz), int(100 * nNz / vecDim), int(min_value),
+					 int(max_value)));
+  highsReportDevInfo(log_options,
+		     highsFormatToString("           Value distribution:"));
+  if (excessVLsV)
+    highsReportDevInfo(
+		       log_options,
+		       highsFormatToString(
+					   " More than %" HIGHSINT_FORMAT " different values", VLsZ));
+  highsReportDevInfo(log_options, highsFormatToString("\n            Value        Count\n"));
+  for (HighsInt ix = 0; ix < VLsZ; ix++) {
+    if (!VLsK[ix]) continue;
+    HighsInt pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
+    highsReportDevInfo(log_options,
+		       highsFormatToString("     %12g %12" HIGHSINT_FORMAT
+					   " (%3" HIGHSINT_FORMAT "%%)\n",
+					   VLsV[ix], VLsK[ix], pct));
+  }
+  highsReportDevInfo(log_options,
+		     highsFormatToString("grep_value_distrib,%s,%" HIGHSINT_FORMAT "",
+					 model_name.c_str(), VLsZ));
+  highsReportDevInfo(log_options, highsFormatToString(","));
+  if (excessVLsV) highsReportDevInfo(log_options, highsFormatToString("!"));
+  for (HighsInt ix = 0; ix < VLsZ; ix++)
+    highsReportDevInfo(log_options, highsFormatToString(",%g", VLsV[ix]));
+  highsReportDevInfo(log_options, highsFormatToString("\n"));
 }
 
 void analyseMatrixSparsity(const HighsLogOptions& log_options,
