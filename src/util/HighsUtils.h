@@ -144,8 +144,8 @@ void analyseVectorValues(
 
 void analyseVectorValues(
     const HighsLogOptions* log_options,
-    const std::string message,       //!< Message to be printed
-    HighsInt vecDim,                 //!< Dimension of vector
+    const std::string message,         //!< Message to be printed
+    HighsInt vecDim,                   //!< Dimension of vector
     const std::vector<HighsInt>& vec,  //!< Vector of values
     std::string model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
