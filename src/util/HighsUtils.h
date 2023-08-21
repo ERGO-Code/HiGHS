@@ -142,6 +142,16 @@ void analyseVectorValues(
                    //!< different values in the vector
 );
 
+void analyseVectorValues(
+    const HighsLogOptions* log_options,
+    const std::string message,         //!< Message to be printed
+    HighsInt vecDim,                   //!< Dimension of vector
+    const std::vector<HighsInt>& vec,  //!< Vector of values
+    std::string model_name =
+        "Unknown"  //!< Model name to report if analysing distribution of
+                   //!< different values in the vector
+);
+
 void analyseMatrixSparsity(
     const HighsLogOptions& log_options,
     const char* message,                  //!< Message to be printed

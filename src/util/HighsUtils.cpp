@@ -477,6 +477,86 @@ void analyseVectorValues(const HighsLogOptions* log_options,
   }
 }
 
+void analyseVectorValues(const HighsLogOptions* log_options,
+                         const std::string message, HighsInt vecDim,
+                         const std::vector<HighsInt>& vec,
+                         std::string model_name) {
+  const bool analyseValueList = true;
+  if (vecDim == 0) return;
+  const HighsInt VLsMxZ = 10;
+  std::vector<std::pair<HighsInt, HighsInt>> VLs;
+  // Ensure that 1.0 and -1.0 are counted
+  const HighsInt PlusOneIx = 0;
+  const HighsInt MinusOneIx = 1;
+  bool excessVLsV = false;
+  HighsInt VLsZ = 0;
+  HighsInt min_value = kHighsIInf;
+  HighsInt max_value = 0;
+  HighsInt nNz = 0;
+
+  for (HighsInt ix = 0; ix < vecDim; ix++) {
+    HighsInt v = vec[ix];
+    min_value = std::min(v, min_value);
+    max_value = std::max(v, max_value);
+    if (v != 0) nNz++;
+
+    HighsInt fdIx = -1;
+    for (HighsInt ix = 0; ix < VLsZ; ix++) {
+      if (v == VLs[ix].first) {
+        fdIx = ix;
+        break;
+      }
+    }
+    if (fdIx == -1) {
+      // New value
+      if (VLsZ < VLsMxZ) {
+        fdIx = VLsZ;
+        VLs.push_back(std::make_pair(v, 1));
+        VLsZ++;
+      } else {
+        excessVLsV = true;
+      }
+    } else {
+      // Existing value
+      VLs[fdIx].second++;
+    }
+  }
+  assert(VLsZ == int(VLs.size()));
+  std::sort(VLs.begin(), VLs.end());
+  highsReportDevInfo(
+      log_options,
+      highsFormatToString(
+          "%s of dimension %d with %d nonzeros (%3d%%) in [%d, %d]\n",
+          message.c_str(), int(vecDim), int(nNz), int(100 * nNz / vecDim),
+          int(min_value), int(max_value)));
+  highsReportDevInfo(log_options,
+                     highsFormatToString("           Value distribution:"));
+  if (excessVLsV)
+    highsReportDevInfo(
+        log_options,
+        highsFormatToString(" More than %" HIGHSINT_FORMAT " different values",
+                            VLsZ));
+  highsReportDevInfo(log_options,
+                     highsFormatToString("\n            Value        Count\n"));
+  for (HighsInt ix = 0; ix < VLsZ; ix++) {
+    if (!VLs[ix].second) continue;
+    HighsInt pct = ((100.0 * VLs[ix].second) / vecDim) + 0.5;
+    highsReportDevInfo(log_options,
+                       highsFormatToString("     %12d %12d (%3d%%)\n",
+                                           VLs[ix].first, VLs[ix].second, pct));
+  }
+  /*
+  highsReportDevInfo(log_options,
+                     highsFormatToString("grep_value_distrib,%s,%"
+  HIGHSINT_FORMAT "", model_name.c_str(), VLsZ));
+  highsReportDevInfo(log_options, highsFormatToString(","));
+  if (excessVLsV) highsReportDevInfo(log_options, highsFormatToString("!"));
+  for (HighsInt ix = 0; ix < VLsZ; ix++)
+    highsReportDevInfo(log_options, highsFormatToString(",%g", VLs[ix].first));
+  highsReportDevInfo(log_options, highsFormatToString("\n"));
+  */
+}
+
 void analyseMatrixSparsity(const HighsLogOptions& log_options,
                            const char* message, HighsInt numCol,
                            HighsInt numRow, const std::vector<HighsInt>& Astart,
@@ -493,6 +573,9 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
     for (HighsInt el = Astart[col]; el < Astart[col + 1]; el++)
       rowCount[Aindex[el]]++;
   }
+  analyseVectorValues(&log_options, "Column counts", numCol, colCount);
+  analyseVectorValues(&log_options, "Row counts", numRow, rowCount);
+
   const HighsInt maxCat = 10;
   std::vector<HighsInt> CatV;
   std::vector<HighsInt> rowCatK;
