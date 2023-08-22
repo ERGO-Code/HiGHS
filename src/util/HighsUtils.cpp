@@ -400,10 +400,12 @@ void analyseVectorValues(const HighsLogOptions* log_options,
   // value of inf
   if (!nNz) min_abs_value = 0;
   highsReportDevInfo(
-      log_options, highsFormatToString(
-                       "%s - %d/%d nonzeros (%3d%%) - in [%11.4g, %11.4g]\n",
-                       message.c_str(), int(nNz), int(vecDim),
-                       int(100 * nNz / vecDim), min_abs_value, max_abs_value));
+      log_options,
+      highsFormatToString(
+          "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
+          " nonzeros (%3d%%) in [%11.4g, %11.4g]\n",
+          message.c_str(), vecDim, nNz, int(1e2 * double(nNz) / double(vecDim)),
+          min_abs_value, max_abs_value));
   if (nNegInfV > 0)
     highsReportDevInfo(
         log_options, highsFormatToString(
