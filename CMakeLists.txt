@@ -429,6 +429,7 @@ message(STATUS "Build shared libraries: " ${SHARED})
 
 if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
+    add_compile_definitions("NDEBUG")
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -491,6 +492,7 @@ option(EXP "Experimental mode: run unit tests with doctest." OFF)
 
 if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
+    add_compile_definitions("NDEBUG")
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
