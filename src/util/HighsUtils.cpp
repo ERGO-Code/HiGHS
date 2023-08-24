@@ -302,6 +302,7 @@ void analyseVectorValues(const HighsLogOptions* log_options,
                          const std::string message, HighsInt vecDim,
                          const std::vector<double>& vec, bool analyseValueList,
                          std::string model_name) {
+  assert(vecDim == int(vec.size()));
   if (vecDim == 0) return;
   double log10 = log(10.0);
   const HighsInt nVK = 20;
@@ -1132,7 +1133,13 @@ double nearestPowerOfTwoScale(const double value) {
   // (if arg is not zero), if no errors occur, returns the value x in
   // the range (-1;-0.5], [0.5; 1) and stores an integer value in *exp
   // such that x×2(*exp)=arg
-  std::frexp(value, &exp_scale);
+  double check_x = std::frexp(value, &exp_scale);
+  if (std::fabs(check_x) == 0.5) {
+    check_x *= 2;
+    exp_scale--;
+  }
+  const double check_value = check_x * std::pow(2, exp_scale);
+  assert(check_value == value);
   exp_scale = -exp_scale;
   // Multiply a floating point value x(=1) by the number 2 raised to
   // the exp power
