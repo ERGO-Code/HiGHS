@@ -1451,6 +1451,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
+  bool have_integrality = lp.integrality_.size();
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -1463,6 +1464,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
       lp.col_lower_[new_num_col] = lp.col_lower_[col];
       lp.col_upper_[new_num_col] = lp.col_upper_[col];
       if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
+      if (have_integrality) lp.integrality_[new_num_col] = lp.integrality_[col];
       new_num_col++;
     }
     if (keep_to_col >= col_dim - 1) break;
