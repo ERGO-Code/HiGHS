@@ -62,7 +62,8 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
-void scaleLp(const HighsOptions& options, HighsLp& lp);
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling = false);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
                               const HighsInt use_scale_strategy);
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
