@@ -22,10 +22,9 @@
 
 void highsLogHeader(const HighsLogOptions& log_options) {
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               "Running HiGHS %d.%d.%d: %s\n",
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+               (int)HIGHS_VERSION_PATCH,
                kHighsCopyrightStatement.c_str());
 }
 
