@@ -30,7 +30,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # set default build type before project call, as it otherwise seems to fail for some plattforms
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RELEASE)
+  set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 
 # Default Build Type to be Release
@@ -93,13 +93,13 @@ endif()
 include(CTest)
 
 if(MSVC)
-	# This option is only available when building with MSVC. By default, highs
-	# is build using the cdecl calling convention, which is useful if you're
-	# writing C. However, the CLR and Win32 API both expect stdcall.
-	#
-	# If you are writing a CLR program and want to link to highs, you'll want
-	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	option( STDCALL			"Build highs with the __stdcall convention"   OFF  )
+  # This option is only available when building with MSVC. By default, highs
+  # is build using the cdecl calling convention, which is useful if you're
+  # writing C. However, the CLR and Win32 API both expect stdcall.
+  #
+  # If you are writing a CLR program and want to link to highs, you'll want
+  # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+  option(STDCALL "Build highs with the __stdcall convention" OFF)
 endif()
 
 option(FAST_BUILD "Fast build: " ON)
@@ -149,28 +149,27 @@ check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
 message(STATUS "Found int * size: ${SIZEOF_INT_P}")
 cmake_pop_check_state()
 
-
-### Require out-of-source builds
+# Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")
-    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file).
+  message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file).
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
 option(BUILD_TESTING "Build Tests" ON)
 
 if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-    message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+  message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
 elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT ipo_supported OUTPUT error)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
-    if(ipo_supported)
-        message(STATUS "IPO / LTO enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(STATUS "IPO / LTO not supported: <${error}>")
-    endif()
+  if(ipo_supported)
+    message(STATUS "IPO / LTO enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+  else()
+    message(STATUS "IPO / LTO not supported: <${error}>")
+  endif()
 endif()
 
 # emscripten
@@ -180,16 +179,16 @@ set(CMAKE_MACOSX_RPATH ON)
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
-    "#include <immintrin.h>
+  "#include <immintrin.h>
     int main () {
         _mm_pause();
         return 0;
     }"
-    HIGHS_HAVE_MM_PAUSE)
+  HIGHS_HAVE_MM_PAUSE)
 
 if(MSVC)
-    check_cxx_source_compiles(
-        "#include <intrin.h>
+  check_cxx_source_compiles(
+    "#include <intrin.h>
         #pragma intrinsic(_BitScanReverse)
         #pragma intrinsic(_BitScanReverse64)
         int main () {
@@ -199,22 +198,22 @@ if(MSVC)
             _BitScanReverse64(&x, y);
             return 0;
         }"
-        HIGHS_HAVE_BITSCAN_REVERSE)
+    HIGHS_HAVE_BITSCAN_REVERSE)
 else()
-    check_cxx_source_compiles(
-        "#include <cstdint>
+  check_cxx_source_compiles(
+    "#include <cstdint>
          int main () {
             unsigned int x = 5;
             unsigned long long y = __builtin_clz(x);
             x = __builtin_clzll(y);
             return 0;
         }"
-        HIGHS_HAVE_BUILTIN_CLZ)
+    HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
 include(CheckCXXCompilerFlag)
 
-if (NOT FAST_BUILD)
+if(NOT FAST_BUILD)
 
   option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
@@ -226,14 +225,14 @@ if (NOT FAST_BUILD)
 
   # Function to set compiler flags on and off easily.
   function(enable_cxx_compiler_flag_if_supported flag)
-      string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-      if(flag_already_set EQUAL -1)
-          check_cxx_compiler_flag("${flag}" flag_supported)
-          if(flag_supported)
-              set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-          endif()
-          unset(flag_supported CACHE)
+    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+    if(flag_already_set EQUAL -1)
+      check_cxx_compiler_flag("${flag}" flag_supported)
+      if(flag_supported)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
       endif()
+      unset(flag_supported CACHE)
+    endif()
   endfunction()
 
   # usage: turn pedantic on for even more warnings.
@@ -259,60 +258,62 @@ if(DEBUGSOL)
 endif()
 
 option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
-if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
-    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
+
+if(NOT(${HIGHSINT64} STREQUAL "OFF"))
+  message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
 # If Visual Studio targets are being built.
 if(MSVC)
-    add_definitions(/W4)
-    add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
-    add_definitions(/MP)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    if (STDCALL)
-	# /Gz - stdcall calling convention
-        add_definitions(/Gz)
-    endif()
+  add_definitions(/W4)
+  add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
+  add_definitions(/MP)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-#
-# This fouls up building HiGHS as part of a larger CMake project: see #1129.
-# Setting it will speed up run-time in debug (and compile-time?)
-#
-#    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+  if(STDCALL)
+    # /Gz - stdcall calling convention
+    add_definitions(/Gz)
+  endif()
+
+  #
+  # This fouls up building HiGHS as part of a larger CMake project: see #1129.
+  # Setting it will speed up run-time in debug (and compile-time?)
+  #
+  # add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
 endif()
 
-if (NOT FAST_BUILD OR FORTRAN)
+if(NOT FAST_BUILD OR FORTRAN)
   include(CheckLanguage)
   if(NOT MSVC)
-      check_language("Fortran")
+    check_language("Fortran")
   endif()
   if(CMAKE_Fortran_COMPILER)
-      enable_language(Fortran)
-      set(FORTRAN_FOUND ON)
+    enable_language(Fortran)
+    set(FORTRAN_FOUND ON)
   else()
-      set(FORTRAN_FOUND OFF)
+    set(FORTRAN_FOUND OFF)
   endif(CMAKE_Fortran_COMPILER)
 endif()
 
-if (NOT FAST_BUILD OR CSHARP)
+if(NOT FAST_BUILD OR CSHARP)
   check_language("CSharp")
   if(CMAKE_CSharp_COMPILER)
-      enable_language(CSharp)
-      set(CSHARP_FOUND ON)
+    enable_language(CSharp)
+    set(CSHARP_FOUND ON)
   else()
-      set(CSHARP_FOUND OFF)
+    set(CSHARP_FOUND OFF)
   endif(CMAKE_CSharp_COMPILER)
 endif()
 
 check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
 if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
+  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
 else()
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
 # uncomment for memory debugging
@@ -322,7 +323,7 @@ endif()
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
 # if zlib is found, then we can enable reading zlib-compressed input
-if (ZLIB)
+if(ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
@@ -334,107 +335,109 @@ set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
 find_program(GIT git)
-if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
-    execute_process(
-        COMMAND ${GIT} describe --always --dirty
-        WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
-        OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+
+if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
+  execute_process(
+    COMMAND ${GIT} describe --always --dirty
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
+    OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
 else()
-    set(GITHASH "n/a")
+  set(GITHASH "n/a")
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
-if (NOT FAST_BUILD)
+if(NOT FAST_BUILD)
+  # For the moment keep above coverage part in case we are testing at CI.
+  option(CI "CI extended tests" ON)
 
-# For the moment keep above coverage part in case we are testing at CI.
-option(CI "CI extended tests" ON)
+  # Coverage part
+  # 'make coverage' to start the coverage process
+  option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 
-# Coverage part
-# 'make coverage' to start the coverage process
-option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
-if (HIGHS_COVERAGE)
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_C_FLAGS_DEBUG    "${CMAKE_C_FLAGS_DEBUG}    -O0 --coverage")
-    set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG}  -O0 --coverage")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O0 --coverage")
-  endif ()
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
-  endif ()
-endif ()
+  if(HIGHS_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}    -O0 --coverage")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -O0 --coverage")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O0 --coverage")
+    endif()
 
-if (HIGHS_COVERAGE)
-  if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-    message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
-  endif ()
-endif ()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}   -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
+    endif()
+  endif()
 
-if (HIGHS_COVERAGE)
-  if (WIN32)
-    message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
-  endif ()
+  if(HIGHS_COVERAGE)
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+      message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
+    endif()
+  endif()
 
-  find_program(GCOV_PATH gcov)
-  find_program(LCOV_PATH lcov)
-  find_program(GENHTML_PATH genhtml)
+  if(HIGHS_COVERAGE)
+    if(WIN32)
+      message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
+    endif()
 
-  if (NOT GCOV_PATH)
-    message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
-  endif ()
+    find_program(GCOV_PATH gcov)
+    find_program(LCOV_PATH lcov)
+    find_program(GENHTML_PATH genhtml)
 
-  if (NOT LCOV_PATH)
-    message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
-  endif ()
+    if(NOT GCOV_PATH)
+      message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
+    endif()
 
-  if (NOT GENHTML_PATH)
-    message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
-  endif ()
+    if(NOT LCOV_PATH)
+      message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
+    endif()
 
-  # Capturing lcov counters and generating report
-  if (NOT CI)
-    add_custom_target(coverage
-                    COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
-                    COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
-                    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-                    COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
-                    COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-                    COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-                    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-            VERBATIM
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                    COMMENT "Resetting code coverage counters to zero.
+    if(NOT GENHTML_PATH)
+      message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
+    endif()
+
+    # Capturing lcov counters and generating report
+    if(NOT CI)
+      add_custom_target(coverage
+        COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
+        COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+        COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Resetting code coverage counters to zero.
     Processing code coverage counters and generating report.
     You can zip the directory ${CMAKE_BINARY_DIR}/coverage and upload the content to a web server.")
-  else()
-    add_custom_target(ci_cov
-                    COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
-                    COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
-                    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-                    COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
-		    VERBATIM
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                    COMMENT "Resetting code coverage counters to zero.")
+    else()
+      add_custom_target(ci_cov
+        COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
+        COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Resetting code coverage counters to zero.")
+    endif()
   endif()
-endif ()
 
-# whether to use shared or static libraries
-option(SHARED "Build shared libraries" ON)
-set(BUILD_SHARED_LIBS ${SHARED})
-message(STATUS "Build shared libraries: " ${SHARED})
+  # whether to use shared or static libraries
+  option(SHARED "Build shared libraries" ON)
+  set(BUILD_SHARED_LIBS ${SHARED})
+  message(STATUS "Build shared libraries: " ${SHARED})
 
-if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
+  if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
     add_compile_definitions("NDEBUG")
-endif()
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+  endif()
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
-include_directories(
+  configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+  include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
     ${HIGHS_SOURCE_DIR}/extern
@@ -452,146 +455,141 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
 
-
-# explicitly switch on colored output for ninja
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # explicitly switch on colored output for ninja
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_GENERATOR STREQUAL "Ninja")
-        set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
     endif()
-endif()
+  endif()
 
+  # if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
+  #   enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
+  # endif()
 
-#if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
-#    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
-#endif()
+  # use, i.e. don't skip the full RPATH for the build tree
+  set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
-# use, i.e. don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
+  # when building, don't use the install RPATH already
+  # (but later on when installing)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
-
-# Targets
-enable_testing()
-add_subdirectory(app)
-if(BUILD_TESTING)
+  # Targets
+  enable_testing()
+  add_subdirectory(app)
+  if(BUILD_TESTING)
     add_subdirectory(check)
-endif()
-add_subdirectory(src)
+  endif()
+  add_subdirectory(src)
 
 else(FAST_BUILD)
 
-message(STATUS "FAST_BUILD set to on.
+  message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
 
-option(EXP "Experimental mode: run unit tests with doctest." OFF)
+  option(EXP "Experimental mode: run unit tests with doctest." OFF)
 
-if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
+  if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
     add_compile_definitions("NDEBUG")
-endif()
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+  endif()
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+  # configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
-# set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+  # set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+  option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 
-option(BUILD_SHARED_LIBS "Build shared libraries." ON)
+  # static build for windows
+  if(NOT UNIX)
+    option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    # for multi-config builds (e.g. msvc)
+    foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+      string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+    endforeach()
+  endif()
 
-# static build for windows
-if (NOT UNIX)
-option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-# for multi-config builds (e.g. msvc)
-foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-  string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-endforeach()
-endif()
+  if(BUILD_SHARED_LIBS AND MSVC)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  endif()
 
+  # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
+  if(BUILD_PYTHON)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  endif()
 
-if(BUILD_SHARED_LIBS AND MSVC)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
+  include(CMakeDependentOption)
 
-# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-if(BUILD_PYTHON)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
+  option(BUILD_EXAMPLES "Build examples" ON)
+  message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
-include(CMakeDependentOption)
+  CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
+  message(STATUS "Build C++: ${BUILD_CXX_EX}")
+  CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
+  message(STATUS "Build Python: ${BUILD_PYTHON_EXAMPLE}")
+  CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
+  message(STATUS "Build CSharp: ${BUILD_CSHARP_EXAMPLE}")
 
-option(BUILD_EXAMPLES "Build examples" ON)
-message(STATUS "Build examples: ${BUILD_EXAMPLES}")
-
-CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
-message(STATUS "Build C++: ${BUILD_CXX_EX}")
-CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
-message(STATUS "Build Python: ${BUILD_PYTHON_EXAMPLE}")
-CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
-message(STATUS "Build CSharp: ${BUILD_CSHARP_EXAMPLE}")
-
-# IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
-CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
-  "NOT BUILD_DEPS" ON)
-message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
-
-if(PYTHON)
-  CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
+  # IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
+  CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
     "NOT BUILD_DEPS" ON)
-  message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
+  message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
 
-  CMAKE_DEPENDENT_OPTION(BUILD_VENV "Create Python venv in BINARY_DIR/python/venv" OFF
-    "NOT BUILD_TESTING" ON)
-  message(STATUS "Python: Create venv: ${BUILD_VENV}")
+  if(PYTHON)
+    CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
+      "NOT BUILD_DEPS" ON)
+    message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
 
-  option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" OFF)
-  message(STATUS "Python: Allow venv to use system site packages: ${VENV_USE_SYSTEM_SITE_PACKAGES}")
+    CMAKE_DEPENDENT_OPTION(BUILD_VENV "Create Python venv in BINARY_DIR/python/venv" OFF
+      "NOT BUILD_TESTING" ON)
+    message(STATUS "Python: Create venv: ${BUILD_VENV}")
 
-  option(FETCH_PYTHON_DEPS "Install python required modules if not available" ${BUILD_DEPS})
-  message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
-endif()
+    option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" OFF)
+    message(STATUS "Python: Allow venv to use system site packages: ${VENV_USE_SYSTEM_SITE_PACKAGES}")
 
-option(JULIA "Build library and executable for Julia" OFF)
+    option(FETCH_PYTHON_DEPS "Install python required modules if not available" ${BUILD_DEPS})
+    message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
+  endif()
 
-include(cpp-highs)
-include(c-highs)
+  option(JULIA "Build library and executable for Julia" OFF)
 
-if (PYTHON)
-  include(python-highs)
-endif()
+  include(cpp-highs)
+  include(c-highs)
 
-# Add tests in examples/tests
-add_subdirectory(examples)
+  if(PYTHON)
+    include(python-highs)
+  endif()
 
-add_subdirectory(app)
+  # Add tests in examples/tests
+  add_subdirectory(examples)
 
-if (EXP)
+  add_subdirectory(app)
+
+  if(EXP)
     add_executable(doctest)
-    #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
+
+    # target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
 
-    if (NOT APPLE)
-        # triggers hanging on macOS
-        target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    if(NOT APPLE)
+      # triggers hanging on macOS
+      target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
     endif()
 
     target_include_directories(doctest PRIVATE extern)
     target_link_libraries(doctest highs)
-endif()
+  endif()
 
 # install(TARGETS highs EXPORT highs-targets
-#     LIBRARY
-#     ARCHIVE
-#     RUNTIME
-#     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-
+# LIBRARY
+# ARCHIVE
+# RUNTIME
+# PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 endif()
