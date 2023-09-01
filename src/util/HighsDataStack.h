@@ -29,7 +29,7 @@
 
 class HighsDataStack {
   std::vector<char> data;
-  HighsInt position;
+  std::size_t position;
 
  public:
   void resetPosition() { position = data.size(); }
