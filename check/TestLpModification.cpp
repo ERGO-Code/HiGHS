@@ -1,4 +1,5 @@
 #include "Avgas.h"
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
@@ -1454,6 +1455,41 @@ TEST_CASE("LP-free-row", "[highs_data]") {
   highs.changeRowBounds(0, -inf, inf);
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value == -3);
+}
+
+TEST_CASE("LP-delete-ip-var", "[highs_data]") {
+  Highs highs;
+  HighsInt num_var = 5;
+  std::vector<double> lower = {1, 2, 3, 4, 5};
+  std::vector<double> upper = {1, 2, 3, 4, 5};
+  highs.addVars(num_var, lower.data(), upper.data());
+  const HighsInt og_ip_var = 3;
+  const std::vector<HighsInt> og_ip_var_set = {og_ip_var};
+  const std::vector<HighsVarType> og_ip_var_integrality = {
+      HighsVarType::kInteger};
+  const HighsInt delete_var = 2;
+  const std::vector<HighsInt> delete_var_set = {delete_var};
+  const HighsInt later_ip_var = 2;
+  highs.changeColsIntegrality(1, og_ip_var_set.data(),
+                              og_ip_var_integrality.data());
+
+  for (HighsInt iCol = 0; iCol < num_var; iCol++) {
+    if (iCol == og_ip_var) {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kInteger);
+    } else {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kContinuous);
+    }
+  }
+  highs.deleteVars(1, delete_var_set.data());
+  // Now that #1386 is fixed, the integrality should be correct
+  num_var--;
+  for (HighsInt iCol = 0; iCol < num_var; iCol++) {
+    if (iCol == later_ip_var) {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kInteger);
+    } else {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kContinuous);
+    }
+  }
 }
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,

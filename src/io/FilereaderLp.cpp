@@ -141,6 +141,12 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
       lp.row_lower_.push_back(con->lowerbound);
       lp.row_upper_.push_back(con->upperbound);
+
+      if (!con->expr->quadterms.empty()) {
+        highsLogUser(options.log_options, HighsLogType::kError,
+                     "Quadratic constraints not supported by HiGHS\n");
+        return FilereaderRetcode::kParserError;
+      }
     }
 
     // Check for empty row names, giving them a special name if possible

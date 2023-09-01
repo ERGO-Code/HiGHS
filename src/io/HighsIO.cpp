@@ -21,12 +21,9 @@
 #include "lp_data/HighsOptions.h"
 
 void highsLogHeader(const HighsLogOptions& log_options) {
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+  highsLogUser(log_options, HighsLogType::kInfo, "Running HiGHS %d.%d.%d: %s\n",
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-               kHighsCopyrightStatement.c_str());
+               (int)HIGHS_VERSION_PATCH, kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,
@@ -135,7 +132,8 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, log_options_.log_user_callback_data);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }
@@ -184,7 +182,8 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, log_options_.log_user_callback_data);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }

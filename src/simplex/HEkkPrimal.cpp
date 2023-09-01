@@ -110,7 +110,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     // removed by flips for and fixed variables shifts for the rest
     solve_phase = kSolvePhase2;
     if (!pass_force_phase2) {
-      const bool local_report = true;
+      const bool local_report = false;  // true;
       if (!primal_feasible_with_unperturbed_bounds && local_report) {
         printf(
             "Solve %d: Forcing phase 2 since near primal feasible with "

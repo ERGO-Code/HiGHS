@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 

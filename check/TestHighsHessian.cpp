@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "lp_data/HighsOptions.h"
 #include "model/HighsHessian.h"

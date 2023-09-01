@@ -52,8 +52,7 @@ struct HighsLogOptions {
 };
 
 /**
- * @brief Write the HiGHS version, compilation date, git hash and
- * copyright statement
+ * @brief Write the HiGHS version and copyright statement
  */
 void highsLogHeader(const HighsLogOptions& log_options);
 

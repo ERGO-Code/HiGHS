@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 #include "util/HighsRandom.h"

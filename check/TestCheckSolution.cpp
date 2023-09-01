@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
@@ -70,10 +71,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  //  const HighsInfo& info = highs.getInfo();
   if (dev_run) printf("\n********************\nSolving from scratch\n");
   highs.setOptionValue("output_flag", dev_run);
-
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
 
@@ -90,7 +89,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
-  const bool test0 = true;
+  const bool other_tests = true;
+  const bool test0 = other_tests;
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
@@ -110,7 +110,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = true;
+  const bool test1 = other_tests;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -129,7 +129,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = true;
+  const bool test2 = other_tests;
   if (test2) {
     if (dev_run)
       printf(
@@ -159,7 +159,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test3 = true;
+  const bool test3 = other_tests;
   if (test3) {
     if (dev_run)
       printf(
@@ -182,7 +182,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test4 = true;
+  const bool test4 = other_tests;
   if (test4) {
     if (dev_run)
       printf(
@@ -197,6 +197,35 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(column_solution_file);
     REQUIRE(return_status == HighsStatus::kError);
 
+    highs.clear();
+  }
+
+  const bool test5 = other_tests;
+  if (test5) {
+    HighsSolution starting_solution = optimal_solution;
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from partial integer "
+          "solution\n");
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    HighsInt k = 0;
+    const HighsInt max_k = 1;
+    // Set a proportion of the integer variables to a fractional value
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
+      if (k <= max_k) {
+        starting_solution.col_value[iCol] = 0.5;
+        k++;
+      } else {
+        k = 0;
+      }
+    }
+    return_status = highs.setSolution(starting_solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+    highs.run();
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
     highs.clear();
   }
 
