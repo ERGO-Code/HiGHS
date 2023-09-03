@@ -933,10 +933,6 @@ PYBIND11_MODULE(highspy, m) {
   py::module_ simplex_constants =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
 
-  py::enum_<SimplexAlgorithm>(simplex_constants, "SimplexAlgorithm")
-      .value("kNone", SimplexAlgorithm::kNone)
-      .value("kPrimal", SimplexAlgorithm::kPrimal)
-      .value("kDual", SimplexAlgorithm::kDual);
   py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy")
       .value("kSimplexStrategyMin", SimplexStrategy::kSimplexStrategyMin)
       .value("kSimplexStrategyChoose", SimplexStrategy::kSimplexStrategyChoose)
@@ -986,34 +982,6 @@ PYBIND11_MODULE(highspy, m) {
              SimplexSolvePhase::kSolvePhaseOptimalCleanup)
       .value("kSolvePhaseTabooBasis", SimplexSolvePhase::kSolvePhaseTabooBasis)
       .value("kSolvePhaseMax", SimplexSolvePhase::kSolvePhaseMax)
-      .export_values();
-  py::enum_<SimplexCrashStrategy>(simplex_constants, "SimplexCrashStrategy")
-      .value("kSimplexCrashStrategyMin",
-             SimplexCrashStrategy::kSimplexCrashStrategyMin)
-      .value("kSimplexCrashStrategyOff",
-             SimplexCrashStrategy::kSimplexCrashStrategyOff)
-      .value("kSimplexCrashStrategyLtssfK",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtssfK)
-      .value("kSimplexCrashStrategyLtssf",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtssf)
-      .value("kSimplexCrashStrategyBixby",
-             SimplexCrashStrategy::kSimplexCrashStrategyBixby)
-      .value("kSimplexCrashStrategyLtssfPri",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtssfPri)
-      .value("kSimplexCrashStrategyLtsfK",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtsfK)
-      .value("kSimplexCrashStrategyLtsfPri",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtsfPri)
-      .value("kSimplexCrashStrategyLtsf",
-             SimplexCrashStrategy::kSimplexCrashStrategyLtsf)
-      .value("kSimplexCrashStrategyBixbyNoNonzeroColCosts",
-             SimplexCrashStrategy::kSimplexCrashStrategyBixbyNoNonzeroColCosts)
-      .value("kSimplexCrashStrategyBasic",
-             SimplexCrashStrategy::kSimplexCrashStrategyBasic)
-      .value("kSimplexCrashStrategyTestSing",
-             SimplexCrashStrategy::kSimplexCrashStrategyTestSing)
-      .value("kSimplexCrashStrategyMax",
-             SimplexCrashStrategy::kSimplexCrashStrategyMax)
       .export_values();
   py::enum_<SimplexEdgeWeightStrategy>(simplex_constants,
                                        "SimplexEdgeWeightStrategy")
@@ -1073,33 +1041,6 @@ PYBIND11_MODULE(highspy, m) {
       .value("kSimplexPrimalCorrectionStrategyAlways",
              SimplexPrimalCorrectionStrategy::
                  kSimplexPrimalCorrectionStrategyAlways)
-      .export_values();
-  py::enum_<RebuildReason>(simplex_constants, "RebuildReason")
-      .value("kRebuildReasonCleanup", RebuildReason::kRebuildReasonCleanup)
-      .value("kRebuildReasonNo", RebuildReason::kRebuildReasonNo)
-      .value("kRebuildReasonUpdateLimitReached",
-             RebuildReason::kRebuildReasonUpdateLimitReached)
-      .value("kRebuildReasonSyntheticClockSaysInvert",
-             RebuildReason::kRebuildReasonSyntheticClockSaysInvert)
-      .value("kRebuildReasonPossiblyOptimal",
-             RebuildReason::kRebuildReasonPossiblyOptimal)
-      .value("kRebuildReasonPossiblyPhase1Feasible",
-             RebuildReason::kRebuildReasonPossiblyPhase1Feasible)
-      .value("kRebuildReasonPossiblyPrimalUnbounded",
-             RebuildReason::kRebuildReasonPossiblyPrimalUnbounded)
-      .value("kRebuildReasonPossiblyDualUnbounded",
-             RebuildReason::kRebuildReasonPossiblyDualUnbounded)
-      .value("kRebuildReasonPossiblySingularBasis",
-             RebuildReason::kRebuildReasonPossiblySingularBasis)
-      .value("kRebuildReasonPrimalInfeasibleInPrimalSimplex",
-             RebuildReason::kRebuildReasonPrimalInfeasibleInPrimalSimplex)
-      .value("kRebuildReasonChooseColumnFail",
-             RebuildReason::kRebuildReasonChooseColumnFail)
-      .value("kRebuildReasonForceRefactor",
-             RebuildReason::kRebuildReasonForceRefactor)
-      .value("kRebuildReasonExcessivePrimalValue",
-             RebuildReason::kRebuildReasonExcessivePrimalValue)
-      .value("kRebuildReasonCount", RebuildReason::kRebuildReasonCount)
       .export_values();
   py::enum_<SimplexNlaOperation>(simplex_constants, "SimplexNlaOperation")
       .value("kSimplexNlaNull", SimplexNlaOperation::kSimplexNlaNull)
