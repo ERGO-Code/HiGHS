@@ -1408,6 +1408,7 @@ void print_map(std::string comment, const std::map<std::string, HighsInt>& m)
 }
 */
 
+/*
 bool repeatedNames(const std::vector<std::string> name) {
   const HighsInt num_name = name.size();
   // With no names, cannot have any repeated
@@ -1423,3 +1424,4 @@ bool repeatedNames(const std::vector<std::string> name) {
   }
   return false;
 }
+*/

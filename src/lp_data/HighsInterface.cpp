@@ -168,6 +168,10 @@ HighsStatus Highs::addColsInterface(
   }
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
+
+  // Possibly add column names
+  lp.addColNames("", ext_num_new_col);
+
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
   assert(lpDimensionsOk("addCols", lp, options.log_options));
@@ -287,6 +291,9 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
+  // Possibly add row names
+  lp.addRowNames("", ext_num_new_row);
+
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
   assert(lpDimensionsOk("addRows", lp, options.log_options));
@@ -295,6 +302,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
   ekk_instance_.addRows(lp, local_ar_matrix);
+
   return return_status;
 }
 
@@ -341,6 +349,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     assert(new_col == lp.num_col_);
   }
   assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
+  lp.col_hash_.name2index.clear();
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
@@ -382,6 +391,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     assert(new_row == lp.num_row_);
   }
   assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
+  lp.row_hash_.name2index.clear();
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
@@ -1526,5 +1536,13 @@ HighsStatus Highs::invertRequirementError(std::string method_name) {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());
+  return HighsStatus::kError;
+}
+
+HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
+  assert(!ekk_instance_.status_.has_invert);
+  if (model_.isMip() || model_.isQp()) return HighsStatus::kOk;
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "No LP invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
 }

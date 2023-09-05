@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
@@ -244,7 +245,7 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   lp.a_matrix_.start_ = {0, 0};
   lp.integrality_ = {semi_continuous};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
@@ -263,6 +264,33 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   highs.passModel(lp);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
+TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
+  // Introduced due to a semi-variable possibly having an infinite
+  // upper bound that needs to be written to MPS in order to define
+  // variable type
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  semiModel0(lp);
+  highs.passModel(lp);
+  highs.run();
+  const double obj0 = highs.getObjectiveValue();
+  if (dev_run) printf("Optimum at first run: %g\n", obj0);
+
+  // now write out to MPS and load again
+  const std::string test_mps = "test.mps";
+  highs.writeModel(test_mps);
+  highs.readModel(test_mps);
+  highs.run();
+  const double obj1 = highs.getObjectiveValue();
+  if (dev_run)
+    printf("Optimum at second run (after writing and loading again): %g\n",
+           obj1);
+  REQUIRE(obj0 == obj1);
+  std::remove(test_mps.c_str());
 }
 
 void semiModel0(HighsLp& lp) {

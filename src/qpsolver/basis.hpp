@@ -14,14 +14,6 @@
 #include "util/HVector.h"
 #include "util/HVectorBase.h"
 
-enum class BasisStatus {
-  Default,
-  ActiveAtLower = 1,
-  ActiveAtUpper,
-  ActiveAtZero,
-  Inactive
-};
-
 class Basis {
   HVector buffer_vec2hvec;
 

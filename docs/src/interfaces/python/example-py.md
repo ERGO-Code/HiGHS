@@ -166,6 +166,8 @@ print('Primal solution status = ', h.solutionStatusToString(info.primal_solution
 print('Dual solution status = ', h.solutionStatusToString(info.dual_solution_status))
 print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 ```
+!!! warning
+    The following are markers for documentation that has yet to be added
 
 ## Extract results
 
@@ -185,9 +187,9 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 
 ## Get model data
 
- * `getNumCols`
- * `getNumRows`
- * `getNumEntries`
+ * `getNumCol`
+ * `getNumRow`
+ * `getNumNz`
  * `getCol`
  * `getRow`
  * `getColEntries`
@@ -196,6 +198,10 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `getRows`
  * `getColsEntries`
  * `getRowsEntries`
+ * `getColName`
+ * `getColByName`
+ * `getRowName`
+ * `getRowByName`
  * `getCoeff`
 
 ## Modify model data

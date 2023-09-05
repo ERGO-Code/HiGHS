@@ -62,7 +62,8 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
-void scaleLp(const HighsOptions& options, HighsLp& lp);
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling = false);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
                               const HighsInt use_scale_strategy);
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -216,6 +217,11 @@ bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
 
+void assessColPrimalSolution(const HighsOptions& options, const double primal,
+                             const double lower, const double upper,
+                             const HighsVarType type, double& col_infeasibility,
+                             double& integer_infeasibility);
+
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -225,7 +231,8 @@ HighsStatus calculateRowValues(const HighsLp& lp,
                                const std::vector<double>& col_value,
                                std::vector<double>& row_value);
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution);
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
+                                   const HighsInt report_row = -1);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 
 bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp);

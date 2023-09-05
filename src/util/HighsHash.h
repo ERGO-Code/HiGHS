@@ -757,7 +757,7 @@ struct HighsHashHelpers {
     // defined to be UINT16_MAX - |exponent| when the exponent is negative.
     // casting the exponent to a uint32_t directly would give wrong promotion
     // of negative exponents as UINT32_MAX - |exponent| and take up to many bits
-    // or possibly loose information after the 16 bit shift. For the mantissa we
+    // or possibly lose information after the 16 bit shift. For the mantissa we
     // take the 15 most significant bits, even though we could squeeze out a few
     // more of the exponent. We don't need more bits as this would make the
     // buckets very small and might miss more values that are equal within

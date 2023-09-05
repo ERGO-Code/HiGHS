@@ -94,6 +94,16 @@ bool HighsPrimalHeuristics::solveSubMip(
   // set limits
   submipoptions.mip_max_leaves = maxleaves;
   submipoptions.output_flag = false;
+
+  const bool allow_submip_log = true;
+  if (allow_submip_log && lp.num_col_ == -54 && lp.num_row_ == -172) {
+    submipoptions.output_flag = true;
+    printf(
+        "HighsPrimalHeuristics::solveSubMip (%d, %d) with output_flag = %s\n",
+        int(lp.num_col_), int(lp.num_row_),
+        highsBoolToString(submipoptions.output_flag).c_str());
+  }
+
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.mip_max_stall_nodes = stallnodes;
   submipoptions.mip_pscost_minreliable = 0;

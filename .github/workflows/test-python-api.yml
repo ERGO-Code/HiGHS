@@ -1,0 +1,25 @@
+name: test-python-api
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python: [3.9]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install correct python version
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test Python Interface
+        shell: bash
+        run: |
+          # No need to separately install highs,
+          # shared library lookups are good enough
+          pip install -vvv .
+          pip install pytest numpy
+          pytest -v ./highspy/tests/

@@ -6,7 +6,7 @@
 #include "qpsolver/runtime.hpp"
 
 inline
-void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
+void computestartingpoint_quass(Runtime& runtime, QpHotstartInformation& result) {
   /*
    creates and solves the feasibility problem
    min 
@@ -57,7 +57,7 @@ void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
 
   // HighsModelStatus phase1stat = highs.getModelStatus();
   // if (phase1stat == HighsModelStatus::kInfeasible) {
-  //   runtime.status = ProblemStatus::INFEASIBLE;
+  //   runtime.status = QpModelStatus::INFEASIBLE;
   //   return;
   // }
 

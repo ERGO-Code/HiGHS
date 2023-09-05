@@ -116,7 +116,13 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   changedColIndices.reserve(model->num_col_);
   numDeletedCols = 0;
   numDeletedRows = 0;
-  reductionLimit = std::numeric_limits<size_t>::max();
+  reductionLimit = options->presolve_reduction_limit < 0
+                       ? kHighsSize_tInf
+                       : options->presolve_reduction_limit;
+  if (options->presolve != kHighsOffString && reductionLimit < kHighsSize_tInf)
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "HPresolve::setInput reductionLimit = %d\n",
+                 int(reductionLimit));
 }
 
 // for MIP presolve
@@ -655,26 +661,30 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   HighsInt oldNumCol = model->num_col_;
   model->num_col_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
+  const bool have_col_names = model->col_names_.size() > 0;
+  assert(!have_col_names || HighsInt(model->col_names_.size()) == oldNumCol);
   for (HighsInt i = 0; i != oldNumCol; ++i) {
     if (colDeleted[i])
       newColIndex[i] = -1;
     else {
       newColIndex[i] = model->num_col_++;
-      model->col_cost_[newColIndex[i]] = model->col_cost_[i];
-      model->col_lower_[newColIndex[i]] = model->col_lower_[i];
-      model->col_upper_[newColIndex[i]] = model->col_upper_[i];
-      assert(!std::isnan(model->col_lower_[newColIndex[i]]));
-      assert(!std::isnan(model->col_upper_[newColIndex[i]]));
-      model->integrality_[newColIndex[i]] = model->integrality_[i];
-      implColLower[newColIndex[i]] = implColLower[i];
-      implColUpper[newColIndex[i]] = implColUpper[i];
-      colLowerSource[newColIndex[i]] = colLowerSource[i];
-      colUpperSource[newColIndex[i]] = colUpperSource[i];
-      colhead[newColIndex[i]] = colhead[i];
-      colsize[newColIndex[i]] = colsize[i];
-      if ((HighsInt)model->col_names_.size() > 0)
-        model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
-      changedColFlag[newColIndex[i]] = changedColFlag[i];
+      if (newColIndex[i] < i) {
+        model->col_cost_[newColIndex[i]] = model->col_cost_[i];
+        model->col_lower_[newColIndex[i]] = model->col_lower_[i];
+        model->col_upper_[newColIndex[i]] = model->col_upper_[i];
+        assert(!std::isnan(model->col_lower_[newColIndex[i]]));
+        assert(!std::isnan(model->col_upper_[newColIndex[i]]));
+        model->integrality_[newColIndex[i]] = model->integrality_[i];
+        implColLower[newColIndex[i]] = implColLower[i];
+        implColUpper[newColIndex[i]] = implColUpper[i];
+        colLowerSource[newColIndex[i]] = colLowerSource[i];
+        colUpperSource[newColIndex[i]] = colUpperSource[i];
+        colhead[newColIndex[i]] = colhead[i];
+        colsize[newColIndex[i]] = colsize[i];
+        if (have_col_names)
+          model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
+        changedColFlag[newColIndex[i]] = changedColFlag[i];
+      }
     }
   }
   colDeleted.assign(model->num_col_, false);
@@ -688,11 +698,12 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   colUpperSource.resize(model->num_col_);
   colhead.resize(model->num_col_);
   colsize.resize(model->num_col_);
-  if ((HighsInt)model->col_names_.size() > 0)
-    model->col_names_.resize(model->num_col_);
+  if (have_col_names) model->col_names_.resize(model->num_col_);
   changedColFlag.resize(model->num_col_);
   numDeletedCols = 0;
   HighsInt oldNumRow = model->num_row_;
+  const bool have_row_names = model->row_names_.size() > 0;
+  assert(!have_row_names || HighsInt(model->row_names_.size()) == oldNumRow);
   model->num_row_ = 0;
   std::vector<HighsInt> newRowIndex(oldNumRow);
   for (HighsInt i = 0; i != oldNumRow; ++i) {
@@ -700,26 +711,27 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       newRowIndex[i] = -1;
     else {
       newRowIndex[i] = model->num_row_++;
-      model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
-      model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
-      assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
-      assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
-      rowDualLower[newRowIndex[i]] = rowDualLower[i];
-      rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
-      implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
-      implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
-      rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
-      rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
-      rowroot[newRowIndex[i]] = rowroot[i];
-      rowsize[newRowIndex[i]] = rowsize[i];
-      rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
-      rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
-      if ((HighsInt)model->row_names_.size() > 0)
-        model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
-      changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+      if (newRowIndex[i] < i) {
+        model->row_lower_[newRowIndex[i]] = model->row_lower_[i];
+        model->row_upper_[newRowIndex[i]] = model->row_upper_[i];
+        assert(!std::isnan(model->row_lower_[newRowIndex[i]]));
+        assert(!std::isnan(model->row_upper_[newRowIndex[i]]));
+        rowDualLower[newRowIndex[i]] = rowDualLower[i];
+        rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
+        implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
+        implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
+        rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
+        rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
+        rowroot[newRowIndex[i]] = rowroot[i];
+        rowsize[newRowIndex[i]] = rowsize[i];
+        rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
+        rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+        if (have_row_names)
+          model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
+        changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
+      }
     }
   }
-
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (colLowerSource[i] != -1)
       colLowerSource[i] = newRowIndex[colLowerSource[i]];
@@ -747,8 +759,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
   rowsizeImplInt.resize(model->num_row_);
-  if ((HighsInt)model->row_names_.size() > 0)
-    model->row_names_.resize(model->num_row_);
+  if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
 
   numDeletedRows = 0;
@@ -1480,7 +1491,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   return checkLimits(postsolve_stack);
 }
 
-void HPresolve::addToMatrix(HighsInt row, HighsInt col, double val) {
+void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
+                            const double val) {
   HighsInt pos = findNonzero(row, col);
 
   markChangedRow(row);
@@ -2354,6 +2366,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 2);
   assert(model->row_lower_[row] == model->row_upper_[row]);
+
   // printf("doubleton equation: ");
   // debugPrintRow(row);
   HighsInt nzPos1 = rowroot[row];
@@ -2988,8 +3001,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             break;
           }
         }
-
-        if (binCol != -1) {
+        // Reduction uses substitution involving range of all columns
+        // other than the binary. This is not well defined when any of
+        // the columns is not boxed, so look for non-boxed columns
+        // Exposed as #1280
+        bool all_boxed_column = true;
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          if (model->col_lower_[nonz.index()] <= -kHighsInf ||
+              model->col_upper_[nonz.index()] >= kHighsInf) {
+            all_boxed_column = false;
+            break;
+          }
+        }
+        if (binCol != -1 && all_boxed_column) {
           // found binary column for substituting all other columns
           // printf("simple probing case on row of size %" HIGHSINT_FORMAT "\n",
           // rowsize[row]);
@@ -4011,7 +4035,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   analysis_.setup(this->model, this->options, this->numDeletedRows,
                   this->numDeletedCols);
 
-  if (options->presolve != "off") {
+  if (options->presolve != kHighsOffString) {
     if (mipsolver) mipsolver->mipdata_->cliquetable.setPresolveFlag(true);
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -4057,7 +4081,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       // when presolving after a restart the clique table and implication
       // structure may contain substitutions which we apply directly before
-      // running the aggregator as they might loose validity otherwise
+      // running the aggregator as they might lose validity otherwise
       if (mipsolver != nullptr) {
         HPRESOLVE_CHECKED_CALL(
             applyConflictGraphSubstitutions(postsolve_stack));
@@ -4185,6 +4209,47 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   // todo: check timelimit
   size_t numreductions = postsolve_stack.numReductions();
 
+  bool debug_report = false;
+  HighsInt check_col = debugGetCheckCol();
+  HighsInt check_row = debugGetCheckRow();
+  bool col_bound_change = false;
+  bool row_bound_change = false;
+  if (check_col >= 0 || check_row >= 0) {
+    if (check_col >= 0) {
+      col_bound_change =
+          numreductions == 1 ||
+          postsolve_stack.debug_prev_col_lower !=
+              model->col_lower_[check_col] ||
+          postsolve_stack.debug_prev_col_upper != model->col_upper_[check_col];
+      postsolve_stack.debug_prev_col_lower = model->col_lower_[check_col];
+      postsolve_stack.debug_prev_col_upper = model->col_upper_[check_col];
+    }
+    if (check_row >= 0) {
+      row_bound_change =
+          numreductions == 1 ||
+          postsolve_stack.debug_prev_row_lower !=
+              model->row_lower_[check_row] ||
+          postsolve_stack.debug_prev_row_upper != model->row_upper_[check_row];
+      postsolve_stack.debug_prev_row_lower = model->row_lower_[check_row];
+      postsolve_stack.debug_prev_row_upper = model->row_upper_[check_row];
+    }
+    debug_report = numreductions > postsolve_stack.debug_prev_numreductions;
+  }
+  if (check_col >= 0 && col_bound_change && debug_report) {
+    printf("After reduction %4d: col = %4d[%s] has bounds [%11.4g, %11.4g]\n",
+           int(numreductions - 1), int(check_col),
+           model->col_names_[check_col].c_str(), model->col_lower_[check_col],
+           model->col_upper_[check_col]);
+    postsolve_stack.debug_prev_numreductions = numreductions;
+  }
+  if (check_row >= 0 && row_bound_change && debug_report) {
+    printf("After reduction %4d: row = %4d[%s] has bounds [%11.4g, %11.4g]\n",
+           int(numreductions - 1), int(check_row),
+           model->row_names_[check_row].c_str(), model->row_lower_[check_row],
+           model->row_upper_[check_row]);
+    postsolve_stack.debug_prev_numreductions = numreductions;
+  }
+
   if (timer != nullptr && (numreductions & 1023u) == 0) {
     if (timer->readRunHighsClock() >= options->time_limit)
       return Result::kStopped;
@@ -4210,17 +4275,31 @@ double HPresolve::problemSizeReduction() {
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
+  presolve_status_ = HighsPresolveStatus::kNotSet;
   shrinkProblemEnabled = true;
+  postsolve_stack.debug_prev_numreductions = 0;
+  postsolve_stack.debug_prev_col_lower = 0;
+  postsolve_stack.debug_prev_col_upper = 0;
+  postsolve_stack.debug_prev_row_lower = 0;
+  postsolve_stack.debug_prev_row_upper = 0;
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
       break;
     case Result::kPrimalInfeasible:
+      presolve_status_ = HighsPresolveStatus::kInfeasible;
       return HighsModelStatus::kInfeasible;
     case Result::kDualInfeasible:
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
 
+  if (options->presolve != kHighsOffString &&
+      reductionLimit < kHighsSize_tInf) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Presolve performed %d of %d permitted reductions\n",
+                 int(postsolve_stack.numReductions()), int(reductionLimit));
+  }
   shrinkProblem(postsolve_stack);
 
   if (mipsolver != nullptr) {
@@ -4274,21 +4353,34 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
         model->a_matrix_.start_);
 
   if (model->num_col_ == 0) {
+    // Reduced to empty
     if (mipsolver) {
-      if (model->offset_ > mipsolver->mipdata_->upper_limit)
+      if (model->offset_ > mipsolver->mipdata_->upper_limit) {
+        presolve_status_ = HighsPresolveStatus::kInfeasible;
         return HighsModelStatus::kInfeasible;
-
+      }
       mipsolver->mipdata_->lower_bound = 0;
     } else {
       assert(model->num_row_ == 0);
-      if (model->num_row_ != 0) return HighsModelStatus::kNotset;
+      if (model->num_row_ != 0) {
+        presolve_status_ = HighsPresolveStatus::kNotPresolved;
+        return HighsModelStatus::kNotset;
+      }
     }
+    presolve_status_ = HighsPresolveStatus::kReducedToEmpty;
     return HighsModelStatus::kOptimal;
+  } else if (postsolve_stack.numReductions() > 0) {
+    // Reductions performed
+    presolve_status_ = HighsPresolveStatus::kReduced;
+  } else {
+    // No reductions performed
+    presolve_status_ = HighsPresolveStatus::kNotReduced;
   }
 
   if (!mipsolver && options->use_implied_bounds_from_presolve)
     setRelaxedImpliedBounds();
 
+  assert(presolve_status_ != HighsPresolveStatus::kNotSet);
   return HighsModelStatus::kNotset;
 }
 
@@ -5318,6 +5410,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   std::unordered_multimap<std::uint64_t, HighsInt> buckets;
 
+  const bool debug_report = false;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (colDeleted[i]) continue;
     if (colsize[i] == 0) {
@@ -5464,13 +5557,15 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // if the scale is larger than 1, duplicate column cannot compensate for
         // all values of scaled col due to integrality as the scaled column
         // moves on a grid of 1/scale.
+        //
+        // ToDo: Check whether this is too restrictive
         if (colScale != 1.0) checkDuplicateColImplBounds = false;
       } else if (model->integrality_[i] == HighsVarType::kInteger) {
         col = i;
         duplicateCol = parallelColCandidate;
         colScale = colMax[duplicateCol].first / colMax[col].first;
 
-        // as col is integral and dulicateCol is not col cannot compensate for
+        // as col is integral and duplicateCol is not col cannot compensate for
         // duplicate col
         checkColImplBounds = false;
       } else {
@@ -5478,7 +5573,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         duplicateCol = i;
         colScale = colMax[duplicateCol].first / colMax[col].first;
 
-        // as col might be integral and dulicateCol is not integral. In that
+        // as col might be integral and duplicateCol is not integral. In that
         // case col cannot compensate for duplicate col
         checkColImplBounds =
             model->integrality_[parallelColCandidate] != HighsVarType::kInteger;
@@ -5536,73 +5631,47 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           reductionCase =
               colScale > 0 ? kDominanceColToUpper : kDominanceColToLower;
       }
-      double mergeLower = 0;
-      double mergeUpper = 0;
       if (reductionCase == kMergeParallelCols) {
-        if (colScale > 0) {
-          mergeLower = model->col_lower_[col] +
-                       colScale * model->col_lower_[duplicateCol];
-          mergeUpper = model->col_upper_[col] +
-                       colScale * model->col_upper_[duplicateCol];
-        } else {
-          mergeLower = model->col_lower_[col] +
-                       colScale * model->col_upper_[duplicateCol];
-          mergeUpper = model->col_upper_[col] +
-                       colScale * model->col_lower_[duplicateCol];
-        }
-        if (model->integrality_[col] == HighsVarType::kInteger) {
-          // the only possible reduction if the column parallelism check
+        const bool x_int = model->integrality_[col] == HighsVarType::kInteger;
+        const bool y_int =
+            model->integrality_[duplicateCol] == HighsVarType::kInteger;
+        bool illegal_scale = true;
+        if (x_int) {
+          // The only possible reduction if the column parallelism check
           // succeeds is to merge the two columns into one. If one column is
           // integral this means we have restrictions on integers and need to
           // check additional conditions to allow the merging of two integer
           // columns, or a continuous column and an integer.
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger) {
+            assert(!y_int);
             // only one column is integral which cannot be duplicateCol due to
             // the way we assign the columns above
-            if (std::abs(colScale * (model->col_upper_[duplicateCol] -
+            //
+            // Scale must not exceed 1/(y_u-y_l) in magnitude
+            illegal_scale =
+                std::abs(colScale * (model->col_upper_[duplicateCol] -
                                      model->col_lower_[duplicateCol])) <
-                1.0 - primal_feastol)
-              continue;
-          } else if (colScale > 1.0) {
-            // round bounds to exact integer values to make sure they are not
-            // wrongly truncated in conversions happening below
-            mergeLower = std::round(mergeLower);
-            mergeUpper = std::round(mergeUpper);
-
-            // this should not happen, since this would allow domination and
-            // would have been caught by the cases above
-            assert(mergeLower != -kHighsInf);
-            assert(mergeUpper != kHighsInf);
-
-            HighsInt kMax = mergeUpper;
-            bool representable = true;
-            for (HighsInt k = mergeLower; k <= kMax; ++k) {
-              // we loop over the domain of the merged variable to check whether
-              // there exists a value for col and duplicateCol so that both are
-              // within their bounds. since the merged column y is defined as y
-              // = col + colScale * duplicateCol, we know that the value of col
-              // can be computed as col = y - colScale * duplicateCol. Hence we
-              // loop over the domain of col2 until we verify that a suitable
-              // value of column 1 exists to yield the desired value for y.
-              double mergeVal = mergeLower + k;
-              HighsInt k2Max = model->col_upper_[duplicateCol];
-              assert(k2Max == model->col_upper_[duplicateCol]);
-              representable = false;
-              for (HighsInt k2 = model->col_lower_[duplicateCol]; k2 <= k2Max;
-                   ++k2) {
-                double colVal = mergeVal - colScale * k2;
-                if (colVal >= model->col_lower_[col] - primal_feastol &&
-                    colVal <= model->col_upper_[col] + primal_feastol) {
-                  representable = true;
-                  break;
-                }
-              }
-
-              if (!representable) break;
-            }
-
-            if (!representable) continue;
+                1.0 - primal_feastol;
+            if (!illegal_scale && debug_report)
+              printf(
+                  "kMergeParallelCols: T-F is %s legal with scale %.4g and "
+                  "duplicateCol = [%.4g, %.4g]\n",
+                  illegal_scale ? "not" : "   ", colScale,
+                  model->col_lower_[duplicateCol],
+                  model->col_upper_[duplicateCol]);
+          } else {
+            // Both columns integer
+            assert(x_int && y_int);
+            // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
+            const double scale_limit = model->col_upper_[col] -
+                                       model->col_lower_[col] + 1 +
+                                       primal_feastol;
+            illegal_scale = std::fabs(colScale) > scale_limit;
           }
+          if (illegal_scale) continue;
+        } else {
+          // Neither column integer: no problem with
+          assert(!x_int && !y_int);
         }
       }
 
@@ -5659,12 +5728,29 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           fixColToUpper(postsolve_stack, col);
           break;
         case kMergeParallelCols:
-          postsolve_stack.duplicateColumn(
+          const bool ok_merge = postsolve_stack.duplicateColumn(
               colScale, model->col_lower_[col], model->col_upper_[col],
               model->col_lower_[duplicateCol], model->col_upper_[duplicateCol],
               col, duplicateCol,
               model->integrality_[col] == HighsVarType::kInteger,
-              model->integrality_[duplicateCol] == HighsVarType::kInteger);
+              model->integrality_[duplicateCol] == HighsVarType::kInteger,
+              options->mip_feasibility_tolerance);
+          if (!ok_merge && debug_report) {
+            printf(
+                "HPresolve::detectParallelRowsAndCols Illegal merge "
+                "prevented\n");
+            break;
+          }
+          // When merging a continuous variable into an integer
+          // variable, the integer will become continuous - since any
+          // value in its range can be mapped back to an integer and a
+          // continuous variable. Hence the number of integer
+          // variables in the rows corresponding to the former integer
+          // variable reduces.
+          //
+          // With the opposite - merging an integer variable into a
+          // continuous variable - the retained variable is
+          // continuous, so no action is required
           HighsInt rowsizeIntReduction = 0;
           if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
               model->integrality_[col] == HighsVarType::kInteger) {
@@ -5683,7 +5769,14 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           // infinite bounds we need to make sure the counters for the number of
           // infinite bounds that contribute to the implied row bounds are
           // updated correctly and that all finite contributions are removed.
+
+          double mergeLower = 0;
+          double mergeUpper = 0;
           if (colScale > 0) {
+            mergeLower = model->col_lower_[col] +
+                         colScale * model->col_lower_[duplicateCol];
+            mergeUpper = model->col_upper_[col] +
+                         colScale * model->col_upper_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_upper_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5700,6 +5793,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             else
               model->col_lower_[duplicateCol] = 0;
           } else {
+            mergeLower = model->col_lower_[col] +
+                         colScale * model->col_upper_[duplicateCol];
+            mergeUpper = model->col_upper_[col] +
+                         colScale * model->col_lower_[duplicateCol];
             if (mergeUpper == kHighsInf && model->col_upper_[col] != kHighsInf)
               model->col_lower_[duplicateCol] =
                   model->col_upper_[col] / colScale;
@@ -5730,8 +5827,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             HighsInt colrow = Arow[coliter];
             // if an an integer column was merged into a continuous one make
             // sure to update the integral rowsize
-            if (rowsizeIntReduction)
+            if (rowsizeIntReduction) {
+              assert(rowsizeIntReduction == 1);
               rowsizeInteger[colrow] -= rowsizeIntReduction;
+            }
             coliter = Anext[coliter];
 
             unlink(colpos);
@@ -6119,7 +6218,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     Highs highs;
     highs.passModel(model);
     highs.passOptions(options);
-    highs.setOptionValue("presolve", "off");
+    highs.setOptionValue("presolve", kHighsOffString);
     highs.run();
     if (highs.getModelStatus() != HighsModelStatus::kOptimal) return;
     reducedsol = highs.getSolution();
@@ -6506,6 +6605,38 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
   }
 
   return Result::kOk;
+}
+
+HighsInt HPresolve::debugGetCheckCol() const {
+  const std::string check_col_name = "";  // c37";
+  HighsInt check_col = -1;
+  if (check_col_name == "") return check_col;
+  if (model->col_names_.size()) {
+    if (HighsInt(model->col_hash_.name2index.size()) != model->num_col_)
+      model->col_hash_.form(model->col_names_);
+    auto search = model->col_hash_.name2index.find(check_col_name);
+    if (search != model->col_hash_.name2index.end()) {
+      check_col = search->second;
+      assert(model->col_names_[check_col] == check_col_name);
+    }
+  }
+  return check_col;
+}
+
+HighsInt HPresolve::debugGetCheckRow() const {
+  const std::string check_row_name = "";  //"row_ekk_119";
+  HighsInt check_row = -1;
+  if (check_row_name == "") return check_row;
+  if (model->row_names_.size()) {
+    if (HighsInt(model->row_hash_.name2index.size()) != model->num_row_)
+      model->row_hash_.form(model->row_names_);
+    auto search = model->row_hash_.name2index.find(check_row_name);
+    if (search != model->row_hash_.name2index.end()) {
+      check_row = search->second;
+      assert(model->row_names_[check_row] == check_row_name);
+    }
+  }
+  return check_row;
 }
 
 }  // namespace presolve

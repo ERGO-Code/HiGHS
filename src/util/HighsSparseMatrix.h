@@ -84,12 +84,16 @@ class HighsSparseMatrix {
                    const HighsInt to_col);
   void createColwise(const HighsSparseMatrix& matrix);
   void createRowwise(const HighsSparseMatrix& matrix);
-  void productQuad(vector<double>& result, const vector<double>& row,
+  void alphaProductPlusY(const double alpha, const std::vector<double>& x,
+                         std::vector<double>& y,
+                         const bool transpose = false) const;
+  void product(vector<double>& result, const vector<double>& x) const;
+  void productTranspose(vector<double>& result, const vector<double>& x) const;
+  void productQuad(vector<double>& result, const vector<double>& x,
                    const HighsInt debug_report = kDebugReportOff) const;
   void productTransposeQuad(
       vector<double>& result_value, vector<HighsInt>& result_index,
-      const HVector& column,
-      const HighsInt debug_report = kDebugReportOff) const;
+      const HVector& x, const HighsInt debug_report = kDebugReportOff) const;
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
   void createRowwisePartitioned(const HighsSparseMatrix& matrix,

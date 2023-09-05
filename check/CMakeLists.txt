@@ -6,6 +6,8 @@ add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 
+configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
+
 FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
 "mip_rel_gap=0.0
 mip_abs_gap=0.0")
@@ -38,6 +40,7 @@ set(TEST_SOURCES
     TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
+    TestHighsSparseMatrix.cpp
     TestHSet.cpp
     TestICrash.cpp
     TestLogging.cpp
@@ -74,9 +77,12 @@ if(FORTRAN_FOUND)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
    include_directories(${HIGHS_SOURCE_DIR}/src)
    add_executable(fortrantest TestFortranAPI.f90)
-   target_link_libraries(fortrantest libhighs FortranHighs)
+   if (NOT FAST_BUILD)
+       target_link_libraries(fortrantest libhighs FortranHighs)
+    else()
+       target_link_libraries(fortrantest highs FortranHighs)
+    endif()
    target_include_directories(fortrantest PUBLIC ${HIGHS_SOURCE_DIR}/src/interfaces)
- else()
  endif(FORTRAN_FOUND)
 
 # check the C API

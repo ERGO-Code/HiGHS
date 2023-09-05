@@ -1,7 +1,7 @@
+import tempfile
 import unittest
 import highspy
 import numpy as np
-from pyomo.common.tee import capture_output
 from io import StringIO
 
 
@@ -104,10 +104,10 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.5.1")
+        self.assertEqual(h.version(), "1.5.3")
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 5)
-        self.assertEqual(h.versionPatch(), 1)
+        self.assertEqual(h.versionPatch(), 3)
 
     def test_basics(self):
         h = self.get_basic_model()
@@ -751,3 +751,38 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (5, 5, 0.5))
         h.addConstr(c1)
         self.assertAlmostEqual((h.getLp().row_lower_[0], h.getLp().row_upper_[0]), (4.5, 4.5))
+
+    def test_write_basis_before_running(self):
+        h = self.get_basic_model()
+        with tempfile.NamedTemporaryFile() as f:
+            h.writeBasis(f.name)
+            contents = f.read()
+            self.assertEqual(contents, b'HiGHS v1\nNone\n')
+        
+    def test_write_basis_after_running(self):
+        h = self.get_basic_model()
+        h.run()
+        with tempfile.NamedTemporaryFile() as f:
+            h.writeBasis(f.name)
+            contents = f.read()
+            self.assertEqual(
+                contents, b'HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n'
+            )
+
+    def test_read_basis(self):
+        # Read basis from one run model into an unrun model
+        expected_status_before = highspy.HighsBasisStatus.kLower
+        expected_status_after = highspy.HighsBasisStatus.kBasic
+
+        h1 = self.get_basic_model()
+        self.assertEqual(h1.getBasis().col_status[0], expected_status_before)
+        h1.run()
+        self.assertEqual(h1.getBasis().col_status[0], expected_status_after)
+
+        h2 = self.get_basic_model()
+        self.assertEqual(h2.getBasis().col_status[0], expected_status_before)
+
+        with tempfile.NamedTemporaryFile() as f:
+            h1.writeBasis(f.name)
+            h2.readBasis(f.name)
+            self.assertEqual(h2.getBasis().col_status[0], expected_status_after)

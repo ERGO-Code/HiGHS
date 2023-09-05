@@ -258,6 +258,10 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
   return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
 }
 
+HighsInt Highs_readOptions(const void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->readOptions(filename);
+}
+
 HighsInt Highs_clear(void* highs) { return (HighsInt)((Highs*)highs)->clear(); }
 
 HighsInt Highs_clearModel(void* highs) {
@@ -625,6 +629,11 @@ double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
+HighsInt Highs_zeroAllClocks(const void* highs) {
+  ((Highs*)highs)->zeroAllClocks();
+  return (HighsInt)HighsStatus::kOk;
+}
+
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
                       const HighsInt* index, const double* value) {
@@ -906,10 +915,26 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name) {
   return retcode;
 }
 
+HighsInt Highs_getRowByName(const void* highs, const char* name,
+                            HighsInt* row) {
+  HighsInt local_row;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getRowByName(name, local_row);
+  *row = local_row;
+  return retcode;
+}
+
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name) {
   std::string name_v;
   HighsInt retcode = (HighsInt)((Highs*)highs)->getColName(col, name_v);
   strcpy(name, name_v.c_str());
+  return retcode;
+}
+
+HighsInt Highs_getColByName(const void* highs, const char* name,
+                            HighsInt* col) {
+  HighsInt local_col;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getColByName(name, local_col);
+  *col = local_col;
   return retcode;
 }
 

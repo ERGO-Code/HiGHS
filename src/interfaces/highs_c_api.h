@@ -492,6 +492,16 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name);
 
 /**
+ * Read the option values from file.
+ *
+ * @param highs     A pointer to the Highs instance.
+ * @param filename  The filename from which to read the option values.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_readOptions(const void* highs, const char* filename);
+
+/**
  * Set a boolean-valued option.
  *
  * @param highs     A pointer to the Highs instance.
@@ -1060,6 +1070,24 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
 double Highs_getRunTime(const void* highs);
 
 /**
+ * Reset the clocks in a `highs` model.
+ *
+ * Each `highs` model contains a single instance of clock that records how much
+ * time is spent in various parts of the algorithm. This clock is not reset on
+ * entry to `Highs_run`, so repeated calls to `Highs_run` report the cumulative
+ * time spent in the algorithm. A side-effect is that this will trigger a time
+ * limit termination once the cumulative run time exceeds the time limit, rather
+ * than the run time of each individual call to `Highs_run`.
+ *
+ * As a work-around, call `Highs_zeroAllClocks` before each call to `Highs_run`.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_zeroAllClocks(const void* highs);
+
+/**
  * Add a new column (variable) to the model.
  *
  * @param highs         A pointer to the Highs instance.
@@ -1613,6 +1641,19 @@ HighsInt Highs_getRowsByMask(const void* highs, const HighsInt* mask,
 HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
 
 /**
+ * Get the index of a row from its name.
+ *
+ * If multiple rows have the same name, or if no row exists with `name`, this
+ * function returns `kHighsStatusError`.
+ *
+ * @param name A pointer of the name of the row to query.
+ * @param row  A pointer in which to store the index of the row
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getRowByName(const void* highs, const char* name, HighsInt* row);
+
+/**
  * Get the name of a column.
  *
  * @param col   The index of the column to query.
@@ -1622,6 +1663,19 @@ HighsInt Highs_getRowName(const void* highs, const HighsInt row, char* name);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getColName(const void* highs, const HighsInt col, char* name);
+
+/**
+ * Get the index of a column from its name.
+ *
+ * If multiple columns have the same name, or if no column exists with `name`,
+ * this function returns `kHighsStatusError`.
+ *
+ * @param name A pointer of the name of the column to query.
+ * @param col  A pointer in which to store the index of the column
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getColByName(const void* highs, const char* name, HighsInt* col);
 
 /**
  * Get the integrality of a column.

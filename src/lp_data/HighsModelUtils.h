@@ -104,6 +104,6 @@ std::string typeToString(const HighsVarType type);
 std::string findModelObjectiveName(const HighsLp* lp,
                                    const HighsHessian* hessian = nullptr);
 
-bool repeatedNames(const std::vector<std::string> name);
+// bool repeatedNames(const std::vector<std::string> name);
 
 #endif

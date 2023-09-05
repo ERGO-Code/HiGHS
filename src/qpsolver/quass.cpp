@@ -10,7 +10,6 @@
 #include "qpsolver/devexharrispricing.hpp"
 #include "qpsolver/devexpricing.hpp"
 #include "qpsolver/factor.hpp"
-#include "qpsolver/feasibility.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
 #include "lp_data/HighsAnalysis.h"
@@ -22,28 +21,14 @@
 #include "qpsolver/scaling.hpp"
 #include "qpsolver/perturbation.hpp"
 
-void Quass::solve() {
-  scale(runtime);
-  runtime.instance = runtime.scaled;
-  perturb(runtime);
-  runtime.instance = runtime.perturbed;
-  CrashSolution crash(runtime.instance.num_var, runtime.instance.num_con);
-  computestartingpoint(runtime, crash);
-  if (runtime.status != ProblemStatus::INDETERMINED) {
-    return;
-  }
-  Basis basis(runtime, crash.active, crash.rowstatus, crash.inactive);
-  solve(crash.primal, crash.rowact, basis);
-}
-
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void Quass::loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor) {
+static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, HighsTimer& timer) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
   rt.statistics.objval.push_back(rt.instance.objval(rt.primal));
-  rt.statistics.time.push_back(runtime.timer.readRunHighsClock());
+  rt.statistics.time.push_back(timer.readRunHighsClock());
   SumNum sm =
       rt.instance.sumnumprimalinfeasibilities(rt.primal, rt.rowactivity);
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
@@ -196,19 +181,88 @@ static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
 }
 
 static void regularize(Runtime& rt) {
+  if (!rt.settings.hessianregularization) {
+   return;
+  }
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
     for (HighsInt index = rt.instance.Q.mat.start[i];
          index < rt.instance.Q.mat.start[i + 1]; index++) {
       if (rt.instance.Q.mat.index[index] == i) {
         rt.instance.Q.mat.value[index] +=
-            rt.settings.semidefiniteregularization;
+            rt.settings.hessianregularizationfactor;
       }
     }
   }
 }
 
-void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
+#if 0
+static void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dual_con, Vector& dual_var) {
+  for (auto e : basis.getactive()) {
+    HighsInt indexinbasis = basis.getindexinfactor()[e];
+    BasisStatus status = basis.getstatus(e);
+    if (e >= rt.instance.num_con) {
+      // active variable bound
+      HighsInt var = e - rt.instance.num_con;
+
+      if (status == BasisStatus::ActiveAtUpper) {
+        dual_var.value[var] = -lambda.value[indexinbasis];
+      } else if (status == BasisStatus::ActiveAtLower) {
+        dual_var.value[var] = lambda.value[indexinbasis];
+      } else {
+        assert(lambda.value[indexinbasis] == 0);
+        (void) dual_var.value[var];
+      }
+        
+    } else {
+      if (status == BasisStatus::ActiveAtUpper) {
+        dual_con.value[e] = -lambda.value[indexinbasis];
+      } else if (status == BasisStatus::ActiveAtLower) {
+        dual_con.value[e] = lambda.value[indexinbasis];
+      } else {
+        assert(lambda.value[indexinbasis] == 0);
+        dual_con.value[e] = 0;
+      }
+    }
+  }
+  dual_con.resparsify();
+  dual_var.resparsify();
+}
+
+static double compute_primal_violation(Runtime& rt) {
+  double maxviolation = 0.0;
+  Vector rowact = rt.instance.A.mat_vec(rt.primal);
+  for (HighsInt i = 0; i < rt.instance.num_con; i++) {
+    double violation = rt.instance.con_lo[i] - rowact.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = rowact.value[i] - rt.instance.con_up[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  for (HighsInt i = 0; i < rt.instance.num_var; i++) {
+    double violation = rt.instance.var_lo[i] - rt.primal.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = rt.primal.value[i] - rt.instance.var_up[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  return maxviolation;
+}
+
+static double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_con, Vector& dual_var) {
+  double maxviolation = 0.0;
+
+  Vector residuals = instance.Q.mat_vec(primal) + instance.c + instance.A.t().mat_vec(dual_con) + dual_var;
+
+  for (HighsInt i = 0; i < instance.num_var; i++) {
+    double violation = residuals.value[i];
+    maxviolation = max(violation, maxviolation);
+    violation = -residuals.value[i];
+    maxviolation = max(violation, maxviolation);
+  }
+  return maxviolation;
+}
+#endif
+
+void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;
@@ -243,13 +297,13 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
-      runtime.status = ProblemStatus::ITERATIONLIMIT;
-      break;
+      runtime.status = QpModelStatus::ITERATIONLIMIT;
+      break; 
     }
 
     // check time limit
-    if (runtime.timer.readRunHighsClock() >= runtime.settings.timelimit) {
-      runtime.status = ProblemStatus::TIMELIMIT;
+    if (timer.readRunHighsClock() >= runtime.settings.timelimit) {
+      runtime.status = QpModelStatus::TIMELIMIT;
       break;
     }
 
@@ -257,8 +311,8 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
         0) {
-      loginformation(runtime, basis, factor);
-      runtime.endofiterationevent.fire(runtime);
+      loginformation(runtime, basis, factor, timer);
+      runtime.settings.endofiterationevent.fire(runtime.statistics);
     }
     runtime.statistics.num_iterations++;
 
@@ -269,7 +323,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     if (atfsep) {
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
       if (minidx == -1) {
-        runtime.status = ProblemStatus::OPTIMAL;
+        runtime.status = QpModelStatus::OPTIMAL;
         break;
       }
 
@@ -292,7 +346,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
       if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
         if (status != QpSolverStatus::OK) {
-          runtime.status = ProblemStatus::INDETERMINED;
+          runtime.status = QpModelStatus::INDETERMINED;
           return;
         }
       }
@@ -304,7 +358,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
 
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0) {
+        maxsteplength == 0.0 || fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold) {
       atfsep = true;
     } else {
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
@@ -314,7 +368,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d,
                         maxabsd, constrainttodrop);
         if (status != QpSolverStatus::OK) {
-          runtime.status = ProblemStatus::INDETERMINED;
+          runtime.status = QpModelStatus::INDETERMINED;
           return;
         }
         if (!zero_curvature_direction) {
@@ -331,7 +385,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
                                     : BasisStatus::ActiveAtUpper,
                                 constrainttodrop, pricing.get());
         if (status != QpSolverStatus::OK) {
-          runtime.status = ProblemStatus::INDETERMINED;
+          runtime.status = QpModelStatus::INDETERMINED;
           return;
         }
         if (basis.getnumactive() != runtime.instance.num_var) {
@@ -341,7 +395,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
         if (stepres.alpha ==
             std::numeric_limits<double>::infinity()) {
           // unbounded
-          runtime.status = ProblemStatus::UNBOUNDED;
+          runtime.status = QpModelStatus::UNBOUNDED;
           return;
         }
         atfsep = false;
@@ -356,8 +410,8 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     }
   }
 
-  loginformation(runtime, basis, factor);
-  runtime.endofiterationevent.fire(runtime);
+  loginformation(runtime, basis, factor, timer);
+  runtime.settings.endofiterationevent.fire(runtime.statistics);
 
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
@@ -365,6 +419,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
+    BasisStatus status = basis.getstatus(e);
     if (e >= runtime.instance.num_con) {
       // active variable bound
       HighsInt var = e - runtime.instance.num_con;
@@ -372,6 +427,23 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0) {
     } else {
       runtime.dualcon.value[e] = lambda.value[indexinbasis];
     }
+  }
+  runtime.dualcon.resparsify();
+  runtime.dualvar.resparsify();
+
+  //Vector actual_dual_var(runtime.instance.num_var);
+  //Vector actual_dual_con(runtime.instance.num_con);
+  //compute_actual_duals(runtime, basis, redcosts.getReducedCosts(), actual_dual_con, actual_dual_var);
+  //printf("max primal violation = %.20lf\n", compute_primal_violation(runtime));
+  //printf("max dual   violation = %.20lf\n", compute_dual_violation(runtime.instance, runtime.primal, actual_dual_con, actual_dual_var));
+
+  // extract basis status
+  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+    runtime.status_var[i] = basis.getstatus(runtime.instance.num_con + i);
+  }
+
+  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+    runtime.status_con[i] = basis.getstatus(i);
   }
 
   if (basis.getnumactive() == runtime.instance.num_var) {

@@ -798,7 +798,8 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   return new_scaling;
 }
 
-void scaleLp(const HighsOptions& options, HighsLp& lp) {
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling) {
   lp.clearScaling();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
@@ -828,14 +829,15 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
-  bool no_scaling =
-      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
-      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
-  if (force_scaling) {
-    no_scaling = false;
-    printf("!!!! FORCE SCALING !!!!\n");
-  }
+  // Possibly force scaling, otherwise base the decision on the range
+  // of values in the matrix, values that will be used later for
+  // reporting
+  const bool no_scaling = force_scaling
+                              ? false
+                              : (original_matrix_min_value >=
+                                 no_scaling_original_matrix_min_value) &&
+                                    (original_matrix_max_value <=
+                                     no_scaling_original_matrix_max_value);
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
@@ -1229,6 +1231,24 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
 
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
+
+  // The 015(7) values refer to bit settings in FICO's scaling options.
+  // Specifically
+  //
+  // 0: Row scaling
+  //
+  // 1: Column scaling
+  //
+  // 5: Scale by maximum element
+  //
+  // 7: Scale objective function for the simplex method
+  //
+  // Note that 7 is not yet implemented, so
+  // kSimplexScaleStrategyMaxValue015 and
+  // kSimplexScaleStrategyMaxValue0157 are equivalent. However, cost
+  // scaling could be well worth adding, now that the unscaled problem
+  // can be solved using scaled NLA
+
   const double log2 = log(2.0);
   const double max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
@@ -1310,7 +1330,7 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
 
   const double improvement_factor_required = 1.0;
   const bool poor_improvement =
-      improvement_factor < improvement_factor_required;
+      improvement_factor <= improvement_factor_required;
 
   if (poor_improvement) {
     // Unscale the matrix
@@ -1451,6 +1471,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
+  bool have_integrality = lp.integrality_.size();
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -1463,6 +1484,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
       lp.col_lower_[new_num_col] = lp.col_lower_[col];
       lp.col_upper_[new_num_col] = lp.col_upper_[col];
       if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
+      if (have_integrality) lp.integrality_[new_num_col] = lp.integrality_[col];
       new_num_col++;
     }
     if (keep_to_col >= col_dim - 1) break;
@@ -1978,6 +2000,7 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
 }
 
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
+  /*
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1994,7 +2017,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
     colRange[col] = lp.col_upper_[col] - lp.col_lower_[col];
   for (HighsInt row = 0; row < lp.num_row_; row++)
     rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
-
+  */
   std::string message;
   if (lp.is_scaled_) {
     message = "Scaled";
@@ -2016,18 +2039,20 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
                       lp.col_lower_, true, lp.model_name_);
   analyseVectorValues(&log_options, "Column upper bounds", lp.num_col_,
                       lp.col_upper_, true, lp.model_name_);
-  analyseVectorValues(&log_options, "Column min abs bound", lp.num_col_,
-                      min_colBound, true, lp.model_name_);
-  analyseVectorValues(&log_options, "Column range", lp.num_col_, colRange, true,
-                      lp.model_name_);
+  //  analyseVectorValues(&log_options, "Column min abs bound", lp.num_col_,
+  //                      min_colBound, true, lp.model_name_);
+  //  analyseVectorValues(&log_options, "Column range", lp.num_col_, colRange,
+  //  true,
+  //                      lp.model_name_);
   analyseVectorValues(&log_options, "Row lower bounds", lp.num_row_,
                       lp.row_lower_, true, lp.model_name_);
   analyseVectorValues(&log_options, "Row upper bounds", lp.num_row_,
                       lp.row_upper_, true, lp.model_name_);
-  analyseVectorValues(&log_options, "Row min abs bound", lp.num_row_,
-                      min_rowBound, true, lp.model_name_);
-  analyseVectorValues(&log_options, "Row range", lp.num_row_, rowRange, true,
-                      lp.model_name_);
+  //  analyseVectorValues(&log_options, "Row min abs bound", lp.num_row_,
+  //                      min_rowBound, true, lp.model_name_);
+  //  analyseVectorValues(&log_options, "Row range", lp.num_row_, rowRange,
+  //  true,
+  //                      lp.model_name_);
   analyseVectorValues(&log_options, "Matrix sparsity",
                       lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.value_,
                       true, lp.model_name_);
@@ -2152,17 +2177,27 @@ HighsStatus readSolutionFile(const std::string filename,
                                   read_solution, read_basis, in_file);
   }
   assert(keyword == "Rows");
-  if (num_row != lp_num_row) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                 " rows, not %" HIGHSINT_FORMAT "\n",
-                 num_row, lp_num_row);
-    return readSolutionFileErrorReturn(in_file);
-  }
+  // OK to read from a file with different number of rows, since the
+  // primal solution is all that's important. For example, see #1284,
+  // where the user is solving a sequence of MIPs with the same number
+  // of variables, but incresing numbers of constraints, and wants to
+  // used the solution from one MIP as the starting solution for the
+  // next.
+  const bool num_row_ok = num_row == lp_num_row;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (!readSolutionFileIdDoubleLineOk(value, in_file))
       return readSolutionFileErrorReturn(in_file);
-    read_solution.row_value[iRow] = value;
+    if (num_row_ok) read_solution.row_value[iRow] = value;
+  }
+  if (!num_row_ok) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                 " rows, not %" HIGHSINT_FORMAT ": row values ignored\n",
+                 num_row, lp_num_row);
+    // Calculate the row values
+    if (calculateRowValues(lp, read_solution.col_value,
+                           read_solution.row_value) != HighsStatus::kOk)
+      return readSolutionFileErrorReturn(in_file);
   }
   // OK to have no EOL
   if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2295,6 +2330,37 @@ bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
   return true;
 }
 
+void assessColPrimalSolution(const HighsOptions& options, const double primal,
+                             const double lower, const double upper,
+                             const HighsVarType type, double& col_infeasibility,
+                             double& integer_infeasibility) {
+  // @primal_infeasibility calculation
+  col_infeasibility = 0;
+  if (primal < lower - options.primal_feasibility_tolerance) {
+    col_infeasibility = lower - primal;
+  } else if (primal > upper + options.primal_feasibility_tolerance) {
+    col_infeasibility = primal - upper;
+  }
+  integer_infeasibility = 0;
+  if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+    double nearest_integer = std::floor(primal + 0.5);
+    integer_infeasibility = std::fabs(primal - nearest_integer);
+  }
+  if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                type == HighsVarType::kSemiInteger)) {
+    // Semi-variables at zero will have positive col
+    // infeasibility, so possibly zero this
+    if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+      col_infeasibility = 0;
+    // If there is (still) column infeasibility due to value being
+    // off zero or below lower bound, then this counts as an integer
+    // infeasibility
+    if (col_infeasibility && primal < upper)
+      integer_infeasibility =
+          std::max(col_infeasibility, integer_infeasibility);
+  }
+}
+
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2326,31 +2392,12 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     const double upper = lp.col_upper_[iCol];
     const HighsVarType type =
         have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
-    // @primal_infeasibility calculation
+
     double col_infeasibility = 0;
-    if (primal < lower - options.primal_feasibility_tolerance) {
-      col_infeasibility = lower - primal;
-    } else if (primal > upper + options.primal_feasibility_tolerance) {
-      col_infeasibility = primal - upper;
-    }
     double integer_infeasibility = 0;
-    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-      double nearest_integer = std::floor(primal + 0.5);
-      integer_infeasibility = std::fabs(primal - nearest_integer);
-    }
-    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
-                                  type == HighsVarType::kSemiInteger)) {
-      // Semi-variables at zero will have positive col
-      // infeasibility, so possibly zero this
-      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
-        col_infeasibility = 0;
-      // If there is (still) column infeasibility due to value being
-      // off zero or below lower bound, then this counts as an integer
-      // infeasibility
-      if (col_infeasibility && primal < upper)
-        integer_infeasibility =
-            std::max(col_infeasibility, integer_infeasibility);
-    }
+
+    assessColPrimalSolution(options, primal, lower, upper, type,
+                            col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
       if (col_infeasibility > options.primal_feasibility_tolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
@@ -2534,11 +2581,11 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
 }
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
-  //  assert(solution.row_dual.size() > 0);
-  if (int(solution.row_dual.size()) < lp.num_row_) return HighsStatus::kError;
+  const bool correct_size = int(solution.row_dual.size()) == lp.num_row_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   solution.col_dual.assign(lp.num_col_, 0);
 
@@ -2560,11 +2607,11 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 HighsStatus calculateRowValues(const HighsLp& lp,
                                const std::vector<double>& col_value,
                                std::vector<double>& row_value) {
-  // assert(col_value.size() > 0);
-  if (int(col_value.size()) < lp.num_col_) return HighsStatus::kError;
+  const bool correct_size = int(col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   row_value.clear();
   row_value.assign(lp.num_row_, 0);
@@ -2587,12 +2634,13 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   return calculateRowValues(lp, solution.col_value, solution.row_value);
 }
 
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
-  // assert(solution.col_value.size() > 0);
-  if (int(solution.col_value.size()) != lp.num_col_) return HighsStatus::kError;
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
+                                   const HighsInt report_row) {
+  const bool correct_size = int(solution.col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
-  assert(is_colwise);
-  if (!is_colwise) return HighsStatus::kError;
+  const bool data_error = !correct_size || !is_colwise;
+  assert(!data_error);
+  if (data_error) return HighsStatus::kError;
 
   std::vector<HighsCDouble> row_value;
   row_value.assign(lp.num_row_, HighsCDouble{0.0});
@@ -2605,8 +2653,14 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-
       row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+      if (row == report_row) {
+        printf(
+            "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
+            ".col_value[%d] = %g\n",
+            int(row), double(row_value[row]), int(col),
+            solution.col_value[col]);
+      }
     }
   }
 

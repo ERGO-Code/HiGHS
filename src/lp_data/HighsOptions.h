@@ -346,6 +346,7 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
+  HighsInt presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
@@ -1041,6 +1042,12 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
+        "presolve_reduction_limit",
+        "Limit on number of presolve reductions -1 => no limit", advanced,
+        &presolve_reduction_limit, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
     records.push_back(record_int);
@@ -1099,6 +1106,7 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.log_dev_level = &log_dev_level;
     log_options.log_highs_callback = nullptr;
     log_options.log_user_callback = nullptr;
+    log_options.log_user_callback_data = nullptr;
   }
 
   void deleteRecords() {

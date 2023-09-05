@@ -21,12 +21,9 @@
 #include "lp_data/HighsOptions.h"
 
 void highsLogHeader(const HighsLogOptions& log_options) {
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+  highsLogUser(log_options, HighsLogType::kInfo, "Running HiGHS %d.%d.%d: %s\n",
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-               kHighsCopyrightStatement.c_str());
+               (int)HIGHS_VERSION_PATCH, kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,
@@ -135,7 +132,8 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, nullptr);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }
@@ -184,7 +182,8 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer, nullptr);
+    log_options_.log_user_callback(type, msgbuffer,
+                                   log_options_.log_user_callback_data);
   }
   va_end(argptr);
 }
@@ -232,8 +231,12 @@ std::string highsFormatToString(const char* format, ...) {
   return std::string(msgbuffer);
 }
 
-const std::string highsBoolToString(const bool b) {
-  return b ? "true" : "false";
+const std::string highsBoolToString(const bool b, const HighsInt field_width) {
+  const HighsInt abs_field_width = std::abs(field_width);
+  if (abs_field_width <= 1) return b ? "T" : "F";
+  if (abs_field_width <= 2) return b ? "true" : "false";
+  if (field_width < 0) return b ? "true " : "false";
+  return b ? " true" : "false";
 }
 
 const std::string highsInsertMdEscapes(const std::string from_string) {

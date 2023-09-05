@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
@@ -70,10 +71,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  //  const HighsInfo& info = highs.getInfo();
   if (dev_run) printf("\n********************\nSolving from scratch\n");
   highs.setOptionValue("output_flag", dev_run);
-
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
 
@@ -90,7 +89,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
-  const bool test0 = true;
+  const bool other_tests = true;
+  const bool test0 = other_tests;
   bool valid, integral, feasible;
   if (test0) {
     if (dev_run)
@@ -110,7 +110,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test1 = true;
+  const bool test1 = other_tests;
   if (test1) {
     if (dev_run)
       printf("\n***************************\nSolving from solution file\n");
@@ -129,7 +129,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test2 = true;
+  const bool test2 = other_tests;
   if (test2) {
     if (dev_run)
       printf(
@@ -159,7 +159,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test3 = true;
+  const bool test3 = other_tests;
   if (test3) {
     if (dev_run)
       printf(
@@ -182,7 +182,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
-  const bool test4 = true;
+  const bool test4 = other_tests;
   if (test4) {
     if (dev_run)
       printf(
@@ -197,6 +197,35 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.readSolution(column_solution_file);
     REQUIRE(return_status == HighsStatus::kError);
 
+    highs.clear();
+  }
+
+  const bool test5 = other_tests;
+  if (test5) {
+    HighsSolution starting_solution = optimal_solution;
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from partial integer "
+          "solution\n");
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    HighsInt k = 0;
+    const HighsInt max_k = 1;
+    // Set a proportion of the integer variables to a fractional value
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
+      if (k <= max_k) {
+        starting_solution.col_value[iCol] = 0.5;
+        k++;
+      } else {
+        k = 0;
+      }
+    }
+    return_status = highs.setSolution(starting_solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+    highs.run();
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
     highs.clear();
   }
 
@@ -270,6 +299,35 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
   highs.run();
   double objective2 = highs.getInfo().objective_function_value;
   REQUIRE(fabs(objective1 - objective2) / max(1.0, objective1) < 1e-5);
+}
+
+TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
+  Highs highs;
+  const std::string solution_file_name = "temp.sol";
+  highs.setOptionValue("output_flag", dev_run);
+  highs.addVar(0, 2);
+  highs.addVar(0, 2);
+  highs.changeColCost(0, 1);
+  highs.changeColCost(1, 10);
+  highs.changeColIntegrality(0, HighsVarType::kInteger);
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {1, 1};
+  highs.addRow(1, kHighsInf, 2, index.data(), value.data());
+  highs.run();
+  highs.writeSolution(solution_file_name);
+  if (dev_run) highs.writeSolution("", 1);
+  highs.clearSolver();
+  // Add a constraint that cuts off the optimal solution, but leaves
+  // the integer assignment feasible
+  value[0] = 1;
+  value[1] = 4;
+  highs.addRow(4, kHighsInf, 2, index.data(), value.data());
+  // Read the original solution - testing that the row section is not
+  // used
+  REQUIRE(highs.readSolution(solution_file_name) == HighsStatus::kOk);
+  highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  std::remove(solution_file_name.c_str());
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,

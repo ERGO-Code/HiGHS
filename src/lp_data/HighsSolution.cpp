@@ -486,6 +486,15 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
     // If the variable is basic, then consider it not to be at a bound
     // so that any dual value yields an infeasibility value
     if (*status_pointer == HighsBasisStatus::kBasic) at_a_bound = false;
+    // Check that kLower and kUpper are consistent with value and
+    // bounds - for debugging QP basis errors
+    if (*status_pointer == HighsBasisStatus::kLower) {
+      assert(value >= lower - primal_feasibility_tolerance &&
+             value <= lower + primal_feasibility_tolerance);
+    } else if (*status_pointer == HighsBasisStatus::kUpper) {
+      assert(value >= upper - primal_feasibility_tolerance &&
+             value <= upper + primal_feasibility_tolerance);
+    }
   }
   if (at_a_bound) {
     // At a bound

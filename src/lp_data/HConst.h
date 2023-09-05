@@ -23,6 +23,7 @@
 const std::string kHighsCopyrightStatement =
     "Copyright (c) 2023 HiGHS under MIT licence terms";
 
+const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
@@ -167,6 +168,14 @@ enum class HighsPresolveStatus {
   kTimeout,
   kNullError,     // V2.0: Delete since it's not used!
   kOptionsError,  // V2.0: Delete since it's not used!
+  kNotSet,
+};
+
+enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
+  kNotPresolved = -1,
+  kNoPrimalSolutionError,
+  kSolutionRecovered,
+  kBasisError
 };
 
 enum class HighsModelStatus {
@@ -251,6 +260,9 @@ const double kMaxSemiVariableUpper = 1e5;
 
 // Limit on primal values being realistic
 const double kExcessivePrimalValue = 1e25;
+
+// Hash marker for duplicates
+const HighsInt kHashIsDuplicate = -1;
 
 // Tolerance values for highsDoubleToString
 const double kModelValueToStringTolerance = 1e-15;

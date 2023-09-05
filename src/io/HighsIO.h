@@ -48,11 +48,11 @@ struct HighsLogOptions {
   HighsInt* log_dev_level;
   void (*log_highs_callback)(HighsLogType, const char*, void*) = nullptr;
   void (*log_user_callback)(HighsLogType, const char*, void*) = nullptr;
+  void* log_user_callback_data = nullptr;
 };
 
 /**
- * @brief Write the HiGHS version, compilation date, git hash and
- * copyright statement
+ * @brief Write the HiGHS version and copyright statement
  */
 void highsLogHeader(const HighsLogOptions& log_options);
 
@@ -88,7 +88,8 @@ void highsReportLogOptions(const HighsLogOptions& log_options_);
 
 std::string highsFormatToString(const char* format, ...);
 
-const std::string highsBoolToString(const bool b);
+const std::string highsBoolToString(const bool b,
+                                    const HighsInt field_width = 2);
 
 const std::string highsInsertMdEscapes(const std::string from_string);
 

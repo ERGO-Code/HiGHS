@@ -1,6 +1,7 @@
 #include <cassert>
 #include <sstream>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 

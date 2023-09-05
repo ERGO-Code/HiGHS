@@ -371,7 +371,7 @@ class Highs {
    * producing HTML, otherwise using the standard format used to read
    * options from a file.
    */
-  HighsStatus writeInfo(const std::string& filename) const;
+  HighsStatus writeInfo(const std::string& filename = "") const;
 
   /**
    * @brief Get the value of infinity used by HiGHS
@@ -417,6 +417,11 @@ class Highs {
    * @brief Return a const reference to the internal HighsSolution instance
    */
   const HighsSolution& getSolution() const { return solution_; }
+
+  /**
+   * @brief Zero all clocks in the internal HighsTimer instance
+   */
+  void zeroAllClocks() { timer_.zeroAllClocks(); };
 
   /**
    * @brief Return a const reference to the internal HighsSolution instance
@@ -644,6 +649,11 @@ class Highs {
   HighsStatus getColName(const HighsInt col, std::string& name) const;
 
   /**
+   * @brief Get column index corresponding to name
+   */
+  HighsStatus getColByName(const std::string& name, HighsInt& col);
+
+  /**
    * @brief Get a column integrality from the incumbent model
    */
   HighsStatus getColIntegrality(const HighsInt col,
@@ -709,6 +719,11 @@ class Highs {
   HighsStatus getRowName(const HighsInt row, std::string& name) const;
 
   /**
+   * @brief Get row index corresponding to name
+   */
+  HighsStatus getRowByName(const std::string& name, HighsInt& row);
+
+  /**
    * @brief Get a matrix coefficient
    */
   HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value);
@@ -716,12 +731,12 @@ class Highs {
   /**
    * @brief Write out the incumbent model to a file
    */
-  HighsStatus writeModel(const std::string& filename);
+  HighsStatus writeModel(const std::string& filename = "");
 
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename);
+  HighsStatus writeBasis(const std::string& filename = "");
 
   /**
    * Methods for incumbent model modification
@@ -1000,8 +1015,7 @@ class Highs {
    */
   HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
                                                        const char*, void*),
-                             void* deprecated = nullptr  // V2.0 remove
-  );
+                             void* log_user_callback_data = nullptr);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1030,6 +1044,8 @@ class Highs {
   /**
    * @brief Interpret common qualifiers to string values
    */
+  std::string presolveStatusToString(
+      const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
   std::string solutionStatusToString(const HighsInt solution_status) const;
   std::string basisStatusToString(const HighsBasisStatus basis_status) const;
@@ -1411,6 +1427,7 @@ class Highs {
   HighsStatus checkOptimality(const std::string& solver_type,
                               HighsStatus return_status);
   HighsStatus invertRequirementError(std::string method_name);
+  HighsStatus lpInvertRequirementError(std::string method_name);
 };
 
 #endif
