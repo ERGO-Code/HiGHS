@@ -775,7 +775,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         "mip_improving_solution_file",
-        "File for reporting improving MIP solutions: not reported if \"\"",
+        "File for reporting improving MIP solutions: not reported for an empty "
+        "string \"\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
