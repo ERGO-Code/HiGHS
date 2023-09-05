@@ -90,8 +90,8 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     }
     if (result.count("version")) {
       std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
-                << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
-                << std::endl;
+                << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH;
+      std::cout << " Githash " << HIGHS_GITHASH << ". ";
       std::cout << kHighsCopyrightStatement << std::endl;
       exit(0);
     }
