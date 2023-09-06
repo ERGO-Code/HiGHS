@@ -45,7 +45,7 @@ struct HighsObjectiveSolution {
 
 struct HighsCallbackDataOut {
   HighsObjectiveSolution objective_solution;
-  void clear();  
+  void clear();
 };
 
 struct HighsCallbackDataIn {
