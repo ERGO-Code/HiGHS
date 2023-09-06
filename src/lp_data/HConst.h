@@ -197,10 +197,12 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
-  // V2.0: flip kUnknown and kSolutionLimit - and then modify kMax and
-  // highs_c_api.h, highs_csharp_api.cs, highspy/highs_bindings.cpp
+  // V2.0: put kUnknown after kSolutionLimit and kInterrupt - and then
+  // modify kMax and highs_c_api.h, highs_csharp_api.cs,
+  // highspy/highs_bindings.cpp
   kUnknown,
   kSolutionLimit,
+  kInterrupt,
   kMin = kNotset,
   kMax = kSolutionLimit
 };
