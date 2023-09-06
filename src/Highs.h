@@ -1018,6 +1018,15 @@ class Highs {
                              void* log_user_callback_data = nullptr);
 
   /**
+   * @brief Set the callback method to use for HiGHS
+   */
+  //const int
+  //, const HighsCallbackDataOut&, HighsCallbackDataIn&
+  HighsStatus setHighsCallback(void (*highs_user_callback)(HighsLogType,
+                                                       const char*, void*),
+			       void* highs_user_callback_data = nullptr);
+
+  /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
    * instance. The origin string is used to identify the source of the
    * HighsBasis instance.
@@ -1253,6 +1262,10 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+
+  //const int
+  //, const HighsCallbackDataOut&, HighsCallbackDataIn&
+  void (*highs_user_callback_)(HighsLogType, const char*, void*) = nullptr;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 

@@ -13,6 +13,7 @@ test_array = [
   ['test_alienbasis', 'TestAlienBasis.cpp'],
   ['test_dualize', 'TestDualize.cpp'],
   ['test_checksolution', 'TestCheckSolution.cpp'],
+  ['test_callbacks', 'TestCallbacks.cpp'],
   ['test_ekk', 'TestEkk.cpp'],
   ['test_factor', 'TestFactor.cpp'],
   ['test_freezebasis', 'TestFreezeBasis.cpp'],

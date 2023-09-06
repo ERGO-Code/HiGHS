@@ -43,6 +43,15 @@ struct HighsObjectiveSolution {
   void clear();
 };
 
+struct HighsCallbackDataOut {
+  HighsObjectiveSolution objective_solution;
+  void clear();  
+};
+
+struct HighsCallbackDataIn {
+  bool user_interrupt;
+};
+
 struct RefactorInfo {
   bool use = false;
   std::vector<HighsInt> pivot_row;

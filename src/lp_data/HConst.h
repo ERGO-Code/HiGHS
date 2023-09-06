@@ -207,6 +207,13 @@ enum class HighsModelStatus {
   kMax = kSolutionLimit
 };
 
+enum HighsCallbackType : int {
+  kHighsCallbackMin = 0,
+  kHighsCallbackInterrupt = kHighsCallbackMin,
+  kHighsCallbackMipImprovingSolution,
+  kHighsCallbackMax = kHighsCallbackMipImprovingSolution
+};
+
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
 enum class HighsBasisStatus : uint8_t {
   kLower =
