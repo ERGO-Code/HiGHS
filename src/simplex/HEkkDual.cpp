@@ -1006,12 +1006,11 @@ void HEkkDual::rebuild() {
     highs_callback_data_in.clear();
     ekk_instance_.highs_callback_data_out_.clear();
     ekk_instance_.highs_callback_data_out_.simplex_iteration_count =
-      ekk_instance_.iteration_count_;
-    ekk_instance_.highs_user_callback_(kHighsCallbackInterrupt,
-				       "Simplex interrupt callback",
-				       ekk_instance_.highs_user_callback_data_,
-				       ekk_instance_.highs_callback_data_out_,
-				       highs_callback_data_in);
+        ekk_instance_.iteration_count_;
+    ekk_instance_.highs_user_callback_(
+        kHighsCallbackInterrupt, "Simplex interrupt callback",
+        ekk_instance_.highs_user_callback_data_,
+        ekk_instance_.highs_callback_data_out_, highs_callback_data_in);
     assert(!highs_callback_data_in.user_interrupt);
   }
   HighsSimplexInfo& info = ekk_instance_.info_;

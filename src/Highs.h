@@ -1022,7 +1022,7 @@ class Highs {
    */
   HighsStatus setHighsCallback(
       void (*highs_user_callback)(const int, const char*, void*,
-				  const HighsCallbackDataOut&,
+                                  const HighsCallbackDataOut&,
                                   HighsCallbackDataIn&),
       void* highs_user_callback_data = nullptr);
 
@@ -1264,7 +1264,7 @@ class Highs {
   HighsRanging ranging_;
 
   void (*highs_user_callback_)(const int, const char*, void*,
-			       const HighsCallbackDataOut&,
+                               const HighsCallbackDataOut&,
                                HighsCallbackDataIn&) = nullptr;
   void* highs_user_callback_data_ = nullptr;
 

@@ -105,9 +105,8 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_start(argptr, format);
   const bool flush_streams = true;
   const bool use_log_callback =
-    log_options_.log_user_callback ||
-    log_options_.highs_user_callback;
-    
+      log_options_.log_user_callback || log_options_.highs_user_callback;
+
   if (!use_log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_stream) {
@@ -138,16 +137,16 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     }
     if (log_options_.log_user_callback) {
       log_options_.log_user_callback(type, msgbuffer,
-				     log_options_.log_user_callback_data);
+                                     log_options_.log_user_callback_data);
     } else {
       assert(log_options_.highs_user_callback);
       HighsCallbackDataIn highs_callback_data_in;
       HighsCallbackDataOut highs_callback_data_out;
       highs_callback_data_out.log_type = type;
       log_options_.highs_user_callback(kHighsCallbackLogging, msgbuffer,
-				       log_options_.highs_user_callback_data,
-				       highs_callback_data_out,
-				       highs_callback_data_in);
+                                       log_options_.highs_user_callback_data,
+                                       highs_callback_data_out,
+                                       highs_callback_data_in);
     }
   }
   va_end(argptr);

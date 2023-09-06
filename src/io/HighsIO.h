@@ -49,8 +49,8 @@ struct HighsLogOptions {
   void (*log_user_callback)(HighsLogType, const char*, void*) = nullptr;
   void* log_user_callback_data = nullptr;
   void (*highs_user_callback)(const int, const char*, void*,
-			      const HighsCallbackDataOut&,
-			      HighsCallbackDataIn&) = nullptr;
+                              const HighsCallbackDataOut&,
+                              HighsCallbackDataIn&) = nullptr;
   void* highs_user_callback_data = nullptr;
 };
 

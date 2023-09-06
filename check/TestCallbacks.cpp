@@ -5,15 +5,15 @@ const HighsInt kLogUserCallbackNoData = -1;
 const HighsInt kLogUserCallbackData = 99;
 
 static void userHighsCallback(const int highs_callback_type,
-			      const char* message, void* user_callback_data,
+                              const char* message, void* user_callback_data,
                               const HighsCallbackDataOut& callback_data_out,
                               HighsCallbackDataIn& callback_data_in) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
   const int local_callback_data =
-    user_callback_data
-    ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
-    : kLogUserCallbackNoData;
+      user_callback_data
+          ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
+          : kLogUserCallbackNoData;
   if (user_callback_data) {
     REQUIRE(local_callback_data == kLogUserCallbackData);
   } else {
@@ -21,14 +21,16 @@ static void userHighsCallback(const int highs_callback_type,
   }
   if (dev_run) {
     if (highs_callback_type == kHighsCallbackLogging) {
-      printf("userHighsCallback(type %2d; data %2d): %s", 
-	     highs_callback_type, local_callback_data,
-	     message);
+      printf("userHighsCallback(type %2d; data %2d): %s", highs_callback_type,
+             local_callback_data, message);
     } else if (highs_callback_type == kHighsCallbackInterrupt) {
-      printf("userHighsCallback(type %2d; data %2d): %s with iteration count = %d\n",
-	     highs_callback_type, local_callback_data, message,
-	     callback_data_out.simplex_iteration_count);
-      callback_data_in.user_interrupt = callback_data_out.simplex_iteration_count > 30;
+      printf(
+          "userHighsCallback(type %2d; data %2d): %s with iteration count = "
+          "%d\n",
+          highs_callback_type, local_callback_data, message,
+          callback_data_out.simplex_iteration_count);
+      callback_data_in.user_interrupt =
+          callback_data_out.simplex_iteration_count > 30;
     }
   }
 }
@@ -50,11 +52,11 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setHighsCallback(userHighsCallback);
   highs.readModel(filename);
   highs.run();
 }
-

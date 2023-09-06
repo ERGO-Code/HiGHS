@@ -1870,13 +1870,14 @@ HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
 
 HighsStatus Highs::setHighsCallback(
     void (*highs_user_callback)(const int, const char*, void*,
-				const HighsCallbackDataOut&,
+                                const HighsCallbackDataOut&,
                                 HighsCallbackDataIn&),
     void* highs_user_callback_data) {
   this->highs_user_callback_ = highs_user_callback;
   this->highs_user_callback_data_ = highs_user_callback_data;
   options_.log_options.highs_user_callback = this->highs_user_callback_;
-  options_.log_options.highs_user_callback_data = this->highs_user_callback_data_;
+  options_.log_options.highs_user_callback_data =
+      this->highs_user_callback_data_;
   return HighsStatus::kOk;
 }
 
@@ -3878,6 +3879,4 @@ void HighsCallbackDataOut::clear() {
   this->objective_solution.clear();
 }
 
-void HighsCallbackDataIn::clear() {
-  this->user_interrupt = false;
-}
+void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
