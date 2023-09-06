@@ -1020,10 +1020,10 @@ class Highs {
   /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setHighsCallback(void (*highs_user_callback)(const int,
-							   const HighsCallbackDataOut&,
-							   HighsCallbackDataIn&),
-                               void* highs_user_callback_data = nullptr);
+  HighsStatus setHighsCallback(
+      void (*highs_user_callback)(const int, const HighsCallbackDataOut&,
+                                  HighsCallbackDataIn&),
+      void* highs_user_callback_data = nullptr);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1262,9 +1262,8 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
-  void (*highs_user_callback_)(const int,
-			       const HighsCallbackDataOut&,
-			       HighsCallbackDataIn&) = nullptr;
+  void (*highs_user_callback_)(const int, const HighsCallbackDataOut&,
+                               HighsCallbackDataIn&) = nullptr;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 

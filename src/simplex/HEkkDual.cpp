@@ -1001,6 +1001,9 @@ void HEkkDual::solvePhase2() {
 }
 
 void HEkkDual::rebuild() {
+  if (ekk_instance_.highs_user_callback_) {
+    printf("highs_user_callback_ is set\n");
+  }
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
   // Clear taboo flag from any bad basis changes
