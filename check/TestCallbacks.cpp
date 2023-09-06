@@ -2,12 +2,9 @@
 #include "catch.hpp"
 const bool dev_run = true;
 
-// Callback that provides user logging
-
-// const int highs_callback_type
-//  , const HighsCallbackDataOut& callback_data_out,
-//  HighsCallbackDataIn& callback_data_in
-static void userHighsCallback(const int highs_callback_type) {
+static void userHighsCallback(const int highs_callback_type,
+			      const HighsCallbackDataOut& callback_data_out,
+			      HighsCallbackDataIn& callback_data_in) {
   if (dev_run)
     printf("userHighsCallback: %d", highs_callback_type);
 }
