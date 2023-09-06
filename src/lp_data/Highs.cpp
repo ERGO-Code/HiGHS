@@ -1868,10 +1868,8 @@ HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setHighsCallback(void (*highs_user_callback)(HighsLogType,
-                                                                const char*,
-                                                                void*),
-                                    void* log_user_callback_data) {
+HighsStatus Highs::setHighsCallback(void (*highs_user_callback)(const int),
+                                    void* highs_user_callback_data) {
   this->highs_user_callback_ = highs_user_callback;
   return HighsStatus::kOk;
 }

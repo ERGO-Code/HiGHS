@@ -7,10 +7,9 @@ const bool dev_run = true;
 // const int highs_callback_type
 //  , const HighsCallbackDataOut& callback_data_out,
 //  HighsCallbackDataIn& callback_data_in
-static void userHighsCallback(HighsLogType type, const char* message,
-                              void* deprecated) {
+static void userHighsCallback(const int highs_callback_type) {
   if (dev_run)
-    printf("userHighsCallback:%s", message);  // %d", highs_callback_type);
+    printf("userHighsCallback: %d", highs_callback_type);
 }
 
 TEST_CASE("highs-run-callback", "[callback]") {

@@ -1022,8 +1022,7 @@ class Highs {
    */
   // const int
   //, const HighsCallbackDataOut&, HighsCallbackDataIn&
-  HighsStatus setHighsCallback(void (*highs_user_callback)(HighsLogType,
-                                                           const char*, void*),
+  HighsStatus setHighsCallback(void (*highs_user_callback)(const int),
                                void* highs_user_callback_data = nullptr);
 
   /**
@@ -1263,9 +1262,8 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
-  // const int
   //, const HighsCallbackDataOut&, HighsCallbackDataIn&
-  void (*highs_user_callback_)(HighsLogType, const char*, void*) = nullptr;
+  void (*highs_user_callback_)(const int) = nullptr;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
