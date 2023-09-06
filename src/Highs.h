@@ -1266,6 +1266,7 @@ class Highs {
   void (*highs_user_callback_)(const int, const char*, void*,
 			       const HighsCallbackDataOut&,
                                HighsCallbackDataIn&) = nullptr;
+  void* highs_user_callback_data_ = nullptr;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 

@@ -39,6 +39,8 @@ const double kRunningAverageMultiplier = 0.05;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
+enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
+
 enum SimplexScaleStrategy {
   kSimplexScaleStrategyMin = 0,
   kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0

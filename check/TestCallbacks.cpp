@@ -21,10 +21,12 @@ static void userHighsCallback(const int highs_callback_type,
   }
   if (dev_run) {
     if (highs_callback_type == kHighsCallbackLogging) {
-      printf("userHighsCallback(%2d): %s", local_callback_data, message);
+      printf("userHighsCallback(type %2d; data %2d): %s", 
+	     highs_callback_type, local_callback_data,
+	     message);
     } else if (highs_callback_type == kHighsCallbackInterrupt) {
-      printf("userHighsCallback: %d with simplex iteration count = %d\n",
-	     highs_callback_type,
+      printf("userHighsCallback(type %2d; data %2d): %s with iteration count = %d\n",
+	     highs_callback_type, local_callback_data, message,
 	     callback_data_out.simplex_iteration_count);
       callback_data_in.user_interrupt = callback_data_out.simplex_iteration_count > 30;
     }
