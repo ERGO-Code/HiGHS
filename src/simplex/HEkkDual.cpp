@@ -1008,6 +1008,8 @@ void HEkkDual::rebuild() {
     ekk_instance_.highs_callback_data_out_.simplex_iteration_count =
       ekk_instance_.iteration_count_;
     ekk_instance_.highs_user_callback_(kHighsCallbackInterrupt,
+				       nullptr,
+				       nullptr,
 				       ekk_instance_.highs_callback_data_out_,
 				       highs_callback_data_in);
     assert(!highs_callback_data_in.user_interrupt);

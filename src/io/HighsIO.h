@@ -17,7 +17,8 @@
 #include <array>
 #include <iostream>
 
-#include "util/HighsInt.h"
+#include "lp_data/HStruct.h"
+//#include "util/HighsInt.h"
 
 class HighsOptions;
 
@@ -46,9 +47,13 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
-  void (*log_highs_callback)(HighsLogType, const char*, void*) = nullptr;
+  //  void (*log_highs_callback)(HighsLogType, const char*, void*) = nullptr;
   void (*log_user_callback)(HighsLogType, const char*, void*) = nullptr;
   void* log_user_callback_data = nullptr;
+  void (*highs_user_callback)(const int, const char*, void*,
+			      const HighsCallbackDataOut&,
+			      HighsCallbackDataIn&) = nullptr;
+  void* highs_user_callback_data = nullptr;
 };
 
 /**

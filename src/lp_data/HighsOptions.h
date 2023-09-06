@@ -1104,9 +1104,11 @@ class HighsOptions : public HighsOptionsStruct {
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
-    log_options.log_highs_callback = nullptr;
+    //    log_options.log_highs_callback = nullptr;
     log_options.log_user_callback = nullptr;
     log_options.log_user_callback_data = nullptr;
+    log_options.highs_user_callback = nullptr;
+    log_options.highs_user_callback_data = nullptr;
   }
 
   void deleteRecords() {
