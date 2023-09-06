@@ -44,12 +44,14 @@ struct HighsObjectiveSolution {
 };
 
 struct HighsCallbackDataOut {
+  HighsInt simplex_iteration_count;
   HighsObjectiveSolution objective_solution;
   void clear();
 };
 
 struct HighsCallbackDataIn {
   bool user_interrupt;
+  void clear();
 };
 
 struct RefactorInfo {

@@ -3098,6 +3098,8 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
+  // Copy any highs_user_callback_ pointer
+  ekk_instance_.highs_user_callback_ = this->highs_user_callback_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
@@ -3865,4 +3867,11 @@ void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
-void HighsCallbackDataOut::clear() { this->objective_solution.clear(); }
+void HighsCallbackDataOut::clear() {
+  this->simplex_iteration_count = -1;
+  this->objective_solution.clear();
+}
+
+void HighsCallbackDataIn::clear() {
+  this->user_interrupt = false;
+}
