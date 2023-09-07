@@ -46,8 +46,10 @@ bool HighsCallback::callbackAction(const int callback_type,
   this->user_callback(callback_type, message.c_str(), &this->data_out,
                       &this->data_in, this->user_callback_data);
   // Assess any action
-  if (callback_type == kHighsCallbackInterrupt ||
+  action = this->data_in.user_interrupt;
+
+  if (callback_type == kHighsCallbackMipImprovingSolution ||
       callback_type == kHighsCallbackMipDualBound)
-    action = this->data_in.user_interrupt;
+    assert(!action);
   return action;
 }

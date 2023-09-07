@@ -1750,14 +1750,13 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
       upper_limit);
   */
   if (non_improving) return;
-  printf("HighsMipSolverData::saveReportMipSolution: active = %d\n",
-         int(mipsolver.callback_->active[kHighsCallbackMipImprovingSolution]));
-  if (mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kHighsCallbackMipImprovingSolution]) {
-    mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
-    mipsolver.callback_->data_out.col_value = mipsolver.solution_.data();
-    mipsolver.callback_->callbackAction(kHighsCallbackMipImprovingSolution,
-                                        "saveReportMipSolution");
+  if (mipsolver.callback_->user_callback) {
+    if (mipsolver.callback_->active[kHighsCallbackMipImprovingSolution]) {
+      mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
+      mipsolver.callback_->data_out.col_value = mipsolver.solution_.data();
+      mipsolver.callback_->callbackAction(kHighsCallbackMipImprovingSolution,
+                                          "saveReportMipSolution");
+    }
   }
   if (mipsolver.options_mip_->mip_improving_solution_save) {
     HighsObjectiveSolution record;
