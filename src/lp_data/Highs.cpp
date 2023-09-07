@@ -1876,16 +1876,14 @@ HighsStatus Highs::setLogCallback(void (*user_log_callback)(HighsLogType,
 
 HighsStatus Highs::setHighsCallback(
     void (*user_callback)(const int, const char*, void*,
-                                const HighsCallbackDataOut&,
-                                HighsCallbackDataIn&),
+                          const HighsCallbackDataOut&, HighsCallbackDataIn&),
     void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;
-  options_.log_options.user_callback_data =
-      this->callback_.user_callback_data;
+  options_.log_options.user_callback_data = this->callback_.user_callback_data;
   options_.log_options.user_callback_active = false;
   return HighsStatus::kOk;
 }
@@ -1893,7 +1891,7 @@ HighsStatus Highs::setHighsCallback(
 HighsStatus Highs::startCallback(const HighsCallbackType type) {
   if (!this->callback_.user_callback) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Cannot start callback when user_callback not defined\n");
+                 "Cannot start callback when user_callback not defined\n");
     return HighsStatus::kError;
   }
   assert(int(this->callback_.active.size()) == this->callback_.num_type);
@@ -1907,7 +1905,7 @@ HighsStatus Highs::startCallback(const HighsCallbackType type) {
 HighsStatus Highs::stopCallback(const HighsCallbackType type) {
   if (!this->callback_.user_callback) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "Cannot stop callback when user_callback not defined\n");
+                 "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
   std::vector<bool>& active = this->callback_.active;
@@ -1937,8 +1935,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_,
-					callback_, options_, timer_);
+                                        info_, ekk_instance_, callback_,
+                                        options_, timer_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3910,4 +3908,3 @@ HighsStatus Highs::openLogFile(const std::string& log_file) {
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
-

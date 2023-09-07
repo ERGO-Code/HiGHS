@@ -21,10 +21,10 @@ using std::strncmp;
 using std::strstr;
 
 // Callback that saves message for comparison
-static void myLogCallback(const int highs_callback_type,
-			  const char* message, void* user_callback_data,
-			  const HighsCallbackDataOut& callback_data_out,
-			  HighsCallbackDataIn& callback_data_in) {
+static void myLogCallback(const int highs_callback_type, const char* message,
+                          void* user_callback_data,
+                          const HighsCallbackDataOut& callback_data_out,
+                          HighsCallbackDataIn& callback_data_in) {
   strcpy(printed_log, message);
 }
 

@@ -22,7 +22,8 @@ class HighsLpSolverObject {
  public:
   HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
                       HighsInfo& highs_info, HEkk& ekk_instance,
-                      HighsCallback& callback, HighsOptions& options, HighsTimer& timer)
+                      HighsCallback& callback, HighsOptions& options,
+                      HighsTimer& timer)
       : lp_(lp),
         basis_(basis),
         solution_(solution),

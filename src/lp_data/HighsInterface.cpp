@@ -1119,7 +1119,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // The LP has no invert to use, so have to set one up, but only
     // for the current basis, so return_value is the rank deficiency.
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
-                                      ekk_instance_, callback_, options_, timer_);
+                                      ekk_instance_, callback_, options_,
+                                      timer_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,

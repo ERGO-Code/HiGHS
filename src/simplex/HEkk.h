@@ -57,9 +57,8 @@ class HEkk {
   void ftran(HVector& rhs, const double expected_density);
 
   void moveLp(HighsLpSolverObject& solver_object);
-  void setPointers(HighsCallback* callback,
-		   HighsOptions* options,
-		   HighsTimer* timer);
+  void setPointers(HighsCallback* callback, HighsOptions* options,
+                   HighsTimer* timer);
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 

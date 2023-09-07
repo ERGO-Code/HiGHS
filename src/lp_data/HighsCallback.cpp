@@ -31,20 +31,19 @@ void HighsCallback::clear() {
   this->data_in.clear();
 }
 
-bool HighsCallback::callbackAction(const HighsCallbackType type, std::string message) {
+bool HighsCallback::callbackAction(const HighsCallbackType type,
+                                   std::string message) {
   if (!this->active[int(type)]) return false;
-  this->user_callback(int(type), message.c_str(),
-			    this->user_callback_data,
-			    this->data_out,
-			    this->data_in);
+  this->user_callback(int(type), message.c_str(), this->user_callback_data,
+                      this->data_out, this->data_in);
   switch (type) {
-  case HighsCallbackType::kLogging:
-    assert(1 == 0);
-    return false;
-  case HighsCallbackType::kInterrupt:
-    return this->data_in.user_interrupt;
-  default:
-    assert(1 == 0);
-    return false;
+    case HighsCallbackType::kLogging:
+      assert(1 == 0);
+      return false;
+    case HighsCallbackType::kInterrupt:
+      return this->data_in.user_interrupt;
+    default:
+      assert(1 == 0);
+      return false;
   }
 }

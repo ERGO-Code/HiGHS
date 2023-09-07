@@ -445,14 +445,16 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // Update other EKK pointers. Currently just pointers to the
   // HighsOptions and HighsTimer members of the Highs class that are
   // communicated by reference via the HighsLpSolverObject instance.
-  this->setPointers(&solver_object.callback_, &solver_object.options_, &solver_object.timer_);
+  this->setPointers(&solver_object.callback_, &solver_object.options_,
+                    &solver_object.timer_);
   // Initialise Ekk if this has not been done. Ekk isn't initialised
   // if moveLp hasn't been called for this instance of HiGHS, or if
   // the Ekk instance is junked due to removing rows from the LP
   this->initialiseEkk();
 }
 
-void HEkk::setPointers(HighsCallback* callback, HighsOptions* options, HighsTimer* timer) {
+void HEkk::setPointers(HighsCallback* callback, HighsOptions* options,
+                       HighsTimer* timer) {
   this->callback_ = callback;
   this->options_ = options;
   this->timer_ = timer;
@@ -3468,10 +3470,9 @@ bool HEkk::bailout() {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
   } else if (callback_->user_callback &&
-	     callback_->active[int(HighsCallbackType::kInterrupt)]) {
+             callback_->active[int(HighsCallbackType::kInterrupt)]) {
     callback_->data_out.clear();
-    callback_->data_out.simplex_iteration_count =
-      iteration_count_;
+    callback_->data_out.simplex_iteration_count = iteration_count_;
     if (callback_->callbackAction(HighsCallbackType::kInterrupt)) {
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kInterrupt;

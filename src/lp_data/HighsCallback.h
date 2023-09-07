@@ -30,8 +30,8 @@ struct HighsCallbackDataIn {
 
 struct HighsCallback {
   void (*user_callback)(const int, const char*, void*,
-			      const HighsCallbackDataOut&,
-			      HighsCallbackDataIn&) = nullptr;
+                        const HighsCallbackDataOut&,
+                        HighsCallbackDataIn&) = nullptr;
   void* user_callback_data = nullptr;
   const int num_type = int(HighsCallbackType::kMipImprovingSolution) + 1;
   std::vector<bool> active;
