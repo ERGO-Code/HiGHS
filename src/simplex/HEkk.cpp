@@ -3453,7 +3453,7 @@ void HEkk::invalidateDualInfeasibilityRecord() {
   invalidateDualMaxSumInfeasibilityRecord();
 }
 
-bool HEkk::bailoutOnTimeIterations() {
+bool HEkk::bailout() {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -3467,6 +3467,15 @@ bool HEkk::bailoutOnTimeIterations() {
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
+  } else if (callback_->user_callback &&
+	     callback_->active[int(HighsCallbackType::kInterrupt)]) {
+    callback_->data_out.clear();
+    callback_->data_out.simplex_iteration_count =
+      iteration_count_;
+    if (callback_->callbackAction(HighsCallbackType::kInterrupt)) {
+      solve_bailout_ = true;
+      model_status_ = HighsModelStatus::kInterrupt;
+    }
   }
   return solve_bailout_;
 }
@@ -3493,7 +3502,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
-           model_status_ == HighsModelStatus::kObjectiveTarget);
+           model_status_ == HighsModelStatus::kObjectiveTarget ||
+           model_status_ == HighsModelStatus::kInterrupt);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
@@ -3579,11 +3589,12 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown: {
       // Simplex has failed to conclude a model property. Either it
       // has bailed out due to reaching the objecive bound, target,
-      // time or iteration limit, or it has not been set (cycling is
-      // the only reason). Could happen anywhere.
+      // time, iteration limit or user interrupt, or it has not been
+      // set (cycling is the only reason). Could happen anywhere.
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);

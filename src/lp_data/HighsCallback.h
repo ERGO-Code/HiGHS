@@ -29,15 +29,15 @@ struct HighsCallbackDataIn {
 };
 
 struct HighsCallback {
-  void (*highs_user_callback)(const int, const char*, void*,
+  void (*user_callback)(const int, const char*, void*,
 			      const HighsCallbackDataOut&,
 			      HighsCallbackDataIn&) = nullptr;
-  void* highs_user_callback_data = nullptr;
-  const int num_type = int(NewHighsCallbackType::kMipImprovingSolution) + 1;
+  void* user_callback_data = nullptr;
+  const int num_type = int(HighsCallbackType::kMipImprovingSolution) + 1;
   std::vector<bool> active;
-  HighsCallbackDataOut highs_callback_data_out;
-  HighsCallbackDataIn highs_callback_data_in;
-  bool callbackAction(const NewHighsCallbackType type, std::string message = "");
+  HighsCallbackDataOut data_out;
+  HighsCallbackDataIn data_in;
+  bool callbackAction(const HighsCallbackType type, std::string message = "");
   void clear();
 };
 #endif /* LP_DATA_HIGHSCALLBACK_H_ */

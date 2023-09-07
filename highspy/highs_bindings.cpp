@@ -568,6 +568,7 @@ PYBIND11_MODULE(highspy, m) {
       .value("kIterationLimit", HighsModelStatus::kIterationLimit)
       .value("kUnknown", HighsModelStatus::kUnknown)
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit);
+      .value("kInterrupt", HighsModelStatus::kInterrupt)
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)

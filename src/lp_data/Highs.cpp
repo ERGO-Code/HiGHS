@@ -1229,7 +1229,8 @@ HighsStatus Highs::run() {
             model_status_ == HighsModelStatus::kUnbounded ||
             model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
             model_status_ == HighsModelStatus::kTimeLimit ||
-            model_status_ == HighsModelStatus::kIterationLimit;
+            model_status_ == HighsModelStatus::kIterationLimit ||
+            model_status_ == HighsModelStatus::kInterrupt;
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
@@ -1459,12 +1460,17 @@ HighsStatus Highs::run() {
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
     // be infeasible or unbounded, the time/iteration limit has been
-    // reached, or the status is unknown (cycling)
+    // reached, a user interrupt has ocurred, or the status is unknown
+    // (cycling)
+    //
+    // Hence there's no incumbent lp solution or basis to drive dual
+    // postsolve
     assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kInterrupt ||
            model_status_ == HighsModelStatus::kUnknown);
     // The HEkk data correspond to the (strictly reduced) presolved LP
     // so must be cleared
@@ -1869,47 +1875,47 @@ HighsStatus Highs::setLogCallback(void (*user_log_callback)(HighsLogType,
 }
 
 HighsStatus Highs::setHighsCallback(
-    void (*highs_user_callback)(const int, const char*, void*,
+    void (*user_callback)(const int, const char*, void*,
                                 const HighsCallbackDataOut&,
                                 HighsCallbackDataIn&),
-    void* highs_user_callback_data) {
+    void* user_callback_data) {
   this->callback_.clear();
-  this->callback_.highs_user_callback = highs_user_callback;
-  this->callback_.highs_user_callback_data = highs_user_callback_data;
+  this->callback_.user_callback = user_callback;
+  this->callback_.user_callback_data = user_callback_data;
 
-  options_.log_options.highs_user_callback = this->callback_.highs_user_callback;
-  options_.log_options.highs_user_callback_data =
-      this->callback_.highs_user_callback_data;
-  options_.log_options.highs_user_callback_active = false;
+  options_.log_options.user_callback = this->callback_.user_callback;
+  options_.log_options.user_callback_data =
+      this->callback_.user_callback_data;
+  options_.log_options.user_callback_active = false;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::startCallback(const NewHighsCallbackType type) {
-  if (!this->callback_.highs_user_callback) {
+HighsStatus Highs::startCallback(const HighsCallbackType type) {
+  if (!this->callback_.user_callback) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Cannot start callback when highs_user_callback not defined\n");
+		 "Cannot start callback when user_callback not defined\n");
     return HighsStatus::kError;
   }
   assert(int(this->callback_.active.size()) == this->callback_.num_type);
   this->callback_.active[int(type)] = true;
   // Possibly modify the logging callback activity
-  if (type == NewHighsCallbackType::kLogging)
-    options_.log_options.highs_user_callback_active = true;
+  if (type == HighsCallbackType::kLogging)
+    options_.log_options.user_callback_active = true;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::stopCallback(const NewHighsCallbackType type) {
-  if (!this->callback_.highs_user_callback) {
+HighsStatus Highs::stopCallback(const HighsCallbackType type) {
+  if (!this->callback_.user_callback) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "Cannot stop callback when highs_user_callback not defined\n");
+		 "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
   std::vector<bool>& active = this->callback_.active;
   assert(int(this->callback_.active.size()) == this->callback_.num_type);
   this->callback_.active[int(type)] = false;
   // Possibly modify the logging callback activity
-  if (type == NewHighsCallbackType::kLogging)
-    options_.log_options.highs_user_callback_active = false;
+  if (type == HighsCallbackType::kLogging)
+    options_.log_options.user_callback_active = false;
   return HighsStatus::kOk;
 }
 
@@ -3692,6 +3698,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown:
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -3730,6 +3737,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!

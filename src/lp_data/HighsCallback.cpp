@@ -24,25 +24,25 @@ void HighsCallbackDataOut::clear() {
 void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
 
 void HighsCallback::clear() {
-  this->highs_user_callback = nullptr;
-  this->highs_user_callback_data = nullptr;
+  this->user_callback = nullptr;
+  this->user_callback_data = nullptr;
   this->active.assign(num_type, false);
-  this->highs_callback_data_out.clear();
-  this->highs_callback_data_in.clear();
+  this->data_out.clear();
+  this->data_in.clear();
 }
 
-bool HighsCallback::callbackAction(const NewHighsCallbackType type, std::string message) {
+bool HighsCallback::callbackAction(const HighsCallbackType type, std::string message) {
   if (!this->active[int(type)]) return false;
-  this->highs_user_callback(int(type), message.c_str(),
-			    this->highs_user_callback_data,
-			    this->highs_callback_data_out,
-			    this->highs_callback_data_in);
+  this->user_callback(int(type), message.c_str(),
+			    this->user_callback_data,
+			    this->data_out,
+			    this->data_in);
   switch (type) {
-  case NewHighsCallbackType::kLogging:
+  case HighsCallbackType::kLogging:
     assert(1 == 0);
     return false;
-  case NewHighsCallbackType::kInterrupt:
-    return this->highs_callback_data_in.user_interrupt;
+  case HighsCallbackType::kInterrupt:
+    return this->data_in.user_interrupt;
   default:
     assert(1 == 0);
     return false;

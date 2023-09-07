@@ -47,11 +47,11 @@ struct HighsLogOptions {
   HighsInt* log_dev_level;
   void (*user_log_callback)(HighsLogType, const char*, void*) = nullptr;
   void* user_log_callback_data = nullptr;
-  void (*highs_user_callback)(const int, const char*, void*,
+  void (*user_callback)(const int, const char*, void*,
                               const HighsCallbackDataOut&,
                               HighsCallbackDataIn&) = nullptr;
-  void* highs_user_callback_data = nullptr;
-  bool highs_user_callback_active = false;
+  void* user_callback_data = nullptr;
+  bool user_callback_active = false;
   void clear();
 };
 

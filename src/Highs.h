@@ -1030,12 +1030,12 @@ class Highs {
   /**
    * @brief Start callback of given type
    */
-  HighsStatus startCallback(const NewHighsCallbackType type);
+  HighsStatus startCallback(const HighsCallbackType type);
 
   /**
    * @brief Stop callback of given type
    */
-  HighsStatus stopCallback(const NewHighsCallbackType type);
+  HighsStatus stopCallback(const HighsCallbackType type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis

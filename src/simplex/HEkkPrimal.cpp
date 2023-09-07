@@ -97,7 +97,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
 
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
-  if (ekk_instance_.bailoutOnTimeIterations())
+  if (ekk_instance_.bailout())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   // Now to do some iterations!
@@ -430,7 +430,7 @@ void HEkkPrimal::solvePhase1() {
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailout()) return;
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
               "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
@@ -446,7 +446,7 @@ void HEkkPrimal::solvePhase1() {
     rebuild();
     if (solve_phase == kSolvePhaseError) return;
     if (solve_phase == kSolvePhaseUnknown) return;
-    if (ekk_instance_.bailoutOnTimeIterations()) return;
+    if (ekk_instance_.bailout()) return;
     assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
     //
     // solve_phase = kSolvePhase2 is set if no primal infeasibilities
@@ -455,7 +455,7 @@ void HEkkPrimal::solvePhase1() {
 
     for (;;) {
       iterate();
-      if (ekk_instance_.bailoutOnTimeIterations()) return;
+      if (ekk_instance_.bailout()) return;
       if (solve_phase == kSolvePhaseError) return;
       assert(solve_phase == kSolvePhase1);
       if (rebuild_reason) break;
@@ -521,7 +521,7 @@ void HEkkPrimal::solvePhase2() {
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailout()) return;
   highsLogDev(options.log_options, HighsLogType::kDetailed,
               "primal-phase2-start\n");
   phase2UpdatePrimal(true);
@@ -540,7 +540,7 @@ void HEkkPrimal::solvePhase2() {
     rebuild();
     if (solve_phase == kSolvePhaseError) return;
     if (solve_phase == kSolvePhaseUnknown) return;
-    if (ekk_instance_.bailoutOnTimeIterations()) return;
+    if (ekk_instance_.bailout()) return;
     assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
     //
     // solve_phase = kSolvePhase1 is set if primal infeasibilities
@@ -549,7 +549,7 @@ void HEkkPrimal::solvePhase2() {
 
     for (;;) {
       iterate();
-      if (ekk_instance_.bailoutOnTimeIterations()) return;
+      if (ekk_instance_.bailout()) return;
       if (solve_phase == kSolvePhaseError) return;
       assert(solve_phase == kSolvePhase2);
       if (rebuild_reason) break;

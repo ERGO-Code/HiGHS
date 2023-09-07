@@ -44,10 +44,10 @@ static void userHighsCallback(const int highs_callback_type,
     REQUIRE(local_callback_data == kLogUserCallbackNoData);
   }
   if (dev_run) {
-    if (highs_callback_type == kHighsCallbackLogging) {
+    if (highs_callback_type == int(HighsCallbackType::kLogging)) {
       printf("userHighsCallback(type %2d; data %2d): %s", highs_callback_type,
              local_callback_data, message);
-    } else if (highs_callback_type == kHighsCallbackInterrupt) {
+    } else if (highs_callback_type == int(HighsCallbackType::kInterrupt)) {
       printf(
           "userHighsCallback(type %2d; data %2d): %s with iteration count = "
           "%d\n",
@@ -69,8 +69,8 @@ TEST_CASE("my-callback-logging", "[highs-callback]") {
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  log_options.highs_user_callback = myLogCallback;
-  log_options.highs_user_callback_active = true;
+  log_options.user_callback = myLogCallback;
+  log_options.user_callback_active = true;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
@@ -113,15 +113,15 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   // Uses userHighsCallback to start logging lines with
   // "userHighsCallback(kLogUserCallbackData): " since
   // Highs::setHighsCallback has second argument
-  // p_highs_user_callback_data
+  // p_user_callback_data
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  int highs_user_callback_data = kLogUserCallbackData;
-  void* p_highs_user_callback_data =
-      reinterpret_cast<void*>(static_cast<intptr_t>(highs_user_callback_data));
+  int user_callback_data = kLogUserCallbackData;
+  void* p_user_callback_data =
+      reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setHighsCallback(userHighsCallback, p_highs_user_callback_data);
-  highs.startCallback(NewHighsCallbackType::kLogging);
+  highs.setHighsCallback(userHighsCallback, p_user_callback_data);
+  highs.startCallback(HighsCallbackType::kLogging);
   highs.readModel(filename);
   highs.run();
 }
@@ -132,7 +132,7 @@ TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setHighsCallback(userHighsCallback);
-  highs.startCallback(NewHighsCallbackType::kInterrupt);
+  highs.startCallback(HighsCallbackType::kInterrupt);
   highs.readModel(filename);
   highs.run();
 }
