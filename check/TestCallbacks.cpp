@@ -48,15 +48,18 @@ static void userCallback(const int callback_type, const char* message,
       printf("userCallback(type %2d; data %2d): %s", callback_type,
              local_callback_data, message);
     } else if (callback_type == kHighsCallbackInterrupt) {
-      printf("userCallback(type %2d; data %2d): %s with iteration count = "
-	     "%d\n",
-	     callback_type, local_callback_data, message,
-	     data_out->simplex_iteration_count);
-      data_in->user_interrupt =	data_out->simplex_iteration_count > 30;
+      printf(
+          "userCallback(type %2d; data %2d): %s with iteration count = "
+          "%d\n",
+          callback_type, local_callback_data, message,
+          data_out->simplex_iteration_count);
+      data_in->user_interrupt = data_out->simplex_iteration_count > 30;
     } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-      printf("userCallback(type %2d; data %2d): %s with objective %g and solution[0] = %g\n",
-	     callback_type, local_callback_data, message,
-	     data_out->objective, data_out->col_value[0]);
+      printf(
+          "userCallback(type %2d; data %2d): %s with objective %g and "
+          "solution[0] = %g\n",
+          callback_type, local_callback_data, message, data_out->objective,
+          data_out->col_value[0]);
     }
   }
 }
@@ -139,8 +142,7 @@ TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);

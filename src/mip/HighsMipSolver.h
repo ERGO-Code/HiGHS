@@ -23,7 +23,6 @@ class HighsImplications;
 
 class HighsMipSolver {
  public:
-  
   HighsCallback* callback_;
   const HighsOptions* options_mip_;
   const HighsLp* model_;
@@ -79,9 +78,9 @@ class HighsMipSolver {
     return model_->integrality_[col];
   }
 
-  HighsMipSolver(HighsCallback& callback,
-		 const HighsOptions& options, const HighsLp& lp,
-                 const HighsSolution& solution, bool submip = false);
+  HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
+                 const HighsLp& lp, const HighsSolution& solution,
+                 bool submip = false);
 
   ~HighsMipSolver();
 

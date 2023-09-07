@@ -134,7 +134,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.value_valid = false;
   solution.dual_valid = false;
   printf("HighsPrimalHeuristics::solveSubMip\n");
-  HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip, solution, true);
+  HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
+                              solution, true);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;

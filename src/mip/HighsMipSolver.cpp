@@ -30,7 +30,7 @@
 using std::fabs;
 
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
-			       const HighsOptions& options, const HighsLp& lp,
+                               const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
     : callback_(&callback),
       options_mip_(&options),
