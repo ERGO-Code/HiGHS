@@ -1867,8 +1867,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setCallback(
-    void (*user_callback)(const int, const char*, void*,
-                          const HighsCallbackDataOut&, HighsCallbackDataIn&),
+    void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
+                          HighsCallbackDataIn*, void*),
     void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;

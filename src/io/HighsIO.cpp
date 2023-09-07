@@ -142,12 +142,10 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     }
     if (log_options_.user_callback_active) {
       assert(log_options_.user_callback);
-      HighsCallbackDataIn data_in;
       HighsCallbackDataOut data_out;
       data_out.log_type = type;
-      log_options_.user_callback(kHighsCallbackLogging, msgbuffer,
-                                 log_options_.user_callback_data, data_out,
-                                 data_in);
+      log_options_.user_callback(kHighsCallbackLogging, msgbuffer, &data_out,
+                                 nullptr, log_options_.user_callback_data);
     }
   }
   va_end(argptr);
@@ -205,12 +203,10 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                                      log_options_.user_log_callback_data);
     } else if (log_options_.user_callback_active) {
       assert(log_options_.user_callback);
-      HighsCallbackDataIn data_in;
       HighsCallbackDataOut data_out;
       data_out.log_type = type;
-      log_options_.user_callback(kHighsCallbackLogging, msgbuffer,
-                                 log_options_.user_callback_data, data_out,
-                                 data_in);
+      log_options_.user_callback(kHighsCallbackLogging, msgbuffer, &data_out,
+                                 nullptr, log_options_.user_callback_data);
     }
   }
   va_end(argptr);

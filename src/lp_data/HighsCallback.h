@@ -30,9 +30,8 @@ struct HighsCallbackDataIn {
 };
 
 struct HighsCallback {
-  void (*user_callback)(const int, const char*, void*,
-                        const HighsCallbackDataOut&,
-                        HighsCallbackDataIn&) = nullptr;
+  void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
+                        HighsCallbackDataIn*, void*) = nullptr;
   void* user_callback_data = nullptr;
   std::vector<bool> active;
   HighsCallbackDataOut data_out;

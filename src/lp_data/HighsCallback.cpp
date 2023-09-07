@@ -39,8 +39,8 @@ bool HighsCallback::callbackAction(const int callback_type,
   assert(callback_type_ok);
   if (!callback_type_ok) return false;
   if (!this->active[callback_type]) return false;
-  this->user_callback(callback_type, message.c_str(), this->user_callback_data,
-                      this->data_out, this->data_in);
+  this->user_callback(callback_type, message.c_str(), &this->data_out,
+                      &this->data_in, this->user_callback_data);
   if (callback_type == kHighsCallbackLogging) {
     assert(1 == 0);
     return false;

@@ -1014,9 +1014,9 @@ class Highs {
   /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setCallback(void (*user_callback)(const int, const char*, void*,
-                                                const HighsCallbackDataOut&,
-                                                HighsCallbackDataIn&),
+  HighsStatus setCallback(void (*user_callback)(const int, const char*,
+                                                const HighsCallbackDataOut*,
+                                                HighsCallbackDataIn*, void*),
                           void* user_callback_data = nullptr);
 
   /**
