@@ -1270,16 +1270,10 @@ class Highs {
   HighsModel presolved_model_;
   HighsTimer timer_;
 
+  HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
-
-  HighsCallback callback_;
-
-  void (*highs_user_callback_)(const int, const char*, void*,
-                               const HighsCallbackDataOut&,
-                               HighsCallbackDataIn&) = nullptr;
-  void* highs_user_callback_data_ = nullptr;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 

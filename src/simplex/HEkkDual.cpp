@@ -1001,25 +1001,13 @@ void HEkkDual::solvePhase2() {
 }
 
 void HEkkDual::rebuild() {
-  if (ekk_instance_.highs_user_callback_) {
+  if (ekk_instance_.callback_->highs_user_callback) {
     ekk_instance_.callback_->highs_callback_data_out.clear();
     ekk_instance_.callback_->highs_callback_data_out.simplex_iteration_count =
       ekk_instance_.iteration_count_;
     const bool action = ekk_instance_.callback_->callbackAction(NewHighsCallbackType::kInterrupt);
     //    if (action) {};
-
     assert(!action);
-
-    HighsCallbackDataIn highs_callback_data_in;
-    highs_callback_data_in.clear();
-    ekk_instance_.highs_callback_data_out_.clear();
-    ekk_instance_.highs_callback_data_out_.simplex_iteration_count =
-        ekk_instance_.iteration_count_;
-    ekk_instance_.highs_user_callback_(
-        kHighsCallbackInterrupt, "Simplex interrupt callback",
-        ekk_instance_.highs_user_callback_data_,
-        ekk_instance_.highs_callback_data_out_, highs_callback_data_in);
-    assert(!highs_callback_data_in.user_interrupt);
   }
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;

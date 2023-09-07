@@ -1873,15 +1873,14 @@ HighsStatus Highs::setHighsCallback(
                                 const HighsCallbackDataOut&,
                                 HighsCallbackDataIn&),
     void* highs_user_callback_data) {
-  this->highs_user_callback_ = highs_user_callback;
-  this->highs_user_callback_data_ = highs_user_callback_data;
-  options_.log_options.highs_user_callback = this->highs_user_callback_;
-  options_.log_options.highs_user_callback_data =
-      this->highs_user_callback_data_;
-  options_.log_options.highs_user_callback_active = false;
   this->callback_.clear();
   this->callback_.highs_user_callback = highs_user_callback;
   this->callback_.highs_user_callback_data = highs_user_callback_data;
+
+  options_.log_options.highs_user_callback = this->callback_.highs_user_callback;
+  options_.log_options.highs_user_callback_data =
+      this->callback_.highs_user_callback_data;
+  options_.log_options.highs_user_callback_active = false;
   return HighsStatus::kOk;
 }
 
@@ -3137,9 +3136,6 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
-  // Copy any highs_user_callback_ and data pointer
-  ekk_instance_.highs_user_callback_ = this->highs_user_callback_;
-  ekk_instance_.highs_user_callback_data_ = this->highs_user_callback_data_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 

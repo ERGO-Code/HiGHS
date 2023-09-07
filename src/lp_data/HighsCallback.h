@@ -40,7 +40,4 @@ struct HighsCallback {
   bool callbackAction(const NewHighsCallbackType type, std::string message = "");
   void clear();
 };
-
-
-
 #endif /* LP_DATA_HIGHSCALLBACK_H_ */

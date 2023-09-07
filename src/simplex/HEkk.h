@@ -134,12 +134,6 @@ class HEkk {
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
-  void (*highs_user_callback_)(const int, const char*, void*,
-                               const HighsCallbackDataOut&,
-                               HighsCallbackDataIn&) = nullptr;
-  void* highs_user_callback_data_ = nullptr;
-  HighsCallbackDataOut highs_callback_data_out_;
-
   HighsCallback* callback_;
   HighsOptions* options_;
   HighsTimer* timer_;
