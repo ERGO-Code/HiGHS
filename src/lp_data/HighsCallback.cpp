@@ -34,20 +34,20 @@ void HighsCallback::clear() {
 
 bool HighsCallback::callbackAction(const int callback_type,
                                    std::string message) {
+  // Check that callback_type is within range
+  bool action = false;
   const bool callback_type_ok =
       callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
   assert(callback_type_ok);
-  if (!callback_type_ok) return false;
-  if (!this->active[callback_type]) return false;
+  if (!callback_type_ok) return action;
+  // Don't call callback if it is not active
+  if (!this->active[callback_type]) return action;
+  // Call callback!
   this->user_callback(callback_type, message.c_str(), &this->data_out,
                       &this->data_in, this->user_callback_data);
-  if (callback_type == kHighsCallbackLogging) {
-    assert(1 == 0);
-    return false;
-  } else if (callback_type == kHighsCallbackInterrupt) {
-    return this->data_in.user_interrupt;
-  } else {
-    assert(1 == 0);
-    return false;
-  }
+  // Assess any action
+  if (callback_type == kHighsCallbackInterrupt ||
+      callback_type == kHighsCallbackMipDualBound) 
+    action = this->data_in.user_interrupt;
+  return action;
 }

@@ -2926,7 +2926,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
     //
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
-    HighsMipSolver solver(options_, original_lp, solution_);
+    HighsMipSolver solver(callback_, options_, original_lp, solution_);
     solver.runPresolve();
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
@@ -3353,7 +3353,7 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-  HighsMipSolver solver(options_, lp, solution_);
+  HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled

@@ -22,15 +22,15 @@ using std::strstr;
 
 // Callback that saves message for comparison
 static void myLogCallback(const int callback_type, const char* message,
-                          const HighsCallbackDataOut* callback_data_out,
-                          HighsCallbackDataIn* callback_data_in,
+                          const HighsCallbackDataOut* data_out,
+                          HighsCallbackDataIn* data_in,
                           void* user_callback_data) {
   strcpy(printed_log, message);
 }
 
 static void userCallback(const int callback_type, const char* message,
-                         const HighsCallbackDataOut* callback_data_out,
-                         HighsCallbackDataIn* callback_data_in,
+                         const HighsCallbackDataOut* data_out,
+                         HighsCallbackDataIn* data_in,
                          void* user_callback_data) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
@@ -48,13 +48,15 @@ static void userCallback(const int callback_type, const char* message,
       printf("userCallback(type %2d; data %2d): %s", callback_type,
              local_callback_data, message);
     } else if (callback_type == kHighsCallbackInterrupt) {
-      printf(
-          "userCallback(type %2d; data %2d): %s with iteration count = "
-          "%d\n",
-          callback_type, local_callback_data, message,
-          callback_data_out->simplex_iteration_count);
-      callback_data_in->user_interrupt =
-          callback_data_out->simplex_iteration_count > 30;
+      printf("userCallback(type %2d; data %2d): %s with iteration count = "
+	     "%d\n",
+	     callback_type, local_callback_data, message,
+	     data_out->simplex_iteration_count);
+      data_in->user_interrupt =	data_out->simplex_iteration_count > 30;
+    } else if (callback_type == kHighsCallbackMipImprovingSolution) {
+      printf("userCallback(type %2d; data %2d): %s with objective %g and solution[0] = %g\n",
+	     callback_type, local_callback_data, message,
+	     data_out->objective, data_out->col_value[0]);
     }
   }
 }
@@ -132,6 +134,18 @@ TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setCallback(userCallback);
   highs.startCallback(kHighsCallbackInterrupt);
+  highs.readModel(filename);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setCallback(userCallback);
+  highs.startCallback(kHighsCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
 }

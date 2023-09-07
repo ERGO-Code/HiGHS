@@ -12,6 +12,7 @@
 #define MIP_HIGHS_MIP_SOLVER_H_
 
 #include "Highs.h"
+#include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 
 struct HighsMipSolverData;
@@ -22,6 +23,8 @@ class HighsImplications;
 
 class HighsMipSolver {
  public:
+  
+  HighsCallback* callback_;
   const HighsOptions* options_mip_;
   const HighsLp* model_;
   const HighsLp* orig_model_;
@@ -76,7 +79,8 @@ class HighsMipSolver {
     return model_->integrality_[col];
   }
 
-  HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+  HighsMipSolver(HighsCallback& callback,
+		 const HighsOptions& options, const HighsLp& lp,
                  const HighsSolution& solution, bool submip = false);
 
   ~HighsMipSolver();
