@@ -11,7 +11,7 @@ const HighsInt kLogBufferSize = kIoBufferSize;
 const HighsInt kLogUserCallbackNoData = -1;
 const HighsInt kLogUserCallbackData = 99;
 
-char printed_log[kLogBufferSize];
+char alt_printed_log[kLogBufferSize];
 
 using std::memset;
 using std::strcmp;
@@ -23,7 +23,7 @@ using std::strstr;
 // Callback that saves message for comparison
 static void myLogCallback(HighsLogType type, const char* message,
                           void* log_user_callback_data) {
-  strcpy(printed_log, message);
+  strcpy(alt_printed_log, message);
 }
 
 // Callback that provides user logging
@@ -84,38 +84,38 @@ TEST_CASE("log-callback", "[highs_io]") {
   log_options.log_user_callback = myLogCallback;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
-  if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-  REQUIRE(strcmp(printed_log, "Hi HiGHS!") == 0);
+  if (dev_run) printf("Log callback yields \"%s\"\n", alt_printed_log);
+  REQUIRE(strcmp(alt_printed_log, "Hi HiGHS!") == 0);
 
   // Check that nothing is printed if the type is VERBOSE when
   // log_dev_level is kHighsLogDevLevelInfo;
-  *printed_log = '\0';
+  *alt_printed_log = '\0';
   highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
-  REQUIRE(*printed_log == '\0');
+  REQUIRE(*alt_printed_log == '\0');
 
   {
-    char long_message[sizeof(printed_log)];
+    char long_message[sizeof(alt_printed_log)];
     memset(long_message, 'H', sizeof(long_message));
     long_message[sizeof(long_message) - 2] = '\0';
     long_message[sizeof(long_message) - 1] = '\n';
     highsLogDev(log_options, HighsLogType::kInfo, long_message);
-    if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-    REQUIRE(strncmp(printed_log, "HHHH", 4) == 0);
-    REQUIRE(strlen(printed_log) <= sizeof(printed_log));
+    if (dev_run) printf("Log callback yields \"%s\"\n", alt_printed_log);
+    REQUIRE(strncmp(alt_printed_log, "HHHH", 4) == 0);
+    REQUIRE(strlen(alt_printed_log) <= sizeof(alt_printed_log));
   }
 
   highsLogUser(log_options, HighsLogType::kInfo, "Hello %s!\n", "HiGHS");
-  REQUIRE(strlen(printed_log) > 9);
-  REQUIRE(strcmp(printed_log, "Hello HiGHS!\n") == 0);
+  REQUIRE(strlen(alt_printed_log) > 9);
+  REQUIRE(strcmp(alt_printed_log, "Hello HiGHS!\n") == 0);
 
   {
-    char long_message[sizeof(printed_log)];
+    char long_message[sizeof(alt_printed_log)];
     memset(long_message, 'H', sizeof(long_message));
     long_message[sizeof(long_message) - 2] = '\0';
     long_message[sizeof(long_message) - 1] = '\n';
     highsLogUser(log_options, HighsLogType::kWarning, long_message);
-    if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
-    REQUIRE(strstr(printed_log, "HHHH") != nullptr);
-    REQUIRE(strlen(printed_log) <= sizeof(printed_log));
+    if (dev_run) printf("Log callback yields \"%s\"\n", alt_printed_log);
+    REQUIRE(strstr(alt_printed_log, "HHHH") != nullptr);
+    REQUIRE(strlen(alt_printed_log) <= sizeof(alt_printed_log));
   }
 }
