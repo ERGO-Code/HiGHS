@@ -28,10 +28,10 @@ static void myLogCallback(const int callback_type, const char* message,
   strcpy(printed_log, message);
 }
 
-static void userCallback(const int callback_type,
-                              const char* message, void* user_callback_data,
-                              const HighsCallbackDataOut& callback_data_out,
-                              HighsCallbackDataIn& callback_data_in) {
+static void userCallback(const int callback_type, const char* message,
+                         void* user_callback_data,
+                         const HighsCallbackDataOut& callback_data_out,
+                         HighsCallbackDataIn& callback_data_in) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
   const int local_callback_data =

@@ -1015,10 +1015,10 @@ class Highs {
    * @brief Set the callback method to use for HiGHS
    */
   HighsStatus setCallback(void (*user_callback)(const int, const char*, void*,
-						const HighsCallbackDataOut&,
-						HighsCallbackDataIn&),
-			  void* user_callback_data = nullptr);
-  
+                                                const HighsCallbackDataOut&,
+                                                HighsCallbackDataIn&),
+                          void* user_callback_data = nullptr);
+
   /**
    * @brief Start callback of given type
    */

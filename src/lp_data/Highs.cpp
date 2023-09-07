@@ -1866,10 +1866,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setCallback(void (*user_callback)(const int, const char*, void*,
-						     const HighsCallbackDataOut&,
-						     HighsCallbackDataIn&),
-			       void* user_callback_data) {
+HighsStatus Highs::setCallback(
+    void (*user_callback)(const int, const char*, void*,
+                          const HighsCallbackDataOut&, HighsCallbackDataIn&),
+    void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
   this->callback_.user_callback_data = user_callback_data;
@@ -1882,8 +1882,7 @@ HighsStatus Highs::setCallback(void (*user_callback)(const int, const char*, voi
 
 HighsStatus Highs::startCallback(const int callback_type) {
   const bool callback_type_ok =
-    callback_type >= kHighsCallbackMin &&
-    callback_type <= kHighsCallbackMax;
+      callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
   assert(callback_type_ok);
   if (!callback_type_ok) return HighsStatus::kError;
   if (!this->callback_.user_callback) {
@@ -1901,8 +1900,7 @@ HighsStatus Highs::startCallback(const int callback_type) {
 
 HighsStatus Highs::stopCallback(const int callback_type) {
   const bool callback_type_ok =
-    callback_type >= kHighsCallbackMin &&
-    callback_type <= kHighsCallbackMax;
+      callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
   assert(callback_type_ok);
   if (!callback_type_ok) return HighsStatus::kError;
   if (!this->callback_.user_callback) {
