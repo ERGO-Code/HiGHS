@@ -8,8 +8,8 @@
 const bool dev_run = true;
 
 const HighsInt kLogBufferSize = kIoBufferSize;
-const HighsInt kLogUserCallbackNoData = -1;
-const HighsInt kLogUserCallbackData = 99;
+const HighsInt kUserCallbackNoData = -1;
+const HighsInt kUserCallbackData = 99;
 
 char printed_log[kLogBufferSize];
 
@@ -21,14 +21,14 @@ using std::strncmp;
 using std::strstr;
 
 // Callback that saves message for comparison
-static void myLogCallback(const int highs_callback_type, const char* message,
+static void myLogCallback(const int callback_type, const char* message,
                           void* user_callback_data,
                           const HighsCallbackDataOut& callback_data_out,
                           HighsCallbackDataIn& callback_data_in) {
   strcpy(printed_log, message);
 }
 
-static void userHighsCallback(const int highs_callback_type,
+static void userCallback(const int callback_type,
                               const char* message, void* user_callback_data,
                               const HighsCallbackDataOut& callback_data_out,
                               HighsCallbackDataIn& callback_data_in) {
@@ -37,21 +37,21 @@ static void userHighsCallback(const int highs_callback_type,
   const int local_callback_data =
       user_callback_data
           ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
-          : kLogUserCallbackNoData;
+          : kUserCallbackNoData;
   if (user_callback_data) {
-    REQUIRE(local_callback_data == kLogUserCallbackData);
+    REQUIRE(local_callback_data == kUserCallbackData);
   } else {
-    REQUIRE(local_callback_data == kLogUserCallbackNoData);
+    REQUIRE(local_callback_data == kUserCallbackNoData);
   }
   if (dev_run) {
-    if (highs_callback_type == int(HighsCallbackType::kLogging)) {
-      printf("userHighsCallback(type %2d; data %2d): %s", highs_callback_type,
+    if (callback_type == kHighsCallbackLogging) {
+      printf("userCallback(type %2d; data %2d): %s", callback_type,
              local_callback_data, message);
-    } else if (highs_callback_type == int(HighsCallbackType::kInterrupt)) {
+    } else if (callback_type == kHighsCallbackInterrupt) {
       printf(
-          "userHighsCallback(type %2d; data %2d): %s with iteration count = "
+          "userCallback(type %2d; data %2d): %s with iteration count = "
           "%d\n",
-          highs_callback_type, local_callback_data, message,
+          callback_type, local_callback_data, message,
           callback_data_out.simplex_iteration_count);
       callback_data_in.user_interrupt =
           callback_data_out.simplex_iteration_count > 30;
@@ -110,18 +110,17 @@ TEST_CASE("my-callback-logging", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-logging", "[highs-callback]") {
-  // Uses userHighsCallback to start logging lines with
-  // "userHighsCallback(kLogUserCallbackData): " since
-  // Highs::setHighsCallback has second argument
-  // p_user_callback_data
+  // Uses userCallback to start logging lines with
+  // "userCallback(kUserCallbackData): " since
+  // Highs::setCallback has second argument p_user_callback_data
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  int user_callback_data = kLogUserCallbackData;
+  int user_callback_data = kUserCallbackData;
   void* p_user_callback_data =
       reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setHighsCallback(userHighsCallback, p_user_callback_data);
-  highs.startCallback(HighsCallbackType::kLogging);
+  highs.setCallback(userCallback, p_user_callback_data);
+  highs.startCallback(kHighsCallbackLogging);
   highs.readModel(filename);
   highs.run();
 }
@@ -131,8 +130,8 @@ TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setHighsCallback(userHighsCallback);
-  highs.startCallback(HighsCallbackType::kInterrupt);
+  highs.setCallback(userCallback);
+  highs.startCallback(kHighsCallbackInterrupt);
   highs.readModel(filename);
   highs.run();
 }

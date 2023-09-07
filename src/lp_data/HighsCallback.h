@@ -33,11 +33,10 @@ struct HighsCallback {
                         const HighsCallbackDataOut&,
                         HighsCallbackDataIn&) = nullptr;
   void* user_callback_data = nullptr;
-  const int num_type = int(HighsCallbackType::kMipImprovingSolution) + 1;
   std::vector<bool> active;
   HighsCallbackDataOut data_out;
   HighsCallbackDataIn data_in;
-  bool callbackAction(const HighsCallbackType type, std::string message = "");
+  bool callbackAction(const int callback_type, std::string message = "");
   void clear();
 };
 #endif /* LP_DATA_HIGHSCALLBACK_H_ */

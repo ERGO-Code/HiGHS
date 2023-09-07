@@ -1012,30 +1012,22 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Set the callback method and user data to use for logging
-   */
-  HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
-                                                       const char*, void*),
-                             void* log_user_callback_data = nullptr);
-
-  /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setHighsCallback(
-      void (*highs_user_callback)(const int, const char*, void*,
-                                  const HighsCallbackDataOut&,
-                                  HighsCallbackDataIn&),
-      void* highs_user_callback_data = nullptr);
-
+  HighsStatus setCallback(void (*user_callback)(const int, const char*, void*,
+						const HighsCallbackDataOut&,
+						HighsCallbackDataIn&),
+			  void* user_callback_data = nullptr);
+  
   /**
    * @brief Start callback of given type
    */
-  HighsStatus startCallback(const HighsCallbackType type);
+  HighsStatus startCallback(const int callback_type);
 
   /**
    * @brief Stop callback of given type
    */
-  HighsStatus stopCallback(const HighsCallbackType type);
+  HighsStatus stopCallback(const int callback_type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1165,6 +1157,10 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   // Start of deprecated methods
+
+  HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
+                                                       const char*, void*),
+                             void* user_log_callback_data = nullptr);
 
   HighsInt getNumCols() const {
     deprecationMessage("getNumCols", "getNumCol");

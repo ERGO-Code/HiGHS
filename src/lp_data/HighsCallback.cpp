@@ -26,24 +26,30 @@ void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
 void HighsCallback::clear() {
   this->user_callback = nullptr;
   this->user_callback_data = nullptr;
-  this->active.assign(num_type, false);
+  this->active.assign(kNumHighsCallbackType, false);
   this->data_out.clear();
   this->data_in.clear();
 }
 
-bool HighsCallback::callbackAction(const HighsCallbackType type,
+bool HighsCallback::callbackAction(const int callback_type,
                                    std::string message) {
-  if (!this->active[int(type)]) return false;
-  this->user_callback(int(type), message.c_str(), this->user_callback_data,
-                      this->data_out, this->data_in);
-  switch (type) {
-    case HighsCallbackType::kLogging:
-      assert(1 == 0);
-      return false;
-    case HighsCallbackType::kInterrupt:
-      return this->data_in.user_interrupt;
-    default:
-      assert(1 == 0);
-      return false;
+  const bool callback_type_ok =
+    callback_type >= kHighsCallbackMin &&
+    callback_type <= kHighsCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return false;
+  if (!this->active[callback_type]) return false;
+  this->user_callback(callback_type, message.c_str(),
+		      this->user_callback_data,
+                      this->data_out,
+		      this->data_in);
+  if (callback_type == kHighsCallbackLogging) {
+    assert(1 == 0);
+    return false;
+  } else if (callback_type == kHighsCallbackInterrupt) {
+    return this->data_in.user_interrupt;
+  } else {
+    assert(1 == 0);
+    return false;
   }
 }

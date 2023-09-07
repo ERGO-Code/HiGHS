@@ -145,7 +145,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       HighsCallbackDataIn data_in;
       HighsCallbackDataOut data_out;
       data_out.log_type = type;
-      log_options_.user_callback(int(HighsCallbackType::kLogging), msgbuffer,
+      log_options_.user_callback(kHighsCallbackLogging, msgbuffer,
                                  log_options_.user_callback_data, data_out,
                                  data_in);
     }
@@ -208,7 +208,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       HighsCallbackDataIn data_in;
       HighsCallbackDataOut data_out;
       data_out.log_type = type;
-      log_options_.user_callback(int(HighsCallbackType::kLogging), msgbuffer,
+      log_options_.user_callback(kHighsCallbackLogging, msgbuffer,
                                  log_options_.user_callback_data, data_out,
                                  data_in);
     }
