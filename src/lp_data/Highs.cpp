@@ -1878,7 +1878,21 @@ HighsStatus Highs::setHighsCallback(
   options_.log_options.highs_user_callback = this->highs_user_callback_;
   options_.log_options.highs_user_callback_data =
       this->highs_user_callback_data_;
+  this->callback_.clear();
+  this->callback_.highs_user_callback = highs_user_callback;
+  this->callback_.highs_user_callback_data = highs_user_callback_data;
   return HighsStatus::kOk;
+}
+
+HighsStatus Highs::toggleCallback(const NewHighsCallbackType type) {
+  if (!this->callback_.highs_user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Cannot toggle callback when highs_user_callback not defined\n");
+    return HighsStatus::kError;
+  }
+  std::vector<bool>& active = this->callback_.active;
+  assert(int(active.size()) == this->callback_.num_type);
+  active[int(type)] = !active[int(type)];
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis,
@@ -3873,18 +3887,3 @@ void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
-void HighsCallbackDataOut::clear() {
-  this->log_type = HighsLogType::kInfo;
-  this->simplex_iteration_count = -1;
-  this->objective_solution.clear();
-}
-
-void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
-
-void HighsCallback::clear() {
-  this->highs_user_callback = nullptr;
-  this->highs_user_callback_data = nullptr;
-  this->active.assign(num_type, false);
-  this->highs_callback_data_out.clear();
-  this->highs_callback_data_in.clear();
-}

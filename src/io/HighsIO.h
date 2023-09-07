@@ -17,7 +17,7 @@
 #include <array>
 #include <iostream>
 
-#include "lp_data/HStruct.h"
+#include "lp_data/HighsCallback.h"
 //#include "util/HighsInt.h"
 
 class HighsOptions;

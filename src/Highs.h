@@ -16,6 +16,7 @@
 
 #include <sstream>
 
+#include "lp_data/HighsCallback.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -1025,6 +1026,11 @@ class Highs {
                                   const HighsCallbackDataOut&,
                                   HighsCallbackDataIn&),
       void* highs_user_callback_data = nullptr);
+
+  /**
+   * @brief Toggle activation of callback type
+   */
+  HighsStatus toggleCallback(const NewHighsCallbackType type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis

@@ -14,6 +14,7 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
+#include "lp_data/HighsCallback.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HSet.h"
