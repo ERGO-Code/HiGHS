@@ -1860,11 +1860,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
+HighsStatus Highs::setLogCallback(void (*user_log_callback)(HighsLogType,
                                                             const char*, void*),
-                                  void* log_user_callback_data) {
-  options_.log_options.log_user_callback = log_user_callback;
-  options_.log_options.log_user_callback_data = log_user_callback_data;
+                                  void* user_log_callback_data) {
+  options_.log_options.user_log_callback = user_log_callback;
+  options_.log_options.user_log_callback_data = user_log_callback_data;
   return HighsStatus::kOk;
 }
 

@@ -22,20 +22,20 @@ using std::strstr;
 
 // Callback that saves message for comparison
 static void myLogCallback(HighsLogType type, const char* message,
-                          void* log_user_callback_data) {
+                          void* user_log_callback_data) {
   strcpy(alt_printed_log, message);
 }
 
 // Callback that provides user logging
 static void userLogCallback(HighsLogType type, const char* message,
-                            void* log_user_callback_data) {
-  // Extract local_callback_data from log_user_callback_data unless it
+                            void* user_log_callback_data) {
+  // Extract local_callback_data from user_log_callback_data unless it
   // is nullptr
   const int local_callback_data =
-      log_user_callback_data
-          ? static_cast<int>(reinterpret_cast<intptr_t>(log_user_callback_data))
+      user_log_callback_data
+          ? static_cast<int>(reinterpret_cast<intptr_t>(user_log_callback_data))
           : kLogUserCallbackNoData;
-  if (log_user_callback_data) {
+  if (user_log_callback_data) {
     REQUIRE(local_callback_data == kLogUserCallbackData);
   } else {
     REQUIRE(local_callback_data == kLogUserCallbackNoData);
@@ -47,7 +47,7 @@ TEST_CASE("run-callback", "[highs_io]") {
   // Uses userLogCallback to start logging lines with
   // "userLogCallback(kLogUserCallbackNoData): " since
   // Highs::setLogCallback has no second argument so
-  // log_user_callback_data will be nullptr
+  // user_log_callback_data will be nullptr
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -60,14 +60,14 @@ TEST_CASE("run-callback-data", "[highs_io]") {
   // Uses userLogCallback to start logging lines with
   // "userLogCallback(kLogUserCallbackData): " since
   // Highs::setLogCallback has second argument
-  // p_log_user_callback_data
+  // p_user_log_callback_data
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  int log_user_callback_data = kLogUserCallbackData;
-  void* p_log_user_callback_data =
-      reinterpret_cast<void*>(static_cast<intptr_t>(log_user_callback_data));
+  int user_log_callback_data = kLogUserCallbackData;
+  void* p_user_log_callback_data =
+      reinterpret_cast<void*>(static_cast<intptr_t>(user_log_callback_data));
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  highs.setLogCallback(userLogCallback, p_log_user_callback_data);
+  highs.setLogCallback(userLogCallback, p_user_log_callback_data);
   highs.readModel(filename);
   highs.run();
 }
@@ -81,7 +81,7 @@ TEST_CASE("log-callback", "[highs_io]") {
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  log_options.log_user_callback = myLogCallback;
+  log_options.user_log_callback = myLogCallback;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   if (dev_run) printf("Log callback yields \"%s\"\n", alt_printed_log);

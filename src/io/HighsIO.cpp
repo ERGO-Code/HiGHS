@@ -105,7 +105,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_start(argptr, format);
   const bool flush_streams = true;
   const bool use_log_callback =
-      log_options_.log_user_callback || log_options_.highs_user_callback;
+      log_options_.user_log_callback || log_options_.highs_user_callback;
 
   if (!use_log_callback) {
     // Write to log file stream unless it is NULL
@@ -135,9 +135,9 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    if (log_options_.log_user_callback) {
-      log_options_.log_user_callback(type, msgbuffer,
-                                     log_options_.log_user_callback_data);
+    if (log_options_.user_log_callback) {
+      log_options_.user_log_callback(type, msgbuffer,
+                                     log_options_.user_log_callback_data);
     } if (log_options_.highs_user_callback_active) {
       assert(log_options_.highs_user_callback);
       HighsCallbackDataIn highs_callback_data_in;
@@ -176,7 +176,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_start(argptr, format);
   const bool flush_streams = true;
   const bool use_log_callback =
-      log_options_.log_user_callback || log_options_.highs_user_callback;
+      log_options_.user_log_callback || log_options_.highs_user_callback;
   if (!use_log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_stream) {
@@ -198,9 +198,9 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    if (log_options_.log_user_callback) {
-      log_options_.log_user_callback(type, msgbuffer,
-				     log_options_.log_user_callback_data);
+    if (log_options_.user_log_callback) {
+      log_options_.user_log_callback(type, msgbuffer,
+				     log_options_.user_log_callback_data);
     } else if (log_options_.highs_user_callback_active) {
       assert(log_options_.highs_user_callback);
       HighsCallbackDataIn highs_callback_data_in;
@@ -286,8 +286,8 @@ void HighsLogOptions::clear() {
   this->output_flag = nullptr;
   this->log_to_console = nullptr;
   this->log_dev_level = nullptr;
-  this->log_user_callback = nullptr;
-  this->log_user_callback_data = nullptr;
+  this->user_log_callback = nullptr;
+  this->user_log_callback_data = nullptr;
   this->highs_user_callback = nullptr;
   this->highs_user_callback_data = nullptr;
   this->highs_user_callback_active = false;
