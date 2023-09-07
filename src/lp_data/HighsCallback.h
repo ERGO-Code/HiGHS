@@ -19,7 +19,8 @@
 struct HighsCallbackDataOut {
   HighsLogType log_type;
   HighsInt simplex_iteration_count;
-  HighsObjectiveSolution objective_solution;
+  double objective;
+  double* col_value;
   void clear();
 };
 

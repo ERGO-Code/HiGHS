@@ -18,7 +18,8 @@
 void HighsCallbackDataOut::clear() {
   this->log_type = HighsLogType::kInfo;
   this->simplex_iteration_count = -1;
-  this->objective_solution.clear();
+  this->objective = -kHighsInf;
+  this->col_value = nullptr;
 }
 
 void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
