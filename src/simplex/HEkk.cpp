@@ -84,8 +84,9 @@ void HEkk::clearNlaInvertStatus() {
 }
 
 void HEkk::clearEkkPointers() {
-  this->options_ = NULL;
-  this->timer_ = NULL;
+  this->callback_ = nullptr;
+  this->options_ = nullptr;
+  this->timer_ = nullptr;
 }
 
 void HEkk::clearEkkLp() {
@@ -444,14 +445,15 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // Update other EKK pointers. Currently just pointers to the
   // HighsOptions and HighsTimer members of the Highs class that are
   // communicated by reference via the HighsLpSolverObject instance.
-  this->setPointers(&solver_object.options_, &solver_object.timer_);
+  this->setPointers(&solver_object.callback_, &solver_object.options_, &solver_object.timer_);
   // Initialise Ekk if this has not been done. Ekk isn't initialised
   // if moveLp hasn't been called for this instance of HiGHS, or if
   // the Ekk instance is junked due to removing rows from the LP
   this->initialiseEkk();
 }
 
-void HEkk::setPointers(HighsOptions* options, HighsTimer* timer) {
+void HEkk::setPointers(HighsCallback* callback, HighsOptions* options, HighsTimer* timer) {
+  this->callback_ = callback;
   this->options_ = options;
   this->timer_ = timer;
   this->analysis_.timer_ = this->timer_;

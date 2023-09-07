@@ -1002,6 +1002,14 @@ void HEkkDual::solvePhase2() {
 
 void HEkkDual::rebuild() {
   if (ekk_instance_.highs_user_callback_) {
+    ekk_instance_.callback_->highs_callback_data_out.clear();
+    ekk_instance_.callback_->highs_callback_data_out.simplex_iteration_count =
+      ekk_instance_.iteration_count_;
+    const bool action = ekk_instance_.callback_->callbackAction(NewHighsCallbackType::kInterrupt);
+    //    if (action) {};
+
+    assert(!action);
+
     HighsCallbackDataIn highs_callback_data_in;
     highs_callback_data_in.clear();
     ekk_instance_.highs_callback_data_out_.clear();

@@ -138,7 +138,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     if (log_options_.log_user_callback) {
       log_options_.log_user_callback(type, msgbuffer,
                                      log_options_.log_user_callback_data);
-    } else {
+    } if (log_options_.highs_user_callback_active) {
       assert(log_options_.highs_user_callback);
       HighsCallbackDataIn highs_callback_data_in;
       HighsCallbackDataOut highs_callback_data_out;
@@ -201,7 +201,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     if (log_options_.log_user_callback) {
       log_options_.log_user_callback(type, msgbuffer,
 				     log_options_.log_user_callback_data);
-    } else {
+    } else if (log_options_.highs_user_callback_active) {
       assert(log_options_.highs_user_callback);
       HighsCallbackDataIn highs_callback_data_in;
       HighsCallbackDataOut highs_callback_data_out;
@@ -279,4 +279,16 @@ const std::string highsInsertMdEscapes(const std::string from_string) {
     to_string += from_string[p];
   }
   return to_string;
+}
+
+void HighsLogOptions::clear() {
+  this->log_stream = nullptr;
+  this->output_flag = nullptr;
+  this->log_to_console = nullptr;
+  this->log_dev_level = nullptr;
+  this->log_user_callback = nullptr;
+  this->log_user_callback_data = nullptr;
+  this->highs_user_callback = nullptr;
+  this->highs_user_callback_data = nullptr;
+  this->highs_user_callback_active = false;
 }

@@ -64,11 +64,13 @@ TEST_CASE("my-callback-logging", "[highs-callback]") {
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
   HighsLogOptions log_options;
+  log_options.clear();
   log_options.log_stream = stdout;
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
   log_options.highs_user_callback = myLogCallback;
+  log_options.highs_user_callback_active = true;
 
   highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   if (dev_run) printf("Log callback yields \"%s\"\n", printed_log);
@@ -119,6 +121,7 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setHighsCallback(userHighsCallback, p_highs_user_callback_data);
+  highs.startCallback(NewHighsCallbackType::kLogging);
   highs.readModel(filename);
   highs.run();
 }
@@ -129,6 +132,7 @@ TEST_CASE("highs-callback-interrupt", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setHighsCallback(userHighsCallback);
+  highs.startCallback(NewHighsCallbackType::kInterrupt);
   highs.readModel(filename);
   highs.run();
 }

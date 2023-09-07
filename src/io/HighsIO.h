@@ -52,6 +52,8 @@ struct HighsLogOptions {
                               const HighsCallbackDataOut&,
                               HighsCallbackDataIn&) = nullptr;
   void* highs_user_callback_data = nullptr;
+  bool highs_user_callback_active = false;
+  void clear();
 };
 
 /**

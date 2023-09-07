@@ -37,7 +37,7 @@ struct HighsCallback {
   std::vector<bool> active;
   HighsCallbackDataOut highs_callback_data_out;
   HighsCallbackDataIn highs_callback_data_in;
-  bool callbackAction(const NewHighsCallbackType type);
+  bool callbackAction(const NewHighsCallbackType type, std::string message = "");
   void clear();
 };
 

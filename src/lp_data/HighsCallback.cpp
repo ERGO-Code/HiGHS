@@ -12,6 +12,9 @@
  * @brief
  */
 #include "HighsCallback.h"
+
+#include <cassert>
+
 void HighsCallbackDataOut::clear() {
   this->log_type = HighsLogType::kInfo;
   this->simplex_iteration_count = -1;
@@ -28,3 +31,20 @@ void HighsCallback::clear() {
   this->highs_callback_data_in.clear();
 }
 
+bool HighsCallback::callbackAction(const NewHighsCallbackType type, std::string message) {
+  if (!this->active[int(type)]) return false;
+  this->highs_user_callback(int(type), message.c_str(),
+			    this->highs_user_callback_data,
+			    this->highs_callback_data_out,
+			    this->highs_callback_data_in);
+  switch (type) {
+  case NewHighsCallbackType::kLogging:
+    assert(1 == 0);
+    return false;
+  case NewHighsCallbackType::kInterrupt:
+    return this->highs_callback_data_in.user_interrupt;
+  default:
+    assert(1 == 0);
+    return false;
+  }
+}

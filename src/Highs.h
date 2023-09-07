@@ -1028,9 +1028,14 @@ class Highs {
       void* highs_user_callback_data = nullptr);
 
   /**
-   * @brief Toggle activation of callback type
+   * @brief Start callback of given type
    */
-  HighsStatus toggleCallback(const NewHighsCallbackType type);
+  HighsStatus startCallback(const NewHighsCallbackType type);
+
+  /**
+   * @brief Stop callback of given type
+   */
+  HighsStatus stopCallback(const NewHighsCallbackType type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
