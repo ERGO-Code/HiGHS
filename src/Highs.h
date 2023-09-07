@@ -1263,6 +1263,8 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
 
+  HighsCallback callback_;
+
   void (*highs_user_callback_)(const int, const char*, void*,
                                const HighsCallbackDataOut&,
                                HighsCallbackDataIn&) = nullptr;

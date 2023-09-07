@@ -55,6 +55,19 @@ struct HighsCallbackDataIn {
   void clear();
 };
 
+struct HighsCallback {
+  void (*highs_user_callback)(const int, const char*, void*,
+			      const HighsCallbackDataOut&,
+			      HighsCallbackDataIn&) = nullptr;
+  void* highs_user_callback_data = nullptr;
+  const int num_type = int(NewHighsCallbackType::kMipImprovingSolution) + 1;
+  std::vector<bool> active;
+  HighsCallbackDataOut highs_callback_data_out;
+  HighsCallbackDataIn highs_callback_data_in;
+  bool callbackAction(const NewHighsCallbackType type);
+  void clear();
+};
+
 struct RefactorInfo {
   bool use = false;
   std::vector<HighsInt> pivot_row;

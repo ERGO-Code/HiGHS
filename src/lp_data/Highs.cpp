@@ -3880,3 +3880,11 @@ void HighsCallbackDataOut::clear() {
 }
 
 void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
+
+void HighsCallback::clear() {
+  this->highs_user_callback = nullptr;
+  this->highs_user_callback_data = nullptr;
+  this->active.assign(num_type, false);
+  this->highs_callback_data_out.clear();
+  this->highs_callback_data_in.clear();
+}
