@@ -3470,10 +3470,12 @@ bool HEkk::bailout() {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
   } else if (callback_->user_callback &&
-             callback_->active[kHighsCallbackInterrupt]) {
+             callback_->active[kHighsCallbackSimplexInterrupt]) {
     callback_->data_out.clear();
     callback_->data_out.simplex_iteration_count = iteration_count_;
-    if (callback_->callbackAction(kHighsCallbackInterrupt)) {
+    if (callback_->callbackAction(kHighsCallbackSimplexInterrupt, "Simplex interrupt")) {
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+		  "User interrupt\n");
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kInterrupt;
     }

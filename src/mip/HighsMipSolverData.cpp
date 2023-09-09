@@ -445,7 +445,7 @@ void HighsMipSolverData::runSetup() {
     if (feasible && solobj < upper_bound) {
       upper_bound = solobj;
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
-      if (!mipsolver.submip) saveReportMipSolution(new_upper_limit);
+      saveReportMipSolution(new_upper_limit);
       if (new_upper_limit < upper_limit) {
         upper_limit = new_upper_limit;
         optimality_limit =
@@ -1659,25 +1659,70 @@ restart:
 }
 
 bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
-  // ToDo Add user termination callback here -
-  // if (!mipsolver.submip) Callbackfor termination
-
   const HighsOptions& options = *mipsolver.options_mip_;
+
+  // Possible user interrupt
+  // For !mipsolver.submip && ????
+  if (mipsolver.callback_->user_callback) {
+    if (mipsolver.callback_->active[kHighsCallbackMipInterrupt]) {
+      mipsolver.callback_->data_out.clear();
+
+      const int64_t node_count = mipsolver.node_count_;
+      const double running_time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+      const double primal_bound = mipsolver.primal_bound_;
+      const double dual_bound = mipsolver.dual_bound_;
+      const double mip_rel_gap = mipsolver.gap_;
+      printf("%7s dimension(%d, %d) "
+	     "Node count = %" PRId64 "; Time = %6.2f; "
+	     "Bounds (%11.4g, %11.4g); Gap = %11.4g\n",
+	     mipsolver.submip ? "Sub-MIP" : "MIP    ",
+	     mipsolver.model_->num_col_, mipsolver.model_->num_row_,
+	     node_count, running_time,
+	     dual_bound, primal_bound, mip_rel_gap);
+  
+      mipsolver.callback_->data_out.node_count = node_count;
+      mipsolver.callback_->data_out.running_time = running_time;
+      mipsolver.callback_->data_out.primal_bound = primal_bound;
+      mipsolver.callback_->data_out.dual_bound = dual_bound;
+      mipsolver.callback_->data_out.mip_rel_gap = mip_rel_gap;
+      if (mipsolver.callback_->callbackAction(kHighsCallbackMipInterrupt,
+					      "MIP interrupt")) {
+	if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+	  highsLogDev(options.log_options, HighsLogType::kInfo,
+		      "User interrupt\n");
+	  mipsolver.modelstatus_ = HighsModelStatus::kInterrupt;
+	}
+	return true;
+      }
+    }
+  }
+  // Possible termination due to objective being at least as good as
+  // the target value
+  if (!mipsolver.submip &&
+      mipsolver.solution_objective_ < options.objective_target) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Reached objective target\n");
+      mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
+    }
+    return true;
+  }
 
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes + nodeOffset >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached node limit\n");
+                  "Reached node limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
   }
+
   if (options.mip_max_leaves != kHighsIInf &&
       num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached leaf node limit\n");
+                  "Reached leaf node limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
@@ -1687,7 +1732,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
       numImprovingSols >= options.mip_max_improving_sols) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached improving solution limit\n");
+                  "Reached improving solution limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kSolutionLimit;
     }
     return true;
@@ -1697,7 +1742,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "reached time limit\n");
+                  "Reached time limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kTimeLimit;
     }
     return true;
@@ -1742,14 +1787,19 @@ void HighsMipSolverData::setupDomainPropagation() {
 
 void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   const bool non_improving = new_upper_limit >= upper_limit;
-  /*
-  printf(
-      "MIP %4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
-      "%11.4g)\n",
-      non_improving ? "non-" : "", int(numImprovingSols), new_upper_limit,
-      upper_limit);
-  */
+  if (mipsolver.submip) return;
   if (non_improving) return;
+
+  printf(
+      "%7s dimension(%d, %d) "
+      "%4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
+      "%11.4g); Objective = %11.4g\n",
+      mipsolver.submip ? "Sub-MIP" : "MIP    ",
+      mipsolver.model_->num_col_, mipsolver.model_->num_row_,
+      non_improving ? "non-" : "",
+      int(numImprovingSols), new_upper_limit,
+      upper_limit, mipsolver.solution_objective_);
+
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kHighsCallbackMipImprovingSolution]) {
       mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
@@ -1758,6 +1808,7 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
                                           "saveReportMipSolution");
     }
   }
+
   if (mipsolver.options_mip_->mip_improving_solution_save) {
     HighsObjectiveSolution record;
     record.objective = mipsolver.solution_objective_;

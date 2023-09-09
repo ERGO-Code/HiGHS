@@ -19,6 +19,11 @@
 struct HighsCallbackDataOut {
   HighsLogType log_type;
   HighsInt simplex_iteration_count;
+  int64_t node_count;
+  double running_time;
+  double primal_bound;
+  double dual_bound;
+  double mip_rel_gap;
   double objective;
   double* col_value;
   void clear();

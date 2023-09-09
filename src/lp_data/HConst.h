@@ -212,7 +212,9 @@ enum class HighsModelStatus {
 enum HighsCallbackType : int {
   kHighsCallbackMin = 0,
   kHighsCallbackLogging = kHighsCallbackMin,
-  kHighsCallbackInterrupt,
+  kHighsCallbackSimplexInterrupt,
+  kHighsCallbackIpmInterrupt,
+  kHighsCallbackMipInterrupt,
   kHighsCallbackMipImprovingSolution,
   kHighsCallbackMipDualBound,
   kHighsCallbackMax = kHighsCallbackMipDualBound,

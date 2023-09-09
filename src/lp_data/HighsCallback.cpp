@@ -18,6 +18,11 @@
 void HighsCallbackDataOut::clear() {
   this->log_type = HighsLogType::kInfo;
   this->simplex_iteration_count = -1;
+  this->node_count = -1;
+  this->running_time = -1;
+  this->primal_bound = kHighsInf;
+  this->dual_bound = -kHighsInf;
+  this->mip_rel_gap = -1;
   this->objective = -kHighsInf;
   this->col_value = nullptr;
 }

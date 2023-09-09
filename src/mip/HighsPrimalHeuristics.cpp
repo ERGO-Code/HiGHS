@@ -133,7 +133,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;
-  printf("HighsPrimalHeuristics::solveSubMip\n");
+  // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true);
   submipsolver.rootbasis = &basis;
