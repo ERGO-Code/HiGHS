@@ -681,6 +681,10 @@ try_again:
   double row_violation_ = 0;
   double integrality_violation_ = 0;
 
+  // obj is the actual objective of the MIP - including the offset,
+  // and independent of objective sense
+  //
+  // ToDO Give it a more meaningful name!
   HighsCDouble obj = mipsolver.orig_model_->offset_;
   if (kAllowDeveloperAssert)
     assert((HighsInt)solution.col_value.size() ==
@@ -1724,13 +1728,32 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   // Possible termination due to objective being at least as good as
   // the target value
   if (!mipsolver.submip &&
-      mipsolver.solution_objective_ < options.objective_target) {
-    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-      highsLogDev(options.log_options, HighsLogType::kInfo,
-                  "Reached objective target\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
+      mipsolver.solution_objective_ < kHighsInf &&
+      options.objective_target > -kHighsInf) {
+    // Note:
+    //
+    // Whether the sense is ObjSense::kMinimize or
+    // ObjSense::kMaximize, the undefined value of
+    // mipsolver.solution_objective_ is kHighsInf, and the default
+    // target value is -kHighsInf, so had to rule out these cases in
+    // the conditional statement above.
+    //
+    // mipsolver.solution_objective_ is the actual objective of the
+    // MIP - including the offset, and independent of objective sense
+    //
+    // The target is reached if the objective is below (above) the
+    // target value when minimizing (maximizing).
+    const int int_sense = int(this->mipsolver.orig_model_->sense_);
+    const bool reached_objective_target = 
+      int_sense * mipsolver.solution_objective_ < int_sense * options.objective_target;
+    if (reached_objective_target) {
+      if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
+	highsLogDev(options.log_options, HighsLogType::kInfo,
+		    "Reached objective target\n");
+	mipsolver.modelstatus_ = HighsModelStatus::kObjectiveTarget;
+      }
+      return true;
     }
-    return true;
   }
 
   if (options.mip_max_nodes != kHighsIInf &&
