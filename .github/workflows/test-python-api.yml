@@ -13,15 +13,32 @@ jobs:
         python: [3.9]
     steps:
       - uses: actions/checkout@v3
-      - name: Install correct python version
-        uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python }}
-      - name: Test Python Interface
-        shell: bash
+          submodules: "recursive"
+          fetch-depth: 0
+      - name: Install Conda environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: highsdev
+          create-args: >-
+            python==${{ matrix.python }}
+            meson
+            pkgconfig
+            ninja
+            zlib
+          cache-environment: true
+          init-shell: >-
+            bash
+            zsh
+      - name: Build and test
+        shell: bash -l {0}
         run: |
-          # No need to separately install highs,
-          # shared library lookups are good enough
-          pip install -vvv .
+          meson setup bbdir -Duse_zlib=enabled -Dwith_tests=False -Dhighsint64=False --prefix $CONDA_PREFIX
+          meson install -C bbdir
+      - name: Test Python Interface
+        shell: bash -l {0}
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib
+          export PYTHONPATH=$PYTHONPATH:$CONDA_PREFIX/usr/local/lib/python${{ matrix.python }}/site-packages
           pip install pytest numpy
           pytest -v ./highspy/tests/
