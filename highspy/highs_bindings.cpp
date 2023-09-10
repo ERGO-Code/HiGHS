@@ -243,7 +243,7 @@ HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   double* cost_ptr = static_cast<double*>(cost_info.ptr);
 
-  return h->changeColsCost(num_set_entries, indices_ptr, cost_ptr);
+  return h->changeColsCost(num_set_entries, indices_ptr_, cost_ptr);
 }
 
 HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
@@ -258,7 +258,7 @@ HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
   double* lower_ptr = static_cast<double*>(lower_info.ptr);
   double* upper_ptr = static_cast<double*>(upper_info.ptr);
 
-  return h->changeColsBounds(num_set_entries, indices_ptr, lower_ptr,
+  return h->changeColsBounds(num_set_entries, indices_ptr_, lower_ptr,
                              upper_ptr);
 }
 
@@ -272,18 +272,32 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
   HighsVarType* integrality_ptr =
       static_cast<HighsVarType*>(integrality_info.ptr);
 
-  return h->changeColsIntegrality(num_set_entries, indices_ptr,
+  return h->changeColsIntegrality(num_set_entries, indices_ptr_,
                                   integrality_ptr);
 }
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                              std::vector<HighsInt>& indices) {
-  return h->deleteCols(num_set_entries, indices.data());
+                             py::array_t<HighsInt> indices) {
+  py::buffer_info indices_info = indices.request();
+
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+
+  return h->deleteCols(num_set_entries, indices_ptr_);
 }
 
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<HighsInt>& indices) {
-    return h->deleteRows(num_set_entries, indices.data());
+HighsStatus highs_deleteVars(Highs* h, HighsInt num_set_entries,
+                             py::array_t<HighsInt> indices) {
+  return highs_deleteCols(h, num_set_entries, indices);
+}
+
+HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
+                             py::array_t<HighsInt> indices) {
+  py::buffer_info indices_info = indices.request();
+
+  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
+
+  return h->deleteRows(num_set_entries, indices_ptr_);
 }
 
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
