@@ -1099,15 +1099,15 @@ static std::array<char, 16> convertToPrintString(double val,
 }
 
 void HighsMipSolverData::printDisplayLine(char first) {
+  if (!mipsolver.options_mip_->log_options.output_flag) return;
+
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   if (first == ' ' && time - last_disptime < 5.) return;
-
   last_disptime = time;
 
-  double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+    highsLogUser(mipsolver.options_mip_->log_options,
+		 HighsLogType::kInfo,
         // clang-format off
         "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
           "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
@@ -1130,6 +1130,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
   double explored = 100 * double(pruned_treeweight);
 
+  double offset = mipsolver.model_->offset_;
   double lb = lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
   double ub = kHighsInf;
@@ -1164,8 +1165,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+    highsLogUser(mipsolver.options_mip_->log_options,
+		 HighsLogType::kInfo,
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on

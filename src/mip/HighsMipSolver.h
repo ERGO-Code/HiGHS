@@ -33,6 +33,8 @@ class HighsMipSolver {
   double bound_violation_;
   double integrality_violation_;
   double row_violation_;
+  // The following are only to return data to HiGHS, and are set in
+  // HighsMipSolver::cleanupSolve
   double dual_bound_;
   double primal_bound_;
   double gap_;
