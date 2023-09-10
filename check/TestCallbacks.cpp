@@ -92,13 +92,15 @@ static void userDataCallback(const int callback_type, const char* message,
                              const HighsCallbackDataOut* data_out,
                              HighsCallbackDataIn* data_in,
                              void* user_callback_data) {
-  assert(callback_type == kHighsCallbackMipInterrupt);
+  assert(callback_type == kHighsCallbackMipInterrupt ||
+         callback_type == kHighsCallbackMipLogging ||
+         callback_type == kHighsCallbackMipImprovingSolution);
   if (dev_run)
-    printf("\nuserDataCallback: %s with Node count = %" PRId64
+    printf("userDataCallback: Node count = %" PRId64
            "; Time = %6.2f; "
-           "Bounds (%11.4g, %11.4g); Gap = %11.4g\n\n",
-           message, data_out->node_count, data_out->running_time,
-           data_out->dual_bound, data_out->primal_bound, data_out->mip_rel_gap);
+           "Bounds (%11.4g, %11.4g); Gap = %11.4g: %s\n",
+           data_out->node_count, data_out->running_time, data_out->dual_bound,
+           data_out->primal_bound, data_out->mip_rel_gap, message);
 }
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
@@ -209,7 +211,8 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setCallback(userDataCallback);
-  highs.startCallback(kHighsCallbackMipInterrupt);
+  highs.startCallback(kHighsCallbackMipImprovingSolution);
+  highs.startCallback(kHighsCallbackMipLogging);
   highs.readModel(filename);
   highs.run();
 }

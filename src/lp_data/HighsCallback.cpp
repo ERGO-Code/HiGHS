@@ -37,24 +37,31 @@ void HighsCallback::clear() {
   this->data_in.clear();
 }
 
-bool HighsCallback::callbackAction(const int callback_type,
-                                   std::string message) {
+bool HighsCallback::callbackActive(const int callback_type) {
+  // Check that callback function has been defined
+  if (!this->user_callback) return false;
   // Check that callback_type is within range
-  bool action = false;
   const bool callback_type_ok =
       callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
   assert(callback_type_ok);
-  if (!callback_type_ok) return action;
+  if (!callback_type_ok) return false;
   // Don't call callback if it is not active
-  if (!this->active[callback_type]) return action;
-  // Call callback!
+  assert(this->active.size() > 0);
+  if (!this->active[callback_type]) return false;
+  return true;
+}
+
+bool HighsCallback::callbackAction(const int callback_type,
+                                   std::string message) {
+  if (!callbackActive(callback_type)) return false;
   this->user_callback(callback_type, message.c_str(), &this->data_out,
                       &this->data_in, this->user_callback_data);
   // Assess any action
-  action = this->data_in.user_interrupt;
+  bool action = this->data_in.user_interrupt;
 
+  // Check for no action if case not handled internally
   if (callback_type == kHighsCallbackMipImprovingSolution ||
-      callback_type == kHighsCallbackMipDualBound)
+      callback_type == kHighsCallbackMipLogging)
     assert(!action);
   return action;
 }

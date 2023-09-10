@@ -214,10 +214,10 @@ enum HighsCallbackType : int {
   kHighsCallbackLogging = kHighsCallbackMin,
   kHighsCallbackSimplexInterrupt,
   kHighsCallbackIpmInterrupt,
-  kHighsCallbackMipInterrupt,
   kHighsCallbackMipImprovingSolution,
-  kHighsCallbackMipDualBound,
-  kHighsCallbackMax = kHighsCallbackMipDualBound,
+  kHighsCallbackMipLogging,
+  kHighsCallbackMipInterrupt,
+  kHighsCallbackMax = kHighsCallbackMipInterrupt,
   kNumHighsCallbackType
 };
 

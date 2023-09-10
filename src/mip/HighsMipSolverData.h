@@ -186,6 +186,8 @@ struct HighsMipSolverData {
   bool checkLimits(int64_t nodeOffset = 0) const;
   void limitsToBounds(double& dual_bound, double& primal_bound,
                       double& mip_rel_gap) const;
+  bool interruptFromCallbackWithData(const int callback_type,
+                                     const std::string message = "") const;
 };
 
 #endif
