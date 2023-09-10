@@ -1108,16 +1108,15 @@ void HighsMipSolverData::printDisplayLine(char first) {
   // printed, the sense of the optimizaiton is applied so that the
   // values printed correspond to the original objective.
 
-  
-  //  if (!mipsolver.options_mip_->log_options.output_flag) return;
+  // No point in computing all the logging values if logging is off
+  if (!mipsolver.options_mip_->log_options.output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  const bool no_logging_line = first == ' ' && time - last_disptime < 5.;
-  //  if (first == ' ' && time - last_disptime < 5.) return;  assert(!no_logging_line);
+  if (first == ' ' && time - last_disptime < 5.) return;
   last_disptime = time;
 
   if (num_disp_lines % 20 == 0) {
-    if (!no_logging_line) highsLogUser(mipsolver.options_mip_->log_options,
+    highsLogUser(mipsolver.options_mip_->log_options,
 		 HighsLogType::kInfo,
         // clang-format off
         "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
@@ -1176,7 +1175,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    if (!no_logging_line) highsLogUser(mipsolver.options_mip_->log_options,
+    highsLogUser(mipsolver.options_mip_->log_options,
 		 HighsLogType::kInfo,
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
@@ -1197,7 +1196,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    if (!no_logging_line) highsLogUser(
+    highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
