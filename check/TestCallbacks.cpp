@@ -33,64 +33,72 @@ static void myLogCallback(const int callback_type, const char* message,
 }
 
 static void userInterruptCallback(const int callback_type, const char* message,
-				  const HighsCallbackDataOut* data_out,
-				  HighsCallbackDataIn* data_in,
-				  void* user_callback_data) {
+                                  const HighsCallbackDataOut* data_out,
+                                  HighsCallbackDataIn* data_in,
+                                  void* user_callback_data) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
   if (callback_type == kHighsCallbackMipImprovingSolution) {
     // Use local_callback_data to maintain the objective value from
     // the previous callback
     assert(user_callback_data);
-    // Extract the double value pointed to from void* user_callback_data 
+    // Extract the double value pointed to from void* user_callback_data
     const double local_callback_data = *(double*)user_callback_data;
-    if (dev_run) printf("userCallback(type %2d; data %11.4g): %s with objective %g and "
-			"solution[0] = %g\n",
-			callback_type, local_callback_data, message, data_out->objective,
-			data_out->col_value[0]);
+    if (dev_run)
+      printf(
+          "userCallback(type %2d; data %11.4g): %s with objective %g and "
+          "solution[0] = %g\n",
+          callback_type, local_callback_data, message, data_out->objective,
+          data_out->col_value[0]);
     REQUIRE(local_callback_data >= data_out->objective);
-    // Update the double value pointed to from void* user_callback_data 
+    // Update the double value pointed to from void* user_callback_data
     *(double*)user_callback_data = data_out->objective;
   } else {
     const int local_callback_data =
-      user_callback_data
-      ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
-      : kUserCallbackNoData;
+        user_callback_data
+            ? static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data))
+            : kUserCallbackNoData;
     if (user_callback_data) {
       REQUIRE(local_callback_data == kUserCallbackData);
     } else {
       REQUIRE(local_callback_data == kUserCallbackNoData);
     }
     if (callback_type == kHighsCallbackLogging) {
-      if (dev_run) printf("userInterruptCallback(type %2d; data %2d): %s", callback_type,
-			  local_callback_data, message);
+      if (dev_run)
+        printf("userInterruptCallback(type %2d; data %2d): %s", callback_type,
+               local_callback_data, message);
     } else if (callback_type == kHighsCallbackSimplexInterrupt) {
-      if (dev_run) printf(
-			  "userInterruptCallback(type %2d; data %2d): %s with iteration count = "
-			  "%d\n",
-			  callback_type, local_callback_data, message,
-			  data_out->simplex_iteration_count);
-      data_in->user_interrupt = data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
+      if (dev_run)
+        printf(
+            "userInterruptCallback(type %2d; data %2d): %s with iteration "
+            "count = "
+            "%d\n",
+            callback_type, local_callback_data, message,
+            data_out->simplex_iteration_count);
+      data_in->user_interrupt =
+          data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
     } else if (callback_type == kHighsCallbackMipInterrupt) {
-      if (dev_run) printf(
-			  "userInterruptCallback(type %2d; data %2d): %s with objective = %g\n",
-			  callback_type, local_callback_data, message,
-			  data_out->objective);
+      if (dev_run)
+        printf(
+            "userInterruptCallback(type %2d; data %2d): %s with objective = "
+            "%g\n",
+            callback_type, local_callback_data, message, data_out->objective);
       data_in->user_interrupt = data_out->objective < egout_objective_target;
     }
   }
 }
 
 static void userDataCallback(const int callback_type, const char* message,
-			     const HighsCallbackDataOut* data_out,
-			     HighsCallbackDataIn* data_in,
-			     void* user_callback_data) {
+                             const HighsCallbackDataOut* data_out,
+                             HighsCallbackDataIn* data_in,
+                             void* user_callback_data) {
   assert(callback_type == kHighsCallbackMipInterrupt);
-  if (dev_run) printf("\nuserDataCallback: %s with Node count = %" PRId64 "; Time = %6.2f; "
-		      "Bounds (%11.4g, %11.4g); Gap = %11.4g\n\n",
-		      message, 
-		      data_out->node_count, data_out->running_time,
-		      data_out->dual_bound, data_out->primal_bound, data_out->mip_rel_gap);
+  if (dev_run)
+    printf("\nuserDataCallback: %s with Node count = %" PRId64
+           "; Time = %6.2f; "
+           "Bounds (%11.4g, %11.4g); Gap = %11.4g\n\n",
+           message, data_out->node_count, data_out->running_time,
+           data_out->dual_bound, data_out->primal_bound, data_out->mip_rel_gap);
 }
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
@@ -205,4 +213,3 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.readModel(filename);
   highs.run();
 }
-

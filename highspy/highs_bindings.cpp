@@ -767,7 +767,9 @@ PYBIND11_MODULE(highspy, m) {
       .def_readwrite("mip_rel_gap", &HighsOptions::mip_rel_gap)
       .def_readwrite("mip_abs_gap", &HighsOptions::mip_abs_gap)
       .def_readwrite("mip_heuristic_effort",
-                     &HighsOptions::mip_heuristic_effort);
+                     &HighsOptions::mip_heuristic_effort)
+      .def_readwrite("mip_min_logging_interval",
+                     &HighsOptions::mip_min_logging_interval);
   py::class_<Highs>(m, "Highs")
       .def(py::init<>())
       .def("version", &Highs::version)

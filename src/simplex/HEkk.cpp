@@ -3473,9 +3473,10 @@ bool HEkk::bailout() {
              callback_->active[kHighsCallbackSimplexInterrupt]) {
     callback_->data_out.clear();
     callback_->data_out.simplex_iteration_count = iteration_count_;
-    if (callback_->callbackAction(kHighsCallbackSimplexInterrupt, "Simplex interrupt")) {
+    if (callback_->callbackAction(kHighsCallbackSimplexInterrupt,
+                                  "Simplex interrupt")) {
       highsLogDev(options_->log_options, HighsLogType::kInfo,
-		  "User interrupt\n");
+                  "User interrupt\n");
       solve_bailout_ = true;
       model_status_ = HighsModelStatus::kInterrupt;
     }
