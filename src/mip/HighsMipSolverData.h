@@ -184,6 +184,7 @@ struct HighsMipSolverData {
   }
 
   bool checkLimits(int64_t nodeOffset = 0) const;
+  void limitsToBounds(double& dual_bound, double& primal_bound, double& mip_rel_gap) const;
 };
 
 #endif

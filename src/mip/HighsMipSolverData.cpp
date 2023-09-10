@@ -1099,14 +1099,25 @@ static std::array<char, 16> convertToPrintString(double val,
 }
 
 void HighsMipSolverData::printDisplayLine(char first) {
-  if (!mipsolver.options_mip_->log_options.output_flag) return;
+  // MIP logging method
+  //
+  // Note that if the original problem is a maximization, the cost
+  // coefficients are ngated so that the MIP solver only solves a
+  // minimization. Hence, in preparing to print the display line, the
+  // dual bound (lb) is always less than the primal bound (ub). When
+  // printed, the sense of the optimizaiton is applied so that the
+  // values printed correspond to the original objective.
+
+  
+  //  if (!mipsolver.options_mip_->log_options.output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (first == ' ' && time - last_disptime < 5.) return;
+  const bool no_logging_line = first == ' ' && time - last_disptime < 5.;
+  //  if (first == ' ' && time - last_disptime < 5.) return;  assert(!no_logging_line);
   last_disptime = time;
 
   if (num_disp_lines % 20 == 0) {
-    highsLogUser(mipsolver.options_mip_->log_options,
+    if (!no_logging_line) highsLogUser(mipsolver.options_mip_->log_options,
 		 HighsLogType::kInfo,
         // clang-format off
         "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
@@ -1165,7 +1176,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    highsLogUser(mipsolver.options_mip_->log_options,
+    if (!no_logging_line) highsLogUser(mipsolver.options_mip_->log_options,
 		 HighsLogType::kInfo,
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
@@ -1186,7 +1197,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 16> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    highsLogUser(
+    if (!no_logging_line) highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
@@ -1196,6 +1207,16 @@ void HighsMipSolverData::printDisplayLine(char first) {
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   }
+  // Check that limitsToBounds yields the same values for the
+  // dual_bound, primal_bound (modulo optimization sense) and
+  // mip_rel_gap
+  double dual_bound;
+  double primal_bound;
+  double mip_rel_gap;
+  limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
+  assert(dual_bound == (int)mipsolver.orig_model_->sense_ * lb);
+  assert(primal_bound == (int)mipsolver.orig_model_->sense_ * ub);
+  assert(mip_rel_gap == gap);
 }
 
 bool HighsMipSolverData::rootSeparationRound(
@@ -1824,3 +1845,68 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
         mipsolver.options_mip_->mip_improving_solution_report_sparse);
   }
 }
+
+void HighsMipSolverData::limitsToBounds(double& dual_bound, double& primal_bound, double& mip_rel_gap) const {
+  const HighsLp* model = this->mipsolver.model_;
+  const HighsLp* orig_model = this->mipsolver.orig_model_;
+
+  const double offset = model->offset_;
+  dual_bound = lower_bound + offset;
+  if (std::abs(dual_bound) <= epsilon) dual_bound = 0;
+  primal_bound = kHighsInf;
+  mip_rel_gap = kHighsInf;
+ 
+  if (upper_bound != kHighsInf) {
+    primal_bound = upper_bound + offset;
+
+    if (std::fabs(primal_bound) <= epsilon) primal_bound = 0;
+    dual_bound = std::min(dual_bound, primal_bound);
+    if (primal_bound == 0.0)
+      mip_rel_gap = dual_bound == 0.0 ? 0.0 : kHighsInf;
+    else
+      mip_rel_gap = 100. * (primal_bound - dual_bound) / fabs(primal_bound);
+
+  }
+  primal_bound = std::min(mipsolver.options_mip_->objective_bound, primal_bound);
+
+  // Adjust objective sense in case of maximization problem
+  if (orig_model->sense_ == ObjSense::kMaximize) {
+    dual_bound = -dual_bound;
+    primal_bound = -primal_bound;
+  }
+
+  /*
+  // Compute the dual bound from the lower bound
+  dual_bound = this->lower_bound;
+  if (this->objectiveFunction.isIntegral()) {
+    double rounded_lower_bound =
+        std::ceil(this->lower_bound *
+                      this->objectiveFunction.integralScale() -
+                  this->feastol) /
+        this->objectiveFunction.integralScale();
+    dual_bound = std::max(dual_bound, rounded_lower_bound);
+  }
+  dual_bound += model->offset_;
+
+  // Compute the primal bound from the upper bound
+  primal_bound = this->upper_bound + model->offset_;
+
+  // Ensure that the dual bounds does not exceed the primal bound
+  dual_bound = std::min(dual_bound, primal_bound);
+
+  // Adjust objective sense in case of maximization problem
+  if (orig_model->sense_ == ObjSense::kMaximize) {
+    dual_bound = -dual_bound;
+    primal_bound = -primal_bound;
+  }
+  // Compute the (relative) MIP gap
+  mip_rel_gap = fabs(primal_bound - dual_bound);
+  if (primal_bound == 0.0)
+    mip_rel_gap = dual_bound == 0.0 ? 0.0 : kHighsInf;
+  else if (primal_bound != kHighsInf)
+    mip_rel_gap = fabs(primal_bound - dual_bound) / fabs(primal_bound);
+  else
+    mip_rel_gap = kHighsInf;
+  */
+}
+
