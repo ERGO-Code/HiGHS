@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <csignal>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -48,6 +49,11 @@ const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
 Highs::Highs() {}
+
+void highsSignalHandler(int signum) {
+  //  std::cout << "Interrupt signal (" << signum << ") received.\n";
+  exit(signum);
+}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -785,6 +791,9 @@ HighsStatus Highs::presolve() {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
+  // register signal SIGINT and signal handler
+  signal(SIGINT, highsSignalHandler);
+  //  sleep(1); raise( SIGINT);
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
@@ -1220,7 +1229,8 @@ HighsStatus Highs::run() {
             model_status_ == HighsModelStatus::kUnbounded ||
             model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
             model_status_ == HighsModelStatus::kTimeLimit ||
-            model_status_ == HighsModelStatus::kIterationLimit;
+            model_status_ == HighsModelStatus::kIterationLimit ||
+            model_status_ == HighsModelStatus::kInterrupt;
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
@@ -1450,12 +1460,17 @@ HighsStatus Highs::run() {
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
     // be infeasible or unbounded, the time/iteration limit has been
-    // reached, or the status is unknown (cycling)
+    // reached, a user interrupt has ocurred, or the status is unknown
+    // (cycling)
+    //
+    // Hence there's no incumbent lp solution or basis to drive dual
+    // postsolve
     assert(model_status_ == HighsModelStatus::kInfeasible ||
            model_status_ == HighsModelStatus::kUnbounded ||
            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
            model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kInterrupt ||
            model_status_ == HighsModelStatus::kUnknown);
     // The HEkk data correspond to the (strictly reduced) presolved LP
     // so must be cleared
@@ -1851,11 +1866,54 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setLogCallback(void (*log_user_callback)(HighsLogType,
-                                                            const char*, void*),
-                                  void* log_user_callback_data) {
-  options_.log_options.log_user_callback = log_user_callback;
-  options_.log_options.log_user_callback_data = log_user_callback_data;
+HighsStatus Highs::setCallback(
+    void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
+                          HighsCallbackDataIn*, void*),
+    void* user_callback_data) {
+  this->callback_.clear();
+  this->callback_.user_callback = user_callback;
+  this->callback_.user_callback_data = user_callback_data;
+
+  options_.log_options.user_callback = this->callback_.user_callback;
+  options_.log_options.user_callback_data = this->callback_.user_callback_data;
+  options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::startCallback(const int callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot start callback when user_callback not defined\n");
+    return HighsStatus::kError;
+  }
+  assert(int(this->callback_.active.size()) == kNumHighsCallbackType);
+  this->callback_.active[callback_type] = true;
+  // Possibly modify the logging callback activity
+  if (callback_type == kHighsCallbackLogging)
+    options_.log_options.user_callback_active = true;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::stopCallback(const int callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot stop callback when user_callback not defined\n");
+    return HighsStatus::kWarning;
+  }
+  std::vector<bool>& active = this->callback_.active;
+  assert(int(this->callback_.active.size()) == kNumHighsCallbackType);
+  this->callback_.active[callback_type] = false;
+  // Possibly modify the logging callback activity
+  if (callback_type == kHighsCallbackLogging)
+    options_.log_options.user_callback_active = false;
   return HighsStatus::kOk;
 }
 
@@ -1877,7 +1935,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, options_, timer_);
+                                        info_, ekk_instance_, callback_,
+                                        options_, timer_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -2867,7 +2926,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
     //
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
-    HighsMipSolver solver(options_, original_lp, solution_);
+    HighsMipSolver solver(callback_, options_, original_lp, solution_);
     solver.runPresolve();
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
@@ -3085,7 +3144,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus call_status;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    options_, timer_);
+                                    callback_, options_, timer_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -3294,7 +3353,7 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
-  HighsMipSolver solver(options_, lp, solution_);
+  HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   // Set the return_status, model status and, for completeness, scaled
@@ -3637,6 +3696,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown:
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -3675,6 +3735,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kSolutionLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown:
       // Have info and primal solution (unless infeasible). No primal solution
       // in some other case, too!

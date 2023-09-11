@@ -14,6 +14,15 @@
 #include "HConfig.h"
 #include "Highs.h"
 
+HighsStatus Highs::setLogCallback(void (*user_log_callback)(HighsLogType,
+                                                            const char*, void*),
+                                  void* user_log_callback_data) {
+  deprecationMessage("setLogCallback", "setCallback");
+  options_.log_options.user_log_callback = user_log_callback;
+  options_.log_options.user_log_callback_data = user_log_callback_data;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
   deprecationMessage("setHighsOptionValue", "setOptionValue");

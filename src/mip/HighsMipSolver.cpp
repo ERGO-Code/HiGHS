@@ -29,9 +29,11 @@
 
 using std::fabs;
 
-HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+HighsMipSolver::HighsMipSolver(HighsCallback& callback,
+                               const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
-    : options_mip_(&options),
+    : callback_(&callback),
+      options_mip_(&options),
       model_(&lp),
       orig_model_(&lp),
       solution_objective_(kHighsInf),
