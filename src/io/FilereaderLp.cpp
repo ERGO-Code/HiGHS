@@ -47,7 +47,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     lp.row_names_.resize(m.constraints.size());
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HighsInt num_continuous = 0;
-    for (HighsUInt i = 0; i < m.variables.size(); i++) {
+    for (size_t i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
       lp.col_lower_.push_back(m.variables[i]->lowerbound);
       lp.col_upper_.push_back(m.variables[i]->upperbound);
@@ -72,7 +72,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     //
     lp.offset_ = m.objective->offset;
     lp.col_cost_.resize(lp.num_col_, 0.0);
-    for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
+    for (size_t i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
       lp.col_cost_[varindex[lt->var->name]] = lt->coef;
     }
@@ -96,7 +96,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // nonzero entries
     unsigned int qnnz = 0;
     for (std::shared_ptr<Variable> var : m.variables)
-      for (unsigned int i = 0; i < mat[var].size(); i++)
+      for (size_t i = 0; i < mat[var].size(); i++)
         if (mat2[var][i]) qnnz++;
     if (qnnz) {
       hessian.dim_ = m.variables.size();
@@ -107,7 +107,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       assert((int)hessian.start_.size() == 0);
       for (std::shared_ptr<Variable> var : m.variables) {
         hessian.start_.push_back(qnnz);
-        for (unsigned int i = 0; i < mat[var].size(); i++) {
+        for (size_t i = 0; i < mat[var].size(); i++) {
           double value = mat2[var][i];
           if (value) {
             hessian.index_.push_back(varindex[mat[var][i]->name]);
@@ -126,10 +126,10 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>
         consofvarmap_index;
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
-    for (HighsUInt i = 0; i < m.constraints.size(); i++) {
+    for (size_t i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
       lp.row_names_[i] = con->expr->name;
-      for (HighsUInt j = 0; j < con->expr->linterms.size(); j++) {
+      for (size_t j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
           consofvarmap_index[lt->var] = std::vector<unsigned int>();
@@ -182,7 +182,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     for (HighsInt i = 0; i < lp.num_col_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
       lp.a_matrix_.start_.push_back(nz);
-      for (HighsUInt j = 0; j < consofvarmap_index[var].size(); j++) {
+      for (size_t j = 0; j < consofvarmap_index[var].size(); j++) {
         double value = consofvarmap_value[var][j];
         if (value) {
           lp.a_matrix_.index_.push_back(consofvarmap_index[var][j]);

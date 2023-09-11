@@ -104,7 +104,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
   // Only set up lp.integrality_ if non-continuous
   bool is_mip = false;
-  for (HighsInt iCol = 0; iCol < (int)col_integrality.size(); iCol++) {
+  for (size_t iCol = 0; iCol < col_integrality.size(); iCol++) {
     if (col_integrality[iCol] != HighsVarType::kContinuous) {
       is_mip = true;
       break;
@@ -363,7 +363,7 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
                                         HighsInt& end,
                                         std::string& word) const {
   start = strline.find_first_not_of(" ");
-  if ((start == (HighsInt)strline.size() - 1) || is_empty(strline[start + 1])) {
+  if ((static_cast<size_t>(start) == strline.size() - 1) || is_empty(strline[start + 1])) {
     end = start + 1;
     word = strline[start];
     return HMpsFF::Parsekey::kNone;

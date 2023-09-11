@@ -432,25 +432,25 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
+    for (size_t i = 0; i < solution.col_value.size(); i++) {
       col_value[i] = solution.col_value[i];
     }
   }
 
   if (col_dual != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.col_dual.size(); i++) {
+    for (size_t i = 0; i < solution.col_dual.size(); i++) {
       col_dual[i] = solution.col_dual[i];
     }
   }
 
   if (row_value != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.row_value.size(); i++) {
+    for (size_t i = 0; i < solution.row_value.size(); i++) {
       row_value[i] = solution.row_value[i];
     }
   }
 
   if (row_dual != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.row_dual.size(); i++) {
+    for (size_t i = 0; i < solution.row_dual.size(); i++) {
       row_dual[i] = solution.row_dual[i];
     }
   }
@@ -460,11 +460,11 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
-  for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
+  for (size_t i = 0; i < basis.col_status.size(); i++) {
     col_status[i] = (HighsInt)basis.col_status[i];
   }
 
-  for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); i++) {
+  for (size_t i = 0; i < basis.row_status.size(); i++) {
     row_status[i] = (HighsInt)basis.row_status[i];
   }
   return kHighsStatusOk;
