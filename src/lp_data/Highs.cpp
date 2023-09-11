@@ -3599,9 +3599,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
   if (this->model_.isMip() && !basis.valid) {
-    // Postsolving a MIP without a valid basis - which, if valid,
-    // would imply that the relaxation had been solved, a case handled
-    // below
+    // Postsolving a MIP without a valid basis - which would imply
+    // that the relaxation was being solved
     presolve_.data_.recovered_solution_ = solution;
     if (HighsInt(presolve_.data_.recovered_solution_.col_value.size()) <
         presolved_lp.num_col_) {
@@ -3626,9 +3625,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                      this->basis_, this->info_);
       double& max_integrality_violation = this->info_.max_integrality_violation;
       max_integrality_violation = 0;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      for (HighsInt iCol = 0; iCol != lp.num_col_; iCol++) {
         if (lp.integrality_[iCol] == HighsVarType::kInteger) {
-          const double value = this->solution_.col_value[iCol];
+          const double value = solution.col_value[iCol];
           double intval = std::floor(value + 0.5);
           max_integrality_violation =
               std::max(fabs(intval - value), max_integrality_violation);

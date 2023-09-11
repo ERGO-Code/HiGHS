@@ -125,17 +125,18 @@ HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                         q_value_ptr);
 }
 
-HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution,
-                            const HighsBasis& basis) {
+HighsStatus highs_lpPostsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
+{
   return h->postsolve(solution, basis);
 }
-
-HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution) {
+ 
+HighsStatus highs_MipPostsolve(Highs* h, const HighsSolution& solution)
+{
   return h->postsolve(solution);
 }
-
-HighsStatus highs_writeSolution(Highs* h, const std::string filename,
-                                const HighsInt style) {
+ 
+HighsStatus highs_writeSolution(Highs* h, const std::string filename, const HighsInt style)
+{
   return h->writeSolution(filename, style);
 }
 
@@ -717,172 +718,136 @@ PYBIND11_MODULE(_highs, m) {
       .def_readwrite("sum_dual_infeasibilities",
                      &HighsInfo::sum_dual_infeasibilities);
   py::class_<HighsOptions>(m, "HighsOptions")
-      .def(py::init<>())
-      .def_readwrite("presolve", &HighsOptions::presolve)
-      .def_readwrite("solver", &HighsOptions::solver)
-      .def_readwrite("parallel", &HighsOptions::parallel)
-      .def_readwrite("run_crossover", &HighsOptions::run_crossover)
-      .def_readwrite("ranging", &HighsOptions::ranging)
-      .def_readwrite("time_limit", &HighsOptions::time_limit)
-      .def_readwrite("infinite_cost", &HighsOptions::infinite_cost)
-      .def_readwrite("infinite_bound", &HighsOptions::infinite_bound)
-      .def_readwrite("small_matrix_value", &HighsOptions::small_matrix_value)
-      .def_readwrite("large_matrix_value", &HighsOptions::large_matrix_value)
-      .def_readwrite("primal_feasibility_tolerance",
-                     &HighsOptions::primal_feasibility_tolerance)
-      .def_readwrite("dual_feasibility_tolerance",
-                     &HighsOptions::dual_feasibility_tolerance)
-      .def_readwrite("ipm_optimality_tolerance",
-                     &HighsOptions::ipm_optimality_tolerance)
-      .def_readwrite("objective_bound", &HighsOptions::objective_bound)
-      .def_readwrite("objective_target", &HighsOptions::objective_target)
-      .def_readwrite("random_seed", &HighsOptions::random_seed)
-      .def_readwrite("threads", &HighsOptions::threads)
-      .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
-      .def_readwrite("highs_analysis_level",
-                     &HighsOptions::highs_analysis_level)
-      .def_readwrite("simplex_strategy", &HighsOptions::simplex_strategy)
-      .def_readwrite("simplex_scale_strategy",
-                     &HighsOptions::simplex_scale_strategy)
-      .def_readwrite("simplex_crash_strategy",
-                     &HighsOptions::simplex_crash_strategy)
-      .def_readwrite("simplex_dual_edge_weight_strategy",
-                     &HighsOptions::simplex_dual_edge_weight_strategy)
-      .def_readwrite("simplex_primal_edge_weight_strategy",
-                     &HighsOptions::simplex_primal_edge_weight_strategy)
-      .def_readwrite("simplex_iteration_limit",
-                     &HighsOptions::simplex_iteration_limit)
-      .def_readwrite("simplex_update_limit",
-                     &HighsOptions::simplex_update_limit)
-      .def_readwrite("simplex_min_concurrency",
-                     &HighsOptions::simplex_min_concurrency)
-      .def_readwrite("simplex_max_concurrency",
-                     &HighsOptions::simplex_max_concurrency)
-      .def_readwrite("ipm_iteration_limit", &HighsOptions::ipm_iteration_limit)
-      .def_readwrite("write_model_file", &HighsOptions::write_model_file)
-      .def_readwrite("solution_file", &HighsOptions::solution_file)
-      .def_readwrite("log_file", &HighsOptions::log_file)
-      .def_readwrite("write_model_to_file", &HighsOptions::write_model_to_file)
-      .def_readwrite("write_solution_to_file",
-                     &HighsOptions::write_solution_to_file)
-      .def_readwrite("write_solution_style",
-                     &HighsOptions::write_solution_style)
-      .def_readwrite("output_flag", &HighsOptions::output_flag)
-      .def_readwrite("log_to_console", &HighsOptions::log_to_console)
-      .def_readwrite("log_dev_level", &HighsOptions::log_dev_level)
-      .def_readwrite("allow_unbounded_or_infeasible",
-                     &HighsOptions::allow_unbounded_or_infeasible)
-      .def_readwrite("allowed_matrix_scale_factor",
-                     &HighsOptions::allowed_matrix_scale_factor)
-      .def_readwrite("ipx_dualize_strategy",
-                     &HighsOptions::ipx_dualize_strategy)
-      .def_readwrite("simplex_dualize_strategy",
-                     &HighsOptions::simplex_dualize_strategy)
-      .def_readwrite("simplex_permute_strategy",
-                     &HighsOptions::simplex_permute_strategy)
-      .def_readwrite("simplex_price_strategy",
-                     &HighsOptions::simplex_price_strategy)
-      .def_readwrite("mip_detect_symmetry", &HighsOptions::mip_detect_symmetry)
-      .def_readwrite("mip_max_nodes", &HighsOptions::mip_max_nodes)
-      .def_readwrite("mip_max_stall_nodes", &HighsOptions::mip_max_stall_nodes)
-      .def_readwrite("mip_max_leaves", &HighsOptions::mip_max_leaves)
-      .def_readwrite("mip_max_improving_sols",
-                     &HighsOptions::mip_max_improving_sols)
-      .def_readwrite("mip_lp_age_limit", &HighsOptions::mip_lp_age_limit)
-      .def_readwrite("mip_pool_age_limit", &HighsOptions::mip_pool_age_limit)
-      .def_readwrite("mip_pool_soft_limit", &HighsOptions::mip_pool_soft_limit)
-      .def_readwrite("mip_pscost_minreliable",
-                     &HighsOptions::mip_pscost_minreliable)
-      .def_readwrite("mip_min_cliquetable_entries_for_parallelism",
-                     &HighsOptions::mip_min_cliquetable_entries_for_parallelism)
-      .def_readwrite("mip_report_level", &HighsOptions::mip_report_level)
-      .def_readwrite("mip_feasibility_tolerance",
-                     &HighsOptions::mip_feasibility_tolerance)
-      .def_readwrite("mip_rel_gap", &HighsOptions::mip_rel_gap)
-      .def_readwrite("mip_abs_gap", &HighsOptions::mip_abs_gap)
-      .def_readwrite("mip_heuristic_effort",
-                     &HighsOptions::mip_heuristic_effort)
-      .def_readwrite("mip_min_logging_interval",
-                     &HighsOptions::mip_min_logging_interval);
-  py::class_<Highs>(m, "Highs")
-      .def(py::init<>())
-      .def("version", &Highs::version)
-      .def("versionMajor", &Highs::versionMajor)
-      .def("versionMinor", &Highs::versionMinor)
-      .def("versionPatch", &Highs::versionPatch)
-      .def("githash", &Highs::githash)
-      .def("compilationDate", &Highs::compilationDate)
-      .def("clear", &Highs::clear)
-      .def("clearModel", &Highs::clearModel)
-      .def("clearSolver", &Highs::clearSolver)
-      .def("passModel", &highs_passModel)
-      .def("passModel", &highs_passModelPointers)
-      .def("passModel", &highs_passLp)
-      .def("passModel", &highs_passLpPointers)
-      .def("passHessian", &highs_passHessian)
-      .def("passHessian", &highs_passHessianPointers)
-      .def("passColName", &Highs::passColName)
-      .def("passRowName", &Highs::passRowName)
-      .def("readModel", &Highs::readModel)
-      .def("readBasis", &Highs::readBasis)
-      .def("writeBasis", &Highs::writeBasis)
-      .def("postsolve", &highs_postsolve)
-      .def("postsolve", &highs_mipPostsolve)
-      .def("run", &Highs::run)
-      .def("presolve", &Highs::presolve)
-      .def("writeSolution", &highs_writeSolution)
-      .def("readSolution", &Highs::readSolution)
-      .def("setOptionValue",
-           static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(
-               &Highs::setOptionValue))
-      .def("setOptionValue",
-           static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(
-               &Highs::setOptionValue))
-      .def(
-          "setOptionValue",
-          static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(
-              &Highs::setOptionValue))
-      .def("setOptionValue",
-           static_cast<HighsStatus (Highs::*)(
-               const std::string&, const std::string&)>(&Highs::setOptionValue))
-      .def("readOptions", &Highs::readOptions)
-      .def("passOptions", &Highs::passOptions)
-      .def("getOptions", &Highs::getOptions)
-      .def("getOptionValue", &highs_getOptionValue)
-      //    .def("getOptionName", &highs_getOptionName)
-      .def("getOptionType", &highs_getOptionType)
-      .def("resetOptions", &Highs::resetOptions)
-      .def("writeOptions", &highs_writeOptions)
-      //    .def("getBoolOptionValues", &highs_getBoolOptionValues)
-      //    .def("getIntOptionValues", &highs_getIntOptionValues)
-      //    .def("getDoubleOptionValues", &highs_getDoubleOptionValues)
-      //    .def("getStringOptionValues", &highs_getStringOptionValues)
-      .def("getInfo", &Highs::getInfo)
-      .def("getInfoValue", &highs_getInfoValue)
-      .def("getInfoType", &highs_getInfoType)
-      .def("writeInfo", &Highs::writeInfo)
-      .def("getInfinity", &Highs::getInfinity)
-      .def("getRunTime", &Highs::getRunTime)
-      .def("getPresolvedLp", &Highs::getPresolvedLp)
-      //    .def("getPresolvedModel", &Highs::getPresolvedModel)
-      //    .def("getPresolveLog", &Highs::getPresolveLog)
-      .def("getLp", &Highs::getLp)
-      .def("getModel", &Highs::getModel)
-      .def("getSolution", &Highs::getSolution)
-      .def("getSavedMipSolutions", &Highs::getSavedMipSolutions)
-      .def("getBasis", &Highs::getBasis)
-      // &highs_getModelStatus not needed once getModelStatus(const bool
-      // scaled_model) disappears from, Highs.h
-      .def("getModelStatus", &highs_getModelStatus)  //&Highs::getModelStatus)
-      .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
-      .def("getRanging", &highs_getRanging)
-      .def("getObjectiveValue", &Highs::getObjectiveValue)
-      .def("getNumCol", &Highs::getNumCol)
-      .def("getNumRow", &Highs::getNumRow)
-      .def("getNumNz", &Highs::getNumNz)
-      .def("getHessianNumNz", &Highs::getHessianNumNz)
-      .def("getObjectiveSense", &highs_getObjectiveSense)
-      .def("getObjectiveOffset", &highs_getObjectiveOffset)
+    .def(py::init<>())
+    .def_readwrite("presolve", &HighsOptions::presolve)
+    .def_readwrite("solver", &HighsOptions::solver)
+    .def_readwrite("parallel", &HighsOptions::parallel)
+    .def_readwrite("run_crossover", &HighsOptions::run_crossover)
+    .def_readwrite("ranging", &HighsOptions::ranging)
+    .def_readwrite("time_limit", &HighsOptions::time_limit)
+    .def_readwrite("infinite_cost", &HighsOptions::infinite_cost)
+    .def_readwrite("infinite_bound", &HighsOptions::infinite_bound)
+    .def_readwrite("small_matrix_value", &HighsOptions::small_matrix_value)
+    .def_readwrite("large_matrix_value", &HighsOptions::large_matrix_value)
+    .def_readwrite("primal_feasibility_tolerance", &HighsOptions::primal_feasibility_tolerance)
+    .def_readwrite("dual_feasibility_tolerance", &HighsOptions::dual_feasibility_tolerance)
+    .def_readwrite("ipm_optimality_tolerance", &HighsOptions::ipm_optimality_tolerance)
+    .def_readwrite("objective_bound", &HighsOptions::objective_bound)
+    .def_readwrite("objective_target", &HighsOptions::objective_target)
+    .def_readwrite("random_seed", &HighsOptions::random_seed)
+    .def_readwrite("threads", &HighsOptions::threads)
+    .def_readwrite("highs_debug_level", &HighsOptions::highs_debug_level)
+    .def_readwrite("highs_analysis_level", &HighsOptions::highs_analysis_level)
+    .def_readwrite("simplex_strategy", &HighsOptions::simplex_strategy)
+    .def_readwrite("simplex_scale_strategy", &HighsOptions::simplex_scale_strategy)
+    .def_readwrite("simplex_crash_strategy", &HighsOptions::simplex_crash_strategy)
+    .def_readwrite("simplex_dual_edge_weight_strategy", &HighsOptions::simplex_dual_edge_weight_strategy)
+    .def_readwrite("simplex_primal_edge_weight_strategy", &HighsOptions::simplex_primal_edge_weight_strategy)
+    .def_readwrite("simplex_iteration_limit", &HighsOptions::simplex_iteration_limit)
+    .def_readwrite("simplex_update_limit", &HighsOptions::simplex_update_limit)
+    .def_readwrite("simplex_min_concurrency", &HighsOptions::simplex_min_concurrency)
+    .def_readwrite("simplex_max_concurrency", &HighsOptions::simplex_max_concurrency)
+    .def_readwrite("ipm_iteration_limit", &HighsOptions::ipm_iteration_limit)
+    .def_readwrite("write_model_file", &HighsOptions::write_model_file)
+    .def_readwrite("solution_file", &HighsOptions::solution_file)
+    .def_readwrite("log_file", &HighsOptions::log_file)
+    .def_readwrite("write_model_to_file", &HighsOptions::write_model_to_file)
+    .def_readwrite("write_solution_to_file", &HighsOptions::write_solution_to_file)
+    .def_readwrite("write_solution_style", &HighsOptions::write_solution_style)
+    .def_readwrite("output_flag", &HighsOptions::output_flag)
+    .def_readwrite("log_to_console", &HighsOptions::log_to_console)
+    .def_readwrite("log_dev_level", &HighsOptions::log_dev_level)
+    .def_readwrite("allow_unbounded_or_infeasible", &HighsOptions::allow_unbounded_or_infeasible)
+    .def_readwrite("allowed_matrix_scale_factor", &HighsOptions::allowed_matrix_scale_factor)
+    .def_readwrite("ipx_dualize_strategy", &HighsOptions::ipx_dualize_strategy)
+    .def_readwrite("simplex_dualize_strategy", &HighsOptions::simplex_dualize_strategy)
+    .def_readwrite("simplex_permute_strategy", &HighsOptions::simplex_permute_strategy)
+    .def_readwrite("simplex_price_strategy", &HighsOptions::simplex_price_strategy)
+    .def_readwrite("mip_detect_symmetry", &HighsOptions::mip_detect_symmetry)
+    .def_readwrite("mip_max_nodes", &HighsOptions::mip_max_nodes)
+    .def_readwrite("mip_max_stall_nodes", &HighsOptions::mip_max_stall_nodes)
+    .def_readwrite("mip_max_leaves", &HighsOptions::mip_max_leaves)
+    .def_readwrite("mip_max_improving_sols", &HighsOptions::mip_max_improving_sols)
+    .def_readwrite("mip_lp_age_limit", &HighsOptions::mip_lp_age_limit)
+    .def_readwrite("mip_pool_age_limit", &HighsOptions::mip_pool_age_limit)
+    .def_readwrite("mip_pool_soft_limit", &HighsOptions::mip_pool_soft_limit)
+    .def_readwrite("mip_pscost_minreliable", &HighsOptions::mip_pscost_minreliable)
+    .def_readwrite("mip_min_cliquetable_entries_for_parallelism", &HighsOptions::mip_min_cliquetable_entries_for_parallelism)
+    .def_readwrite("mip_report_level", &HighsOptions::mip_report_level)
+    .def_readwrite("mip_feasibility_tolerance", &HighsOptions::mip_feasibility_tolerance)
+    .def_readwrite("mip_rel_gap", &HighsOptions::mip_rel_gap)
+    .def_readwrite("mip_abs_gap", &HighsOptions::mip_abs_gap)
+    .def_readwrite("mip_heuristic_effort", &HighsOptions::mip_heuristic_effort);
+  py::class_<Highs>(m, "_Highs")
+    .def(py::init<>())
+    .def("version", &Highs::version)
+    .def("versionMajor", &Highs::versionMajor)
+    .def("versionMinor", &Highs::versionMinor)
+    .def("versionPatch", &Highs::versionPatch)
+    .def("githash", &Highs::githash)
+    .def("compilationDate", &Highs::compilationDate)
+    .def("clear", &Highs::clear)
+    .def("clearModel", &Highs::clearModel)
+    .def("clearSolver", &Highs::clearSolver)
+    .def("passModel", &highs_passModel)
+    .def("passModel", &highs_passModelPointers)
+    .def("passModel", &highs_passLp)
+    .def("passModel", &highs_passLpPointers)
+    .def("passHessian", &highs_passHessian)
+    .def("passHessian", &highs_passHessianPointers)
+    .def("passColName", &Highs::passColName)
+    .def("passRowName", &Highs::passRowName)
+    .def("readModel", &Highs::readModel)
+    .def("readBasis", &Highs::readBasis)
+    .def("writeBasis", &Highs::writeBasis)
+    .def("presolve", &Highs::presolve)
+    .def("run", &Highs::run)
+    .def("postsolve", &highs_mipPostsolve)
+    .def("postsolve", &highs_lpPostsolve)
+    .def("writeSolution", &highs_writeSolution)
+    .def("readSolution", &Highs::readSolution)
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const int)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const double)>(&Highs::setOptionValue))
+    .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const std::string&)>(&Highs::setOptionValue))
+    .def("readOptions", &Highs::readOptions)
+    .def("passOptions", &Highs::passOptions)
+    .def("getOptions", &Highs::getOptions)
+    .def("getOptionValue", &highs_getOptionValue)
+    //    .def("getOptionName", &highs_getOptionName)
+    .def("getOptionType", &highs_getOptionType)
+    .def("resetOptions", &Highs::resetOptions)
+    .def("writeOptions", &highs_writeOptions)
+    //    .def("getBoolOptionValues", &highs_getBoolOptionValues)
+    //    .def("getIntOptionValues", &highs_getIntOptionValues)
+    //    .def("getDoubleOptionValues", &highs_getDoubleOptionValues)
+    //    .def("getStringOptionValues", &highs_getStringOptionValues)
+    .def("getInfo", &Highs::getInfo)
+    .def("getInfoValue", &highs_getInfoValue)
+    .def("getInfoType", &highs_getInfoType)
+    .def("writeInfo", &Highs::writeInfo)
+    .def("getInfinity", &Highs::getInfinity)
+    .def("getRunTime", &Highs::getRunTime)
+    .def("getPresolvedLp", &Highs::getPresolvedLp)
+    //    .def("getPresolvedModel", &Highs::getPresolvedModel)
+    //    .def("getPresolveLog", &Highs::getPresolveLog)
+    .def("getLp", &Highs::getLp)
+    .def("getModel", &Highs::getModel)
+    .def("getSolution", &Highs::getSolution)
+    .def("getSavedMipSolutions", &Highs::getSavedMipSolutions)
+    .def("getBasis", &Highs::getBasis)
+// &highs_getModelStatus not needed once getModelStatus(const bool
+// scaled_model) disappears from, Highs.h
+    .def("getModelStatus", &highs_getModelStatus) //&Highs::getModelStatus)
+    .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
+    .def("getRanging", &highs_getRanging)
+    .def("getObjectiveValue", &Highs::getObjectiveValue)
+    .def("getNumCol", &Highs::getNumCol)
+    .def("getNumRow", &Highs::getNumRow)
+    .def("getNumNz", &Highs::getNumNz)
+    .def("getHessianNumNz", &Highs::getHessianNumNz)
+    .def("getObjectiveSense", &highs_getObjectiveSense)
+    .def("getObjectiveOffset", &highs_getObjectiveOffset)
 
       .def("getCol", &highs_getCol)
       .def("getColEntries", &highs_getColEntries)
