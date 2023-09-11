@@ -13,7 +13,7 @@ class TestHighsPy(unittest.TestCase):
         -x + y >= 2
         x + y >= 0
         """
-        inf = highspy.kHighsInf
+        inf = highspy.highspy.kHighsInf
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
         h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
@@ -36,10 +36,10 @@ class TestHighsPy(unittest.TestCase):
                     6 <= 3x0 + 2x1
                     0 <= x0 <= 4; 1 <= x1
         """
-        inf = highspy.kHighsInf
+        inf = highspy.highspy.kHighsInf
         h = highspy.Highs()
         # Define a HighsLp instance
-        lp = highspy.HighsLp()
+        lp = highspy.highspy.HighsLp()
         lp.num_col_ = 2
         lp.num_row_ = 3
         lp.col_cost_ = np.array([1, 1], dtype=np.double)
@@ -82,8 +82,8 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(lp.row_upper_[1], h.inf)
 
     def get_infeasible_model(self):
-        inf = highspy.kHighsInf
-        lp = highspy.HighsLp()
+        inf = highspy.highspy.kHighsInf
+        lp = highspy.highspy.HighsLp()
         lp.num_col_ = 2;
         lp.num_row_ = 2;
         lp.col_cost_ = np.array([10, 15], dtype=np.double)
@@ -98,7 +98,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
         status = h.passModel(lp)
-        self.assertEqual(status, highspy.HighsStatus.kOk)
+        self.assertEqual(status, highspy.highspy.HighsStatus.kOk)
         h.setOptionValue('presolve', 'off')
         return h
 
@@ -118,7 +118,7 @@ class TestHighsPy(unittest.TestCase):
 #        h.setOptionValue('output_flag', True)
         h.writeModel('')
         h.setOptionValue('output_flag', False)
-        self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.HighsStatus.kOk)
+        self.assertEqual(h.setOptionValue('presolve', 'off'), highspy.highspy.HighsStatus.kOk)
 #        h.setOptionValue('output_flag', True)
         h.run()
         
@@ -148,7 +148,7 @@ class TestHighsPy(unittest.TestCase):
         -x + y >= 3
         x + y >= 0
         """
-        inf = highspy.kHighsInf
+        inf = highspy.highspy.kHighsInf
         h.changeRowBounds(0, 3, inf)
         h.run()
         sol = h.getSolution()
@@ -156,7 +156,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(sol.col_value[1], 1.5)
 
         # now make y integer
-        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
+        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.highspy.HighsVarType.kInteger]))
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1.5)
@@ -197,10 +197,10 @@ class TestHighsPy(unittest.TestCase):
 
         h.changeColCost(1, 1)
         [status, sense] = h.getObjectiveSense()
-        self.assertEqual(sense, highspy.ObjSense.kMinimize)
-        h.changeObjectiveSense(highspy.ObjSense.kMaximize)
+        self.assertEqual(sense, highspy.highspy.ObjSense.kMinimize)
+        h.changeObjectiveSense(highspy.highspy.ObjSense.kMaximize)
         [status, sense] = h.getObjectiveSense()
-        self.assertEqual(sense, highspy.ObjSense.kMaximize)
+        self.assertEqual(sense, highspy.highspy.ObjSense.kMaximize)
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
@@ -218,7 +218,7 @@ class TestHighsPy(unittest.TestCase):
         mip_node_count0 = info.mip_node_count
         self.assertAlmostEqual(mip_node_count0, 0)
         [status, mip_node_count1] = h.getInfoValue("mip_node_count")
-        self.assertEqual(status, highspy.HighsStatus.kOk)
+        self.assertEqual(status, highspy.highspy.HighsStatus.kOk)
         self.assertAlmostEqual(mip_node_count0, mip_node_count1)
 
     def test_example(self):
@@ -294,11 +294,11 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(simplex_update_limit, 5000);
         # Illegal name
         option_value = h.getOptionValue('simplex_limit')
-        self.assertEqual(option_value[0], highspy.HighsStatus.kError)
+        self.assertEqual(option_value[0], highspy.highspy.HighsStatus.kError)
         
         # test bool option
         [status, type] = h.getOptionType('output_flag')
-        self.assertEqual(type, highspy.HighsOptionType.kBool)
+        self.assertEqual(type, highspy.highspy.HighsOptionType.kBool)
 
         h.setOptionValue('output_flag', True)
         [status, value] = h.getOptionValue('output_flag')
@@ -309,7 +309,7 @@ class TestHighsPy(unittest.TestCase):
 
         # test string option
         [status, type] = h.getOptionType('presolve')
-        self.assertEqual(type, highspy.HighsOptionType.kString)
+        self.assertEqual(type, highspy.highspy.HighsOptionType.kString)
         h.setOptionValue('presolve', 'off')
         [status, value] = h.getOptionValue('presolve')
         self.assertEqual(value, 'off')
@@ -319,7 +319,7 @@ class TestHighsPy(unittest.TestCase):
 
         # test int option
         [status, type] = h.getOptionType('threads')
-        self.assertEqual(type, highspy.HighsOptionType.kInt)
+        self.assertEqual(type, highspy.highspy.HighsOptionType.kInt)
         h.setOptionValue('threads', 1)
         [status, value] = h.getOptionValue('threads')
         self.assertEqual(value, 1)
@@ -329,7 +329,7 @@ class TestHighsPy(unittest.TestCase):
 
         # test double option
         [status, type] = h.getOptionType('time_limit')
-        self.assertEqual(type, highspy.HighsOptionType.kDouble)
+        self.assertEqual(type, highspy.highspy.HighsOptionType.kDouble)
         h.setOptionValue('time_limit', 1.7)
         [status, value] = h.getOptionValue('time_limit')
         self.assertAlmostEqual(value, 1.7)
@@ -390,7 +390,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(value, orig_feas_tol)
 
     def test_ranging(self):
-        inf = highspy.kHighsInf
+        inf = highspy.highspy.kHighsInf
         h = self.get_basic_model()
         # Cost ranging
         #c0 2 -1 1 0
@@ -454,10 +454,10 @@ class TestHighsPy(unittest.TestCase):
         h.addConstr(x + y == 1)
         
         status = h.minimize(10*x + 15*y)
-        self.assertEqual(status, highspy.HighsStatus.kOk)
+        self.assertEqual(status, highspy.highspy.HighsStatus.kOk)
 
         status = h.getModelStatus()
-        self.assertEqual(status, highspy.HighsModelStatus.kInfeasible)
+        self.assertEqual(status, highspy.highspy.HighsModelStatus.kInfeasible)
     
     def test_basics_builder(self):
         h = highspy.Highs()
@@ -487,7 +487,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.val(y), 1.5)
 
         # now make y integer
-        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
+        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.highspy.HighsVarType.kInteger]))
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -1)
@@ -525,9 +525,9 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.val(x), -5)
         self.assertAlmostEqual(h.val(y), -5)
 
-        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMinimize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.highspy.ObjSense.kMinimize)
         h.maximize(y)
-        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMaximize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.highspy.ObjSense.kMaximize)
 
         self.assertAlmostEqual(h.val(x), -5)
         self.assertAlmostEqual(h.val(y), -5)
@@ -539,13 +539,13 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.getObjectiveValue(), -4)
 
     def test_addVar(self):  
-        h = highspy.Highs()  
+        h = highspy.Highs()
         h.addVar()
         h.update()
         self.assertEqual(h.numVars, 1)  
   
     def test_removeVar(self):  
-        h = highspy.Highs()  
+        h = highspy.Highs()
         x = [h.addVar(), h.addVar()]
 
         h.update()
@@ -600,7 +600,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(vals[1], 0)
 
     def test_var_name(self):  
-        h = highspy.Highs()  
+        h = highspy.Highs()
         
         # name set, but not in the model
         x = h.addVar(name='x')
@@ -642,7 +642,7 @@ class TestHighsPy(unittest.TestCase):
         lp = h.getLp()
         self.assertAlmostEqual(lp.col_lower_[0], 0)
         self.assertAlmostEqual(lp.col_upper_[0], 1)
-        self.assertEqual(lp.integrality_[0], highspy.HighsVarType.kInteger)
+        self.assertEqual(lp.integrality_[0], highspy.highspy.HighsVarType.kInteger)
 
         self.assertAlmostEqual(h.val(x[0]), 1)
 
@@ -659,8 +659,8 @@ class TestHighsPy(unittest.TestCase):
         h.maximize(x[0]+x[1])
 
         lp = h.getLp()
-        self.assertEqual(lp.integrality_[0], highspy.HighsVarType.kInteger)
-        self.assertEqual(lp.integrality_[1], highspy.HighsVarType.kContinuous)
+        self.assertEqual(lp.integrality_[0], highspy.highspy.HighsVarType.kInteger)
+        self.assertEqual(lp.integrality_[1], highspy.highspy.HighsVarType.kContinuous)
 
         self.assertAlmostEqual(h.val(x[0]), 5)
 
@@ -780,8 +780,8 @@ class TestHighsPy(unittest.TestCase):
 
     def test_read_basis(self):
         # Read basis from one run model into an unrun model
-        expected_status_before = highspy.HighsBasisStatus.kLower
-        expected_status_after = highspy.HighsBasisStatus.kBasic
+        expected_status_before = highspy.highspy.HighsBasisStatus.kLower
+        expected_status_after = highspy.highspy.HighsBasisStatus.kBasic
 
         h1 = self.get_basic_model()
         self.assertEqual(h1.getBasis().col_status[0], expected_status_before)
