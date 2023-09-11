@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -104,7 +104,7 @@ static void userDataCallback(const int callback_type, const char* message,
 }
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
-  bool output_flag = true;
+  bool output_flag = true;  // Still runs quietly
   bool log_to_console = false;
   HighsInt log_dev_level = kHighsLogDevLevelInfo;
   HighsLogOptions log_options;

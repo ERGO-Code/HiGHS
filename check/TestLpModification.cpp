@@ -1459,6 +1459,7 @@ TEST_CASE("LP-free-row", "[highs_data]") {
 
 TEST_CASE("LP-delete-ip-var", "[highs_data]") {
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsInt num_var = 5;
   std::vector<double> lower = {1, 2, 3, 4, 5};
   std::vector<double> upper = {1, 2, 3, 4, 5};

@@ -86,7 +86,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(solution.row_dual[1] - required_row_dual1) <
           double_equal_tolerance);
 
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 
   // Check with qjh.mps
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
