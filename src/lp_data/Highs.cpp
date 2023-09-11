@@ -2684,6 +2684,11 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::postsolve(const HighsSolution& solution) {
+  HighsBasis basis;
+  return this->postsolve(solution, basis);
+}
+
 HighsStatus Highs::postsolve(const HighsSolution& solution,
                              const HighsBasis& basis) {
   const bool can_run_postsolve =
@@ -3356,75 +3361,123 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
-  const bool solution_ok = isSolutionRightSize(presolved_lp, solution);
-  if (!solution_ok) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Solution provided to postsolve is incorrect size\n");
-    return HighsStatus::kError;
-  }
-  if (basis.valid) {
-    // Check a valid basis
-    const bool basis_ok = isBasisConsistent(presolved_lp, basis);
-    if (!basis_ok) {
+  if (this->model_.isMip() && !basis.valid) {
+    // Postsolving a MIP without a valid basis - which would imply
+    // that the relaxation was being solved
+    presolve_.data_.recovered_solution_ = solution;
+    if (HighsInt(presolve_.data_.recovered_solution_.col_value.size()) <
+        presolved_lp.num_col_) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Basis provided to postsolve is incorrect size\n");
+                   "Solution provided to postsolve is incorrect size\n");
       return HighsStatus::kError;
     }
-  }
-  presolve_.data_.recovered_solution_ = solution;
-  presolve_.data_.recovered_basis_ = basis;
+    presolve_.data_.recovered_solution_.row_value.assign(presolved_lp.num_row_,
+                                                         0);
+    presolve_.data_.recovered_basis_.valid = false;
 
-  HighsPostsolveStatus postsolve_status = runPostsolve();
-  if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-    highsLogDev(options_.log_options, HighsLogType::kVerbose,
-                "Postsolve finished\n");
-    // Set solution and its status
-    solution_.clear();
-    solution_ = presolve_.data_.recovered_solution_;
-    solution_.value_valid = true;
-    solution_.dual_valid = true;
-    // Set basis and its status
-    basis_.valid = true;
-    basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-    basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-    basis_.debug_origin_name += ": after postsolve";
-    // Save the options to allow the best simplex strategy to
-    // be used
-    HighsOptions save_options = options_;
-    options_.simplex_strategy = kSimplexStrategyChoose;
-    // Ensure that the parallel solver isn't used
-    options_.simplex_min_concurrency = 1;
-    options_.simplex_max_concurrency = 1;
-    // Use any pivot threshold resulting from solving the presolved LP
-    // if (factor_pivot_threshold > 0)
-    //    options_.factor_pivot_threshold = factor_pivot_threshold;
-    // The basis returned from postsolve is just basic/nonbasic
-    // and EKK expects a refined basis, so set it up now
-    HighsLp& incumbent_lp = model_.lp_;
-    refineBasis(incumbent_lp, solution_, basis_);
-    // Scrap the EKK data from solving the presolved LP
-    ekk_instance_.invalidate();
-    ekk_instance_.lp_name_ = "Postsolve LP";
-    // Set up the timing record so that adding the corresponding
-    // values after callSolveLp gives difference
-    timer_.start(timer_.solve_clock);
-    call_status = callSolveLp(
-        incumbent_lp,
-        "Solving the original LP from the solution after postsolve");
-    // Determine the timing record
-    timer_.stop(timer_.solve_clock);
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveLp");
-    // Recover the options
-    options_ = save_options;
-    if (return_status == HighsStatus::kError)
-      return returnFromRun(return_status);
+    HighsPostsolveStatus postsolve_status = runPostsolve();
+
+    if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
+      this->solution_ = presolve_.data_.recovered_solution_;
+      this->model_status_ = HighsModelStatus::kUnknown;
+      this->info_.invalidate();
+      HighsLp& lp = this->model_.lp_;
+      this->info_.objective_function_value =
+          computeObjectiveValue(lp, this->solution_);
+      getKktFailures(this->options_, this->model_, this->solution_,
+                     this->basis_, this->info_);
+      double& max_integrality_violation = this->info_.max_integrality_violation;
+      max_integrality_violation = 0;
+      for (HighsInt iCol = 0; iCol != lp.num_col_; iCol++) {
+        if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+          const double value = solution.col_value[iCol];
+          double intval = std::floor(value + 0.5);
+          max_integrality_violation =
+              std::max(fabs(intval - value), max_integrality_violation);
+        }
+      }
+      highsLogUser(
+          options_.log_options, HighsLogType::kWarning,
+          "Postsolve performed for MIP, but model status cannot be known\n");
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Postsolve return status is %d\n", (int)postsolve_status);
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kPostsolveError);
+    }
   } else {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Postsolve return status is %d\n", (int)postsolve_status);
-    setHighsModelStatusAndClearSolutionAndBasis(
-        HighsModelStatus::kPostsolveError);
-    return returnFromRun(HighsStatus::kError);
+    // Postsolving an LP, or a MIP after solving the relaxation
+    // (identified by passing a valid basis).
+    const bool solution_ok = isSolutionRightSize(presolved_lp, solution);
+    if (!solution_ok) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Solution provided to postsolve is incorrect size\n");
+      return HighsStatus::kError;
+    }
+    if (basis.valid) {
+      // Check a valid basis
+      const bool basis_ok = isBasisConsistent(presolved_lp, basis);
+      if (!basis_ok) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Basis provided to postsolve is incorrect size\n");
+        return HighsStatus::kError;
+      }
+    }
+    presolve_.data_.recovered_solution_ = solution;
+    presolve_.data_.recovered_basis_ = basis;
+
+    HighsPostsolveStatus postsolve_status = runPostsolve();
+    if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
+      highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                  "Postsolve finished\n");
+      // Set solution and its status
+      solution_.clear();
+      solution_ = presolve_.data_.recovered_solution_;
+      solution_.value_valid = true;
+      solution_.dual_valid = true;
+      // Set basis and its status
+      basis_.valid = true;
+      basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+      basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+      basis_.debug_origin_name += ": after postsolve";
+      // Save the options to allow the best simplex strategy to
+      // be used
+      HighsOptions save_options = options_;
+      options_.simplex_strategy = kSimplexStrategyChoose;
+      // Ensure that the parallel solver isn't used
+      options_.simplex_min_concurrency = 1;
+      options_.simplex_max_concurrency = 1;
+      // Use any pivot threshold resulting from solving the presolved LP
+      // if (factor_pivot_threshold > 0)
+      //    options_.factor_pivot_threshold = factor_pivot_threshold;
+      // The basis returned from postsolve is just basic/nonbasic
+      // and EKK expects a refined basis, so set it up now
+      HighsLp& incumbent_lp = model_.lp_;
+      refineBasis(incumbent_lp, solution_, basis_);
+      // Scrap the EKK data from solving the presolved LP
+      ekk_instance_.invalidate();
+      ekk_instance_.lp_name_ = "Postsolve LP";
+      // Set up the timing record so that adding the corresponding
+      // values after callSolveLp gives difference
+      timer_.start(timer_.solve_clock);
+      call_status = callSolveLp(
+          incumbent_lp,
+          "Solving the original LP from the solution after postsolve");
+      // Determine the timing record
+      timer_.stop(timer_.solve_clock);
+      return_status = interpretCallStatus(options_.log_options, call_status,
+                                          return_status, "callSolveLp");
+      // Recover the options
+      options_ = save_options;
+      if (return_status == HighsStatus::kError)
+        return returnFromRun(return_status);
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Postsolve return status is %d\n", (int)postsolve_status);
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kPostsolveError);
+      return returnFromRun(HighsStatus::kError);
+    }
   }
   call_status = highsStatusFromHighsModelStatus(model_status_);
   return_status =

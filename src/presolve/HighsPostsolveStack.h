@@ -563,7 +563,7 @@ class HighsPostsolveStack {
       solution.col_value[origColIndex[i]] = solution.col_value[i];
     }
 
-    assert(origNumRow > 0);
+    assert(origNumRow >= 0);
     solution.row_value.resize(origNumRow);
     for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i) {
       assert(origRowIndex[i] >= i);

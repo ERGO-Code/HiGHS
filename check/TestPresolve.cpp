@@ -2,7 +2,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation = false);
@@ -95,16 +95,32 @@ void presolveSolvePostsolve(const std::string& model_file,
       printf("Presolve timeout: return status = %d\n", (int)return_status);
   }
   HighsLp lp = highs0.getPresolvedLp();
-  const bool is_mip = lp.isMip();
   highs1.passModel(lp);
   if (solve_relaxation) highs1.setOptionValue("solver", kSimplexString);
   highs1.setOptionValue("presolve", kHighsOffString);
   highs1.run();
-  HighsBasis basis = highs1.getBasis();
   HighsSolution solution = highs1.getSolution();
-  return_status = highs0.postsolve(solution, basis);
-  REQUIRE(return_status == HighsStatus::kOk);
-  HighsModelStatus model_status = highs0.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kOptimal);
-  REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+  const double objective_value = highs1.getInfo().objective_function_value;
+  if (lp.isMip() && !solve_relaxation) {
+    return_status = highs0.postsolve(solution);
+    REQUIRE(return_status == HighsStatus::kWarning);
+    HighsModelStatus model_status = highs0.getModelStatus();
+    REQUIRE(model_status == HighsModelStatus::kUnknown);
+    const double dl_objective_value =
+        std::fabs(highs0.getInfo().objective_function_value - objective_value);
+    REQUIRE(dl_objective_value < 1e-12);
+    REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
+    double mip_feasibility_tolerance;
+    highs0.getOptionValue("mip_feasibility_tolerance",
+                          mip_feasibility_tolerance);
+    REQUIRE(highs0.getInfo().max_integrality_violation <=
+            mip_feasibility_tolerance);
+  } else {
+    HighsBasis basis = highs1.getBasis();
+    return_status = highs0.postsolve(solution, basis);
+    REQUIRE(return_status == HighsStatus::kOk);
+    HighsModelStatus model_status = highs0.getModelStatus();
+    REQUIRE(model_status == HighsModelStatus::kOptimal);
+    REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+  }
 }

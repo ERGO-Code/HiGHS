@@ -136,6 +136,16 @@ HighsStatus highs_passHessianPointers(Highs* h,
 			q_start_ptr, q_index_ptr, q_value_ptr);
 }
  
+HighsStatus highs_lpPostsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
+{
+  return h->postsolve(solution, basis);
+}
+ 
+HighsStatus highs_MipPostsolve(Highs* h, const HighsSolution& solution)
+{
+  return h->postsolve(solution);
+}
+ 
 HighsStatus highs_writeSolution(Highs* h, const std::string filename, const int style)
 {
   return h->writeSolution(filename, style);
@@ -767,7 +777,8 @@ PYBIND11_MODULE(highs_bindings, m)
     .def("writeBasis", &Highs::writeBasis)
     .def("presolve", &Highs::presolve)
     .def("run", &Highs::run)
-    .def("postsolve", &Highs::postsolve)
+    .def("postsolve", &highs_mipPostsolve)
+    .def("postsolve", &highs_lpPostsolve)
     .def("writeSolution", &highs_writeSolution)
     .def("readSolution", &Highs::readSolution)
     .def("setOptionValue", static_cast<HighsStatus (Highs::*)(const std::string&, const bool)>(&Highs::setOptionValue))

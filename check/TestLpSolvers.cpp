@@ -298,7 +298,7 @@ TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
   // When solving the relaxation of a MIP. Exposed #1406
   HighsStatus status;
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
   status = highs.readModel(filename);

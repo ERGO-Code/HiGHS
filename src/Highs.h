@@ -185,6 +185,11 @@ class Highs {
   HighsStatus run();
 
   /**
+   * @brief Postsolve the incumbent model using a solution
+   */
+  HighsStatus postsolve(const HighsSolution& solution);
+
+  /**
    * @brief Postsolve the incumbent model using a solution and basis
    */
   HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
