@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>  //Used in HiGHS
 
+#include "HCheckConfig.h"
 #include "catch.hpp"
 // #include <exception>
 const bool dev_run = false;

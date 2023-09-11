@@ -1,5 +1,6 @@
 #include "interfaces/highs_c_api.h"
 
+#include "HCheckConfig.h"
 #include <stdio.h>
 #include <stdlib.h>
 // Force asserts to be checked always.

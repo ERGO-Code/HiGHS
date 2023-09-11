@@ -2,7 +2,6 @@ import tempfile
 import unittest
 import highspy
 import numpy as np
-from pyomo.common.tee import capture_output
 from io import StringIO
 
 
@@ -28,7 +27,7 @@ class TestHighsPy(unittest.TestCase):
         values = np.array([-1, 1, 1, 1], dtype=np.double)
         h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
         return h
-    
+
     def get_example_model(self):
         """
         minimize    f  =  x0 +  x1
@@ -41,8 +40,8 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         # Define a HighsLp instance
         lp = highspy.HighsLp()
-        lp.num_col_ = 2;
-        lp.num_row_ = 3;
+        lp.num_col_ = 2
+        lp.num_row_ = 3
         lp.col_cost_ = np.array([1, 1], dtype=np.double)
         lp.col_lower_ = np.array([0, 1], dtype=np.double)
         lp.col_upper_ = np.array([4, inf], dtype=np.double)
@@ -53,7 +52,35 @@ class TestHighsPy(unittest.TestCase):
         lp.a_matrix_.value_ = np.array([1, 3, 1, 2, 2], dtype=np.double)
         h.passModel(lp)
         return h
-    
+
+    def test_example_model_builder(self):
+        """
+        minimize    f  =  x0 +  x1
+        subject to              x1 <= 7
+                    5 <=  x0 + 2x1 <= 15
+                    6 <= 3x0 + 2x1
+                    0 <= x0 <= 4; 1 <= x1
+        """
+        h = highspy.Highs()
+
+        x0 = h.addVar(lb=0, ub=4, obj=1)
+        x1 = h.addVar(lb=1, ub=7, obj=1)
+
+        h.addConstr(5 <= x0 + 2*x1 <= 15)
+        h.addConstr(6 <= 3*x0 + 2*x1)
+
+        lp = h.getLp()
+
+        self.assertEqual(lp.num_col_, 2)
+        self.assertEqual(lp.num_row_, 2)
+        self.assertAlmostEqual(lp.col_cost_[0], 1)
+        self.assertAlmostEqual(lp.col_lower_[0], 0)
+        self.assertAlmostEqual(lp.col_upper_[0], 4)
+        self.assertAlmostEqual(lp.row_lower_[0], 5)
+        self.assertAlmostEqual(lp.row_upper_[0], 15)
+        self.assertAlmostEqual(lp.row_lower_[1], 6)
+        self.assertAlmostEqual(lp.row_upper_[1], h.inf)
+
     def get_infeasible_model(self):
         inf = highspy.kHighsInf
         lp = highspy.HighsLp()
@@ -74,7 +101,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(status, highspy.HighsStatus.kOk)
         h.setOptionValue('presolve', 'off')
         return h
-    
+
     def test_version(self):
         h = self.get_basic_model()
         self.assertEqual(h.version(), "1.5.3")
@@ -404,7 +431,327 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.row_bound_dn.value_[1], -inf);
         self.assertEqual(ranging.row_bound_up.value_[1], inf);
         self.assertEqual(ranging.row_bound_up.objective_[1], inf);
+
+   
+    def test_infeasible_model(self):
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+        h.setOptionValue('presolve', 'off')
+
+        x = h.addVar()
+        y = h.addVar()
+
+        h.addConstr(x + y == 3)
+        h.addConstr(x + y == 1)
         
+        status = h.minimize(10*x + 15*y)
+        self.assertEqual(status, highspy.HighsStatus.kOk)
+
+        status = h.getModelStatus()
+        self.assertEqual(status, highspy.HighsModelStatus.kInfeasible)
+    
+    def test_basics_builder(self):
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = h.addVar(lb=-h.inf)
+        y = h.addVar(lb=-h.inf)
+
+        c1 = h.addConstr(-x + y >= 2)
+        c2 = h.addConstr(x + y >= 0)
+
+        h.minimize(y)
+
+        self.assertAlmostEqual(h.val(x), -1)
+        self.assertAlmostEqual(h.val(y), 1)
+
+        """
+        min y
+        s.t.
+        -x + y >= 3
+        x + y >= 0
+        """
+        h.changeRowBounds(0, 3, h.inf)
+        h.run()
+
+        self.assertAlmostEqual(h.val(x), -1.5)
+        self.assertAlmostEqual(h.val(y), 1.5)
+
+        # now make y integer
+        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
+        h.run()
+        sol = h.getSolution()
+        self.assertAlmostEqual(sol.col_value[0], -1)
+        self.assertAlmostEqual(sol.col_value[1], 2)
+
+        """
+        now delete the first constraint and add a new one
+        
+        min y
+        s.t.
+        x + y >= 0
+        -x + y >= 0
+        """
+        h.removeConstr(c1)
+
+        c1 = h.addConstr(-x + y >= 0)
+
+        h.run()
+        
+        self.assertAlmostEqual(h.val(x), 0)
+        self.assertAlmostEqual(h.val(y), 0)
+
+        # change the upper bound of x to -5
+        h.changeColsBounds(1, np.array([0]), np.array([-h.inf], dtype=np.double),
+                           np.array([-5], dtype=np.double))
+        h.run()
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), 5)
+
+        # now maximize
+        h.changeRowBounds(1, -h.inf, 0)
+        h.changeRowBounds(0, -h.inf, 0)
+        h.minimize(-y)
+
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), -5)
+
+        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMinimize)
+        h.maximize(y)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMaximize)
+
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), -5)
+
+        self.assertAlmostEqual(h.getObjectiveValue(), -5)
+
+        h.maximize(y + 1)
+        self.assertAlmostEqual(h.getObjectiveOffset()[1], 1)
+        self.assertAlmostEqual(h.getObjectiveValue(), -4)
+
+    def test_addVar(self):  
+        h = highspy.Highs()  
+        h.addVar()
+        h.update()
+        self.assertEqual(h.numVars, 1)  
+  
+    def test_removeVar(self):  
+        h = highspy.Highs()  
+        x = [h.addVar(), h.addVar()]
+
+        h.update()
+        self.assertEqual(h.numVars, 2)
+
+        h.removeVar(x[0])
+        self.assertEqual(h.numVars, 1)
+
+    def test_addConstr(self):  
+        h = highspy.Highs()
+        x = h.addVar()
+        y = h.addVar()
+
+        h.addConstr(2*x + 3*y <= 10)  
+        self.assertEqual(h.numVars, 2)
+        self.assertEqual(h.numConstrs, 1)  
+        self.assertEqual(h.getNumNz(), 2)
+
+        lp = h.getLp()
+        self.assertAlmostEqual(lp.row_lower_[0], -h.inf)
+        self.assertAlmostEqual(lp.row_upper_[0], 10)
+
+        self.assertEqual(lp.a_matrix_.index_[0], 0)
+        self.assertEqual(lp.a_matrix_.index_[1], 1)
+
+        self.assertAlmostEqual(lp.a_matrix_.value_[0], 2)
+        self.assertAlmostEqual(lp.a_matrix_.value_[1], 3)
+  
+    def test_removeConstr(self):  
+        h = highspy.Highs()
+        x = h.addVar()
+        y = h.addVar()
+        c = h.addConstr(2*x + 3*y <= 10)
+        self.assertEqual(h.numConstrs, 1)
+
+        h.removeConstr(c)  
+        self.assertEqual(h.numVars, 2)
+        self.assertEqual(h.numConstrs, 0)  
+  
+    def test_val(self):  
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = [h.addVar(), h.addVar()]
+        h.addConstr(2*x[0] + 3*x[1] <= 10)
+        h.maximize(x[0])
+
+        self.assertAlmostEqual(h.val(x[0]), 5)
+
+        vals = h.vals(x)  
+        self.assertAlmostEqual(vals[0], 5)
+        self.assertAlmostEqual(vals[1], 0)
+
+    def test_var_name(self):  
+        h = highspy.Highs()  
+        
+        # name set, but not in the model
+        x = h.addVar(name='x')
+        self.assertEqual(x.name, 'x')
+
+        # change name before adding to the model
+        x.name = 'y'
+        self.assertEqual(x.name, 'y')
+
+        # add to the model
+        h.update()
+        self.assertEqual(h.numVars, 1)  
+        self.assertEqual(h.getLp().col_names_[0], 'y')
+
+        # change name after adding to the model
+        x.name = 'z'
+        self.assertEqual(h.getLp().col_names_[0], 'z')
+
+        # change name via the model
+        h.passColName(0, 'a')
+        self.assertEqual(h.getLp().col_names_[0], 'a')
+        self.assertEqual(x.name, 'a')
+ 
+        # change name to none or empty string
+        def change_name(n):
+            x.name = n
+
+        self.assertRaises(Exception, change_name, None)
+        self.assertRaises(Exception, change_name, '')
+
+    def test_binary(self):  
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = [h.addBinary(), h.addBinary()]
+        h.addConstr(2*x[0] + 3*x[1] <= 10)
+        h.maximize(x[0])
+
+        lp = h.getLp()
+        self.assertAlmostEqual(lp.col_lower_[0], 0)
+        self.assertAlmostEqual(lp.col_upper_[0], 1)
+        self.assertEqual(lp.integrality_[0], highspy.HighsVarType.kInteger)
+
+        self.assertAlmostEqual(h.val(x[0]), 1)
+
+        vals = h.vals(x)  
+        self.assertAlmostEqual(vals[0], 1)
+        self.assertAlmostEqual(vals[1], 0)
+
+    def test_integer(self):  
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = [h.addIntegral(), h.addVar()]
+        h.addConstr(2*x[0] + 3*x[1] <= 10.6)
+        h.maximize(x[0]+x[1])
+
+        lp = h.getLp()
+        self.assertEqual(lp.integrality_[0], highspy.HighsVarType.kInteger)
+        self.assertEqual(lp.integrality_[1], highspy.HighsVarType.kContinuous)
+
+        self.assertAlmostEqual(h.val(x[0]), 5)
+
+        vals = h.vals(x)  
+        self.assertAlmostEqual(vals[0], 5)
+        self.assertAlmostEqual(vals[1], 0.2)
+
+    def test_objective(self):  
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = [h.addVar(), h.addVar()]
+        h.addConstr(2*x[0] + 3*x[1] <= 10)
+
+        self.assertRaises(Exception, h.maximize, x[0]+x[1] <= 3)
+        self.assertRaises(Exception, h.minimize, x[0]+x[1] <= 3)
+
+    def test_constraint_builder(self):  
+        h = highspy.Highs()
+        (x,y) = [h.addVar(), h.addVar()]
+
+        # -inf <= 2x + 3y <= inf
+        c1 = 2*x + 3*y 
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, h.inf, 0))
+
+        # -inf <= 2x + 3y <= 2x
+        c1 = 2*x + 3*y <= 2*x
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+
+        # -inf <= 2x + 3y <= 2x
+        c1 = 2*x >= 2*x + 3*y 
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+
+        # max{1,4} <= 2x + 3y <= inf
+        c1 = 1 <= (4 <= 2*x + 3*y)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (4, h.inf, 0))
+
+        # -inf <= 2x + 3y <= min{1,4}
+        c1 = 2 >= (4 >= 2*x + 3*y)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 2, 0))
+        c1 = 2*x + 3*y <= (2 <= 4)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, True, 0))
+        c1 = (2*x + 3*y <= 2) <= 4
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 2, 0))
+
+        # 1 <= 2x + 3y <= 5
+        c1 = (1 <= 2*x + 3*y) <= 5
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (1, 5, 0))
+
+        # 1 <= 2x + 3y <= 5
+        c1 = 1 <= (2*x + 3*y <= 5)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (1, 5, 0))
+
+        # 1 <= 2x + 3y <= 5
+        c1 = 1 <= (5 >= 2*x + 3*y)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (1, 5, 0))
+
+        # 1 <= 2x + 3y <= 5
+        c1 = (5 >= 2*x + 3*y) >= 1
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (1, 5, 0))
+
+        # 1 <= 2x + 3y <= 5
+        c1 = 5 >= (2*x + 3*y >= 1)
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (1, 5, 0))
+
+        # failure, non-linear terms
+        self.assertRaises(Exception, lambda: 2*x*3*y, None)
+
+        # failure, order matters when having variables on both sides of inequality
+        # -inf <= 4*x - t <= min{0, 5}
+        c1 = (4*x <= 2*x + 3*y) <= 5
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+
+        #4*x <= (2*x + 3*y <= 5) 
+        self.assertRaises(Exception, lambda: 4*x <= (2*x + 3*y <= 5), None)
+
+        #(4*x <= 2*x + 3*y) <= 5*x
+        self.assertRaises(Exception, lambda: (4*x <= 2*x + 3*y) <= 5*x, None)
+
+        # test various combinations with different inequalities
+        self.assertRaises(Exception, lambda: (2*x + 3*y == 3*y) == 3, None)
+        self.assertRaises(Exception, lambda: 2*x + 3*y == (3*y == 3), None)
+        self.assertRaises(Exception, lambda: 2*x + 3*y == (3*y <= 3), None)
+        self.assertRaises(Exception, lambda: 2*x + 3*y == (3*y >= 3), None)
+
+        c1 = 2*x + 3*y == x
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (0, 0, 0))
+
+        c1 = 2*x + 3*y == 5
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (5, 5, 0))
+
+        c1 = 5 == 2*x + 3*y
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (5, 5, 0))
+
+        # 2*x + 3*y == 4.5
+        c1 = 2*x + 3*y + 0.5 == 5
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (5, 5, 0.5))
+        h.addConstr(c1)
+        self.assertAlmostEqual((h.getLp().row_lower_[0], h.getLp().row_upper_[0]), (4.5, 4.5))
+
     def test_write_basis_before_running(self):
         h = self.get_basic_model()
         with tempfile.NamedTemporaryFile() as f:

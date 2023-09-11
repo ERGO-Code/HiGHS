@@ -1,6 +1,9 @@
 #ifndef __SRC_LIB_SETTINGS_HPP__
 #define __SRC_LIB_SETTINGS_HPP__
 
+#include "eventhandler.hpp"
+#include "statistics.hpp"
+
 enum class RatiotestStrategy { TwoPass, Textbook };
 
 enum class PricingStrategy { DantzigWolfe, Devex };
@@ -30,6 +33,7 @@ struct Settings {
 
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 1;
+  Eventhandler<Statistics&> endofiterationevent;
 
   HighsInt reinvertfrequency = 100;
   HighsInt gradientrecomputefrequency = 1;

@@ -1,5 +1,5 @@
 if(NOT BUILD_EXAMPLES)
-	return()
+  return()
 endif()
 
 if(BUILD_CXX_EXAMPLE)
@@ -22,4 +22,3 @@ if(BUILD_CXX_EXAMPLE)
     add_c_example(${FILE_NAME})
   endforeach()
 endif()
-

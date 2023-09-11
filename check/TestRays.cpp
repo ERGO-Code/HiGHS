@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
@@ -207,8 +208,8 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   REQUIRE(ray_error_norm < 1e-6);
 }
 
-void testInfeasibleMps(const std::string model,
-                       const bool has_dual_ray_ = true) {
+void testInfeasibleMpsLp(const std::string model,
+                         const bool has_dual_ray_ = true) {
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -246,8 +247,44 @@ void testInfeasibleMps(const std::string model,
   REQUIRE(has_primal_ray == false);
 }
 
-void testUnboundedMps(const std::string model,
-                      const ObjSense sense = ObjSense::kMinimize) {
+void testInfeasibleMpsMip(const std::string model) {
+  std::string model_file;
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  bool has_dual_ray;
+  bool has_primal_ray;
+
+  Highs highs;
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  } else {
+    highs.setOptionValue("log_dev_level", 2);
+  }
+
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+
+  // Test dual ray for MIP of infeasible LP
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  require_model_status = HighsModelStatus::kInfeasible;
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  lp = highs.getLp();
+  lp.integrality_.clear();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.integrality_.push_back(HighsVarType::kInteger);
+  highs.passModel(lp);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == require_model_status);
+  // Check that there is no dual ray
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
+  REQUIRE(!has_dual_ray);
+  // Check that there is no primal ray
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+  REQUIRE(has_primal_ray == false);
+}
+
+void testUnboundedMpsLp(const std::string model,
+                        const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
@@ -400,33 +437,38 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(has_primal_ray == false);
 }
 
-TEST_CASE("Rays-gas11", "[highs_test_rays]") { testUnboundedMps("gas11"); }
+TEST_CASE("Rays-gas11", "[highs_test_rays]") { testUnboundedMpsLp("gas11"); }
 TEST_CASE("Rays-adlittlemax", "[highs_test_rays]") {
-  testUnboundedMps("adlittle", ObjSense::kMaximize);
+  testUnboundedMpsLp("adlittle", ObjSense::kMaximize);
 }
 
-TEST_CASE("Rays-galenet", "[highs_test_rays]") { testInfeasibleMps("galenet"); }
+TEST_CASE("Rays-galenet", "[highs_test_rays]") {
+  testInfeasibleMpsLp("galenet");
+}
 
 TEST_CASE("Rays-woodinfe", "[highs_test_rays]") {
-  testInfeasibleMps("woodinfe");
+  testInfeasibleMpsLp("woodinfe");
 }
 
 // klein1 is infeasible, but currently has no dual ray
 TEST_CASE("Rays-klein1", "[highs_test_rays]") {
-  testInfeasibleMps("klein1", true);
+  testInfeasibleMpsLp("klein1", true);
 }
 
 TEST_CASE("Rays-gams10am", "[highs_test_rays]") {
-  testInfeasibleMps("gams10am");
+  testInfeasibleMpsLp("gams10am");
+  testInfeasibleMpsMip("gams10am");
 }
 
-TEST_CASE("Rays-ex72a", "[highs_test_rays]") { testInfeasibleMps("ex72a"); }
+TEST_CASE("Rays-ex72a", "[highs_test_rays]") { testInfeasibleMpsLp("ex72a"); }
 
-TEST_CASE("Rays-forest6", "[highs_test_rays]") { testInfeasibleMps("forest6"); }
+TEST_CASE("Rays-forest6", "[highs_test_rays]") {
+  testInfeasibleMpsLp("forest6");
+}
 
-TEST_CASE("Rays-box1", "[highs_test_rays]") { testInfeasibleMps("box1"); }
+TEST_CASE("Rays-box1", "[highs_test_rays]") { testInfeasibleMpsLp("box1"); }
 
-TEST_CASE("Rays-bgetam", "[highs_test_rays]") { testInfeasibleMps("bgetam"); }
+TEST_CASE("Rays-bgetam", "[highs_test_rays]") { testInfeasibleMpsLp("bgetam"); }
 
 TEST_CASE("Rays-464a", "[highs_test_rays]") {
   // The model is:

@@ -28,7 +28,8 @@
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/ICrashX.h"
-#include "qpsolver/quass.hpp"
+#include "qpsolver/a_quass.hpp"
+#include "qpsolver/runtime.hpp"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
@@ -1538,8 +1539,11 @@ HighsStatus Highs::run() {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
+  // Can't get a ray without an INVERT, but absence is only an error
+  // when solving an LP #1350
+  has_dual_ray = false;
   if (!ekk_instance_.status_.has_invert)
-    return invertRequirementError("getDualRay");
+    return lpInvertRequirementError("getDualRay");
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
@@ -1563,8 +1567,11 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
+  // Can't get a ray without an INVERT, but absence is only an error
+  // when solving an LP #1350
+  has_primal_ray = false;
   if (!ekk_instance_.status_.has_invert)
-    return invertRequirementError("getPrimalRay");
+    return lpInvertRequirementError("getPrimalRay");
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
@@ -3018,32 +3025,57 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
   bool valid, integral, feasible;
+  // Determine whether this solution is feasible, or just integer feasible
   HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
                                                      valid, integral, feasible);
   assert(return_status != HighsStatus::kError);
   assert(valid);
-  // If the current non-continuous solution values are not integral,
-  // then no point in trying to assign values to continous variables
-  // to achieve a feasible solution.
-  if (!integral || feasible) return HighsStatus::kOk;
+  // If the current solution is feasible, then solution can be used by
+  // MIP solver to get a primal bound
+  if (feasible) return HighsStatus::kOk;
+  //  if (!integral) return HighsStatus::kOk;  // TEMP FOR CHECKING NOTHIONG IS
+  //  BROKEN
   // Save the column bounds and integrality in preparation for fixing
-  // the non-continuous variables at user-supplied values
+  // the non-continuous variables when user-supplied values are
+  // integer
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
+  const bool have_integrality = lp.integrality_.size();
+  bool is_integer = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
-    lp.col_lower_[iCol] = solution_.col_value[iCol];
-    lp.col_upper_[iCol] = solution_.col_value[iCol];
+    // Fix non-continuous variable if it has integer value
+    const double primal = solution_.col_value[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const HighsVarType type =
+        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    double col_infeasibility = 0;
+    double integer_infeasibility = 0;
+    assessColPrimalSolution(options_, primal, lower, upper, type,
+                            col_infeasibility, integer_infeasibility);
+    if (integer_infeasibility > options_.mip_feasibility_tolerance) {
+      // Variable is not integer feasible, so record that a MIP will
+      // have to be solved
+      is_integer = false;
+    } else {
+      // Variable is integer feasible, so fix it at this value and
+      // remove its integrality
+      lp.col_lower_[iCol] = solution_.col_value[iCol];
+      lp.col_upper_[iCol] = solution_.col_value[iCol];
+      lp.integrality_[iCol] = HighsVarType::kContinuous;
+    }
   }
-  lp.integrality_.clear();
+  // If the solution is integer valued, only an LP needs to be solved,
+  // so clear all integrality
+  if (is_integer) lp.integrality_.clear();
   solution_.clear();
   basis_.clear();
   // Solve the model
-  assert(!model_.isMip());
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Attempting to find feasible solution of continuous variables "
-               "for user-supplied values of discrete variables\n");
+               "Attempting to find feasible solution "
+               "for (partial) user-supplied values of discrete variables\n");
   return_status = this->run();
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
@@ -3052,8 +3084,7 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   // Handle the error return
   if (return_status == HighsStatus::kError) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Highs::run() error trying to find feasible solution of "
-                 "continuous variables\n");
+                 "Highs::run() error trying to find feasible solution\n");
     return HighsStatus::kError;
   }
   return HighsStatus::kOk;
@@ -3133,43 +3164,49 @@ HighsStatus Highs::callSolveQp() {
     }
   }
 
-  Runtime runtime(instance, timer_);
+  Settings settings;
+  Statistics stats;
 
-  runtime.settings.reportingfequency = 1000;
-  runtime.endofiterationevent.subscribe([this](Runtime& rt) {
-    int rep = rt.statistics.iteration.size() - 1;
+  settings.reportingfequency = 1000;
+
+  settings.endofiterationevent.subscribe([this](Statistics& stats) {
+    int rep = stats.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 rt.statistics.iteration[rep], rt.statistics.time[rep],
-                 rt.statistics.objval[rep],
-                 rt.statistics.nullspacedimension[rep]);
+                 stats.iteration[rep], stats.time[rep], stats.objval[rep],
+                 stats.nullspacedimension[rep]);
   });
 
-  runtime.settings.timelimit = options_.time_limit;
-  runtime.settings.iterationlimit = std::numeric_limits<int>::max();
+  settings.timelimit = options_.time_limit;
+  settings.iterationlimit = options_.simplex_iteration_limit;
+  settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
 
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
 
-  Quass qpsolver(runtime);
-  qpsolver.solve();
+  QpModelStatus qp_model_status;
+
+  QpSolution qp_solution(instance);
+
+  QpAsmStatus qpstatus =
+      solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
                                       return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = runtime.status == QpModelStatus::OPTIMAL
+  model_status_ = qp_model_status == QpModelStatus::OPTIMAL
                       ? HighsModelStatus::kOptimal
-                  : runtime.status == QpModelStatus::UNBOUNDED
+                  : qp_model_status == QpModelStatus::UNBOUNDED
                       ? HighsModelStatus::kUnbounded
-                  : runtime.status == QpModelStatus::INFEASIBLE
+                  : qp_model_status == QpModelStatus::INFEASIBLE
                       ? HighsModelStatus::kInfeasible
-                  : runtime.status == QpModelStatus::ITERATIONLIMIT
+                  : qp_model_status == QpModelStatus::ITERATIONLIMIT
                       ? HighsModelStatus::kIterationLimit
-                  : runtime.status == QpModelStatus::TIMELIMIT
+                  : qp_model_status == QpModelStatus::TIMELIMIT
                       ? HighsModelStatus::kTimeLimit
                       : HighsModelStatus::kNotset;
   // extract variable values
@@ -3177,18 +3214,18 @@ HighsStatus Highs::callSolveQp() {
   solution_.col_dual.resize(lp.num_col_);
   const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    solution_.col_value[iCol] = runtime.primal.value[iCol];
+    solution_.col_value[iCol] = qp_solution.primal.value[iCol];
     solution_.col_dual[iCol] =
-        objective_multiplier * runtime.dualvar.value[iCol];
+        objective_multiplier * qp_solution.dualvar.value[iCol];
   }
   // extract constraint activity
   solution_.row_value.resize(lp.num_row_);
   solution_.row_dual.resize(lp.num_row_);
   // Negate the vector and Hessian
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
+    solution_.row_value[iRow] = qp_solution.rowactivity.value[iRow];
     solution_.row_dual[iRow] =
-        objective_multiplier * runtime.dualcon.value[iRow];
+        objective_multiplier * qp_solution.dualcon.value[iRow];
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
@@ -3198,11 +3235,11 @@ HighsStatus Highs::callSolveQp() {
   basis_.row_status.resize(lp.num_row_);
 
   for (HighsInt i = 0; i < lp.num_col_; i++) {
-    if (runtime.status_var[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
       basis_.col_status[i] = HighsBasisStatus::kLower;
-    } else if (runtime.status_var[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
       basis_.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (runtime.status_var[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
       basis_.col_status[i] = HighsBasisStatus::kNonbasic;
     } else {
       basis_.col_status[i] = HighsBasisStatus::kBasic;
@@ -3210,23 +3247,25 @@ HighsStatus Highs::callSolveQp() {
   }
 
   for (HighsInt i = 0; i < lp.num_row_; i++) {
-    if (runtime.status_con[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
       basis_.row_status[i] = HighsBasisStatus::kLower;
-    } else if (runtime.status_con[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
       basis_.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (runtime.status_con[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
       basis_.row_status[i] = HighsBasisStatus::kNonbasic;
     } else {
       basis_.row_status[i] = HighsBasisStatus::kBasic;
     }
   }
+  basis_.valid = true;
+  basis_.alien = false;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);
   getKktFailures(options_, model_, solution_, basis_, info_);
   // Set the QP-specific values of info_
-  info_.simplex_iteration_count += runtime.statistics.phase1_iterations;
-  info_.qp_iteration_count += runtime.statistics.num_iterations;
+  info_.simplex_iteration_count += stats.phase1_iterations;
+  info_.qp_iteration_count += stats.num_iterations;
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
     checkOptimality("QP", return_status);

@@ -1538,3 +1538,11 @@ HighsStatus Highs::invertRequirementError(std::string method_name) {
                "No invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
 }
+
+HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
+  assert(!ekk_instance_.status_.has_invert);
+  if (model_.isMip() || model_.isQp()) return HighsStatus::kOk;
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "No LP invertible representation for %s\n", method_name.c_str());
+  return HighsStatus::kError;
+}
