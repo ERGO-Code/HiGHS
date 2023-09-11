@@ -15,12 +15,10 @@ py.extension_module(
   include_directories: _incdirs,
 )
 
-py.extension_module(
-  '_highs_options',
-  sources : highsoptions_cpp,
-  dependencies: [pyb11_dep, highs_dep],
-  cpp_args: _args,
-  install: true,
+py.install_sources(
+  [
+    '__init__.py',
+    'highs.py',
+  ],
   subdir: 'highspy',
-  include_directories: _incdirs,
 )
