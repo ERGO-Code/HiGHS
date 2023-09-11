@@ -14,6 +14,7 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
+#include "lp_data/HighsCallback.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HSet.h"
@@ -56,7 +57,8 @@ class HEkk {
   void ftran(HVector& rhs, const double expected_density);
 
   void moveLp(HighsLpSolverObject& solver_object);
-  void setPointers(HighsOptions* options, HighsTimer* timer);
+  void setPointers(HighsCallback* callback, HighsOptions* options,
+                   HighsTimer* timer);
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 
@@ -131,6 +133,7 @@ class HEkk {
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
+  HighsCallback* callback_;
   HighsOptions* options_;
   HighsTimer* timer_;
   HighsSimplexAnalysis analysis_;
@@ -291,7 +294,7 @@ class HEkk {
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
-  bool bailoutOnTimeIterations();
+  bool bailout();
   HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 

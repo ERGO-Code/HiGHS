@@ -135,7 +135,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
                                perturb_costs);
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
-  if (ekk_instance_.bailoutOnTimeIterations())
+  if (ekk_instance_.bailout())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   // Consider initialising edge weights
@@ -611,7 +611,7 @@ void HEkkDual::solvePhase1() {
   // false so they are set if solvePhase1() is called directly - but it never is
   assert(solve_phase == kSolvePhase1);
   assert(!ekk_instance_.solve_bailout_);
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailout()) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
               "dual-phase-1-start\n");
@@ -638,7 +638,7 @@ void HEkkDual::solvePhase1() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (ekk_instance_.bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailout()) break;
     for (;;) {
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
@@ -657,7 +657,7 @@ void HEkkDual::solvePhase1() {
           iterateMulti();
           break;
       }
-      if (ekk_instance_.bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailout()) break;
       assert(solve_phase != kSolvePhaseTabooBasis);
       if (rebuild_reason) break;
     }
@@ -860,7 +860,7 @@ void HEkkDual::solvePhase2() {
   // they are set if solvePhase2() is called directly
   solve_phase = kSolvePhase2;
   ekk_instance_.solve_bailout_ = false;
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailout()) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
               "dual-phase-2-start\n");
@@ -888,7 +888,7 @@ void HEkkDual::solvePhase2() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (ekk_instance_.bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailout()) break;
     if (bailoutOnDualObjective()) break;
     if (dualInfeasCount > 0) break;
     for (;;) {
@@ -911,7 +911,7 @@ void HEkkDual::solvePhase2() {
           iterateMulti();
           break;
       }
-      if (ekk_instance_.bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailout()) break;
       if (bailoutOnDualObjective()) break;
       assert(solve_phase != kSolvePhaseTabooBasis);
 

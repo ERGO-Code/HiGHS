@@ -17,6 +17,7 @@ set(TEST_SOURCES
     TestHighsVersion.cpp
     TestAlienBasis.cpp
     TestDualize.cpp
+    TestCallbacks.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
     TestFactor.cpp

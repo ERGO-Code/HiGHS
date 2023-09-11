@@ -80,6 +80,7 @@ if(NOT FAST_BUILD)
     io/HMpsFF.cpp
     io/LoadOptions.cpp
     lp_data/Highs.cpp
+    lp_data/HighsCallback.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
@@ -189,6 +190,7 @@ if(NOT FAST_BUILD)
     lp_data/HConst.h
     lp_data/HStruct.h
     lp_data/HighsAnalysis.h
+    lp_data/HighsCallback.h
     lp_data/HighsDebug.h
     lp_data/HighsInfo.h
     lp_data/HighsInfoDebug.h
@@ -440,6 +442,7 @@ else()
     io/HMpsFF.cpp
     io/LoadOptions.cpp
     lp_data/Highs.cpp
+    lp_data/HighsCallback.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsDeprecated.cpp
     lp_data/HighsInfo.cpp
@@ -596,6 +599,7 @@ else()
     lp_data/HConst.h
     lp_data/HStruct.h
     lp_data/HighsAnalysis.h
+    lp_data/HighsCallback.h
     lp_data/HighsDebug.h
     lp_data/HighsInfo.h
     lp_data/HighsInfoDebug.h
