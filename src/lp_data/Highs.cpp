@@ -722,7 +722,8 @@ HighsStatus Highs::presolve() {
           (int)options_.threads, max_threads);
       return HighsStatus::kError;
     }
-    model_presolve_status_ = runPresolve(force_presolve);
+    const bool force_lp_presolve = false;
+    model_presolve_status_ = runPresolve(force_lp_presolve, force_presolve);
   }
 
   bool using_reduced_lp = false;
@@ -1083,10 +1084,14 @@ HighsStatus Highs::run() {
         options_.lp_presolve_requires_basis_postsolve;
     if (ipx_no_crossover) options_.lp_presolve_requires_basis_postsolve = false;
     // Possibly presolve - according to option_.presolve
+    //
+    // If solving the relaxation of a MIP, make sure that LP presolve
+    // is used - so that rules assuming MIP properties are not applied.
     const double from_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time = -from_presolve_time;
     timer_.start(timer_.presolve_clock);
-    model_presolve_status_ = runPresolve();
+    const bool force_lp_presolve = true;
+    model_presolve_status_ = runPresolve(force_lp_presolve);
     timer_.stop(timer_.presolve_clock);
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time += to_presolve_time;
@@ -2814,7 +2819,8 @@ void Highs::deprecationMessage(const std::string& method_name,
   }
 }
 
-HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
+HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
+                                       const bool force_presolve) {
   presolve_.clear();
   // Exit if presolve is set to off (unless presolve is forced)
   if (options_.presolve == kHighsOffString && !force_presolve)
@@ -2855,7 +2861,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
   // Presolve.
   HighsPresolveStatus presolve_return_status =
       HighsPresolveStatus::kNotPresolved;
-  if (model_.isMip()) {
+  if (model_.isMip() && !force_lp_presolve) {
     // Use presolve for MIP
     //
     // Presolved model is extracted now since it's part of solver,
@@ -2865,7 +2871,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_presolve) {
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
-    //    presolved_model_.lp_ = solver.getPresolvedModel();
+    presolve_.data_.postSolveStack = solver.getPostsolveStack();
     presolve_.presolve_status_ = presolve_return_status;
     //    presolve_.data_.presolve_log_ =
   } else {
@@ -3356,11 +3362,14 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                  "Solution provided to postsolve is incorrect size\n");
     return HighsStatus::kError;
   }
-  const bool basis_ok = isBasisConsistent(presolved_lp, basis);
-  if (!basis_ok) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Basis provided to postsolve is incorrect size\n");
-    return HighsStatus::kError;
+  if (basis.valid) {
+    // Check a valid basis
+    const bool basis_ok = isBasisConsistent(presolved_lp, basis);
+    if (!basis_ok) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Basis provided to postsolve is incorrect size\n");
+      return HighsStatus::kError;
+    }
   }
   presolve_.data_.recovered_solution_ = solution;
   presolve_.data_.recovered_basis_ = basis;
