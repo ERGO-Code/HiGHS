@@ -841,7 +841,7 @@ PYBIND11_MODULE(_highs, m) {
       .def("readModel", &Highs::readModel)
       .def("readBasis", &Highs::readBasis)
       .def("writeBasis", &Highs::writeBasis)
-      .def("postsolve", &highs_mipPostsolve)
+      .def("postsolve", &highs_MipPostsolve)
       .def("postsolve", &highs_lpPostsolve)
       .def("run", &Highs::run)
       .def("postsolve", &Highs::postsolve)

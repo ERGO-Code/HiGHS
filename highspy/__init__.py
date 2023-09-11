@@ -1,1 +1,1 @@
-from .highs import Highs
+from highspy.highs import Highs
