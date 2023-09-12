@@ -1116,7 +1116,7 @@ class HighsOptions : public HighsOptionsStruct {
   }
 
   void deleteRecords() {
-    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
+    for (size_t i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:

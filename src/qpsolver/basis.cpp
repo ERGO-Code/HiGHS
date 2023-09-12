@@ -18,7 +18,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
     activeconstraintidx.push_back(active[i]);
     basisstatus[activeconstraintidx[i]] = status[i];
   }
-  for (size_t i=0; i<inactive.size(); i++) {
+  for (size_t i = 0; i< inactive.size(); i++) {
     nonactiveconstraintsidx.push_back(inactive[i]);
     basisstatus[nonactiveconstraintsidx[i]] = BasisStatus::InactiveInBasis;
   }
@@ -278,10 +278,10 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
   Vector res_ = ftran(rhs, buffer, q);
 
   target.reset();
-  for (HighsInt i = 0; i < (HighsInt)nonactiveconstraintsidx.size(); i++) {
+  for (size_t i = 0; i < nonactiveconstraintsidx.size(); i++) {
     HighsInt nonactive = nonactiveconstraintsidx[i];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
-    target.index[i] = i;
+    target.index[i] = static_cast<HighsInt>(i);
     target.value[i] = res_.value[idx];
   }
   target.resparsify();

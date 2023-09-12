@@ -1986,7 +1986,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
     clique.erase(clique.begin() + newSize, clique.end());
   }
 
-  if (initialCliqueSize < (HighsInt)clique.size()) {
+  if (static_cast<size_t>(initialCliqueSize) < clique.size()) {
     // todo, shuffle extension vars?
     randgen.shuffle(clique.data() + initialCliqueSize,
                     clique.size() - initialCliqueSize);
