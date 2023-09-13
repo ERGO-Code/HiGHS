@@ -80,9 +80,11 @@ static void userInterruptCallback(const int callback_type, const char* message,
     } else if (callback_type == kHighsCallbackMipInterrupt) {
       if (dev_run)
         printf(
-            "userInterruptCallback(type %2d; data %2d): %s with objective = "
+            "userInterruptCallback(type %2d; data %2d): %s with Bounds "
+            "(%11.4g, %11.4g); Gap = %11.4g; Objective = "
             "%g\n",
-            callback_type, local_callback_data, message, data_out->objective);
+            callback_type, local_callback_data, message, data_out->dual_bound,
+            data_out->primal_bound, data_out->mip_rel_gap, data_out->objective);
       data_in->user_interrupt = data_out->objective < egout_objective_target;
     }
   }
@@ -98,9 +100,10 @@ static void userDataCallback(const int callback_type, const char* message,
   if (dev_run)
     printf("userDataCallback: Node count = %" PRId64
            "; Time = %6.2f; "
-           "Bounds (%11.4g, %11.4g); Gap = %11.4g: %s\n",
+           "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
            data_out->node_count, data_out->running_time, data_out->dual_bound,
-           data_out->primal_bound, data_out->mip_rel_gap, message);
+           data_out->primal_bound, data_out->mip_rel_gap, data_out->objective,
+           message);
 }
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
@@ -190,6 +193,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   highs.readModel(filename);
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {

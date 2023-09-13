@@ -1904,5 +1904,6 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.primal_bound = primal_bound;
   mipsolver.callback_->data_out.dual_bound = dual_bound;
   mipsolver.callback_->data_out.mip_rel_gap = mip_rel_gap;
+  mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
