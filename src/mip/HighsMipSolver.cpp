@@ -627,3 +627,7 @@ const HighsLp& HighsMipSolver::getPresolvedModel() const {
 HighsPresolveStatus HighsMipSolver::getPresolveStatus() const {
   return mipdata_->presolve_status;
 }
+
+presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
+  return mipdata_->postSolveStack;
+}

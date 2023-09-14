@@ -186,7 +186,12 @@ class Highs {
   HighsStatus run();
 
   /**
-   * @brief Postsolve the incumbent model
+   * @brief Postsolve the incumbent model using a solution
+   */
+  HighsStatus postsolve(const HighsSolution& solution);
+
+  /**
+   * @brief Postsolve the incumbent model using a solution and basis
    */
   HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
 
@@ -1305,7 +1310,8 @@ class Highs {
                                const HighsBasis& basis);
 
   PresolveComponent presolve_;
-  HighsPresolveStatus runPresolve(const bool force_presolve = false);
+  HighsPresolveStatus runPresolve(const bool force_lp_presolve,
+                                  const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,

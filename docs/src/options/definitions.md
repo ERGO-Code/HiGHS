@@ -208,7 +208,7 @@
 - Default: "false"
 
 ## mip\_improving\_solution\_file
-- File for reporting improving MIP solutions: not reported if ""
+- File for reporting improving MIP solutions: not reported for an empty string \"\"
 - Type: string
 - Default: ""
 
