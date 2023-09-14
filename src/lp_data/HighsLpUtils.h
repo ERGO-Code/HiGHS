@@ -46,7 +46,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, bool& has_infinite_cost,
-			const double infinite_cost);
+                        const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
@@ -107,7 +107,8 @@ void changeLpIntegrality(HighsLp& lp,
                          const vector<HighsVarType>& new_integrality);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
-                   const vector<double>& new_col_cost);
+                   const vector<double>& new_col_cost,
+                   const double infinite_cost);
 
 void changeLpColBounds(HighsLp& lp,
                        const HighsIndexCollection& index_collection,

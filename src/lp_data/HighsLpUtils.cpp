@@ -57,12 +57,11 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = lp.num_col_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.col_cost_, lp.has_infinite_cost_,
-                            options.infinite_cost);
+  call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
+                            lp.has_infinite_cost_, options.infinite_cost);
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
-  assert(!lp.has_infinite_cost_);
   // Assess the LP column bounds
   call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
                              lp.col_upper_, options.infinite_bound,
@@ -280,7 +279,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, bool& has_infinite_cost,
-			const double infinite_cost) {
+                        const double infinite_cost) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -311,7 +310,6 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // columns in the model.
   //
   HighsInt local_col;
-  HighsInt ml_col;
   HighsInt usr_col = -1;
   HighsInt num_infinite_cost = 0;
   for (HighsInt k = from_k; k < to_k + 1; k++) {
@@ -325,7 +323,6 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     } else {
       usr_col = k;
     }
-    ml_col = ml_col_os + local_col;
     if (index_collection.is_mask_ && !index_collection.mask_[local_col])
       continue;
     if (cost[usr_col] >= infinite_cost) {
@@ -337,10 +334,12 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     }
   }
   has_infinite_cost = num_infinite_cost > 0;
-  if (has_infinite_cost)   
+  if (has_infinite_cost)
     highsLogUser(options.log_options, HighsLogType::kInfo,
-		 "%" HIGHSINT_FORMAT " |cost| values greater than or equal to %12g are treated as Infinity\n",
-		 num_infinite_cost, infinite_cost);
+                 "%" HIGHSINT_FORMAT
+                 " |cost| values greater than or equal to %12g are treated as "
+                 "Infinity\n",
+                 num_infinite_cost, infinite_cost);
   return return_status;
 }
 
@@ -456,13 +455,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   if (num_infinite_lower_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " lower bounds less than or equal to %12g are treated as -Infinity\n",
+                 " lower bounds    less than or equal to %12g are treated as "
+                 "-Infinity\n",
                  type, num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " upper bounds greater than or equal to %12g are treated as +Infinity\n",
+                 " upper bounds greater than or equal to %12g are treated as "
+                 "+Infinity\n",
                  type, num_infinite_upper_bound, infinite_bound);
   }
 
@@ -1663,7 +1664,8 @@ void changeLpIntegrality(HighsLp& lp,
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
-                   const vector<double>& new_col_cost) {
+                   const vector<double>& new_col_cost,
+                   const double infinite_cost) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1693,7 +1695,9 @@ void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
     if (mask && !col_mask[col]) continue;
     lp.col_cost_[col] = new_col_cost[usr_col];
   }
-  assert(!lp.has_infinite_cost_);
+  // Check whether the LP still has an infinite cost
+  if (lp.has_infinite_cost_)
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(infinite_cost);
 }
 
 void changeLpColBounds(HighsLp& lp,

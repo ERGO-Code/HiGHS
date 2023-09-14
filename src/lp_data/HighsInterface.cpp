@@ -107,11 +107,11 @@ HighsStatus Highs::addColsInterface(
   std::vector<double> local_colUpper{ext_col_upper,
                                      ext_col_upper + ext_num_new_col};
 
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          assessCosts(options, lp.num_col_, index_collection,
-                                      local_colCost, lp.has_infinite_cost_, options.infinite_cost),
-                          return_status, "assessCosts");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      assessCosts(options, lp.num_col_, index_collection, local_colCost,
+                  lp.has_infinite_cost_, options.infinite_cost),
+      return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
@@ -626,14 +626,14 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{cost, cost + num_cost};
   HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          assessCosts(options_, 0, index_collection,
-                                      local_colCost, model_.lp_.has_infinite_cost_,
-				      options_.infinite_cost),
-                          return_status, "assessCosts");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      assessCosts(options_, 0, index_collection, local_colCost,
+                  model_.lp_.has_infinite_cost_, options_.infinite_cost),
+      return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
-  changeLpCosts(model_.lp_, index_collection, local_colCost);
+  changeLpCosts(model_.lp_, index_collection, local_colCost,
+                options_.infinite_cost);
   // Deduce the consequences of new costs
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data

@@ -826,7 +826,14 @@ HighsStatus Highs::run() {
       use_output_flag = true;
     }
   }
-  assert(!model_.lp_.has_infinite_cost_);
+  if (model_.lp_.has_infinite_cost_) {
+    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve models with infinite costs\n");
+    return HighsStatus::kError;
+  } else {
+    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
+  }
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 

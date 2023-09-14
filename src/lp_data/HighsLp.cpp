@@ -27,6 +27,14 @@ bool HighsLp::isMip() const {
   return false;
 }
 
+bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (this->col_cost_[iCol] >= infinite_cost) return true;
+    if (this->col_cost_[iCol] <= -infinite_cost) return true;
+  }
+  return false;
+}
+
 bool HighsLp::hasSemiVariables() const {
   HighsInt integrality_size = this->integrality_.size();
   if (integrality_size) {
