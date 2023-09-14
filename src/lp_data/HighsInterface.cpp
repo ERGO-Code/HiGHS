@@ -110,7 +110,7 @@ HighsStatus Highs::addColsInterface(
   return_status =
       interpretCallStatus(options_.log_options,
                           assessCosts(options, lp.num_col_, index_collection,
-                                      local_colCost, options.infinite_cost),
+                                      local_colCost, lp.has_infinite_cost_, options.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
@@ -629,7 +629,8 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   return_status =
       interpretCallStatus(options_.log_options,
                           assessCosts(options_, 0, index_collection,
-                                      local_colCost, options_.infinite_cost),
+                                      local_colCost, model_.lp_.has_infinite_cost_,
+				      options_.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   changeLpCosts(model_.lp_, index_collection, local_colCost);

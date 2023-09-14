@@ -157,9 +157,6 @@ enum GlpsolCostRowLocation {
 
 const std::string kHighsFilenameDefault = "";
 
-// Need to allow infinite costs to pass SCIP LPI unit tests
-const bool kHighsAllowInfiniteCosts = true;
-
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
   kNotReduced,

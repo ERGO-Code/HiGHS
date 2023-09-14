@@ -189,7 +189,7 @@ HighsStatus assessMatrix(
       // Check the value
       double abs_value = fabs(matrix_value[el]);
       // Check that the value is not too large
-      bool large_value = abs_value > large_matrix_value;
+      bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
         if (max_large_value < abs_value) max_large_value = abs_value;
         if (min_large_value > abs_value) min_large_value = abs_value;

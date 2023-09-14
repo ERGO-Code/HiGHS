@@ -826,6 +826,7 @@ HighsStatus Highs::run() {
       use_output_flag = true;
     }
   }
+  assert(!model_.lp_.has_infinite_cost_);
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 

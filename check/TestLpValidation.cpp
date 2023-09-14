@@ -204,23 +204,17 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  reportLp(lp, HighsLogType::kVerbose);
 
   // Try to add a column with illegal cost
-  HighsStatus require_return_status;
-  if (kHighsAllowInfiniteCosts) {
-    require_return_status = HighsStatus::kOk;
-  } else {
-    require_return_status = HighsStatus::kError;
-  }
   XcolCost[0] = my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_status == HighsStatus::kWarning);
 
   XcolCost[0] = -my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_status == HighsStatus::kWarning);
 
   // Reset to a legitimate cost
   XcolCost[0] = 1;
@@ -417,6 +411,58 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
+TEST_CASE("LP-inf_cost", "[highs_data]") {
+  Highs highs;
+  HighsLp lp;
+  const double my_infinite_bound = 1e30;
+  const double my_infinite_cost = kHighsInf;
+  const double my_large_cost = 1e20;
+  highs.setOptionValue("infinite_cost", my_infinite_cost);
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-3, -2, -my_infinite_cost};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {my_infinite_bound, my_infinite_bound, 1};
+  lp.row_lower_ = {-my_infinite_bound, 12};
+  lp.row_upper_ = {7.0, 12.0};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1.0, 4.0, 1.0, 2.0, 1, 1.0};
+
+  lp.integrality_.resize(lp.num_col_);
+  lp.integrality_[0] = HighsVarType::kContinuous;
+  lp.integrality_[0] = HighsVarType::kContinuous;
+  lp.integrality_[0] = HighsVarType::kInteger;
+
+  HighsStatus status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+  
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+
+  // Now just make the cost large
+  status = highs.changeColCost(2, -my_large_cost);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
+  
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // Now transform to LP and make cost infinite
+  status = highs.changeColCost(2, -my_infinite_cost);
+  status = highs.changeColIntegrality(2, HighsVarType::kContinuous);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+  
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {

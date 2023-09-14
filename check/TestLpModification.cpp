@@ -912,11 +912,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Attempting to set a cost to infinity may return error
   return_status = highs.changeColCost(7, kHighsInf);
-  if (kHighsAllowInfiniteCosts) {
-    REQUIRE(return_status == HighsStatus::kOk);
-  } else {
-    REQUIRE(return_status == HighsStatus::kError);
-  }
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77) == HighsStatus::kOk);
