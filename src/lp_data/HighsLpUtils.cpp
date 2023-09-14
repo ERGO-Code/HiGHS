@@ -333,13 +333,14 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
       cost[usr_col] = -kHighsInf;
     }
   }
-  has_infinite_cost = num_infinite_cost > 0;
-  if (has_infinite_cost)
+  if (num_infinite_cost > 0) {
+    has_infinite_cost = true;
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT
                  " |cost| values greater than or equal to %12g are treated as "
                  "Infinity\n",
                  num_infinite_cost, infinite_cost);
+  }
   return return_status;
 }
 
@@ -1421,7 +1422,6 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
   }
-  assert(!lp.has_infinite_cost_);
 }
 
 void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,

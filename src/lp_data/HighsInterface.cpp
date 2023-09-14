@@ -107,10 +107,11 @@ HighsStatus Highs::addColsInterface(
   std::vector<double> local_colUpper{ext_col_upper,
                                      ext_col_upper + ext_num_new_col};
 
+  bool local_has_infinite_cost = false;
   return_status = interpretCallStatus(
       options_.log_options,
       assessCosts(options, lp.num_col_, index_collection, local_colCost,
-                  lp.has_infinite_cost_, options.infinite_cost),
+                  local_has_infinite_cost, options.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
@@ -123,7 +124,6 @@ HighsStatus Highs::addColsInterface(
   // Append the columns to the LP vectors and matrix
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
-
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -175,6 +175,10 @@ HighsStatus Highs::addColsInterface(
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
   assert(lpDimensionsOk("addCols", lp, options.log_options));
+
+  // Interpret possible introduction of infinite costs
+  lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
+  assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options.infinite_cost));
 
   // Deduce the consequences of adding new columns
   invalidateModelStatusSolutionAndInfo();
@@ -626,14 +630,20 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{cost, cost + num_cost};
   HighsStatus return_status = HighsStatus::kOk;
+  bool local_has_infinite_cost = false;
   return_status = interpretCallStatus(
       options_.log_options,
       assessCosts(options_, 0, index_collection, local_colCost,
-                  model_.lp_.has_infinite_cost_, options_.infinite_cost),
+                  local_has_infinite_cost, options_.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
-  changeLpCosts(model_.lp_, index_collection, local_colCost,
-                options_.infinite_cost);
+  HighsLp& lp = model_.lp_;
+  changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
+
+  // Interpret possible introduction of infinite costs
+  lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
+  assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options_.infinite_cost));
+
   // Deduce the consequences of new costs
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data

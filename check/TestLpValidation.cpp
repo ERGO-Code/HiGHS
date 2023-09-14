@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 // No commas in test case name.
@@ -178,6 +178,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(num_col, colCost.data(), colLower.data(), colUpper.data(),
                     num_col_nz, Astart.data(), Aindex.data(), Avalue.data());
   REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
 
   // Create an empty column
   HighsInt XnumNewCol = 1;
@@ -200,21 +201,25 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
   REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
+
   XcolUpper[0] = my_infinity;
   //  reportLp(lp, HighsLogType::kVerbose);
 
-  // Try to add a column with illegal cost
+  // Try to add a column with infinite cost
   XcolCost[0] = my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
 
   XcolCost[0] = -my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
 
   // Reset to a legitimate cost
   XcolCost[0] = 1;
@@ -338,9 +343,16 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();
+  // LP has infinite costs, so cannot yet be solved. To close #1410
+  // the following must be reinstated
+  /*
   REQUIRE(run_status == HighsStatus::kOk);
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
+  */
+  REQUIRE(run_status == HighsStatus::kError);
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::kNotset);
 
   REQUIRE(highs.changeCoeff(-1, 0, check_value) == HighsStatus::kError);
   REQUIRE(highs.changeCoeff(0, -1, check_value) == HighsStatus::kError);
@@ -413,7 +425,7 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
-TEST_CASE("LP-inf_cost", "[highs_data]") {
+TEST_CASE("LP-inf-cost", "[highs_data]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
