@@ -476,6 +476,12 @@ class Highs {
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
 
+
+  /**
+   * @brief Get the current known upper limit
+   */
+  double getMipDualBound() const;
+
   /**
    * Methods for operations with the invertible representation of the
    * current basis matrix

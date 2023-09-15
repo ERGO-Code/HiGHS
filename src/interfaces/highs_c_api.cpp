@@ -495,6 +495,10 @@ double Highs_getObjectiveValue(const void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
 }
 
+double Highs_getMipDualBound(const void* highs) {
+  return ((Highs*)highs)->getMipDualBound();
+}
+
 HighsInt Highs_getBasicVariables(const void* highs, HighsInt* basic_variables) {
   return (HighsInt)((Highs*)highs)->getBasicVariables(basic_variables);
 }

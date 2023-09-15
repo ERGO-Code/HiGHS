@@ -851,6 +851,17 @@ HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
  */
 double Highs_getObjectiveValue(const void* highs);
 
+
+/**
+ * Get the current known dual bound.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns The dual bound value
+ */
+double Highs_getMipDualBound(const void* highs);
+
+
 /**
  * Get the indices of the rows and columns that make up the basis matrix ``B``
  * of a basic feasible solution.

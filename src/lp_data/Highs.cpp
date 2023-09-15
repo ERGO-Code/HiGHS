@@ -2376,6 +2376,10 @@ HighsStatus Highs::getObjectiveOffset(double& offset) const {
   return HighsStatus::kOk;
 }
 
+double Highs::getMipDualBound() const {
+  return info_.mip_dual_bound;
+}
+
 HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
@@ -3121,7 +3125,6 @@ HighsStatus Highs::callSolveQp() {
       i *= -1.0;
     }
   }
-
   Runtime runtime(instance, timer_);
 
   runtime.settings.reportingfequency = 1000;
