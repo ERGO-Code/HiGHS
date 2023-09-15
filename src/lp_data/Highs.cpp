@@ -48,12 +48,12 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
-Highs::Highs() {}
-
 void highsSignalHandler(int signum) {
   //  std::cout << "Interrupt signal (" << signum << ") received.\n";
   exit(signum);
 }
+
+Highs::Highs() { signal(SIGINT, highsSignalHandler); }
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -792,9 +792,6 @@ HighsStatus Highs::presolve() {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  // register signal SIGINT and signal handler
-  signal(SIGINT, highsSignalHandler);
-  //  sleep(1); raise( SIGINT);
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
