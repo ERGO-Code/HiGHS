@@ -11,30 +11,32 @@
 /**@file lp_data/HighsCallback.cpp
  * @brief
  */
-#include "HighsCallback.h"
+#include "lp_data/HighsCallback.h"
 
 #include <cassert>
 
-void HighsCallbackDataOut::clear() {
-  this->log_type = HighsLogType::kInfo;
-  this->simplex_iteration_count = -1;
-  this->node_count = -1;
-  this->running_time = -1;
-  this->primal_bound = kHighsInf;
-  this->dual_bound = -kHighsInf;
-  this->mip_rel_gap = -1;
-  this->objective = -kHighsInf;
-  this->col_value = nullptr;
+void HighsCallback::clearHighsCallbackDataOut() {
+  this->data_out.log_type = -1;
+  this->data_out.running_time = -1;
+  this->data_out.simplex_iteration_count = -1;
+  this->data_out.objective_function_value = -kHighsInf;
+  this->data_out.mip_node_count = -1;
+  this->data_out.mip_primal_bound = kHighsInf;
+  this->data_out.mip_dual_bound = -kHighsInf;
+  this->data_out.mip_gap = -1;
+  this->data_out.mip_solution = nullptr;
 }
 
-void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
+void HighsCallback::clearHighsCallbackDataIn() {
+  this->data_in.user_interrupt = false;
+}
 
 void HighsCallback::clear() {
   this->user_callback = nullptr;
   this->user_callback_data = nullptr;
-  this->active.assign(kNumHighsCallbackType, false);
-  this->data_out.clear();
-  this->data_in.clear();
+  this->active.assign(kNumCallbackType, false);
+  this->clearHighsCallbackDataOut();
+  this->clearHighsCallbackDataIn();
 }
 
 bool HighsCallback::callbackActive(const int callback_type) {
@@ -42,7 +44,7 @@ bool HighsCallback::callbackActive(const int callback_type) {
   if (!this->user_callback) return false;
   // Check that callback_type is within range
   const bool callback_type_ok =
-      callback_type >= kHighsCallbackMin && callback_type <= kHighsCallbackMax;
+      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
   assert(callback_type_ok);
   if (!callback_type_ok) return false;
   // Don't call callback if it is not active
@@ -60,8 +62,8 @@ bool HighsCallback::callbackAction(const int callback_type,
   bool action = this->data_in.user_interrupt;
 
   // Check for no action if case not handled internally
-  if (callback_type == kHighsCallbackMipImprovingSolution ||
-      callback_type == kHighsCallbackMipLogging)
+  if (callback_type == kCallbackMipImprovingSolution ||
+      callback_type == kCallbackMipLogging)
     assert(!action);
   return action;
 }

@@ -8,26 +8,28 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsCallback.h
+/**@file lp_data/HighsCallbackStruct.h
  * @brief
  */
-#ifndef LP_DATA_HIGHSCALLBACK_H_
-#define LP_DATA_HIGHSCALLBACK_H_
+#ifndef LP_DATA_HIGHSCALLBACKSTRUCT_H_
+#define LP_DATA_HIGHSCALLBACKSTRUCT_H_
 
-#include "lp_data/HStruct.h"
-#include "lp_data/HighsCallbackStruct.h"
+#include "util/HighsInt.h"
 
-struct HighsCallback {
-  void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
-                        HighsCallbackDataIn*, void*) = nullptr;
-  void* user_callback_data = nullptr;
-  std::vector<bool> active;
-  HighsCallbackDataOut data_out;
-  HighsCallbackDataIn data_in;
-  bool callbackActive(const int callback_type);
-  bool callbackAction(const int callback_type, std::string message = "");
-  void clearHighsCallbackDataOut();
-  void clearHighsCallbackDataIn();
-  void clear();
+struct HighsCallbackDataOut {
+  int log_type;  // cast of HighsLogType
+  double running_time;
+  HighsInt simplex_iteration_count;
+  double objective_function_value;
+  int64_t mip_node_count;
+  double mip_primal_bound;
+  double mip_dual_bound;
+  double mip_gap;
+  double* mip_solution;
 };
-#endif /* LP_DATA_HIGHSCALLBACK_H_ */
+
+struct HighsCallbackDataIn {
+  int user_interrupt;
+};
+
+#endif /* LP_DATA_HIGHSCALLBACKSTRUCT_H_ */
