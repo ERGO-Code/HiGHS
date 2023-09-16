@@ -9,22 +9,25 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 1;
+const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 static void userCallback(const int callback_type, const char* message,
 			 const struct HighsCallbackDataOut* data_out,
 			 struct HighsCallbackDataIn* data_in,
 			 void* user_callback_data) {
+  // Extract the double value pointed to from void* user_callback_data
+  const double local_callback_data = user_callback_data == NULL ? -1 : *(double*)user_callback_data;
+
   if (callback_type == kHighsCallbackLogging) {
-    if (dev_run) printf("userCallback: %s\n", message);
+    if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-    if (dev_run) printf("userCallback: improving solution with objective = %g\n", data_out->objective_function_value);
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, data_out->objective_function_value);
   } else if (callback_type == kHighsCallbackMipLogging) {
-    if (dev_run) printf("userCallback: MIP interrupt\n");
+    if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
   } else if (callback_type == kHighsCallbackMipInterrupt) {
-    if (dev_run) printf("userCallback: MIP interrupt\n");
+    if (dev_run) printf("userCallback(%11.4g): MIP interrupt\n", local_callback_data);
     data_in->user_interrupt = 1;
   }
 }
@@ -1368,6 +1371,7 @@ void test_callback() {
 		row_lower, row_upper,
 		a_start, a_index, a_value,
 		integrality);
+  
   Highs_setCallback(highs, userCallback, NULL);
   Highs_startCallback(highs, kHighsCallbackLogging);
   Highs_startCallback(highs, kHighsCallbackMipInterrupt);
@@ -1380,6 +1384,16 @@ void test_callback() {
   Highs_run(highs);
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   assertDoubleValuesEqual("objective_function_value", objective_function_value, 17);
+
+  double user_callback_data = inf;
+  void* p_user_callback_data = (void*)(&user_callback_data);
+  
+  Highs_setCallback(highs, userCallback, p_user_callback_data);
+  Highs_clearSolver(highs);
+  Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
+  Highs_run(highs);
+  
+
 }
 
 /*
