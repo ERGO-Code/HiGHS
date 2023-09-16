@@ -1062,6 +1062,16 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
                            const double* row_dual);
 
 /**
+ * @brief Set the callback method to use for HiGHS
+ */
+/*
+  HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const char*,
+								const HighsCallbackDataOut*,
+								HighsCallbackDataIn*, void*),
+			     void* user_callback_data = nullptr);
+*/
+
+/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     A pointer to the Highs instance.
