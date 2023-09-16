@@ -11,7 +11,7 @@
 /**@file lp_data/HighsCallback.cpp
  * @brief
  */
-#include "HighsCallback.h"
+#include "lp_data/HighsCallback.h"
 
 #include <cassert>
 
