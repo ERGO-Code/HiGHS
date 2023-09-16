@@ -15,26 +15,26 @@
 
 #include <cassert>
 
-void HighsCallbackDataOut::clear() {
-  this->log_type = -1;
-  this->simplex_iteration_count = -1;
-  this->node_count = -1;
-  this->running_time = -1;
-  this->primal_bound = kHighsInf;
-  this->dual_bound = -kHighsInf;
-  this->mip_rel_gap = -1;
-  this->objective = -kHighsInf;
-  this->col_value = nullptr;
+void HighsCallback::clearHighsCallbackDataOut() {
+  this->data_out.log_type = -1;
+  this->data_out.simplex_iteration_count = -1;
+  this->data_out.node_count = -1;
+  this->data_out.running_time = -1;
+  this->data_out.primal_bound = kHighsInf;
+  this->data_out.dual_bound = -kHighsInf;
+  this->data_out.mip_rel_gap = -1;
+  this->data_out.objective = -kHighsInf;
+  this->data_out.col_value = nullptr;
 }
 
-void HighsCallbackDataIn::clear() { this->user_interrupt = false; }
+void HighsCallback::clearHighsCallbackDataIn() { this->data_in.user_interrupt = false; }
 
 void HighsCallback::clear() {
   this->user_callback = nullptr;
   this->user_callback_data = nullptr;
   this->active.assign(kNumHighsCallbackType, false);
-  this->data_out.clear();
-  this->data_in.clear();
+  this->clearHighsCallbackDataOut();
+  this->clearHighsCallbackDataIn();
 }
 
 bool HighsCallback::callbackActive(const int callback_type) {

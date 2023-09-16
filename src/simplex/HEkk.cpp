@@ -3471,7 +3471,7 @@ bool HEkk::bailout() {
     model_status_ = HighsModelStatus::kIterationLimit;
   } else if (callback_->user_callback &&
              callback_->active[kHighsCallbackSimplexInterrupt]) {
-    callback_->data_out.clear();
+    callback_->clearHighsCallbackDataOut();
     callback_->data_out.simplex_iteration_count = iteration_count_;
     if (callback_->callbackAction(kHighsCallbackSimplexInterrupt,
                                   "Simplex interrupt")) {
