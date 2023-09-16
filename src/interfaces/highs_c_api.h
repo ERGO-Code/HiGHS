@@ -11,7 +11,8 @@
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
 
-#include "util/HighsInt.h"
+//#include "util/HighsInt.h"
+#include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
 
@@ -1064,12 +1065,10 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
 /**
  * @brief Set the callback method to use for HiGHS
  */
-/*
-  HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const char*,
-								const HighsCallbackDataOut*,
-								HighsCallbackDataIn*, void*),
-			     void* user_callback_data = nullptr);
-*/
+HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const char*,
+						              const struct HighsCallbackDataOut*,
+							      struct HighsCallbackDataIn*, void*),
+			     void* user_callback_data);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.
