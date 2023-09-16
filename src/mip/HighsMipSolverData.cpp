@@ -1833,8 +1833,8 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
-      mipsolver.callback_->data_out.col_value = mipsolver.solution_.data();
+      mipsolver.callback_->data_out.objective_function_value = mipsolver.solution_objective_;
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipImprovingSolution, "Improving solution");
       assert(!interrupt);
@@ -1897,12 +1897,12 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   double primal_bound;
   double mip_rel_gap;
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
-  mipsolver.callback_->data_out.node_count = mipsolver.mipdata_->num_nodes;
   mipsolver.callback_->data_out.running_time =
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  mipsolver.callback_->data_out.primal_bound = primal_bound;
-  mipsolver.callback_->data_out.dual_bound = dual_bound;
-  mipsolver.callback_->data_out.mip_rel_gap = mip_rel_gap;
-  mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
+  mipsolver.callback_->data_out.objective_function_value = mipsolver.solution_objective_;
+  mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
+  mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
+  mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
+  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }

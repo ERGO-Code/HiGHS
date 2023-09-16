@@ -17,14 +17,14 @@
 
 void HighsCallback::clearHighsCallbackDataOut() {
   this->data_out.log_type = -1;
-  this->data_out.simplex_iteration_count = -1;
-  this->data_out.node_count = -1;
   this->data_out.running_time = -1;
-  this->data_out.primal_bound = kHighsInf;
-  this->data_out.dual_bound = -kHighsInf;
-  this->data_out.mip_rel_gap = -1;
-  this->data_out.objective = -kHighsInf;
-  this->data_out.col_value = nullptr;
+  this->data_out.simplex_iteration_count = -1;
+  this->data_out.objective_function_value = -kHighsInf;
+  this->data_out.mip_node_count = -1;
+  this->data_out.mip_primal_bound = kHighsInf;
+  this->data_out.mip_dual_bound = -kHighsInf;
+  this->data_out.mip_gap = -1;
+  this->data_out.mip_solution = nullptr;
 }
 
 void HighsCallback::clearHighsCallbackDataIn() { this->data_in.user_interrupt = false; }

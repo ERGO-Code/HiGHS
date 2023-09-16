@@ -48,11 +48,11 @@ static void userInterruptCallback(const int callback_type, const char* message,
       printf(
           "userCallback(type %2d; data %11.4g): %s with objective %g and "
           "solution[0] = %g\n",
-          callback_type, local_callback_data, message, data_out->objective,
-          data_out->col_value[0]);
-    REQUIRE(local_callback_data >= data_out->objective);
+          callback_type, local_callback_data, message, data_out->objective_function_value,
+          data_out->mip_solution[0]);
+    REQUIRE(local_callback_data >= data_out->objective_function_value);
     // Update the double value pointed to from void* user_callback_data
-    *(double*)user_callback_data = data_out->objective;
+    *(double*)user_callback_data = data_out->objective_function_value;
   } else {
     const int local_callback_data =
         user_callback_data
@@ -83,9 +83,9 @@ static void userInterruptCallback(const int callback_type, const char* message,
             "userInterruptCallback(type %2d; data %2d): %s with Bounds "
             "(%11.4g, %11.4g); Gap = %11.4g; Objective = "
             "%g\n",
-            callback_type, local_callback_data, message, data_out->dual_bound,
-            data_out->primal_bound, data_out->mip_rel_gap, data_out->objective);
-      data_in->user_interrupt = data_out->objective < egout_objective_target;
+            callback_type, local_callback_data, message, data_out->mip_dual_bound,
+            data_out->mip_primal_bound, data_out->mip_gap, data_out->objective_function_value);
+      data_in->user_interrupt = data_out->objective_function_value < egout_objective_target;
     }
   }
 }
@@ -101,8 +101,8 @@ static void userDataCallback(const int callback_type, const char* message,
     printf("userDataCallback: Node count = %" PRId64
            "; Time = %6.2f; "
            "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
-           data_out->node_count, data_out->running_time, data_out->dual_bound,
-           data_out->primal_bound, data_out->mip_rel_gap, data_out->objective,
+           data_out->mip_node_count, data_out->running_time, data_out->mip_dual_bound,
+           data_out->mip_primal_bound, data_out->mip_gap, data_out->objective_function_value,
            message);
 }
 

@@ -16,6 +16,11 @@ static void userCallback(const int callback_type, const char* message,
 			 const struct HighsCallbackDataOut* data_out,
 			 struct HighsCallbackDataIn* data_in,
 			 void* user_callback_data) {
+  if (callback_type == kHighsCallbackLogging) {
+    printf("userCallback: %s\n", message);
+  } else if (callback_type == kHighsCallbackMipImprovingSolution) {
+    printf("userCallback: improving solution with objective = %g\n", data_out->objective_function_value);
+  }
 }
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
@@ -80,6 +85,7 @@ void test_callback() {
 		integrality);
   Highs_setCallback(highs, userCallback, NULL);
   Highs_startCallback(highs, kHighsCallbackLogging);
+  Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
   Highs_run(highs);
 }
 
