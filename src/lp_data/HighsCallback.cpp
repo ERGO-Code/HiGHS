@@ -16,7 +16,7 @@
 #include <cassert>
 
 void HighsCallbackDataOut::clear() {
-  this->log_type = HighsLogType::kInfo;
+  this->log_type = -1;
   this->simplex_iteration_count = -1;
   this->node_count = -1;
   this->running_time = -1;

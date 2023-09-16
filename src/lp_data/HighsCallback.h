@@ -17,7 +17,7 @@
 #include "lp_data/HStruct.h"
 
 struct HighsCallbackDataOut {
-  HighsLogType log_type;
+  int log_type;
   HighsInt simplex_iteration_count;
   int64_t node_count;
   double running_time;
