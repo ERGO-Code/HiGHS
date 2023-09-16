@@ -29,7 +29,7 @@ struct HighsCallbackDataOut {
 };
 
 struct HighsCallbackDataIn {
-  bool user_interrupt;
+  int user_interrupt;
 };
 
 struct HighsCallback {
