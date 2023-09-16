@@ -632,6 +632,14 @@ HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const c
   return (HighsInt)((Highs*)highs)->setCallback(user_callback, user_callback_data);
 }
     
+HighsInt Highs_startCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->startCallback(callback_type);
+}
+
+HighsInt Highs_stopCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->stopCallback(callback_type);
+}
+
 double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }

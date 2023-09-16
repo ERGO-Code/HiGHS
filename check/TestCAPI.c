@@ -12,6 +12,12 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
+static void userCallback(const int callback_type, const char* message,
+			 const struct HighsCallbackDataOut* data_out,
+			 struct HighsCallbackDataIn* data_in,
+			 void* user_callback_data) {
+}
+
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
@@ -42,6 +48,39 @@ void assertLogical(const char* name, const HighsInt is) {
     printf("Value %s = %"HIGHSINT_FORMAT" should not be 0\n", name, is);
     assert(1==0);
   }
+}
+
+void test_callback() {
+  HighsInt num_col = 7;
+  HighsInt num_row = 1;
+  HighsInt num_nz = num_col;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMaximize;
+  double offset = 0;
+  double col_cost[7] = {8, 1, 7, 2, 1, 2, 1};
+  double col_lower[7] = {0, 0, 0, 0, 0, 0, 0};
+  double col_upper[7] = {1, 1, 1, 1, 1, 1, 1};
+  double row_lower[1] = {0};
+  double row_upper[1] = {28};
+  HighsInt a_start[2] = {0, 7};
+  HighsInt a_index[7] = {0, 1, 2, 3, 4, 5, 6};
+  double a_value[7] = {9, 6, 7, 9, 7, 9, 9};
+  HighsInt integrality[7] = {kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger};
+
+  void* highs;
+
+  highs = Highs_create();
+  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		col_cost, col_lower, col_upper,
+		row_lower, row_upper,
+		a_start, a_index, a_value,
+		integrality);
+  Highs_setCallback(highs, userCallback, NULL);
+  Highs_startCallback(highs, kHighsCallbackLogging);
+  Highs_run(highs);
 }
 
 void version_api() {
@@ -1369,6 +1408,7 @@ void test_setSolution() {
 }
 */
 int main() {
+  test_callback();
   version_api();
   minimal_api();
   full_api();

@@ -38,7 +38,7 @@ static void userInterruptCallback(const int callback_type, const char* message,
                                   void* user_callback_data) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
-  if (callback_type == kHighsCallbackMipImprovingSolution) {
+  if (callback_type == kCallbackMipImprovingSolution) {
     // Use local_callback_data to maintain the objective value from
     // the previous callback
     assert(user_callback_data);
@@ -63,11 +63,11 @@ static void userInterruptCallback(const int callback_type, const char* message,
     } else {
       REQUIRE(local_callback_data == kUserCallbackNoData);
     }
-    if (callback_type == kHighsCallbackLogging) {
+    if (callback_type == kCallbackLogging) {
       if (dev_run)
         printf("userInterruptCallback(type %2d; data %2d): %s", callback_type,
                local_callback_data, message);
-    } else if (callback_type == kHighsCallbackSimplexInterrupt) {
+    } else if (callback_type == kCallbackSimplexInterrupt) {
       if (dev_run)
         printf(
             "userInterruptCallback(type %2d; data %2d): %s with iteration "
@@ -77,7 +77,7 @@ static void userInterruptCallback(const int callback_type, const char* message,
             data_out->simplex_iteration_count);
       data_in->user_interrupt =
           data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
-    } else if (callback_type == kHighsCallbackMipInterrupt) {
+    } else if (callback_type == kCallbackMipInterrupt) {
       if (dev_run)
         printf(
             "userInterruptCallback(type %2d; data %2d): %s with Bounds "
@@ -94,9 +94,9 @@ static void userDataCallback(const int callback_type, const char* message,
                              const HighsCallbackDataOut* data_out,
                              HighsCallbackDataIn* data_in,
                              void* user_callback_data) {
-  assert(callback_type == kHighsCallbackMipInterrupt ||
-         callback_type == kHighsCallbackMipLogging ||
-         callback_type == kHighsCallbackMipImprovingSolution);
+  assert(callback_type == kCallbackMipInterrupt ||
+         callback_type == kCallbackMipLogging ||
+         callback_type == kCallbackMipImprovingSolution);
   if (dev_run)
     printf("userDataCallback: Node count = %" PRId64
            "; Time = %6.2f; "
@@ -167,7 +167,7 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setCallback(userInterruptCallback, p_user_callback_data);
-  highs.startCallback(kHighsCallbackLogging);
+  highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
 }
@@ -178,7 +178,7 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setCallback(userInterruptCallback);
-  highs.startCallback(kHighsCallbackSimplexInterrupt);
+  highs.startCallback(kCallbackSimplexInterrupt);
   highs.readModel(filename);
   highs.run();
 }
@@ -189,7 +189,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setCallback(userInterruptCallback);
-  highs.startCallback(kHighsCallbackMipInterrupt);
+  highs.startCallback(kCallbackMipInterrupt);
   highs.readModel(filename);
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
@@ -204,7 +204,7 @@ TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
   double user_callback_data = kHighsInf;
   void* p_user_callback_data = (void*)(&user_callback_data);
   highs.setCallback(userInterruptCallback, p_user_callback_data);
-  highs.startCallback(kHighsCallbackMipImprovingSolution);
+  highs.startCallback(kCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
 }
@@ -215,8 +215,8 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setCallback(userDataCallback);
-  highs.startCallback(kHighsCallbackMipImprovingSolution);
-  highs.startCallback(kHighsCallbackMipLogging);
+  highs.startCallback(kCallbackMipImprovingSolution);
+  highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
   highs.run();
 }

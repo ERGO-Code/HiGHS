@@ -1226,7 +1226,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   // Possibly interrupt from MIP logging callback
   mipsolver.callback_->clearHighsCallbackDataOut();
   const bool interrupt =
-      interruptFromCallbackWithData(kHighsCallbackMipLogging, "MIP logging");
+      interruptFromCallbackWithData(kCallbackMipLogging, "MIP logging");
   assert(!interrupt);
 }
 
@@ -1697,7 +1697,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   // Possible user interrupt
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackDataOut();
-    if (interruptFromCallbackWithData(kHighsCallbackMipInterrupt,
+    if (interruptFromCallbackWithData(kCallbackMipInterrupt,
                                       "MIP check limits")) {
       if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
         highsLogDev(options.log_options, HighsLogType::kInfo,
@@ -1830,14 +1830,13 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
       int(numImprovingSols), new_upper_limit, upper_limit,
       mipsolver.solution_objective_);
   */
-
   if (mipsolver.callback_->user_callback) {
-    if (mipsolver.callback_->active[kHighsCallbackMipImprovingSolution]) {
+    if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
       mipsolver.callback_->data_out.objective = mipsolver.solution_objective_;
       mipsolver.callback_->data_out.col_value = mipsolver.solution_.data();
       const bool interrupt = interruptFromCallbackWithData(
-          kHighsCallbackMipImprovingSolution, "Improving solution");
+          kCallbackMipImprovingSolution, "Improving solution");
       assert(!interrupt);
     }
   }

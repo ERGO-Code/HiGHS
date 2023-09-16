@@ -86,6 +86,13 @@ const HighsInt kHighsBasisStatusUpper = 2;
 const HighsInt kHighsBasisStatusZero = 3;
 const HighsInt kHighsBasisStatusNonbasic = 4;
 
+const HighsInt kHighsCallbackLogging = 0;
+const HighsInt kHighsCallbackSimplexInterrupt = 1;
+const HighsInt kHighsCallbackIpmInterrupt = 2;
+const HighsInt kHighsCallbackMipImprovingSolution = 3;
+const HighsInt kHighsCallbackMipLogging = 4;
+const HighsInt kHighsCallbackMipInterrupt = 5;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1063,12 +1070,28 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
                            const double* row_dual);
 
 /**
- * @brief Set the callback method to use for HiGHS
+ * Set the callback method to use for HiGHS
+ *
+ * @param highs       A pointer to the Highs instance.
  */
 HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const char*,
 						              const struct HighsCallbackDataOut*,
 							      struct HighsCallbackDataIn*, void*),
-			     void* user_callback_data);
+			   void* user_callback_data);
+
+/**
+ * Start callback of given type
+ *
+ * @param highs       A pointer to the Highs instance.
+ */
+HighsInt Highs_startCallback(void* highs, const int callback_type);
+
+/**
+ * Stop callback of given type
+ *
+ * @param highs       A pointer to the Highs instance.
+ */
+HighsInt Highs_stopCallback(void* highs, const int callback_type);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.
