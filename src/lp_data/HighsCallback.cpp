@@ -27,7 +27,9 @@ void HighsCallback::clearHighsCallbackDataOut() {
   this->data_out.mip_solution = nullptr;
 }
 
-void HighsCallback::clearHighsCallbackDataIn() { this->data_in.user_interrupt = false; }
+void HighsCallback::clearHighsCallbackDataIn() {
+  this->data_in.user_interrupt = false;
+}
 
 void HighsCallback::clear() {
   this->user_callback = nullptr;

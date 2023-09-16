@@ -9,7 +9,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 0;
+const HighsInt dev_run = 1;
 const double double_equal_tolerance = 1e-5;
 
 static void userCallback(const int callback_type, const char* message,
@@ -17,9 +17,15 @@ static void userCallback(const int callback_type, const char* message,
 			 struct HighsCallbackDataIn* data_in,
 			 void* user_callback_data) {
   if (callback_type == kHighsCallbackLogging) {
-    printf("userCallback: %s\n", message);
+    if (dev_run) printf("userCallback: %s\n", message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-    printf("userCallback: improving solution with objective = %g\n", data_out->objective_function_value);
+    if (dev_run) printf("userCallback: improving solution with objective = %g\n", data_out->objective_function_value);
+  } else if (callback_type == kHighsCallbackMipLogging) {
+    if (dev_run) printf("userCallback: MIP interrupt\n");
+    data_in->user_interrupt = 1;
+  } else if (callback_type == kHighsCallbackMipInterrupt) {
+    if (dev_run) printf("userCallback: MIP interrupt\n");
+    data_in->user_interrupt = 1;
   }
 }
 
@@ -53,40 +59,6 @@ void assertLogical(const char* name, const HighsInt is) {
     printf("Value %s = %"HIGHSINT_FORMAT" should not be 0\n", name, is);
     assert(1==0);
   }
-}
-
-void test_callback() {
-  HighsInt num_col = 7;
-  HighsInt num_row = 1;
-  HighsInt num_nz = num_col;
-  HighsInt a_format = kHighsMatrixFormatRowwise;
-  HighsInt sense = kHighsObjSenseMaximize;
-  double offset = 0;
-  double col_cost[7] = {8, 1, 7, 2, 1, 2, 1};
-  double col_lower[7] = {0, 0, 0, 0, 0, 0, 0};
-  double col_upper[7] = {1, 1, 1, 1, 1, 1, 1};
-  double row_lower[1] = {0};
-  double row_upper[1] = {28};
-  HighsInt a_start[2] = {0, 7};
-  HighsInt a_index[7] = {0, 1, 2, 3, 4, 5, 6};
-  double a_value[7] = {9, 6, 7, 9, 7, 9, 9};
-  HighsInt integrality[7] = {kHighsVarTypeInteger, kHighsVarTypeInteger,
-			     kHighsVarTypeInteger, kHighsVarTypeInteger,
-			     kHighsVarTypeInteger, kHighsVarTypeInteger,
-			     kHighsVarTypeInteger};
-
-  void* highs;
-
-  highs = Highs_create();
-  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
-		col_cost, col_lower, col_upper,
-		row_lower, row_upper,
-		a_start, a_index, a_value,
-		integrality);
-  Highs_setCallback(highs, userCallback, NULL);
-  Highs_startCallback(highs, kHighsCallbackLogging);
-  Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
-  Highs_run(highs);
 }
 
 void version_api() {
@@ -1366,6 +1338,48 @@ void test_ranging() {
   free(row_bound_dn_in_var);
   free(row_bound_dn_ou_var);
 
+}
+
+void test_callback() {
+  HighsInt num_col = 7;
+  HighsInt num_row = 1;
+  HighsInt num_nz = num_col;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMaximize;
+  double offset = 0;
+  double col_cost[7] = {8, 1, 7, 2, 1, 2, 1};
+  double col_lower[7] = {0, 0, 0, 0, 0, 0, 0};
+  double col_upper[7] = {1, 1, 1, 1, 1, 1, 1};
+  double row_lower[1] = {0};
+  double row_upper[1] = {28};
+  HighsInt a_start[2] = {0, 7};
+  HighsInt a_index[7] = {0, 1, 2, 3, 4, 5, 6};
+  double a_value[7] = {9, 6, 7, 9, 7, 9, 9};
+  HighsInt integrality[7] = {kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger};
+
+  void* highs;
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		col_cost, col_lower, col_upper,
+		row_lower, row_upper,
+		a_start, a_index, a_value,
+		integrality);
+  Highs_setCallback(highs, userCallback, NULL);
+  Highs_startCallback(highs, kHighsCallbackLogging);
+  Highs_startCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  double inf = Highs_getInfinity(highs);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, inf);
+  Highs_stopCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, 17);
 }
 
 /*

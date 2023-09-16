@@ -1072,24 +1072,36 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
 /**
  * Set the callback method to use for HiGHS
  *
- * @param highs       A pointer to the Highs instance.
+ * @param highs              A pointer to the Highs instance.
+ * @param user_callback      A pointer to the user callback
+ * @param user_callback_data A pointer to the user callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-HighsInt Highs_setCallback(void* highs, void (*user_callback)(const int, const char*,
-						              const struct HighsCallbackDataOut*,
-							      struct HighsCallbackDataIn*, void*),
-			   void* user_callback_data);
+HighsInt Highs_setCallback(
+    void* highs,
+    void (*user_callback)(const int, const char*,
+                          const struct HighsCallbackDataOut*,
+                          struct HighsCallbackDataIn*, void*),
+    void* user_callback_data);
 
 /**
  * Start callback of given type
  *
- * @param highs       A pointer to the Highs instance.
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be started
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_startCallback(void* highs, const int callback_type);
 
 /**
  * Stop callback of given type
  *
- * @param highs       A pointer to the Highs instance.
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be stopped
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 
