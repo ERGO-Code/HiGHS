@@ -268,27 +268,14 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
                                   integrality_ptr);
 }
 
+// Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  py::buffer_info indices_info = indices.request();
-
-  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
-
-  return h->deleteCols(num_set_entries, indices_ptr);
+                              std::vector<HighsInt>& indices) {
+  return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteVars(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  return highs_deleteCols(h, num_set_entries, indices);
-}
-
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  py::buffer_info indices_info = indices.request();
-
-  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
-
-  return h->deleteRows(num_set_entries, indices_ptr);
+HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<HighsInt>& indices) {
+    return h->deleteRows(num_set_entries, indices.data());
 }
 
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
@@ -920,7 +907,7 @@ PYBIND11_MODULE(highspy, m) {
       .def("changeColsBounds", &highs_changeColsBounds)
       .def("changeColsIntegrality", &highs_changeColsIntegrality)
       .def("deleteCols", &highs_deleteCols)
-      .def("deleteVars", &highs_deleteVars)
+      .def("deleteVars", &highs_deleteCols) // alias
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &Highs::setSolution)
       .def("modelStatusToString", &Highs::modelStatusToString)
