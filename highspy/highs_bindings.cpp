@@ -125,12 +125,12 @@ HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                         q_value_ptr);
 }
 
-HighsStatus highs_lpPostsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
+HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
 {
   return h->postsolve(solution, basis);
 }
  
-HighsStatus highs_MipPostsolve(Highs* h, const HighsSolution& solution)
+HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution)
 {
   return h->postsolve(solution);
 }
@@ -827,8 +827,8 @@ PYBIND11_MODULE(_highs, m) {
       .def("readModel", &Highs::readModel)
       .def("readBasis", &Highs::readBasis)
       .def("writeBasis", &Highs::writeBasis)
-      .def("postsolve", &highs_MipPostsolve)
-      .def("postsolve", &highs_lpPostsolve)
+      .def("postsolve", &highs_postsolve)
+      .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
