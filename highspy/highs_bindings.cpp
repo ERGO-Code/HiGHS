@@ -844,7 +844,6 @@ PYBIND11_MODULE(_highs, m) {
       .def("postsolve", &highs_MipPostsolve)
       .def("postsolve", &highs_lpPostsolve)
       .def("run", &Highs::run)
-      .def("postsolve", &Highs::postsolve)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
       .def("setOptionValue",
