@@ -133,7 +133,6 @@ class Highs(Highs_):
     def removeVar(self, var):
         for i in self._vars[var.index+1:]:
             i.index -= 1
-
         del self._vars[var.index]
         super().deleteVars(1, [var.index])
 
@@ -173,9 +172,8 @@ class Highs(Highs_):
         return self._cons
 
     def removeConstr(self, cons):
-        for i in self._cons[cons.index+1:]:
+        for i in self._cons[cons.index + 1 :]:
             i.index -= 1
-
         del self._cons[cons.index]
         super().deleteRows(1, [cons.index])
 

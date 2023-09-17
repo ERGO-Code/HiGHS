@@ -277,27 +277,13 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
 }
 
 // Same as deleteVars
-HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  py::buffer_info indices_info = indices.request();
-
-  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
-
-  return h->deleteCols(num_set_entries, indices_ptr);
+HighsStatus highs_deleteCols(Highs* h, int num_set_entries,
+                              std::vector<int>& indices) {
+  return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteVars(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  return highs_deleteCols(h, num_set_entries, indices);
-}
-
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
-                             py::array_t<HighsInt> indices) {
-  py::buffer_info indices_info = indices.request();
-
-  HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
-
-  return h->deleteRows(num_set_entries, indices_ptr);
+HighsStatus highs_deleteRows(Highs* h, int num_set_entries, std::vector<int>& indices) {
+    return h->deleteRows(num_set_entries, indices.data());
 }
 
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
