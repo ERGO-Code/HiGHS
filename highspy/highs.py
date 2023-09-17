@@ -1,4 +1,4 @@
-from highspy.highspy import (
+from highspy._highs import (
     # enum classes
     ObjSense,
     MatrixFormat,

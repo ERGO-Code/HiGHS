@@ -243,7 +243,7 @@ HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   double* cost_ptr = static_cast<double*>(cost_info.ptr);
 
-  return h->changeColsCost(num_set_entries, indices_ptr_, cost_ptr);
+  return h->changeColsCost(num_set_entries, indices_ptr, cost_ptr);
 }
 
 HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
@@ -258,7 +258,7 @@ HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
   double* lower_ptr = static_cast<double*>(lower_info.ptr);
   double* upper_ptr = static_cast<double*>(upper_info.ptr);
 
-  return h->changeColsBounds(num_set_entries, indices_ptr_, lower_ptr,
+  return h->changeColsBounds(num_set_entries, indices_ptr, lower_ptr,
                              upper_ptr);
 }
 
@@ -272,7 +272,7 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
   HighsVarType* integrality_ptr =
       static_cast<HighsVarType*>(integrality_info.ptr);
 
-  return h->changeColsIntegrality(num_set_entries, indices_ptr_,
+  return h->changeColsIntegrality(num_set_entries, indices_ptr,
                                   integrality_ptr);
 }
 
@@ -283,7 +283,7 @@ HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
 
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
 
-  return h->deleteCols(num_set_entries, indices_ptr_);
+  return h->deleteCols(num_set_entries, indices_ptr);
 }
 
 HighsStatus highs_deleteVars(Highs* h, HighsInt num_set_entries,
@@ -297,7 +297,7 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
 
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
 
-  return h->deleteRows(num_set_entries, indices_ptr_);
+  return h->deleteRows(num_set_entries, indices_ptr);
 }
 
 std::tuple<HighsStatus, py::object> highs_getOptionValue(

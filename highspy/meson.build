@@ -5,9 +5,11 @@ pyb11_dep = [
   dependency('pybind11')
 ]
 
-py.extension_module(
+highspyext = py.extension_module(
   '_highs',
-  sources : highspy_cpp,
+  sources : [
+    'highs_bindings.cpp',
+  ],
   dependencies: [pyb11_dep, highs_dep],
   cpp_args: _args,
   install: true,
