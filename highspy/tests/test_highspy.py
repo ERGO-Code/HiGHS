@@ -432,7 +432,16 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(ranging.row_bound_up.value_[1], inf);
         self.assertEqual(ranging.row_bound_up.objective_[1], inf);
 
-   
+    def test_constraint_removal(self):
+        h = highspy.Highs()
+        x = h.addVar(lb=-h.inf)
+        y = h.addVar(lb=-h.inf)
+        c1 = h.addConstr(-x + y >= 2)
+        c2 = h.addConstr(x + y >= 0)
+        self.assertEqual(h.numConstrs, 2)
+        h.removeConstr(c1)
+        self.assertEqual(h.numConstrs, 1)
+
     def test_infeasible_model(self):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
