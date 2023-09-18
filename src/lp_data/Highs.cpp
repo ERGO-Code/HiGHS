@@ -828,9 +828,11 @@ HighsStatus Highs::run() {
   }
   if (model_.lp_.has_infinite_cost_) {
     assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot solve models with infinite costs\n");
-    return HighsStatus::kError;
+    HighsStatus return_status = handleInfCost();
+    if (return_status != HighsStatus::kOk) {
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
+      return return_status;
+    }
   } else {
     assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
   }
@@ -3784,7 +3786,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
   // Restore any infinite costs
   this->restoreInfCost(return_status);
-  
+
   // Unapply any modifications that have not yet been unapplied
   this->model_.lp_.unapplyMods();
 

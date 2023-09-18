@@ -394,7 +394,6 @@ void HighsLp::unapplyMods() {
     this->col_upper_[iCol] = tightened_semi_variable_upper_bound_value[k];
   }
 
-  
   this->mods_.clear();
 }
 

@@ -1446,8 +1446,8 @@ class Highs {
   HighsStatus invertRequirementError(std::string method_name);
   HighsStatus lpInvertRequirementError(std::string method_name);
 
+  HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
-
 };
 
 #endif

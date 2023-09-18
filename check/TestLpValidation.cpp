@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 // No commas in test case name.
@@ -343,9 +343,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();
-  // LP has infinite costs, so cannot yet be solved. To close #1410
-  // the following must be reinstated
-  REQUIRE(run_status == HighsStatus::kWarning);
+  // LP has free variable with infinite costs so cannot be solved
+  REQUIRE(run_status == HighsStatus::kError);
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kUnknown);
 
@@ -449,8 +448,8 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(highs.getLp().has_infinite_cost_);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
   // Now just make the cost large
   status = highs.changeColCost(2, -my_large_cost);
@@ -468,17 +467,21 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(highs.getLp().has_infinite_cost_);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   highs.clearModel();
 
+  // Formulate min -inf x s.t. x <= 2; 1 <= x <= 3
+  //
+  // Fixing x at 3 is infeasible, so kUnknown status should be
+  // returned with kWarning
   lp.num_col_ = 1;
   lp.num_row_ = 1;
   lp.col_cost_ = {-my_infinite_cost};
-  lp.col_lower_ = {0};
-  lp.col_upper_ = {2};
+  lp.col_lower_ = {1};
+  lp.col_upper_ = {3};
   lp.row_lower_ = {-my_infinite_bound};
-  lp.row_upper_ = {1};
+  lp.row_upper_ = {2};
   lp.a_matrix_.start_ = {0, 1};
   lp.a_matrix_.index_ = {0};
   lp.a_matrix_.value_ = {1};
@@ -493,6 +496,14 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
 
+  highs.changeObjectiveSense(ObjSense::kMaximize);
+  // Switching to maximization, fixing x at 1 is feasible, so kOk
+  // status should be returned with kOptimal and objective = -inf
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
