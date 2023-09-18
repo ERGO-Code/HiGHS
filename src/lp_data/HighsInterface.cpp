@@ -1558,3 +1558,38 @@ HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
                "No LP invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
 }
+
+void Highs::restoreInfCost(HighsStatus& return_status) {
+  HighsLp& lp = this->model_.lp_;
+  HighsBasis& basis = this->basis_;
+  HighsLpMods& mods = lp.mods_;
+  if (!lp.has_infinite_cost_) return;
+  HighsInt num_inf_cost = mods.save_inf_cost_variable_index.size();
+  assert(num_inf_cost);
+  for (HighsInt ix = 0; ix < num_inf_cost; ix++) {
+    HighsInt iCol = mods.save_inf_cost_variable_index[ix];
+    double cost = mods.save_inf_cost_variable_cost[ix];
+    double lower = mods.save_inf_cost_variable_lower[ix];
+    double upper = mods.save_inf_cost_variable_upper[ix];
+    if (basis.valid) {
+      assert(basis.col_status[iCol] != HighsBasisStatus::kBasic);
+      if (lp.col_lower_[iCol] == lower) {
+	basis.col_status[iCol] = HighsBasisStatus::kLower;
+      } else {
+	basis.col_status[iCol] = HighsBasisStatus::kUpper;
+      }
+    }
+    lp.col_cost_[iCol] = cost;
+    lp.col_lower_[iCol] = lower;
+    lp.col_upper_[iCol] = upper;
+  }
+  
+  if (this->model_status_ == HighsModelStatus::kInfeasible) {
+    // Model is infeasible with the infinite cost variables fixed at
+    // appropriate values, so model status cannot be determined
+    this->model_status_ =  HighsModelStatus::kUnknown;
+    setHighsModelStatusAndClearSolutionAndBasis(this->model_status_);
+    return_status = highsStatusFromHighsModelStatus(model_status_);
+    assert(111==999);
+  }
+}

@@ -3781,6 +3781,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
   // Record that returnFromRun() has been called
   called_return_from_run = true;
+
+  // Restore any infinite costs
+  this->restoreInfCost(return_status);
+  
   // Unapply any modifications that have not yet been unapplied
   this->model_.lp_.unapplyMods();
 

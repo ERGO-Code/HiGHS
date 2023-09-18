@@ -345,14 +345,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   run_status = highs.run();
   // LP has infinite costs, so cannot yet be solved. To close #1410
   // the following must be reinstated
-  /*
-  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(run_status == HighsStatus::kWarning);
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kInfeasible);
-  */
-  REQUIRE(run_status == HighsStatus::kError);
-  model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kNotset);
+  REQUIRE(model_status == HighsModelStatus::kUnknown);
 
   REQUIRE(highs.changeCoeff(-1, 0, check_value) == HighsStatus::kError);
   REQUIRE(highs.changeCoeff(0, -1, check_value) == HighsStatus::kError);
@@ -454,9 +449,8 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(highs.getLp().has_infinite_cost_);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::kError);  // HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() ==
-          HighsModelStatus::kNotset);  // HighsModelStatus::kUnknown);
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
 
   // Now just make the cost large
   status = highs.changeColCost(2, -my_large_cost);
@@ -474,9 +468,31 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(highs.getLp().has_infinite_cost_);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::kError);  // HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() ==
-          HighsModelStatus::kNotset);  // HighsModelStatus::kUnknown);
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  highs.clearModel();
+
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-my_infinite_cost};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {2};
+  lp.row_lower_ = {-my_infinite_bound};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+
+  lp.integrality_.clear();
+
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {

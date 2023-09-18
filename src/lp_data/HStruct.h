@@ -93,6 +93,12 @@ struct HighsLpMods {
   std::vector<double> save_relaxed_semi_variable_lower_bound_value;
   std::vector<HighsInt> save_tightened_semi_variable_upper_bound_index;
   std::vector<double> save_tightened_semi_variable_upper_bound_value;
+
+  std::vector<HighsInt> save_inf_cost_variable_index;
+  std::vector<double> save_inf_cost_variable_cost;
+  std::vector<double> save_inf_cost_variable_lower;
+  std::vector<double> save_inf_cost_variable_upper;
+
   void clear();
   bool isClear();
 };

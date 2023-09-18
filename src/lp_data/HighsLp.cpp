@@ -394,6 +394,7 @@ void HighsLp::unapplyMods() {
     this->col_upper_[iCol] = tightened_semi_variable_upper_bound_value[k];
   }
 
+  
   this->mods_.clear();
 }
 
@@ -407,6 +408,10 @@ void HighsLpMods::clear() {
   this->save_relaxed_semi_variable_lower_bound_value.clear();
   this->save_tightened_semi_variable_upper_bound_index.clear();
   this->save_tightened_semi_variable_upper_bound_value.clear();
+  this->save_inf_cost_variable_index.clear();
+  this->save_inf_cost_variable_cost.clear();
+  this->save_inf_cost_variable_lower.clear();
+  this->save_inf_cost_variable_upper.clear();
 }
 
 bool HighsLpMods::isClear() {
