@@ -74,7 +74,7 @@ static void userInterruptCallback(const int callback_type, const char* message,
             "count = "
             "%d\n",
             callback_type, local_callback_data, message,
-            data_out->simplex_iteration_count);
+            int(data_out->simplex_iteration_count));
       data_in->user_interrupt =
           data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
     } else if (callback_type == kCallbackMipInterrupt) {
