@@ -824,6 +824,16 @@ HighsStatus Highs::run() {
       use_output_flag = true;
     }
   }
+  if (model_.lp_.has_infinite_cost_) {
+    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
+    HighsStatus return_status = handleInfCost();
+    if (return_status != HighsStatus::kOk) {
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
+      return return_status;
+    }
+  } else {
+    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
+  }
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
@@ -3832,6 +3842,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
   // Record that returnFromRun() has been called
   called_return_from_run = true;
+
+  // Restore any infinite costs
+  this->restoreInfCost(return_status);
+
   // Unapply any modifications that have not yet been unapplied
   this->model_.lp_.unapplyMods();
 
