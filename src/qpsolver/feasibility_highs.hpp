@@ -2,38 +2,39 @@
 #define __SRC_LIB_FEASIBILITYHIGHS_HPP__
 
 #include "Highs.h"
-#include "crashsolution.hpp"
+#include "qpsolver/a_asm.hpp"
+#include "qpsolver/crashsolution.hpp"
 
-static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) {
+static void computestartingpoint_highs(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpHotstartInformation& result, HighsTimer& timer) {
   // compute initial feasible point
   Highs highs;
 
   // set HiGHS to be silent
   highs.setOptionValue("output_flag", false);
   highs.setOptionValue("presolve", "on");
-  highs.setOptionValue("time_limit", runtime.settings.timelimit -
-                                         runtime.timer.readRunHighsClock());
+  highs.setOptionValue("time_limit", settings.timelimit -
+                                         timer.readRunHighsClock());
 
   HighsLp lp;
   lp.a_matrix_.index_ =
-      *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
+      *((std::vector<HighsInt>*)&instance.A.mat.index);
   lp.a_matrix_.start_ =
-      *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
-  lp.a_matrix_.value_ = runtime.instance.A.mat.value;
+      *((std::vector<HighsInt>*)&instance.A.mat.start);
+  lp.a_matrix_.value_ = instance.A.mat.value;
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.col_cost_.assign(runtime.instance.num_var, 0.0);
+  lp.col_cost_.assign(instance.num_var, 0.0);
   // lp.col_cost_ = runtime.instance.c.value;
-  lp.col_lower_ = runtime.instance.var_lo;
-  lp.col_upper_ = runtime.instance.var_up;
-  lp.row_lower_ = runtime.instance.con_lo;
-  lp.row_upper_ = runtime.instance.con_up;
-  lp.num_col_ = runtime.instance.num_var;
-  lp.num_row_ = runtime.instance.num_con;
+  lp.col_lower_ = instance.var_lo;
+  lp.col_upper_ = instance.var_up;
+  lp.row_lower_ = instance.con_lo;
+  lp.row_upper_ = instance.con_up;
+  lp.num_col_ = instance.num_var;
+  lp.num_row_ = instance.num_con;
 
   // create artificial bounds for free variables
-  if (runtime.settings.phase1boundfreevars) {
-    for (HighsInt i=0; i<runtime.instance.num_var; i++) {
-      if (isfreevar(runtime, i)) {
+  if (settings.phase1boundfreevars) {
+    for (HighsInt i=0; i<instance.num_var; i++) {
+      if (isfreevar(instance, i)) {
         lp.col_lower_[i] = -1E5;
         lp.col_upper_[i] = 1E5;
       }
@@ -42,18 +43,18 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
 
   highs.passModel(lp);
 
-  if (runtime.settings.phase1movefreevarsbasic) {
+  if (settings.phase1movefreevarsbasic) {
     HighsBasis basis;
     basis.alien = true;  // Set true when basis is instantiated
-    for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
+    for (HighsInt i = 0; i < instance.num_con; i++) {
       basis.row_status.push_back(HighsBasisStatus::kNonbasic);
     }
 
-    for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
+    for (HighsInt i = 0; i < instance.num_var; i++) {
       // make free variables basic
-      if (runtime.instance.var_lo[i] ==
+      if (instance.var_lo[i] ==
               -std::numeric_limits<double>::infinity() &&
-          runtime.instance.var_up[i] ==
+          instance.var_up[i] ==
               std::numeric_limits<double>::infinity()) {
         // free variable
         basis.col_status.push_back(HighsBasisStatus::kBasic);
@@ -70,23 +71,23 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
 
   HighsStatus status = highs.run();
   if (status != HighsStatus::kOk) {
-    runtime.status = QpModelStatus::ERROR;
+    modelstatus = QpModelStatus::ERROR;
     return;
   }
 
-  runtime.statistics.phase1_iterations = highs.getInfo().simplex_iteration_count;
+  stats.phase1_iterations = highs.getInfo().simplex_iteration_count;
 
   HighsModelStatus phase1stat = highs.getModelStatus();
   if (phase1stat == HighsModelStatus::kInfeasible) {
-    runtime.status = QpModelStatus::INFEASIBLE;
+    modelstatus = QpModelStatus::INFEASIBLE;
     return;
   }
 
   HighsSolution sol = highs.getSolution();
   HighsBasis bas = highs.getBasis();
 
-  Vector x0(runtime.instance.num_var);
-  Vector ra(runtime.instance.num_con);
+  Vector x0(instance.num_var);
+  Vector ra(instance.num_con);
   for (HighsInt i = 0; i < x0.dim; i++) {
     if (fabs(sol.col_value[i]) > 10E-5) {
       x0.value[i] = sol.col_value[i];
@@ -113,7 +114,7 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
       atlower.push_back(BasisStatus::ActiveAtUpper);
     } else if (bas.row_status[i] != HighsBasisStatus::kBasic) {
       // printf("row %d nonbasic\n", i);
-      initialinactive.push_back(runtime.instance.num_con + i);
+      initialinactive.push_back(instance.num_con + i);
     } else {
       assert(bas.row_status[i] == HighsBasisStatus::kBasic);
     }
@@ -121,25 +122,25 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
 
   for (HighsInt i = 0; i < (HighsInt)bas.col_status.size(); i++) {
     if (bas.col_status[i] == HighsBasisStatus::kLower) {
-      if (isfreevar(runtime, i)) {
-        initialinactive.push_back(runtime.instance.num_con + i);
+      if (isfreevar(instance, i)) {
+        initialinactive.push_back(instance.num_con + i);
       } else {
-        initialactive.push_back(i + runtime.instance.num_con);
+        initialactive.push_back(i + instance.num_con);
         atlower.push_back(BasisStatus::ActiveAtLower);
       }
       
     } else if (bas.col_status[i] == HighsBasisStatus::kUpper) {
-      if (isfreevar(runtime, i)) {
-        initialinactive.push_back(runtime.instance.num_con + i);
+      if (isfreevar(instance, i)) {
+        initialinactive.push_back(instance.num_con + i);
       } else {
-        initialactive.push_back(i + runtime.instance.num_con);
+        initialactive.push_back(i + instance.num_con);
         atlower.push_back(BasisStatus::ActiveAtUpper);
       }
       
     } else if (bas.col_status[i] == HighsBasisStatus::kZero) {
       // printf("col %" HIGHSINT_FORMAT " free and set to 0 %" HIGHSINT_FORMAT
       // "\n", i, (HighsInt)bas.col_status[i]);
-      initialinactive.push_back(runtime.instance.num_con + i);
+      initialinactive.push_back(instance.num_con + i);
     } else if (bas.col_status[i] != HighsBasisStatus::kBasic) {
       // printf("Column %" HIGHSINT_FORMAT " basis stus %" HIGHSINT_FORMAT "\n",
       // i, (HighsInt)bas.col_status[i]);
@@ -149,25 +150,25 @@ static void computestartingpoint_highs(Runtime& runtime, CrashSolution& result) 
   }
 
   assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
-         runtime.instance.num_var);
+         instance.num_var);
 
   for (HighsInt ia : initialinactive) {
-    if (ia < runtime.instance.num_con) {
+    if (ia < instance.num_con) {
       printf("free row %d\n", (int)ia);
-      assert(runtime.instance.con_lo[ia] ==
+      assert(instance.con_lo[ia] ==
              -std::numeric_limits<double>::infinity());
-      assert(runtime.instance.con_up[ia] ==
+      assert(instance.con_up[ia] ==
              std::numeric_limits<double>::infinity());
     } else {
       // printf("free col %d\n", (int)ia);
-      assert(runtime.instance.var_lo[ia - runtime.instance.num_con] ==
+      assert(instance.var_lo[ia - instance.num_con] ==
              -std::numeric_limits<double>::infinity());
-      assert(runtime.instance.var_up[ia - runtime.instance.num_con] ==
+      assert(instance.var_up[ia - instance.num_con] ==
              std::numeric_limits<double>::infinity());
     }
   }
 
-  result.rowstatus = atlower;
+  result.status = atlower;
   result.active = initialactive;
   result.inactive = initialinactive;
   result.primal = x0;

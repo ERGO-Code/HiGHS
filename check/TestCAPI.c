@@ -1,5 +1,6 @@
 #include "interfaces/highs_c_api.h"
 
+#include "HCheckConfig.h"
 #include <stdio.h>
 #include <stdlib.h>
 // Force asserts to be checked always.
@@ -10,6 +11,26 @@
 
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
+
+static void userCallback(const int callback_type, const char* message,
+			 const struct HighsCallbackDataOut* data_out,
+			 struct HighsCallbackDataIn* data_in,
+			 void* user_callback_data) {
+  // Extract the double value pointed to from void* user_callback_data
+  const double local_callback_data = user_callback_data == NULL ? -1 : *(double*)user_callback_data;
+
+  if (callback_type == kHighsCallbackLogging) {
+    if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
+  } else if (callback_type == kHighsCallbackMipImprovingSolution) {
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, data_out->objective_function_value);
+  } else if (callback_type == kHighsCallbackMipLogging) {
+    if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
+    data_in->user_interrupt = 1;
+  } else if (callback_type == kHighsCallbackMipInterrupt) {
+    if (dev_run) printf("userCallback(%11.4g): MIP interrupt\n", local_callback_data);
+    data_in->user_interrupt = 1;
+  }
+}
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
@@ -1322,6 +1343,59 @@ void test_ranging() {
 
 }
 
+void test_callback() {
+  HighsInt num_col = 7;
+  HighsInt num_row = 1;
+  HighsInt num_nz = num_col;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMaximize;
+  double offset = 0;
+  double col_cost[7] = {8, 1, 7, 2, 1, 2, 1};
+  double col_lower[7] = {0, 0, 0, 0, 0, 0, 0};
+  double col_upper[7] = {1, 1, 1, 1, 1, 1, 1};
+  double row_lower[1] = {0};
+  double row_upper[1] = {28};
+  HighsInt a_start[2] = {0, 7};
+  HighsInt a_index[7] = {0, 1, 2, 3, 4, 5, 6};
+  double a_value[7] = {9, 6, 7, 9, 7, 9, 9};
+  HighsInt integrality[7] = {kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger};
+
+  void* highs;
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		col_cost, col_lower, col_upper,
+		row_lower, row_upper,
+		a_start, a_index, a_value,
+		integrality);
+  
+  Highs_setCallback(highs, userCallback, NULL);
+  Highs_startCallback(highs, kHighsCallbackLogging);
+  Highs_startCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  double inf = Highs_getInfinity(highs);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, inf);
+  Highs_stopCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, 17);
+
+  double user_callback_data = inf;
+  void* p_user_callback_data = (void*)(&user_callback_data);
+  
+  Highs_setCallback(highs, userCallback, p_user_callback_data);
+  Highs_clearSolver(highs);
+  Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
+  Highs_run(highs);
+  
+
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1368,6 +1442,7 @@ void test_setSolution() {
 }
 */
 int main() {
+  test_callback();
   version_api();
   minimal_api();
   full_api();

@@ -1,6 +1,6 @@
-
 #include <numeric>
 
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "mip/HighsGFkSolve.h"
 #include "util/HighsRandom.h"

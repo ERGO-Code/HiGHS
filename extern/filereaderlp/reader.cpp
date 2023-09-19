@@ -1272,7 +1272,7 @@ bool Reader::readnexttoken(RawToken& t) {
       return false;
 
     case '\0':  // empty line
-      assert(this->linebufferpos == this->linebuffer.size());
+      lpassert(this->linebufferpos == this->linebuffer.size());
       return false;
   }
 
@@ -1288,7 +1288,7 @@ bool Reader::readnexttoken(RawToken& t) {
 
   // assume it's an (section/variable/constraint) identifier
   auto endpos =
-      this->linebuffer.find_first_of("\t\n\\:+<>^= /-*", this->linebufferpos);
+      this->linebuffer.find_first_of("\t\n\\:+<>^= /-*[]", this->linebufferpos);
   if (endpos == std::string::npos)
     endpos = this->linebuffer.size();  // take complete rest of string
   if (endpos > this->linebufferpos) {

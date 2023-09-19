@@ -6,7 +6,7 @@
 #include "qpsolver/runtime.hpp"
 
 inline
-void computestartingpoint_quass(Runtime& runtime, CrashSolution& result) {
+void computestartingpoint_quass(Runtime& runtime, QpHotstartInformation& result) {
   /*
    creates and solves the feasibility problem
    min 
