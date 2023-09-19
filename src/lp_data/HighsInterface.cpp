@@ -1573,6 +1573,12 @@ HighsStatus Highs::handleInfCost() {
       if (cost > -inf_cost && cost < inf_cost) continue;
       double lower = lp.col_lower_[iCol];
       double upper = lp.col_upper_[iCol];
+      if (lp.isMip()) {
+        if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+          lower = std::ceil(lower);
+          upper = std::floor(upper);
+        }
+      }
       if (cost <= -inf_cost) {
         if (lp.sense_ == ObjSense::kMinimize) {
           // Minimizing with -inf cost so try to fix at upper bound
@@ -1646,16 +1652,17 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     double cost = mods.save_inf_cost_variable_cost[ix];
     double lower = mods.save_inf_cost_variable_lower[ix];
     double upper = mods.save_inf_cost_variable_upper[ix];
+    double value = solution_.value_valid ? solution_.col_value[iCol] : 0;
     if (basis.valid) {
       assert(basis.col_status[iCol] != HighsBasisStatus::kBasic);
       if (lp.col_lower_[iCol] == lower) {
         basis.col_status[iCol] = HighsBasisStatus::kLower;
-        if (lower) this->info_.objective_function_value += lower * cost;
       } else {
         basis.col_status[iCol] = HighsBasisStatus::kUpper;
-        if (upper) this->info_.objective_function_value += upper * cost;
       }
     }
+    assert(lp.col_cost_[iCol] == 0);
+    if (value) this->info_.objective_function_value += value * cost;
     lp.col_cost_[iCol] = cost;
     lp.col_lower_[iCol] = lower;
     lp.col_upper_[iCol] = upper;

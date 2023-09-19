@@ -504,6 +504,43 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
+
+  // Formulate min -inf x s.t. x <= 2; 0.5 <= x <= 3.5; x integer
+  //
+  // Fixing x at 3 is infeasible, so kUnknown status should be
+  // returned with kWarning
+
+  highs.clearModel();
+
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-my_infinite_cost};
+  lp.col_lower_ = {0.5};
+  lp.col_upper_ = {3.5};
+  lp.row_lower_ = {-my_infinite_bound};
+  lp.row_upper_ = {2};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  lp.integrality_ = {HighsVarType::kInteger};
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+
+  highs.changeObjectiveSense(ObjSense::kMaximize);
+  // Switching to maximization, fixing x at 1 is feasible, so kOk
+  // status should be returned with kOptimal and objective = -inf
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
+  // Check that x was fixed at 1, not 0.5
+  REQUIRE(highs.getSolution().col_value[0] == 1);
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
