@@ -1561,7 +1561,7 @@ HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
 
 HighsStatus Highs::handleInfCost() {
   HighsLp& lp = this->model_.lp_;
-  if (!lp.has_infinite_cost_) return;
+  if (!lp.has_infinite_cost_) return HighsStatus::kOk;
   HighsLpMods& mods = lp.mods_;
   double inf_cost = this->options_.infinite_cost;
   for (HighsInt k = 0; k < 2; k++) {
