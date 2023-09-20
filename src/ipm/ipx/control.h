@@ -37,7 +37,7 @@ public:
     Control(const Control&&) = delete;
 
     // Returns IPX_ERROR_* if interrupt is requested, 0 otherwise.
-    Int InterruptCheck() const;
+    Int InterruptCheck(const Int ipm_iteration_count = -1) const;
 
     // Returns output streams for log and debugging messages. The streams
     // evaluate to false if they discard output, so that we can write

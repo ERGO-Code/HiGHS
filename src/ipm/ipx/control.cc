@@ -10,19 +10,22 @@ Control::Control() {
     dummy_.setstate(std::ios::failbit);
 }
 
-Int Control::InterruptCheck() const {
+Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
     if (parameters_.time_limit >= 0.0 &&
         parameters_.time_limit < timer_.Elapsed())
-        return IPX_ERROR_interrupt_time;
+        return IPX_ERROR_time_interrupt;
     if (callback_->user_callback
 	//       && callback_->active[kCallbackMipInterrupt]
 	) {
       callback_->clearHighsCallbackDataOut();
-      callback_->data_out.simplex_iteration_count = 0;//iteration_count_;
+      callback_->data_out.ipm_iteration_count = ipm_iteration_count;
       if (callback_->callbackAction(kCallbackIpmInterrupt,
 				    "IPM interrupt"))
-	return IPX_ERROR_interrupt_user;
+	return IPX_ERROR_user_interrupt;
+      if (ipm_iteration_count == -3) {
+	return IPX_ERROR_user_interrupt;
+      }
     }
     return 0;
 }

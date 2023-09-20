@@ -112,6 +112,7 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
     control_.ResetPrintInterval();
     Int next = 0;
     while (next < (Int)variables.size()) {
+	    assert(0==114);
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -203,7 +204,7 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
         x[(*basis)[p]] = xbasic[p];
 
     // Set status flag.
-    if (info->errflag == IPX_ERROR_interrupt_time) {
+    if (info->errflag == IPX_ERROR_time_interrupt) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
     } else if (info->errflag != 0) {
@@ -249,6 +250,7 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     control_.ResetPrintInterval();
     Int next = 0;
     while (next < (Int)variables.size()) {
+	    assert(0==115);
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -323,7 +325,7 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     }
 
     // Set status flag.
-    if (info->errflag == IPX_ERROR_interrupt_time) {
+    if (info->errflag == IPX_ERROR_time_interrupt) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
     } else if (info->errflag != 0) {

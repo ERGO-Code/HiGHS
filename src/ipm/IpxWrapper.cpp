@@ -239,10 +239,14 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     // time limit, and this is why crossover returns are tested first
     if (illegalIpxStoppedIpmStatus(ipx_info, options))
       return HighsStatus::kError;
+    // Can stop with user interrupt
     // Can stop with time limit
     // Can stop with iter limit
     // Can stop with no progress
-    if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
+    if (ipx_info.status_ipm == IPX_STATUS_user_interrupt) {
+      model_status = HighsModelStatus::kInterrupt;
+      return HighsStatus::kWarning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
       model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
@@ -568,8 +572,8 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     // not "on"
     return HighsStatus::kOk;
   } else if (status == IPX_STATUS_optimal) {
-    highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: %s optimal\n",
-                 method_name.c_str());
+    highsLogUser(options.log_options, HighsLogType::kInfo, 
+                 "Ipx: %s optimal\n", method_name.c_str());
     return HighsStatus::kOk;
   } else if (status == IPX_STATUS_imprecise) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -583,6 +587,10 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s dual infeasible\n", method_name.c_str());
     return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_user_interrupt) {
+    highsLogUser(options.log_options, HighsLogType::kWarning, 
+                 "Ipx: %s user interrupt\n", method_name.c_str());
+    return HighsStatus::kOk;
   } else if (status == IPX_STATUS_time_limit) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s reached time limit\n", method_name.c_str());

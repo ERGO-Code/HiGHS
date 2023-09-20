@@ -88,7 +88,6 @@ static void userInterruptCallback(const int callback_type, const char* message,
             int(data_out->ipm_iteration_count));
       data_in->user_interrupt =
           data_out->ipm_iteration_count > adlittle_ipm_iteration_limit;
-      data_in->user_interrupt = true;
     } else if (callback_type == kCallbackMipInterrupt) {
       if (dev_run)
         printf(

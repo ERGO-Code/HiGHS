@@ -510,7 +510,7 @@ void LpSolver::BuildStartingBasis() {
     basis_.reset(new Basis(control_, model_));
     control_.Log() << " Constructing starting basis...\n";
     StartingBasis(iterate_.get(), basis_.get(), &info_);
-    if (info_.errflag == IPX_ERROR_interrupt_time) {
+    if (info_.errflag == IPX_ERROR_time_interrupt) {
         info_.errflag = 0;
         info_.status_ipm = IPX_STATUS_time_limit;
         return;

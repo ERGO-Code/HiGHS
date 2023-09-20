@@ -3,6 +3,7 @@
 #include <cmath>
 #include "ipm/ipx/timer.h"
 #include "ipm/ipx/utils.h"
+#include <cassert> // 0==116; 0==117
 
 namespace ipx {
 
@@ -79,6 +80,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
         cdot = cdotnew;
 
         iter_++;
+	    assert(0==116);
         if ((errflag_ = control_.InterruptCheck()) != 0)
             break;
     }
@@ -204,7 +206,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
             resnorm_precond_system = rsdot;
         }
 
-        if ((errflag_ = control_.InterruptCheck()) != 0)
+        if ((errflag_ = control_.InterruptCheck(-3)) != 0)
             break;
     }
     time_ = timer.Elapsed();
