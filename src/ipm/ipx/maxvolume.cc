@@ -47,7 +47,6 @@ Int Maxvolume::RunSequential(const double* colscale, Basis& basis) {
                 candidates.pop_back();
                 continue;
             }
-	    assert(0==111);
             if ((errflag = control_.InterruptCheck()) != 0)
                 break;
             basis.SolveForUpdate(j, ftran);
@@ -246,7 +245,6 @@ Int Maxvolume::Driver(Basis& basis, Slice& slice) {
         assert(basis.StatusOf(jn) == Basis::NONBASIC);
         assert(colscale[jn] > 0.0);
 
-	    assert(0==112);
         if ((errflag = control_.InterruptCheck()) != 0)
             break;
 

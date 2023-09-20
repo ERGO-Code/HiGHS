@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -196,7 +196,8 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
   HighsStatus status = highs.run();
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
-  REQUIRE(highs.getInfo().simplex_iteration_count > adlittle_simplex_iteration_limit);
+  REQUIRE(highs.getInfo().simplex_iteration_count >
+          adlittle_simplex_iteration_limit);
 }
 
 TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {

@@ -20,7 +20,7 @@
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                           HighsBasis& highs_basis,
                           HighsSolution& highs_solution,
-                          HighsModelStatus& model_status,
-                          HighsInfo& highs_info);
+                          HighsModelStatus& model_status, HighsInfo& highs_info,
+                          HighsCallback& highs_callback);
 
 #endif

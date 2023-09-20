@@ -700,7 +700,6 @@ void Basis::PivotFreeVariablesIntoBasis(const double* colweights, Info* info) {
         Int jn = remaining.back();
         assert(std::isinf(colweights[jn]));
         assert(map2basis_[jn] < 0);
-	    assert(0==118);
         if ((info->errflag = control_.InterruptCheck()) != 0)
             return;
 
@@ -824,7 +823,6 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
         Int jb = remaining.back();
         assert(colweights[jb] == 0.0);
         assert(map2basis_[jb] >= 0);
-	    assert(0==119);
         if ((info->errflag = control_.InterruptCheck()) != 0)
             return;
 

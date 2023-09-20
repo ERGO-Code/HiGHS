@@ -15,16 +15,16 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     if (parameters_.time_limit >= 0.0 &&
         parameters_.time_limit < timer_.Elapsed())
         return IPX_ERROR_time_interrupt;
-    if (callback_->user_callback
-	//       && callback_->active[kCallbackMipInterrupt]
-	) {
-      callback_->clearHighsCallbackDataOut();
-      callback_->data_out.ipm_iteration_count = ipm_iteration_count;
-      if (callback_->callbackAction(kCallbackIpmInterrupt,
-				    "IPM interrupt"))
-	return IPX_ERROR_user_interrupt;
-      if (ipm_iteration_count == -3) {
-	return IPX_ERROR_user_interrupt;
+    // The pointer callback_ should not be null, since that indicates
+    // that it's not been set
+    assert(callback_);
+    if (callback_) {
+      if (callback_->user_callback	       && callback_->active[kCallbackIpmInterrupt]	  ) {
+	callback_->clearHighsCallbackDataOut();
+	callback_->data_out.ipm_iteration_count = ipm_iteration_count;
+	if (callback_->callbackAction(kCallbackIpmInterrupt,
+				      "IPM interrupt"))
+	  return IPX_ERROR_user_interrupt;
       }
     }
     return 0;
