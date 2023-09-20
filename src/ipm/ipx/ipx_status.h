@@ -44,6 +44,7 @@
 
 #define IPX_ERROR_lapack_chol               401
 #define IPX_ERROR_not_implemented           901
+#define IPX_ERROR_interrupt_user            998
 #define IPX_ERROR_interrupt_time            999
 
 #define IPX_basic                            0

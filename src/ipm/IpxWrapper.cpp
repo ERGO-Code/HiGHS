@@ -24,7 +24,8 @@ using std::min;
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
                     solver_object.basis_, solver_object.solution_, 
-                    solver_object.model_status_, solver_object.highs_info_);
+                    solver_object.model_status_, solver_object.highs_info_,
+		    solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options,
@@ -33,7 +34,8 @@ HighsStatus solveLpIpx(const HighsOptions& options,
                        HighsBasis& highs_basis,
 		       HighsSolution& highs_solution,
                        HighsModelStatus& model_status,
-                       HighsInfo& highs_info) {
+                       HighsInfo& highs_info,
+		       HighsCallback& callback) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -136,6 +138,9 @@ HighsStatus solveLpIpx(const HighsOptions& options,
 
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
+
+  // Set pointer to any callback
+  lps.SetCallback(&callback);
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;

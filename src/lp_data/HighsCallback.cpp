@@ -19,6 +19,7 @@ void HighsCallback::clearHighsCallbackDataOut() {
   this->data_out.log_type = -1;
   this->data_out.running_time = -1;
   this->data_out.simplex_iteration_count = -1;
+  this->data_out.ipm_iteration_count = -1;
   this->data_out.objective_function_value = -kHighsInf;
   this->data_out.mip_node_count = -1;
   this->data_out.mip_primal_bound = kHighsInf;

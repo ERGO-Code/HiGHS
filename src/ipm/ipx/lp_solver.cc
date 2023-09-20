@@ -155,6 +155,10 @@ void LpSolver::SetParameters(Parameters new_parameters) {
     control_.parameters(new_parameters);
 }
 
+void LpSolver::SetCallback(HighsCallback* callback) {
+    control_.callback(callback);
+}
+
 void LpSolver::ClearModel() {
     model_.clear();
     ClearSolution();

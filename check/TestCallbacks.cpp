@@ -5,10 +5,11 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
+const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
 
 const HighsInt kLogBufferSize = kIoBufferSize;
@@ -77,6 +78,17 @@ static void userInterruptCallback(const int callback_type, const char* message,
             int(data_out->simplex_iteration_count));
       data_in->user_interrupt =
           data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
+    } else if (callback_type == kCallbackIpmInterrupt) {
+      if (dev_run)
+        printf(
+            "userInterruptCallback(type %2d; data %2d): %s with iteration "
+            "count = "
+            "%d\n",
+            callback_type, local_callback_data, message,
+            int(data_out->ipm_iteration_count));
+      data_in->user_interrupt =
+          data_out->ipm_iteration_count > adlittle_ipm_iteration_limit;
+      data_in->user_interrupt = true;
     } else if (callback_type == kCallbackMipInterrupt) {
       if (dev_run)
         printf(
@@ -182,7 +194,25 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
   highs.setCallback(userInterruptCallback);
   highs.startCallback(kCallbackSimplexInterrupt);
   highs.readModel(filename);
-  highs.run();
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().simplex_iteration_count > adlittle_simplex_iteration_limit);
+}
+
+TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setCallback(userInterruptCallback);
+  highs.startCallback(kCallbackIpmInterrupt);
+  highs.readModel(filename);
+  highs.setOptionValue("solver", kIpmString);
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().ipm_iteration_count > adlittle_ipm_iteration_limit);
 }
 
 TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
@@ -193,9 +223,10 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   highs.setCallback(userInterruptCallback);
   highs.startCallback(kCallbackMipInterrupt);
   highs.readModel(filename);
-  highs.run();
-  REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {

@@ -8,6 +8,7 @@
 #include "ipm/ipx/ipx_internal.h"
 #include "ipm/ipx/multistream.h"
 #include "ipm/ipx/timer.h"
+#include "lp_data/HighsCallback.h"
 
 namespace ipx {
 
@@ -84,6 +85,7 @@ public:
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);
+    void callback(HighsCallback* callback);
 
     // Opens the log file defined in parameters.logfile, if any.
     // Ignores if an error occurs; in this case no file log is written.
@@ -98,6 +100,7 @@ public:
 private:
     void MakeStream();           // composes output_
     Parameters parameters_;
+    HighsCallback* callback_ = nullptr;
     std::ofstream logfile_;
     Timer timer_;                // total runtime
     mutable Timer interval_;     // time since last interval log

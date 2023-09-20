@@ -1,4 +1,5 @@
 #include "parallel/HighsParallel.h"
+#include "lp_data/HighsCallback.h"
 #include "ipm/ipx/control.h"
 #include <iostream>
 
@@ -14,6 +15,15 @@ Int Control::InterruptCheck() const {
     if (parameters_.time_limit >= 0.0 &&
         parameters_.time_limit < timer_.Elapsed())
         return IPX_ERROR_interrupt_time;
+    if (callback_->user_callback
+	//       && callback_->active[kCallbackMipInterrupt]
+	) {
+      callback_->clearHighsCallbackDataOut();
+      callback_->data_out.simplex_iteration_count = 0;//iteration_count_;
+      if (callback_->callbackAction(kCallbackIpmInterrupt,
+				    "IPM interrupt"))
+	return IPX_ERROR_interrupt_user;
+    }
     return 0;
 }
 
@@ -53,6 +63,10 @@ const Parameters& Control::parameters() const {
 void Control::parameters(const Parameters& new_parameters) {
     parameters_ = new_parameters;
     MakeStream();
+}
+
+void Control::callback(HighsCallback* callback) {
+    callback_ = callback;
 }
 
 void Control::OpenLogfile() {
