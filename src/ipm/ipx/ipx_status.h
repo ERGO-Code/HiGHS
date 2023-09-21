@@ -14,11 +14,12 @@
 #define IPX_STATUS_imprecise                2
 #define IPX_STATUS_primal_infeas            3
 #define IPX_STATUS_dual_infeas              4
-#define IPX_STATUS_time_limit               5
-#define IPX_STATUS_iter_limit               6
-#define IPX_STATUS_no_progress              7
-#define IPX_STATUS_failed                   8
-#define IPX_STATUS_debug                    9
+#define IPX_STATUS_user_interrupt           5
+#define IPX_STATUS_time_limit               6
+#define IPX_STATUS_iter_limit               7
+#define IPX_STATUS_no_progress              8
+#define IPX_STATUS_failed                   9
+#define IPX_STATUS_debug                    10
 
 /* error flags for invalid input */
 #define IPX_ERROR_argument_null             102
@@ -44,7 +45,8 @@
 
 #define IPX_ERROR_lapack_chol               401
 #define IPX_ERROR_not_implemented           901
-#define IPX_ERROR_interrupt_time            999
+#define IPX_ERROR_user_interrupt            998
+#define IPX_ERROR_time_interrupt            999
 
 #define IPX_basic                            0
 #define IPX_nonbasic                        -1

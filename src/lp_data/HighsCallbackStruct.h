@@ -20,6 +20,7 @@ struct HighsCallbackDataOut {
   int log_type;  // cast of HighsLogType
   double running_time;
   HighsInt simplex_iteration_count;
+  HighsInt ipm_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   double mip_primal_bound;

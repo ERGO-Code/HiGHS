@@ -52,7 +52,8 @@ public:
     // IPX_ERROR_cr_precond_not_posdef  if v'*P*v <= 0 for some vector v
     // IPX_ERROR_cr_inf_or_nan          if overflow occured
     // IPX_ERROR_cr_no_progress         if no progress due to round-off errors
-    // IPX_ERROR_interrupted            if interrupted by control
+    // IPX_ERROR_user_interrupt         if interrupted by user in control
+    // IPX_ERROR_time_interrupt         if interrupted by time limit in control
     Int errflag() const;
 
     // Returns the # iterations in the last call to Solve().

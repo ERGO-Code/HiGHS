@@ -1035,8 +1035,9 @@ HighsStatus Highs::run() {
 
       options_.icrash = false;  // to avoid loop
     } else {
-      HighsStatus crossover_status = callCrossover(
-          options_, model_.lp_, basis_, solution_, model_status_, info_);
+      HighsStatus crossover_status =
+          callCrossover(options_, model_.lp_, basis_, solution_, model_status_,
+                        info_, callback_);
       // callCrossover can return HighsStatus::kWarning due to
       // imprecise dual values. Ignore this since primal simplex will
       // be called to clean up duals
@@ -3963,7 +3964,7 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
     solution_ = user_solution;
     // Use IPX crossover to try to form a basic solution
     return_status = callCrossover(options_, model_.lp_, basis_, solution_,
-                                  model_status_, info_);
+                                  model_status_, info_, callback_);
     if (return_status == HighsStatus::kError) return return_status;
     // Get the objective and any KKT failures
     info_.objective_function_value =
