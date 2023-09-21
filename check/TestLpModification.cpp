@@ -6,7 +6,7 @@
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
@@ -1487,6 +1487,87 @@ TEST_CASE("LP-delete-ip-var", "[highs_data]") {
       REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kContinuous);
     }
   }
+}
+
+TEST_CASE("LP-ipm-restart", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("solver", kIpmString);
+  HighsLp lp;
+  const bool lp0 = false;
+  const bool lp1 = false;
+  const bool lp2 = true;
+  const bool lp3 = false;
+  if (lp0) {
+    lp.num_col_ = 2;
+    lp.num_row_ = 1;
+    lp.col_cost_ = {-1, -2};
+    lp.col_lower_ = {-inf, -inf};
+    lp.col_upper_ = {inf, inf};
+    lp.row_lower_ = {-inf};
+    lp.row_upper_ = {inf};
+    lp.a_matrix_.start_ = {0, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1, 1};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+    highs.passModel(lp);
+    highs.run();
+    // Assertion `std::isfinite(W_[j])' failed.
+  }
+  if (lp1) {
+    lp.num_col_ = 2;
+    lp.num_row_ = 1;
+    lp.col_cost_ = {-1, -2};
+    lp.col_lower_ = {0, 0};
+    lp.col_upper_ = {inf, inf};
+    lp.row_lower_ = {-inf};
+    lp.row_upper_ = {inf};
+    lp.a_matrix_.start_ = {0, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1, 1};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+    highs.passModel(lp);
+    highs.run();
+    // Assertion `ipx_num_row == lp.num_row_' failed.
+  }
+  if (lp2) {
+    lp.num_col_ = 2;
+    lp.num_row_ = 1;
+    lp.col_cost_ = {-1, -2};
+    lp.col_lower_ = {-inf, -inf};
+    lp.col_upper_ = {inf, inf};
+    lp.row_lower_ = {-inf};
+    lp.row_upper_ = {0};
+    lp.a_matrix_.start_ = {0, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1, 1};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+    highs.passModel(lp);
+    highs.run();
+    // Runs indefinitely
+  }
+  if (lp3) {
+    lp.num_col_ = 2;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {-1, -2};
+    lp.col_lower_ = {0, -inf};
+    //  lp.col_lower_ = {0, 0};
+    lp.col_upper_ = {inf, inf};
+    lp.row_lower_ = {-inf, -inf};
+    lp.row_upper_ = {0, inf};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {1, 1, 1, -1};
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+    highs.passModel(lp);
+    highs.run();
+  }
+ 
 }
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
