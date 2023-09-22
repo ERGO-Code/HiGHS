@@ -37,6 +37,9 @@ class HPresolveAnalysis {
   HighsPresolveLog presolve_log_;
 
   // for LP presolve
+  //
+  // Transform options->presolve_rule_off into logical settings in
+  // allow_rule_[*], commenting on the rules switched off
   void setup(const HighsLp* model_, const HighsOptions* options_,
              const HighsInt& numDeletedRows_, const HighsInt& numDeletedCols_);
   void resetNumDeleted();
