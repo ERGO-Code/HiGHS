@@ -37,7 +37,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  if (!solver_object.lp_.num_row_) {
+  const bool all_free_rows = solver_object.lp_.allFreeRows();
+  //  assert(!all_free_rows);
+  if (!solver_object.lp_.num_row_ || all_free_rows) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
@@ -142,9 +144,15 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   // Aliase to model status and solution parameters
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  // Check that the LP really is unconstrained!
-  assert(lp.num_row_ == 0);
-  if (lp.num_row_ != 0) return HighsStatus::kError;
+  // Check that the LP really is unconstrained or has all free rows!
+  assert(lp.num_row_ >= 0);
+  if (lp.num_row_ != 0) {
+    const bool all_free_rows = lp.allFreeRows();
+    if (!all_free_rows) {
+      assert(lp.num_row_ == 0 || all_free_rows);
+      return HighsStatus::kError;
+    }
+  }
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Solving an unconstrained LP with %" HIGHSINT_FORMAT
@@ -272,6 +280,13 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     highs_info.sum_dual_infeasibilities += dual_infeasibility;
     highs_info.max_dual_infeasibility =
         std::max(dual_infeasibility, highs_info.max_dual_infeasibility);
+  }
+  if (lp.num_row_ > 0) {
+    // LP has rows, but all are free - and hence basic at the row
+    // activity with zero dual
+    lp.a_matrix_.product(solution.row_value, solution.col_value);
+    basis.row_status.assign(lp.num_row_, HighsBasisStatus::kBasic);
+    solution.row_dual.assign(lp.num_row_, 0);
   }
   highs_info.objective_function_value = objective;
   solution.value_valid = true;

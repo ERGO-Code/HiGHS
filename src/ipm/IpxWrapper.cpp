@@ -148,6 +148,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   std::vector<char> constraint_type;
   fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
                 rhs, constraint_type);
+  assert(num_row>0);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",

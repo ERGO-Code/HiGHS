@@ -506,7 +506,6 @@ TEST_CASE("free-rows", "[highs_data]") {
       
       highs.passModel(lp);
       highs.run();
-      // Assertion `ipx_num_row == lp.num_row_' failed.
     }
     if (lp2) {
       lp.num_col_ = 2;
