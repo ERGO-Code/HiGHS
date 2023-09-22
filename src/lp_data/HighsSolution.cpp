@@ -648,36 +648,28 @@ HighsStatus ipxSolutionToHighsSolution(
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
 
   // Row activities are needed to set activity values of free rows -
-  // which are ignored by IPX
+  // which are ignored by IPX - and to measure difference between row
+  // activity and slack value
   vector<double> row_activity;
-  const bool get_row_activities = true;  // ipx_num_row < lp.num_row_;
-  if (get_row_activities) row_activity.assign(lp.num_row_, 0);
-  HighsInt ipx_slack = lp.num_col_;
-  assert(ipx_num_row == lp.num_row_);
-  double dual_residual_norm = 0;
+  row_activity.assign(lp.num_row_, 0);
+  // Get the column activities and duals
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     double lower = lp.col_lower_[col];
     double upper = lp.col_upper_[col];
     double value = ipx_col_value[col];
-    if (get_row_activities) {
-      // Accumulate row activities to assign value to free rows
-      double check_dual = lp.col_cost_[col];
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; el++) {
-        HighsInt row = lp.a_matrix_.index_[el];
-        row_activity[row] += value * lp.a_matrix_.value_[el];
-        check_dual -= ipx_y[row] * lp.a_matrix_.value_[el];
-      }
-      double dual_residual =
-          std::fabs(check_dual - (ipx_zl[col] - ipx_zu[col]));
-      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
+    // Accumulate row activities to assign value to free rows
+    for (HighsInt el = lp.a_matrix_.start_[col];
+	 el < lp.a_matrix_.start_[col + 1]; el++) {
+      HighsInt row = lp.a_matrix_.index_[el];
+      row_activity[row] += value * lp.a_matrix_.value_[el];
     }
     double dual = ipx_zl[col] - ipx_zu[col];
     highs_solution.col_value[col] = value;
     highs_solution.col_dual[col] = dual;
   }
+  // Get the row activities and duals, plus the primal residual norm
   HighsInt ipx_row = 0;
-  ipx_slack = lp.num_col_;
+  HighsInt ipx_slack = lp.num_col_;
   double delta_norm = 0;
   for (HighsInt row = 0; row < lp.num_row_; row++) {
     double lower = lp.row_lower_[row];
@@ -707,6 +699,20 @@ HighsStatus ipxSolutionToHighsSolution(
     highs_solution.row_dual[row] = dual;
     // Update the IPX row index
     ipx_row++;
+  }
+  // Get the dual residual norm (now that row duals have been
+  // assigned)
+  double dual_residual_norm = 0;
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
+    double check_dual = lp.col_cost_[col];
+    for (HighsInt el = lp.a_matrix_.start_[col];
+	 el < lp.a_matrix_.start_[col + 1]; el++) {
+      HighsInt row = lp.a_matrix_.index_[el];
+      check_dual -= highs_solution.row_dual[row] * lp.a_matrix_.value_[el];
+    }
+    double dual_residual =
+      std::fabs(check_dual - highs_solution.col_dual[col]);
+    dual_residual_norm = std::max(dual_residual, dual_residual_norm);
   }
   //  if (delta_norm >= dual_feasibility_tolerance)
   highsLogDev(

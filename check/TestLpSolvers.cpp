@@ -2,7 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 struct IterationCount {
   HighsInt simplex;
@@ -433,4 +433,115 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
                max_objective_function_value);
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
   REQUIRE(error < 1e-10);
+}
+
+TEST_CASE("free-rows", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+
+  const bool lpm1 = false;
+  const bool lp0 = false;
+  const bool lp1 = true;
+  const bool lp2 = false;
+  const bool lp3 = false;
+  const double inf = kHighsInf;
+
+  HighsLp lp;
+  // Look at cases with only free rows. Simplex can use them but
+  // shouldn't; IPM removes them, leading to problem with no rows and,
+  // hence, runtime errors
+  for (HighsInt k=0; k<2; k++) {
+    if (k == 0) {
+      highs.setOptionValue("solver", kSimplexString);
+    } else {      
+      highs.setOptionValue("solver", kIpmString);
+    }
+    if (lpm1) {
+      lp.num_col_ = 2;
+      lp.num_row_ = 1;
+      lp.col_cost_ = {-1, -2};
+      lp.col_lower_ = {-inf, -inf};
+      lp.col_upper_ = {inf, inf};
+      lp.row_lower_ = {-inf};
+      lp.row_upper_ = {inf};
+      lp.a_matrix_.start_ = {0, 2};
+      lp.a_matrix_.index_ = {0, 1};
+      lp.a_matrix_.value_ = {1, 1};
+      lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+      
+      highs.passModel(lp);
+      highs.run();
+      // Assertion `std::isfinite(W_[j])' failed.
+    }
+    if (lp0) {
+      lp.num_col_ = 2;
+      lp.num_row_ = 1;
+      lp.col_cost_ = {-1, -2};
+      lp.col_lower_ = {0, 1};
+      lp.col_upper_ = {0, 1};
+      lp.row_lower_ = {-inf};
+      lp.row_upper_ = {inf};
+      lp.a_matrix_.start_ = {0, 2};
+      lp.a_matrix_.index_ = {0, 1};
+      lp.a_matrix_.value_ = {1, 1};
+      lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+      
+      highs.passModel(lp);
+      highs.run();
+      // internal error: basiclu_initialize failed
+    }
+    if (lp1) {
+      lp.num_col_ = 2;
+      lp.num_row_ = 1;
+      lp.col_cost_ = {-1, -2};
+      lp.col_lower_ = {0, 0};
+      lp.col_upper_ = {inf, inf};
+      lp.row_lower_ = {-inf};
+      lp.row_upper_ = {inf};
+      lp.a_matrix_.start_ = {0, 2};
+      lp.a_matrix_.index_ = {0, 1};
+      lp.a_matrix_.value_ = {1, 1};
+      lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+      
+      highs.passModel(lp);
+      highs.run();
+      // Assertion `ipx_num_row == lp.num_row_' failed.
+    }
+    if (lp2) {
+      lp.num_col_ = 2;
+      lp.num_row_ = 1;
+      lp.col_cost_ = {-1, -2};
+      lp.col_lower_ = {-inf, -inf};
+      lp.col_upper_ = {inf, inf};
+      lp.row_lower_ = {-inf};
+      lp.row_upper_ = {0};
+      lp.a_matrix_.start_ = {0, 2};
+      lp.a_matrix_.index_ = {0, 1};
+      lp.a_matrix_.value_ = {1, 1};
+      lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+      
+      highs.passModel(lp);
+      highs.run();
+      // Runs indefinitely
+    }
+    if (lp3) {
+      lp.num_col_ = 2;
+      lp.num_row_ = 2;
+      lp.col_cost_ = {-1, -2};
+      lp.col_lower_ = {0, -inf};
+      //  lp.col_lower_ = {0, 0};
+      lp.col_upper_ = {inf, inf};
+      lp.row_lower_ = {-inf, -inf};
+      lp.row_upper_ = {0, inf};
+      lp.a_matrix_.start_ = {0, 2, 4};
+      lp.a_matrix_.index_ = {0, 1, 0, 1};
+      lp.a_matrix_.value_ = {1, 1, 1, -1};
+      lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+      
+      highs.passModel(lp);
+      highs.run();
+    }
+  }
+ 
 }
