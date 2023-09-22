@@ -1070,7 +1070,7 @@ HighsStatus Highs::run() {
 
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
-    ekk_instance_.lp_name_ = "LP without presolve or with basis";
+    ekk_instance_.lp_name_ = "LP without presolve, or with basis";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
@@ -1081,7 +1081,7 @@ HighsStatus Highs::run() {
     }
     timer_.start(timer_.solve_clock);
     call_status =
-        callSolveLp(incumbent_lp, "Solving LP without presolve or with basis");
+        callSolveLp(incumbent_lp, "Solving LP without presolve, or with basis");
     timer_.stop(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
       options_.log_dev_level = log_dev_level;
