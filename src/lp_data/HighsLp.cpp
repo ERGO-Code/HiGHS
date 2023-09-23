@@ -51,7 +51,8 @@ bool HighsLp::allFreeRows() const {
   if (this->num_row_ == 0) return false;
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++)
     if (this->row_lower_[iRow] > -kHighsInf ||
-	this->row_upper_[iRow] < -kHighsInf) return false;
+        this->row_upper_[iRow] < kHighsInf)
+      return false;
   return true;
 }
 

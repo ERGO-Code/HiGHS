@@ -659,7 +659,7 @@ HighsStatus ipxSolutionToHighsSolution(
     double value = ipx_col_value[col];
     // Accumulate row activities to assign value to free rows
     for (HighsInt el = lp.a_matrix_.start_[col];
-	 el < lp.a_matrix_.start_[col + 1]; el++) {
+         el < lp.a_matrix_.start_[col + 1]; el++) {
       HighsInt row = lp.a_matrix_.index_[el];
       row_activity[row] += value * lp.a_matrix_.value_[el];
     }
@@ -706,12 +706,11 @@ HighsStatus ipxSolutionToHighsSolution(
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     double check_dual = lp.col_cost_[col];
     for (HighsInt el = lp.a_matrix_.start_[col];
-	 el < lp.a_matrix_.start_[col + 1]; el++) {
+         el < lp.a_matrix_.start_[col + 1]; el++) {
       HighsInt row = lp.a_matrix_.index_[el];
       check_dual -= highs_solution.row_dual[row] * lp.a_matrix_.value_[el];
     }
-    double dual_residual =
-      std::fabs(check_dual - highs_solution.col_dual[col]);
+    double dual_residual = std::fabs(check_dual - highs_solution.col_dual[col]);
     dual_residual_norm = std::max(dual_residual, dual_residual_norm);
   }
   //  if (delta_norm >= dual_feasibility_tolerance)

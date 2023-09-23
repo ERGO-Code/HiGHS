@@ -2,7 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 struct IterationCount {
   HighsInt simplex;
@@ -440,24 +440,24 @@ TEST_CASE("free-rows", "[highs_data]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
 
-  const bool lpm1 = false;
-  const bool lp0 = false;
+  const bool lpm1 = true;
+  const bool lp0 = true;
   const bool lp1 = true;
-  const bool lp2 = false;
-  const bool lp3 = false;
+  const bool lp2 = true;
+  const bool lp3 = true;
   const double inf = kHighsInf;
-
   HighsLp lp;
   // Look at cases with only free rows. Simplex can use them but
   // shouldn't; IPM removes them, leading to problem with no rows and,
   // hence, runtime errors
-  for (HighsInt k=0; k<2; k++) {
-    if (k == 0) {
-      highs.setOptionValue("solver", kSimplexString);
-    } else {      
-      highs.setOptionValue("solver", kIpmString);
-    }
+
+  HighsStatus status;
+  for (HighsInt k = 0; k < 2; k++) {
+    std::string solver_string = k == 0 ? kSimplexString : kIpmString;
+    highs.setOptionValue("solver", solver_string);
     if (lpm1) {
+      if (dev_run)
+        printf("\nTEST_CASE(free-rows) LP -1: %s\n", solver_string.c_str());
       lp.num_col_ = 2;
       lp.num_row_ = 1;
       lp.col_cost_ = {-1, -2};
@@ -469,12 +469,15 @@ TEST_CASE("free-rows", "[highs_data]") {
       lp.a_matrix_.index_ = {0, 1};
       lp.a_matrix_.value_ = {1, 1};
       lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-      
+
       highs.passModel(lp);
-      highs.run();
-      // Assertion `std::isfinite(W_[j])' failed.
+      status = highs.run();
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
     }
     if (lp0) {
+      if (dev_run)
+        printf("\nTEST_CASE(free-rows) LP  0: %s\n", solver_string.c_str());
       lp.num_col_ = 2;
       lp.num_row_ = 1;
       lp.col_cost_ = {-1, -2};
@@ -486,12 +489,15 @@ TEST_CASE("free-rows", "[highs_data]") {
       lp.a_matrix_.index_ = {0, 1};
       lp.a_matrix_.value_ = {1, 1};
       lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-      
+
       highs.passModel(lp);
-      highs.run();
-      // internal error: basiclu_initialize failed
+      status = highs.run();
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     }
     if (lp1) {
+      if (dev_run)
+        printf("\nTEST_CASE(free-rows) LP  1: %s\n", solver_string.c_str());
       lp.num_col_ = 2;
       lp.num_row_ = 1;
       lp.col_cost_ = {-1, -2};
@@ -503,11 +509,15 @@ TEST_CASE("free-rows", "[highs_data]") {
       lp.a_matrix_.index_ = {0, 1};
       lp.a_matrix_.value_ = {1, 1};
       lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-      
+
       highs.passModel(lp);
-      highs.run();
+      status = highs.run();
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
     }
     if (lp2) {
+      if (dev_run)
+        printf("\nTEST_CASE(free-rows) LP  2: %s\n", solver_string.c_str());
       lp.num_col_ = 2;
       lp.num_row_ = 1;
       lp.col_cost_ = {-1, -2};
@@ -519,12 +529,21 @@ TEST_CASE("free-rows", "[highs_data]") {
       lp.a_matrix_.index_ = {0, 1};
       lp.a_matrix_.value_ = {1, 1};
       lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-      
+
       highs.passModel(lp);
-      highs.run();
-      // Runs indefinitely
+      status = highs.run();
+      if (k == 0) {
+        REQUIRE(status == HighsStatus::kOk);
+        REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+      } else {
+        // Runs indefinitely with IPM: ToDo debug this!
+        REQUIRE(status == HighsStatus::kWarning);
+        REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+      }
     }
     if (lp3) {
+      if (dev_run)
+        printf("\nTEST_CASE(free-rows) LP  3: %s\n", solver_string.c_str());
       lp.num_col_ = 2;
       lp.num_row_ = 2;
       lp.col_cost_ = {-1, -2};
@@ -537,10 +556,11 @@ TEST_CASE("free-rows", "[highs_data]") {
       lp.a_matrix_.index_ = {0, 1, 0, 1};
       lp.a_matrix_.value_ = {1, 1, 1, -1};
       lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-      
+
       highs.passModel(lp);
-      highs.run();
+      status = highs.run();
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     }
   }
- 
 }
