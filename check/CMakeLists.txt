@@ -110,6 +110,7 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

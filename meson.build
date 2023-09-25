@@ -1,5 +1,5 @@
 project('highs', 'cpp',
-  version : '1.5.3',
+  version : '1.6.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
                      'wrap_mode=forcefallback'])
