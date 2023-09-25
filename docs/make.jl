@@ -67,7 +67,6 @@ Documenter.makedocs(
             ],
 	],
         "Callbacks" => "callbacks.md",
-	],
         "Interfaces" => Any[
             "Python" => Any[
                 "interfaces/python/index.md",
