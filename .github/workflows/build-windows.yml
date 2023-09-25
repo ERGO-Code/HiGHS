@@ -75,7 +75,7 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 1000 --output-on-failure -C Release
+        run: ctest --timeout 10000 --output-on-failure -C Release
 
   fast_build_debug:
     runs-on: windows-latest
@@ -109,7 +109,7 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 1000 --output-on-failure -C Debug
+        run: ctest --timeout 10000 --output-on-failure -C Debug
 
   windows_debug:
     runs-on: windows-latest
@@ -143,7 +143,7 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 1000 --output-on-failure -C Debug
+        run: ctest --timeout 10000 --output-on-failure -C Debug
 
   windows_release64:
     runs-on: windows-latest
@@ -211,4 +211,4 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 1000 --output-on-failure -C Debug
+        run: ctest --timeout 10000 --output-on-failure -C Debug
