@@ -1,6 +1,6 @@
 # Callbacks
 
-The HiGHS callback allows user actions to be performed within HiGHS. There is one generic callback method that can be defined by a user, with specific callback scenarios communicated to the user via a parameter. Its definition is
+The HiGHS callback allows user actions to be performed within HiGHS. There is one generic callback method that can be defined by a user, with specific callback scenarios communicated to the user via a parameter. It can be given any name and, below, is called `userCallback`. Its definition is
 
 ```bash
 void userCallback(const int callback_type,
@@ -18,34 +18,34 @@ where
 * `data_in` communicates data from the user to HiGHS
 * `user_callback_data` allows the user to pass data to the callback
 
-The user's callback method `userCallback` is communicated to HiGHS via the method that in the HiGHS C++ class is
+The user's callback method is communicated to HiGHS via the method that in the HiGHS C++ class is
 ```bash
 HighsStatus setCallback(void (*userCallback)(const int, const char*, const HighsCallbackDataOut*,
-                          HighsCallbackDataIn*, void*), void* user_callback_data);
+                        HighsCallbackDataIn*, void*), void* user_callback_data);
 ```
 and, in the HiGHS C API is
 ```bash
 HighsInt Highs_setCallback(
     void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
+    void (*userCallback)(const int, const char*,
+                         const struct HighsCallbackDataOut*,
+                         struct HighsCallbackDataIn*, void*),
     void* user_callback_data)
 ```
-There current callback scenarios are set out below, and the particular callback is activated by calling (in C++)
+There current callback scenarios are set out below, and the particular callback is activated in C++ by calling
 
 ```bash
 HighsStatus startCallback(const int callback_type);
 ```
-and, in C,
+and, in C, by calling
 ```bash
 HighsInt Highs_startCallback(void* highs, const int callback_type);
 ```
-, and de-activated by calling (in C++)
+, and de-activated in C++ by calling
 ```bash
 HighsStatus stopCallback(const int callback_type);
 ```
-and, in C,
+and, in C, by calling
 ```bash
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 ```
