@@ -3253,7 +3253,7 @@ HighsStatus Highs::callSolveQp() {
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
 
-  QpModelStatus qp_model_status;
+  QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
 
   QpSolution qp_solution(instance);
 
