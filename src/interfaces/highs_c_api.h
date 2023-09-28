@@ -11,7 +11,8 @@
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
 
-#include "util/HighsInt.h"
+//#include "util/HighsInt.h"
+#include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
 
@@ -77,12 +78,20 @@ const HighsInt kHighsModelStatusTimeLimit = 13;
 const HighsInt kHighsModelStatusIterationLimit = 14;
 const HighsInt kHighsModelStatusUnknown = 15;
 const HighsInt kHighsModelStatusSolutionLimit = 16;
+const HighsInt kHighsModelStatusInterrupt = 17;
 
 const HighsInt kHighsBasisStatusLower = 0;
 const HighsInt kHighsBasisStatusBasic = 1;
 const HighsInt kHighsBasisStatusUpper = 2;
 const HighsInt kHighsBasisStatusZero = 3;
 const HighsInt kHighsBasisStatusNonbasic = 4;
+
+const HighsInt kHighsCallbackLogging = 0;
+const HighsInt kHighsCallbackSimplexInterrupt = 1;
+const HighsInt kHighsCallbackIpmInterrupt = 2;
+const HighsInt kHighsCallbackMipImprovingSolution = 3;
+const HighsInt kHighsCallbackMipLogging = 4;
+const HighsInt kHighsCallbackMipInterrupt = 5;
 
 #ifdef __cplusplus
 extern "C" {
@@ -1061,6 +1070,42 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
                            const double* row_dual);
 
 /**
+ * Set the callback method to use for HiGHS
+ *
+ * @param highs              A pointer to the Highs instance.
+ * @param user_callback      A pointer to the user callback
+ * @param user_callback_data A pointer to the user callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallback(
+    void* highs,
+    void (*user_callback)(const int, const char*,
+                          const struct HighsCallbackDataOut*,
+                          struct HighsCallbackDataIn*, void*),
+    void* user_callback_data);
+
+/**
+ * Start callback of given type
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be started
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_startCallback(void* highs, const int callback_type);
+
+/**
+ * Stop callback of given type
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be stopped
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_stopCallback(void* highs, const int callback_type);
+
+/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     A pointer to the Highs instance.
@@ -1068,6 +1113,24 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
  * @returns The cumulative wall-clock time spent in `Highs_run`
  */
 double Highs_getRunTime(const void* highs);
+
+/**
+ * Reset the clocks in a `highs` model.
+ *
+ * Each `highs` model contains a single instance of clock that records how much
+ * time is spent in various parts of the algorithm. This clock is not reset on
+ * entry to `Highs_run`, so repeated calls to `Highs_run` report the cumulative
+ * time spent in the algorithm. A side-effect is that this will trigger a time
+ * limit termination once the cumulative run time exceeds the time limit, rather
+ * than the run time of each individual call to `Highs_run`.
+ *
+ * As a work-around, call `Highs_zeroAllClocks` before each call to `Highs_run`.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_zeroAllClocks(const void* highs);
 
 /**
  * Add a new column (variable) to the model.

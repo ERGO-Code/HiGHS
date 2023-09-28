@@ -1,4 +1,4 @@
-
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "util/HighsIntegers.h"
 

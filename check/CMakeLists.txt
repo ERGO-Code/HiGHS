@@ -6,6 +6,8 @@ add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 
+configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
+
 FILE(WRITE ${CMAKE_BINARY_DIR}/testoptions.txt
 "mip_rel_gap=0.0
 mip_abs_gap=0.0")
@@ -15,6 +17,7 @@ set(TEST_SOURCES
     TestHighsVersion.cpp
     TestAlienBasis.cpp
     TestDualize.cpp
+    TestCallbacks.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
     TestFactor.cpp
@@ -38,6 +41,7 @@ set(TEST_SOURCES
     TestHighsRbTree.cpp
     TestHighsHessian.cpp
     TestHighsModel.cpp
+    TestHighsSparseMatrix.cpp
     TestHSet.cpp
     TestICrash.cpp
     TestLogging.cpp
@@ -106,6 +110,7 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

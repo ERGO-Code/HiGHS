@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "SpecialLps.h"
 #include "catch.hpp"
@@ -553,6 +554,20 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
     REQUIRE(saved_objective_and_solution[last_saved_solution].col_value[iCol] ==
             highs.getSolution().col_value[iCol]);
   std::remove(solution_file.c_str());
+}
+
+TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
+  const double egout_optimal_objective = 568.1007;
+  const double egout_objective_target = 610;
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("objective_target", egout_objective_target);
+  highs.readModel(filename);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kObjectiveTarget);
+  REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 }
 
 bool objectiveOk(const double optimal_objective,

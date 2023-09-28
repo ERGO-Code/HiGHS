@@ -37,6 +37,20 @@ subject to              x1 <= 7
             0 <= x0 <= 4; 1 <= x1
 ```
 
+Using the simplified interface, the model can be built as follows:
+
+```python
+x0 = h.addVar(lb = 0, ub = 4)
+x1 = h.addVar(lb = 1, ub = 7)
+
+h.addConstr(5 <=   x0 + 2*x1 <= 15)
+h.addConstr(6 <= 3*x0 + 2*x1)
+
+h.minimize(x0 + x1)
+```
+
+Alternatively, the model can be built using the more general interface, which allows the user to specify the model in a more flexible way.
+
 Firstly, one variable at a time, via a sequence of calls to `addVar` and `addRow`:s
 ```python
 inf = highspy.kHighsInf
@@ -152,6 +166,8 @@ print('Primal solution status = ', h.solutionStatusToString(info.primal_solution
 print('Dual solution status = ', h.solutionStatusToString(info.dual_solution_status))
 print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 ```
+!!! warning
+    The following are markers for documentation that has yet to be added
 
 ## Extract results
 
@@ -171,9 +187,9 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 
 ## Get model data
 
- * `getNumCols`
- * `getNumRows`
- * `getNumEntries`
+ * `getNumCol`
+ * `getNumRow`
+ * `getNumNz`
  * `getCol`
  * `getRow`
  * `getColEntries`

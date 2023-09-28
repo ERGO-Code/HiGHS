@@ -13,6 +13,7 @@ HiGHS uses CMake (minimum version 3.15) as a build system, and can use the follo
 - Clang ` clang `
 - GNU ` g++ `
 - Intel ` icc `
+- Microsoft ` MSVC `
 
 The simplest setup is to create a build folder (within the folder into
 which HiGHS has been downloaded) and then build HiGHS within it. The

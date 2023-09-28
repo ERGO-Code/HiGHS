@@ -11,6 +11,8 @@
 
 #include "io/Filereader.h"
 
+#include <cctype>
+
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"

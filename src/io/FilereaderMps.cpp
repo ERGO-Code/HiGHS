@@ -78,5 +78,6 @@ HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsModel& model) {
   assert(model.lp_.a_matrix_.isColwise());
-  return writeModelAsMps(options, filename, model);
+  return writeModelAsMps(options, filename, model,
+                         options.mps_parser_type_free);
 }

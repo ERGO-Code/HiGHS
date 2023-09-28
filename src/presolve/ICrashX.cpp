@@ -20,8 +20,8 @@
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                           HighsBasis& highs_basis,
                           HighsSolution& highs_solution,
-                          HighsModelStatus& model_status,
-                          HighsInfo& highs_info) {
+                          HighsModelStatus& model_status, HighsInfo& highs_info,
+                          HighsCallback& highs_callback) {
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
@@ -50,6 +50,9 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
 
   ipx::LpSolver lps;
   lps.SetParameters(parameters);
+
+  // Set pointer to any callback
+  lps.SetCallback(&highs_callback);
 
   ipx::Int load_status = lps.LoadModel(
       num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,

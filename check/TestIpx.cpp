@@ -1,7 +1,9 @@
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
 #include "lp_data/HConst.h"
+#include "lp_data/HighsCallback.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "parallel/HighsParallel.h"
@@ -49,6 +51,10 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   REQUIRE(load_status == 0);
 
   highs::parallel::initialize_scheduler();
+
+  HighsCallback callback;
+  // Set pointer to null callback
+  lps.SetCallback(&callback);
 
   Int status = lps.Solve();
   bool is_solved = status == IPX_STATUS_solved;

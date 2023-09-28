@@ -54,6 +54,7 @@ class HighsLp {
   bool is_scaled_;
   bool is_moved_;
   HighsInt cost_row_location_;
+  bool has_infinite_cost_;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -61,6 +62,7 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool isMip() const;
   bool hasSemiVariables() const;
+  bool hasInfiniteCost(const double infinite_cost) const;
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();

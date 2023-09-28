@@ -45,7 +45,8 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        vector<double>& cost, const double infinite_cost);
+                        vector<double>& cost, bool& has_infinite_cost,
+                        const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
@@ -62,7 +63,8 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
-void scaleLp(const HighsOptions& options, HighsLp& lp);
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling = false);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
                               const HighsInt use_scale_strategy);
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -105,7 +107,8 @@ void changeLpIntegrality(HighsLp& lp,
                          const vector<HighsVarType>& new_integrality);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
-                   const vector<double>& new_col_cost);
+                   const vector<double>& new_col_cost,
+                   const double infinite_cost);
 
 void changeLpColBounds(HighsLp& lp,
                        const HighsIndexCollection& index_collection,
@@ -215,6 +218,11 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
 bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
+
+void assessColPrimalSolution(const HighsOptions& options, const double primal,
+                             const double lower, const double upper,
+                             const HighsVarType type, double& col_infeasibility,
+                             double& integer_infeasibility);
 
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,

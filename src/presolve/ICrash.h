@@ -116,6 +116,6 @@ void reportOptions(const ICrashOptions& options);
 
 bool callCrossover(const HighsLp& lp, const HighsOptions& options,
                    const std::vector<double>& x_values, HighsSolution& solution,
-                   HighsBasis& basis);
+                   HighsBasis& basis, HighsCallback& callback);
 
 #endif

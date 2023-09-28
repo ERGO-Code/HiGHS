@@ -625,8 +625,31 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
+HighsInt Highs_setCallback(
+    void* highs,
+    void (*user_callback)(const int, const char*,
+                          const struct HighsCallbackDataOut*,
+                          struct HighsCallbackDataIn*, void*),
+    void* user_callback_data) {
+  return (HighsInt)((Highs*)highs)
+      ->setCallback(user_callback, user_callback_data);
+}
+
+HighsInt Highs_startCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->startCallback(callback_type);
+}
+
+HighsInt Highs_stopCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->stopCallback(callback_type);
+}
+
 double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
+}
+
+HighsInt Highs_zeroAllClocks(const void* highs) {
+  ((Highs*)highs)->zeroAllClocks();
+  return (HighsInt)HighsStatus::kOk;
 }
 
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
