@@ -1,6 +1,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 #include <cassert>
 
@@ -905,10 +906,34 @@ PYBIND11_MODULE(highspy, m) {
       .def(py::init<>())
       .def_readwrite("value_valid", &HighsSolution::value_valid)
       .def_readwrite("dual_valid", &HighsSolution::dual_valid)
-      .def_readwrite("col_value", &HighsSolution::col_value)
-      .def_readwrite("col_dual", &HighsSolution::col_dual)
-      .def_readwrite("row_value", &HighsSolution::row_value)
-      .def_readwrite("row_dual", &HighsSolution::row_dual);
+      .def_property(
+          "col_value",
+          [](HighsSolution& self) {
+            return py::array_t<double>(self.col_value.size(),
+                                       self.col_value.data());
+          },
+          nullptr)
+      .def_property(
+          "col_dual",
+          [](HighsSolution& self) {
+            return py::array_t<double>(self.col_dual.size(),
+                                       self.col_dual.data());
+          },
+          nullptr)
+      .def_property(
+          "row_value",
+          [](HighsSolution& self) {
+            return py::array_t<double>(self.row_value.size(),
+                                       self.row_value.data());
+          },
+          nullptr)
+      .def_property(
+          "row_dual",
+          [](HighsSolution& self) {
+            return py::array_t<double>(self.row_dual.size(),
+                                       self.row_dual.data());
+          },
+          nullptr);
   py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution")
       .def(py::init<>())
       .def_readwrite("objective", &HighsObjectiveSolution::objective)
