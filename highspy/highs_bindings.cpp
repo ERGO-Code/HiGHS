@@ -281,11 +281,11 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, int num_set_entries,
-                              std::vector<int>& indices) {
+                              std::vector<HighsInt>& indices) {
   return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteRows(Highs* h, int num_set_entries, std::vector<int>& indices) {
+HighsStatus highs_deleteRows(Highs* h, int num_set_entries, std::vector<HighsInt>& indices) {
     return h->deleteRows(num_set_entries, indices.data());
 }
 
