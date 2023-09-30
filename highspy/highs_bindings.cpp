@@ -955,4 +955,139 @@ PYBIND11_MODULE(highspy, m) {
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
+  // Submodules
+  py::module_ simplex_constants =
+      m.def_submodule("simplex_constants", "Submodule for simplex constants");
+
+  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy")
+      .value("kSimplexStrategyMin", SimplexStrategy::kSimplexStrategyMin)
+      .value("kSimplexStrategyChoose", SimplexStrategy::kSimplexStrategyChoose)
+      .value("kSimplexStrategyDual", SimplexStrategy::kSimplexStrategyDual)
+      .value("kSimplexStrategyDualPlain",
+             SimplexStrategy::kSimplexStrategyDualPlain)
+      .value("kSimplexStrategyDualTasks",
+             SimplexStrategy::kSimplexStrategyDualTasks)
+      .value("kSimplexStrategyDualMulti",
+             SimplexStrategy::kSimplexStrategyDualMulti)
+      .value("kSimplexStrategyPrimal", SimplexStrategy::kSimplexStrategyPrimal)
+      .value("kSimplexStrategyMax", SimplexStrategy::kSimplexStrategyMax)
+      .value("kSimplexStrategyNum", SimplexStrategy::kSimplexStrategyNum)
+      .export_values();  // needed since it isn't an enum class
+  py::enum_<SimplexUnscaledSolutionStrategy>(simplex_constants,
+                                             "SimplexUnscaledSolutionStrategy")
+      .value(
+          "kSimplexUnscaledSolutionStrategyMin",
+          SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyMin)
+      .value(
+          "kSimplexUnscaledSolutionStrategyNone",
+          SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyNone)
+      .value("kSimplexUnscaledSolutionStrategyRefine",
+             SimplexUnscaledSolutionStrategy::
+                 kSimplexUnscaledSolutionStrategyRefine)
+      .value("kSimplexUnscaledSolutionStrategyDirect",
+             SimplexUnscaledSolutionStrategy::
+                 kSimplexUnscaledSolutionStrategyDirect)
+      .value(
+          "kSimplexUnscaledSolutionStrategyMax",
+          SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyMax)
+      .value(
+          "kSimplexUnscaledSolutionStrategyNum",
+          SimplexUnscaledSolutionStrategy::kSimplexUnscaledSolutionStrategyNum)
+      .export_values();
+  py::enum_<SimplexSolvePhase>(simplex_constants, "SimplexSolvePhase")
+      .value("kSolvePhaseMin", SimplexSolvePhase::kSolvePhaseMin)
+      .value("kSolvePhaseError", SimplexSolvePhase::kSolvePhaseError)
+      .value("kSolvePhaseExit", SimplexSolvePhase::kSolvePhaseExit)
+      .value("kSolvePhaseUnknown", SimplexSolvePhase::kSolvePhaseUnknown)
+      .value("kSolvePhaseOptimal", SimplexSolvePhase::kSolvePhaseOptimal)
+      .value("kSolvePhase1", SimplexSolvePhase::kSolvePhase1)
+      .value("kSolvePhase2", SimplexSolvePhase::kSolvePhase2)
+      .value("kSolvePhasePrimalInfeasibleCleanup",
+             SimplexSolvePhase::kSolvePhasePrimalInfeasibleCleanup)
+      .value("kSolvePhaseOptimalCleanup",
+             SimplexSolvePhase::kSolvePhaseOptimalCleanup)
+      .value("kSolvePhaseTabooBasis", SimplexSolvePhase::kSolvePhaseTabooBasis)
+      .value("kSolvePhaseMax", SimplexSolvePhase::kSolvePhaseMax)
+      .export_values();
+  py::enum_<SimplexEdgeWeightStrategy>(simplex_constants,
+                                       "SimplexEdgeWeightStrategy")
+      .value("kSimplexEdgeWeightStrategyMin",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyMin)
+      .value("kSimplexEdgeWeightStrategyChoose",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyChoose)
+      .value("kSimplexEdgeWeightStrategyDantzig",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyDantzig)
+      .value("kSimplexEdgeWeightStrategyDevex",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyDevex)
+      .value("kSimplexEdgeWeightStrategySteepestEdge",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategySteepestEdge)
+      .value("kSimplexEdgeWeightStrategyMax",
+             SimplexEdgeWeightStrategy::kSimplexEdgeWeightStrategyMax)
+      .export_values();
+  py::enum_<SimplexPriceStrategy>(simplex_constants, "SimplexPriceStrategy")
+      .value("kSimplexPriceStrategyMin",
+             SimplexPriceStrategy::kSimplexPriceStrategyMin)
+      .value("kSimplexPriceStrategyCol",
+             SimplexPriceStrategy::kSimplexPriceStrategyCol)
+      .value("kSimplexPriceStrategyRow",
+             SimplexPriceStrategy::kSimplexPriceStrategyRow)
+      .value("kSimplexPriceStrategyRowSwitch",
+             SimplexPriceStrategy::kSimplexPriceStrategyRowSwitch)
+      .value("kSimplexPriceStrategyRowSwitchColSwitch",
+             SimplexPriceStrategy::kSimplexPriceStrategyRowSwitchColSwitch)
+      .value("kSimplexPriceStrategyMax",
+             SimplexPriceStrategy::kSimplexPriceStrategyMax)
+      .export_values();
+  py::enum_<SimplexPivotalRowRefinementStrategy>(
+      simplex_constants, "SimplexPivotalRowRefinementStrategy")
+      .value("kSimplexInfeasibilityProofRefinementMin",
+             SimplexPivotalRowRefinementStrategy::
+                 kSimplexInfeasibilityProofRefinementMin)
+      .value("kSimplexInfeasibilityProofRefinementNo",
+             SimplexPivotalRowRefinementStrategy::
+                 kSimplexInfeasibilityProofRefinementNo)
+      .value("kSimplexInfeasibilityProofRefinementUnscaledLp",
+             SimplexPivotalRowRefinementStrategy::
+                 kSimplexInfeasibilityProofRefinementUnscaledLp)
+      .value("kSimplexInfeasibilityProofRefinementAlsoScaledLp",
+             SimplexPivotalRowRefinementStrategy::
+                 kSimplexInfeasibilityProofRefinementAlsoScaledLp)
+      .value("kSimplexInfeasibilityProofRefinementMax",
+             SimplexPivotalRowRefinementStrategy::
+                 kSimplexInfeasibilityProofRefinementMax)
+      .export_values();
+  py::enum_<SimplexPrimalCorrectionStrategy>(simplex_constants,
+                                             "SimplexPrimalCorrectionStrategy")
+      .value(
+          "kSimplexPrimalCorrectionStrategyNone",
+          SimplexPrimalCorrectionStrategy::kSimplexPrimalCorrectionStrategyNone)
+      .value("kSimplexPrimalCorrectionStrategyInRebuild",
+             SimplexPrimalCorrectionStrategy::
+                 kSimplexPrimalCorrectionStrategyInRebuild)
+      .value("kSimplexPrimalCorrectionStrategyAlways",
+             SimplexPrimalCorrectionStrategy::
+                 kSimplexPrimalCorrectionStrategyAlways)
+      .export_values();
+  py::enum_<SimplexNlaOperation>(simplex_constants, "SimplexNlaOperation")
+      .value("kSimplexNlaNull", SimplexNlaOperation::kSimplexNlaNull)
+      .value("kSimplexNlaBtranFull", SimplexNlaOperation::kSimplexNlaBtranFull)
+      .value("kSimplexNlaPriceFull", SimplexNlaOperation::kSimplexNlaPriceFull)
+      .value("kSimplexNlaBtranBasicFeasibilityChange",
+             SimplexNlaOperation::kSimplexNlaBtranBasicFeasibilityChange)
+      .value("kSimplexNlaPriceBasicFeasibilityChange",
+             SimplexNlaOperation::kSimplexNlaPriceBasicFeasibilityChange)
+      .value("kSimplexNlaBtranEp", SimplexNlaOperation::kSimplexNlaBtranEp)
+      .value("kSimplexNlaPriceAp", SimplexNlaOperation::kSimplexNlaPriceAp)
+      .value("kSimplexNlaFtran", SimplexNlaOperation::kSimplexNlaFtran)
+      .value("kSimplexNlaFtranBfrt", SimplexNlaOperation::kSimplexNlaFtranBfrt)
+      .value("kSimplexNlaFtranDse", SimplexNlaOperation::kSimplexNlaFtranDse)
+      .value("kSimplexNlaBtranPse", SimplexNlaOperation::kSimplexNlaBtranPse)
+      .value("kNumSimplexNlaOperation",
+             SimplexNlaOperation::kNumSimplexNlaOperation)
+      .export_values();
+  py::enum_<EdgeWeightMode>(simplex_constants, "EdgeWeightMode")
+      .value("kDantzig", EdgeWeightMode::kDantzig)
+      .value("kDevex", EdgeWeightMode::kDevex)
+      .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
+      .value("kCount", EdgeWeightMode::kCount);
 }
