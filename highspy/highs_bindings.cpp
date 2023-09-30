@@ -14,14 +14,15 @@ HighsStatus highs_passModel(Highs* h, HighsModel& model) {
 }
 
 HighsStatus highs_passModelPointers(
-    Highs* h, const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
-    const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format, const HighsInt sense,
-    const double offset, const py::array_t<double> col_cost,
-    const py::array_t<double> col_lower, const py::array_t<double> col_upper,
-    const py::array_t<double> row_lower, const py::array_t<double> row_upper,
-    const py::array_t<HighsInt> a_start, const py::array_t<HighsInt> a_index,
-    const py::array_t<double> a_value, const py::array_t<HighsInt> q_start,
-    const py::array_t<HighsInt> q_index, const py::array_t<double> q_value,
+    Highs* h, const HighsInt num_col, const HighsInt num_row,
+    const HighsInt num_nz, const HighsInt q_num_nz, const HighsInt a_format,
+    const HighsInt q_format, const HighsInt sense, const double offset,
+    const py::array_t<double> col_cost, const py::array_t<double> col_lower,
+    const py::array_t<double> col_upper, const py::array_t<double> row_lower,
+    const py::array_t<double> row_upper, const py::array_t<HighsInt> a_start,
+    const py::array_t<HighsInt> a_index, const py::array_t<double> a_value,
+    const py::array_t<HighsInt> q_start, const py::array_t<HighsInt> q_index,
+    const py::array_t<double> q_value,
     const py::array_t<HighsInt> integrality) {
   py::buffer_info col_cost_info = col_cost.request();
   py::buffer_info col_lower_info = col_lower.request();
@@ -47,7 +48,8 @@ HighsStatus highs_passModelPointers(
   const HighsInt* q_start_ptr = static_cast<HighsInt*>(q_start_info.ptr);
   const HighsInt* q_index_ptr = static_cast<HighsInt*>(q_index_info.ptr);
   const double* q_value_ptr = static_cast<double*>(q_value_info.ptr);
-  const HighsInt* integrality_ptr = static_cast<HighsInt*>(integrality_info.ptr);
+  const HighsInt* integrality_ptr =
+      static_cast<HighsInt*>(integrality_info.ptr);
 
   return h->passModel(num_col, num_row, num_nz, q_num_nz, a_format, q_format,
                       sense, offset, col_cost_ptr, col_lower_ptr, col_upper_ptr,
@@ -59,12 +61,13 @@ HighsStatus highs_passModelPointers(
 HighsStatus highs_passLp(Highs* h, HighsLp& lp) { return h->passModel(lp); }
 
 HighsStatus highs_passLpPointers(
-    Highs* h, const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
-    const HighsInt a_format, const HighsInt sense, const double offset,
-    const py::array_t<double> col_cost, const py::array_t<double> col_lower,
-    const py::array_t<double> col_upper, const py::array_t<double> row_lower,
-    const py::array_t<double> row_upper, const py::array_t<HighsInt> a_start,
-    const py::array_t<HighsInt> a_index, const py::array_t<double> a_value,
+    Highs* h, const HighsInt num_col, const HighsInt num_row,
+    const HighsInt num_nz, const HighsInt a_format, const HighsInt sense,
+    const double offset, const py::array_t<double> col_cost,
+    const py::array_t<double> col_lower, const py::array_t<double> col_upper,
+    const py::array_t<double> row_lower, const py::array_t<double> row_upper,
+    const py::array_t<HighsInt> a_start, const py::array_t<HighsInt> a_index,
+    const py::array_t<double> a_value,
     const py::array_t<HighsInt> integrality) {
   py::buffer_info col_cost_info = col_cost.request();
   py::buffer_info col_lower_info = col_lower.request();
@@ -84,7 +87,8 @@ HighsStatus highs_passLpPointers(
   const HighsInt* a_start_ptr = static_cast<HighsInt*>(a_start_info.ptr);
   const HighsInt* a_index_ptr = static_cast<HighsInt*>(a_index_info.ptr);
   const double* a_value_ptr = static_cast<double*>(a_value_info.ptr);
-  const HighsInt* integrality_ptr = static_cast<HighsInt*>(integrality_info.ptr);
+  const HighsInt* integrality_ptr =
+      static_cast<HighsInt*>(integrality_info.ptr);
 
   return h->passModel(num_col, num_row, num_nz, a_format, sense, offset,
                       col_cost_ptr, col_lower_ptr, col_upper_ptr, row_lower_ptr,
@@ -96,7 +100,8 @@ HighsStatus highs_passHessian(Highs* h, HighsHessian& hessian) {
   return h->passHessian(hessian);
 }
 
-HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim, const HighsInt num_nz,
+HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
+                                      const HighsInt num_nz,
                                       const HighsInt format,
                                       const py::array_t<HighsInt> q_start,
                                       const py::array_t<HighsInt> q_index,
@@ -138,8 +143,9 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   return std::make_tuple(status, ranging);
 }
 
-HighsStatus highs_addRow(Highs* h, double lower, double upper, HighsInt num_new_nz,
-                         py::array_t<HighsInt> indices, py::array_t<double> values) {
+HighsStatus highs_addRow(Highs* h, double lower, double upper,
+                         HighsInt num_new_nz, py::array_t<HighsInt> indices,
+                         py::array_t<double> values) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
 
@@ -151,7 +157,8 @@ HighsStatus highs_addRow(Highs* h, double lower, double upper, HighsInt num_new_
 
 HighsStatus highs_addRows(Highs* h, HighsInt num_row, py::array_t<double> lower,
                           py::array_t<double> upper, HighsInt num_new_nz,
-                          py::array_t<HighsInt> starts, py::array_t<HighsInt> indices,
+                          py::array_t<HighsInt> starts,
+                          py::array_t<HighsInt> indices,
                           py::array_t<double> values) {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -208,7 +215,8 @@ HighsStatus highs_addVar(Highs* h, double lower, double upper) {
   return h->addVar(lower, upper);
 }
 
-HighsStatus highs_addVars(Highs* h, HighsInt num_vars, py::array_t<double> lower,
+HighsStatus highs_addVars(Highs* h, HighsInt num_vars,
+                          py::array_t<double> lower,
                           py::array_t<double> upper) {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -423,7 +431,8 @@ highs_getRowEntries(Highs* h, HighsInt row) {
 
 std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>,
            py::array_t<double>, HighsInt>
-highs_getCols(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices) {
+highs_getCols(Highs* h, HighsInt num_set_entries,
+              py::array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -445,7 +454,8 @@ highs_getCols(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices)
 
 std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>,
            py::array_t<double>>
-highs_getColsEntries(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices) {
+highs_getColsEntries(Highs* h, HighsInt num_set_entries,
+                     py::array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -470,7 +480,8 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> i
 
 std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>,
            HighsInt>
-highs_getRows(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices) {
+highs_getRows(Highs* h, HighsInt num_set_entries,
+              py::array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -490,7 +501,8 @@ highs_getRows(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices)
 
 std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>,
            py::array_t<double>>
-highs_getRowsEntries(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> indices) {
+highs_getRowsEntries(Highs* h, HighsInt num_set_entries,
+                     py::array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -513,7 +525,8 @@ highs_getRowsEntries(Highs* h, HighsInt num_set_entries, py::array_t<HighsInt> i
                          py::cast(value));
 }
 
-std::tuple<HighsStatus, std::string> highs_getColName(Highs* h, const HighsInt col) {
+std::tuple<HighsStatus, std::string> highs_getColName(Highs* h,
+                                                      const HighsInt col) {
   std::string name;
   HighsStatus status = h->getColName(col, name);
   return std::make_tuple(status, name);
@@ -526,7 +539,8 @@ std::tuple<HighsStatus, int> highs_getColByName(Highs* h,
   return std::make_tuple(status, col);
 }
 
-std::tuple<HighsStatus, std::string> highs_getRowName(Highs* h, const HighsInt row) {
+std::tuple<HighsStatus, std::string> highs_getRowName(Highs* h,
+                                                      const HighsInt row) {
   std::string name;
   HighsStatus status = h->getRowName(row, name);
   return std::make_tuple(status, name);
