@@ -10,6 +10,8 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
+PYBIND11_MAKE_OPAQUE(std::vector<double>);
+
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
 }
@@ -541,6 +543,7 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 PYBIND11_MODULE(highspy, m) {
+  py::bind_vector<std::vector<double>>(m, "VectorDouble");
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
@@ -906,34 +909,10 @@ PYBIND11_MODULE(highspy, m) {
       .def(py::init<>())
       .def_readwrite("value_valid", &HighsSolution::value_valid)
       .def_readwrite("dual_valid", &HighsSolution::dual_valid)
-      .def_property(
-          "col_value",
-          [](HighsSolution& self) {
-            return py::array_t<double>(self.col_value.size(),
-                                       self.col_value.data());
-          },
-          nullptr)
-      .def_property(
-          "col_dual",
-          [](HighsSolution& self) {
-            return py::array_t<double>(self.col_dual.size(),
-                                       self.col_dual.data());
-          },
-          nullptr)
-      .def_property(
-          "row_value",
-          [](HighsSolution& self) {
-            return py::array_t<double>(self.row_value.size(),
-                                       self.row_value.data());
-          },
-          nullptr)
-      .def_property(
-          "row_dual",
-          [](HighsSolution& self) {
-            return py::array_t<double>(self.row_dual.size(),
-                                       self.row_dual.data());
-          },
-          nullptr);
+      .def_readwrite("col_value", &HighsSolution::col_value)
+      .def_readwrite("col_dual", &HighsSolution::col_dual)
+      .def_readwrite("row_value", &HighsSolution::row_value)
+      .def_readwrite("row_dual", &HighsSolution::row_dual);
   py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution")
       .def(py::init<>())
       .def_readwrite("objective", &HighsObjectiveSolution::objective)
