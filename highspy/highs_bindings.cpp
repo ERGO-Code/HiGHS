@@ -543,26 +543,7 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 PYBIND11_MODULE(highspy, m) {
-  py::class_<std::vector<double>>(m, "VectorDouble")
-      .def(py::init<>())
-      .def("clear", &std::vector<double>::clear)
-      .def("pop_back", &std::vector<double>::pop_back)
-      .def("__len__", [](const std::vector<double>& v) { return v.size(); })
-      .def(
-          "__iter__",
-          [](std::vector<double>& v) {
-            return py::make_iterator(v.begin(), v.end());
-          },
-          py::keep_alive<0, 1>())
-      .def("__getitem__",
-           [](const std::vector<double>& v, size_t i) {
-             if (i >= v.size()) throw py::index_error();
-             return v.at(i);
-           })
-      .def("__setitem__", [](std::vector<double>& v, size_t i, double value) {
-        if (i >= v.size()) throw py::index_error();
-        v.at(i) = value;
-      });
+  py::bind_vector<std::vector<double>>(m, "VectorDouble");
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
