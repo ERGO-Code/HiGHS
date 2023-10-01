@@ -281,7 +281,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     }
 
     double maxError = 0.0;
-    auto IsZero = [&](HighsInt col, double val) {
+    auto IsZero = [&](HighsInt /* col */, double val) {
       double absval = std::abs(val);
       if (absval <= mip.options_mip_->small_matrix_value) return true;
 
@@ -462,7 +462,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     // right hand side to the nearest integral value, as small deviation
     // only come from numerical errors during resubstitution of slack variables
 
-    auto IsZero = [&](HighsInt col, double val) {
+    auto IsZero = [&](HighsInt /* col */, double val) {
       assert(col < mip.numCol());
       return fabs(val) < 0.5;
     };

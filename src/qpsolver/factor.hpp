@@ -96,7 +96,7 @@ class CholeskyFactor {
     L.resize(current_k_max * current_k_max);
   }
 
-  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
+  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& /* m */) {
     if (!uptodate) {
       return QpSolverStatus::OK;
     }
@@ -214,7 +214,7 @@ class CholeskyFactor {
   }
 
   void eliminate(std::vector<double>& m, HighsInt i, HighsInt j, HighsInt kmax,
-                 HighsInt currentk) {
+                 HighsInt /* currentk */) {
     // i = col, j = row
     if (m[j * kmax + i] == 0.0) {
       return;

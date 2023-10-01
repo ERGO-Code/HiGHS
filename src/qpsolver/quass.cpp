@@ -48,7 +48,7 @@ static void tidyup(Vector& p, Vector& rowmove, Basis& basis, Runtime& runtime) {
   }
 }
 
-static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
+static void computerowmove(Runtime& runtime, Basis& /* basis */, Vector& p,
                     Vector& rowmove) {
   runtime.instance.A.mat_vec(p, rowmove);
   return;
@@ -76,7 +76,7 @@ static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 }
 
 // VECTOR
-static Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
+static Vector& computesearchdirection_minor(Runtime& /* rt */, Basis& bas,
                                      CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
   Vector g2 = -redgrad.get(); // TODO PERF: buffer Vector
@@ -263,10 +263,8 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
 }
 #endif
 
-void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
-
+void Quass::solve(const Vector& x0, const Vector& /* ra */, Basis& b0, HighsTimer& timer) {
   //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
-
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;

@@ -4607,7 +4607,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
 }
 
 HPresolve::Result HPresolve::removeDependentFreeCols(
-    HighsPostsolveStack& postsolve_stack) {
+    HighsPostsolveStack& /* postsolve_stack */) {
   return Result::kOk;
 
   // Commented out unreachable code

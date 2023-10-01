@@ -776,8 +776,8 @@ static lu_int lu_pivot_singleton_row(struct lu *this)
     const lu_int cbeg = Wbegin[pivot_col];
     const lu_int cend = Wend[pivot_col];
     const lu_int rbeg = Wbegin[m+pivot_row];
-    const lu_int rend = Wend[m+pivot_row];
-    const lu_int rnz1 = rend-rbeg-1;   /* nz in pivot row except pivot */
+    /* const lu_int rend = Wend[m+pivot_row]; */
+    /* const lu_int rnz1 = rend-rbeg-1;   /\* nz in pivot row except pivot *\/ */
 
     lu_int i, pos, put, nz, where;
     double pivot, x;
@@ -862,10 +862,10 @@ static lu_int lu_pivot_singleton_col(struct lu *this)
     double *Wvalue          = this->Wvalue;
     
     const lu_int cbeg = Wbegin[pivot_col];
-    const lu_int cend = Wend[pivot_col];
+    /* const lu_int cend = Wend[pivot_col]; */
     const lu_int rbeg = Wbegin[m+pivot_row];
     const lu_int rend = Wend[m+pivot_row];
-    const lu_int cnz1 = cend-cbeg-1;   /* nz in pivot column except pivot */
+    /* const lu_int cnz1 = cend-cbeg-1;   /\* nz in pivot column except pivot *\/ */
 
     lu_int j, pos, rpos, put, nz, where, found;
     double pivot, cmx, x, xrj;
@@ -971,7 +971,7 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
     lu_int cend = Wend[pivot_col];
     lu_int rbeg = Wbegin[m+pivot_row];
     lu_int rend = Wend[m+pivot_row];
-    const lu_int cnz1 = cend-cbeg-1;   /* nz in pivot column except pivot */
+    /* const lu_int cnz1 = cend-cbeg-1;   /\* nz in pivot column except pivot *\/ */
     const lu_int rnz1 = rend-rbeg-1;   /* nz in pivot row except pivot */
 
     lu_int j, pos, rpos, put, Uput, nz, nfill, where, where_pivot, where_other;

@@ -442,7 +442,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 // nonbasic variables are updated, and the extent to which a nonbasic
 // variable is off its bound is returned.
 void getVariableKktFailures(const double primal_feasibility_tolerance,
-                            const double dual_feasibility_tolerance,
+                            const double /* dual_feasibility_tolerance */,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsBasisStatus* status_pointer,
@@ -624,8 +624,8 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 
 HighsStatus ipxSolutionToHighsSolution(
     const HighsOptions& options, const HighsLp& lp,
-    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
+    const std::vector<double>& rhs, const std::vector<char>& /* constraint_type */,
+    const HighsInt /* ipx_num_col */, const HighsInt /* ipx_num_row */,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
     const std::vector<double>& ipx_zu, const HighsModelStatus model_status,

@@ -947,7 +947,7 @@ bool HighsLpRelaxation::checkDualProof() const {
   return viol > mipsolver.mipdata_->feastol;
 }
 
-bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
+bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& /* globaldomain */,
                                             std::vector<HighsInt>& inds,
                                             std::vector<double>& vals,
                                             double& rhs) {

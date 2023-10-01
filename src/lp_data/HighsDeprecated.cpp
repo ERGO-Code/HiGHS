@@ -108,13 +108,13 @@ const HighsOptions& Highs::getHighsOptions() const {
   return getOptions();
 }
 
-HighsStatus Highs::setHighsLogfile(FILE* logfile) {
+HighsStatus Highs::setHighsLogfile(FILE* /* logfile */) {
   deprecationMessage("setHighsLogfile", "None");
   options_.output_flag = false;
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setHighsOutput(FILE* output) {
+HighsStatus Highs::setHighsOutput(FILE* /* output */) {
   deprecationMessage("setHighsOutput", "None");
   options_.output_flag = false;
   return HighsStatus::kOk;
@@ -177,7 +177,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
 }
 #endif
 
-const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
+const HighsModelStatus& Highs::getModelStatus(const bool /* scaled_model */) const {
   deprecationMessage("getModelStatus(const bool scaled_model)",
                      "getModelStatus()");
   return model_status_;

@@ -2850,7 +2850,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
-    const std::string message) {
+    const std::string /* message */) {
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {

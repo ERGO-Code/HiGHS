@@ -210,7 +210,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   //    usedWeights;
   HighsInt k;
   auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights,
-                      int rhsIndex) {
+                      int /* rhsIndex */) {
     // cuts which come from a single row can already be found with the
     // aggregation heuristic
     if (weights.empty()) return;

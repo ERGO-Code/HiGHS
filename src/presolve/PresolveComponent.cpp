@@ -17,7 +17,7 @@
 #include "presolve/HPresolve.h"
 
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
-                                    bool mip) {
+                                    bool /* mip */) {
   data_.postSolveStack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   data_.reduced_lp_ = lp;
   this->timer = &timer;

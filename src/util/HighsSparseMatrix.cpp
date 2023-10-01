@@ -1150,7 +1150,7 @@ void HighsSparseMatrix::productTranspose(vector<double>& result,
 
 void HighsSparseMatrix::productQuad(vector<double>& result,
                                     const vector<double>& row,
-                                    const HighsInt debug_report) const {
+                                    const HighsInt /* debug_report */) const {
   assert(this->formatOk());
   assert((int)row.size() >= this->num_col_);
   result.assign(this->num_row_, 0.0);
@@ -1570,7 +1570,7 @@ void HighsSparseMatrix::priceByRowDenseResult(
 
 void HighsSparseMatrix::priceByRowDenseResult(
     std::vector<HighsCDouble>& result, const HVector& column,
-    const HighsInt from_index, const HighsInt debug_report) const {
+    const HighsInt from_index, const HighsInt /* debug_report */) const {
   // Assumes that result is zeroed beforehand - in case continuing
   // priceByRow after switch from sparse
   assert(this->isRowwise());

@@ -1048,7 +1048,7 @@ void Model::ScaleBackBasicSolution(Vector& x, Vector& slack, Vector& y,
     }
 }
 
-void Model::ScaleBackBasis(std::vector<Int>& cbasis,
+void Model::ScaleBackBasis(std::vector<Int>& /* cbasis */,
                            std::vector<Int>& vbasis) const {
     for (Int j : flipped_vars_) {
         assert(vbasis[j] != IPX_nonbasic_ub);

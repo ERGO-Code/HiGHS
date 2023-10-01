@@ -428,7 +428,7 @@ void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
 
 void HighsImplications::rebuild(HighsInt ncols,
                                 const std::vector<HighsInt>& orig2reducedcol,
-                                const std::vector<HighsInt>& orig2reducedrow) {
+                                const std::vector<HighsInt>& /* orig2reducedrow */) {
   std::vector<HighsHashTree<HighsInt, VarBound>> oldvubs;
   std::vector<HighsHashTree<HighsInt, VarBound>> oldvlbs;
 

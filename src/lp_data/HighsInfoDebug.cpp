@@ -13,7 +13,7 @@
  */
 #include "lp_data/HighsInfoDebug.h"
 
-HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
+HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& /* lp */,
                            const HighsBasis& basis,
                            const HighsSolution& solution, const HighsInfo& info,
                            const HighsModelStatus model_status) {

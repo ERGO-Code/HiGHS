@@ -62,7 +62,7 @@ bool HSimplexNla::frozenBasisIdValid(const HighsInt frozen_basis_id) const {
   return valid_id;
 }
 
-bool HSimplexNla::frozenBasisHasInvert(const HighsInt frozen_basis_id) const {
+bool HSimplexNla::frozenBasisHasInvert(const HighsInt /* frozen_basis_id */) const {
   // Determine whether there will be an invertible representation to
   // use after unfreezing this basis
   //
