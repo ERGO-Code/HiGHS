@@ -26,6 +26,7 @@ if host_system == 'linux'
   _args += '-Wno-return-type'
   _args += '-Wno-switch'
   _args += '-Wno-unused-variable'
+  _args += '-Wno-unused-but-set-variable'
   _args += '-Wno-unused-const-variable'
 endif
 
