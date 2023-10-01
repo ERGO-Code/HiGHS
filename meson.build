@@ -166,11 +166,6 @@ highs_dep = declare_dependency(link_with: _linkto,
                                include_directories: _incdirs,
                                )
 
-highs_dep = declare_dependency(link_with: _linkto,
-                               dependencies: _deps,
-                               include_directories: _incdirs,
-                               )
-
 # --------------------- Tests
 
 if get_option('with_tests')
@@ -186,5 +181,12 @@ highsoptions_cpp = files([
   'highspy/highs_options.cpp'
 ])
 if get_option('with_pybind11')
+  highspy_cpp = files([
+    'highspy/highs_bindings.cpp',
+  ])
+  highspy_py = files([
+    'highspy/__init__.py',
+    'highspy/highs.py',
+  ])
   subdir('highspy')
 endif
