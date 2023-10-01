@@ -349,7 +349,7 @@ void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
   }
 }
 
-void HighsLp::addRowNames(const std::string /* name */, const HighsInt num_new_row) {
+void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
   // Don't add names if there are no rows, or if the names are already
   // incomplete
   if (this->num_row_ == 0) return;

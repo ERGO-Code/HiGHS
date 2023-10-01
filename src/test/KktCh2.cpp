@@ -67,8 +67,8 @@ void KktChStep::addCost(HighsInt col, double value) { RcolCost[col] = value; }
 16 REDUNDANT_ROW
 
 */
-void KktChStep::addChange(int type, HighsInt /* row */, HighsInt col, double valC,
-                          double /* dualC */, double dualR) {
+void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
+                          double dualC, double dualR) {
   // when updating fill new values for b, c, bounds in Rb RcolCost RcolUpper,
   // RcolLower
   vector<pair<HighsInt, double>> upd;

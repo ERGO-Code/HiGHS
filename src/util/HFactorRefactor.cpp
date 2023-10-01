@@ -30,7 +30,7 @@ void RefactorInfo::clear() {
   this->pivot_type.clear();
 }
 
-HighsInt HFactor::rebuild(HighsTimerClock* /* factor_timer_clock_pointer */) {
+HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_lu = false;
   // Check that the refactorization information should be used
   assert(refactor_info_.use);

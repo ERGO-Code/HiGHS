@@ -295,7 +295,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
               200 + mipsolver.mipdata_->num_nodes / 20, 12);
 }
 
-void HighsPrimalHeuristics::RENS(const std::vector<double>& /* tmp */) {
+void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
   HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();

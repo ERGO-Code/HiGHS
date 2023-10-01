@@ -1276,7 +1276,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
 }
 
 void HEkk::addCols(const HighsLp& lp,
-                   const HighsSparseMatrix& /* scaled_a_matrix */) {
+                   const HighsSparseMatrix& scaled_a_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -1316,10 +1316,10 @@ void HEkk::addRows(const HighsLp& lp,
   this->updateStatus(LpAction::kNewRows);
 }
 
-void HEkk::deleteCols(const HighsIndexCollection& /* index_collection */) {
+void HEkk::deleteCols(const HighsIndexCollection& index_collection) {
   this->updateStatus(LpAction::kDelCols);
 }
-void HEkk::deleteRows(const HighsIndexCollection& /* index_collection */) {
+void HEkk::deleteRows(const HighsIndexCollection& index_collection) {
   this->updateStatus(LpAction::kDelRows);
 }
 
@@ -2446,7 +2446,7 @@ void HEkk::initialiseLpRowBound() {
 }
 
 void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
-                          const HighsInt /* solve_phase */, const bool perturb) {
+                          const HighsInt solve_phase, const bool perturb) {
   // Copy the cost
   initialiseLpColCost();
   initialiseLpRowCost();

@@ -753,10 +753,9 @@ class HighsPostsolveStack {
 
   // Only used for debugging
   void undoUntil(const HighsOptions& options,
-                 const std::vector<HighsInt>& /* flagRow */,
-                 const std::vector<HighsInt>& /* flagCol */,
-                 HighsSolution& solution, HighsBasis& basis,
-                 HighsInt numReductions) {
+                 const std::vector<HighsInt>& flagRow,
+                 const std::vector<HighsInt>& flagCol, HighsSolution& solution,
+                 HighsBasis& basis, HighsInt numReductions) {
     reductionValues.resetPosition();
 
     // Do these returns ever happen? How is it known that undo has not

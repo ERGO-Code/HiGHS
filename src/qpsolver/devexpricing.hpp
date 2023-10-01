@@ -67,14 +67,14 @@ class DevexPricing : public Pricing {
   // dual values updated as:
   // c_N^T  += alpha_D * a_p^T (pivotal row)
   // alpha_D = -c_q / a_pq
-  HighsInt price(const Vector& /* x */, const Vector& /* gradient */) {
+  HighsInt price(const Vector& x, const Vector& gradient) {
     Vector& lambda = redcosts.getReducedCosts();
     HighsInt minidx = chooseconstrainttodrop(lambda);
     return minidx;
   }
 
-  void update_weights(const Vector& aq, const Vector& /* ep */, HighsInt p,
-                      HighsInt /* q */) {
+  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+                      HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
     double weight_p = weights[rowindex_p];
     for (HighsInt i = 0; i < runtime.instance.num_var; i++) {

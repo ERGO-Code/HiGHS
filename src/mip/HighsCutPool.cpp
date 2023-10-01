@@ -49,7 +49,7 @@ static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen
 
 bool HighsCutPool::isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
                                const double* Rvalue, HighsInt Rlen,
-                               double /* rhs */) {
+                               double rhs) {
   auto range = hashToCutMap.equal_range(hash);
   const double* ARvalue = matrix_.getARvalue();
   const HighsInt* ARindex = matrix_.getARindex();

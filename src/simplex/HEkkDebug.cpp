@@ -1505,7 +1505,7 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
 }
 
 HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
-    const std::string /* message */) {
+    const std::string message) {
   // Possibly force the expensive check for development work
   const bool check_dual_edge_weights = false;  // true;
   if (check_dual_edge_weights) {

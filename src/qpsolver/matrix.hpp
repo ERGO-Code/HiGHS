@@ -200,7 +200,7 @@ struct Matrix {
     mat.num_col = nc;
   };
 
-  Matrix(const MatrixBase& m, bool /* needstran */) {
+  Matrix(const MatrixBase& m, bool needstran) {
     mat = m;
     // if (needstran) {
     //    transpose();

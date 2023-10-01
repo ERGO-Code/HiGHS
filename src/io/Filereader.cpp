@@ -36,7 +36,7 @@ static const std::string getFilenameExt(const std::string filename) {
   return name;
 }
 
-Filereader* Filereader::getFilereader(const HighsLogOptions& /* log_options */,
+Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
                                       const std::string filename) {
   Filereader* reader;
   std::string extension = getFilenameExt(filename);

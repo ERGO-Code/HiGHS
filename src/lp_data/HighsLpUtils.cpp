@@ -271,7 +271,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   return ok;
 }
 
-HighsStatus assessCosts(const HighsOptions& options, const HighsInt /* ml_col_os */,
+HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, bool& has_infinite_cost,
                         const double infinite_cost) {

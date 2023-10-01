@@ -49,7 +49,7 @@ struct Vector {
     return *this;
   }
 
-  static Vector& unit(HighsInt /* dim */, HighsInt u, Vector& target) {
+  static Vector& unit(HighsInt dim, HighsInt u, Vector& target) {
     target.reset();
     target.index[0] = u;
     target.value[u] = 1.0;

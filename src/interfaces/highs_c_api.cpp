@@ -1028,7 +1028,7 @@ HighsInt Highs_getHessianNumNz(const void* highs) {
 }
 
 HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
-                        const HighsInt /* q_format */, HighsInt* num_col,
+                        const HighsInt q_format, HighsInt* num_col,
                         HighsInt* num_row, HighsInt* num_nz, HighsInt* q_num_nz,
                         HighsInt* sense, double* offset, double* col_cost,
                         double* col_lower, double* col_upper, double* row_lower,
@@ -1259,12 +1259,12 @@ HighsInt Highs_runQuiet(void* highs) {
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
-HighsInt Highs_setHighsLogfile(void* highs, const void* /* logfile */) {
+HighsInt Highs_setHighsLogfile(void* highs, const void* logfile) {
   ((Highs*)highs)->deprecationMessage("Highs_setHighsLogfile", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
-HighsInt Highs_setHighsOutput(void* highs, const void* /* outputfile */) {
+HighsInt Highs_setHighsOutput(void* highs, const void* outputfile) {
   ((Highs*)highs)->deprecationMessage("Highs_setHighsOutput", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }

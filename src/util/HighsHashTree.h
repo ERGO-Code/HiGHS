@@ -487,7 +487,7 @@ class HighsHashTree {
 
   template <int SizeClass1, int SizeClass2>
   static HighsHashTableEntry<K, V>* findCommonInLeaf(
-      InnerLeaf<SizeClass1>* leaf1, InnerLeaf<SizeClass2>* leaf2, int /* hashPos */) {
+      InnerLeaf<SizeClass1>* leaf1, InnerLeaf<SizeClass2>* leaf2, int hashPos) {
     uint64_t matchMask = leaf1->occupation & leaf2->occupation;
     if (matchMask == 0) return nullptr;
 
@@ -586,7 +586,7 @@ class HighsHashTree {
   }
 
   static NodePtr removeChildFromBranchNode(BranchNode* branch, int location,
-                                           uint64_t /* hash */, int hashPos) {
+                                           uint64_t hash, int hashPos) {
     NodePtr newNode;
     int newNumChild = branch->occupation.num_set();
 

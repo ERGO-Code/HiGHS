@@ -52,7 +52,7 @@ bool parseICrashStrategy(const std::string& strategy,
   return true;
 }
 
-bool checkOptions(const HighsLp& /* lp */, const ICrashOptions options) {
+bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   if (options.exact) {
     // std::cout << "ICrashError: exact subproblem solution not available "
     //              "at the moment." << std::endl;

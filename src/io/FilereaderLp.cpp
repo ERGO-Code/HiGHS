@@ -280,7 +280,7 @@ void FilereaderLp::writeToFileMatrixRow(FILE* file, const HighsInt iRow,
   }
 }
 
-HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& /* options */,
+HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;

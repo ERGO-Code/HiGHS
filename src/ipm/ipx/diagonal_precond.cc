@@ -13,7 +13,7 @@ DiagonalPrecond::DiagonalPrecond(const Model& model) : model_(model) {
     diagonal_.resize(m);
 }
 
-void DiagonalPrecond::Factorize(const double* W, Info* /* info */) {
+void DiagonalPrecond::Factorize(const double* W, Info* info) {
     const Int m = model_.rows();
     const Int n = model_.cols();
     const SparseMatrix& AI = model_.AI();

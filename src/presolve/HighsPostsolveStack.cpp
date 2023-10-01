@@ -58,8 +58,8 @@ void HighsPostsolveStack::compressIndexMaps(
   origColIndex.resize(numCol);
 }
 
-void HighsPostsolveStack::LinearTransform::undo(const HighsOptions& /* options */,
-                                                HighsSolution& solution) const {
+void HighsPostsolveStack::LinearTransform::undo(
+    const HighsOptions& /* options */, HighsSolution& solution) const {
   solution.col_value[col] *= scale;
   solution.col_value[col] += constant;
 
@@ -228,8 +228,9 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 }
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
-    const HighsOptions& /* options */, const std::vector<Nonzero>& /* eqRowValues */,
-    HighsSolution& solution, HighsBasis& /* basis */) const {
+    const HighsOptions& /* options */,
+    const std::vector<Nonzero>& /* eqRowValues */, HighsSolution& solution,
+    HighsBasis& basis) const {
   // assert that valid row indices are used.
   assert(static_cast<size_t>(row) < solution.row_value.size() &&
          static_cast<size_t>(addedEqRow) < solution.row_value.size());
@@ -247,7 +248,8 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
 }
 
 void HighsPostsolveStack::EqualityRowAdditions::undo(
-    const HighsOptions& /* options */, const std::vector<Nonzero>& /* eqRowValues */,
+    const HighsOptions& /* options */,
+    const std::vector<Nonzero>& /* eqRowValues */,
     const std::vector<Nonzero>& targetRows, HighsSolution& solution,
     HighsBasis& basis) const {
   // assert that a valid row index is used.
@@ -272,7 +274,7 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
 }
 
 void HighsPostsolveStack::ForcingColumn::undo(
-    const HighsOptions& /* options */, const std::vector<Nonzero>& colValues,
+    const HighsOptions& options, const std::vector<Nonzero>& colValues,
     HighsSolution& solution, HighsBasis& basis) const {
   HighsInt nonbasicRow = -1;
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::kNonbasic;

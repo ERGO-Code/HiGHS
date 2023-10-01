@@ -216,7 +216,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   return FilereaderRetcode::kOk;
 }
 
-HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& /* options */,
+HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsModel& model) {
   std::ofstream f;
