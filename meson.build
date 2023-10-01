@@ -182,7 +182,10 @@ highsoptions_cpp = files([
 ])
 if get_option('with_pybind11')
   highspy_cpp = files([
-    'highspy/highs_bindings.cpp',
+    'highspy/highs_bindings.cpp'
+  ])
+  highsoptions_cpp = files([
+    'highspy/highs_options.cpp'
   ])
   highspy_py = files([
     'highspy/__init__.py',
