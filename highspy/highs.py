@@ -1,3 +1,4 @@
+from highspy._highs import simplex_constants as simpc
 from highspy._highs import (
     # enum classes
     ObjSense,
