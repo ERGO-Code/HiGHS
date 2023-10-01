@@ -3,7 +3,6 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
 
 #include <cassert>
 
@@ -12,8 +11,6 @@
 
 namespace py = pybind11;
 using namespace pybind11::literals;
-
-PYBIND11_MAKE_OPAQUE(std::vector<double>);
 
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
@@ -555,7 +552,6 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 PYBIND11_MODULE(_highs, m) {
-  py::bind_vector<std::vector<double>>(m, "VectorDouble");
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
