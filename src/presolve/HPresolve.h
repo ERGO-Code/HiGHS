@@ -83,6 +83,8 @@ class HPresolve {
   std::vector<double> implRowDualUpper;
   std::vector<HighsInt> rowDualLowerSource;
   std::vector<HighsInt> rowDualUpperSource;
+  vector<vector<HighsInt>> colLowerSourceByRow;
+  vector<vector<HighsInt>> colUpperSourceByRow;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables
@@ -154,6 +156,10 @@ class HPresolve {
   double getMaxAbsRowVal(HighsInt row) const;
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void recomputeColImpliedBounds(HighsInt col);
+
+  bool validateColImpliedBounds(HighsInt col);
 
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
 
