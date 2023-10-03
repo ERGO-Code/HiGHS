@@ -62,35 +62,37 @@ user.
 
 ### Logging callback
 
-The logging callback type is a cast of `kCallbackLogging` in the C++ enum
-`HighsCallbackType` and, in C, is the constant `kHighsCallbackLogging`. The logging
-type is a cast of the particular member of the enum class 'HighsLogType', and is available as a constant in C. It is
-passed as the member `log_type` in the `HighsCallbackDataOut`
-struct, and the message is passed as the `const char*` parameter.
+The logging callback type is a cast of `kCallbackLogging` in the C++
+enum `HighsCallbackType` and, in C, is the constant
+`kHighsCallbackLogging`. The logging type is a cast of the particular
+member of the enum class 'HighsLogType', and is available as a
+constant in C. It is passed as the member `log_type` in the
+`HighsCallbackDataOut` struct, and the message is passed as the `const
+char*` parameter.
 
 ### Simplex interrupt callback
 
 The simplex interrupt is called once every simplex iteration, and its
 callback type is a cast of `kCallbackSimplexInterrupt` in the C++ enum
-`HighsCallbackType`, and the  `kHighsCallbackSimplexInterrupt` constant  in C. The
-simplex iteration count is passed as the `simplex_iteration_count`
-member of the `HighsCallbackDataOut` struct.
+`HighsCallbackType`, and the `kHighsCallbackSimplexInterrupt` constant
+in C. The simplex iteration count is passed as the
+`simplex_iteration_count` member of the `HighsCallbackDataOut` struct.
 
 ### IPM interrupt callback
 
-The IPM interrupt is called once every interior point
-iteration, and its callback type is a cast of `kCallbackIpmInterrupt` in the C++
-enum `HighsCallbackType`, and the  `kHighsCallbackIpmInterrupt` constant in C. The
-IPM iteration count is passed as the `ipm_iteration_count` member of
-the `HighsCallbackDataOut` struct.
+The IPM interrupt is called once every interior point iteration, and
+its callback type is a cast of `kCallbackIpmInterrupt` in the C++ enum
+`HighsCallbackType`, and the `kHighsCallbackIpmInterrupt` constant in
+C. The IPM iteration count is passed as the `ipm_iteration_count`
+member of the `HighsCallbackDataOut` struct.
 
 ### MIP improving solution callback
 
-The MIP improving solution is called whenever the MIP
-solver identifies an improving integer feasible solution, and its
-callback type is a cast of `kCallbackMipImprovingSolution` in the C++ enum
-`HighsCallbackType`, and the  `kHighsCallbackMipImprovingSolution` constant in C. A
-pointer to the improving solution is passed as the
+The MIP improving solution is called whenever the MIP solver
+identifies an improving integer feasible solution, and its callback
+type is a cast of `kCallbackMipImprovingSolution` in the C++ enum
+`HighsCallbackType`, and the `kHighsCallbackMipImprovingSolution`
+constant in C. A pointer to the improving solution is passed as the
 `objective_function_value` and `mip_solution` members of the
 `HighsCallbackDataOut` struct.
 
@@ -98,16 +100,18 @@ pointer to the improving solution is passed as the
 ### MIP logging callback
 
 The MIP logging callback is called once every time MIP logging takes
-place, and its callback type is a cast of `kCallbackMipLogging` in the C++ enum
-`HighsCallbackType`, and `kHighsCallbackMipLogging` in C.
+place, and its callback type is a cast of `kCallbackMipLogging` in the
+C++ enum `HighsCallbackType`, and `kHighsCallbackMipLogging` in C.
 
 ### MIP interrupt callback
 
-The MIP interrupt is called once every interior point
-iteration, and its callback type is a cast of `kCallbackMipInterrupt` in the C++
-enum `HighsCallbackType`, and the  `kHighsCallbackMipInterrupt` constant in C. The
-simplex iteration count is passed as the `simplex_iteration_count`
-member of the `HighsCallbackDataOut` struct.
+The MIP interrupt callback is called when the MIP solver checks
+whether computation limits (such as time, node, leaves, improving
+solutions, and target objective) have been reached, and its callback
+type is a cast of `kCallbackMipInterrupt` in the C++ enum
+`HighsCallbackType`, and the `kHighsCallbackMipInterrupt` constant in
+C. The simplex iteration count is passed as the
+`simplex_iteration_count` member of the `HighsCallbackDataOut` struct.
 
 ### MIP callback data
 
