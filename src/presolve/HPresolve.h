@@ -83,8 +83,7 @@ class HPresolve {
   std::vector<double> implRowDualUpper;
   std::vector<HighsInt> rowDualLowerSource;
   std::vector<HighsInt> rowDualUpperSource;
-  vector<vector<HighsInt>> colLowerSourceByRow;
-  vector<vector<HighsInt>> colUpperSourceByRow;
+  std::vector<std::set<HighsInt>> colImplSourceByRow;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables

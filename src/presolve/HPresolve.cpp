@@ -78,8 +78,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   colUpperSource.resize(model->num_col_, -1);
   implColLower.resize(model->num_col_, -kHighsInf);
   implColUpper.resize(model->num_col_, kHighsInf);
-  colLowerSourceByRow.resize(model->num_row_, vector<HighsInt>());
-  colUpperSourceByRow.resize(model->num_row_, vector<HighsInt>());
+  colImplSourceByRow.resize(model->num_row_, std::set<HighsInt>());
 
   rowDualLower.resize(model->num_row_, -kHighsInf);
   rowDualUpper.resize(model->num_row_, kHighsInf);
@@ -456,7 +455,7 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   // re-computed when the corresponding rows stored in 'colLowerSource' or
   // 'colUpperSource' are modified (e.g., non-zeros added by substitution or
   // constraint bounds modified)?
-  bool boundsOK = validateColImpliedBounds(col);
+  // bool boundsOK = validateColImpliedBounds(col);
 
   double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
   double dualRowLower =
@@ -775,8 +774,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         implRowDualUpper[newRowIndex[i]] = implRowDualUpper[i];
         rowDualLowerSource[newRowIndex[i]] = rowDualLowerSource[i];
         rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
-        colLowerSourceByRow[newRowIndex[i]] = colLowerSourceByRow[i];
-        colUpperSourceByRow[newRowIndex[i]] = colUpperSourceByRow[i];
+        colImplSourceByRow[newRowIndex[i]] = colImplSourceByRow[i];
         rowroot[newRowIndex[i]] = rowroot[i];
         rowsize[newRowIndex[i]] = rowsize[i];
         rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
@@ -802,20 +800,13 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   }
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
-    std::transform(
-        colLowerSourceByRow[i].cbegin(), colLowerSourceByRow[i].cend(),
-        colLowerSourceByRow[i].begin(),
-        [newColIndex](HighsInt colindex) { return newColIndex[colindex]; });
-    colLowerSourceByRow[i].erase(std::remove(colLowerSourceByRow[i].begin(),
-                                             colLowerSourceByRow[i].end(), -1),
-                                 colLowerSourceByRow[i].end());
-    std::transform(
-        colUpperSourceByRow[i].cbegin(), colUpperSourceByRow[i].cend(),
-        colUpperSourceByRow[i].begin(),
-        [newColIndex](HighsInt colindex) { return newColIndex[colindex]; });
-    colUpperSourceByRow[i].erase(std::remove(colUpperSourceByRow[i].begin(),
-                                             colUpperSourceByRow[i].end(), -1),
-                                 colUpperSourceByRow[i].end());
+    std::set<HighsInt> newSet;
+    for (auto it = colImplSourceByRow[i].begin();
+      it != colImplSourceByRow[i].end(); it++) {
+      if (newColIndex[*it] != -1) 
+        newSet.emplace(newColIndex[*it]);
+    }
+    colImplSourceByRow[i] = std::move(newSet);
   }
   rowDeleted.assign(model->num_row_, false);
   model->row_lower_.resize(model->num_row_);
@@ -826,8 +817,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   implRowDualUpper.resize(model->num_row_);
   rowDualLowerSource.resize(model->num_row_);
   rowDualUpperSource.resize(model->num_row_);
-  colLowerSourceByRow.resize(model->num_row_);
-  colUpperSourceByRow.resize(model->num_row_);
+  colImplSourceByRow.resize(model->num_row_);
   rowroot.resize(model->num_row_);
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
@@ -1660,15 +1650,9 @@ void HPresolve::markColDeleted(HighsInt col) {
   ++numDeletedCols;
   // remove column from row-wise implied bound storage
   if (colLowerSource[col] != -1)
-    colLowerSourceByRow[colLowerSource[col]].erase(
-        std::remove(colLowerSourceByRow[colLowerSource[col]].begin(),
-                    colLowerSourceByRow[colLowerSource[col]].end(), col),
-        colLowerSourceByRow[colLowerSource[col]].end());
+    colImplSourceByRow[colLowerSource[col]].erase(col);
   if (colUpperSource[col] != -1)
-    colUpperSourceByRow[colUpperSource[col]].erase(
-        std::remove(colUpperSourceByRow[colUpperSource[col]].begin(),
-                    colUpperSourceByRow[colUpperSource[col]].end(), col),
-        colUpperSourceByRow[colUpperSource[col]].end());
+    colImplSourceByRow[colUpperSource[col]].erase(col);
 }
 
 void HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -1752,12 +1736,8 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
   if (colUpperSource[col] != -1)
-    colUpperSourceByRow[colUpperSource[col]].erase(
-        std::remove(
-        colUpperSourceByRow[colUpperSource[col]].begin(),
-                colUpperSourceByRow[colUpperSource[col]].end(), col));
-  if (originRow != -1)
-    colUpperSourceByRow[originRow].push_back(col);
+    colImplSourceByRow[colUpperSource[col]].erase(col);
+  if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
   colUpperSource[col] = originRow;
   implColUpper[col] = newUpper;
@@ -1797,12 +1777,8 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
   if (colLowerSource[col] != -1)
-    colLowerSourceByRow[colLowerSource[col]].erase(
-        std::remove(
-        colLowerSourceByRow[colLowerSource[col]].begin(),
-                colLowerSourceByRow[colLowerSource[col]].end(), col));
-  if (originRow != -1)
-    colLowerSourceByRow[originRow].push_back(col);
+    colImplSourceByRow[colLowerSource[col]].erase(col);
+  if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
   colLowerSource[col] = originRow;
   implColLower[col] = newLower;
@@ -2357,6 +2333,11 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
       if (Acol[rowiter] != col)
         addToMatrix(colrow, Acol[rowiter], scale * Avalue[rowiter]);
     }
+
+    // recompute affected implied bounds
+    std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
+    for (auto it = affectedCols.begin(); it != affectedCols.end(); it++)
+      recomputeColImpliedBounds(*it);
 
     // check if this is an equation row and it now has a different size
     if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
