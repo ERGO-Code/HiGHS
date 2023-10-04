@@ -4,6 +4,7 @@
 [![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
+[![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 
 ## Table of Contents
 
