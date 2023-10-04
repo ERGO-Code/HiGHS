@@ -234,7 +234,7 @@ class HighsPostsolveStack {
   };
 
   HighsDataStack reductionValues;
-  std::vector<std::pair<ReductionType, HighsInt>> reductions;
+  std::vector<std::pair<ReductionType, size_t>> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
   std::vector<uint8_t> linearlyTransformable;
@@ -245,7 +245,7 @@ class HighsPostsolveStack {
   HighsInt origNumRow = -1;
 
   void reductionAdded(ReductionType type) {
-    HighsInt position = reductionValues.getCurrentDataSize();
+    size_t position = reductionValues.getCurrentDataSize();
     reductions.emplace_back(type, position);
   }
 
@@ -511,7 +511,7 @@ class HighsPostsolveStack {
       const std::vector<double>& origPrimalSolution) {
     std::vector<double> reducedSolution = origPrimalSolution;
 
-    for (const std::pair<ReductionType, HighsInt>& primalColTransformation :
+    for (const std::pair<ReductionType, size_t>& primalColTransformation :
          reductions) {
       switch (primalColTransformation.first) {
         case ReductionType::kDuplicateColumn: {

@@ -130,7 +130,7 @@ struct HighsHashHelpers {
 
   static int popcnt(uint64_t x) {
 #ifdef _WIN64
-    return __popcnt64(x);
+    return static_cast<int>(__popcnt64(x));
 #else
     return __popcnt(x & 0xffffffffu) + __popcnt(x >> 32);
 #endif
@@ -277,7 +277,8 @@ struct HighsHashHelpers {
 
   template <HighsInt k>
   static u64 pair_hash(u32 a, u32 b) {
-    return (a + c[2 * k]) * (b + c[2 * k + 1]);
+    return (static_cast<u64>(a) + c[2 * k]) *
+           (static_cast<u64>(b) + c[2 * k + 1]);
   }
 
   static void sparse_combine(u64& hash, HighsInt index, u64 value) {
@@ -383,16 +384,16 @@ struct HighsHashHelpers {
     // which we evaluate at the random vector of 16.
 
     // make sure input value is never zero and at most 31bits are used
-    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+    value = (pair_hash<0>(static_cast<u32>(value), value >> 32) >> 33) | 1;
 
     // make sure that the constant has at most 31 bits, as otherwise the modulo
     // algorithm for multiplication mod M31 might not work properly due to
     // overflow
-    u32 a = c[index & 63] & M31();
+    u32 a = static_cast<u32>(c[index & 63] & M31());
     HighsInt degree = (index >> 6) + 1;
 
     u64 result = hash;
-    result += multiply_modM31(value, modexp_M31(a, degree));
+    result += multiply_modM31(static_cast<u32>(value), modexp_M31(a, degree));
     result = (result >> 31) + (result & M31());
     if (result >= M31()) result -= M31();
     assert(result < M31());
@@ -409,14 +410,15 @@ struct HighsHashHelpers {
     // procedure.
 
     // make sure input value is never zero and at most 31bits are used
-    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+    value = (pair_hash<0>(static_cast<u32>(value), value >> 32) >> 33) | 1;
 
-    u32 a = c[index & 63] & M31();
+    u32 a = static_cast<u32>(c[index & 63] & M31());
     HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M31() - hashvalue) instead of the hash value
     // itself
     u64 result = hash;
-    result += M31() - multiply_modM31(value, modexp_M31(a, degree));
+    result +=
+        M31() - multiply_modM31(static_cast<u32>(value), modexp_M31(a, degree));
     result = (result >> 31) + (result & M31());
     if (result >= M31()) result -= M31();
     assert(result < M31());
