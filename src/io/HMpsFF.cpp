@@ -363,7 +363,8 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
                                         HighsInt& end,
                                         std::string& word) const {
   start = strline.find_first_not_of(" ");
-  if ((static_cast<size_t>(start) == strline.size() - 1) || is_empty(strline[start + 1])) {
+  if ((static_cast<size_t>(start) == strline.size() - 1) ||
+      is_empty(strline[start + 1])) {
     end = start + 1;
     word = strline[start];
     return HMpsFF::Parsekey::kNone;

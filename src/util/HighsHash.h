@@ -985,8 +985,8 @@ class HighsHashTable {
 
   HighsHashTable() { makeEmptyTable(128); }
   HighsHashTable(u64 minCapacity) {
-    u64 initCapacity = u64{1} << (u64)std::ceil(
-                           std::log2(std::max(128.0, 8 * static_cast<double>(minCapacity) / 7)));
+    u64 initCapacity = u64{1} << (u64)std::ceil(std::log2(std::max(
+                           128.0, 8 * static_cast<double>(minCapacity) / 7)));
     makeEmptyTable(initCapacity);
   }
 
