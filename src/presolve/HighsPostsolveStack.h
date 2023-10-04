@@ -544,7 +544,7 @@ class HighsPostsolveStack {
   bool isColLinearlyTransformable(HighsInt col) const {
     return linearlyTransformable[col];
   }
-  
+
   template <typename T>
   void undoIterateBackwards(std::vector<T>& values,
                             const std::vector<HighsInt>& index) {
@@ -688,7 +688,8 @@ class HighsPostsolveStack {
           break;
         }
         default:
-          printf("Reduction case %d not handled\n", int(reductions[i - 1].first));
+          printf("Reduction case %d not handled\n",
+                 int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
     }
