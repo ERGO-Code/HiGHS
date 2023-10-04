@@ -1,19 +1,23 @@
 # HiGHS - Linear optimization software
 
 [![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
+[![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
 
 ## Table of Contents
 
-*   [About HiGHS](#about-highs)
-*   [Documentation](#documentation)
-*   [Precompiled binaries](#precompiled-binaries)
-*   [Compilation](#compilation)
-*   [Interfaces](#interfaces)
-*   [Python](#python)
-*   [Example](#google-colab-example)
-*   [Reference](#reference)
+- [HiGHS - Linear optimization software](#highs---linear-optimization-software)
+  - [Table of Contents](#table-of-contents)
+  - [About HiGHS](#about-highs)
+  - [Documentation](#documentation)
+  - [Precompiled binaries](#precompiled-binaries)
+  - [Compilation](#compilation)
+  - [Meson](#meson)
+  - [Interfaces](#interfaces)
+  - [Python](#python)
+  - [Google Colab Example](#google-colab-example)
+  - [Reference](#reference)
 
 About HiGHS
 -----------

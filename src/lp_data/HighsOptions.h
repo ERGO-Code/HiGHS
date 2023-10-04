@@ -545,13 +545,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_bound", "Objective bound for termination of dual simplex",
-        advanced, &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
+        "objective_bound",
+        "Objective bound for termination of the dual simplex solver", advanced,
+        &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination of MIP solver",
-        advanced,
+        "objective_target",
+        "Objective target for termination of the MIP solver", advanced,
         //"primal simplex and "
         &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
