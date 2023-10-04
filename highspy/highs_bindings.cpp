@@ -113,6 +113,16 @@ HighsStatus highs_passHessianPointers(Highs* h, const int dim, const int num_nz,
                         q_value_ptr);
 }
 
+HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
+{
+  return h->postsolve(solution, basis);
+}
+ 
+HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution)
+{
+  return h->postsolve(solution);
+}
+
 HighsStatus highs_writeSolution(Highs* h, const std::string filename,
                                 const int style) {
   return h->writeSolution(filename, style);
@@ -792,9 +802,9 @@ PYBIND11_MODULE(highspy, m) {
       .def("readModel", &Highs::readModel)
       .def("readBasis", &Highs::readBasis)
       .def("writeBasis", &Highs::writeBasis)
-      .def("presolve", &Highs::presolve)
+      .def("postsolve", &highs_postsolve)
+      .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run)
-      .def("postsolve", &Highs::postsolve)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
       .def("setOptionValue",
@@ -890,7 +900,6 @@ PYBIND11_MODULE(highspy, m) {
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)
       .def("basisValidityToString", &Highs::basisValidityToString);
-
   // structs
   py::class_<HighsSolution>(m, "HighsSolution")
       .def(py::init<>())

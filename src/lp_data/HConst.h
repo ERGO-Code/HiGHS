@@ -157,9 +157,6 @@ enum GlpsolCostRowLocation {
 
 const std::string kHighsFilenameDefault = "";
 
-// Need to allow infinite costs to pass SCIP LPI unit tests
-const bool kHighsAllowInfiniteCosts = true;
-
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
   kNotReduced,
@@ -210,15 +207,15 @@ enum class HighsModelStatus {
 };
 
 enum HighsCallbackType : int {
-  kHighsCallbackMin = 0,
-  kHighsCallbackLogging = kHighsCallbackMin,
-  kHighsCallbackSimplexInterrupt,
-  kHighsCallbackIpmInterrupt,
-  kHighsCallbackMipImprovingSolution,
-  kHighsCallbackMipLogging,
-  kHighsCallbackMipInterrupt,
-  kHighsCallbackMax = kHighsCallbackMipInterrupt,
-  kNumHighsCallbackType
+  kCallbackMin = 0,
+  kCallbackLogging = kCallbackMin,
+  kCallbackSimplexInterrupt,
+  kCallbackIpmInterrupt,
+  kCallbackMipImprovingSolution,
+  kCallbackMipLogging,
+  kCallbackMipInterrupt,
+  kCallbackMax = kCallbackMipInterrupt,
+  kNumCallbackType
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

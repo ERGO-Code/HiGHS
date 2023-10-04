@@ -74,10 +74,16 @@
 - Default: 1e-08
 
 ## objective\_bound
-- Objective bound for termination
+- Objective bound for termination of the dual simplex solver
 - Type: double
 - Range: [-inf, inf]
 - Default: inf
+
+## objective\_target
+- Objective target for termination of the MIP solver
+- Type: double
+- Range: [-inf, inf]
+- Default: -inf
 
 ## random\_seed
 - Random seed used in HiGHS
@@ -208,7 +214,7 @@
 - Default: "false"
 
 ## mip\_improving\_solution\_file
-- File for reporting improving MIP solutions: not reported if ""
+- File for reporting improving MIP solutions: not reported for an empty string \"\"
 - Type: string
 - Default: ""
 

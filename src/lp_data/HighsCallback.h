@@ -15,24 +15,7 @@
 #define LP_DATA_HIGHSCALLBACK_H_
 
 #include "lp_data/HStruct.h"
-
-struct HighsCallbackDataOut {
-  HighsLogType log_type;
-  HighsInt simplex_iteration_count;
-  int64_t node_count;
-  double running_time;
-  double primal_bound;
-  double dual_bound;
-  double mip_rel_gap;
-  double objective;
-  double* col_value;
-  void clear();
-};
-
-struct HighsCallbackDataIn {
-  bool user_interrupt;
-  void clear();
-};
+#include "lp_data/HighsCallbackStruct.h"
 
 struct HighsCallback {
   void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
@@ -43,6 +26,8 @@ struct HighsCallback {
   HighsCallbackDataIn data_in;
   bool callbackActive(const int callback_type);
   bool callbackAction(const int callback_type, std::string message = "");
+  void clearHighsCallbackDataOut();
+  void clearHighsCallbackDataIn();
   void clear();
 };
 #endif /* LP_DATA_HIGHSCALLBACK_H_ */

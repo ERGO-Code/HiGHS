@@ -24,19 +24,28 @@ void HPresolveAnalysis::setup(const HighsLp* model_,
 
   if (options->presolve_rule_off) {
     // Some presolve rules are off
+    //
+    // Transform options->presolve_rule_off into logical settings in
+    // allow_rule_[*], commenting on the rules switched off
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Presolve rules not allowed:\n");
     HighsInt bit = 1;
     for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
          rule_type++) {
+      // Identify whether this rule is allowed
       const bool allow = !(options->presolve_rule_off & bit);
       if (rule_type >= kPresolveRuleFirstAllowOff) {
+        // This is a rule that can be switched off, so comment
+        // positively if it is off
         allow_rule_[rule_type] = allow;
         if (!allow)
           highsLogUser(options->log_options, HighsLogType::kInfo,
                        "   Rule %2d (bit %4d): %s\n", (int)rule_type, (int)bit,
                        utilPresolveRuleTypeToString(rule_type).c_str());
-      } else {
+      } else if (!allow) {
+        // This is a rule that cannot be switched off so, if an
+        // attempt is made, don't allow it to be off and comment
+        // negatively
         highsLogUser(options->log_options, HighsLogType::kWarning,
                      "Cannot disallow rule %2d (bit %4d): %s\n", (int)rule_type,
                      (int)bit, utilPresolveRuleTypeToString(rule_type).c_str());

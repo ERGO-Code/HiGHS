@@ -705,7 +705,7 @@ void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
 
 bool HighsSparseMatrix::hasLargeValue(const double large_matrix_value) {
   for (HighsInt iEl = 0; iEl < this->numNz(); iEl++)
-    if (std::abs(this->value_[iEl]) > large_matrix_value) return true;
+    if (std::abs(this->value_[iEl]) >= large_matrix_value) return true;
   return false;
 }
 

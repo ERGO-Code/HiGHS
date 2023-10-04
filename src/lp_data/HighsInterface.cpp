@@ -107,11 +107,12 @@ HighsStatus Highs::addColsInterface(
   std::vector<double> local_colUpper{ext_col_upper,
                                      ext_col_upper + ext_num_new_col};
 
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          assessCosts(options, lp.num_col_, index_collection,
-                                      local_colCost, options.infinite_cost),
-                          return_status, "assessCosts");
+  bool local_has_infinite_cost = false;
+  return_status = interpretCallStatus(
+      options_.log_options,
+      assessCosts(options, lp.num_col_, index_collection, local_colCost,
+                  local_has_infinite_cost, options.infinite_cost),
+      return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
@@ -123,7 +124,6 @@ HighsStatus Highs::addColsInterface(
   // Append the columns to the LP vectors and matrix
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
-
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is is easy to handle and, if there are nonzeros, it can be
   // normalised
@@ -175,6 +175,10 @@ HighsStatus Highs::addColsInterface(
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
   assert(lpDimensionsOk("addCols", lp, options.log_options));
+
+  // Interpret possible introduction of infinite costs
+  lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
+  assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options.infinite_cost));
 
   // Deduce the consequences of adding new columns
   invalidateModelStatusSolutionAndInfo();
@@ -626,13 +630,20 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{cost, cost + num_cost};
   HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          assessCosts(options_, 0, index_collection,
-                                      local_colCost, options_.infinite_cost),
-                          return_status, "assessCosts");
+  bool local_has_infinite_cost = false;
+  return_status = interpretCallStatus(
+      options_.log_options,
+      assessCosts(options_, 0, index_collection, local_colCost,
+                  local_has_infinite_cost, options_.infinite_cost),
+      return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
-  changeLpCosts(model_.lp_, index_collection, local_colCost);
+  HighsLp& lp = model_.lp_;
+  changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
+
+  // Interpret possible introduction of infinite costs
+  lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
+  assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options_.infinite_cost));
+
   // Deduce the consequences of new costs
   invalidateModelStatusSolutionAndInfo();
   // Determine any implications for simplex data
@@ -1546,4 +1557,122 @@ HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No LP invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
+}
+
+HighsStatus Highs::handleInfCost() {
+  HighsLp& lp = this->model_.lp_;
+  if (!lp.has_infinite_cost_) return HighsStatus::kOk;
+  HighsLpMods& mods = lp.mods_;
+  double inf_cost = this->options_.infinite_cost;
+  for (HighsInt k = 0; k < 2; k++) {
+    // Pass twice: first checking that infinite costs can be handled,
+    // then handling them, so that model is unmodified if infinite
+    // costs cannot be handled
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double cost = lp.col_cost_[iCol];
+      if (cost > -inf_cost && cost < inf_cost) continue;
+      double lower = lp.col_lower_[iCol];
+      double upper = lp.col_upper_[iCol];
+      if (lp.isMip()) {
+        if (lp.integrality_[iCol] == HighsVarType::kInteger) {
+          lower = std::ceil(lower);
+          upper = std::floor(upper);
+        }
+      }
+      if (cost <= -inf_cost) {
+        if (lp.sense_ == ObjSense::kMinimize) {
+          // Minimizing with -inf cost so try to fix at upper bound
+          if (upper < kHighsInf) {
+            if (k) lp.col_lower_[iCol] = upper;
+          } else {
+            highsLogUser(options_.log_options, HighsLogType::kError,
+                         "Cannot minimize with a cost on variable %d of %g and "
+                         "upper bound of %g\n",
+                         int(iCol), cost, upper);
+            return HighsStatus::kError;
+          }
+        } else {
+          // Maximizing with -inf cost so try to fix at lower bound
+          if (lower > -kHighsInf) {
+            if (k) lp.col_upper_[iCol] = lower;
+          } else {
+            highsLogUser(options_.log_options, HighsLogType::kError,
+                         "Cannot maximize with a cost on variable %d of %g and "
+                         "lower bound of %g\n",
+                         int(iCol), cost, lower);
+            return HighsStatus::kError;
+          }
+        }
+      } else {
+        if (lp.sense_ == ObjSense::kMinimize) {
+          // Minimizing with inf cost so try to fix at lower bound
+          if (lower > -kHighsInf) {
+            if (k) lp.col_upper_[iCol] = lower;
+          } else {
+            highsLogUser(options_.log_options, HighsLogType::kError,
+                         "Cannot minimize with a cost on variable %d of %g and "
+                         "lower bound of %g\n",
+                         int(iCol), cost, lower);
+            return HighsStatus::kError;
+          }
+        } else {
+          // Maximizing with inf cost so try to fix at upper bound
+          if (upper < kHighsInf) {
+            if (k) lp.col_lower_[iCol] = upper;
+          } else {
+            highsLogUser(options_.log_options, HighsLogType::kError,
+                         "Cannot maximize with a cost on variable %d of %g and "
+                         "upper bound of %g\n",
+                         int(iCol), cost, upper);
+            return HighsStatus::kError;
+          }
+        }
+      }
+      if (k) {
+        mods.save_inf_cost_variable_index.push_back(iCol);
+        mods.save_inf_cost_variable_cost.push_back(cost);
+        mods.save_inf_cost_variable_lower.push_back(lower);
+        mods.save_inf_cost_variable_upper.push_back(upper);
+        lp.col_cost_[iCol] = 0;
+      }
+    }
+  }
+  return HighsStatus::kOk;
+}
+
+void Highs::restoreInfCost(HighsStatus& return_status) {
+  HighsLp& lp = this->model_.lp_;
+  if (!lp.has_infinite_cost_) return;
+  HighsBasis& basis = this->basis_;
+  HighsLpMods& mods = lp.mods_;
+  HighsInt num_inf_cost = mods.save_inf_cost_variable_index.size();
+  assert(num_inf_cost);
+  for (HighsInt ix = 0; ix < num_inf_cost; ix++) {
+    HighsInt iCol = mods.save_inf_cost_variable_index[ix];
+    double cost = mods.save_inf_cost_variable_cost[ix];
+    double lower = mods.save_inf_cost_variable_lower[ix];
+    double upper = mods.save_inf_cost_variable_upper[ix];
+    double value = solution_.value_valid ? solution_.col_value[iCol] : 0;
+    if (basis.valid) {
+      assert(basis.col_status[iCol] != HighsBasisStatus::kBasic);
+      if (lp.col_lower_[iCol] == lower) {
+        basis.col_status[iCol] = HighsBasisStatus::kLower;
+      } else {
+        basis.col_status[iCol] = HighsBasisStatus::kUpper;
+      }
+    }
+    assert(lp.col_cost_[iCol] == 0);
+    if (value) this->info_.objective_function_value += value * cost;
+    lp.col_cost_[iCol] = cost;
+    lp.col_lower_[iCol] = lower;
+    lp.col_upper_[iCol] = upper;
+  }
+
+  if (this->model_status_ == HighsModelStatus::kInfeasible) {
+    // Model is infeasible with the infinite cost variables fixed at
+    // appropriate values, so model status cannot be determined
+    this->model_status_ = HighsModelStatus::kUnknown;
+    setHighsModelStatusAndClearSolutionAndBasis(this->model_status_);
+    return_status = highsStatusFromHighsModelStatus(model_status_);
+  }
 }

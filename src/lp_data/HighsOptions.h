@@ -500,31 +500,32 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
     //
     // Options read from the file
-    record_double =
-        new OptionRecordDouble("infinite_cost",
-                               "Limit on cost coefficient: values larger than "
-                               "this will be treated as infinite",
-                               advanced, &infinite_cost, 1e15, 1e20, kHighsInf);
+    record_double = new OptionRecordDouble(
+        "infinite_cost",
+        "Limit on |cost coefficient|: values greater than or equal to "
+        "this will be treated as infinite",
+        advanced, &infinite_cost, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "infinite_bound",
-        "Limit on |constraint bound|: values larger "
-        "than this will be treated as infinite",
+        "Limit on |constraint bound|: values greater than or equal to "
+        "this will be treated as infinite",
         advanced, &infinite_bound, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "small_matrix_value",
-        "Lower limit on |matrix entries|: values smaller than this will be "
+        "Lower limit on |matrix entries|: values less than or equal to this "
+        "will be "
         "treated as zero",
         advanced, &small_matrix_value, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "large_matrix_value",
-        "Upper limit on |matrix entries|: values larger "
-        "than this will be treated as infinite",
+        "Upper limit on |matrix entries|: values greater than or equal to "
+        "this will be treated as infinite",
         advanced, &large_matrix_value, 1e0, 1e15, kHighsInf);
     records.push_back(record_double);
 
@@ -544,13 +545,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_bound", "Objective bound for termination of dual simplex",
-        advanced, &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
+        "objective_bound",
+        "Objective bound for termination of the dual simplex solver", advanced,
+        &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination of MIP solver",
-        advanced,
+        "objective_target",
+        "Objective target for termination of the MIP solver", advanced,
         //"primal simplex and "
         &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
@@ -778,7 +780,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         "mip_improving_solution_file",
-        "File for reporting improving MIP solutions: not reported if \"\"",
+        "File for reporting improving MIP solutions: not reported for an empty "
+        "string \"\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 

@@ -8,19 +8,29 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef PRESOLVE_ICRASHX_H_
-#define PRESOLVE_ICRASHX_H_
+/**@file lp_data/HighsCallbackStruct.h
+ * @brief
+ */
+#ifndef LP_DATA_HIGHSCALLBACKSTRUCT_H_
+#define LP_DATA_HIGHSCALLBACKSTRUCT_H_
 
-#include <iostream>
+#include "util/HighsInt.h"
 
-#include "HConfig.h"
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsSolution.h"
+struct HighsCallbackDataOut {
+  int log_type;  // cast of HighsLogType
+  double running_time;
+  HighsInt simplex_iteration_count;
+  HighsInt ipm_iteration_count;
+  double objective_function_value;
+  int64_t mip_node_count;
+  double mip_primal_bound;
+  double mip_dual_bound;
+  double mip_gap;
+  double* mip_solution;
+};
 
-HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
-                          HighsBasis& highs_basis,
-                          HighsSolution& highs_solution,
-                          HighsModelStatus& model_status, HighsInfo& highs_info,
-                          HighsCallback& highs_callback);
+struct HighsCallbackDataIn {
+  int user_interrupt;
+};
 
-#endif
+#endif /* LP_DATA_HIGHSCALLBACKSTRUCT_H_ */
