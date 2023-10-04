@@ -676,13 +676,14 @@ bool HPresolve::validateColImpliedBounds(HighsInt col) {
   double oldImplUpper = implColUpper[col];
   HighsInt oldImplLowerSource = colLowerSource[col];
   HighsInt oldImplUpperSource = colUpperSource[col];
-  
+
   // recompute implied column bounds
   recomputeColImpliedBounds(col);
 
   // check if bounds were correct / up-to-date when entering this method
   if ((colLowerSource[col] != oldImplLowerSource) ||
-      (colUpperSource[col] != oldImplUpperSource)) return false;
+      (colUpperSource[col] != oldImplUpperSource))
+    return false;
 
   if (((oldImplLower != -kHighsInf) || (implColLower[col] != -kHighsInf)) &&
       (abs(oldImplLower - implColLower[col]) > primal_feastol))
@@ -801,10 +802,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     std::set<HighsInt> newSet;
-    for (auto it = colImplSourceByRow[i].begin();
-      it != colImplSourceByRow[i].end(); it++) {
-      if (newColIndex[*it] != -1) 
-        newSet.emplace(newColIndex[*it]);
+    for (auto it = colImplSourceByRow[i].cbegin();
+         it != colImplSourceByRow[i].cend(); it++) {
+      if (newColIndex[*it] != -1) newSet.emplace(newColIndex[*it]);
     }
     colImplSourceByRow[i] = std::move(newSet);
   }
@@ -2336,7 +2336,7 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 
     // recompute affected implied bounds
     std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
-    for (auto it = affectedCols.begin(); it != affectedCols.end(); it++)
+    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++)
       recomputeColImpliedBounds(*it);
 
     // check if this is an equation row and it now has a different size
