@@ -19,8 +19,6 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <iomanip>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -277,11 +275,9 @@ class HighsTimer {
             double percent_ideal = 100.0 * time / ideal_sum_time;
             printf("; %5.1f%%", percent_ideal);
           }
-          std::cout << "; " << std::fixed << std::setprecision(1)
-                    << std::setw(5) << percent_sum_clock_times[i] << "%):";
-          std::cout << std::setw(9) << clock_num_call[iClock];
-          std::cout << " " << std::scientific << std::setprecision(4)
-                    << time_per_call << "\n";
+          printf("; %5.1f%%):%9" HIGHSINT_FORMAT " %11.4e\n",
+                 percent_sum_clock_times[i], clock_num_call[iClock],
+                 time_per_call);
         }
       }
       sum_time += time;
