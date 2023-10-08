@@ -24,29 +24,33 @@ starts = np.array([0, 2])
 indices = np.array([0, 1, 0, 1])
 values = np.array([-1, 1, 1, 1], dtype=np.double)
 h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
-h.setOptionValue('log_to_console', True)
+h.setOptionValue("log_to_console", True)
 h.run()
 num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
 model_status = h.getModelStatus()
-print('Model status = ', h.modelStatusToString(model_status))
-print('Optimal objective = ', info.objective_function_value)
-print('Iteration count = ', info.simplex_iteration_count)
-print('Primal solution status = ', h.solutionStatusToString(info.primal_solution_status))
-print('Dual solution status = ', h.solutionStatusToString(info.dual_solution_status))
-print('Basis validity = ', h.basisValidityToString(info.basis_validity))
+print("Model status = ", h.modelStatusToString(model_status))
+print("Optimal objective = ", info.objective_function_value)
+print("Iteration count = ", info.simplex_iteration_count)
+print(
+    "Primal solution status = ", h.solutionStatusToString(info.primal_solution_status)
+)
+print("Dual solution status = ", h.solutionStatusToString(info.dual_solution_status))
+print("Basis validity = ", h.basisValidityToString(info.basis_validity))
 for icol in range(num_var):
     print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
 
 # Read in and solve avgas
 h.readModel("check/instances/avgas.mps")
-#h.writeModel("ml.mps")
+# h.writeModel("ml.mps")
 h.run()
 lp = h.getLp()
 num_nz = h.getNumNz()
-print('LP has ', lp.num_col_, ' columns', lp.num_row_, ' rows and ', num_nz, ' nonzeros')
+print(
+    "LP has ", lp.num_col_, " columns", lp.num_row_, " rows and ", num_nz, " nonzeros"
+)
 
 # Clear so that incumbent model is empty
 h.clear()
@@ -71,18 +75,20 @@ solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
 model_status = h.getModelStatus()
-print('Model status = ', h.modelStatusToString(model_status))
-print('Optimal objective = ', info.objective_function_value)
-print('Iteration count = ', info.simplex_iteration_count)
-print('Primal solution status = ', h.solutionStatusToString(info.primal_solution_status))
-print('Dual solution status = ', h.solutionStatusToString(info.dual_solution_status))
-print('Basis validity = ', h.basisValidityToString(info.basis_validity))
+print("Model status = ", h.modelStatusToString(model_status))
+print("Optimal objective = ", info.objective_function_value)
+print("Iteration count = ", info.simplex_iteration_count)
+print(
+    "Primal solution status = ", h.solutionStatusToString(info.primal_solution_status)
+)
+print("Dual solution status = ", h.solutionStatusToString(info.dual_solution_status))
+print("Basis validity = ", h.basisValidityToString(info.basis_validity))
 num_var = h.getNumCol()
 num_row = h.getNumRow()
-print('Variables')
+print("Variables")
 for icol in range(num_var):
     print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
-print('Constraints')
+print("Constraints")
 for irow in range(num_row):
     print(irow, solution.row_value[irow], h.basisStatusToString(basis.row_status[irow]))
 
@@ -108,7 +114,7 @@ model.hessian_.start_ = np.array([0, 2, 2, 3])
 model.hessian_.index_ = np.array([0, 2, 2])
 model.hessian_.value_ = np.array([2.0, -1.0, 1.0], dtype=np.double)
 
-print('test-semi-definite0 as HighsModel')
+print("test-semi-definite0 as HighsModel")
 h.passModel(model)
 h.run()
 
@@ -135,19 +141,35 @@ hessian_value = np.array([2.0, -1.0, 1.0], dtype=np.double)
 hessian_num_nz = hessian_start[num_col]
 integrality = np.array([0, 0, 0])
 
-print('test-semi-definite0 as pointers')
-h.passModel(num_col, num_row, a_matrix_num_nz, hessian_num_nz,
-            a_matrix_format, hessian_format, sense, offset,
-            col_cost, col_lower, col_upper, row_lower, row_upper,
-            a_matrix_start, a_matrix_index, a_matrix_value,
-            hessian_start, hessian_index, hessian_value,
-            integrality)
+print("test-semi-definite0 as pointers")
+h.passModel(
+    num_col,
+    num_row,
+    a_matrix_num_nz,
+    hessian_num_nz,
+    a_matrix_format,
+    hessian_format,
+    sense,
+    offset,
+    col_cost,
+    col_lower,
+    col_upper,
+    row_lower,
+    row_upper,
+    a_matrix_start,
+    a_matrix_index,
+    a_matrix_value,
+    hessian_start,
+    hessian_index,
+    hessian_value,
+    integrality,
+)
 h.run()
 h.writeSolution("", 1)
 
 # Clear so that incumbent model is empty
 h.clear()
-print('25fv47 as HighsModel')
+print("25fv47 as HighsModel")
 
 h.readModel("check/instances/25fv47.mps")
 h.presolve()
@@ -157,20 +179,22 @@ print('\nCreate Highs instance to solve presolved LP')
 h1 = highspy._highs.Highs()
 h1.passModel(presolved_lp)
 options = h1.getOptions()
-options.presolve = 'off'
-options.solver = 'ipm'
+options.presolve = "off"
+options.solver = "ipm"
 h1.passOptions(options)
 h1.writeOptions("")
 h1.run()
 solution = h1.getSolution()
 basis = h1.getBasis()
-print('\nCrossover then postsolve LP using solution and basis from other Highs instance')
+print(
+    "\nCrossover then postsolve LP using solution and basis from other Highs instance"
+)
 h.postsolve(solution, basis)
 info = h.getInfo()
 model_status = h.getModelStatus()
-print('Model status = ', h.modelStatusToString(model_status))
-print('Optimal objective = ', info.objective_function_value)
-print('Iteration count = ', info.simplex_iteration_count)
+print("Model status = ", h.modelStatusToString(model_status))
+print("Optimal objective = ", info.objective_function_value)
+print("Iteration count = ", info.simplex_iteration_count)
 
 run_time = h.getRunTime()
-print('Total HiGHS run time is ', run_time)
+print("Total HiGHS run time is ", run_time)
