@@ -41,7 +41,7 @@ for icol in range(num_var):
     print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
 
 # Read in and solve avgas
-h.readModel("../check/instances/avgas.mps")
+h.readModel("check/instances/avgas.mps")
 #h.writeModel("ml.mps")
 h.run()
 lp = h.getLp()
@@ -149,7 +149,7 @@ h.writeSolution("", 1)
 h.clear()
 print('25fv47 as HighsModel')
 
-h.readModel("../check/instances/25fv47.mps")
+h.readModel("check/instances/25fv47.mps")
 h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP

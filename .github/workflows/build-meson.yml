@@ -32,3 +32,9 @@ jobs:
         run: |
           meson setup bbdir_test -Duse_zlib=enabled -Dwith_tests=True --prefix $CONDA_PREFIX
           meson test -C bbdir_test
+      - name: Test compiled highspy
+        shell: bash -l {0}
+        run: |
+          meson configure bbdir_test -Dwith_pybind11=True
+          meson compile -C bbdir_test
+          PYTHONPATH=$(pwd)/bbdir_test/highspy python examples/call_highs_from_python.py
