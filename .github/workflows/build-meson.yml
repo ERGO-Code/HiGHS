@@ -23,6 +23,7 @@ jobs:
             ninja
             zlib
             catch2
+            numpy
           cache-environment: true
           init-shell: >-
             bash
