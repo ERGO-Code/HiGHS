@@ -640,6 +640,19 @@ PYBIND11_MODULE(_highs, m) {
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError)
       .export_values();
+  py::enum_<HighsCallbackType>(m, "HighsCallbackType")
+      .value("kCallbackMin", HighsCallbackType::kCallbackMin)
+      .value("kCallbackLogging", HighsCallbackType::kCallbackLogging)
+      .value("kCallbackSimplexInterrupt",
+             HighsCallbackType::kCallbackSimplexInterrupt)
+      .value("kCallbackIpmInterrupt", HighsCallbackType::kCallbackIpmInterrupt)
+      .value("kCallbackMipImprovingSolution",
+             HighsCallbackType::kCallbackMipImprovingSolution)
+      .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
+      .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
+      .value("kCallbackMax", HighsCallbackType::kCallbackMax)
+      .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
+      .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
