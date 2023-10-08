@@ -1019,11 +1019,10 @@ class Highs {
   /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setCallback(
-      std::function<void(int, const std::string&, const HighsCallbackDataOut*,
-                         HighsCallbackDataIn*, void*)>
-          user_callback,
-      void* user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCallbackFunctionType user_callback,
+                          void* user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCCallbackType c_callback,
+                          void* user_callback_data = nullptr);
 
   /**
    * @brief Start callback of given type
@@ -1462,5 +1461,4 @@ class Highs {
 void cpp_callback_forwarder(int code, const std::string& msg,
                             const HighsCallbackDataOut* out_data,
                             HighsCallbackDataIn* in_data, void* user_data);
-
 #endif

@@ -16,12 +16,14 @@
 #include <algorithm>
 #include <cassert>
 #include <csignal>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <sstream>
 
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
+#include "lp_data/HighsCallbackStruct.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
@@ -51,15 +53,6 @@ const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 void highsSignalHandler(int signum) {
   //  std::cout << "Interrupt signal (" << signum << ") received.\n";
   exit(signum);
-}
-
-// C++ callback function that forwards to the C function pointer
-void cpp_callback_forwarder(int code, const std::string& msg,
-                            const HighsCallbackDataOut* out_data,
-                            HighsCallbackDataIn* in_data, void* user_data) {
-  if (g_user_callback) {
-    g_user_callback(code, msg.c_str(), out_data, in_data, user_data);
-  }
 }
 
 Highs::Highs() { signal(SIGINT, highsSignalHandler); }
@@ -1938,13 +1931,25 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setCallback(
-    std::function<void(int, const std::string&, const HighsCallbackDataOut*,
-                       HighsCallbackDataIn*, void*)>
-        user_callback,
-    void* user_callback_data) {
+HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
+                               void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
+  this->callback_.user_callback_data = user_callback_data;
+
+  options_.log_options.user_callback = this->callback_.user_callback;
+  options_.log_options.user_callback_data = this->callback_.user_callback_data;
+  options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
+                               void* user_callback_data) {
+  this->callback_.clear();
+  this->callback_.user_callback =
+      [c_callback](int a, const std::string& b, const HighsCallbackDataOut* c,
+                   HighsCallbackDataIn* d,
+                   void* e) { c_callback(a, b.c_str(), c, d, e); };
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;

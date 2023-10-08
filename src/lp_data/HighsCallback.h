@@ -19,11 +19,14 @@
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
 
+using HighsCallbackFunctionType =
+    std::function<void(int, const std::string&, const HighsCallbackDataOut*,
+                       HighsCallbackDataIn*, void*)>;
+
 struct HighsCallback {
   // Function pointers cannot be used for Pybind11, so use std::function
-  std::function<void(int, const std::string&, const HighsCallbackDataOut*,
-                     HighsCallbackDataIn*, void*)>
-      user_callback = nullptr;
+  HighsCallbackFunctionType user_callback = nullptr;
+  HighsCCallbackType c_callback = nullptr;
   void* user_callback_data = nullptr;
   std::vector<bool> active;
   HighsCallbackDataOut data_out;
