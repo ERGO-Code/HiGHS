@@ -8,7 +8,6 @@
 import highspy._highs
 import numpy as np
 inf = highspy._highs.kHighsInf
-
 h = highspy._highs.Highs()
 alt_inf = h.getInfinity()
 print('highspy._highs.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
