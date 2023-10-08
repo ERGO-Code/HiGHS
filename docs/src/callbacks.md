@@ -127,7 +127,7 @@ For each of the MIP callbacks, the following `HighsCallbackDataOut` struct membe
 * `num_nodes`: the number of MIP nodes explored to date
 * `primal_bound`: the primal bound
 * `dual_bound`: the dual bound
-* `mip_gap`: the (relative) difference between tht primal and dual bounds
+* `mip_gap`: the (relative) difference between the primal and dual bounds
 
 
 
