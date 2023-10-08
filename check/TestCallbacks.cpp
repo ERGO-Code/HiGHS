@@ -26,17 +26,13 @@ using std::strncmp;
 using std::strstr;
 
 // Callback that saves message for comparison
-static void myLogCallback(const int callback_type, const char* message,
-                          const HighsCallbackDataOut* data_out,
-                          HighsCallbackDataIn* data_in,
-                          void* user_callback_data) {
-  strcpy(printed_log, message);
-}
+std::function<void(int, const std::string&, const HighsCallbackDataOut*, HighsCallbackDataIn*, void*)>
+myLogCallback = [](int callback_type, const std::string& message, const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in, void* user_callback_data) {
+  strcpy(printed_log, message.c_str());
+};
 
-static void userInterruptCallback(const int callback_type, const char* message,
-                                  const HighsCallbackDataOut* data_out,
-                                  HighsCallbackDataIn* data_in,
-                                  void* user_callback_data) {
+std::function<void(int, const std::string&, const HighsCallbackDataOut*, HighsCallbackDataIn*, void*)>
+userInterruptCallback = [](int callback_type, const std::string& message, const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in, void* user_callback_data) {
   // Extract local_callback_data from user_callback_data unless it
   // is nullptr
   if (callback_type == kCallbackMipImprovingSolution) {
@@ -49,7 +45,7 @@ static void userInterruptCallback(const int callback_type, const char* message,
       printf(
           "userCallback(type %2d; data %11.4g): %s with objective %g and "
           "solution[0] = %g\n",
-          callback_type, local_callback_data, message,
+          callback_type, local_callback_data, message.c_str(),
           data_out->objective_function_value, data_out->mip_solution[0]);
     REQUIRE(local_callback_data >= data_out->objective_function_value);
     // Update the double value pointed to from void* user_callback_data
@@ -67,14 +63,14 @@ static void userInterruptCallback(const int callback_type, const char* message,
     if (callback_type == kCallbackLogging) {
       if (dev_run)
         printf("userInterruptCallback(type %2d; data %2d): %s", callback_type,
-               local_callback_data, message);
+               local_callback_data, message.c_str());
     } else if (callback_type == kCallbackSimplexInterrupt) {
       if (dev_run)
         printf(
             "userInterruptCallback(type %2d; data %2d): %s with iteration "
             "count = "
             "%d\n",
-            callback_type, local_callback_data, message,
+            callback_type, local_callback_data, message.c_str(),
             int(data_out->simplex_iteration_count));
       data_in->user_interrupt =
           data_out->simplex_iteration_count > adlittle_simplex_iteration_limit;
@@ -84,7 +80,7 @@ static void userInterruptCallback(const int callback_type, const char* message,
             "userInterruptCallback(type %2d; data %2d): %s with iteration "
             "count = "
             "%d\n",
-            callback_type, local_callback_data, message,
+            callback_type, local_callback_data, message.c_str(),
             int(data_out->ipm_iteration_count));
       data_in->user_interrupt =
           data_out->ipm_iteration_count > adlittle_ipm_iteration_limit;
@@ -94,19 +90,17 @@ static void userInterruptCallback(const int callback_type, const char* message,
             "userInterruptCallback(type %2d; data %2d): %s with Bounds "
             "(%11.4g, %11.4g); Gap = %11.4g; Objective = "
             "%g\n",
-            callback_type, local_callback_data, message,
+            callback_type, local_callback_data, message.c_str(),
             data_out->mip_dual_bound, data_out->mip_primal_bound,
             data_out->mip_gap, data_out->objective_function_value);
       data_in->user_interrupt =
           data_out->objective_function_value < egout_objective_target;
     }
   }
-}
+};
 
-static void userDataCallback(const int callback_type, const char* message,
-                             const HighsCallbackDataOut* data_out,
-                             HighsCallbackDataIn* data_in,
-                             void* user_callback_data) {
+std::function<void(int, const std::string&, const HighsCallbackDataOut*, HighsCallbackDataIn*, void*)>
+userDataCallback = [](int callback_type, const std::string& message, const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in, void* user_callback_data) {
   assert(callback_type == kCallbackMipInterrupt ||
          callback_type == kCallbackMipLogging ||
          callback_type == kCallbackMipImprovingSolution);
@@ -116,8 +110,8 @@ static void userDataCallback(const int callback_type, const char* message,
            "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
            data_out->mip_node_count, data_out->running_time,
            data_out->mip_dual_bound, data_out->mip_primal_bound,
-           data_out->mip_gap, data_out->objective_function_value, message);
-}
+           data_out->mip_gap, data_out->objective_function_value, message.c_str());
+};
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
   bool output_flag = true;  // Still runs quietly

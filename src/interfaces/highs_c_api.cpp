@@ -12,6 +12,11 @@
 
 #include "Highs.h"
 
+// This global variable can hold the C function pointer between the calls Needed
+// since std::function can take any callable, not just function pointers Can be
+// dropped if users *promise* to never pass anything but a function pointer
+CCallbackType g_user_callback = nullptr;
+
 HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
                       const HighsInt num_nz, const HighsInt a_format,
                       const HighsInt sense, const double offset,
@@ -625,14 +630,13 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
-HighsInt Highs_setCallback(
-    void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
-    void* user_callback_data) {
-  return (HighsInt)((Highs*)highs)
-      ->setCallback(user_callback, user_callback_data);
+HighsInt Highs_setCallback(void* highs, CCallbackType user_callback, void* user_callback_data) {
+    // Store the C function pointer globally
+    g_user_callback = user_callback;
+
+    // Use the forwarder as the C++ callback
+    auto status = static_cast<Highs*>(highs)->setCallback(cpp_callback_forwarder, user_callback_data);
+    return static_cast<int>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const int callback_type) {

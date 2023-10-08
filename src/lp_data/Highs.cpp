@@ -53,6 +53,13 @@ void highsSignalHandler(int signum) {
   exit(signum);
 }
 
+// C++ callback function that forwards to the C function pointer
+void cpp_callback_forwarder(int code, const std::string& msg, const HighsCallbackDataOut* out_data, HighsCallbackDataIn* in_data, void* user_data) {
+    if (g_user_callback) {
+        g_user_callback(code, msg.c_str(), out_data, in_data, user_data);
+    }
+}
+
 Highs::Highs() { signal(SIGINT, highsSignalHandler); }
 
 HighsStatus Highs::clear() {
@@ -1930,9 +1937,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setCallback(
-    void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
-                          HighsCallbackDataIn*, void*),
-    void* user_callback_data) {
+      std::function<void(int, const std::string&, const HighsCallbackDataOut*,
+                         HighsCallbackDataIn*, void*)>
+          user_callback,
+      void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
   this->callback_.user_callback_data = user_callback_data;

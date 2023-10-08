@@ -1080,9 +1080,7 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
  */
 HighsInt Highs_setCallback(
     void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
+    CCallbackType user_callback,
     void* user_callback_data);
 
 /**
