@@ -1456,9 +1456,4 @@ class Highs {
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
 };
-
-// Forwards C API calls
-void cpp_callback_forwarder(int code, const std::string& msg,
-                            const HighsCallbackDataOut* out_data,
-                            HighsCallbackDataIn* in_data, void* user_data);
 #endif
