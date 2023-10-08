@@ -14,9 +14,10 @@
 #ifndef LP_DATA_HIGHSCALLBACK_H_
 #define LP_DATA_HIGHSCALLBACK_H_
 
+#include <functional>
+
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
-#include <functional>
 
 struct HighsCallback {
   // Function pointers cannot be used for Pybind11, so use std::function

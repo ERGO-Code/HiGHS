@@ -38,8 +38,7 @@ typedef struct {
 } HighsCallbackDataIn;
 
 // Additional callback handling
-typedef void (*CCallbackType)(int, const char*,
-                              const HighsCallbackDataOut*,
+typedef void (*CCallbackType)(int, const char*, const HighsCallbackDataOut*,
                               HighsCallbackDataIn*, void*);
 extern CCallbackType g_user_callback;
 
