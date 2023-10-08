@@ -5,12 +5,74 @@
 # The paths to MPS file instances assumes that this is run in the
 # directory of this file (ie highs/examples) or any other subdirectory
 # of HiGHS
-import highspy._highs
 import numpy as np
-inf = highspy._highs.kHighsInf
+import highspy._highs
+import highspy._highs.cb as hscb
+
 h = highspy._highs.Highs()
+inf = highspy._highs.kHighsInf
 alt_inf = h.getInfinity()
 print('highspy._highs.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
+
+def user_interrupt_callback(
+    callback_type, message, data_out, data_in, user_callback_data
+):
+    dev_run = True  # or any other condition
+
+    # Constants for iteration limits or objective targets, adjust as per requirement
+    ADLITTLE_SIMPLEX_ITERATION_LIMIT = 100
+    ADLITTLE_IPM_ITERATION_LIMIT = 100
+    EGOUT_OBJECTIVE_TARGET = 1.0
+
+    # Callback for MIP Improving Solution
+    if callback_type == hscb.HighsCallbackType.kCallbackMipImprovingSolution:
+        assert user_callback_data is not None, "User callback data is None!"
+        local_callback_data = user_callback_data[0]  # Assuming it is a list or array
+
+        if dev_run:
+            print(
+                f"userCallback(type {callback_type}; data {local_callback_data:.4g}): {message} with objective {data_out.objective_function_value} and solution[0] = {data_out.mip_solution[0]}"
+            )
+
+        # Check and update the objective function value
+        assert (
+            local_callback_data >= data_out.objective_function_value
+        ), "Objective function value is invalid!"
+        user_callback_data[0] = data_out.objective_function_value
+
+    else:
+        # Various other callback types
+        if callback_type == hscb.HighsCallbackType.kCallbackLogging:
+            if dev_run:
+                print(f"userInterruptCallback(type {callback_type}): {message}")
+
+        elif callback_type == hscb.HighsCallbackType.kCallbackSimplexInterrupt:
+            if dev_run:
+                print(
+                    f"userInterruptCallback(type {callback_type}): {message} with iteration count = {data_out.simplex_iteration_count}"
+                )
+            data_in.user_interrupt = (
+                data_out.simplex_iteration_count > ADLITTLE_SIMPLEX_ITERATION_LIMIT
+            )
+
+        elif callback_type == hscb.HighsCallbackType.kCallbackIpmInterrupt:
+            if dev_run:
+                print(
+                    f"userInterruptCallback(type {callback_type}): {message} with iteration count = {data_out.ipm_iteration_count}"
+                )
+            data_in.user_interrupt = (
+                data_out.ipm_iteration_count > ADLITTLE_IPM_ITERATION_LIMIT
+            )
+
+        elif callback_type == hscb.HighsCallbackType.kCallbackMipInterrupt:
+            if dev_run:
+                print(
+                    f"userInterruptCallback(type {callback_type}): {message} with Bounds ({data_out.mip_dual_bound:.4g}, {data_out.mip_primal_bound:.4g}); Gap = {data_out.mip_gap:.4g}; Objective = {data_out.objective_function_value:.4g}"
+                )
+            data_in.user_interrupt = (
+                data_out.objective_function_value < EGOUT_OBJECTIVE_TARGET
+            )
+
 
 h.addVar(-inf, inf)
 h.addVar(-inf, inf)
@@ -24,7 +86,10 @@ indices = np.array([0, 1, 0, 1])
 values = np.array([-1, 1, 1, 1], dtype=np.double)
 h.addRows(num_cons, lower, upper, num_new_nz, starts, indices, values)
 h.setOptionValue("log_to_console", True)
+h.setCallback(user_interrupt_callback, None)
+h.startCallback(hscb.HighsCallbackType.kCallbackLogging)
 h.run()
+h.stopCallback(hscb.HighsCallbackType.kCallbackLogging)
 num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
