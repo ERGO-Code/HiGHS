@@ -16,7 +16,11 @@
 
 #include "util/HighsInt.h"
 
-struct HighsCallbackDataOut {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
   int log_type;  // cast of HighsLogType
   double running_time;
   HighsInt simplex_iteration_count;
@@ -27,10 +31,20 @@ struct HighsCallbackDataOut {
   double mip_dual_bound;
   double mip_gap;
   double* mip_solution;
-};
+} HighsCallbackDataOut;
 
-struct HighsCallbackDataIn {
+typedef struct {
   int user_interrupt;
-};
+} HighsCallbackDataIn;
+
+// Additional callback handling
+typedef void (*CCallbackType)(int, const char*,
+                              const HighsCallbackDataOut*,
+                              HighsCallbackDataIn*, void*);
+extern CCallbackType g_user_callback;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LP_DATA_HIGHSCALLBACKSTRUCT_H_ */
