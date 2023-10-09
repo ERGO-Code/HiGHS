@@ -48,16 +48,17 @@ bool HighsLp::hasSemiVariables() const {
 }
 
 bool HighsLp::hasMods() const {
-  return
-    this->mods_.save_non_semi_variable_index.size() > 0 ||
-    this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
-    this->mods_.save_inf_cost_variable_index.size() > 0;
+  return this->mods_.save_non_semi_variable_index.size() > 0 ||
+         this->mods_.save_inconsistent_semi_variable_index.size() > 0 ||
+         this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
+         this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
+             0 ||
+         this->mods_.save_inf_cost_variable_index.size() > 0;
 }
 
 bool HighsLp::needsMods(const double infinite_cost) const {
   assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
-  return
-    this->has_infinite_cost_ || this->hasSemiVariables();
+  return this->has_infinite_cost_ || this->hasSemiVariables();
 }
 
 bool HighsLp::operator==(const HighsLp& lp) const {

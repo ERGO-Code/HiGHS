@@ -34,7 +34,9 @@ class HighsModel {
   bool isEmpty() const {
     return (this->lp_.num_col_ == 0 && this->lp_.num_row_ == 0);
   }
-  bool needsMods(const double infinite_cost) const { return this->lp_.needsMods(infinite_cost); }
+  bool needsMods(const double infinite_cost) const {
+    return this->lp_.needsMods(infinite_cost);
+  }
   bool hasMods() const { return this->lp_.hasMods(); }
   void clear();
   double objectiveValue(const std::vector<double>& solution) const;

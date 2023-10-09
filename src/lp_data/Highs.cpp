@@ -710,9 +710,9 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
 
 HighsStatus Highs::presolve() {
   if (model_.needsMods(options_.infinite_cost)) {
-    highsLogUser(
-		 options_.log_options, HighsLogType::kError,
-		 "Model contains infinite costs or semi-variables, so cannot be presolved independently\n");
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Model contains infinite costs or semi-variables, so cannot "
+                 "be presolved independently\n");
     return HighsStatus::kError;
   }
   HighsStatus return_status = HighsStatus::kOk;
@@ -830,7 +830,7 @@ HighsStatus Highs::run() {
       use_output_flag = true;
     }
   }
-  
+
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
@@ -875,8 +875,8 @@ HighsStatus Highs::run() {
   // to run() - with initial check that called_return_from_run is true
   // - called_return_from_run cannot yet be set false.
   //
-  // This possible call to run() means that any need to modify the problem to remove
-  // infinite costs must be done first.
+  // This possible call to run() means that any need to modify the problem to
+  // remove infinite costs must be done first.
   //
   // Set undo_mods = false so that returnFromRun() doesn't undo any
   // mods that must be preserved - such as when solving a MIP node
@@ -977,7 +977,8 @@ HighsStatus Highs::run() {
     // integrality, keeping a record of any bound and type
     // modifications for semi-variables
     bool made_semi_variable_mods = false;
-    call_status = assessSemiVariables(model_.lp_, options_, made_semi_variable_mods);
+    call_status =
+        assessSemiVariables(model_.lp_, options_, made_semi_variable_mods);
     undo_mods = undo_mods || made_semi_variable_mods;
     if (call_status == HighsStatus::kError) {
       setHighsModelStatusAndClearSolutionAndBasis(
@@ -992,9 +993,9 @@ HighsStatus Highs::run() {
       if (model_.isMip()) {
         if (options_.solve_relaxation) {
           // Relax any semi-variables
-	  bool made_semi_variable_mods = false;
+          bool made_semi_variable_mods = false;
           relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-	  undo_mods = undo_mods || made_semi_variable_mods;
+          undo_mods = undo_mods || made_semi_variable_mods;
         } else {
           highsLogUser(options_.log_options, HighsLogType::kError,
                        "Cannot solve MIQP problems with HiGHS\n");
@@ -1069,7 +1070,8 @@ HighsStatus Highs::run() {
     HighsStatus icrash_status =
         callICrash(model_.lp_, icrash_options, icrash_info_);
 
-    if (icrash_status != HighsStatus::kOk) return returnFromRun(icrash_status, undo_mods);
+    if (icrash_status != HighsStatus::kOk)
+      return returnFromRun(icrash_status, undo_mods);
 
     // for now set the solution_.col_value
     solution_.col_value = icrash_info_.x_values;
@@ -3623,9 +3625,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       // Recover the options
       options_ = save_options;
       if (return_status == HighsStatus::kError) {
-	// Set undo_mods = false, since passing models requiring
-	// modification to Highs::presolve is illegal
-	const bool undo_mods = false;
+        // Set undo_mods = false, since passing models requiring
+        // modification to Highs::presolve is illegal
+        const bool undo_mods = false;
         return returnFromRun(return_status, undo_mods);
       }
     } else {
@@ -3750,7 +3752,7 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
-				 const bool undo_mods) {
+                                 const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   assert(return_status == run_return_status);

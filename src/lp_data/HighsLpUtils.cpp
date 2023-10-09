@@ -478,9 +478,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
-HighsStatus assessSemiVariables(HighsLp& lp,
-				const HighsOptions& options,
-				bool& made_semi_variable_mods) {
+HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
+                                bool& made_semi_variable_mods) {
   made_semi_variable_mods = false;
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
@@ -653,13 +652,13 @@ HighsStatus assessSemiVariables(HighsLp& lp,
     return_status = HighsStatus::kError;
   }
   made_semi_variable_mods =
-    inconsistent_semi_variable_index.size() > 0 ||
-    tightened_semi_variable_upper_bound_index.size() > 0;
+      lp.mods_.save_non_semi_variable_index.size() > 0 ||
+      inconsistent_semi_variable_index.size() > 0 ||
+      tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
-void relaxSemiVariables(HighsLp& lp,
-			bool& made_semi_variable_mods) {
+void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
   // When solving relaxation, semi-variables are continuous between 0
   // and their upper bound, so have to modify the lower bound to be
   // zero

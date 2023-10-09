@@ -1366,7 +1366,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status, const bool undo_mods);
+  HighsStatus returnFromRun(const HighsStatus return_status,
+                            const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 

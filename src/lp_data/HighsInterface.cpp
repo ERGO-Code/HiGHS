@@ -1642,7 +1642,7 @@ HighsStatus Highs::handleInfCost() {
   // set lp.has_infinite_cost_ to be false to avoid assert when run()
   // is called using copy of model in MIP solver (See #1446)
   lp.has_infinite_cost_ = false;
-  
+
   return HighsStatus::kOk;
 }
 
@@ -1658,10 +1658,9 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     double cost = mods.save_inf_cost_variable_cost[ix];
     double lower = mods.save_inf_cost_variable_lower[ix];
     double upper = mods.save_inf_cost_variable_upper[ix];
-    HighsBasisStatus status = basis.valid ? basis.col_status[iCol] : HighsBasisStatus::kBasic;
+    HighsBasisStatus status =
+        basis.valid ? basis.col_status[iCol] : HighsBasisStatus::kBasic;
     double value = solution_.value_valid ? solution_.col_value[iCol] : 0;
-    printf("Highs::restoreInfCost ix = %d; iCol = %d / %d; cost = %g; [lower, value, upper] = [%g, %g, %g] Basis status = %s\n",
-	   int(ix), int(iCol), int(lp.num_col_), cost, lower, value, upper, basis.valid ? utilBasisStatusToString(status).c_str() : "No basis");
     if (basis.valid) {
       assert(basis.col_status[iCol] != HighsBasisStatus::kBasic);
       if (lp.col_lower_[iCol] == lower) {

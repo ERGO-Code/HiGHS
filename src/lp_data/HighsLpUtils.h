@@ -57,11 +57,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus assessSemiVariables(HighsLp& lp,
-				const HighsOptions& options,
-				bool& made_semi_variable_mods);
-void relaxSemiVariables(HighsLp& lp,
-			bool& made_semi_variable_mods);
+HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
+                                bool& made_semi_variable_mods);
+void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
