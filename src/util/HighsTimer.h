@@ -275,9 +275,8 @@ class HighsTimer {
             double percent_ideal = 100.0 * time / ideal_sum_time;
             printf("; %5.1f%%", percent_ideal);
           }
-          printf("; %5.1f%%):%9" HIGHSINT_FORMAT " %11.4e\n",
-                 percent_sum_clock_times[i], clock_num_call[iClock],
-                 time_per_call);
+          printf("; %5.1f%%):%9ld %11.4e\n", percent_sum_clock_times[i],
+                 static_cast<long int>(clock_num_call[iClock]), time_per_call);
         }
       }
       sum_time += time;
