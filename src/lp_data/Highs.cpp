@@ -831,16 +831,6 @@ HighsStatus Highs::run() {
     }
   }
   
-  if (model_.lp_.has_infinite_cost_) {
-    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
-    HighsStatus return_status = handleInfCost();
-    if (return_status != HighsStatus::kOk) {
-      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
-      return return_status;
-    }
-  } else {
-    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
-  }
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
@@ -863,29 +853,71 @@ HighsStatus Highs::run() {
                 max_threads);
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
               "Running with %" HIGHSINT_FORMAT " thread(s)\n", max_threads);
+
+  // returnFromRun() is a common exit method to ensure consistency of
+  // values set by run() and many other things. It's important to be
+  // able to check that it's been called, and this is done with
+  // this->called_return_from_run
+  //
+  // Make sure here that returnFromRun() has been called after any
+  // previous call to run()
+
   assert(called_return_from_run);
   if (!called_return_from_run) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Highs::run() called with called_return_from_run false\n");
     return HighsStatus::kError;
   }
+
+  // HiGHS solvers require models with no inifinite costs, and no semi-variables
+  //
+  // Since completeSolutionFromDiscreteAssignment() may require a call
+  // to run() - with initial check that called_return_from_run is true
+  // - called_return_from_run cannot yet be set false.
+  //
+  // This possible call to run() means that any need to modify the problem to remove
+  // infinite costs must be done first.
+  //
+  // Set undo_mods = false so that returnFromRun() doesn't undo any
+  // mods that must be preserved - such as when solving a MIP node
+  bool undo_mods = false;
+  if (model_.lp_.has_infinite_cost_) {
+    // If the model has infinite costs, then try to remove them. The
+    // return_status indicates the success of this operation and, if
+    // it's unsuccessful, the model will not have been modified and
+    // run() can simply return an error with model status
+    // HighsModelStatus::kUnknown
+    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
+    HighsStatus return_status = handleInfCost();
+    if (return_status != HighsStatus::kOk) {
+      assert(return_status == HighsStatus::kError);
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
+      return return_status;
+    }
+    // Modifications have been performed, so must be undone before
+    // this call to run() returns
+    assert(!model_.lp_.has_infinite_cost_);
+    undo_mods = true;
+  } else {
+    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
+  }
+
   // Ensure that all vectors in the model have exactly the right size
   exactResizeModel();
 
   if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the current solution of a MIP is feasible
-    // and, if not, try to assign values to continous variables to
-    // achieve a feasible solution. Valuable in the case where users
-    // make a heuristic assignment of discrete variables
-    HighsStatus call_status = assignContinuousAtDiscreteSolution();
+    // Determine whether the current (partial) solution of a MIP is
+    // feasible and, if not, try to complete the assignment with
+    // integer values (if necessary) and continuous values (if
+    // necessary) to achieve a feasible solution. Valuable in the case
+    // where users make a heuristic (partial) assignment of discrete variables
+    HighsStatus call_status = completeSolutionFromDiscreteAssignment();
     if (call_status != HighsStatus::kOk) return HighsStatus::kError;
   }
 
-  // Set this so that calls to returnFromRun() can be checked
+  // Set this so that calls to returnFromRun() can be checked: from
+  // here all return statements execute returnFromRun()
   called_return_from_run = false;
-  // Set this so that returnFromRun() knows whether to undo any mods
-  bool undo_mods = false;
-  // From here all return statements execute returnFromRun()
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Initialise the HiGHS model status
@@ -944,7 +976,9 @@ HighsStatus Highs::run() {
     // Not solving the relaxation, so check validity of any
     // integrality, keeping a record of any bound and type
     // modifications for semi-variables
-    call_status = assessIntegrality(model_.lp_, options_);
+    bool made_semi_variable_mods = false;
+    call_status = assessSemiVariables(model_.lp_, options_, made_semi_variable_mods);
+    undo_mods = undo_mods || made_semi_variable_mods;
     if (call_status == HighsStatus::kError) {
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kSolveError);
@@ -958,7 +992,9 @@ HighsStatus Highs::run() {
       if (model_.isMip()) {
         if (options_.solve_relaxation) {
           // Relax any semi-variables
-          relaxSemiVariables(model_.lp_);
+	  bool made_semi_variable_mods = false;
+          relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+	  undo_mods = undo_mods || made_semi_variable_mods;
         } else {
           highsLogUser(options_.log_options, HighsLogType::kError,
                        "Cannot solve MIQP problems with HiGHS\n");
@@ -989,7 +1025,9 @@ HighsStatus Highs::run() {
   if (model_.isMip()) {
     assert(options_.solve_relaxation || use_simplex_or_ipm);
     // Relax any semi-variables
-    relaxSemiVariables(model_.lp_);
+    bool made_semi_variable_mods = false;
+    relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+    undo_mods = undo_mods || made_semi_variable_mods;
     highsLogUser(
         options_.log_options, HighsLogType::kInfo,
         "Solving LP relaxation since%s%s%s\n",
@@ -3093,7 +3131,7 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
-HighsStatus Highs::assignContinuousAtDiscreteSolution() {
+HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
   // if not, try to assign values to continous variables to achieve a
   // feasible solution. Valuable in the case where users make a
@@ -3109,8 +3147,6 @@ HighsStatus Highs::assignContinuousAtDiscreteSolution() {
   // If the current solution is feasible, then solution can be used by
   // MIP solver to get a primal bound
   if (feasible) return HighsStatus::kOk;
-  //  if (!integral) return HighsStatus::kOk;  // TEMP FOR CHECKING NOTHIONG IS
-  //  BROKEN
   // Save the column bounds and integrality in preparation for fixing
   // the non-continuous variables when user-supplied values are
   // integer
@@ -3713,7 +3749,8 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 }
 
 // Applies checks before returning from run()
-HighsStatus Highs::returnFromRun(const HighsStatus run_return_status, const bool undo_mods) {
+HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
+				 const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   assert(return_status == run_return_status);
@@ -3862,11 +3899,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status, const bool
   // Record that returnFromRun() has been called
   called_return_from_run = true;
 
-  // Restore any infinite costs
-  this->restoreInfCost(return_status);
+  if (undo_mods) {
+    // Restore any infinite costs
+    this->restoreInfCost(return_status);
 
-  // Unapply any modifications that have not yet been unapplied
-  this->model_.lp_.unapplyMods();
+    // Unapply any modifications that have not yet been unapplied
+    this->model_.lp_.unapplyMods();
+    //    undo_mods = false;
+  }
 
   // Unless solved as a MIP, report on the solution
   const bool solved_as_mip = !options_.solver.compare(kHighsChooseString) &&

@@ -1301,7 +1301,7 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
-  HighsStatus assignContinuousAtDiscreteSolution();
+  HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();

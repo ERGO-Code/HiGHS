@@ -478,7 +478,10 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
-HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
+HighsStatus assessSemiVariables(HighsLp& lp,
+				const HighsOptions& options,
+				bool& made_semi_variable_mods) {
+  made_semi_variable_mods = false;
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
@@ -649,13 +652,18 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }
+  made_semi_variable_mods =
+    inconsistent_semi_variable_index.size() > 0 ||
+    tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
-void relaxSemiVariables(HighsLp& lp) {
+void relaxSemiVariables(HighsLp& lp,
+			bool& made_semi_variable_mods) {
   // When solving relaxation, semi-variables are continuous between 0
   // and their upper bound, so have to modify the lower bound to be
   // zero
+  made_semi_variable_mods = false;
   if (!lp.integrality_.size()) return;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_modified_lower = 0;
@@ -672,6 +680,7 @@ void relaxSemiVariables(HighsLp& lp) {
       lp.col_lower_[iCol] = 0;
     }
   }
+  made_semi_variable_mods = relaxed_semi_variable_lower_index.size() > 0;
 }
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
