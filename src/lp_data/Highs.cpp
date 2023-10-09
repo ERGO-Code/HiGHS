@@ -709,6 +709,12 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::presolve() {
+  if (model_.needsMods(options_.infinite_cost)) {
+    highsLogUser(
+		 options_.log_options, HighsLogType::kError,
+		 "Model contains infinite costs or semi-variables, so cannot be presolved independently\n");
+    return HighsStatus::kError;
+  }
   HighsStatus return_status = HighsStatus::kOk;
 
   clearPresolve();
@@ -824,6 +830,7 @@ HighsStatus Highs::run() {
       use_output_flag = true;
     }
   }
+  
   if (model_.lp_.has_infinite_cost_) {
     assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
     HighsStatus return_status = handleInfCost();
