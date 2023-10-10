@@ -86,24 +86,24 @@ bool is_empty(std::string& str, const std::string& chars) {
   return false;
 }
 
-bool is_end(std::string& str, int end, const std::string& chars) {
-  int pos = str.find_first_not_of(chars, end);
-  if (pos == -1 || pos == (int)str.size()) return true;
+bool is_end(std::string& str, size_t end, const std::string& chars) {
+  size_t pos = str.find_first_not_of(chars, end);
+  if (pos == -1 || pos == str.size()) return true;
   return false;
 }
 
-int first_word_end(std::string& str, int start) {
+size_t first_word_end(std::string& str, size_t start) {
   const std::string chars = "\t\n\v\f\r ";
-  int next_word_start = str.find_first_not_of(chars, start);
-  int next_word_end = str.find_first_of(chars, next_word_start);
-  if (next_word_end < 0 || next_word_end > (int)str.size()) return str.size();
+  size_t next_word_start = str.find_first_not_of(chars, start);
+  size_t next_word_end = str.find_first_of(chars, next_word_start);
+  if (next_word_end < 0 || next_word_end > str.size()) return str.size();
   return next_word_end;
 }
 
-std::string first_word(std::string& str, int start) {
+std::string first_word(std::string& str, size_t start) {
   // If start is (at least) the length of str, then next_word_start is
   // negative, so there's no word, so return ""
-  if (start >= int(str.length())) return "";
+  if (start >= str.length()) return "";
   const std::string chars = "\t\n\v\f\r ";
   int next_word_start = str.find_first_not_of(chars, start);
   int next_word_end = str.find_first_of(chars, next_word_start);
