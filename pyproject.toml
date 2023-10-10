@@ -1,6 +1,6 @@
 [project]
 name = "highspy"
-version = "1.6.0.dev0"
+version = "1.6.0.dev1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [
     {name = "HiGHS developers", email = "highsopt@gmail.com"},
@@ -19,16 +19,22 @@ license = {text = "MIT"}
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python<0.14.0", "meson>=1.2.0"]
-build-backend = "mesonpy"
+# Minimum requirements for the build system to execute.
+requires = [
+  "setuptools>=45",
+  "pybind11>=2.4",
+  "wheel>=0.2",
+] 
 
-[tool.meson-python.args]
-setup = ['-Dwith_pybind11=True',
-        '-Dhighsint64=False',
-        '-Dwrap_mode=forcefallback',
-         # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
-        ]
-dist = ['--include-subprojects']
+build-backend = "setuptools.build_meta"
+
+# [tool.meson-python.args]
+# setup = ['-Dwith_pybind11=True',
+#         '-Dhighsint64=False',
+#         '-Dwrap_mode=forcefallback',
+#          # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
+#         ]
+# dist = ['--include-subprojects']
 
 [tool.cibuildwheel]
 build = "*"
