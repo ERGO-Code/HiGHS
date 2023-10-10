@@ -19,81 +19,126 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   HighsStatus return_status;
   HighsStatus read_status;
 
-  // Several tests don't pass, but should, so possibly skip them
-  const bool test_garbage_mps = false;
+  // Switching off for debugging
+  const bool run_first_tests = true;
+  
+  const bool test_garbage_mps = true;
   const bool test_garbage_ems = true;
-  const bool test_garbage_lp = false;
+  const bool test_garbage_lp = true;
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
 
-  // Try to run HiGHS with default options. No model loaded so OK
-  run_status = highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kModelEmpty);
-  REQUIRE(run_status == HighsStatus::kOk);
+  if (run_first_tests) {
+    // Try to run HiGHS with default options. No model loaded so OK
+    run_status = highs.run();
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kModelEmpty);
+    REQUIRE(run_status == HighsStatus::kOk);
 
-  // Load a non-existent MPS file and try to run HiGHS
-  model = "";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::kError);
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-
-  // Load a non-existent LP file and try to run HiGHS
-  model = "";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
-  return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::kError);
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-
-  // Load a non-supported file type and try to run HiGHS
-  model = "model";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
-  return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::kError);
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-
-  // Load an LP file that does not end with a newline
-  model = "no-newline-eof";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
-  return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-
-  // Load an existing MPS file and run HiGHS
-  model = "adlittle";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::kOk);
-
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-  REQUIRE(info.simplex_iteration_count == 87);
-
-  model = "garbage";
-  if (test_garbage_mps) {
+    // Load a non-existent MPS file and try to run HiGHS
+    model = "";
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-    read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::kError);
-  }
+    return_status = highs.readModel(model_file);
+    REQUIRE(return_status == HighsStatus::kError);
+    run_status = highs.run();
+    REQUIRE(run_status == HighsStatus::kOk);
 
-  if (test_garbage_ems) {
-    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
-    read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::kError);
-  }
-
-  if (test_garbage_lp) {
+    // Load a non-existent LP file and try to run HiGHS
+    model = "";
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
-    read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::kError);
+    return_status = highs.readModel(model_file);
+    REQUIRE(return_status == HighsStatus::kError);
+    run_status = highs.run();
+    REQUIRE(run_status == HighsStatus::kOk);
+
+    // Load a non-supported file type and try to run HiGHS
+    model = "model";
+    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
+    return_status = highs.readModel(model_file);
+    REQUIRE(return_status == HighsStatus::kError);
+    run_status = highs.run();
+    REQUIRE(run_status == HighsStatus::kOk);
+
+    // Load an LP file that does not end with a newline
+    model = "no-newline-eof";
+    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+    return_status = highs.readModel(model_file);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    run_status = highs.run();
+    REQUIRE(run_status == HighsStatus::kOk);
+
+    // Load an existing MPS file and run HiGHS
+    model = "adlittle";
+    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    return_status = highs.readModel(model_file);
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    run_status = highs.run();
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(info.simplex_iteration_count == 87);
+
+    model = "garbage";
+    if (test_garbage_mps) {
+      if (dev_run) printf("\ngarbage.mps\n");
+      model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      read_status = highs.readModel(model_file);
+      REQUIRE(read_status == HighsStatus::kError);
+    }
+
+    if (test_garbage_ems) {
+      if (dev_run) printf("\ngarbage.ems\n");
+      model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
+      read_status = highs.readModel(model_file);
+      REQUIRE(read_status == HighsStatus::kError);
+    }
+
+    if (test_garbage_lp) {
+      if (dev_run) printf("\ngarbage.lp\n");
+      model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+      read_status = highs.readModel(model_file);
+      REQUIRE(read_status == HighsStatus::kError);
+    }
   }
+
+  model = "1448";
+  if (dev_run) printf("\n%s.lp\n", model.c_str());
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::kOk);
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == 2);
+
+  // Gurobi cannot read
+  //
+  // Minimize a subject to a >= 1 bounds a <= 0
+  model = "1449a";
+  if (dev_run) printf("\n%s.mps\n", model.c_str());
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::kError);
+
+  // Gurobi can read
+  //
+  // Minimize a subject to a >= 1
+  //
+  // However, requiring "end" checks for file corruption
+  model = "1449b";
+  if (dev_run) printf("\n%s.mps\n", model.c_str());
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::kError);
+
+  // blah blah not a good file
+  model = "1451";
+  if (dev_run) printf("\n%s.mps\n", model.c_str());
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::kError);
+  
 }
 
 void freeFixedModelTest(const std::string model_name) {
