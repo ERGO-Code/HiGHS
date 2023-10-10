@@ -1301,7 +1301,7 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
-  HighsStatus assignContinuousAtDiscreteSolution();
+  HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
@@ -1366,7 +1366,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status);
+  HighsStatus returnFromRun(const HighsStatus return_status,
+                            const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
