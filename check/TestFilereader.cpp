@@ -21,7 +21,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   // Switching off for debugging
   const bool run_first_tests = true;
-  
+
   const bool test_garbage_mps = true;
   const bool test_garbage_ems = true;
   const bool test_garbage_lp = true;
@@ -82,14 +82,16 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     model = "garbage";
     if (test_garbage_mps) {
       if (dev_run) printf("\ngarbage.mps\n");
-      model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      model_file =
+          std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
       read_status = highs.readModel(model_file);
       REQUIRE(read_status == HighsStatus::kError);
     }
 
     if (test_garbage_ems) {
       if (dev_run) printf("\ngarbage.ems\n");
-      model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
+      model_file =
+          std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
       read_status = highs.readModel(model_file);
       REQUIRE(read_status == HighsStatus::kError);
     }
@@ -102,15 +104,12 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     }
   }
 
+  // blah blah not a good file
   model = "1448";
-  if (dev_run) printf("\n%s.lp\n", model.c_str());
+  if (dev_run) printf("\n%s.mps\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kOk);
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(highs.getInfo().objective_function_value == 2);
+  REQUIRE(read_status == HighsStatus::kError);
 
   // Gurobi cannot read
   //
@@ -132,13 +131,15 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == HighsStatus::kError);
 
-  // blah blah not a good file
   model = "1451";
-  if (dev_run) printf("\n%s.mps\n", model.c_str());
+  if (dev_run) printf("\n%s.lp\n", model.c_str());
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::kError);
-  
+  REQUIRE(read_status == HighsStatus::kOk);
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == 2);
 }
 
 void freeFixedModelTest(const std::string model_name) {

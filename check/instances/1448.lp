@@ -1,7 +1,1 @@
-Minimize
-  x
-Subject to
-  x - 1 >= 2
-Integer
-  x
-End
+blah blah not a good file
