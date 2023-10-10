@@ -843,8 +843,7 @@ class HighsHashTree {
                 hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
-            uint8_t sizes[InnerLeaf<4>::capacity() + 1];
-            memset(sizes, 0, branchSize * sizeof(uint8_t));
+            uint8_t sizes[InnerLeaf<4>::capacity() + 1] = {};
             sizes[occupation.num_set_until(hashChunk) - 1] += 1;
             for (int i = 0; i < leaf->size; ++i) {
               int pos =
