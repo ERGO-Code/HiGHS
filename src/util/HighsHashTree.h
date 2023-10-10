@@ -655,6 +655,9 @@ class HighsHashTree {
               for (int i = 0; i <= newNumChild; ++i)
                 mergeIntoLeaf(newLeafSize4, hashPos, branch->child[i]);
             }
+            default:
+              throw std::logic_error(
+                  "Unexpected result from entries_to_size_class");
           }
 
           destroyBranchingNode(branch);
@@ -840,8 +843,7 @@ class HighsHashTree {
                 hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
-            uint8_t sizes[InnerLeaf<4>::capacity() + 1];
-            memset(sizes, 0, branchSize);
+            uint8_t sizes[InnerLeaf<4>::capacity() + 1] = {};
             sizes[occupation.num_set_until(hashChunk) - 1] += 1;
             for (int i = 0; i < leaf->size; ++i) {
               int pos =
@@ -864,6 +866,9 @@ class HighsHashTree {
                 case 4:
                   branch->child[i] = new InnerLeaf<4>;
                   break;
+                default:
+                  throw std::logic_error(
+                      "Unexpected result from entries_to_size_class");
               }
             }
 
