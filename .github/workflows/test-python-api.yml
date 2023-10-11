@@ -1,8 +1,8 @@
 # python release WIP
 name: test-python-api
 
-on: []
-#on: [push, pull_request]
+#on: []
+on: [push, pull_request]
 
 jobs:
   build:
