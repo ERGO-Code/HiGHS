@@ -1,6 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 import pybind11.setup_helpers
 import os
+import numpy
 
 # original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
 # pybind11.setup_helpers.MACOS = False
@@ -13,24 +14,12 @@ import os
 #                                     libraries=['highs']))
 
 setup(name='highspy',
-        version='1.5.3',
-        packages=find_packages(),
-        description='Python interface to HiGHS',
-        maintainer_email='highsopt@gmail.com',
-        license='MIT',
-        url='https://github.com/ergo-code/highs',
-        include_package_data=True,
-        package_data={ 'highs': ['build/lib/highs*.so'],
-         'highs_bindings': ['build/lib/highs_bindings*.so']
-         },
-        python_requires='>=3.7',
-        classifiers=["Programming Language :: Python :: 3",
-                    "Programming Language :: Python :: 3.7",
-                    "Programming Language :: Python :: 3.8",
-                    "Programming Language :: Python :: 3.9",
-                    "Programming Language :: Python :: 3.10",
-                    "Programming Language :: Python :: 3.11",
-                    "License :: OSI Approved :: MIT License"]
-          )
+      packages=find_packages(),
+      include_package_data=True,
+    #   package_data={ # 'highspy.highs': ['highs*.so'],
+    #     'highspy.hig'highspy.highs': ['highs*.so'],hs_bindings': ['highs_bindings*.so']}
+      package_data={ '': ['libs/highs*.so','libs/highs_bindings*.so'] }
+      )
+
 # finally:
     # pybind11.setup_helpers.MACOS = original_pybind11_setup_helpers_macos
