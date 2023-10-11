@@ -843,6 +843,8 @@ class HighsHashTree {
                 hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
+	    assert(999==888);
+	    printf("removeChildFromBranchNode has hit @fwesselm's mod\n");
             uint8_t sizes[InnerLeaf<4>::capacity() + 1] = {};
             sizes[occupation.num_set_until(hashChunk) - 1] += 1;
             for (int i = 0; i < leaf->size; ++i) {
