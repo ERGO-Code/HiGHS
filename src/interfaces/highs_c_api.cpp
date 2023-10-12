@@ -461,11 +461,11 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
   for (size_t i = 0; i < basis.col_status.size(); i++) {
-    col_status[i] = (HighsInt)basis.col_status[i];
+    col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }
 
   for (size_t i = 0; i < basis.row_status.size(); i++) {
-    row_status[i] = (HighsInt)basis.row_status[i];
+    row_status[i] = static_cast<HighsInt>(basis.row_status[i]);
   }
   return kHighsStatusOk;
 }
