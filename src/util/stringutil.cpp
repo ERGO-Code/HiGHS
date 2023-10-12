@@ -75,14 +75,14 @@ std::string& trim(std::string& str, const std::string& chars) {
 }
 
 bool is_empty(char c, const std::string& chars) {
-  int pos = chars.find_first_of(c);
-  if (pos == -1 || pos == (int)chars.size()) return false;
+  size_t pos = chars.find_first_of(c);
+  if (pos == -1 || pos == chars.size()) return false;
   return true;
 }
 
 bool is_empty(std::string& str, const std::string& chars) {
-  int pos = str.find_first_not_of(chars);
-  if (pos == -1 || pos == (int)str.size()) return true;
+  size_t pos = str.find_first_not_of(chars);
+  if (pos == -1 || pos == str.size()) return true;
   return false;
 }
 
@@ -105,8 +105,8 @@ std::string first_word(std::string& str, size_t start) {
   // negative, so there's no word, so return ""
   if (start >= str.length()) return "";
   const std::string chars = "\t\n\v\f\r ";
-  int next_word_start = str.find_first_not_of(chars, start);
-  int next_word_end = str.find_first_of(chars, next_word_start);
+  size_t next_word_start = str.find_first_not_of(chars, start);
+  size_t next_word_end = str.find_first_of(chars, next_word_start);
   assert(next_word_start >= 0);
   return str.substr(next_word_start, next_word_end - next_word_start);
 }

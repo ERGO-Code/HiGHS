@@ -45,35 +45,32 @@ double Dot(const Vector& x, const Vector& y) {
 
 Int FindMaxAbs(const Vector& x) {
     double xmax = 0.0;
-    Int imax = 0;
-    for (Int i = 0; i < (Int)x.size(); i++) {
+    size_t imax = 0;
+    for (size_t i = 0; i < x.size(); i++) {
         if (std::abs(x[i]) > xmax) {
             xmax = std::abs(x[i]);
             imax = i;
         }
     }
-    return imax;
+    return static_cast<Int>(imax);
 }
 
 void Permute(const std::vector<Int>& permuted_index, const Vector& rhs,
              Vector& lhs) {
-    Int m = permuted_index.size();
-    for (Int i = 0; i < m; i++)
+    for (size_t i = 0; i < permuted_index.size(); i++)
         lhs[permuted_index[i]] = rhs[i];
 }
 
 void PermuteBack(const std::vector<Int>& permuted_index, const Vector& rhs,
                  Vector& lhs) {
-    Int m = permuted_index.size();
-    for (Int i = 0; i < m; i++)
+    for (size_t i = 0; i < permuted_index.size(); i++)
         lhs[i] = rhs[permuted_index[i]];
 }
 
 std::vector<Int> InversePerm(const std::vector<Int>& perm) {
-    Int m = perm.size();
-    std::vector<Int> invperm(m);
+    std::vector<Int> invperm(perm.size());
     // at() throws an exception if the index is out of range
-    for (Int i = 0; i < m; i++)
+    for (size_t i = 0; i < perm.size(); i++)
         invperm.at(perm[i]) = i;
     return invperm;
 }

@@ -470,10 +470,10 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                value_bool);
   } else if (type == HighsOptionType::kInt) {
     // Check that the string only contains legitimate characters
-    HighsInt illegal = value_trim.find_first_not_of("+-0123456789eE");
-    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
+    size_t illegal = value_trim.find_first_not_of("+-0123456789eE");
+    if (illegal >= 0) return OptionStatus::kIllegalValue;
     // Check that the string contains a numerical character
-    HighsInt found_digit = value_trim.find_first_of("0123456789");
+    size_t found_digit = value_trim.find_first_of("0123456789");
     HighsInt value_int;
     int scanned_num_char;
     const char* value_char = value_trim.c_str();
@@ -497,10 +497,10 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                value_int);
   } else if (type == HighsOptionType::kDouble) {
     // Check that the string only contains legitimate characters
-    HighsInt illegal = value_trim.find_first_not_of("+-.0123456789eE");
-    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
+    size_t illegal = value_trim.find_first_not_of("+-.0123456789eE");
+    if (illegal >= 0) return OptionStatus::kIllegalValue;
     // Check that the string contains a numerical character
-    HighsInt found_digit = value_trim.find_first_of("0123456789");
+    size_t found_digit = value_trim.find_first_of("0123456789");
     HighsInt value_int = atoi(value_trim.c_str());
     double value_double = atof(value_trim.c_str());
     double value_int_double = value_int;

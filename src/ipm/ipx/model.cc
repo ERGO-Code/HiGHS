@@ -1069,13 +1069,13 @@ void Model::DualizeBasicSolution(const Vector& x_user,
 
     if (dualized_) {
         assert(num_var_ == m);
-        assert(num_constr_ + (Int)boxed_vars_.size() == n);
+        assert(num_constr_ + boxed_vars_.size() == static_cast<size_t>(n));
 
         // Build dual solver variables from primal user variables.
         y_solver = -x_user;
         for (Int i = 0; i < num_constr_; i++)
             z_solver[i] = -slack_user[i];
-        for (Int k = 0; k < (Int)boxed_vars_.size(); k++) {
+        for (size_t k = 0; k < boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             z_solver[num_constr_+k] = c(num_constr_+k) + y_solver[j];
         }
@@ -1085,7 +1085,7 @@ void Model::DualizeBasicSolution(const Vector& x_user,
         // Build primal solver variables from dual user variables.
         std::copy_n(std::begin(y_user), num_constr_, std::begin(x_solver));
         std::copy_n(std::begin(z_user), num_var_, std::begin(x_solver) + n);
-        for (Int k = 0; k < (Int)boxed_vars_.size(); k++) {
+        for (size_t k = 0; k < boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             if (x_solver[n+j] < 0.0) {
                 // j is a boxed variable and z_user[j] < 0
