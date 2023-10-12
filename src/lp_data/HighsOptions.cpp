@@ -472,8 +472,6 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     // Check that the string only contains legitimate characters
     size_t illegal = value_trim.find_first_not_of("+-0123456789eE");
     if (illegal >= 0) return OptionStatus::kIllegalValue;
-    // Check that the string contains a numerical character
-    size_t found_digit = value_trim.find_first_of("0123456789");
     HighsInt value_int;
     int scanned_num_char;
     const char* value_char = value_trim.c_str();
@@ -499,8 +497,6 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
     // Check that the string only contains legitimate characters
     size_t illegal = value_trim.find_first_not_of("+-.0123456789eE");
     if (illegal >= 0) return OptionStatus::kIllegalValue;
-    // Check that the string contains a numerical character
-    size_t found_digit = value_trim.find_first_of("0123456789");
     HighsInt value_int = atoi(value_trim.c_str());
     double value_double = atof(value_trim.c_str());
     double value_int_double = value_int;
@@ -813,7 +809,6 @@ HighsStatus writeOptionsToFile(FILE* file,
                                const bool report_only_deviations,
                                const HighsFileType file_type) {
   const bool html_file = file_type == HighsFileType::kHtml;
-  const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Options</title>\n");
@@ -839,8 +834,6 @@ HighsStatus writeOptionsToFile(FILE* file,
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations,
                    const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
-  const bool md_file = file_type == HighsFileType::kMd;
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;

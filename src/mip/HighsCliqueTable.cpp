@@ -1611,7 +1611,6 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
                  std::max(
                      HighsInt{10},
                      (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
-        HighsInt initSize = cliques[cliqueid].end - cliques[cliqueid].start;
         clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
                    cliqueentries.begin() + cliques[cliqueid].end);
         HighsInt numDel = 0;
@@ -1948,7 +1947,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
   for (HighsInt i = 0; i != initialCliqueSize; ++i)
     iscandidate[clique[i].index()] = true;
 
-  HighsInt node;
   auto addCands = [&](HighsInt cliqueid) {
     HighsInt start = cliques[cliqueid].start;
     HighsInt end = cliques[cliqueid].end;
@@ -2060,7 +2058,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     for (HighsInt i = 0; i != numclqvars; ++i)
       iscandidate[clqvars[i].index()] = true;
 
-    HighsInt node;
     auto addCands = [&](HighsInt cliqueid) {
       HighsInt start = cliques[cliqueid].start;
       HighsInt end = cliques[cliqueid].end;

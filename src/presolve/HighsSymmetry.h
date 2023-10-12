@@ -44,7 +44,6 @@ class HighsMatrixColoring {
     // iterator points to smallest element in map which fulfills key >= value -
     // tolerance
     auto it = colorMap.lower_bound(value - tolerance);
-    u32 color;
     // check if there is no such element, or if this element has a key value +
     // tolerance in which case we create a new color and store it with the key
     // value

@@ -150,7 +150,6 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
   HighsInt numWatched = 0;
   for (HighsInt i = start; i != end; ++i) {
     if (domain->isActive(conflictEntries[i])) continue;
-    HighsInt col = conflictEntries[i].column;
     HighsInt watchPos = 2 * conflict + numWatched;
     watchedLiterals_[watchPos].domchg = conflictEntries[i];
     linkWatchedLiteral(watchPos);
@@ -231,9 +230,6 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
     HighsInt col, double oldbound, double newbound) {
   assert(!domain->infeasible_);
 
-  const std::vector<HighsDomainChange>& conflictEntries =
-      conflictpool_->getConflictEntryVector();
-
   for (HighsInt i = colLowerWatched_[col]; i != -1;
        i = watchedLiterals_[i].next) {
     HighsInt conflict = i >> 1;
@@ -251,9 +247,6 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
 void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
     HighsInt col, double oldbound, double newbound) {
   assert(!domain->infeasible_);
-
-  const std::vector<HighsDomainChange>& conflictEntries =
-      conflictpool_->getConflictEntryVector();
 
   for (HighsInt i = colUpperWatched_[col]; i != -1;
        i = watchedLiterals_[i].next) {
@@ -291,7 +284,6 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
   WatchedLiteral* watched = watchedLiterals_.data() + 2 * conflict;
 
   HighsInt inactive[2];
-  HighsInt latestactive[2];
   HighsInt numInactive = 0;
   for (HighsInt i = start; i != end; ++i) {
     if (domain->isActive(entries[i])) continue;
@@ -711,10 +703,6 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
         objectiveLower += domain->col_upper_[col] * cost[col];
     }
   }
-
-  double lb = numInfObjLower == 0
-                  ? double(objectiveLower) + domain->mipsolver->model_->offset_
-                  : -kHighsInf;
 
   recomputeCapacityThreshold();
   debugCheckObjectiveLower();
@@ -2174,7 +2162,6 @@ void HighsDomain::setDomainChangeStack(
   domchgreason_.clear();
   branchPos_.clear();
   HighsInt stacksize = domchgstack.size();
-  HighsInt nextBranchPos = -1;
   HighsInt k = 0;
   for (HighsInt branchPos : branchingPositions) {
     for (; k < branchPos; ++k) {

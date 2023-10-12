@@ -1579,7 +1579,6 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    double oldLimit = upper_limit;
     heuristics.rootReducedCost();
     heuristics.flushStatistics();
 

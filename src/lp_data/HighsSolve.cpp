@@ -45,7 +45,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   } else if (options.solver == kIpmString) {
     // Use IPM
-    bool imprecise_solution;
     // Use IPX to solve the LP
     try {
       call_status = solveLpIpx(solver_object);
@@ -165,8 +164,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla
   double objective = lp.offset_;
-  bool infeasible = false;
-  bool unbounded = false;
 
   highs_info.num_primal_infeasibilities = 0;
   highs_info.max_primal_infeasibility = 0;

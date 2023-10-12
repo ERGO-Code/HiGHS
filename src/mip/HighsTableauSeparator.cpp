@@ -145,7 +145,6 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   numTries += fractionalBasisvars.size();
 
   for (auto& fracvar : fractionalBasisvars) {
-    HighsInt i = fracvar.basisIndex;
     if (lpSolver.getBasisInverseRowSparse(fracvar.basisIndex, rowEpBuffer) !=
         HighsStatus::kOk)
       continue;

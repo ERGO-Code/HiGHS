@@ -455,7 +455,6 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& relative_primal_infeasibility,
                             double& dual_infeasibility,
                             double& value_residual) {
-  const double middle = (lower + upper) * 0.5;
   // @primal_infeasibility calculation
   absolute_primal_infeasibility = 0;
   relative_primal_infeasibility = 0;
@@ -656,8 +655,6 @@ HighsStatus ipxSolutionToHighsSolution(
   assert(ipx_num_row == lp.num_row_);
   double dual_residual_norm = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    double lower = lp.col_lower_[col];
-    double upper = lp.col_upper_[col];
     double value = ipx_col_value[col];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
@@ -730,7 +727,7 @@ HighsStatus ipxSolutionToHighsSolution(
     HighsInt num_col_primal_truncations = 0;
     HighsInt num_col_dual_truncations = 0;
     HighsInt col = 0, row = 0;
-    double lower, upper, value, dual, residual;
+    double lower, upper, value, dual;
     const HighsInt check_col = -127;
     const HighsInt check_row = -37;
     // Truncating to tolerances can lead to infeasibilities by margin
@@ -974,8 +971,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   HighsInt num_basic_variables = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     bool unrecognised = false;
-    const double lower = lp.col_lower_[col];
-    const double upper = lp.col_upper_[col];
     if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
       highs_basis.col_status[col] = HighsBasisStatus::kBasic;
@@ -1220,7 +1215,6 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   HighsBasis& basis = solver_object.basis_;
   HighsOptions& options = solver_object.options_;
   HEkk& ekk_instance = solver_object.ekk_instance_;
-  HighsLp& ekk_lp = ekk_instance.lp_;
   HighsSimplexStatus& ekk_status = ekk_instance.status_;
   lp.ensureColwise();
   // Consider scaling the LP

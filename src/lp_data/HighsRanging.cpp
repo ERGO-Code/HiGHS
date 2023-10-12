@@ -92,8 +92,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
   // Aliases
   const HighsSimplexInfo& simplex_info = ekk_instance.info_;
   const SimplexBasis& simplex_basis = ekk_instance.basis_;
-  const vector<double>& col_scale = use_lp.scale_.col;
-  const vector<double>& row_scale = use_lp.scale_.row;
   const vector<double>& value_ = simplex_info.workValue_;
   const vector<double>& dual_ = simplex_info.workDual_;
   const vector<double>& cost_ = simplex_info.workCost_;
@@ -228,7 +226,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
       double alpha = dWork_[myk_inc];
       ixj_inc[j] = i;
       axj_inc[j] = alpha;
-      const double numerator = (alpha < 0 ? dxi_inc[i] : dxi_dec[i]);
       txj_inc[j] = (alpha < 0 ? dxi_inc[i] : dxi_dec[i]) / -alpha;
       wxj_inc[j] = (alpha < 0 ? +1 : -1);
     }
