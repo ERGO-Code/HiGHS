@@ -71,7 +71,7 @@ std::vector<Int> InversePerm(const std::vector<Int>& perm) {
     std::vector<Int> invperm(perm.size());
     // at() throws an exception if the index is out of range
     for (size_t i = 0; i < perm.size(); i++)
-        invperm.at(perm[i]) = i;
+        invperm.at(perm[i]) = static_cast<Int>(i);
     return invperm;
 }
 
