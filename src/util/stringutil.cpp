@@ -76,19 +76,19 @@ std::string& trim(std::string& str, const std::string& chars) {
 
 bool is_empty(char c, const std::string& chars) {
   size_t pos = chars.find_first_of(c);
-  if (pos < 0 || pos == chars.size()) return false;
+  if (pos == std::string::npos || pos == chars.size()) return false;
   return true;
 }
 
 bool is_empty(std::string& str, const std::string& chars) {
   size_t pos = str.find_first_not_of(chars);
-  if (pos < 0 || pos == str.size()) return true;
+  if (pos == std::string::npos || pos == str.size()) return true;
   return false;
 }
 
 bool is_end(std::string& str, size_t end, const std::string& chars) {
   size_t pos = str.find_first_not_of(chars, end);
-  if (pos < 0 || pos == str.size()) return true;
+  if (pos == std::string::npos || pos == str.size()) return true;
   return false;
 }
 
@@ -96,7 +96,8 @@ size_t first_word_end(std::string& str, size_t start) {
   const std::string chars = "\t\n\v\f\r ";
   size_t next_word_start = str.find_first_not_of(chars, start);
   size_t next_word_end = str.find_first_of(chars, next_word_start);
-  if (next_word_end < 0 || next_word_end > str.size()) return str.size();
+  if (next_word_end == std::string::npos || next_word_end > str.size())
+    return str.size();
   return next_word_end;
 }
 

@@ -35,7 +35,7 @@ HighsLoadOptionsStatus loadOptionsFromFile(
       if (line.size() == 0 || line[0] == '#') continue;
 
       size_t equals = line.find_first_of("=");
-      if (equals < 0 || equals + 1 >= line.size()) {
+      if (equals == std::string::npos || equals + 1 >= line.size()) {
         highsLogUser(report_log_options, HighsLogType::kError,
                      "Error on line %" HIGHSINT_FORMAT " of options file.\n",
                      line_count);
