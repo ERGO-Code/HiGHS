@@ -2405,13 +2405,10 @@ bool HighsDomain::propagate() {
     if (!propagateinds_.empty()) {
       propagateinds.swap(propagateinds_);
 
-      HighsInt propnnz = 0;
       HighsInt numproprows = propagateinds.size();
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
         propagateflags_[row] = 0;
-        propnnz += mipsolver->mipdata_->ARstart_[i + 1] -
-                   mipsolver->mipdata_->ARstart_[i];
       }
 
       if (!infeasible_) {
@@ -2498,14 +2495,10 @@ bool HighsDomain::propagate() {
       if (!cutpoolprop.propagatecutinds_.empty()) {
         propagateinds.swap(cutpoolprop.propagatecutinds_);
 
-        HighsInt propnnz = 0;
         HighsInt numproprows = propagateinds.size();
-
         for (HighsInt i = 0; i != numproprows; ++i) {
           HighsInt cut = propagateinds[i];
           cutpoolprop.propagatecutflags_[cut] &= 2;
-          propnnz += cutpoolprop.cutpool->getMatrix().getRowEnd(cut) -
-                     cutpoolprop.cutpool->getMatrix().getRowStart(cut);
         }
 
         if (!infeasible_) {
