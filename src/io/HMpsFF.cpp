@@ -130,7 +130,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
 HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
   size_t num_entries = entries.size();
-  if (num_entries != num_nz) return 1;
+  if (num_entries != static_cast<size_t>(num_nz)) return 1;
 
   a_value.resize(num_nz);
   a_index.resize(num_nz);

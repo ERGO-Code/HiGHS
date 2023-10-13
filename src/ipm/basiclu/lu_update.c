@@ -466,7 +466,6 @@ lu_int lu_update(struct lu *this, double xtbl)
     lu_int have_diag, intersect, istriangular, nz_roweta, nz_spike;
     lu_int nreach, *col_reach, *row_reach;
     double spike_diag, newpiv, piverr;
-    double tic[2], elapsed;
 
     assert(nforrest < m);
 
