@@ -127,6 +127,8 @@ double highsRelativeDifference(const double v0, const double v1);
  * @brief Analyse the values of a vector, assessing how many are in
  * each power of ten, and possibly analyse the distribution of
  * different values
+ *
+ * NB If log_options is a null pointer then printf is used
  */
 void analyseVectorValues(
     const HighsLogOptions* log_options,
@@ -135,6 +137,16 @@ void analyseVectorValues(
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
+    std::string model_name =
+        "Unknown"  //!< Model name to report if analysing distribution of
+                   //!< different values in the vector
+);
+
+void analyseVectorValues(
+    const HighsLogOptions* log_options,
+    const std::string message,         //!< Message to be printed
+    HighsInt vecDim,                   //!< Dimension of vector
+    const std::vector<HighsInt>& vec,  //!< Vector of values
     std::string model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector

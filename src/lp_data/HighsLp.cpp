@@ -27,6 +27,14 @@ bool HighsLp::isMip() const {
   return false;
 }
 
+bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (this->col_cost_[iCol] >= infinite_cost) return true;
+    if (this->col_cost_[iCol] <= -infinite_cost) return true;
+  }
+  return false;
+}
+
 bool HighsLp::hasSemiVariables() const {
   HighsInt integrality_size = this->integrality_.size();
   if (integrality_size) {
@@ -37,6 +45,20 @@ bool HighsLp::hasSemiVariables() const {
         return true;
   }
   return false;
+}
+
+bool HighsLp::hasMods() const {
+  return this->mods_.save_non_semi_variable_index.size() > 0 ||
+         this->mods_.save_inconsistent_semi_variable_index.size() > 0 ||
+         this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
+         this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
+             0 ||
+         this->mods_.save_inf_cost_variable_index.size() > 0;
+}
+
+bool HighsLp::needsMods(const double infinite_cost) const {
+  assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
+  return this->has_infinite_cost_ || this->hasSemiVariables();
 }
 
 bool HighsLp::operator==(const HighsLp& lp) const {
@@ -157,6 +179,7 @@ void HighsLp::clear() {
   this->is_scaled_ = false;
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
+  this->has_infinite_cost_ = false;
   this->mods_.clear();
 }
 
@@ -398,6 +421,10 @@ void HighsLpMods::clear() {
   this->save_relaxed_semi_variable_lower_bound_value.clear();
   this->save_tightened_semi_variable_upper_bound_index.clear();
   this->save_tightened_semi_variable_upper_bound_value.clear();
+  this->save_inf_cost_variable_index.clear();
+  this->save_inf_cost_variable_cost.clear();
+  this->save_inf_cost_variable_lower.clear();
+  this->save_inf_cost_variable_upper.clear();
 }
 
 bool HighsLpMods::isClear() {

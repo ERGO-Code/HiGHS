@@ -1,3 +1,4 @@
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
@@ -30,7 +31,9 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   lp.col_upper_[semi_col] = inf;
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
+
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   REQUIRE(fabs(info.objective_function_value -
@@ -39,6 +42,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   // Remove the semi-condition and resolve - not the same as relaxation
   highs.changeColIntegrality(semi_col, continuous);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 3.93333;
   REQUIRE(fabs(info.objective_function_value -
@@ -48,6 +52,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   highs.changeColIntegrality(semi_col, semi_continuous);
   highs.changeColCost(semi_col, -0.1);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 8.22333;
   REQUIRE(fabs(info.objective_function_value -
@@ -56,15 +61,17 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   // Fix the variable at zero and resolve
   highs.changeColBounds(semi_col, 0, 0);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 6.83333;
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  // Change to sem-integer, restore the bounds and resolve
+  // Change to semi-integer, restore the bounds and resolve
   highs.changeColIntegrality(semi_col, semi_integer);
   highs.changeColBounds(semi_col, semi_col_lower, semi_col_upper);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   optimal_objective_function_value = 8.13333;
   REQUIRE(fabs(info.objective_function_value -
@@ -75,9 +82,9 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   sol.col_value = {0, 0, 0.5, 0};
   highs.setSolution(sol);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
-  //
 }
 
 TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {

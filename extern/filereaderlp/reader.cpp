@@ -308,6 +308,23 @@ Model Reader::read() {
   splittokens();
 
   // std::clog << "Setting up model..." << std::endl;
+  //
+  // Since
+  //
+  // "The problem statement must begin with the word MINIMIZE or
+  // MAXIMIZE, MINIMUM or MAXIMUM, or the abbreviations MIN or MAX, in
+  // any combination of upper- and lower-case characters. The word
+  // introduces the objective function section."
+  //
+  // Use positivity of sectiontokens.count(LpSectionKeyword::OBJMIN) +
+  // sectiontokens.count(LpSectionKeyword::OBJMAX) to identify garbage file
+  //
+
+  const int num_objective_section =
+    sectiontokens.count(LpSectionKeyword::OBJMIN) +
+    sectiontokens.count(LpSectionKeyword::OBJMAX);
+  lpassert(num_objective_section>0);
+
   processsections();
   processedtokens.clear();
   processedtokens.shrink_to_fit();
@@ -350,8 +367,7 @@ void Reader::parseexpression(std::vector<ProcessedToken>::iterator& it,
 
     // const
     if (it->type == ProcessedTokenType::CONST) {
-      //	printf("LpReader: Offset change from %+g by %+g\n",
-      //expr->offset, it->value);
+      //      printf("LpReader: Offset change from %+g by %+g\n", expr->offset, it->value);
       expr->offset += it->value;
       ++it;
       continue;
@@ -1272,7 +1288,7 @@ bool Reader::readnexttoken(RawToken& t) {
       return false;
 
     case '\0':  // empty line
-      assert(this->linebufferpos == this->linebuffer.size());
+      lpassert(this->linebufferpos == this->linebuffer.size());
       return false;
   }
 
@@ -1288,7 +1304,7 @@ bool Reader::readnexttoken(RawToken& t) {
 
   // assume it's an (section/variable/constraint) identifier
   auto endpos =
-      this->linebuffer.find_first_of("\t\n\\:+<>^= /-*", this->linebufferpos);
+      this->linebuffer.find_first_of("\t\n\\:+<>^= /-*[]", this->linebufferpos);
   if (endpos == std::string::npos)
     endpos = this->linebuffer.size();  // take complete rest of string
   if (endpos > this->linebufferpos) {

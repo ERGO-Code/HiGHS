@@ -1,0 +1,13 @@
+[wrap-file]
+directory = pybind11-2.10.4
+source_url = https://github.com/pybind/pybind11/archive/refs/tags/v2.10.4.tar.gz
+source_filename = pybind11-2.10.4.tar.gz
+source_hash = 832e2f309c57da9c1e6d4542dedd34b24e4192ecb4d62f6f4866a737454c9970
+patch_filename = pybind11_2.10.4-1_patch.zip
+patch_url = https://wrapdb.mesonbuild.com/v2/pybind11_2.10.4-1/get_patch
+patch_hash = 9489d0cdc1244078a3108c52b4591a6f07f3dc30ca7299d3a3c42b84fa763396
+source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/pybind11_2.10.4-1/pybind11-2.10.4.tar.gz
+wrapdb_version = 2.10.4-1
+
+[provide]
+pybind11 = pybind11_dep

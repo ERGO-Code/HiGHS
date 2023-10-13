@@ -39,6 +39,8 @@ const double kRunningAverageMultiplier = 0.05;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
+enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
+
 enum SimplexScaleStrategy {
   kSimplexScaleStrategyMin = 0,
   kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
@@ -155,9 +157,6 @@ enum GlpsolCostRowLocation {
 
 const std::string kHighsFilenameDefault = "";
 
-// Need to allow infinite costs to pass SCIP LPI unit tests
-const bool kHighsAllowInfiniteCosts = true;
-
 enum class HighsPresolveStatus {
   kNotPresolved = -1,
   kNotReduced,
@@ -197,12 +196,26 @@ enum class HighsModelStatus {
   kObjectiveTarget,
   kTimeLimit,
   kIterationLimit,
-  // V2.0: flip kUnknown and kSolutionLimit - and then modify kMax and
-  // highs_c_api.h, highs_csharp_api.cs, highspy/highs_bindings.cpp
+  // V2.0: put kUnknown after kSolutionLimit and kInterrupt - and then
+  // modify kMax and highs_c_api.h, highs_csharp_api.cs,
+  // highspy/highs_bindings.cpp
   kUnknown,
   kSolutionLimit,
+  kInterrupt,
   kMin = kNotset,
-  kMax = kSolutionLimit
+  kMax = kInterrupt
+};
+
+enum HighsCallbackType : int {
+  kCallbackMin = 0,
+  kCallbackLogging = kCallbackMin,
+  kCallbackSimplexInterrupt,
+  kCallbackIpmInterrupt,
+  kCallbackMipImprovingSolution,
+  kCallbackMipLogging,
+  kCallbackMipInterrupt,
+  kCallbackMax = kCallbackMipInterrupt,
+  kNumCallbackType
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

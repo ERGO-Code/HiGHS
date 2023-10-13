@@ -66,6 +66,7 @@ Documenter.makedocs(
                 "structures/classes/HighsInfo.md",
             ],
 	],
+        "Callbacks" => "callbacks.md",
         "Interfaces" => Any[
             "Python" => Any[
                 "interfaces/python/index.md",

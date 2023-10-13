@@ -1,19 +1,23 @@
 # HiGHS - Linear optimization software
 
 [![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
+[![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
 
 ## Table of Contents
 
-*   [About HiGHS](#about-highs)
-*   [Documentation](#documentation)
-*   [Precompiled binaries](#precompiled-binaries)
-*   [Compilation](#compilation)
-*   [Interfaces](#interfaces)
-*   [Python](#python)
-*   [Example](#google-colab-example)
-*   [Reference](#reference)
+- [HiGHS - Linear optimization software](#highs---linear-optimization-software)
+  - [Table of Contents](#table-of-contents)
+  - [About HiGHS](#about-highs)
+  - [Documentation](#documentation)
+  - [Precompiled binaries](#precompiled-binaries)
+  - [Compilation](#compilation)
+  - [Meson](#meson)
+  - [Interfaces](#interfaces)
+  - [Python](#python)
+  - [Google Colab Example](#google-colab-example)
+  - [Reference](#reference)
 
 About HiGHS
 -----------
@@ -44,7 +48,7 @@ https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
-See https://ergo-code.github.io/HiGHS/binaries.html.
+See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
 Compilation
 -----------
@@ -82,10 +86,21 @@ HiGHS is installed using the command
 
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
+Meson
+-----
+
+HiGHs can also use the `meson` build interface:
+
+``` sh
+meson setup bbdir -Dwith_tests=True
+meson test -C bbdir
+```
+
+
 Interfaces
 ----------
 
-There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/interfaces.html.
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 

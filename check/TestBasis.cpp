@@ -1,5 +1,6 @@
 #include <fstream>
 
+#include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 

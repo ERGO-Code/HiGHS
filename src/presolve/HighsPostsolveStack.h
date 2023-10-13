@@ -556,12 +556,14 @@ class HighsPostsolveStack {
     bool perform_basis_postsolve = basis.valid;
 
     // expand solution to original index space
+    assert(origNumCol > 0);
     solution.col_value.resize(origNumCol);
     for (HighsInt i = origColIndex.size() - 1; i >= 0; --i) {
       assert(origColIndex[i] >= i);
       solution.col_value[origColIndex[i]] = solution.col_value[i];
     }
 
+    assert(origNumRow >= 0);
     solution.row_value.resize(origNumRow);
     for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i) {
       assert(origRowIndex[i] >= i);

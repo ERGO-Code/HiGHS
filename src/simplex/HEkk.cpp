@@ -84,8 +84,9 @@ void HEkk::clearNlaInvertStatus() {
 }
 
 void HEkk::clearEkkPointers() {
-  this->options_ = NULL;
-  this->timer_ = NULL;
+  this->callback_ = nullptr;
+  this->options_ = nullptr;
+  this->timer_ = nullptr;
 }
 
 void HEkk::clearEkkLp() {
@@ -444,14 +445,17 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // Update other EKK pointers. Currently just pointers to the
   // HighsOptions and HighsTimer members of the Highs class that are
   // communicated by reference via the HighsLpSolverObject instance.
-  this->setPointers(&solver_object.options_, &solver_object.timer_);
+  this->setPointers(&solver_object.callback_, &solver_object.options_,
+                    &solver_object.timer_);
   // Initialise Ekk if this has not been done. Ekk isn't initialised
   // if moveLp hasn't been called for this instance of HiGHS, or if
   // the Ekk instance is junked due to removing rows from the LP
   this->initialiseEkk();
 }
 
-void HEkk::setPointers(HighsOptions* options, HighsTimer* timer) {
+void HEkk::setPointers(HighsCallback* callback, HighsOptions* options,
+                       HighsTimer* timer) {
+  this->callback_ = callback;
   this->options_ = options;
   this->timer_ = timer;
   this->analysis_.timer_ = this->timer_;
@@ -3451,7 +3455,7 @@ void HEkk::invalidateDualInfeasibilityRecord() {
   invalidateDualMaxSumInfeasibilityRecord();
 }
 
-bool HEkk::bailoutOnTimeIterations() {
+bool HEkk::bailout() {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -3465,6 +3469,17 @@ bool HEkk::bailoutOnTimeIterations() {
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
+  } else if (callback_->user_callback &&
+             callback_->active[kCallbackSimplexInterrupt]) {
+    callback_->clearHighsCallbackDataOut();
+    callback_->data_out.simplex_iteration_count = iteration_count_;
+    if (callback_->callbackAction(kCallbackSimplexInterrupt,
+                                  "Simplex interrupt")) {
+      highsLogDev(options_->log_options, HighsLogType::kInfo,
+                  "User interrupt\n");
+      solve_bailout_ = true;
+      model_status_ = HighsModelStatus::kInterrupt;
+    }
   }
   return solve_bailout_;
 }
@@ -3491,7 +3506,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
-           model_status_ == HighsModelStatus::kObjectiveTarget);
+           model_status_ == HighsModelStatus::kObjectiveTarget ||
+           model_status_ == HighsModelStatus::kInterrupt);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
@@ -3577,11 +3593,12 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown: {
       // Simplex has failed to conclude a model property. Either it
       // has bailed out due to reaching the objecive bound, target,
-      // time or iteration limit, or it has not been set (cycling is
-      // the only reason). Could happen anywhere.
+      // time, iteration limit or user interrupt, or it has not been
+      // set (cycling is the only reason). Could happen anywhere.
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);

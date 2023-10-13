@@ -1,6 +1,6 @@
-
 #include <numeric>
 
+#include "HCheckConfig.h"
 #include "catch.hpp"
 #include "util/HighsRandom.h"
 #include "util/HighsRbTree.h"
