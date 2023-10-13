@@ -2374,6 +2374,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   }
 }
 
+// Determine validity, primal feasibility and (when relevant) integer
+// feasibility of a solution
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2395,6 +2397,14 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
   double sum_row_residuals = 0;
   const double kRowResidualTolerance =
       options.primal_feasibility_tolerance;  // 1e-12;
+  const double kPrimalFeasibilityTolerance =
+      lp.isMip() ? options.mip_feasibility_tolerance
+                 : options.primal_feasibility_tolerance;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Assessing feasiblity of %s tolerance of %11.4g\n",
+               lp.isMip() ? "MIP using primal feasibility and integrality"
+                          : "LP using primal feasibility",
+               kPrimalFeasibilityTolerance);
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
   const bool have_integrality = lp.integrality_.size();
@@ -2412,7 +2422,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     assessColPrimalSolution(options, primal, lower, upper, type,
                             col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
-      if (col_infeasibility > options.primal_feasibility_tolerance) {
+      if (col_infeasibility > kPrimalFeasibilityTolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d has         infeasibility of %11.4g from "
@@ -2446,13 +2456,13 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     const double upper = lp.row_upper_[iRow];
     // @primal_infeasibility calculation
     double row_infeasibility = 0;
-    if (primal < lower - options.primal_feasibility_tolerance) {
+    if (primal < lower - kPrimalFeasibilityTolerance) {
       row_infeasibility = lower - primal;
-    } else if (primal > upper + options.primal_feasibility_tolerance) {
+    } else if (primal > upper + kPrimalFeasibilityTolerance) {
       row_infeasibility = primal - upper;
     }
     if (row_infeasibility > 0) {
-      if (row_infeasibility > options.primal_feasibility_tolerance) {
+      if (row_infeasibility > kPrimalFeasibilityTolerance) {
         if (row_infeasibility > 2 * max_row_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Row %6d has         infeasibility of %11.4g from "
