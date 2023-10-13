@@ -202,8 +202,9 @@ class HighsPseudocost {
     double cost;
 
     if (nsamplesup[col] == 0 || nsamplesup[col] < minreliable) {
-      double weightPs = nsamplesup[col] == 0
-                            ? 0
+      double weightPs =
+          nsamplesup[col] == 0
+              ? 0
               : 0.9 + 0.1 * nsamplesup[col] / static_cast<double>(minreliable);
       cost = weightPs * pseudocostup[col];
       cost += (1.0 - weightPs) * getAvgPseudocost();
@@ -217,8 +218,10 @@ class HighsPseudocost {
     double cost;
 
     if (nsamplesdown[col] == 0 || nsamplesdown[col] < minreliable) {
-      double weightPs = nsamplesdown[col] == 0 ? 0
-                                               : 0.9 + 0.1 * nsamplesdown[col] / static_cast<double>(minreliable);
+      double weightPs = nsamplesdown[col] == 0
+                            ? 0
+                            : 0.9 + 0.1 * nsamplesdown[col] /
+                                        static_cast<double>(minreliable);
       cost = weightPs * pseudocostdown[col];
       cost += (1.0 - weightPs) * getAvgPseudocost();
     } else
@@ -255,14 +258,16 @@ class HighsPseudocost {
                             std::max(1e-6, inferences_total * inferences_total);
 
     double cutOffScoreUp =
-        ncutoffsup[col] / std::max(1.0, static_cast<double>(ncutoffsup[col]) +
+        ncutoffsup[col] /
+        std::max(1.0, static_cast<double>(ncutoffsup[col]) +
                           static_cast<double>(nsamplesup[col]));
     double cutOffScoreDown =
         ncutoffsdown[col] /
-        std::max(1.0,
-                 static_cast<double>(ncutoffsdown[col]) + static_cast<double>(nsamplesdown[col]));
+        std::max(1.0, static_cast<double>(ncutoffsdown[col]) +
+                          static_cast<double>(nsamplesdown[col]));
     double avgCutoffs = static_cast<double>(ncutoffstotal) /
-        std::max(1.0, static_cast<double>(ncutoffstotal) + static_cast<double>(nsamplestotal));
+                        std::max(1.0, static_cast<double>(ncutoffstotal) +
+                                          static_cast<double>(nsamplestotal));
 
     double cutoffScore = std::max(cutOffScoreUp, 1e-6) *
                          std::max(cutOffScoreDown, 1e-6) /
@@ -298,9 +303,11 @@ class HighsPseudocost {
 
     double cutOffScoreUp =
         ncutoffsup[col] /
-        std::max(1.0, static_cast<double>(ncutoffsup[col]) + static_cast<double>(nsamplesup[col]));
+        std::max(1.0, static_cast<double>(ncutoffsup[col]) +
+                          static_cast<double>(nsamplesup[col]));
     double avgCutoffs = static_cast<double>(ncutoffstotal) /
-        std::max(1.0, static_cast<double>(ncutoffstotal) + static_cast<double>(nsamplestotal));
+                        std::max(1.0, static_cast<double>(ncutoffstotal) +
+                                          static_cast<double>(nsamplestotal));
 
     double cutoffScore = cutOffScoreUp / std::max(1e-6, avgCutoffs);
 
@@ -325,10 +332,11 @@ class HighsPseudocost {
 
     double cutOffScoreDown =
         ncutoffsdown[col] /
-        std::max(1.0,
-                 static_cast<double>(ncutoffsdown[col]) + static_cast<double>(nsamplesdown[col]));
+        std::max(1.0, static_cast<double>(ncutoffsdown[col]) +
+                          static_cast<double>(nsamplesdown[col]));
     double avgCutoffs = static_cast<double>(ncutoffstotal) /
-        std::max(1.0, static_cast<double>(ncutoffstotal) + static_cast<double>(nsamplestotal));
+                        std::max(1.0, static_cast<double>(ncutoffstotal) +
+                                          static_cast<double>(nsamplestotal));
 
     double cutoffScore = cutOffScoreDown / std::max(1e-6, avgCutoffs);
 

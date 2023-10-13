@@ -88,7 +88,9 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   if (fractionalBasisvars.empty()) return;
   int64_t maxTries = 5000 + getNumCalls() * 50 +
-                     (mip.mipdata_->total_lp_iterations - mip.mipdata_->heuristic_lp_iterations) / 10;
+                     (mip.mipdata_->total_lp_iterations -
+                      mip.mipdata_->heuristic_lp_iterations) /
+                         10;
   if (numTries >= maxTries) return;
 
   maxTries -= numTries;

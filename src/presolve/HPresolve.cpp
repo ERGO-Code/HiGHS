@@ -3205,9 +3205,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 // z is fixed after rounding its new bounds. If that is the case
                 // we directly fix x1 instead of first substituting with d * z +
                 // b.
-                double zLower =
-                    std::ceil((model->col_lower_[x1] - b) / static_cast<double>(d) - primal_feastol);
-                double zUpper = std::floor((model->col_upper_[x1] - b) / static_cast<double>(d) +
+                double zLower = std::ceil((model->col_lower_[x1] - b) /
+                                              static_cast<double>(d) -
+                                          primal_feastol);
+                double zUpper = std::floor((model->col_upper_[x1] - b) /
+                                               static_cast<double>(d) +
                                            primal_feastol);
 
                 if (zLower == zUpper) {
