@@ -106,7 +106,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool& have_basis = basis.valid;
-  const bool have_integrality = lp.integrality_.size() > 0;
+  const bool have_integrality = (lp.integrality_.size() != 0);
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
   // Check that there is no basis if there's no dual solution

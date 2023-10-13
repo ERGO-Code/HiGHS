@@ -3155,7 +3155,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   bool is_integer = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;

@@ -1480,7 +1480,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
   bool have_names = (lp.col_names_.size() != 0);
-  bool have_integrality = lp.integrality_.size();
+  bool have_integrality = (lp.integrality_.size() != 0);
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
