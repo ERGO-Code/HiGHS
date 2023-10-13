@@ -108,6 +108,6 @@ std::string first_word(std::string& str, size_t start) {
   const std::string chars = "\t\n\v\f\r ";
   size_t next_word_start = str.find_first_not_of(chars, start);
   size_t next_word_end = str.find_first_of(chars, next_word_start);
-  assert(next_word_start >= 0);
+  assert(next_word_start != std::string::npos);
   return str.substr(next_word_start, next_word_end - next_word_start);
 }
