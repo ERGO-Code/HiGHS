@@ -111,11 +111,6 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   const bool near_optimal = no_simplex_dual_infeasibilities &&
                             info.num_primal_infeasibilities < 1000 &&
                             info.max_primal_infeasibility < 1e-3;
-  // For reporting, save dual infeasibility data for the LP without
-  // cost perturbations
-  HighsInt unperturbed_num_infeasibilities = info.num_dual_infeasibilities;
-  double unperturbed_max_infeasibility = info.max_dual_infeasibility;
-  double unperturbed_sum_infeasibilities = info.sum_dual_infeasibilities;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible with unperturbed costs and num / max / sum "
@@ -503,8 +498,6 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
 
   // Alias to the matrix
   const HighsInt* Astart = a_matrix->start_.data();
-  const HighsInt* Aindex = a_matrix->index_.data();
-  const double* Avalue = a_matrix->value_.data();
   const HighsInt AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
@@ -2201,7 +2194,6 @@ void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
 void HEkkDual::shiftBack(const HighsInt iCol) {
   HighsSimplexInfo& info = ekk_instance_.info_;
   if (!info.workShift_[iCol]) return;
-  const double shift = fabs(info.workShift_[iCol]);
   info.workDual_[iCol] -= info.workShift_[iCol];
   info.workShift_[iCol] = 0;
   // Analysis
@@ -2286,7 +2278,6 @@ void HEkkDual::initialiseDevexFramework() {
 
 void HEkkDual::interpretDualEdgeWeightStrategy(
     const HighsInt dual_edge_weight_strategy) {
-  const bool always_initialise_dual_steepest_edge_weights = true;
   if (dual_edge_weight_strategy == kSimplexEdgeWeightStrategyChoose) {
     edge_weight_mode = EdgeWeightMode::kSteepestEdge;
     allow_dual_steepest_edge_to_devex_switch = true;

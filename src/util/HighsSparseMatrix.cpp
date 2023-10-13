@@ -171,7 +171,6 @@ void HighsSparseMatrix::ensureRowwise() {
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
-  bool empty_matrix = num_col == 0 || num_row == 0;
   if (num_nz == 0) {
     // Empty matrix, so just ensure that there are enough zero starts
     // for the new orientation
@@ -903,9 +902,7 @@ void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
   assert(matrix.formatOk());
   assert(matrix.isColwise());
   assert(this->formatOk());
-  HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& a_start = matrix.start_;
   const vector<HighsInt>& a_index = matrix.index_;
   const vector<double>& a_value = matrix.value_;

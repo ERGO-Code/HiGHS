@@ -316,7 +316,6 @@ void ForrestTomlin::ComputeSpike(Int nb, const Int* bi, const double* bx) {
 
     // Store spike in U. Indices are sorted, which is required for the sparse
     // dot product in Update().
-    Int nz = 0;
     U_.clear_queue();
     for (Int p = 0; p < dim_+num_updates; p++) {
         if (work_[p] != 0.0)
@@ -348,7 +347,6 @@ void ForrestTomlin::ComputeEta(Int j) {
 
     // Queue eta at end of R. Indices are sorted, which is required for the
     // sparse dot product in Update().
-    Int nz = 0;
     R_.clear_queue();
     double pivot = work_[pos];
     for (Int i = pos+1; i < dim_+num_updates; i++) {

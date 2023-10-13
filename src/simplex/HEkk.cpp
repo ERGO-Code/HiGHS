@@ -636,7 +636,6 @@ HighsStatus HEkk::dualize() {
   double one = 1;
   for (HighsInt iX = 0; iX < num_upper_bound_col; iX++) {
     HighsInt iCol = upper_bound_col_[iX];
-    const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
     extra_columns.addVec(1, &iCol, &one);
     lp_.col_cost_.push_back(upper);
@@ -787,8 +786,8 @@ HighsStatus HEkk::undualize() {
   HighsInt dual_num_col = lp_.num_col_;
   HighsInt primal_num_tot = original_num_col_ + original_num_row_;
   // These two aren't used (yet)
-  vector<double>& dual_work_dual = info_.workDual_;
-  vector<double>& primal_work_value = info_.workValue_;
+  // vector<double>& dual_work_dual = info_.workDual_;
+  // vector<double>& primal_work_value = info_.workValue_;
   // Take copies of the nonbasic information for the dual LP, since
   // its values will be over-written in constructing the corresponding
   // data for the primal problem
@@ -800,7 +799,6 @@ HighsStatus HEkk::undualize() {
   basis_.nonbasicFlag_.assign(primal_num_tot, kIllegalFlagValue);
   basis_.nonbasicMove_.assign(primal_num_tot, kIllegalMoveValue);
   basis_.basicIndex_.resize(0);
-  const double inf = kHighsInf;
   // The number of dual rows is the number of primal columns, so all
   // dual basic variables are nonbasic in the primal problem.
   //
@@ -820,7 +818,6 @@ HighsStatus HEkk::undualize() {
   // boxed variables/constraints
   HighsInt upper_bound_col = original_num_row_;
   for (HighsInt iCol = 0; iCol < original_num_col_; iCol++) {
-    const double cost = original_col_cost_[iCol];
     const double lower = original_col_lower_[iCol];
     const double upper = original_col_upper_[iCol];
     HighsInt move = kIllegalMoveValue;
@@ -1154,7 +1151,6 @@ HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
   const HighsInt num_col = lp_.num_col_;
   const HighsInt num_row = lp_.num_row_;
-  const HighsInt num_tot = num_col + num_row;
 
   basis_.setup(num_col, num_row);
   basis_.debug_origin_name = "HEkk::setBasis - logical";
@@ -1224,7 +1220,6 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   }
   HighsInt num_col = lp_.num_col_;
   HighsInt num_row = lp_.num_row_;
-  HighsInt num_tot = num_col + num_row;
   // Set up the basis in case it has not yet been done for this LP
   basis_.setup(num_col, num_row);
   basis_.debug_id = highs_basis.debug_id;
@@ -1572,7 +1567,6 @@ void HEkk::handleRankDeficiency() {
   HFactor& factor = simplex_nla_.factor_;
   HighsInt rank_deficiency = factor.rank_deficiency;
   vector<HighsInt>& row_with_no_pivot = factor.row_with_no_pivot;
-  vector<HighsInt>& col_with_no_pivot = factor.col_with_no_pivot;
   vector<HighsInt>& var_with_no_pivot = factor.var_with_no_pivot;
   for (HighsInt k = 0; k < rank_deficiency; k++) {
     HighsInt row_in = row_with_no_pivot[k];
@@ -2544,7 +2538,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     double upper = lp_.col_upper_[i];
     double xpert = (1 + info_.numTotRandomValue_[i]) *
                    (fabs(info_.workCost_[i]) + 1) * cost_perturbation_base_;
-    const double previous_cost = info_.workCost_[i];
+    // const double previous_cost = info_.workCost_[i];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free - no perturb
     } else if (upper >= kHighsInf) {  // Lower
