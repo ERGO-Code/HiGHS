@@ -23,8 +23,6 @@ const double kResidualExcessiveError = sqrt(kResidualLargeError);
 const double kSolveLargeError = 1e-8;
 const double kSolveExcessiveError = sqrt(kSolveLargeError);
 
-const double kInverseLargeError = 1e-8;
-
 HighsDebugStatus HSimplexNla::debugCheckInvert(
     const std::string message, const HighsInt alt_debug_level) const {
   // Sometimes a value other than highs_debug_level is passed as

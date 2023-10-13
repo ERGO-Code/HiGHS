@@ -2918,7 +2918,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HighsInt col = rowDualLowerSource[row];
         assert(model->col_cost_[col] != 0.0);
         if (colsize[col] == 1) {
-          double colCoef = Avalue[colhead[col]];
           if (model->col_cost_[col] > 0) {
             assert(
                 model->col_lower_[col] == -kHighsInf ||
