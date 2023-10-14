@@ -1,43 +1,11 @@
 from highspy._highs import simplex_constants as simpc
-from highspy._highs import (
-    # enum classes
-    ObjSense,
-    MatrixFormat,
-    HessianFormat,
-    SolutionStatus,
-    BasisValidity,
-    HighsModelStatus,
-    HighsPresolveStatus,
-    HighsBasisStatus,
-    HighsVarType,
-    HighsOptionType,
-    HighsInfoType,
-    HighsStatus,
-    HighsLogType,
-    # classes
-    Highs_,
-    HighsSparseMatrix,
-    HighsLp,
-    HighsHessian,
-    HighsModel,
-    HighsInfo,
-    HighsOptions,
-    # structs
-    HighsSolution,
-    HighsObjectiveSolution,
-    HighsBasis,
-    HighsRangingRecord,
-    HighsRanging,
-    # constants
-    kHighsInf,
-    kHighsIInf,
-)
+from highspy import _highs as _h
 from itertools import groupby
 from operator import itemgetter
 from decimal import Decimal
 
 
-class Highs(Highs_):
+class Highs(_h.Highs_):
     """HiGHS solver interface"""
     __slots__ = ['_batch', '_vars', '_cons']
 
@@ -58,7 +26,7 @@ class Highs(Highs_):
             raise Exception('Objective cannot be an inequality')
 
         self.update()
-        super().changeObjectiveSense(ObjSense.kMinimize)
+        super().changeObjectiveSense(_h.ObjSense.kMinimize)
 
         # reset objective
         super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
@@ -80,7 +48,7 @@ class Highs(Highs_):
             raise Exception('Objective cannot be an inequality')
 
         self.update()
-        super().changeObjectiveSense(ObjSense.kMaximize)
+        super().changeObjectiveSense(_h.ObjSense.kMaximize)
 
         # reset objective
         super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
@@ -120,16 +88,16 @@ class Highs(Highs_):
     #
     # add variable & useful constants
     #
-    def addVar(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
+    def addVar(self, lb = 0, ub = _h.kHighsInf, obj = 0, type=_h.HighsVarType.kContinuous, name = None):
         var = self._batch.add(obj, lb, ub, type, name, self)
         self._vars.append(var)
         return var
 
-    def addIntegral(self, lb = 0, ub = kHighsInf, obj = 0, name = None):
-        return self.addVar(lb, ub, obj, HighsVarType.kInteger, name)
+    def addIntegral(self, lb = 0, ub = _h.kHighsInf, obj = 0, name = None):
+        return self.addVar(lb, ub, obj, _h.HighsVarType.kInteger, name)
 
     def addBinary(self, obj = 0, name = None):
-        return self.addVar(0, 1, obj, HighsVarType.kInteger, name)
+        return self.addVar(0, 1, obj, _h.HighsVarType.kInteger, name)
 
     def removeVar(self, var):
         for i in self._vars[var.index+1:]:
@@ -142,7 +110,7 @@ class Highs(Highs_):
 
     @property
     def inf(self):
-        return kHighsInf
+        return _h.kHighsInf
 
     @property
     def numVars(self):
@@ -278,8 +246,8 @@ class highs_linear_expression(object):
 
     def __init__(self, other=None):
         self.constant = 0
-        self.LHS = -kHighsInf
-        self.RHS = kHighsInf
+        self.LHS = -_h.kHighsInf
+        self.RHS = _h.kHighsInf
 
         if isinstance(other, highs_linear_expression):
             self.vars = list(other.vars)
@@ -301,7 +269,7 @@ class highs_linear_expression(object):
     # (LHS <= self <= RHS) <= (other.LHS <= other <= other.RHS)
     def __le__(self, other):
         if isinstance(other, highs_linear_expression):
-            if self.LHS != -kHighsInf and self.RHS != kHighsInf and len(other.vars) > 0 or other.LHS != -kHighsInf:
+            if self.LHS != -_h.kHighsInf and self.RHS != _h.kHighsInf and len(other.vars) > 0 or other.LHS != -_h.kHighsInf:
                 raise Exception('Cannot construct constraint with variables as bounds.')
 
             # move variables from other to self
@@ -324,7 +292,7 @@ class highs_linear_expression(object):
    # (LHS <= self <= RHS) == (other.LHS <= other <= other.RHS)
     def __eq__(self, other):
         if isinstance(other, highs_linear_expression):
-            if self.LHS != -kHighsInf and len(other.vars) > 0 or other.LHS != -kHighsInf:
+            if self.LHS != -_h.kHighsInf and len(other.vars) > 0 or other.LHS != -_h.kHighsInf:
                 raise Exception('Cannot construct constraint with variables as bounds.')
 
             # move variables from other to self
@@ -339,7 +307,7 @@ class highs_linear_expression(object):
             return NotImplemented
 
         elif isinstance(other, (int, float, Decimal)):
-            if self.LHS != -kHighsInf or self.RHS != kHighsInf:
+            if self.LHS != -_h.kHighsInf or self.RHS != _h.kHighsInf:
                 raise Exception('Logic error in constraint equality.')
 
             self.LHS = other
