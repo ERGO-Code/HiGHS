@@ -1,5 +1,5 @@
-from highspy._highs import simplex_constants as simpc
-from highspy import _highs as _h
+from ._highs import simplex_constants as simpc
+from . import _highs as _h
 from itertools import groupby
 from operator import itemgetter
 from decimal import Decimal
