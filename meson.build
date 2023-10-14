@@ -180,16 +180,11 @@ highspy_cpp = files([
 highsoptions_cpp = files([
   'highspy/highs_options.cpp'
 ])
+highspy_py = files([
+  'highspy/__init__.py',
+  'highspy/highs.py',
+])
+
 if get_option('with_pybind11')
-  highspy_cpp = files([
-    'highspy/highs_bindings.cpp'
-  ])
-  highsoptions_cpp = files([
-    'highspy/highs_options.cpp'
-  ])
-  highspy_py = files([
-    'highspy/__init__.py',
-    'highspy/highs.py',
-  ])
   subdir('highspy')
 endif
