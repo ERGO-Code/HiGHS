@@ -19,12 +19,18 @@ else
     conf_data.set('HIGHSINT64', false)
 endif
 # Commit hash
-commit_hash_cmd = run_command('git', 'rev-parse',
-                              '--short', 'HEAD',
-                             check: true)
-commit_hash = commit_hash_cmd.stdout().strip()
-conf_data.set_quoted('HIGHS_GITHASH',
-                     commit_hash)
+commit_hash = 'unknown' # Default value
+git = find_program('git', required: false)
+if git.found()
+    commit_hash_cmd = run_command(git, 'rev-parse', '--short',
+                                  '-C', meson.project_source_root(), 'HEAD',
+                                  check: false, # Don't abort on failure
+                                 )
+    if commit_hash_cmd.returncode() == 0
+        commit_hash = commit_hash_cmd.stdout().strip()
+    endif
+endif
+conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
 python_getdate = '''
 import datetime
