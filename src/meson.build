@@ -10,8 +10,14 @@ conf_data.set('HIGHS_VERSION_PATCH',
               meson.project_version().split('.')[2])
 conf_data.set('ZLIB_FOUND',
               zlib_dep.found())
-conf_data.set('HIGHSINT64',
-              get_option('highsint64'))
+# 64 bit numbers
+if host_machine.cpu_family() == 'x86_64'
+    # Get user's option, if it's not provided, enable highsint64 by default on x86_64
+    highsint64_opt = get_option('highsint64')
+    conf_data.set('HIGHSINT64', highsint64_opt)
+else
+    conf_data.set('HIGHSINT64', false)
+endif
 # Commit hash
 commit_hash_cmd = run_command('git', 'rev-parse',
                               '--short', 'HEAD',

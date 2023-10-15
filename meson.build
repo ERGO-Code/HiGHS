@@ -3,7 +3,8 @@ project('highs', 'cpp',
   meson_version: '>= 1.2.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
-                     'wrap_mode=forcefallback'])
+                     'wrap_mode=forcefallback',
+                     'highsint64=false'])
 
 
 # Add C++ compiler options
