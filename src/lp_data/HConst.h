@@ -211,6 +211,7 @@ enum HighsCallbackType : int {
   kCallbackLogging = kCallbackMin,
   kCallbackSimplexInterrupt,
   kCallbackIpmInterrupt,
+  kCallbackMipSolution,
   kCallbackMipImprovingSolution,
   kCallbackMipLogging,
   kCallbackMipInterrupt,
