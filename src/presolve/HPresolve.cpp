@@ -3174,7 +3174,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             if (x1Cand != -1) {
               HighsInt x1Pos = rowpositions[x1Cand];
               HighsInt x1 = Acol[x1Pos];
-              double rhs2 = rhs / d;
+              double rhs2 = rhs / static_cast<double>(d);
               if (std::abs(std::round(rhs2) - rhs2) <=
                   mipsolver->mipdata_->epsilon) {
                 // the right hand side is integral, so we can substitute
@@ -3187,7 +3187,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               } else {
                 // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod d)
 
-                // first compute the modular multiplciative inverse of a1^-1
+                // first compute the modular multiplicative inverse of a1^-1
                 // (mod d) of a1
                 int64_t a1 = std::round(intScale * Avalue[x1Pos]);
                 a1 = HighsIntegers::mod(a1, d);
@@ -3204,9 +3204,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 // z is fixed after rounding its new bounds. If that is the case
                 // we directly fix x1 instead of first substituting with d * z +
                 // b.
-                double zLower =
-                    std::ceil((model->col_lower_[x1] - b) / d - primal_feastol);
-                double zUpper = std::floor((model->col_upper_[x1] - b) / d +
+                double zLower = std::ceil((model->col_lower_[x1] - b) /
+                                              static_cast<double>(d) -
+                                          primal_feastol);
+                double zUpper = std::floor((model->col_upper_[x1] - b) /
+                                               static_cast<double>(d) +
                                            primal_feastol);
 
                 if (zLower == zUpper) {

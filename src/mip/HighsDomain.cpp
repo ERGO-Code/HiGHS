@@ -235,7 +235,7 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
     HighsInt conflict = i >> 1;
 
     const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
-    HighsInt numInactiveDelta =
+    uint8_t numInactiveDelta =
         (domchg.boundval > newbound) - (domchg.boundval > oldbound);
     if (numInactiveDelta != 0) {
       conflictFlag_[conflict] += numInactiveDelta;
@@ -2626,8 +2626,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
           proofinds, proofvals, prooflen, proofrhs, double(activitymin)))
     return;
 
-  if (conflictSet.resolvedDomainChanges.size() >
-      100 + 0.3 * mipsolver->mipdata_->integral_cols.size())
+  if (10 * conflictSet.resolvedDomainChanges.size() >
+      1000 + 3 * mipsolver->mipdata_->integral_cols.size())
     return;
 
   conflictSet.reconvergenceFrontier.insert(
@@ -3817,8 +3817,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           locdomchg.domchg.column);
   }
 
-  if (resolvedDomainChanges.size() >
-      100 + 0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+  if (10 * resolvedDomainChanges.size() >
+      1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),
@@ -3891,8 +3891,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           locdomchg.domchg.column);
   }
 
-  if (resolvedDomainChanges.size() >
-      100 + 0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+  if (10 * resolvedDomainChanges.size() >
+      1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),

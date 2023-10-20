@@ -542,7 +542,7 @@ class HighsPostsolveStack {
   }
 
   bool isColLinearlyTransformable(HighsInt col) const {
-    return linearlyTransformable[col];
+    return (linearlyTransformable[col] != 0);
   }
 
   template <typename T>

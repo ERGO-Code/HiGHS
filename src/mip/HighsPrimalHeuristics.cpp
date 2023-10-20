@@ -226,7 +226,9 @@ class HeuristicNeighbourhood {
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
 
-    return numTotal ? fixedCols.size() / (double)numTotal : 0.0;
+    return numTotal ? static_cast<double>(fixedCols.size()) /
+                          static_cast<double>(numTotal)
+                    : 0.0;
   }
 
   void backtracked() {
@@ -238,7 +240,7 @@ class HeuristicNeighbourhood {
 void HighsPrimalHeuristics::rootReducedCost() {
   std::vector<std::pair<double, HighsDomainChange>> lurkingBounds =
       mipsolver.mipdata_->redcostfixing.getLurkingBounds(mipsolver);
-  if (lurkingBounds.size() < 0.1 * mipsolver.mipdata_->integral_cols.size())
+  if (10 * lurkingBounds.size() < mipsolver.mipdata_->integral_cols.size())
     return;
   pdqsort(lurkingBounds.begin(), lurkingBounds.end(),
           [](const std::pair<double, HighsDomainChange>& a,
@@ -290,7 +292,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
-              200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12);
+              200 + mipsolver.mipdata_->num_nodes / 20, 12);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
@@ -512,7 +514,7 @@ retry:
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -799,7 +801,7 @@ retry:
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -978,7 +980,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if (intcols.size() / (double)mipsolver.numCol() >= 0.2)
+    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", "on");
     else
       lprelax.getLpSolver().setBasis(
