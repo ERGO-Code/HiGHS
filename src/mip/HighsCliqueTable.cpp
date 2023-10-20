@@ -1948,7 +1948,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
   for (HighsInt i = 0; i != initialCliqueSize; ++i)
     iscandidate[clique[i].index()] = true;
 
-  HighsInt node;
   auto addCands = [&](HighsInt cliqueid) {
     HighsInt start = cliques[cliqueid].start;
     HighsInt end = cliques[cliqueid].end;
@@ -2060,7 +2059,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     for (HighsInt i = 0; i != numclqvars; ++i)
       iscandidate[clqvars[i].index()] = true;
 
-    HighsInt node;
     auto addCands = [&](HighsInt cliqueid) {
       HighsInt start = cliques[cliqueid].start;
       HighsInt end = cliques[cliqueid].end;
@@ -2285,7 +2283,7 @@ void HighsCliqueTable::buildFrom(const HighsLp* origModel,
   newCliqueTable.setPresolveFlag(minEntriesForParallelism);
   HighsInt ncliques = init.cliques.size();
   std::vector<CliqueVar> clqBuffer;
-  clqBuffer.reserve(2 * origModel->num_col_);
+  clqBuffer.reserve(2 * static_cast<size_t>(origModel->num_col_));
   for (HighsInt i = 0; i != ncliques; ++i) {
     if (init.cliques[i].start == -1) continue;
 

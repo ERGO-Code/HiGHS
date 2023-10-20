@@ -28,6 +28,7 @@ BasicLu::BasicLu(const Control& control, Int dim) : control_(control) {
     xstore_[BASICLU_MEMORYL] = 1;
     xstore_[BASICLU_MEMORYU] = 1;
     xstore_[BASICLU_MEMORYW] = 1;
+    fill_factor_ = 0.0;
 }
 
 Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
@@ -265,12 +266,12 @@ void BasicLu::_pivottol(double new_pivottol) {
 }
 
 void BasicLu::Reallocate() {
-    assert(Li_.size() == xstore_[BASICLU_MEMORYL]);
-    assert(Lx_.size() == xstore_[BASICLU_MEMORYL]);
-    assert(Ui_.size() == xstore_[BASICLU_MEMORYU]);
-    assert(Ux_.size() == xstore_[BASICLU_MEMORYU]);
-    assert(Wi_.size() == xstore_[BASICLU_MEMORYW]);
-    assert(Wx_.size() == xstore_[BASICLU_MEMORYW]);
+    assert(Li_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Lx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Ui_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Ux_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Wi_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
+    assert(Wx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
 
     if (xstore_[BASICLU_ADD_MEMORYL] > 0) {
         Int new_size = xstore_[BASICLU_MEMORYL] + xstore_[BASICLU_ADD_MEMORYL];

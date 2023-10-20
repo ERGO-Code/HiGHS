@@ -1213,7 +1213,7 @@ HighsInt Highs_getRanging(
 }
 
 void Highs_resetGlobalScheduler(HighsInt blocking) {
-  Highs::resetGlobalScheduler(blocking);
+  Highs::resetGlobalScheduler(blocking != 0);
 }
 
 // *********************
