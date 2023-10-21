@@ -52,6 +52,7 @@ class HighsDataStack {
     }
     std::memcpy(data.data() + dataSize, &r, sizeof(T));
   }
+
   template <typename T,
             typename std::enable_if<IS_TRIVIALLY_COPYABLE(T), int>::type = 0>
   void pop(T& r) {
