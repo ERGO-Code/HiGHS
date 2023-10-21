@@ -1617,7 +1617,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
     //
     // Sections 3 and 4: Perform (bound-flipping) ratio test. This can
     // fail if the dual values are excessively large
-    bool chooseColumnFail = dualRow.chooseFinal();
+    bool chooseColumnFail = (dualRow.chooseFinal() != 0);
     if (chooseColumnFail) {
       rebuild_reason = kRebuildReasonChooseColumnFail;
       return;

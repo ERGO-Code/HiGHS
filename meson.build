@@ -3,7 +3,8 @@ project('highs', 'cpp',
   meson_version: '>= 1.2.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
-                     'wrap_mode=forcefallback'])
+                     'wrap_mode=forcefallback',
+                     'highsint64=false'])
 
 
 # Add C++ compiler options
@@ -26,6 +27,7 @@ if host_system == 'linux'
   _args += '-Wno-return-type'
   _args += '-Wno-switch'
   _args += '-Wno-unused-variable'
+  _args += '-Wno-unused-but-set-variable'
   _args += '-Wno-unused-const-variable'
 endif
 
@@ -83,6 +85,45 @@ threads_dep = dependency('threads',
                         required: true)
 _deps += threads_dep
 
+# Determine whether it is necessary to link libatomic. This could be the case
+# e.g. on 32-bit platforms when atomic operations are used on 64-bit types.
+# The check is copied from SciPy which in turn came from
+# Mesa <https://www.mesa3d.org/>.
+null_dep = dependency('', required : false)
+atomic_dep = null_dep
+code_non_lockfree = '''
+  #include <stdint.h>
+  int main() {
+   struct {
+     uint64_t *v;
+   } x;
+   return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE) &
+          (int)__atomic_add_fetch(x.v, (uint64_t)1, __ATOMIC_ACQ_REL);
+  }
+'''
+if cc.get_id() != 'msvc'
+  if not cc.links(
+      code_non_lockfree,
+      name : 'Check atomic builtins without -latomic'
+    )
+    atomic_dep = cc.find_library('atomic', required: false)
+    if atomic_dep.found()
+      # From SciPy
+      # We're not sure that with `-latomic` things will work for all compilers,
+      # so verify and only keep libatomic as a dependency if this works.
+      if not cc.links(
+          code_non_lockfree,
+          dependencies: atomic_dep,
+          name : 'Check atomic builtins with -latomic'
+        )
+        atomic_dep = null_dep
+      endif
+    endif
+  endif
+endif
+
+_deps += atomic_dep
+
 # Optional
 zlib_dep = dependency('zlib',
                       required: get_option('use_zlib'))
@@ -134,7 +175,12 @@ if get_option('with_tests')
 endif
 
 # --------------------- Bindings
-
+highspy_cpp = files([
+  'highspy/highs_bindings.cpp'
+])
+highsoptions_cpp = files([
+  'highspy/highs_options.cpp'
+])
 if get_option('with_pybind11')
   subdir('highspy')
 endif

@@ -52,7 +52,7 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     case kCutPool:
       return mipsolver.mipdata_->cutpool.cutIsIntegral(index);
     case kModel:
-      return mipsolver.mipdata_->rowintegral[index];
+      return (mipsolver.mipdata_->rowintegral[index] != 0);
   };
 
   assert(false);
@@ -343,9 +343,9 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
     // fractionality.
 
     HighsCDouble increase = 0.0;
-    double offset = mipsolver.mipdata_->feastol *
-                    std::max(std::abs(objective), 1.0) /
-                    mipsolver.mipdata_->integral_cols.size();
+    double offset =
+        mipsolver.mipdata_->feastol * std::max(std::abs(objective), 1.0) /
+        static_cast<double>(mipsolver.mipdata_->integral_cols.size());
 
     for (const std::pair<HighsInt, double>& f : fractionalints) {
       increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),

@@ -539,8 +539,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   bool warning_found = false;
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
-  bool have_col_names = lp.col_names_.size();
-  bool have_row_names = lp.row_names_.size();
+  bool have_col_names = (lp.col_names_.size() != 0);
+  bool have_row_names = (lp.row_names_.size() != 0);
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.num_col_);

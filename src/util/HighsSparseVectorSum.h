@@ -62,7 +62,7 @@ class HighsSparseVectorSum {
   double getValue(HighsInt index) const { return double(values[index]); }
 
   void clear() {
-    if (nonzeroinds.size() < 0.3 * values.size())
+    if (10 * nonzeroinds.size() < 3 * values.size())
       for (HighsInt i : nonzeroinds) values[i] = 0.0;
     else
       values.assign(values.size(), false);
