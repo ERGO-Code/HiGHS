@@ -16,7 +16,6 @@
 #include <limits>
 
 #include "Highs.h"
-#include "HighsExceptions.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
@@ -35,6 +34,7 @@
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
+#include "util/HighsExceptions.h"
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 

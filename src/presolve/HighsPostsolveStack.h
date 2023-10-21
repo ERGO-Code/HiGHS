@@ -22,13 +22,13 @@
 #include <tuple>
 #include <vector>
 
-#include "HighsExceptions.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
 #include "util/HighsMatrixSlice.h"
+#include "util/HighsExceptions.h"
 
 // class HighsOptions;
 namespace presolve {
