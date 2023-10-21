@@ -27,8 +27,8 @@
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
-#include "util/HighsMatrixSlice.h"
 #include "util/HighsExceptions.h"
+#include "util/HighsMatrixSlice.h"
 
 // class HighsOptions;
 namespace presolve {
@@ -373,22 +373,23 @@ class HighsPostsolveStack {
   template <typename ColStorageFormat>
   void fixedColAtLower(HighsInt col, double fixValue, double colCost,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
-    try {
-      assert(std::isfinite(fixValue));
-      colValues.clear();
-      for (const HighsSliceNonzero& colVal : colVec)
+    assert(std::isfinite(fixValue));
+    colValues.clear();
+    for (const HighsSliceNonzero& colVal : colVec) {
+      try {
         colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
-
-      reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                    HighsBasisStatus::kLower});
-      reductionValues.push(colValues);
-      reductionAdded(ReductionType::kFixedCol);
-    } catch (const DataStackOverflow& e) {
-      std::cerr << "Memory allocation failed while processing fixedColAtLower: "
-                << std::endl;
-      // Rethrow.
-      throw;
+      } catch (const DataStackOverflow& e) {
+        std::cerr
+            << "Memory allocation failed while processing fixedColAtLower: "
+            << std::endl;
+        // Rethrow.
+        throw;
+      }
     }
+    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+                                  HighsBasisStatus::kLower});
+    reductionValues.push(colValues);
+    reductionAdded(ReductionType::kFixedCol);
   }
   template <typename ColStorageFormat>
   void fixedColAtUpper(HighsInt col, double fixValue, double colCost,

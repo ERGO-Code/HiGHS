@@ -47,7 +47,7 @@ class HighsDataStack {
       throw DataStackOverflow(
           "Failed to resize the vector. Requested new size: " +
           std::to_string(newSize) + ". Size to add is " +
-          std::to_string(sizeof(T)) + "for "+
+          std::to_string(sizeof(T)) +
           ". Current size: " + std::to_string(data.size()) + ".");
     }
     std::memcpy(data.data() + dataSize, &r, sizeof(T));
