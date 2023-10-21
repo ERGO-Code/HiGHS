@@ -34,7 +34,6 @@
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
-#include "util/HighsExceptions.h"
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
@@ -4054,12 +4053,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    try {
-      HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
-    } catch (const DataStackOverflow& e) {
-      // Here we re-throw the error
-      throw PresolveTooLarge(e.what());
-    }
+    HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
 #if ENABLE_SPARSIFY_FOR_LP

@@ -27,7 +27,6 @@
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
-#include "util/HighsExceptions.h"
 #include "util/HighsMatrixSlice.h"
 
 // class HighsOptions;
@@ -375,22 +374,15 @@ class HighsPostsolveStack {
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
     colValues.clear();
-    for (const HighsSliceNonzero& colVal : colVec) {
-      try {
-        colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
-      } catch (const DataStackOverflow& e) {
-        std::cerr
-            << "Memory allocation failed while processing fixedColAtLower: "
-            << std::endl;
-        // Rethrow.
-        throw;
-      }
-    }
+    for (const HighsSliceNonzero& colVal : colVec)
+      colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
+
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
                                   HighsBasisStatus::kLower});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFixedCol);
   }
+
   template <typename ColStorageFormat>
   void fixedColAtUpper(HighsInt col, double fixValue, double colCost,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
