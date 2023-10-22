@@ -134,6 +134,7 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
+    kError,
   };
   HighsPresolveStatus presolve_status_;
   HPresolveAnalysis analysis_;

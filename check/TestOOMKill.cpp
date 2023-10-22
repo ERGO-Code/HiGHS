@@ -62,7 +62,7 @@ TEST_CASE("linprog_oom", "[highs_solver]") {
     // highs.setOptionValue("threads", 1);
     REQUIRE(highs.setOptionValue("presolve", "on") == HighsStatus::kOk);
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kError);
 }
 
 

@@ -3695,7 +3695,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                            "Problem too large for Presolve, try without\n");
               highsLogUser(options->log_options, HighsLogType::kInfo,
                            "Specific error raised:\n%s\n", e.what());
-              return Result::kPrimalInfeasible;
+              return Result::kError;
             }
             if (model->col_upper_[nonzero.index()] >
                 model->col_lower_[nonzero.index()])
@@ -4297,9 +4297,14 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
       return HighsModelStatus::kInfeasible;
-    case Result::kDualInfeasible:
+    case Result::kDualInfeasible: {
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return HighsModelStatus::kUnboundedOrInfeasible;
+    }
+    case Result::kError: {
+      presolve_status_ = HighsPresolveStatus::kError;
+      return HighsModelStatus::kPresolveError;
+    }
   }
 
   if (options->presolve != kHighsOffString &&
