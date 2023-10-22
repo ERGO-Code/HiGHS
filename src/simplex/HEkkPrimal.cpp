@@ -1212,7 +1212,7 @@ void HEkkPrimal::phase1ChooseRow() {
   pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(theta_dual);
-  for (HighsUInt i = 0; i < ph1SorterR.size(); i++) {
+  for (size_t i = 0; i < ph1SorterR.size(); i++) {
     double dMyTheta = ph1SorterR.at(i).first;
     HighsInt index = ph1SorterR.at(i).second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
@@ -1227,8 +1227,8 @@ void HEkkPrimal::phase1ChooseRow() {
   // Find out the biggest possible alpha for pivot
   pdqsort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
-  HighsUInt iLast = ph1SorterT.size();
-  for (HighsUInt i = 0; i < ph1SorterT.size(); i++) {
+  size_t iLast = ph1SorterT.size();
+  for (size_t i = 0; i < ph1SorterT.size(); i++) {
     double dMyTheta = ph1SorterT.at(i).first;
     HighsInt index = ph1SorterT.at(i).second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
@@ -1248,8 +1248,8 @@ void HEkkPrimal::phase1ChooseRow() {
   row_out = kNoRowChosen;
   variable_out = -1;
   move_out = 0;
-  for (HighsInt i = iLast - 1; i >= 0; i--) {
-    HighsInt index = ph1SorterT.at(i).second;
+  for (size_t i = iLast; i > 0; i--) {
+    HighsInt index = ph1SorterT.at(i - 1).second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     double dAbsAlpha = fabs(col_aq.array[iRow]);
     if (dAbsAlpha > dMaxAlpha * 0.1) {

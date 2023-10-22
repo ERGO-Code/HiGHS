@@ -29,7 +29,7 @@
 
 class HighsDataStack {
   std::vector<char> data;
-  HighsInt position;
+  std::size_t position;
 
  public:
   void resetPosition() { position = data.size(); }
@@ -78,9 +78,9 @@ class HighsDataStack {
     }
   }
 
-  void setPosition(HighsInt position_) { this->position = position_; }
+  void setPosition(size_t position_) { this->position = position_; }
 
-  HighsInt getCurrentDataSize() const { return data.size(); }
+  size_t getCurrentDataSize() const { return data.size(); }
 };
 
 #endif

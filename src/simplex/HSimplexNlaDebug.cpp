@@ -23,9 +23,6 @@ const double kResidualExcessiveError = sqrt(kResidualLargeError);
 const double kSolveLargeError = 1e-8;
 const double kSolveExcessiveError = sqrt(kSolveLargeError);
 
-const double kInverseLargeError = 1e-8;
-const double kInverseExcessiveError = sqrt(kInverseLargeError);
-
 HighsDebugStatus HSimplexNla::debugCheckInvert(
     const std::string message, const HighsInt alt_debug_level) const {
   // Sometimes a value other than highs_debug_level is passed as
@@ -140,7 +137,6 @@ HighsDebugStatus HSimplexNla::debugCheckInvert(
   if (use_debug_level < kHighsDebugLevelExpensive) return return_status;
 
   std::string value_adjective;
-  HighsLogType report_level;
   expected_density = 0;
   double inverse_error_norm = 0;
   double residual_error_norm = 0;
@@ -311,7 +307,6 @@ HighsDebugStatus HSimplexNla::debugReportInvertSolutionError(
     const bool transposed, const HVector& true_solution,
     const HVector& solution, HVector& residual, const bool force) const {
   const HighsInt num_row = this->lp_->num_row_;
-  const HighsOptions* options = this->options_;
   double solve_error_norm = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     double solve_error = fabs(solution.array[iRow] - true_solution.array[iRow]);

@@ -58,7 +58,6 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
       coverweight += vals[j] * upper[j];
     }
 
-    const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
     // sort the remaining variables by the contribution to the rows activity in
     // the current solution
     pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,

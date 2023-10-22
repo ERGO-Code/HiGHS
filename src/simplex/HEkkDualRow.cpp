@@ -488,7 +488,6 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
       // first entry
       alt_workGroup.push_back(alt_workCount);
       this_group_first_entry = alt_workCount;
-      HighsInt alt_workGroup_size = alt_workGroup.size();
       selectTheta = (dual + Td) / value;
       // End loop if all permitted groups have been identified
       if (totalChange >= totalDelta) break;
@@ -659,7 +658,6 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
   HighsInt num_infeasibility = 0;
   if (ekk_instance_.options_->highs_debug_level < kHighsDebugLevelCheap)
     return num_infeasibility;
-  const HighsInt move_out = workDelta < 0 ? -1 : 1;
   std::vector<double> unpack_value;
   HighsLp& lp = ekk_instance_.lp_;
   unpack_value.resize(lp.num_col_ + lp.num_row_);
@@ -668,7 +666,6 @@ HighsInt HEkkDualRow::debugChooseColumnInfeasibilities() const {
   const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   for (HighsInt i = 0; i < workCount; i++) {
     const HighsInt iCol = workData[i].first;
-    const double delta = workData[i].second;
     const double value = unpack_value[iCol];
     const HighsInt move = workMove[iCol];
     const double dual = workDual[iCol];

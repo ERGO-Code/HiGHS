@@ -669,7 +669,6 @@ retry:
         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
             mipsolver.mipdata_->feastol) {
           double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
-          HighsInt oldNumBranched = numBranched;
           if (localdom.col_lower_[i] < fixval) {
             ++numBranched;
             heur.branchUpwards(i, fixval, fixval - 0.5);

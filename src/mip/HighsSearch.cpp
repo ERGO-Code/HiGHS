@@ -247,7 +247,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
                                                double& upNodeLb) {
   assert(!lp->getFractionalIntegers().empty());
 
-  static constexpr HighsInt basisstart_threshold = 20;
   std::vector<double> upscore;
   std::vector<double> downscore;
   std::vector<uint8_t> upscorereliable;
@@ -939,7 +938,6 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
     // if global orbits have been computed we check whether they are still valid
     // in this node
     const auto& domchgstack = localdom.getDomainChangeStack();
-    const auto& branchpos = localdom.getBranchingPositions();
     for (HighsInt i : localdom.getBranchingPositions()) {
       HighsInt col = domchgstack[i].column;
       if (mipsolver.mipdata_->symmetries.columnPosition[col] == -1) continue;

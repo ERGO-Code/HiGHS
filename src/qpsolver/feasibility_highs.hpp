@@ -64,7 +64,6 @@ static void computestartingpoint_highs(Instance& instance, Settings& settings, S
     }
 
     highs.setBasis(basis);
-    const HighsBasis& internal_basis = highs.getBasis();
 
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
   }

@@ -611,8 +611,6 @@ HighsStatus Highs::changeIntegralityInterface(
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_, 0,
                            index_collection.dimension_, true));
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   changeLpIntegrality(model_.lp_, index_collection, local_integrality);
   // Deduce the consequences of new integrality
   invalidateModelStatus();
@@ -683,7 +681,6 @@ HighsStatus Highs::changeColBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status;
   changeLpColBounds(model_.lp_, index_collection, local_colLower,
                     local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
@@ -728,7 +725,6 @@ HighsStatus Highs::changeRowBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status;
   changeLpRowBounds(model_.lp_, index_collection, local_rowLower,
                     local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
@@ -1115,7 +1111,6 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
 HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
-  HighsLp& ekk_lp = ekk_instance_.lp_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
   HighsSimplexStatus& ekk_status = ekk_instance_.status_;
@@ -1162,7 +1157,6 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
-  HighsInt num_col = lp.num_col_;
   // For an LP with no rows the solution is vacuous
   if (num_row == 0) return return_status;
   // EKK must have an INVERT, but simplex NLA may need the pointer to
@@ -1175,7 +1169,6 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HVector solve_vector;
   solve_vector.setup(num_row);
   solve_vector.clear();
-  HighsScale& scale = lp.scale_;
   HighsInt rhs_num_nz = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (rhs[iRow]) {
@@ -1658,8 +1651,6 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     double cost = mods.save_inf_cost_variable_cost[ix];
     double lower = mods.save_inf_cost_variable_lower[ix];
     double upper = mods.save_inf_cost_variable_upper[ix];
-    HighsBasisStatus status =
-        basis.valid ? basis.col_status[iCol] : HighsBasisStatus::kBasic;
     double value = solution_.value_valid ? solution_.col_value[iCol] : 0;
     if (basis.valid) {
       assert(basis.col_status[iCol] != HighsBasisStatus::kBasic);

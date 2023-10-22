@@ -132,7 +132,6 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt col_cost_size = lp.col_cost_.size();
   HighsInt col_lower_size = lp.col_lower_.size();
   HighsInt col_upper_size = lp.col_upper_.size();
-  HighsInt matrix_start_size = lp.a_matrix_.start_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
@@ -665,7 +664,6 @@ void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
   made_semi_variable_mods = false;
   if (!lp.integrality_.size()) return;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
-  HighsInt num_modified_lower = 0;
   std::vector<HighsInt>& relaxed_semi_variable_lower_index =
       lp.mods_.save_relaxed_semi_variable_lower_bound_index;
   std::vector<double>& relaxed_semi_variable_lower_value =
@@ -830,7 +828,6 @@ void scaleLp(const HighsOptions& options, HighsLp& lp,
     // something more intelligent
     use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-  bool allow_cost_scaling = options.allowed_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -1236,8 +1233,6 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
 
-  HighsInt simplex_scale_strategy = use_scale_strategy;
-
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
 
@@ -1454,7 +1449,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 
 void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
-  HighsStatus call_status;
   deleteColsFromLpVectors(lp, new_num_col, index_collection);
   lp.a_matrix_.deleteCols(index_collection);
   lp.num_col_ = new_num_col;
@@ -1505,7 +1499,6 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 }
 
 void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsStatus call_status;
   HighsInt new_num_row;
   deleteRowsFromLpVectors(lp, new_num_row, index_collection);
   lp.a_matrix_.deleteRows(index_collection);
@@ -1555,7 +1548,6 @@ void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
 
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -2113,7 +2105,6 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  HighsInt status;
   if (!readSolutionFileIgnoreLineOk(in_file))
     return readSolutionFileErrorReturn(in_file);  // Model status
   if (!readSolutionFileIgnoreLineOk(in_file))
