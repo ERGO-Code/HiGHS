@@ -268,7 +268,7 @@ class HighsHashTree {
         // make space at that position, otherwise nothing needs to be done but
         // incrementing i increasing the sorted range by 1.
         if (pos < i) {
-          uint16_t hash = hashes[i];
+          uint64_t hash = hashes[i];
           auto entry = std::move(entries[i]);
           std::move_backward(&entries[pos], &entries[i], &entries[i + 1]);
           memmove(&hashes[pos + 1], &hashes[pos],
@@ -509,13 +509,15 @@ class HighsHashTree {
       int pos = HighsHashHelpers::log2i(matchMask);
       matchMask ^= (uint64_t{1} << pos);
 
-      int i = leaf1->occupation.num_set_until(pos) + offset1;
+      int i =
+          leaf1->occupation.num_set_until(static_cast<uint8_t>(pos)) + offset1;
       while (get_first_chunk16(leaf1->hashes[i]) != pos) {
         ++i;
         ++offset1;
       }
 
-      int j = leaf2->occupation.num_set_until(pos) + offset2;
+      int j =
+          leaf2->occupation.num_set_until(static_cast<uint8_t>(pos)) + offset2;
       while (get_first_chunk16(leaf2->hashes[j]) != pos) {
         ++j;
         ++offset2;
@@ -568,13 +570,15 @@ class HighsHashTree {
           int pos = HighsHashHelpers::log2i(matchMask);
           matchMask ^= (uint64_t{1} << pos);
 
-          int i = leaf->occupation.num_set_until(pos) + offset;
+          int i = leaf->occupation.num_set_until(static_cast<uint8_t>(pos)) +
+                  offset;
           while (get_first_chunk16(leaf->hashes[i]) != pos) {
             ++i;
             ++offset;
           }
 
-          int j = branch->occupation.num_set_until(pos) - 1;
+          int j =
+              branch->occupation.num_set_until(static_cast<uint8_t>(pos)) - 1;
 
           do {
             if (find_recurse(branch->child[j],
@@ -1144,8 +1148,10 @@ class HighsHashTree {
 
           assert(((matchMask >> pos) & 1) == 0);
 
-          int location1 = branch1->occupation.num_set_until(pos) - 1;
-          int location2 = branch2->occupation.num_set_until(pos) - 1;
+          int location1 =
+              branch1->occupation.num_set_until(static_cast<uint8_t>(pos)) - 1;
+          int location2 =
+              branch2->occupation.num_set_until(static_cast<uint8_t>(pos)) - 1;
 
           const HighsHashTableEntry<K, V>* match =
               find_common_recurse(branch1->child[location1],
