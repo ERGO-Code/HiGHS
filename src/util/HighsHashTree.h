@@ -660,8 +660,8 @@ class HighsHashTree {
                 mergeIntoLeaf(newLeafSize4, hashPos, branch->child[i]);
             }
             default:
-              throw std::logic_error(
-                  "Unexpected result from entries_to_size_class");
+              // Unexpected result from 'entries_to_size_class'
+              assert(false);
           }
 
           destroyBranchingNode(branch);
@@ -871,8 +871,8 @@ class HighsHashTree {
                   branch->child[i] = new InnerLeaf<4>;
                   break;
                 default:
-                  throw std::logic_error(
-                      "Unexpected result from entries_to_size_class");
+                  // Unexpected result from 'entries_to_size_class'
+                  assert(false);
               }
             }
 
