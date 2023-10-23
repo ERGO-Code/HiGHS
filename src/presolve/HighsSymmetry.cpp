@@ -42,7 +42,6 @@ void HighsSymmetryDetection::removeFixPoints() {
                      [&](HighsInt vertex) {
                        if (cellSize(vertexToCell[vertex]) == 1) {
                          --unitCellIndex;
-                         HighsInt oldCellStart = vertexToCell[vertex];
                          vertexToCell[vertex] = unitCellIndex;
                          return true;
                        }
@@ -179,7 +178,6 @@ std::shared_ptr<const StabilizerOrbits>
 HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
   const auto& domchgStack = localdom.getDomainChangeStack();
   const auto& branchingPos = localdom.getBranchingPositions();
-  const auto& prevBounds = localdom.getPreviousBounds();
 
   StabilizerOrbits stabilizerOrbits;
   stabilizerOrbits.stabilizedCols.reserve(permutationColumns.size());
@@ -275,7 +273,6 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
     if (fixcol != -1) {
       HighsInt oldNumFixed = numFixed;
-      double fixVal = domain.col_lower_[fixcol];
       auto oldSize = domain.getDomainChangeStack().size();
       if (domain.col_lower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
@@ -815,7 +812,6 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
   HighsInt vertex = currentPartition[i];
   if (vertexToCell[vertex] != cell) {
     // set new cell id
-    HighsInt oldCellStart = vertexToCell[vertex];
     vertexToCell[vertex] = cell;
     if (i != cell) currentPartitionLinks[i] = cell;
 
@@ -1503,7 +1499,7 @@ HighsSymmetryDetection::computeComponentData(
          componentData.componentStarts.size());
   componentData.permComponentStarts.push_back(numUsedPerms);
 
-  HighsInt numComponents = componentData.componentStarts.size();
+  // HighsInt numComponents = componentData.componentStarts.size();
   // printf("found %d components\n", numComponents);
   componentData.componentStarts.push_back(numActiveCols);
 
@@ -1578,7 +1574,6 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   orbitopeMatrix.numRows = orbitopeNumRows;
   orbitopeMatrix.rowLength = orbitopeOrbitSize;
   assert(componentSize == orbitopeMatrix.numRows * orbitopeMatrix.rowLength);
-  HighsInt orbitopeIndex = symmetries.orbitopes.size();
 
   const HighsInt* perm = symmetries.permutations.data() + p0 * numActiveCols;
   HighsHashTable<HighsInt> colSet;

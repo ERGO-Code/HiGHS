@@ -54,7 +54,7 @@ lu_int lu_markowitz(struct lu *this)
 
     lu_int i, j, pos, where, inext, nz, pivot_row, pivot_col;
     lu_int nsearch, cheap, found, min_colnz, min_rownz;
-    double cmx, x, tol, tic[2];
+    double cmx, x, tol;
 
     /* integers for Markowitz cost must be 64 bit to prevent overflow */
     const int_least64_t M = m;

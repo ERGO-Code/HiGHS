@@ -79,7 +79,6 @@ lu_int lu_pivot(struct lu *this)
 
     lu_int room, need, pos, j;
     lu_int status = BASICLU_OK;
-    double tic[2];
 
     assert(nz_row >= 1);
     assert(nz_col >= 1);

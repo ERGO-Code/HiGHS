@@ -164,7 +164,6 @@ lu_int lu_singletons(
     double *Btx         = this->Wvalue;
 
     lu_int i, j, pos, put, rank, Bnz, ok;
-    double tic[2];
 
     /* -------------------------------- */
     /* Check matrix and build transpose */

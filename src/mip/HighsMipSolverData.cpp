@@ -595,8 +595,9 @@ void HighsMipSolverData::runSetup() {
         // and I would have used the logical to begin with.
         //
         // Hence any compiler warning can be ignored safely
-        numBin += ((mipsolver.model_->col_lower_[i] == 0.0) &
-                   (mipsolver.model_->col_upper_[i] == 1.0));
+        numBin +=
+            (static_cast<HighsInt>(mipsolver.model_->col_lower_[i] == 0.0) &
+             static_cast<HighsInt>(mipsolver.model_->col_upper_[i] == 1.0));
         break;
       case HighsVarType::kSemiContinuous:
       case HighsVarType::kSemiInteger:
@@ -1579,7 +1580,6 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    double oldLimit = upper_limit;
     heuristics.rootReducedCost();
     heuristics.flushStatistics();
 

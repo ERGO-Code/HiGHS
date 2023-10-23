@@ -296,7 +296,6 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
         HighsInt iRow = row_ep.index[i];
         const double lb = lp.row_lower_[iRow];
         const double ub = lp.row_upper_[iRow];
-        const double dual = solution.row_dual[iRow];
 
         double val = sign * row_ep.array[iRow];
         if (ub == lb || val > mipsolver.mipdata_->epsilon) {

@@ -1274,7 +1274,6 @@ void HFactor::buildHandleRankDeficiency() {
   // * Less than the rank deficiency of the basis matrix if num_basic < num_row
   //
   //
-  const HighsInt basic_index_rank_deficiency = rank_deficiency;
   if (num_basic < num_row) {
     rank_deficiency += num_row - num_basic;
   }

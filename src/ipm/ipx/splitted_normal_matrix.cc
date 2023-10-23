@@ -45,11 +45,11 @@ void SplittedNormalMatrix::Prepare(const Basis& basis, const double* colscale) {
     PermuteRows(N_, rowperm_inv_);
 
     // Scale columns of N.
-    for (Int k = 0; k < (Int)nonbasic_vars.size(); k++) {
+    for (size_t k = 0; k < nonbasic_vars.size(); k++) {
         Int j = nonbasic_vars[k];
         double d = colscale[j];
         assert(std::isfinite(d));
-        ScaleColumn(N_, k, d);
+        ScaleColumn(N_, (Int)k, d);
     }
 
     // Build list of free variables.

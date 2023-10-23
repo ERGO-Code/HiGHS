@@ -443,9 +443,9 @@ bool HighsLpMods::isClear() {
 }
 
 void HighsNameHash::form(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     const bool duplicate = !this->name2index.emplace(name[index], index).second;
     if (duplicate) {
       // Find the original and mark it as duplicate
@@ -459,10 +459,10 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
 }
 
 bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
   bool has_duplicate = false;
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     has_duplicate = !this->name2index.emplace(name[index], index).second;
     if (has_duplicate) break;
   }

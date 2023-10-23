@@ -758,7 +758,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     std::string status_text = "  ";
     std::string status_char = "";
     if (have_basis) {
-      const HighsBasisStatus status = basis.row_status[iRow];
       switch (basis.row_status[iRow]) {
         case HighsBasisStatus::kBasic:
           status_text = "B ";
@@ -873,7 +872,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     std::string status_text = "  ";
     std::string status_char = "";
     if (have_basis) {
-      const HighsBasisStatus status = basis.col_status[iCol];
       switch (basis.col_status[iCol]) {
         case HighsBasisStatus::kBasic:
           status_text = "B ";
