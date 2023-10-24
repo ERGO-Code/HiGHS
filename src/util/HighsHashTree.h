@@ -272,7 +272,7 @@ class HighsHashTree {
           auto entry = std::move(entries[i]);
           std::move_backward(&entries[pos], &entries[i], &entries[i + 1]);
           memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(hashes[0]) * (size - pos));
+                  sizeof(hashes[0]) * (i - pos));
           hashes[pos] = hash;
           entries[pos] = std::move(entry);
         }
