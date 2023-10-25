@@ -3491,7 +3491,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
       if (model->row_lower_[row] == -kHighsInf &&
           impliedRowUpper != kHighsInf) {
-        HighsInt numTightened = 0;
         double maxCoefValue = impliedRowUpper - model->row_upper_[row];
         HighsCDouble rhs = model->row_upper_[row];
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
@@ -3504,12 +3503,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             double delta = maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_upper_[nonz.index()];
-            ++numTightened;
           } else if (nonz.value() < -maxCoefValue - primal_feastol) {
             double delta = -maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_lower_[nonz.index()];
-            ++numTightened;
           }
         }
 
@@ -3518,7 +3515,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
       if (model->row_upper_[row] == kHighsInf &&
           impliedRowLower != -kHighsInf) {
-        HighsInt numTightened = 0;
         double maxCoefValue = model->row_lower_[row] - impliedRowLower;
         HighsCDouble rhs = model->row_lower_[row];
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
@@ -3529,12 +3525,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             double delta = maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_lower_[nonz.index()];
-            ++numTightened;
           } else if (nonz.value() < -maxCoefValue - primal_feastol) {
             double delta = -maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_upper_[nonz.index()];
-            ++numTightened;
           }
         }
 
@@ -4600,8 +4594,6 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
   assert(analysis_.allow_rule_[kPresolveRuleAggregator]);
-  HighsInt numsubst = 0;
-  HighsInt numsubstint = 0;
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleAggregator);
   substitutionOpportunities.erase(
@@ -4683,8 +4675,6 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
         changeRowDualLower(row, -kHighsInf);
       }
 
-      ++numsubst;
-      if (model->integrality_[col] == HighsVarType::kInteger) ++numsubstint;
       storeRow(row);
 
       postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
@@ -4729,8 +4719,6 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     }
 
     nfail = 0;
-    ++numsubst;
-    if (model->integrality_[col] == HighsVarType::kInteger) ++numsubstint;
     double rhs;
     HighsPostsolveStack::RowType rowType;
     if (model->row_lower_[row] == model->row_upper_[row]) {
@@ -5406,9 +5394,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   // computed hash values. Whenever a bucket already contains a row/column,
   // check if we can apply a (nearly) parallel row reduction or a
   // parallel/dominated column reduction.
-  HighsInt numRowBuckets = 0;
-  HighsInt numColBuckets = 0;
-
   std::unordered_multimap<std::uint64_t, HighsInt> buckets;
 
   const bool debug_report = false;
@@ -5424,7 +5409,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     HighsInt delCol = -1;
     HighsInt parallelColCandidate = -2;
 
-    if (it == buckets.end()) ++numColBuckets;
     while (it != buckets.end() && it->first == colHashes[i]) {
       parallelColCandidate = it->second;
       last = it++;
@@ -5893,7 +5877,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     if (rowsize[i] <= 1 ||
         (rowsize[i] == 2 && model->row_lower_[i] == model->row_upper_[i])) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
-      ++numRowBuckets;
       continue;
     }
     auto it = buckets.find(rowHashes[i]);
@@ -5908,9 +5891,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       continue;
 #endif
     HighsInt delRow = -1;
-    if (it == buckets.end())
-      ++numRowBuckets;
-    else
+    if (it != buckets.end())
       storeRow(i);
     while (it != buckets.end() && it->first == rowHashes[i]) {
       HighsInt parallelRowCand = it->second;

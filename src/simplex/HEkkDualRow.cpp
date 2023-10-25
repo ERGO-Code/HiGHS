@@ -329,12 +329,9 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
   HighsInt prev_workCount = workCount;
   double prev_remainTheta = kInitialRemainTheta;
   double prev_selectTheta = selectTheta;
-  HighsInt debug_num_loop = 0;
 
   while (selectTheta < kMaxSelectTheta) {
     double remainTheta = kInitialRemainTheta;
-    debug_num_loop++;
-    HighsInt debug_loop_ln = 0;
     for (HighsInt i = workCount; i < fullCount; i++) {
       HighsInt iCol = workData[i].first;
       double value = workData[i].second;
@@ -346,7 +343,6 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
       } else if (dual + Td < remainTheta * value) {
         remainTheta = (dual + Td) / value;
       }
-      debug_loop_ln++;
     }
     workGroup.push_back(workCount);
 
@@ -391,12 +387,9 @@ bool HEkkDualRow::quadChooseFinalWorkGroupQuad() {
   HighsInt prev_workCount = workCount;
   HighsCDouble prev_remainTheta = kInitialRemainTheta;
   HighsCDouble prev_selectTheta = selectTheta;
-  HighsInt debug_num_loop = 0;
 
   while (selectTheta < kMaxSelectTheta) {
     HighsCDouble remainTheta = kInitialRemainTheta;
-    debug_num_loop++;
-    HighsInt debug_loop_ln = 0;
     for (HighsInt i = workCount; i < fullCount; i++) {
       HighsInt iCol = workData[i].first;
       HighsCDouble value = workData[i].second;
@@ -408,7 +401,6 @@ bool HEkkDualRow::quadChooseFinalWorkGroupQuad() {
       } else if (dual + Td < remainTheta * value) {
         remainTheta = (dual + Td) / value;
       }
-      debug_loop_ln++;
     }
     workGroup.push_back(workCount);
 

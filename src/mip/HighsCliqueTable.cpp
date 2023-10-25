@@ -2141,7 +2141,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       }
 
       bool redundant = false;
-      HighsInt numRemoved = 0;
       HighsInt dominatingOrigin = kHighsIInf;
       for (HighsInt cliqueid : cliquehitinds) {
         HighsInt hits = cliquehits[cliqueid];
@@ -2166,7 +2165,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
               if (!vHasClq) infeasvertexstack.push_back(v);
             }
           } else {
-            ++numRemoved;
             removeClique(cliqueid);
           }
         }

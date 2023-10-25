@@ -228,8 +228,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       dual_negative_sum.resize(lp.num_col_);
     }
   }
-  HighsInt num_basic_var = 0;
-  HighsInt num_non_basic_var = 0;
 
   // Set status to a value so the compiler doesn't think it might be unassigned.
   HighsBasisStatus status = HighsBasisStatus::kNonbasic;
@@ -299,7 +297,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     if (have_basis) {
       if (status == HighsBasisStatus::kBasic) {
-        num_basic_var++;
         double abs_basic_dual = dual_infeasibility;
         if (abs_basic_dual > 0) {
           num_nonzero_basic_duals++;
@@ -310,7 +307,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
           sum_nonzero_basic_duals += abs_basic_dual;
         }
       } else {
-        num_non_basic_var++;
         double off_bound_nonbasic = value_residual;
         if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
         max_off_bound_nonbasic =

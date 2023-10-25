@@ -2988,8 +2988,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
     if (covered < -localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3015,14 +3015,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             // bound can be relaxed
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3046,14 +3046,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3102,8 +3102,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
     if (covered > localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3129,14 +3129,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);
@@ -3161,14 +3161,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);

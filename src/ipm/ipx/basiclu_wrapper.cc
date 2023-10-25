@@ -133,7 +133,7 @@ void BasicLu::_SolveDense(const Vector& rhs, Vector& lhs, char trans) {
 
 void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx) {
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -154,7 +154,7 @@ void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx,
     Int status;
     Int nzlhs = 0;
     lhs.set_to_zero();
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -174,7 +174,7 @@ void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx,
 
 void BasicLu::_BtranForUpdate(Int j) {
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -194,7 +194,7 @@ void BasicLu::_BtranForUpdate(Int j, IndexedVector& lhs) {
     Int status;
     Int nzlhs = 0;
     lhs.set_to_zero();
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -215,7 +215,7 @@ void BasicLu::_BtranForUpdate(Int j, IndexedVector& lhs) {
 Int BasicLu::_Update(double pivot) {
     double max_eta_old = xstore_[BASICLU_MAX_ETA];
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_update(istore_.data(), xstore_.data(),
                                 Li_.data(), Lx_.data(),
                                 Ui_.data(), Ux_.data(),
