@@ -1613,10 +1613,14 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
                      (cliques[cliqueid].end - cliques[cliqueid].start) >> 1)) {
         clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
                    cliqueentries.begin() + cliques[cliqueid].end);
-        HighsInt numDel = 0;
-        for (CliqueVar x : clq) numDel += colDeleted[x.col];
 
-        assert(numDel == cliques[cliqueid].numZeroFixed);
+        auto computeNumDeleted = [&](std::vector<CliqueVar>& clq) {
+          HighsInt numDel = 0;
+          for (CliqueVar x : clq) numDel += colDeleted[x.col];
+          return numDel;
+        };
+
+        assert(computeNumDeleted(clq) == cliques[cliqueid].numZeroFixed);
 
         removeClique(cliqueid);
         clq.erase(std::remove_if(clq.begin(), clq.end(),
