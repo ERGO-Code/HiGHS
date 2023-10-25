@@ -5891,8 +5891,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       continue;
 #endif
     HighsInt delRow = -1;
-    if (it != buckets.end())
-      storeRow(i);
+    if (it != buckets.end()) storeRow(i);
     while (it != buckets.end() && it->first == rowHashes[i]) {
       HighsInt parallelRowCand = it->second;
       last = it++;
