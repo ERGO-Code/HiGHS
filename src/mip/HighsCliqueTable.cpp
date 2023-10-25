@@ -1614,7 +1614,7 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
         clq.assign(cliqueentries.begin() + cliques[cliqueid].start,
                    cliqueentries.begin() + cliques[cliqueid].end);
 
-        auto computeNumDeleted = [&](std::vector<CliqueVar>& clq) {
+        auto computeNumDeleted = [&](const std::vector<CliqueVar>& clq) {
           HighsInt numDel = 0;
           for (CliqueVar x : clq) numDel += colDeleted[x.col];
           return numDel;
