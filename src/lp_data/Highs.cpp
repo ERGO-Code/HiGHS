@@ -3717,8 +3717,8 @@ HighsStatus Highs::openWriteFile(const string filename,
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot open writable file \"%s\" in %s\n",
-                   filename.c_str(), method_name.c_str());
+                   "Cannot open writable file \"%s\" in %s\n", filename.c_str(),
+                   method_name.c_str());
       return HighsStatus::kError;
     }
     const char* dot = strrchr(filename.c_str(), '.');
