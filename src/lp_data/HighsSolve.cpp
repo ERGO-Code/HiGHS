@@ -209,7 +209,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = std::max(-dual, 0.);
       }
     } else if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-      // Free column: set to zero and record dual infeasiblility
+      // Free column: set to zero and record dual infeasibility
       value = 0;
       status = HighsBasisStatus::kZero;
       dual_infeasibility = std::fabs(dual);
@@ -222,7 +222,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = 0;
       } else {
         // Infinite lower bound so set to upper bound and record dual
-        // infeasiblility
+        // infeasibility
         value = upper;
         status = HighsBasisStatus::kUpper;
         dual_infeasibility = dual;
@@ -236,7 +236,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = 0;
       } else {
         // Infinite upper bound so set to lower bound and record dual
-        // infeasiblility
+        // infeasibility
         value = lower;
         status = HighsBasisStatus::kLower;
         dual_infeasibility = -dual;

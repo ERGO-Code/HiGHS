@@ -270,7 +270,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
         value, dual, status_pointer, integrality, absolute_primal_infeasibility,
         relative_primal_infeasibility, dual_infeasibility, value_residual);
-    // Accumulate primal infeasiblilties
+    // Accumulate primal infeasibilities
     if (absolute_primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
     if (max_absolute_primal_infeasibility_value <
@@ -286,7 +286,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     sum_primal_infeasibility += absolute_primal_infeasibility;
 
     if (have_dual_solution) {
-      // Accumulate dual infeasiblilties
+      // Accumulate dual infeasibilities
       if (dual_infeasibility > dual_feasibility_tolerance)
         num_dual_infeasibility++;
       if (max_dual_infeasibility_value < dual_infeasibility) {

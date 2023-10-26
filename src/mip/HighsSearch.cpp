@@ -1131,7 +1131,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             }
           }
         } else if (lp->getObjective() > getCutoffBound()) {
-          // the LP is not solved to dual feasibilty due to scaling/numerics
+          // the LP is not solved to dual feasibility due to scaling/numerics
           // therefore we compute a conflict constraint as if the LP was bound
           // exceeding and propagate the local domain again. The lp relaxation
           // class will take care to consider the dual multipliers with an

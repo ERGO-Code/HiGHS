@@ -186,7 +186,7 @@ void IPM::ComputeStartingPoint() {
         // to) zero, and the initial point would be almost complementary but
         // ususally not primal feasible. To prevent this from happening, add
         // a fraction of the objective to zl and adjust y. In exact computation
-        // this does not affect dual feasiblity.
+        // this does not affect dual feasibility.
         const double znorm = Twonorm(zl);
         const double rho = 0.05;
         if (znorm < rho*cnorm) {

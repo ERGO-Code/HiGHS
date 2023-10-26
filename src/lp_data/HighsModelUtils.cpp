@@ -484,12 +484,12 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   // the (inconsistent) behaviour of Glpsol.
   //
   // If Glpsol is run from a .mod file then the cost row is reported
-  // unless there is no objecive [minimize/maximize "objname"]
+  // unless there is no objective [minimize/maximize "objname"]
   // statement in the .mod file. In this case, the N-row in the MPS
   // file is called "R0000000" and referred to below as being artificial.
   //
   // However, the position of a defined cost row depends on where the
-  // objecive appears in the .mod file. If Glpsol is run from a .mod
+  // objective appears in the .mod file. If Glpsol is run from a .mod
   // file, and reads a .sol file, it must be in the right format.
   //
   // HiGHS can't read ..mod files, so works from an MPS or LP file

@@ -1970,7 +1970,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
 void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   if (lp.num_row_) {
-    // With postitive number of rows, can assume that there are index and value
+    // With positive number of rows, can assume that there are index and value
     // vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
                  lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
@@ -2093,7 +2093,7 @@ HighsStatus readSolutionFile(const std::string filename,
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
   const HighsInt lp_num_row = lp.num_row_;
-  // Define idetifiers for reading in
+  // Define identifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
   read_solution.clear();
@@ -2131,7 +2131,7 @@ HighsStatus readSolutionFile(const std::string filename,
   assert(keyword == "Columns");
   // The default style parameter is kSolutionStyleRaw, and this still
   // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, sinc ethere's nothing to
+  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
   // read either way
   const bool sparse = num_col <= 0;
   if (style == kSolutionStyleSparse) assert(sparse);
@@ -2184,7 +2184,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // OK to read from a file with different number of rows, since the
   // primal solution is all that's important. For example, see #1284,
   // where the user is solving a sequence of MIPs with the same number
-  // of variables, but incresing numbers of constraints, and wants to
+  // of variables, but increasing numbers of constraints, and wants to
   // used the solution from one MIP as the starting solution for the
   // next.
   const bool num_row_ok = num_row == lp_num_row;
@@ -2392,7 +2392,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Assessing feasiblity of %s tolerance of %11.4g\n",
+               "Assessing feasibility of %s tolerance of %11.4g\n",
                lp.isMip() ? "MIP using primal feasibility and integrality"
                           : "LP using primal feasibility",
                kPrimalFeasibilityTolerance);

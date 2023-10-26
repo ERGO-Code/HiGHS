@@ -1062,7 +1062,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //                 HighsLogType::kWarning,
       //                 "LP failed to reliably determine infeasibility\n");
 
-      // printf("error: unreliable infeasiblities, modelstatus = %"
+      // printf("error: unreliable infeasibilities, modelstatus = %"
       // HIGHSINT_FORMAT " (scaled
       // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),

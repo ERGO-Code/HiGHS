@@ -409,7 +409,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
           freeslots.push_back(cliqueid);
           return;
         case 2:
-          // due to subsitutions the clique became smaller and is now of size
+          // due to substitutions the clique became smaller and is now of size
           // two as a result we need to link it to the size two cliqueset
           // instead of the normal cliqueset
           assert(cliqueid >= 0 && cliqueid < (HighsInt)cliques.size());

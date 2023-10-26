@@ -855,7 +855,7 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -976,7 +976,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -2831,7 +2831,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
@@ -2941,7 +2941,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else

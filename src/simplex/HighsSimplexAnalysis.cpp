@@ -949,7 +949,7 @@ void HighsSimplexAnalysis::summaryReport() {
     if (num_correct_dual_primal_flip) {
       printf(
           "%12" HIGHSINT_FORMAT
-          "   correct dual primal flips (max = %g) for min dual infeasiblity "
+          "   correct dual primal flips (max = %g) for min dual infeasibility "
           "= %g\n",
           num_correct_dual_primal_flip, max_correct_dual_primal_flip,
           min_correct_dual_primal_flip_dual_infeasibility);
@@ -957,7 +957,7 @@ void HighsSimplexAnalysis::summaryReport() {
     if (num_correct_dual_cost_shift) {
       printf(
           "%12" HIGHSINT_FORMAT
-          "   correct dual  cost shifts (max = %g) for max dual infeasiblity "
+          "   correct dual  cost shifts (max = %g) for max dual infeasibility "
           "= %g\n",
           num_correct_dual_cost_shift, max_correct_dual_cost_shift,
           max_correct_dual_cost_shift_dual_infeasibility);

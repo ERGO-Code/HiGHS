@@ -211,7 +211,7 @@ Int ForrestTomlin::_Update(double pivot) {
 
 bool ForrestTomlin::_NeedFreshFactorization() {
     Int num_updates = replaced_.size();
-    Int Rnz = R_.entries();        // nnz in acculumated row etas
+    Int Rnz = R_.entries();        // nnz in accumulated row etas
     Int Lnz = L_.entries() + dim_; // nnz(L) incl. diagonal
     Int Unz = U_.entries();        // nnz(U) incl. zeroed out columns
     Int U0nz = U_.begin(dim_);     // nnz(U) after factorization

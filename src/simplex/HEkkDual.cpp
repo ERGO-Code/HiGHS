@@ -67,7 +67,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   // Record whether the solution with unperturbed costs is dual feasible
   const bool dual_feasible_with_unperturbed_costs =
       info.num_dual_infeasibilities == 0;
-  // Force phase 2 if dual infeasiblilities without cost perturbation
+  // Force phase 2 if dual infeasibilities without cost perturbation
   // involved fixed variables or were (at most) small
   force_phase2 = pass_force_phase2 ||
                  info.max_dual_infeasibility * info.max_dual_infeasibility <
@@ -98,14 +98,14 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
   }
   // Determine whether the solution is near-optimal. Values 1000 and
   // 1e-3 (ensuring sum<1) are unimportant, as the sum of primal
-  // infeasiblilities for near-optimal solutions is typically many
+  // infeasibilities for near-optimal solutions is typically many
   // orders of magnitude smaller than 1, and the sum of primal
-  // infeasiblilities will be very much larger for non-trivial LPs
+  // infeasibilities will be very much larger for non-trivial LPs
   // that are dual feasible for a logical or crash basis.
   //
   // Consider there to be no dual infeasibilities if there are none,
   // or if phase 2 is forced, in which case any dual infeasibilities
-  // will be shifed
+  // will be shifted
   const bool no_simplex_dual_infeasibilities =
       dual_feasible_with_unperturbed_costs || force_phase2;
   const bool near_optimal = no_simplex_dual_infeasibilities &&
@@ -121,7 +121,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
                 info.num_primal_infeasibilities, info.max_primal_infeasibility,
                 info.sum_primal_infeasibilities);
 
-  // Perturb costs according to whether the solution is near-optimnal
+  // Perturb costs according to whether the solution is near-optimal
   const bool perturb_costs = !near_optimal;
   if (!perturb_costs)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
@@ -199,7 +199,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
 
   // Determine the solve phase
   if (force_phase2) {
-    // Dual infeasiblilities without cost perturbation involved
+    // Dual infeasibilities without cost perturbation involved
     // fixed variables or were (at most) small, so can easily be
     // removed by flips for fixed variables and shifts for the rest
     solve_phase = kSolvePhase2;
@@ -305,7 +305,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
          solve_phase == kSolvePhaseOptimalCleanup ||
          solve_phase == kSolvePhasePrimalInfeasibleCleanup);
   // Can't be solve_phase == kSolvePhase1 since this requires simplex
-  // solver to have continued after identifying dual infeasiblility.
+  // solver to have continued after identifying dual infeasibility.
   if (solve_phase == kSolvePhaseOptimalCleanup ||
       solve_phase == kSolvePhasePrimalInfeasibleCleanup) {
     ekk_instance_.dual_simplex_cleanup_level_++;
@@ -315,7 +315,7 @@ HighsStatus HEkkDual::solve(const bool pass_force_phase2) {
       // known is that cost shifting was required to get dual
       // feasibility after removing cost perturbations, and dual
       // simplex iterations may also have been done. This is unlike
-      // clean-up of dual infeasiblilties after suspected optimality,
+      // clean-up of dual infeasibilities after suspected optimality,
       // when no shifting and dual simplex iterations are done after
       // removing cost perturbations.
       //
@@ -656,7 +656,7 @@ void HEkkDual::solvePhase1() {
     }
     if (ekk_instance_.solve_bailout_) break;
     // If the data are fresh from rebuild(), possibly break out of the
-    // outer loop to see what's ocurred
+    // outer loop to see what's occurred
     //
     // Deciding whether to rebuild is now more complicated if
     // refactorization is being avoided, since
@@ -917,7 +917,7 @@ void HEkkDual::solvePhase2() {
     }
     if (ekk_instance_.solve_bailout_) break;
     // If the data are fresh from rebuild(), possibly break out of the
-    // outer loop to see what's ocurred
+    // outer loop to see what's occurred
     bool finished = status.has_fresh_rebuild &&
                     !ekk_instance_.rebuildRefactor(rebuild_reason);
     // ToDo: Handle the following more elegantly as the first case of
@@ -942,7 +942,7 @@ void HEkkDual::solvePhase2() {
   assert(!ekk_instance_.solve_bailout_);
   // Assess outcome of dual phase 2
   if (dualInfeasCount > 0) {
-    // There are dual infeasiblities so possibly switch to Phase 1 and
+    // There are dual infeasibilities so possibly switch to Phase 1 and
     // return. "Possibly" because, if dual infeasibility has already
     // been shown, primal simplex is used to distinguish primal
     // unboundedness from primal infeasibility
@@ -956,11 +956,11 @@ void HEkkDual::solvePhase2() {
     // Remove any cost perturbations and see if basis is still dual feasible
     cleanup();
     if (dualInfeasCount > 0) {
-      // There are dual infeasiblities, so consider performing primal
+      // There are dual infeasibilities, so consider performing primal
       // simplex iterations to get dual feasibility
       solve_phase = kSolvePhaseOptimalCleanup;
     } else {
-      // There are no dual infeasiblities so optimal!
+      // There are no dual infeasibilities so optimal!
       solve_phase = kSolvePhaseOptimal;
       highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");
@@ -975,7 +975,7 @@ void HEkkDual::solvePhase2() {
                 "dual-phase-2-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
   } else {
-    // Can only be that primal infeasiblility has been detected
+    // Can only be that primal infeasibility has been detected
     assert(model_status == HighsModelStatus::kInfeasible);
     assert(solve_phase == kSolvePhaseExit);
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
@@ -1097,10 +1097,10 @@ void HEkkDual::rebuild() {
   ekk_instance_.resetSyntheticClock();
 
   // Dual simplex doesn't maintain the number of primal
-  // infeasiblities, so set it to an illegal value now
+  // infeasibilities, so set it to an illegal value now
   ekk_instance_.invalidatePrimalInfeasibilityRecord();
   // Although dual simplex should always be dual feasible,
-  // infeasiblilities are only corrected in rebuild
+  // infeasibilities are only corrected in rebuild
   ekk_instance_.invalidateDualInfeasibilityRecord();
 
   // Data are fresh from rebuild
@@ -1152,10 +1152,10 @@ void HEkkDual::cleanup() {
   info.updated_dual_objective_value = info.dual_objective_value;
 
   if (!info.run_quiet) {
-    // Report the primal infeasiblities
+    // Report the primal infeasibilities
     ekk_instance_.computeSimplexPrimalInfeasible();
-    // In phase 1, report the simplex LP dual infeasiblities
-    // In phase 2, report the simplex dual infeasiblities (known)
+    // In phase 1, report the simplex LP dual infeasibilities
+    // In phase 2, report the simplex dual infeasibilities (known)
     if (solve_phase == kSolvePhase1)
       ekk_instance_.computeSimplexLpDualInfeasible();
     reportRebuild(kRebuildReasonCleanup);
@@ -1350,7 +1350,7 @@ void HEkkDual::iterationAnalysisData() {
 }
 
 void HEkkDual::iterationAnalysis() {
-  // Compute the infeasiblility data (expensive) if analysing run-time
+  // Compute the infeasibility data (expensive) if analysing run-time
   // data and the log level is at least kIterationReportLogType
   // (Verbose)
   const bool make_iteration_report = analysis->analyse_simplex_runtime_data &&
@@ -2318,7 +2318,7 @@ void HEkkDual::possiblyUseLiDualSteepestEdge() {
 }
 
 void HEkkDual::computeDualInfeasibilitiesWithFixedVariableFlips() {
-  // Computes num/max/sum of dual infeasibliities, ignoring fixed
+  // Computes num/max/sum of dual infeasibilities, ignoring fixed
   // variables whose infeasibilities can be corrected by flipping at
   // the fixed value, so that decisions on the dual simplex phase can
   // be taken. It is driven by the use of nonbasicMove to identify
@@ -2365,7 +2365,7 @@ void HEkkDual::computeDualInfeasibilitiesWithFixedVariableFlips() {
 }
 
 void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
-  // Removes dual infeasiblilities for all but free variables. For
+  // Removes dual infeasibilities for all but free variables. For
   // fixed variables, dual infeasibilities are removed by flipping at
   // the bound. Otherwise, dual infeasibilities are removed by
   // shifting costs.
@@ -2413,7 +2413,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     }
     dual_infeasibility = -move * current_dual;
     if (dual_infeasibility < dual_feasibility_tolerance) continue;
-    // There is a dual infeasiblity to remove
+    // There is a dual infeasibility to remove
     //
     // force_phase2 is set true to prevent fipping of non-fixed
     // (boxed) variables when correcting infeasibilities in the first
@@ -2613,7 +2613,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
         // negative, so no conclusions on the primal LP can be deduced
         // - could be primal unbounded or primal infeasible.
         //
-        // Indicate the conclusion of dual infeasiblility by setting
+        // Indicate the conclusion of dual infeasibility by setting
         // the scaled model status
         reportOnPossibleLpDualInfeasibility();
         model_status = HighsModelStatus::kUnboundedOrInfeasible;
@@ -2853,7 +2853,7 @@ double HEkkDual::computeExactDualObjectiveValue(HVector& dual_col,
     simplex_nla->btran(dual_col, expected_density);
     lp.a_matrix_.priceByColumn(quad_precision, dual_row, dual_col);
   }
-  // Compute dual infeasiblilities
+  // Compute dual infeasibilities
   ekk_instance_.computeSimplexDualInfeasible();
   if (info.num_dual_infeasibilities > 0)
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,

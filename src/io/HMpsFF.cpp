@@ -582,7 +582,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       std::string unidentified = strline.substr(start);
       trim(unidentified);
       highsLogUser(log_options, HighsLogType::kError,
-                   "Entry \"%s\" in ROWS section of MPS file is unidentifed\n",
+                   "Entry \"%s\" in ROWS section of MPS file is unidentified\n",
                    unidentified.c_str());
       return HMpsFF::Parsekey::kFail;
     }

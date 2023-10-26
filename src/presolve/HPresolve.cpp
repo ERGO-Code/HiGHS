@@ -925,7 +925,7 @@ HPresolve::Result HPresolve::dominatedColumns(
       if (aj > ak + options->small_matrix_value) return false;
     }
 
-    // check row only occuring in the column vector of k
+    // check row only occurring in the column vector of k
     for (const HighsSliceNonzero& nonz : getColumnVector(k)) {
       HighsInt row = nonz.index();
       double ak = scalk * nonz.value();
@@ -1439,7 +1439,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (!rowDeleted[delrow]) removeRow(delrow);
     cliquetable.getDeletedRows().clear();
 
-    // add nonzeros from clique lifting before removign fixed variables, since
+    // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
     std::vector<std::pair<HighsInt, HighsCliqueTable::CliqueVar>>&
         extensionvars = cliquetable.getCliqueExtensions();
@@ -3246,7 +3246,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         }
       }
     } else {
-      // inequality or ranged row, first store row posititions
+      // inequality or ranged row, first store row positions
       storeRow(row);
 
       if (rowsize[row] == rowsizeInteger[row] + rowsizeImplInt[row]) {
@@ -3498,7 +3498,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
             continue;
 
           if (nonz.value() > maxCoefValue + primal_feastol) {
-            // <= contraint, we decrease the coefficient value and the right
+            // <= constraint, we decrease the coefficient value and the right
             // hand side
             double delta = maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
@@ -3917,7 +3917,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
          model->col_upper_[col] != kHighsInf) &&
         model->col_upper_[col] - model->col_lower_[col] > 0.5) {
       // substitute with the bound that is smaller in magnitude and only
-      // suibstitute if bound is not large for an integer
+      // substitute if bound is not large for an integer
       if (std::abs(model->col_upper_[col]) > std::abs(model->col_lower_[col])) {
         if (std::abs(model->col_lower_[col]) < 1000.5)
           transformColumn(postsolve_stack, col, 1.0, model->col_lower_[col]);
@@ -4007,7 +4007,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   //    - fast presolve loop
   //    - parallel rows and columns
   //    - if (changes found) fast presolve loop
-  //    - aggregator // add limit that catches many subsitutions but stops when
+  //    - aggregator // add limit that catches many substitutions but stops when
   //    many failures, do not run exhaustively as now
   //    - if (changes found) start main loop from beginning
   //    - primal and dual matrix sparsification
@@ -5335,7 +5335,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   colHashes.assign(colsize.begin(), colsize.end());
 
   // Step 1: Determine scales for rows and columns and remove column singletons
-  // from the intial row hashes which are initialized with the row sizes
+  // from the initial row hashes which are initialized with the row sizes
   for (HighsInt i = 0; i != nnz; ++i) {
     if (Avalue[i] == 0.0) continue;
     assert(!colDeleted[Acol[i]]);
@@ -5349,7 +5349,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     double absRowMax = std::abs(rowMax[Arow[i]].first);
 
     // among the largest values which are equal in tolerance
-    // we use the nonzero with the smalles row/column index for the column/row
+    // we use the nonzero with the smallest row/column index for the column/row
     // scale so that we ensure that duplicate rows/columns are scaled to have
     // the same sign
     if (absVal >= absRowMax - options->small_matrix_value) {
@@ -5451,7 +5451,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       auto colUpperInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
-          // for LP we check strict reduncancy of the bounds as otherwise dual
+          // for LP we check strict redundancy of the bounds as otherwise dual
           // postsolve might fail when the bound is used in the optimal solution
           return colScale > 0 ? model->col_upper_[col] == kHighsInf ||
                                     implColUpper[col] <

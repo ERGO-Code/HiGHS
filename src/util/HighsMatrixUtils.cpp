@@ -175,7 +175,7 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred.
+      // Check that the index has not already occurred.
       legal_component = index_set.find(component) == nullptr;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,

@@ -152,7 +152,7 @@ HighsDebugStatus debugHighsSolution(
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
                   "debugHighsLpSolution: %" HIGHSINT_FORMAT
-                  " primal infeasiblilities but model status is %s\n",
+                  " primal infeasibilities but model status is %s\n",
                   num_primal_infeasibility,
                   utilModelStatusToString(model_status).c_str());
     }
@@ -160,7 +160,7 @@ HighsDebugStatus debugHighsSolution(
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
                   "debugHighsLpSolution: %" HIGHSINT_FORMAT
-                  " dual infeasiblilities but model status is %s\n",
+                  " dual infeasibilities but model status is %s\n",
                   num_dual_infeasibility,
                   utilModelStatusToString(model_status).c_str());
     }

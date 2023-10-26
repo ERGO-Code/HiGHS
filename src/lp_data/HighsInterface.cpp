@@ -166,7 +166,7 @@ HighsStatus Highs::addColsInterface(
     local_a_matrix.considerColScaling(options.allowed_matrix_scale_factor,
                                       &scale.col[lp.num_col_]);
   }
-  // Update the basis correponding to new nonbasic columns
+  // Update the basis corresponding to new nonbasic columns
   if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
   // Possibly add column names
@@ -292,7 +292,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     local_ar_matrix.considerRowScaling(options.allowed_matrix_scale_factor,
                                        &scale.row[lp.num_row_]);
   }
-  // Update the basis correponding to new basic rows
+  // Update the basis corresponding to new basic rows
   if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
   // Possibly add row names
@@ -464,8 +464,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   // Surely this is checked elsewhere
   assert(0 <= from_k && to_k < lp.num_row_);
   assert(from_k <= to_k);
-  // "Out" means not in the set to be extrated
-  // "In" means in the set to be extrated
+  // "Out" means not in the set to be extracted
+  // "In" means in the set to be extracted
   HighsInt out_from_row;
   HighsInt out_to_row;
   HighsInt in_from_row;

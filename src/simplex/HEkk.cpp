@@ -962,7 +962,7 @@ HighsStatus HEkk::undualize() {
   lp_.row_lower_ = original_row_lower_;
   lp_.row_upper_ = original_row_upper_;
   // The primal constraint matrix is available row-wise as the first
-  // original_num_row_ vectors of the dual constratint matrix
+  // original_num_row_ vectors of the dual constraint matrix
   HighsSparseMatrix primal_matrix;
   primal_matrix.start_.resize(original_num_row_ + 1);
   primal_matrix.index_.resize(original_num_nz_);
@@ -1546,7 +1546,7 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor(
                     "Supposed to be a full-rank basis, but incorrect\n");
         return HighsStatus::kError;
       }
-      // Account for rank deficiency by correcing nonbasicFlag
+      // Account for rank deficiency by correcting nonbasicFlag
       handleRankDeficiency();
       this->updateStatus(LpAction::kNewBasis);
       setNonbasicMove();
@@ -2948,7 +2948,7 @@ void HEkk::computePrimal() {
     info_.baseLower_[i] = info_.workLower_[iCol];
     info_.baseUpper_[i] = info_.workUpper_[iCol];
   }
-  // Indicate that the primal infeasiblility information isn't known
+  // Indicate that the primal infeasibility information isn't known
   info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
@@ -2996,7 +2996,7 @@ void HEkk::computeDual() {
       debugSimplexDualInfeasible("(new duals)", true);
     }
   }
-  // Indicate that the dual infeasiblility information isn't known
+  // Indicate that the dual infeasibility information isn't known
   info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
@@ -3219,16 +3219,16 @@ void HEkk::updateMatrix(const HighsInt variable_in,
 void HEkk::computeInfeasibilitiesForReporting(const SimplexAlgorithm algorithm,
                                               const HighsInt solve_phase) {
   if (algorithm == SimplexAlgorithm::kPrimal) {
-    // Report the primal and dual infeasiblities
+    // Report the primal and dual infeasibilities
     computeSimplexInfeasible();
   } else {
-    // Report the primal infeasiblities
+    // Report the primal infeasibilities
     computeSimplexPrimalInfeasible();
     if (solve_phase == kSolvePhase1) {
-      // In phase 1, report the simplex LP dual infeasiblities
+      // In phase 1, report the simplex LP dual infeasibilities
       computeSimplexLpDualInfeasible();
     } else {
-      // In phase 2, report the simplex dual infeasiblities
+      // In phase 2, report the simplex dual infeasibilities
       computeSimplexDualInfeasible();
     }
   }
@@ -3240,7 +3240,7 @@ void HEkk::computeSimplexInfeasible() {
 }
 
 void HEkk::computeSimplexPrimalInfeasible() {
-  // Computes num/max/sum of primal infeasibliities according to the
+  // Computes num/max/sum of primal infeasibilities according to the
   // simplex bounds. This is used to determine optimality in dual
   // phase 1 and dual phase 2, albeit using different bounds in
   // workLower/Upper.
@@ -3342,7 +3342,7 @@ void HEkk::computeSimplexDualInfeasible() {
 }
 
 void HEkk::computeSimplexLpDualInfeasible() {
-  // Compute num/max/sum of dual infeasibliities according to the
+  // Compute num/max/sum of dual infeasibilities according to the
   // bounds of the simplex LP. Assumes that boxed variables have
   // primal variable at the bound corresponding to the sign of the
   // dual so should only be used in dual phase 1 - where it's only
@@ -3529,13 +3529,13 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
       if (info_.num_primal_infeasibilities) {
-        // Optimal - but not to desired primal feasibilit tolerance
+        // Optimal - but not to desired primal feasibility tolerance
         return_primal_solution_status_ = kSolutionStatusInfeasible;
       } else {
         return_primal_solution_status_ = kSolutionStatusFeasible;
       }
       if (info_.num_dual_infeasibilities) {
-        // Optimal - but not to desired dual feasibilit tolerance
+        // Optimal - but not to desired dual feasibility tolerance
         return_dual_solution_status_ = kSolutionStatusInfeasible;
       } else {
         return_dual_solution_status_ = kSolutionStatusFeasible;
@@ -3588,7 +3588,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kInterrupt:
     case HighsModelStatus::kUnknown: {
       // Simplex has failed to conclude a model property. Either it
-      // has bailed out due to reaching the objecive bound, target,
+      // has bailed out due to reaching the objective bound, target,
       // time, iteration limit or user interrupt, or it has not been
       // set (cycling is the only reason). Could happen anywhere.
       //
