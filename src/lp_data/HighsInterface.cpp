@@ -125,7 +125,7 @@ HighsStatus Highs::addColsInterface(
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
-  // that is is easy to handle and, if there are nonzeros, it can be
+  // that is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_a_matrix;
   local_a_matrix.num_col_ = ext_num_new_col;
@@ -251,7 +251,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
 
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
-  // is is easy to handle and, if there are nonzeros, it can be
+  // is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_ar_matrix;
   local_ar_matrix.num_col_ = lp.num_col_;

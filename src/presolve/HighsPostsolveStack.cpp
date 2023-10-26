@@ -187,7 +187,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
       basis.col_status[col] = HighsBasisStatus::kBasic;
     }
   } else {
-    // otherwise make the reduced cost of the subsituted column zero and make
+    // otherwise make the reduced cost of the substituted column zero and make
     // that column basic
     double rowDualDelta = solution.col_dual[colSubst] / coefSubst;
     solution.row_dual[row] = double(rowDual + rowDualDelta);

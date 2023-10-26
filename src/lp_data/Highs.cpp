@@ -2852,7 +2852,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   if (options_.ranging == kHighsOnString) {
     if (model_.isMip() || model_.isQp()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot determing ranging information for MIP or QP\n");
+                   "Cannot determine ranging information for MIP or QP\n");
       return_status = HighsStatus::kError;
       return returnFromWriteSolution(file, return_status);
     }

@@ -439,7 +439,7 @@ double HPresolve::getMaxAbsRowVal(HighsInt row) const {
 
 void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
                                            double val) {
-  // propagate implied row dual bound bound
+  // propagate implied row dual bound
   // if the column has an infinite lower bound the reduced cost cannot be
   // positive, i.e. the column corresponds to a <= constraint in the dual with
   // right hand side -cost which becomes a >= constraint with side +cost.
@@ -4432,7 +4432,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
       matrix.index_.push_back(nonz.index());
     }
 
-    // add entry for artifical rhs column
+    // add entry for artificial rhs column
     if (model->row_lower_[eq] != 0.0) {
       matrix.value_.push_back(model->row_lower_[eq]);
       matrix.index_.push_back(model->num_col_);
@@ -4544,7 +4544,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //      matrix.index_.push_back(nonz.index());
   //    }
   //
-  //    // add entry for artifical cost row
+  //    // add entry for artificial cost row
   //    if (model->col_cost_[col] != 0.0) {
   //      matrix.value_.push_back(model->col_cost_[col]);
   //      matrix.index_.push_back(model->num_row_);
@@ -5810,7 +5810,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
             HighsInt colpos = coliter;
             HighsInt colrow = Arow[coliter];
-            // if an an integer column was merged into a continuous one make
+            // if an integer column was merged into a continuous one make
             // sure to update the integral rowsize
             if (rowsizeIntReduction) {
               assert(rowsizeIntReduction == 1);

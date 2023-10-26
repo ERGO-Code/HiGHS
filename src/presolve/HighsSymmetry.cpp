@@ -73,7 +73,7 @@ void HighsSymmetryDetection::removeFixPoints() {
       // if the cell number is different to the current cell number this is the
       // start of a new cell
       if (cellNumber != vertexToCell[vertex]) {
-        // remember the number of this cell to indetify its end
+        // remember the number of this cell to identify its end
         cellNumber = vertexToCell[vertex];
         // set the link of the cell start to point to its end
         currentPartitionLinks[cellStart] = i;
@@ -1285,7 +1285,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
     // if the cell number is different to the current cell number this is the
     // start of a new cell
     if (cellNumber != vertexToCell[vertex]) {
-      // remember the number of this cell to indetify its end
+      // remember the number of this cell to identify its end
       cellNumber = vertexToCell[vertex];
       // set the link of the cell start to point to its end
       currentPartitionLinks[cellStart] = i;

@@ -594,7 +594,7 @@ void HEkkDual::solvePhase1() {
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
-  // from scratch in build() isn't checked against the the updated
+  // from scratch in build() isn't checked against the updated
   // value
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;
@@ -843,7 +843,7 @@ void HEkkDual::solvePhase2() {
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
-  // from scratch in build() isn't checked against the the updated
+  // from scratch in build() isn't checked against the updated
   // value
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;
@@ -1163,7 +1163,7 @@ void HEkkDual::cleanup() {
 }
 
 void HEkkDual::iterate() {
-  // This is the main teration loop for dual revised simplex. All the
+  // This is the main iteration loop for dual revised simplex. All the
   // methods have as their first line if (rebuild_reason) return;, where
   // rebuild_reason is, for example, set to 1 when CHUZR finds no
   // candidate. This causes a break from the inner loop of
@@ -1633,7 +1633,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
               (int)dualRow.workPivot, dualRow.workAlpha,
               workDual[dualRow.workPivot],
               workDual[dualRow.workPivot] / dualRow.workAlpha);
-        // On the first pass, try to make the povotal row more accurate
+        // On the first pass, try to make the pivotal row more accurate
         if (chuzc_pass == 0) {
           if (debug_small_pivot_issue_report) printf(": improve row\n");
           ekk_instance_.analysis_.num_improve_choose_column_row_call++;
@@ -1909,7 +1909,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     for (HighsInt i = 0; i < slice_num; i++)
       slice_dualRow[i].computeDevexWeight(i);
     // Accumulate the partial sums
-    // Initialse with the partial sum for row_ep
+    // Initialise with the partial sum for row_ep
     computed_edge_weight = dualRow.computed_edge_weight;
     // Update with the partial sum for row_ep
     for (HighsInt i = 0; i < slice_num; i++)
@@ -1925,7 +1925,7 @@ void HEkkDual::updateFtran() {
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranClock);
-  // Clear the picotal column and indicate that its values should be packed
+  // Clear the pivotal column and indicate that its values should be packed
   col_aq.clear();
   col_aq.packFlag = true;
   // Get the constraint matrix column by combining just one column

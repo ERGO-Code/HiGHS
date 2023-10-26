@@ -989,7 +989,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
         // the new linked column could be the one with the new lowest
         // contribution so update the capacity threshold to ensure propagation
         // runs when it can be fixed to the bound that yields the highest
-        // objective valueu
+        // objective value
         capacityThreshold =
             std::max((oldContribution -
                       objectiveLowerContributions[partitionPos].contribution) *

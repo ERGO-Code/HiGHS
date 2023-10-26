@@ -1327,7 +1327,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   // Possibly don't perform hyper-sparse PRICE based on historical density
   //
   // Ensure that result was set up for this number of columns, and
-  // that result.index is still of corect size
+  // that result.index is still of correct size
   assert(HighsInt(result.size) == this->num_col_);
   assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {

@@ -143,7 +143,7 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
     HighsInt it0 = ekk_instance_.iteration_count_;
     // When starting a new phase the (updated) primal objective function
     // value isn't known. Indicate this so that when the value
-    // computed from scratch in rebuild() isn't checked against the the
+    // computed from scratch in rebuild() isn't checked against the
     // updated value
     status.has_primal_objective_value = false;
     if (solve_phase == kSolvePhaseUnknown) {
@@ -425,7 +425,7 @@ void HEkkPrimal::solvePhase1() {
   HighsSimplexStatus& status = ekk_instance_.status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
-  // computed from scratch in build() isn't checked against the the
+  // computed from scratch in build() isn't checked against the
   // updated value
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;
@@ -516,7 +516,7 @@ void HEkkPrimal::solvePhase2() {
   HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
-  // computed from scratch in build() isn't checked against the the
+  // computed from scratch in build() isn't checked against the
   // updated value
   status.has_primal_objective_value = false;
   status.has_dual_objective_value = false;

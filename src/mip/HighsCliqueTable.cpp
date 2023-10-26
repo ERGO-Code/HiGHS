@@ -1367,7 +1367,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       }
 
       if (!freevar && nbin != 0) {
-        // printf("extracing cliques from this row:\n");
+        // printf("extracting cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -kHighsInf, rhs);
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
@@ -1415,7 +1415,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       }
 
       if (!freevar && nbin != 0) {
-        // printf("extracing cliques from this row:\n");
+        // printf("extracting cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -kHighsInf, rhs);
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,

@@ -57,7 +57,7 @@ HighsDebugStatus debugHighsSolution(const string message,
   //
   // Set up a HighsModelStatus and HighsInfo just to
   // complete the parameter list.By setting
-  // check_model_status_and_highs_info to be false they waren't
+  // check_model_status_and_highs_info to be false they aren't
   // used.
   HighsModelStatus dummy_model_status;
   HighsInfo dummy_highs_info;
