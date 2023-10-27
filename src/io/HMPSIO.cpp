@@ -339,7 +339,7 @@ FilereaderRetcode readMps(
   colUpper.assign(numCol, kHighsInf);
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      // Find the column index associated woith the name "data[2]". If
+      // Find the column index associated with the name "data[2]". If
       // the name is in colIndex then the value stored is the true
       // column index plus one. Otherwise 0 will be returned.
       HighsInt iCol = colIndex[data[2]] - 1;

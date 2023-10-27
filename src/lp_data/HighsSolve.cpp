@@ -63,7 +63,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
-    // Seting the IPM-specific values of (highs_)info_ has been done in
+    // Setting the IPM-specific values of (highs_)info_ has been done in
     // solveLpIpx
     const bool unwelcome_ipx_status =
         solver_object.model_status_ == HighsModelStatus::kUnknown ||

@@ -1817,7 +1817,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
     nodelb = std::max(nodelb, localdom.getObjectiveLowerBound());
     bool nodeToQueue = nodelb > mipsolver.mipdata_->optimality_limit;
-    // we check if switching to the other branch of an anchestor yields a higher
+    // we check if switching to the other branch of an ancestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
     if (!nodeToQueue) {

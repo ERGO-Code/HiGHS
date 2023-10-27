@@ -2415,7 +2415,7 @@ void HEkkDual::correctDualInfeasibilities(HighsInt& free_infeasibility_count) {
     if (dual_infeasibility < dual_feasibility_tolerance) continue;
     // There is a dual infeasibility to remove
     //
-    // force_phase2 is set true to prevent fipping of non-fixed
+    // force_phase2 is set true to prevent flipping of non-fixed
     // (boxed) variables when correcting infeasibilities in the first
     // set of duals computed after cost perturbation
     if (fixed || (boxed && !force_phase2)) {

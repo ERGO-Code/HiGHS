@@ -509,7 +509,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
       if (lp.col_lower_[iCol] > lp.col_upper_[iCol]) {
-        // Semi-variables with inconsistent bounds become continous
+        // Semi-variables with inconsistent bounds become continuous
         // and fixed at zero
         num_inconsistent_semi++;
         inconsistent_semi_variable_index.push_back(iCol);
@@ -1173,7 +1173,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
   const bool poor_improvement =
       improvement_factor < improvement_factor_required;
 
-  // Possibly abandon scaling if it's not improved equlibration significantly
+  // Possibly abandon scaling if it's not improved equilibration significantly
   if (possibly_abandon_scaling && poor_improvement) {
     // Unscale the matrix
     for (HighsInt iCol = 0; iCol < numCol; iCol++) {

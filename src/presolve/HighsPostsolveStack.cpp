@@ -856,7 +856,7 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
   // value of x. Hence a must be an integer and a <= (x_u-x_l)+1
   //
   // For example, if x and y are binary, then x+a.y is [0, 1, a,
-  // 1+a]. For this to be a continuous sequernce of integers, we must
+  // 1+a]. For this to be a continuous sequence of integers, we must
   // have a <= 2.
   //
   // * If x is integer and y is continuous:
