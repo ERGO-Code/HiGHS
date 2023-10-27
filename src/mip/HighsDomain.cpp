@@ -855,7 +855,7 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -976,7 +976,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -989,7 +989,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
         // the new linked column could be the one with the new lowest
         // contribution so update the capacity threshold to ensure propagation
         // runs when it can be fixed to the bound that yields the highest
-        // objective valueu
+        // objective value
         capacityThreshold =
             std::max((oldContribution -
                       objectiveLowerContributions[partitionPos].contribution) *
@@ -2831,7 +2831,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
@@ -2941,7 +2941,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
@@ -2988,8 +2988,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
     if (covered < -localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3015,14 +3015,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             // bound can be relaxed
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3046,14 +3046,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3102,8 +3102,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
     if (covered > localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3129,14 +3129,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);
@@ -3161,14 +3161,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);

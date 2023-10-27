@@ -658,6 +658,7 @@ class HighsHashTree {
               newNode = newLeafSize4;
               for (int i = 0; i <= newNumChild; ++i)
                 mergeIntoLeaf(newLeafSize4, hashPos, branch->child[i]);
+              break;
             }
             default:
               // Unexpected result from 'entries_to_size_class'

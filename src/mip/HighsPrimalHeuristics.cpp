@@ -531,7 +531,7 @@ retry:
       return;
     }
     maxfixingrate = fixingrate * 0.5;
-    // printf("infeasible in in root node, trying with lower fixing rate %g\n",
+    // printf("infeasible in root node, trying with lower fixing rate %g\n",
     //        maxfixingrate);
     goto retry;
   }
@@ -635,7 +635,7 @@ retry:
         // reinforce direction of this solution away from root
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
-        // if objcetive is zero round to nearest integer
+        // if objective is zero round to nearest integer
         double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
         if (rootchange >= 0.4)
           fixval = std::ceil(fracval);
@@ -706,7 +706,7 @@ retry:
       }
 
       if (fixingrate >= minfixingrate)
-        break;  // if the RINS neigborhood achieved a high enough fixing rate
+        break;  // if the RINS neighbourhood achieved a high enough fixing rate
                 // by itself we stop here
       fixcandend = heurlp.getFractionalIntegers().end();
       // now sort the variables by their distance towards the value they will
@@ -817,7 +817,7 @@ retry:
       lp_iterations = new_lp_iterations;
       return;
     }
-    // printf("infeasible in in root node, trying with lower fixing rate\n");
+    // printf("infeasible in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;
   }

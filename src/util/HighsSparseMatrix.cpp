@@ -558,9 +558,9 @@ void HighsSparseMatrix::deleteCols(
     }
     // Ensure that the starts of the deleted columns are zeroed to
     // avoid redundant start information for columns whose indices
-    // are't used after the deletion takes place. In particular, if
+    // aren't used after the deletion takes place. In particular, if
     // all columns are deleted then something must be done to ensure
-    // that the matrix isn't magially recreated by increasing the
+    // that the matrix isn't magically recreated by increasing the
     // number of columns from zero when there are no rows in the
     // matrix.
     for (HighsInt col = delete_from_col; col <= delete_to_col; col++)
@@ -1327,7 +1327,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   // Possibly don't perform hyper-sparse PRICE based on historical density
   //
   // Ensure that result was set up for this number of columns, and
-  // that result.index is still of corect size
+  // that result.index is still of correct size
   assert(HighsInt(result.size) == this->num_col_);
   assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {

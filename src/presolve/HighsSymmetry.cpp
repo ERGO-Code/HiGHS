@@ -73,7 +73,7 @@ void HighsSymmetryDetection::removeFixPoints() {
       // if the cell number is different to the current cell number this is the
       // start of a new cell
       if (cellNumber != vertexToCell[vertex]) {
-        // remember the number of this cell to indetify its end
+        // remember the number of this cell to identify its end
         cellNumber = vertexToCell[vertex];
         // set the link of the cell start to point to its end
         currentPartitionLinks[cellStart] = i;
@@ -539,7 +539,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
         ++numFixed;
         if (domain.infeasible()) {
           // this can happen due to deductions from earlier fixings
-          // otherwise it would have been caughgt by the infeasibility
+          // otherwise it would have been caught by the infeasibility
           // check within the next loop that goes over i
           // printf("packing orbitope propagation found infeasibility\n");
           return numFixed;
@@ -572,7 +572,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       ++numFixed;
       if (domain.infeasible()) {
         // this can happen due to deductions from earlier fixings
-        // otherwise it would have been caughgt by the infeasibility
+        // otherwise it would have been caught by the infeasibility
         // check within the next loop that goes over i
         // printf("packing orbitope propagation found infeasibility\n");
         return numFixed;
@@ -1285,7 +1285,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
     // if the cell number is different to the current cell number this is the
     // start of a new cell
     if (cellNumber != vertexToCell[vertex]) {
-      // remember the number of this cell to indetify its end
+      // remember the number of this cell to identify its end
       cellNumber = vertexToCell[vertex];
       // set the link of the cell start to point to its end
       currentPartitionLinks[cellStart] = i;
@@ -1806,7 +1806,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           // than the best leaves and it would have been already pruned if
           // it's certificate value was larger unless it is equal to the first
           // leave nodes certificate value which is caught by the first case
-          // of the if confition. Hence, having a lexicographically smaller
+          // of the if condition. Hence, having a lexicographically smaller
           // certificate value than the best leave is the only way to get
           // here.
           assert(bestLeaveCertificate[bestLeavePrefixLen] >

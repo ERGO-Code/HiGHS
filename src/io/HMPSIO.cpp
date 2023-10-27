@@ -339,7 +339,7 @@ FilereaderRetcode readMps(
   colUpper.assign(numCol, kHighsInf);
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      // Find the column index associated woith the name "data[2]". If
+      // Find the column index associated with the name "data[2]". If
       // the name is in colIndex then the value stored is the true
       // column index plus one. Otherwise 0 will be returned.
       HighsInt iCol = colIndex[data[2]] - 1;
@@ -905,7 +905,7 @@ HighsStatus writeMps(
             } else {
               if (!highs_isInfinity(-lb)) {
                 // Finite lower bound. No need to state this if LB is
-                // zero unless UB is infinte
+                // zero unless UB is infinite
                 if (lb || highs_isInfinity(ub))
                   fprintf(file, " LI BOUND     %-8s  %.10g\n",
                           col_names[c_n].c_str(), lb);

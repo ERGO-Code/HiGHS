@@ -772,7 +772,7 @@ lu_int lu_update(struct lu *this, double xtbl)
          * If U is permuted triangular, then permute to zero-free diagonal.
          * Set up row_reach[0..nreach-1] and col_reach[0..nreach-1] for
          * updating the permutations below. The column reach is the combined
-         * reach of the path nodes. The row reach is is given through pmap.
+         * reach of the path nodes. The row reach is given through pmap.
          */
         if (istriangular)
         {

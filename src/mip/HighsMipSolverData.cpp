@@ -296,7 +296,7 @@ bool HighsMipSolverData::moreHeuristicsAllowed() const {
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
-    // of heuristics that is allowed in the the first 30% of tree exploration as
+    // of heuristics that is allowed in the first 30% of tree exploration as
     // fast as possible, which is why we have the max(0.3/0.8,...).
     // Hence, in the first 30% of the tree exploration we allow to spent all
     // effort available for heuristics in that part of the search as early as
@@ -1107,10 +1107,10 @@ void HighsMipSolverData::printDisplayLine(char first) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
-  // coefficients are ngated so that the MIP solver only solves a
+  // coefficients are negated so that the MIP solver only solves a
   // minimization. Hence, in preparing to print the display line, the
   // dual bound (lb) is always less than the primal bound (ub). When
-  // printed, the sense of the optimizaiton is applied so that the
+  // printed, the sense of the optimization is applied so that the
   // values printed correspond to the original objective.
 
   // No point in computing all the logging values if logging is off

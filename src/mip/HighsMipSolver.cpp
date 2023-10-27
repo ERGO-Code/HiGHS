@@ -235,7 +235,7 @@ restart:
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
-      // printf("continue plunging due to good esitmate\n");
+      // printf("continue plunging due to good estimate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
     search.flushStatistics();

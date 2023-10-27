@@ -198,7 +198,7 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
   for (HighsInt iVar = 0; iVar < scale.num_col + scale.num_row; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
-    // No dual infeasiblity for fixed rows and columns
+    // No dual infeasibility for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
     bool col = iVar < scale.num_col;
     HighsInt iCol = 0;
