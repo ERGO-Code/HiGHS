@@ -1,17 +1,17 @@
 import highspy, random, time, math
 
-CG_GAP_REL = 1e-2
+CG_GAP_REL = 1e-4
 
 random.seed(100)
 
 #Total number of items
-N = 200
+N = 60
 
 #Item weight
 weights = [round(random.uniform(1, 10),4) for _ in range(N)]
 
 # Bin capacity
-capacity = 50
+capacity = 15
 
 # Maximum number of bins
 B = N # Easy upper bound on the number of bins
@@ -253,12 +253,6 @@ def generateColumns(columns: list, m, msg=True, solve_exact = False, start_time 
         duals = list(solution.row_dual)
         ub = sum(vals)
 
-    # If there are any repeated columns, deletes the repeated ones and resets the master problem.
-    unique_columns = getUniqueColumns(columns)
-    if len(unique_columns) != len(columns):
-        columns = unique_columns
-        m, vals, duals = createMasterProblem(columns)
-
     return m, columns, vals
 
 def getFractionalColumns(vals: list, columns: list):
@@ -289,23 +283,21 @@ class Node:
 
 
 def solveNode(node: Node, columns: list[list[int]], m):
-
-    m, *_ = createMasterProblem(columns, False)
-
-    # The other option is to reset the columns' bounds, but for some reason it slower than creating a new model
-    # m.changeColsBounds(
-    #     len(columns),                   # Qty columns to change bounds
-    #     list(range(len(columns))),      # Which columns
-    #     [0]*len(columns),               # Lower bound
-    #     [1]*len(columns)                # Upper bound
-    # )
-
+    lower_bounds = [
+        0 if idx not in node.assigned_columns
+        else 1
+        for idx in range(len(columns))
+    ]
     m.changeColsBounds(
-        len(node.assigned_columns),         # Qty of columns to change bounds
-        node.assigned_columns,              # Indexes of columns
-        [1]*len(node.assigned_columns),     # Lower bound
-        [1]*len(node.assigned_columns)      # Upper bound
+        len(columns),                       # Qty columns to change bounds
+        list(range(len(columns))),          # Which columns
+        lower_bounds,                       # Lower bound (0 if not assigned else 1)
+        [1]*len(columns)                    # Upper bound (always 1)
     )
+
+    # Making sure that there is no repeated index
+    assert len(node.assigned_columns) == len(set(node.assigned_columns))
+
     m.run()
 
     if m.getModelStatus() == highspy.HighsModelStatus.kOptimal:        
@@ -317,6 +309,10 @@ def solveNode(node: Node, columns: list[list[int]], m):
         node.final_columns = columns
         node.final_columns_vals = vals
         node.final_fractional_columns = getFractionalColumns(vals, columns)
+
+        # Making sure that no column already assigned to 1 in the node
+        # is returned back with a fractional value
+        assert len(set(node.final_fractional_columns).intersection(set(node.assigned_columns))) == 0
 
         return True, m, node
     
@@ -359,11 +355,13 @@ def branchAndPrice(m, vals, columns, start_time=0):
         branch_tree.remove(node)
 
         # Solves the node with column generation
-        is_feasible, m, node = solveNode(node, columns, m)
-        columns = node.final_columns
-
+        mp_is_feasible, m, node = solveNode(node, columns, m)
+        
         qty_nodes_visited += 1
-        if is_feasible:
+        if mp_is_feasible:
+            
+            # It will only add columns if the master problem is feasible
+            columns = node.final_columns
             
             qtd_fractional_columns = len(node.final_fractional_columns)
 
@@ -383,8 +381,8 @@ def branchAndPrice(m, vals, columns, start_time=0):
                     new_assigned_columns = node.assigned_columns + [column_idx]
                     key = getKey(new_assigned_columns)
                     if key not in branch_tree_dict:
-                        new_node = Node(node_id, node.layer+1, new_assigned_columns, node)
                         node_id += 1
+                        new_node = Node(node_id, node.layer+1, new_assigned_columns, node)
                         branch_tree = [new_node] + branch_tree
                         branch_tree_dict[key] = new_node
 
