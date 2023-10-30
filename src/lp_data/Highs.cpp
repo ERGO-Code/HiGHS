@@ -3593,7 +3593,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
-      if (noReoptimization) {
+      if (!noReoptimization) {
         // Save the options to allow the best simplex strategy to
         // be used
         HighsOptions save_options = options_;
