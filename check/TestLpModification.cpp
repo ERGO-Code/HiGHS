@@ -1842,3 +1842,35 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
               message);
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
+
+TEST_CASE("mod-duplicate-indices", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  highs.readModel(filename);
+  std::vector<double> lower = {0, 0, 0, 0};
+  std::vector<HighsInt> set0 = {5, 2, 7, 3};
+  std::vector<double> lower0 = {1, 1, 1, 1};
+  std::vector<double> upper0 = {1, 1, 1, 1};
+  std::vector<HighsInt> set1 = {5, 2, 7, 3, 2};
+  std::vector<double> lower1 = {0, 0, 0, 0, 0};
+  std::vector<double> upper1 = {1, 1, 1, 1, 1};
+  REQUIRE(highs.changeColsBounds(HighsInt(set0.size()), set0.data(),
+                                 lower0.data(),
+                                 upper0.data()) == HighsStatus::kOk);
+  highs.run();
+  double objective1 = highs.getInfo().objective_function_value;
+  // Reverting the change with duplicate index should fail
+  REQUIRE(highs.changeColsBounds(HighsInt(set1.size()), set1.data(),
+                                 lower1.data(),
+                                 upper1.data()) == HighsStatus::kError);
+  // Reverting the change without duplicate index should be OK
+  REQUIRE(highs.changeColsBounds(HighsInt(set0.size()), set0.data(),
+                                 lower.data(),
+                                 upper0.data()) == HighsStatus::kOk);
+  highs.run();
+  double objective0 = highs.getInfo().objective_function_value;
+  REQUIRE(objective0 < objective1);
+  REQUIRE(objective0 == -7.75);
+}
