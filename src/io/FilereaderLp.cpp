@@ -288,9 +288,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   ar_matrix.ensureRowwise();
 
   const bool has_col_names =
-      allow_model_names && lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
+      allow_model_names &&
+      lp.col_names_.size() == static_cast<size_t>(lp.num_col_);
   const bool has_row_names =
-      allow_model_names && lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
+      allow_model_names &&
+      lp.row_names_.size() == static_cast<size_t>(lp.num_row_);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file

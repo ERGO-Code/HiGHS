@@ -2181,7 +2181,16 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Set supplied to Highs::changeColsIntegrality contains "
+                 "duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, local_integrality.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2243,7 +2252,16 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeColsCost contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status =
       changeCostsInterface(index_collection, local_cost.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2314,7 +2332,16 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeColsBounds contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeColBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2387,7 +2414,16 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_row_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeRowsBounds contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeRowBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
