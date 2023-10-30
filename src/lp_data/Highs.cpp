@@ -3513,7 +3513,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
-  if (model_.isMip() && !basis.valid) {
+  if (this->model_.isMip() && !basis.valid) {
     // Postsolving a MIP without a valid basis - which, if valid,
     // would imply that the relaxation had been solved, a case handled
     // below
@@ -3531,17 +3531,19 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     HighsPostsolveStatus postsolve_status = runPostsolve();
 
     if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-      solution_ = presolve_.data_.recovered_solution_;
-      model_status_ = HighsModelStatus::kUnknown;
-      info_.invalidate();
-      HighsLp& lp = model_.lp_;
-      info_.objective_function_value = computeObjectiveValue(lp, solution_);
-      getKktFailures(options_, model_, solution_, basis_, info_);
-      double& max_integrality_violation = info_.max_integrality_violation;
+      this->solution_ = presolve_.data_.recovered_solution_;
+      this->model_status_ = HighsModelStatus::kUnknown;
+      this->info_.invalidate();
+      HighsLp& lp = this->model_.lp_;
+      this->info_.objective_function_value =
+          computeObjectiveValue(lp, this->solution_);
+      getKktFailures(this->options_, this->model_, this->solution_,
+                     this->basis_, this->info_);
+      double& max_integrality_violation = this->info_.max_integrality_violation;
       max_integrality_violation = 0;
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
         if (lp.integrality_[iCol] == HighsVarType::kInteger) {
-          const double value = solution_.col_value[iCol];
+          const double value = this->solution_.col_value[iCol];
           double intval = std::floor(value + 0.5);
           max_integrality_violation =
               std::max(fabs(intval - value), max_integrality_violation);
