@@ -1118,7 +1118,7 @@ HighsStatus Highs::run() {
     assert(basis_.valid);
   }
 
-  // lambda Lp solving
+  // lambda for Lp solving
   auto solveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
                      double& time) {
     time = -timer_.read(timer_.solve_clock);
