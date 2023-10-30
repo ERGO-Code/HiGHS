@@ -1118,26 +1118,32 @@ HighsStatus Highs::run() {
     assert(basis_.valid);
   }
 
+  // lambda Lp solving
+  auto solveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
+                     double& time) {
+    time = -timer_.read(timer_.solve_clock);
+    if (possibly_use_log_dev_level_2) {
+      options_.log_dev_level = use_log_dev_level;
+      options_.output_flag = use_output_flag;
+    }
+    timer_.start(timer_.solve_clock);
+    call_status = callSolveLp(lp, lpSolveDescription);
+    timer_.stop(timer_.solve_clock);
+    if (possibly_use_log_dev_level_2) {
+      options_.log_dev_level = log_dev_level;
+      options_.output_flag = output_flag;
+    }
+    time += timer_.read(timer_.solve_clock);
+  };
+
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
     ekk_instance_.lp_name_ = "LP without presolve or with basis";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
-    this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = use_log_dev_level;
-      options_.output_flag = use_output_flag;
-    }
-    timer_.start(timer_.solve_clock);
-    call_status =
-        callSolveLp(incumbent_lp, "Solving LP without presolve or with basis");
-    timer_.stop(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = log_dev_level;
-      options_.output_flag = output_flag;
-    }
-    this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+    solveLp(incumbent_lp, "Solving LP without presolve or with basis",
+            this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1178,20 +1184,8 @@ HighsStatus Highs::run() {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status =
-            callSolveLp(incumbent_lp, "Not presolved: solving the LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp, "Not presolved: solving the LP",
+                this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1202,20 +1196,8 @@ HighsStatus Highs::run() {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
         reportPresolveReductions(log_options, incumbent_lp, false);
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(
-            incumbent_lp, "Problem not reduced by presolve: solving the LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
+                this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1262,19 +1244,8 @@ HighsStatus Highs::run() {
         // objective values aren't correct
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
-        this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(reduced_lp, "Solving the presolved LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(reduced_lp, "Solving the presolved LP",
+                this_solve_presolved_lp_time);
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
@@ -1333,21 +1304,10 @@ HighsStatus Highs::run() {
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(incumbent_lp,
-                                  "Solving the original LP with primal simplex "
-                                  "to determine infeasible or unbounded");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp,
+                "Solving the original LP with primal simplex "
+                "to determine infeasible or unbounded",
+                this_solve_original_lp_time);
         // Recover the options
         options_ = save_options;
         if (return_status == HighsStatus::kError)
@@ -1479,23 +1439,11 @@ HighsStatus Highs::run() {
             // adding the corresponding values after callSolveLp gives
             // difference
             postsolve_iteration_count = -info_.simplex_iteration_count;
-            this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-            if (possibly_use_log_dev_level_2) {
-              options_.log_dev_level = use_log_dev_level;
-              options_.output_flag = use_output_flag;
-            }
-            timer_.start(timer_.solve_clock);
-            call_status = callSolveLp(
-                incumbent_lp,
-                "Solving the original LP from the solution after postsolve");
-            timer_.stop(timer_.solve_clock);
-            if (possibly_use_log_dev_level_2) {
-              options_.log_dev_level = log_dev_level;
-              options_.output_flag = output_flag;
-            }
-            // Determine the iteration count and timing records
+            solveLp(incumbent_lp,
+                    "Solving the original LP from the solution after postsolve",
+                    this_solve_original_lp_time);
+            // Determine the iteration count
             postsolve_iteration_count += info_.simplex_iteration_count;
-            this_solve_original_lp_time += timer_.read(timer_.solve_clock);
             return_status =
                 interpretCallStatus(options_.log_options, call_status,
                                     return_status, "callSolveLp");
