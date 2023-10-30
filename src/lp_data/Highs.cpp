@@ -292,7 +292,7 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
   return return_status;
 }
 
-// Methods below change the incumbent model or solver infomation
+// Methods below change the incumbent model or solver information
 // associated with it. Hence returnFromHighs is called at the end of
 // each
 HighsStatus Highs::passModel(HighsModel model) {
@@ -869,7 +869,7 @@ HighsStatus Highs::run() {
     return HighsStatus::kError;
   }
 
-  // HiGHS solvers require models with no inifinite costs, and no semi-variables
+  // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call
   // to run() - with initial check that called_return_from_run is true
@@ -986,7 +986,8 @@ HighsStatus Highs::run() {
       return returnFromRun(HighsStatus::kError, undo_mods);
     }
   }
-  const bool use_simplex_or_ipm = options_.solver.compare(kHighsChooseString);
+  const bool use_simplex_or_ipm =
+      (options_.solver.compare(kHighsChooseString) != 0);
   if (!use_simplex_or_ipm) {
     // Leaving HiGHS to choose method according to model class
     if (model_.isQp()) {
@@ -1227,7 +1228,7 @@ HighsStatus Highs::run() {
         if (kAllowDeveloperAssert) {
           // Validate the reduced LP
           //
-          // Although preseolve can yield small values in the matrix,
+          // Although presolve can yield small values in the matrix,
           // they are only stripped out (by assessLp) in debug. This
           // suggests that they are no real danger to the simplex
           // solver. The only danger is pivoting on them, but that
@@ -1327,7 +1328,7 @@ HighsStatus Highs::run() {
           return returnFromRun(return_status, undo_mods);
         }
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
-        // can't reurn this. Use primal simplex solver on the original
+        // can't return this. Use primal simplex solver on the original
         // LP
         HighsOptions save_options = options_;
         options_.solver = "simplex";
@@ -1522,7 +1523,7 @@ HighsStatus Highs::run() {
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
     // be infeasible or unbounded, the time/iteration limit has been
-    // reached, a user interrupt has ocurred, or the status is unknown
+    // reached, a user interrupt has occurred, or the status is unknown
     // (cycling)
     //
     // Hence there's no incumbent lp solution or basis to drive dual
@@ -1797,7 +1798,6 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
 HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                                  HighsInt* row_num_nz, HighsInt* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
-  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -1852,7 +1852,6 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                                     HighsInt* col_num_nz,
                                     HighsInt* col_indices) {
-  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -1970,7 +1969,6 @@ HighsStatus Highs::stopCallback(const int callback_type) {
                  "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
-  std::vector<bool>& active = this->callback_.active;
   assert(int(this->callback_.active.size()) == kNumCallbackType);
   this->callback_.active[callback_type] = false;
   // Possibly modify the logging callback activity
@@ -2857,7 +2855,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   if (options_.ranging == kHighsOnString) {
     if (model_.isMip() || model_.isQp()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot determing ranging information for MIP or QP\n");
+                   "Cannot determine ranging information for MIP or QP\n");
       return_status = HighsStatus::kError;
       return returnFromWriteSolution(file, return_status);
     }
@@ -3138,7 +3136,7 @@ void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
-  // if not, try to assign values to continous variables to achieve a
+  // if not, try to assign values to continuous variables to achieve a
   // feasible solution. Valuable in the case where users make a
   // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
@@ -3158,7 +3156,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   bool is_integer = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
@@ -3210,7 +3208,6 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
@@ -3307,8 +3304,7 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  QpAsmStatus qpstatus =
-      solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
+  solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
@@ -3485,8 +3481,6 @@ HighsStatus Highs::callSolveMip() {
     if (solver.solution_objective_ != kHighsInf) {
       const double mip_max_bound_violation =
           std::max(solver.row_violation_, solver.bound_violation_);
-      const double mip_max_infeasibility =
-          std::max(mip_max_bound_violation, solver.integrality_violation_);
       const double delta_max_bound_violation =
           std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
       // Possibly report a mis-match between the max bound violation
@@ -3727,8 +3721,8 @@ HighsStatus Highs::openWriteFile(const string filename,
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot open writeable file \"%s\" in %s\n",
-                   filename.c_str(), method_name.c_str());
+                   "Cannot open writable file \"%s\" in %s\n", filename.c_str(),
+                   method_name.c_str());
       return HighsStatus::kError;
     }
     const char* dot = strrchr(filename.c_str(), '.');

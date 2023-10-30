@@ -807,8 +807,8 @@ void HFactor::buildSimple() {
     if (nworkLast == nwork) break;
   }
   if (report_anything) reportLu(kReportLuBoth, false);
-  t2_store_l = l_index.size() - t2_store_l;
-  t2_store_u = u_index.size() - t2_store_u;
+  t2_store_l = static_cast<double>(l_index.size()) - t2_store_l;
+  t2_store_u = static_cast<double>(u_index.size()) - t2_store_u;
   t2_store_p = t2_store_p - nwork;
 
   build_synthetic_tick +=
@@ -892,7 +892,7 @@ HighsInt HFactor::buildKernel() {
     if (nwork == check_nwork) {
       reportAsm();
     }
-    // Detemine whether to return due to exceeding the time limit
+    // Determine whether to return due to exceeding the time limit
     if (check_for_timeout && search_k % timer_frequency == 0) {
       double current_time = build_timer_->readRunHighsClock();
       double time_difference = current_time - previous_iteration_time;
@@ -1274,7 +1274,6 @@ void HFactor::buildHandleRankDeficiency() {
   // * Less than the rank deficiency of the basis matrix if num_basic < num_row
   //
   //
-  const HighsInt basic_index_rank_deficiency = rank_deficiency;
   if (num_basic < num_row) {
     rank_deficiency += num_row - num_basic;
   }
@@ -2113,7 +2112,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
       dwork[p_row] = value;
     }
 
-    // 3. Store the partial FTRAN result to matirx U
+    // 3. Store the partial FTRAN result to matrix U
     double ppaq = dwork[iRow[cp]];  // pivot of the partial aq
     dwork[iRow[cp]] = 0;
     HighsInt u_countX = t_start[cp];

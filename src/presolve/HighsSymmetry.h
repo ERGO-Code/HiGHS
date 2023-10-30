@@ -44,7 +44,6 @@ class HighsMatrixColoring {
     // iterator points to smallest element in map which fulfills key >= value -
     // tolerance
     auto it = colorMap.lower_bound(value - tolerance);
-    u32 color;
     // check if there is no such element, or if this element has a key value +
     // tolerance in which case we create a new color and store it with the key
     // value
@@ -80,10 +79,12 @@ struct HighsOrbitopeMatrix {
   std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
-  HighsInt& entry(HighsInt i, HighsInt j) { return matrix[i + j * numRows]; }
+  HighsInt& entry(HighsInt i, HighsInt j) {
+    return matrix[i + static_cast<size_t>(j) * numRows];
+  }
 
   const HighsInt& entry(HighsInt i, HighsInt j) const {
-    return matrix[i + j * numRows];
+    return matrix[i + static_cast<size_t>(j) * numRows];
   }
 
   HighsInt& operator()(HighsInt i, HighsInt j) { return entry(i, j); }

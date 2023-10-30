@@ -949,7 +949,7 @@ void HighsSimplexAnalysis::summaryReport() {
     if (num_correct_dual_primal_flip) {
       printf(
           "%12" HIGHSINT_FORMAT
-          "   correct dual primal flips (max = %g) for min dual infeasiblity "
+          "   correct dual primal flips (max = %g) for min dual infeasibility "
           "= %g\n",
           num_correct_dual_primal_flip, max_correct_dual_primal_flip,
           min_correct_dual_primal_flip_dual_infeasibility);
@@ -957,7 +957,7 @@ void HighsSimplexAnalysis::summaryReport() {
     if (num_correct_dual_cost_shift) {
       printf(
           "%12" HIGHSINT_FORMAT
-          "   correct dual  cost shifts (max = %g) for max dual infeasiblity "
+          "   correct dual  cost shifts (max = %g) for max dual infeasibility "
           "= %g\n",
           num_correct_dual_cost_shift, max_correct_dual_cost_shift,
           max_correct_dual_cost_shift_dual_infeasibility);
@@ -1090,7 +1090,6 @@ void HighsSimplexAnalysis::summaryReport() {
       double dlTime = toTime - fmTime;
       HighsInt iterSpeed = 0;
       if (dlTime > 0) iterSpeed = dlIter / dlTime;
-      HighsInt lc_simplex_strategy = lcAnIter.AnIterTrace_simplex_strategy;
       HighsInt lc_edge_weight_mode = lcAnIter.AnIterTrace_edge_weight_mode;
       std::string str_edge_weight_mode;
       if (lc_edge_weight_mode == (HighsInt)EdgeWeightMode::kSteepestEdge)
@@ -1112,9 +1111,8 @@ void HighsSimplexAnalysis::summaryReport() {
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaFtran]);
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp]);
       printOneDensity(lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp]);
-      double use_DSE_density;
-      HighsInt local_simplex_strategy = lcAnIter.AnIterTrace_simplex_strategy;
       if (rp_dual_steepest_edge) {
+        double use_DSE_density;
         if (lc_edge_weight_mode == (HighsInt)EdgeWeightMode::kSteepestEdge) {
           use_DSE_density = lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse];
         } else {

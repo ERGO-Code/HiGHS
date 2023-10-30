@@ -29,8 +29,7 @@ class HighsIntegers {
   }
 
   static double mod(double a, double m) {
-    int64_t r = std::fmod(a, m);
-    return r + (a < 0) * m;
+    return std::trunc(std::fmod(a, m)) + (a < 0) * m;
   }
 
   static int64_t nearestInteger(double x) {
@@ -38,7 +37,7 @@ class HighsIntegers {
   }
 
   static bool isIntegral(double x, double eps) {
-    double y = std::fabs(x - (int64_t)x);
+    double y = std::fabs(x - std::trunc(x));
     return std::min(y, 1.0 - y) <= eps;
   }
 
@@ -118,8 +117,8 @@ class HighsIntegers {
     m[1] += m[0] * ai;
     m[3] += m[2] * ai;
 
-    double x0 = m[0] / (double)m[2];
-    double x1 = m[1] / (double)m[3];
+    double x0 = static_cast<double>(m[0]) / static_cast<double>(m[2]);
+    double x1 = static_cast<double>(m[1]) / static_cast<double>(m[3]);
     x = std::abs(x);
     double err0 = std::abs(x - x0);
     double err1 = std::abs(x - x1);
@@ -204,7 +203,7 @@ class HighsIntegers {
       }
     }
 
-    return denom / (double)currgcd;
+    return static_cast<double>(denom) / static_cast<double>(currgcd);
   }
 
   static double integralScale(const std::vector<double>& vals, double deltadown,

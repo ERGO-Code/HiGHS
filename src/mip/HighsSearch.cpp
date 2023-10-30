@@ -247,7 +247,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
                                                double& upNodeLb) {
   assert(!lp->getFractionalIntegers().empty());
 
-  static constexpr HighsInt basisstart_threshold = 20;
   std::vector<double> upscore;
   std::vector<double> downscore;
   std::vector<uint8_t> upscorereliable;
@@ -939,7 +938,6 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
     // if global orbits have been computed we check whether they are still valid
     // in this node
     const auto& domchgstack = localdom.getDomainChangeStack();
-    const auto& branchpos = localdom.getBranchingPositions();
     for (HighsInt i : localdom.getBranchingPositions()) {
       HighsInt col = domchgstack[i].column;
       if (mipsolver.mipdata_->symmetries.columnPosition[col] == -1) continue;
@@ -1133,7 +1131,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             }
           }
         } else if (lp->getObjective() > getCutoffBound()) {
-          // the LP is not solved to dual feasibilty due to scaling/numerics
+          // the LP is not solved to dual feasibility due to scaling/numerics
           // therefore we compute a conflict constraint as if the LP was bound
           // exceeding and propagate the local domain again. The lp relaxation
           // class will take care to consider the dual multipliers with an
@@ -1819,7 +1817,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
     nodelb = std::max(nodelb, localdom.getObjectiveLowerBound());
     bool nodeToQueue = nodelb > mipsolver.mipdata_->optimality_limit;
-    // we check if switching to the other branch of an anchestor yields a higher
+    // we check if switching to the other branch of an ancestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
     if (!nodeToQueue) {

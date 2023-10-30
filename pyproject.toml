@@ -29,6 +29,7 @@ setup = ['-Dwith_pybind11=True',
          # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
         ]
 dist = ['--include-subprojects']
+install = ['--skip-subprojects']
 
 [tool.cibuildwheel]
 build = "*"

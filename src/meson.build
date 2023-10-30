@@ -10,15 +10,27 @@ conf_data.set('HIGHS_VERSION_PATCH',
               meson.project_version().split('.')[2])
 conf_data.set('ZLIB_FOUND',
               zlib_dep.found())
-conf_data.set('HIGHSINT64',
-              get_option('highsint64'))
+# 64 bit numbers
+if host_machine.cpu_family() == 'x86_64'
+    # Get user's option, if it's not provided, enable highsint64 by default on x86_64
+    highsint64_opt = get_option('highsint64')
+    conf_data.set('HIGHSINT64', highsint64_opt)
+else
+    conf_data.set('HIGHSINT64', false)
+endif
 # Commit hash
-commit_hash_cmd = run_command('git', 'rev-parse',
-                              '--short', 'HEAD',
-                             check: true)
-commit_hash = commit_hash_cmd.stdout().strip()
-conf_data.set_quoted('HIGHS_GITHASH',
-                     commit_hash)
+commit_hash = 'unknown' # Default value
+git = find_program('git', required: false)
+if git.found()
+    commit_hash_cmd = run_command(git, 'rev-parse', '--short',
+                                  '-C', meson.project_source_root(), 'HEAD',
+                                  check: false, # Don't abort on failure
+                                 )
+    if commit_hash_cmd.returncode() == 0
+        commit_hash = commit_hash_cmd.stdout().strip()
+    endif
+endif
+conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
 python_getdate = '''
 import datetime
@@ -278,6 +290,7 @@ highslib = library('highs',
                    highslib_srcs,
                    dependencies: _deps,
                    cpp_args: _args,
+                   c_args: _args,
                    link_with: _linkto,
                    include_directories: _incdirs,
                    pic: true,

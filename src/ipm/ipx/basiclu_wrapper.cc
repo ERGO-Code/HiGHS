@@ -28,6 +28,7 @@ BasicLu::BasicLu(const Control& control, Int dim) : control_(control) {
     xstore_[BASICLU_MEMORYL] = 1;
     xstore_[BASICLU_MEMORYU] = 1;
     xstore_[BASICLU_MEMORYW] = 1;
+    fill_factor_ = 0.0;
 }
 
 Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
@@ -132,7 +133,7 @@ void BasicLu::_SolveDense(const Vector& rhs, Vector& lhs, char trans) {
 
 void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx) {
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -153,7 +154,7 @@ void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx,
     Int status;
     Int nzlhs = 0;
     lhs.set_to_zero();
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -173,7 +174,7 @@ void BasicLu::_FtranForUpdate(Int nzrhs, const Int* bi, const double* bx,
 
 void BasicLu::_BtranForUpdate(Int j) {
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -193,7 +194,7 @@ void BasicLu::_BtranForUpdate(Int j, IndexedVector& lhs) {
     Int status;
     Int nzlhs = 0;
     lhs.set_to_zero();
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_solve_for_update(istore_.data(), xstore_.data(),
                                           Li_.data(), Lx_.data(),
                                           Ui_.data(), Ux_.data(),
@@ -214,7 +215,7 @@ void BasicLu::_BtranForUpdate(Int j, IndexedVector& lhs) {
 Int BasicLu::_Update(double pivot) {
     double max_eta_old = xstore_[BASICLU_MAX_ETA];
     Int status;
-    for (Int ncall = 0; ; ncall++) {
+    for (;;) {
         status = basiclu_update(istore_.data(), xstore_.data(),
                                 Li_.data(), Lx_.data(),
                                 Ui_.data(), Ux_.data(),
@@ -265,12 +266,12 @@ void BasicLu::_pivottol(double new_pivottol) {
 }
 
 void BasicLu::Reallocate() {
-    assert(Li_.size() == xstore_[BASICLU_MEMORYL]);
-    assert(Lx_.size() == xstore_[BASICLU_MEMORYL]);
-    assert(Ui_.size() == xstore_[BASICLU_MEMORYU]);
-    assert(Ux_.size() == xstore_[BASICLU_MEMORYU]);
-    assert(Wi_.size() == xstore_[BASICLU_MEMORYW]);
-    assert(Wx_.size() == xstore_[BASICLU_MEMORYW]);
+    assert(Li_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Lx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYL]));
+    assert(Ui_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Ux_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYU]));
+    assert(Wi_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
+    assert(Wx_.size() == static_cast<size_t>(xstore_[BASICLU_MEMORYW]));
 
     if (xstore_[BASICLU_ADD_MEMORYL] > 0) {
         Int new_size = xstore_[BASICLU_MEMORYL] + xstore_[BASICLU_ADD_MEMORYL];
