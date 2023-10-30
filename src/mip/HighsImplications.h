@@ -54,7 +54,7 @@ class HighsImplications {
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * numcol);
+    implications.resize(2 * static_cast<size_t>(numcol));
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
@@ -69,7 +69,7 @@ class HighsImplications {
     implications.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * numcol);
+    implications.resize(2 * static_cast<size_t>(numcol));
     colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();

@@ -158,9 +158,9 @@ class HighsCliqueTable {
   int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    invertedHashList.resize(2 * ncols);
-    invertedHashListSizeTwo.resize(2 * ncols);
-    numcliquesvar.resize(2 * ncols, 0);
+    invertedHashList.resize(2 * static_cast<size_t>(ncols));
+    invertedHashListSizeTwo.resize(2 * static_cast<size_t>(ncols));
+    numcliquesvar.resize(2 * static_cast<size_t>(ncols), 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;

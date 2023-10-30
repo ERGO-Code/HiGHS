@@ -5,17 +5,22 @@ pyb11_dep = [
   dependency('pybind11')
 ]
 
-highs_dep = declare_dependency(link_with: _linkto,
-                               dependencies: _deps,
-                               include_directories: _incdirs,
-                               )
-
-highspyext = py.extension_module(
-  'highspy',
-  sources : [
-    'highs_bindings.cpp',
-  ],
+py.extension_module(
+  '_highs',
+  sources : highspy_cpp,
   dependencies: [pyb11_dep, highs_dep],
   cpp_args: _args,
   install: true,
+  subdir: 'highspy',
+  include_directories: _incdirs,
+)
+
+py.extension_module(
+  '_highs_options',
+  sources : highsoptions_cpp,
+  dependencies: [pyb11_dep, highs_dep],
+  cpp_args: _args,
+  install: true,
+  subdir: 'highspy',
+  include_directories: _incdirs,
 )

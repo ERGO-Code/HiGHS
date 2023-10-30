@@ -874,7 +874,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     // Fix the number of user settable options
-    num_user_settable_options_ = records.size();
+    num_user_settable_options_ = static_cast<HighsInt>(records.size());
 
     // Advanced options
     advanced = true;
@@ -1119,7 +1119,7 @@ class HighsOptions : public HighsOptionsStruct {
   }
 
   void deleteRecords() {
-    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
+    for (size_t i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:

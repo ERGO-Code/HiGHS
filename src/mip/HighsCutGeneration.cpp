@@ -58,7 +58,6 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
       coverweight += vals[j] * upper[j];
     }
 
-    const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
     // sort the remaining variables by the contribution to the rows activity in
     // the current solution
     pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,
@@ -1133,7 +1132,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     return false;
 
   // it can happen that there is an unbounded integer variable during the
-  // transform call so that the integers are not tranformed to positive values.
+  // transform call so that the integers are not transformed to positive values.
   // Now the call to preprocessBaseInequality may have removed the unbounded
   // integer, e.g. due to a small coefficient value, so that we can still use
   // the lifted inequalities instead of cmir. We need to make sure, however,
@@ -1279,7 +1278,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(inds, vals,
                                                                rowlen, rhs_);
   // apply cut postprocessing including scaling and removal of small
-  // coeffiicents
+  // coefficients
   if (!postprocessCut()) return false;
   rhs_ = (double)rhs;
   vals_.resize(rowlen);
@@ -1498,7 +1497,7 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(inds, vals,
                                                                rowlen, rhs_);
   // apply cut postprocessing including scaling and removal of small
-  // coeffiicents
+  // coefficients
   if (!postprocessCut()) return false;
   rhs_ = (double)rhs;
   vals_.resize(rowlen);

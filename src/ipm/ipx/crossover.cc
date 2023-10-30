@@ -43,8 +43,8 @@ void Crossover::PushAll(Basis* basis, Vector& x, Vector& y, Vector& z,
     // Run primal push phase. Because z[j]==0 for all basic variables, none of
     // the primal variables is fixed at its bound.
     std::vector<Int> primal_superbasics;
-    for (Int p = perm.size()-1; p >= 0; p--) {
-        Int j = perm[p];
+    for (size_t p = perm.size(); p > 0; p--) {
+        Int j = perm[p - 1];
         if (basis->IsNonbasic(j) && x[j] != lb[j] && x[j] != ub[j] &&
             !(std::isinf(lb[j]) && std::isinf(ub[j]) && x[j] == 0.0))
             primal_superbasics.push_back(j);
@@ -110,8 +110,8 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
     }
 
     control_.ResetPrintInterval();
-    Int next = 0;
-    while (next < (Int)variables.size()) {
+    size_t next = 0;
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -250,8 +250,8 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     }
 
     control_.ResetPrintInterval();
-    Int next = 0;
-    while (next < (Int)variables.size()) {
+    size_t next = 0;
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 

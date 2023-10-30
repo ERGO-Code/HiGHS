@@ -125,7 +125,7 @@ HighsStatus Highs::addColsInterface(
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
-  // that is is easy to handle and, if there are nonzeros, it can be
+  // that is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_a_matrix;
   local_a_matrix.num_col_ = ext_num_new_col;
@@ -166,7 +166,7 @@ HighsStatus Highs::addColsInterface(
     local_a_matrix.considerColScaling(options.allowed_matrix_scale_factor,
                                       &scale.col[lp.num_col_]);
   }
-  // Update the basis correponding to new nonbasic columns
+  // Update the basis corresponding to new nonbasic columns
   if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
   // Possibly add column names
@@ -251,7 +251,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
 
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
-  // is is easy to handle and, if there are nonzeros, it can be
+  // is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_ar_matrix;
   local_ar_matrix.num_col_ = lp.num_col_;
@@ -292,7 +292,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     local_ar_matrix.considerRowScaling(options.allowed_matrix_scale_factor,
                                        &scale.row[lp.num_row_]);
   }
-  // Update the basis correponding to new basic rows
+  // Update the basis corresponding to new basic rows
   if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
   // Possibly add row names
@@ -464,8 +464,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   // Surely this is checked elsewhere
   assert(0 <= from_k && to_k < lp.num_row_);
   assert(from_k <= to_k);
-  // "Out" means not in the set to be extrated
-  // "In" means in the set to be extrated
+  // "Out" means not in the set to be extracted
+  // "In" means in the set to be extracted
   HighsInt out_from_row;
   HighsInt out_to_row;
   HighsInt in_from_row;
@@ -611,8 +611,6 @@ HighsStatus Highs::changeIntegralityInterface(
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_, 0,
                            index_collection.dimension_, true));
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   changeLpIntegrality(model_.lp_, index_collection, local_integrality);
   // Deduce the consequences of new integrality
   invalidateModelStatus();
@@ -683,7 +681,6 @@ HighsStatus Highs::changeColBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status;
   changeLpColBounds(model_.lp_, index_collection, local_colLower,
                     local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
@@ -728,7 +725,6 @@ HighsStatus Highs::changeRowBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status;
   changeLpRowBounds(model_.lp_, index_collection, local_rowLower,
                     local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
@@ -1115,7 +1111,6 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
 HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
-  HighsLp& ekk_lp = ekk_instance_.lp_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
   HighsSimplexStatus& ekk_status = ekk_instance_.status_;
@@ -1162,7 +1157,6 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
-  HighsInt num_col = lp.num_col_;
   // For an LP with no rows the solution is vacuous
   if (num_row == 0) return return_status;
   // EKK must have an INVERT, but simplex NLA may need the pointer to
@@ -1175,7 +1169,6 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HVector solve_vector;
   solve_vector.setup(num_row);
   solve_vector.clear();
-  HighsScale& scale = lp.scale_;
   HighsInt rhs_num_nz = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (rhs[iRow]) {
@@ -1637,15 +1630,21 @@ HighsStatus Highs::handleInfCost() {
       }
     }
   }
+  // Infinite costs have been removed, but their presence in the
+  // original model is known from mods.save_inf_cost_variable_*, so
+  // set lp.has_infinite_cost_ to be false to avoid assert when run()
+  // is called using copy of model in MIP solver (See #1446)
+  lp.has_infinite_cost_ = false;
+
   return HighsStatus::kOk;
 }
 
 void Highs::restoreInfCost(HighsStatus& return_status) {
   HighsLp& lp = this->model_.lp_;
-  if (!lp.has_infinite_cost_) return;
   HighsBasis& basis = this->basis_;
   HighsLpMods& mods = lp.mods_;
   HighsInt num_inf_cost = mods.save_inf_cost_variable_index.size();
+  if (num_inf_cost <= 0) return;
   assert(num_inf_cost);
   for (HighsInt ix = 0; ix < num_inf_cost; ix++) {
     HighsInt iCol = mods.save_inf_cost_variable_index[ix];
@@ -1667,6 +1666,9 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     lp.col_lower_[iCol] = lower;
     lp.col_upper_[iCol] = upper;
   }
+  // Infinite costs have been reintroduced, so reset to true the flag
+  // that was set false in Highs::handleInfCost() (See #1446)
+  lp.has_infinite_cost_ = true;
 
   if (this->model_status_ == HighsModelStatus::kInfeasible) {
     // Model is infeasible with the infinite cost variables fixed at

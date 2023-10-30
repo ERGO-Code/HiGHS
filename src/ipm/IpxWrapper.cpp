@@ -925,9 +925,9 @@ void reportSolveData(const HighsLogOptions& log_options, const ipx::Info& ipx_in
   highsLogDev(log_options, HighsLogType::kInfo,
 	 "    Objective value       = %11.4g\n", ipx_info.objval);
   highsLogDev(log_options, HighsLogType::kInfo,
-	 "    Primal infeasiblility = %11.4g\n", ipx_info.primal_infeas);
+	 "    Primal infeasibility = %11.4g\n", ipx_info.primal_infeas);
   highsLogDev(log_options, HighsLogType::kInfo,
-	 "    Dual infeasiblility   = %11.4g\n\n", ipx_info.dual_infeas);
+	 "    Dual infeasibility   = %11.4g\n\n", ipx_info.dual_infeas);
   
   highsLogDev(log_options, HighsLogType::kInfo,
 	 "    IPM iter   = %d\n", (int)ipx_info.iter);

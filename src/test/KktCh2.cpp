@@ -222,7 +222,7 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
         }
       }
       break;
-    case 11:  // empty row from duplucate rows
+    case 11:  // empty row from duplicate rows
       upd = rLowers.top();
       rLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
@@ -236,7 +236,7 @@ void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
         RrowUpper[ind] = get<1>(upd[i]);
       }
       break;
-    case 12:  // doubleton eq from dupliocate rows;
+    case 12:  // doubleton eq from duplicate rows;
       upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
