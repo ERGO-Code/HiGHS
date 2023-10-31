@@ -1314,7 +1314,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
 
   // first tighten all bounds if they have an implied bound that is tighter
-  // thatn their column bound before probing this is not done for continuous
+  // than their column bound before probing this is not done for continuous
   // columns since it may allow stronger dual presolve and more aggregations
   double hugeBound = primal_feastol / kHighsTiny;
   for (HighsInt i = 0; i != model->num_col_; ++i) {
