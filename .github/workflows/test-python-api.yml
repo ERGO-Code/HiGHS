@@ -1,8 +1,8 @@
 # python release WIP
 name: test-python-api
 
-on: []
-#on: [push, pull_request]
+#on: []
+on: [push, pull_request]
 
 jobs:
   build:
@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        python: [3.9]
+        python: [3.11]
     steps:
       - uses: actions/checkout@v3
       - name: Install correct python version
