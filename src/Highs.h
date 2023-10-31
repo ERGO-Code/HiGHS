@@ -1019,20 +1019,22 @@ class Highs {
   /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setCallback(void (*user_callback)(const int, const char*,
-                                                const HighsCallbackDataOut*,
-                                                HighsCallbackDataIn*, void*),
+  HighsStatus setCallback(HighsCallbackFunctionType user_callback,
+                          void* user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCCallbackType c_callback,
                           void* user_callback_data = nullptr);
 
   /**
    * @brief Start callback of given type
    */
   HighsStatus startCallback(const int callback_type);
+  HighsStatus startCallback(const HighsCallbackType callback_type);
 
   /**
    * @brief Stop callback of given type
    */
   HighsStatus stopCallback(const int callback_type);
+  HighsStatus stopCallback(const HighsCallbackType callback_type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1456,5 +1458,4 @@ class Highs {
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
 };
-
 #endif

@@ -1,8 +1,13 @@
 # Callbacks
 
-The HiGHS callback allows user actions to be performed within HiGHS. There is one generic callback method that can be defined by a user, with specific callback scenarios communicated to the user via a parameter. Particular callbacks must be activated (and can be deactivated) as described below. The user callback can be given any name and, below, is called `userCallback`. Its definition is
+The HiGHS callback allows user actions to be performed within HiGHS. There is
+one generic callback method that can be defined by a user, with specific
+callback scenarios communicated to the user via a parameter. Particular
+callbacks must be activated (and can be deactivated) as described below. The
+user callback can be given any name and, below, is called `userCallback`. Its
+definition is
 
-```bash
+```cpp
 void userCallback(const int callback_type,
                   const char* message,
                   const HighsCallbackDataOut* data_out,
@@ -22,12 +27,12 @@ The logging callback type is a cast of the relevant member of the C++ enum
 `HighsCallbackType`, and is available in C as a constant.
 
 The user's callback method is communicated to HiGHS via the method that in the HiGHS C++ class is
-```bash
+```cpp
 HighsStatus setCallback(void (*userCallback)(const int, const char*, const HighsCallbackDataOut*,
                         HighsCallbackDataIn*, void*), void* user_callback_data);
 ```
 and, in the HiGHS C API is
-```bash
+```cpp
 HighsInt Highs_setCallback(
     void* highs,
     void (*userCallback)(const int, const char*,
@@ -37,19 +42,19 @@ HighsInt Highs_setCallback(
 ```
 There current callback scenarios are set out below, and the particular callback is activated in C++ by calling
 
-```bash
+```cpp
 HighsStatus startCallback(const int callback_type);
 ```
 and, in C, by calling
-```bash
+```cpp
 HighsInt Highs_startCallback(void* highs, const int callback_type);
 ```
 , and de-activated in C++ by calling
-```bash
+```cpp
 HighsStatus stopCallback(const int callback_type);
 ```
 and, in C, by calling
-```bash
+```cpp
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 ```
 
@@ -122,7 +127,7 @@ For each of the MIP callbacks, the following `HighsCallbackDataOut` struct membe
 * `num_nodes`: the number of MIP nodes explored to date
 * `primal_bound`: the primal bound
 * `dual_bound`: the dual bound
-* `mip_gap`: the (relative) difference between tht primal and dual bounds
+* `mip_gap`: the (relative) difference between the primal and dual bounds
 
 
 
