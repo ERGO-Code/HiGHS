@@ -45,7 +45,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   } else if (options.solver == kIpmString) {
     // Use IPM
-    bool imprecise_solution;
     // Use IPX to solve the LP
     try {
       call_status = solveLpIpx(solver_object);
@@ -64,7 +63,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
-    // Seting the IPM-specific values of (highs_)info_ has been done in
+    // Setting the IPM-specific values of (highs_)info_ has been done in
     // solveLpIpx
     const bool unwelcome_ipx_status =
         solver_object.model_status_ == HighsModelStatus::kUnknown ||
@@ -165,8 +164,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla
   double objective = lp.offset_;
-  bool infeasible = false;
-  bool unbounded = false;
 
   highs_info.num_primal_infeasibilities = 0;
   highs_info.max_primal_infeasibility = 0;
@@ -212,7 +209,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = std::max(-dual, 0.);
       }
     } else if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-      // Free column: set to zero and record dual infeasiblility
+      // Free column: set to zero and record dual infeasibility
       value = 0;
       status = HighsBasisStatus::kZero;
       dual_infeasibility = std::fabs(dual);
@@ -225,7 +222,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = 0;
       } else {
         // Infinite lower bound so set to upper bound and record dual
-        // infeasiblility
+        // infeasibility
         value = upper;
         status = HighsBasisStatus::kUpper;
         dual_infeasibility = dual;
@@ -239,7 +236,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         dual_infeasibility = 0;
       } else {
         // Infinite upper bound so set to lower bound and record dual
-        // infeasiblility
+        // infeasibility
         value = lower;
         status = HighsBasisStatus::kLower;
         dual_infeasibility = -dual;

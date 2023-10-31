@@ -164,7 +164,6 @@ lu_int lu_singletons(
     double *Btx         = this->Wvalue;
 
     lu_int i, j, pos, put, rank, Bnz, ok;
-    double tic[2];
 
     /* -------------------------------- */
     /* Check matrix and build transpose */
@@ -412,7 +411,7 @@ static lu_int singleton_cols
 /*
  * singleton_rows()
  *
- * Analogeous singleton_cols except that for each singleton row the
+ * Analogous singleton_cols except that for each singleton row the
  * associated column is stored in L and divided by the pivot element. The
  * pivot element is stored in col_pivot.
  */

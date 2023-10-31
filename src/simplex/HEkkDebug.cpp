@@ -354,7 +354,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
       assert(!nonbasicFlag_error);
       return HighsDebugStatus::kLogicalError;
     }
-    bool nonbasicMove_error = basis.nonbasicMove_[iVar];
+    bool nonbasicMove_error = (basis.nonbasicMove_[iVar] != 0);
     if (nonbasicMove_error) {
       highsLogDev(options.log_options, HighsLogType::kError,
                   "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
@@ -397,7 +397,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
     if (algorithm == SimplexAlgorithm::kPrimal && phase == 1) {
       double primal_phase1_cost = bound_violated;
       if (base) primal_phase1_cost *= 1 + base * info.numTotRandomValue_[iRow];
-      bool primal_phase1_cost_error = abs(cost - primal_phase1_cost);
+      bool primal_phase1_cost_error = (abs(cost - primal_phase1_cost) != 0.0);
       if (primal_phase1_cost_error) {
         highsLogDev(options.log_options, HighsLogType::kError,
                     "HEkk::debugSimplex - %s: Iteration %" HIGHSINT_FORMAT
@@ -953,7 +953,7 @@ HighsDebugStatus HEkk::debugNonbasicMove(const HighsLp* pass_lp) const {
   HighsInt num_fixed_variable_move_errors = 0;
   HighsInt num_col;
   HighsInt num_row;
-  const bool use_pass_lp = pass_lp;
+  const bool use_pass_lp = (pass_lp != nullptr);
   if (use_pass_lp) {
     num_col = pass_lp->num_col_;
     num_row = pass_lp->num_row_;

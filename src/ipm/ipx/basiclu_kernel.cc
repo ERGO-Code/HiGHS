@@ -7,7 +7,7 @@
 
 namespace ipx {
 
-// Wraps the BASICLU object into a struct with contructor/destructor for RAII.
+// Wraps the BASICLU object into a struct with constructor/destructor for RAII.
 struct BasicLuHelper {
     static_assert(sizeof(Int) == sizeof(lu_int),
                   "IPX integer type does not match BASICLU integer type");

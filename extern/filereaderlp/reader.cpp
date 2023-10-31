@@ -874,7 +874,7 @@ void Reader::splittokens() {
     if (new_section_type) {
       // Section type change
       currentsection = it->keyword;
-      // Make sure the new section type has not occured previously
+      // Make sure the new section type has not occurred previously
       lpassert(sectiontokens.count(currentsection) == 0);
       // Remember the beginning of the new section: its the token
       // following the current one
