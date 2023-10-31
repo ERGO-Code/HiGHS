@@ -180,7 +180,7 @@ static lu_int compress_packed(const lu_int m, lu_int *begin, lu_int *index,
  * When row i was mapped to column jlist[nswap], then it will be mapped to
  * column jlist[0].
  *
- * This requires to update pmap, qmap and the rowwise and columwise storage
+ * This requires to update pmap, qmap and the rowwise and columnwise storage
  * of U. It also changes the pivot elements.
  *
  * Note: This is the most ugly part of the update code and looks horribly
@@ -518,7 +518,7 @@ lu_int lu_update(struct lu *this, double xtbl)
      * or
      *    newpiv = xtbl * oldpiv,                                 (2)
      *
-     * where spike_diag is the diaognal element in the spike column
+     * where spike_diag is the diagonal element in the spike column
      * before the Forrest-Tomlin update and oldpiv was the pivot element
      * in column jpivot before inserting the spike. This routine uses
      * newpiv from (1) and reports the difference to (2) to the user

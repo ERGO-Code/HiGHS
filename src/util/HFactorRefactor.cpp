@@ -32,7 +32,7 @@ void RefactorInfo::clear() {
 
 HighsInt HFactor::rebuild(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_lu = false;
-  // Check that the refactorzation information should be used
+  // Check that the refactorization information should be used
   assert(refactor_info_.use);
   /**
    * 0. Clear L and U factor
