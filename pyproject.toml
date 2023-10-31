@@ -1,6 +1,6 @@
 [project]
 name = "highspy"
-version = "1.6.0.dev1"
+version = "1.6.0.dev2"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [
     {name = "HiGHS developers", email = "highsopt@gmail.com"},

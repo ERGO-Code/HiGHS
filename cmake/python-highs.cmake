@@ -67,6 +67,12 @@ set_target_properties(highs_bindings PROPERTIES
   LIBRARY_OUTPUT_NAME "highs_bindings")
 
 
+if(APPLE)
+  set_target_properties(highs_bindings PROPERTIES
+    SUFFIX ".so"
+    )
+endif()
+
 # if(APPLE)
 #   set_target_properties(highs_bindings PROPERTIES
 #     SUFFIX ".so"
