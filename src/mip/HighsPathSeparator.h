@@ -10,7 +10,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsPathSeparator.h
  * @brief Class for separating cuts from heuristically aggregating rows from the
- * LP to indetify path's in a network
+ * LP to identify path's in a network
  *
  */
 

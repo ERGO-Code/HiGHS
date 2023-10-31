@@ -52,7 +52,7 @@ class HEkkDualRHS {
   void chooseMultiGlobal(
       HighsInt* chIndex,  //!< Set of indices of chosen rows
       HighsInt* chCount,  //!< Number of chosen rows
-      HighsInt chLimit    //!< Limit on number of of chosen rows
+      HighsInt chLimit    //!< Limit on number of chosen rows
   );
 
   /**
@@ -62,7 +62,7 @@ class HEkkDualRHS {
   void chooseMultiHyperGraphAuto(
       HighsInt* chIndex,  //!< Set of indices of chosen rows
       HighsInt* chCount,  //!< Number of chosen rows
-      HighsInt chLimit    //!< Limit on number of of chosen rows
+      HighsInt chLimit    //!< Limit on number of chosen rows
   );
 
   /**
@@ -72,7 +72,7 @@ class HEkkDualRHS {
   void chooseMultiHyperGraphPart(
       HighsInt* chIndex,  //!< Set of indices of chosen rows
       HighsInt* chCount,  //!< Number of chosen rows
-      HighsInt chLimit    //!< Limit on number of of chosen rows
+      HighsInt chLimit    //!< Limit on number of chosen rows
   );
 
   /**

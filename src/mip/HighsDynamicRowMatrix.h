@@ -42,7 +42,7 @@ class HighsDynamicRowMatrix {
 
   /// vector of column sizes
 
-  /// keep an ordered set ofof free spaces in the row arrays so that they can be
+  /// keep an ordered set of free spaces in the row arrays so that they can be
   /// reused efficiently
   std::set<std::pair<HighsInt, HighsInt>> freespaces_;
 

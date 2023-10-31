@@ -823,11 +823,11 @@ class HighsHashTree {
           // maxsize in one bucket = number of items - (num buckets-1)
           // since each bucket has at least 1 item the largest one can only
           // have all remaining ones After adding the item: If it does not
-          // collid
+          // collide
           int maxEntriesPerLeaf = 2 + leaf->size - branchSize;
 
           if (maxEntriesPerLeaf <= InnerLeaf<1>::capacity()) {
-            // all items can go into the smalles leaf size
+            // all items can go into the smallest leaf size
             for (int i = 0; i < branchSize; ++i)
               branch->child[i] = new InnerLeaf<1>;
 

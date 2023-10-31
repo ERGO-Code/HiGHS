@@ -146,7 +146,7 @@ class HighsIntegers {
     expshift = std::max(-expshift, 0) + 3;
 
     // guard against making the largest value too big which may cause overflows
-    // with intermdediate gcd values
+    // with intermediate gcd values
     int expMaxVal;
     std::frexp(maxval, &expMaxVal);
     expMaxVal = std::min(expMaxVal, 32);
@@ -194,7 +194,7 @@ class HighsIntegers {
         currgcd = gcd(currgcd, (int64_t) double(downval));
 
         // if the denominator is large, divide by the current gcd to prevent
-        // unecessary overflows
+        // unnecessary overflows
         if (denom > std::numeric_limits<unsigned int>::max()) {
           denom /= currgcd;
           if (startdenom != 1) startdenom /= gcd(currgcd, startdenom);
