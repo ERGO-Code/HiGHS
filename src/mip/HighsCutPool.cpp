@@ -301,7 +301,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                        }) -
       efficacious_cuts.begin();
 
-  HighsInt lowerThreshold = 0.05 * efficacious_cuts.size();
+  HighsInt lowerThreshold = efficacious_cuts.size() / 20;
   HighsInt upperThreshold = efficacious_cuts.size() - 1;
 
   if (numefficacious <= lowerThreshold) {

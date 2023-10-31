@@ -211,7 +211,7 @@ Int ForrestTomlin::_Update(double pivot) {
 
 bool ForrestTomlin::_NeedFreshFactorization() {
     Int num_updates = replaced_.size();
-    Int Rnz = R_.entries();        // nnz in acculumated row etas
+    Int Rnz = R_.entries();        // nnz in accumulated row etas
     Int Lnz = L_.entries() + dim_; // nnz(L) incl. diagonal
     Int Unz = U_.entries();        // nnz(U) incl. zeroed out columns
     Int U0nz = U_.begin(dim_);     // nnz(U) after factorization
@@ -316,7 +316,6 @@ void ForrestTomlin::ComputeSpike(Int nb, const Int* bi, const double* bx) {
 
     // Store spike in U. Indices are sorted, which is required for the sparse
     // dot product in Update().
-    Int nz = 0;
     U_.clear_queue();
     for (Int p = 0; p < dim_+num_updates; p++) {
         if (work_[p] != 0.0)
@@ -348,7 +347,6 @@ void ForrestTomlin::ComputeEta(Int j) {
 
     // Queue eta at end of R. Indices are sorted, which is required for the
     // sparse dot product in Update().
-    Int nz = 0;
     R_.clear_queue();
     double pivot = work_[pos];
     for (Int i = pos+1; i < dim_+num_updates; i++) {

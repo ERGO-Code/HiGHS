@@ -82,7 +82,6 @@ HighsStatus assessMatrix(
   if (partitioned) this_p_end = matrix_p_end[0];
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     this_start = matrix_start[ix];
-    HighsInt next_start = matrix_start[ix + 1];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -176,7 +175,7 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred.
+      // Check that the index has not already occurred.
       legal_component = index_set.find(component) == nullptr;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,

@@ -234,7 +234,7 @@ class HighsPostsolveStack {
   };
 
   HighsDataStack reductionValues;
-  std::vector<std::pair<ReductionType, HighsInt>> reductions;
+  std::vector<std::pair<ReductionType, size_t>> reductions;
   std::vector<HighsInt> origColIndex;
   std::vector<HighsInt> origRowIndex;
   std::vector<uint8_t> linearlyTransformable;
@@ -245,7 +245,7 @@ class HighsPostsolveStack {
   HighsInt origNumRow = -1;
 
   void reductionAdded(ReductionType type) {
-    HighsInt position = reductionValues.getCurrentDataSize();
+    size_t position = reductionValues.getCurrentDataSize();
     reductions.emplace_back(type, position);
   }
 
@@ -261,19 +261,19 @@ class HighsPostsolveStack {
   }
 
   void appendCutsToModel(HighsInt numCuts) {
-    HighsInt currNumRow = origRowIndex.size();
-    HighsInt newNumRow = currNumRow + numCuts;
+    size_t currNumRow = origRowIndex.size();
+    size_t newNumRow = currNumRow + numCuts;
     origRowIndex.resize(newNumRow);
-    for (HighsInt i = currNumRow; i != newNumRow; ++i)
+    for (size_t i = currNumRow; i != newNumRow; ++i)
       origRowIndex[i] = origNumRow++;
   }
 
   void removeCutsFromModel(HighsInt numCuts) {
     origNumRow -= numCuts;
 
-    HighsInt origRowIndexSize = origRowIndex.size();
-    for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i) {
-      if (origRowIndex[i] < origNumRow) break;
+    size_t origRowIndexSize = origRowIndex.size();
+    for (size_t i = origRowIndex.size(); i > 0; --i) {
+      if (origRowIndex[i - 1] < origNumRow) break;
       --origRowIndexSize;
     }
 
@@ -511,7 +511,7 @@ class HighsPostsolveStack {
       const std::vector<double>& origPrimalSolution) {
     std::vector<double> reducedSolution = origPrimalSolution;
 
-    for (const std::pair<ReductionType, HighsInt>& primalColTransformation :
+    for (const std::pair<ReductionType, size_t>& primalColTransformation :
          reductions) {
       switch (primalColTransformation.first) {
         case ReductionType::kDuplicateColumn: {
@@ -533,8 +533,8 @@ class HighsPostsolveStack {
       }
     }
 
-    HighsInt reducedNumCol = origColIndex.size();
-    for (HighsInt i = 0; i < reducedNumCol; ++i)
+    size_t reducedNumCol = origColIndex.size();
+    for (size_t i = 0; i < reducedNumCol; ++i)
       reducedSolution[i] = reducedSolution[origColIndex[i]];
 
     reducedSolution.resize(reducedNumCol);
@@ -542,7 +542,16 @@ class HighsPostsolveStack {
   }
 
   bool isColLinearlyTransformable(HighsInt col) const {
-    return linearlyTransformable[col];
+    return (linearlyTransformable[col] != 0);
+  }
+
+  template <typename T>
+  void undoIterateBackwards(std::vector<T>& values,
+                            const std::vector<HighsInt>& index) {
+    for (size_t i = index.size(); i > 0; --i) {
+      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
+      values[index[i - 1]] = values[i - 1];
+    }
   }
 
   /// undo presolve steps for primal dual solution and basis
@@ -558,48 +567,38 @@ class HighsPostsolveStack {
     // expand solution to original index space
     assert(origNumCol > 0);
     solution.col_value.resize(origNumCol);
-    for (HighsInt i = origColIndex.size() - 1; i >= 0; --i) {
-      assert(origColIndex[i] >= i);
-      solution.col_value[origColIndex[i]] = solution.col_value[i];
-    }
+    undoIterateBackwards(solution.col_value, origColIndex);
 
     assert(origNumRow >= 0);
     solution.row_value.resize(origNumRow);
-    for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i) {
-      assert(origRowIndex[i] >= i);
-      solution.row_value[origRowIndex[i]] = solution.row_value[i];
-    }
+    undoIterateBackwards(solution.row_value, origRowIndex);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
-      for (HighsInt i = origColIndex.size() - 1; i >= 0; --i)
-        solution.col_dual[origColIndex[i]] = solution.col_dual[i];
+      undoIterateBackwards(solution.col_dual, origColIndex);
 
       solution.row_dual.resize(origNumRow);
-      for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i)
-        solution.row_dual[origRowIndex[i]] = solution.row_dual[i];
+      undoIterateBackwards(solution.row_dual, origRowIndex);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       basis.col_status.resize(origNumCol);
-      for (HighsInt i = origColIndex.size() - 1; i >= 0; --i)
-        basis.col_status[origColIndex[i]] = basis.col_status[i];
+      undoIterateBackwards(basis.col_status, origColIndex);
 
       basis.row_status.resize(origNumRow);
-      for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i)
-        basis.row_status[origRowIndex[i]] = basis.row_status[i];
+      undoIterateBackwards(basis.row_status, origRowIndex);
     }
 
     // now undo the changes
-    for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
+    for (size_t i = reductions.size(); i > 0; --i) {
       if (report_col >= 0)
         printf("Before  reduction %2d (type %2d): col_value[%2d] = %g\n",
-               int(i), int(reductions[i].first), int(report_col),
+               int(i - 1), int(reductions[i - 1].first), int(report_col),
                solution.col_value[report_col]);
-      switch (reductions[i].first) {
+      switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
           reductionValues.pop(reduction);
@@ -689,7 +688,8 @@ class HighsPostsolveStack {
           break;
         }
         default:
-          printf("Reduction case %d not handled\n", int(reductions[i].first));
+          printf("Reduction case %d not handled\n",
+                 int(reductions[i - 1].first));
           if (kAllowDeveloperAssert) assert(1 == 0);
       }
     }
@@ -727,7 +727,7 @@ class HighsPostsolveStack {
   void undoUntil(const HighsOptions& options,
                  const std::vector<HighsInt>& flagRow,
                  const std::vector<HighsInt>& flagCol, HighsSolution& solution,
-                 HighsBasis& basis, HighsInt numReductions) {
+                 HighsBasis& basis, size_t numReductions) {
     reductionValues.resetPosition();
 
     // Do these returns ever happen? How is it known that undo has not
@@ -747,43 +747,33 @@ class HighsPostsolveStack {
 
     // expand solution to original index space
     solution.col_value.resize(origNumCol);
-    for (HighsInt i = origColIndex.size() - 1; i >= 0; --i) {
-      assert(origColIndex[i] >= i);
-      solution.col_value[origColIndex[i]] = solution.col_value[i];
-    }
+    undoIterateBackwards(solution.col_value, origColIndex);
 
     solution.row_value.resize(origNumRow);
-    for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i) {
-      assert(origRowIndex[i] >= i);
-      solution.row_value[origRowIndex[i]] = solution.row_value[i];
-    }
+    undoIterateBackwards(solution.row_value, origRowIndex);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
       solution.col_dual.resize(origNumCol);
-      for (HighsInt i = origColIndex.size() - 1; i >= 0; --i)
-        solution.col_dual[origColIndex[i]] = solution.col_dual[i];
+      undoIterateBackwards(solution.col_dual, origColIndex);
 
       solution.row_dual.resize(origNumRow);
-      for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i)
-        solution.row_dual[origRowIndex[i]] = solution.row_dual[i];
+      undoIterateBackwards(solution.row_dual, origRowIndex);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
       basis.col_status.resize(origNumCol);
-      for (HighsInt i = origColIndex.size() - 1; i >= 0; --i)
-        basis.col_status[origColIndex[i]] = basis.col_status[i];
+      undoIterateBackwards(basis.col_status, origColIndex);
 
       basis.row_status.resize(origNumRow);
-      for (HighsInt i = origRowIndex.size() - 1; i >= 0; --i)
-        basis.row_status[origRowIndex[i]] = basis.row_status[i];
+      undoIterateBackwards(basis.row_status, origRowIndex);
     }
 
     // now undo the changes
-    for (HighsInt i = reductions.size() - 1; i >= numReductions; --i) {
-      switch (reductions[i].first) {
+    for (size_t i = reductions.size(); i > numReductions; --i) {
+      switch (reductions[i - 1].first) {
         case ReductionType::kLinearTransform: {
           LinearTransform reduction;
           reductionValues.pop(reduction);

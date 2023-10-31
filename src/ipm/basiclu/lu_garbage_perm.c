@@ -15,8 +15,8 @@
  *  pivotcol[0..pivotlen-1], pivotrow[0..pivotlen-1],
  *
  * where pivotlen >= m. When pivotlen > m, then the arrays contain duplicates.
- * For each index its last occurence in the arrays is its position in the pivot
- * sequence and occurences before mark unused slots.
+ * For each index its last occurrence in the arrays is its position in the pivot
+ * sequence and occurrences before mark unused slots.
  *
  * This routine removes duplicates and compresses the indices such that
  * pivotlen == m.

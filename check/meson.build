@@ -1,7 +1,7 @@
 # -------------------------- Configuration
 test_data_conf = configuration_data()
 test_data_conf.set_quoted('HIGHS_DIR',
-                          meson.source_root())
+                          meson.project_source_root())
 configure_file(
   input: 'HCheckConfig.h.meson.in',
   output: 'HCheckConfig.h',

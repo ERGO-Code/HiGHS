@@ -340,7 +340,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       tidyup(p, rowmove, basis, runtime);
       maxsteplength = std::numeric_limits<double>::infinity();
       // if (runtime.instance.Q.mat.value.size() > 0) {
-      double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
@@ -419,7 +418,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
-    BasisStatus status = basis.getstatus(e);
     if (e >= runtime.instance.num_con) {
       // active variable bound
       HighsInt var = e - runtime.instance.num_con;

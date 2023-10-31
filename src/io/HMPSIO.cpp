@@ -339,7 +339,7 @@ FilereaderRetcode readMps(
   colUpper.assign(numCol, kHighsInf);
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      // Find the column index associated woith the name "data[2]". If
+      // Find the column index associated with the name "data[2]". If
       // the name is in colIndex then the value stored is the true
       // column index plus one. Otherwise 0 will be returned.
       HighsInt iCol = colIndex[data[2]] - 1;
@@ -539,8 +539,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   bool warning_found = false;
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
-  bool have_col_names = lp.col_names_.size();
-  bool have_row_names = lp.row_names_.size();
+  bool have_col_names = (lp.col_names_.size() != 0);
+  bool have_row_names = (lp.row_names_.size() != 0);
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.num_col_);
@@ -905,7 +905,7 @@ HighsStatus writeMps(
             } else {
               if (!highs_isInfinity(-lb)) {
                 // Finite lower bound. No need to state this if LB is
-                // zero unless UB is infinte
+                // zero unless UB is infinite
                 if (lb || highs_isInfinity(ub))
                   fprintf(file, " LI BOUND     %-8s  %.10g\n",
                           col_names[c_n].c_str(), lb);
