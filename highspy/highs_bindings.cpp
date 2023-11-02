@@ -1,3 +1,5 @@
+#define PYBIND11_DETAILED_ERROR_MESSAGES 1
+#include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -5,6 +7,7 @@
 #include <cassert>
 
 #include "Highs.h"
+#include "lp_data/HighsCallback.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -921,7 +924,21 @@ PYBIND11_MODULE(_highs, m) {
       .def("modelStatusToString", &Highs::modelStatusToString)
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)
-      .def("basisValidityToString", &Highs::basisValidityToString);
+      .def("basisValidityToString", &Highs::basisValidityToString)
+      .def(
+          "setCallback",
+          static_cast<HighsStatus (Highs::*)(HighsCallbackFunctionType, void*)>(
+              &Highs::setCallback))
+      .def("startCallback",
+           static_cast<HighsStatus (Highs::*)(const HighsCallbackType)>(
+               &Highs::startCallback))
+      .def("stopCallback",
+           static_cast<HighsStatus (Highs::*)(const HighsCallbackType)>(
+               &Highs::stopCallback))
+      .def("startCallbackInt", static_cast<HighsStatus (Highs::*)(const int)>(
+                                   &Highs::startCallback))
+      .def("stopCallbackInt", static_cast<HighsStatus (Highs::*)(const int)>(
+                                  &Highs::stopCallback));
   // structs
   py::class_<HighsSolution>(m, "HighsSolution")
       .def(py::init<>())
@@ -1098,4 +1115,48 @@ PYBIND11_MODULE(_highs, m) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
+  py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
+  // Types for interface
+  py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType")
+      .value("kCallbackMin", HighsCallbackType::kCallbackMin)
+      .value("kCallbackLogging", HighsCallbackType::kCallbackLogging)
+      .value("kCallbackSimplexInterrupt",
+             HighsCallbackType::kCallbackSimplexInterrupt)
+      .value("kCallbackIpmInterrupt", HighsCallbackType::kCallbackIpmInterrupt)
+      .value("kCallbackMipImprovingSolution",
+             HighsCallbackType::kCallbackMipImprovingSolution)
+      .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
+      .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
+      .value("kCallbackMax", HighsCallbackType::kCallbackMax)
+      .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
+      .export_values();
+  // Classes
+  py::class_<HighsCallbackDataOut>(callbacks, "HighsCallbackDataOut")
+      .def(py::init<>())
+      .def_readwrite("log_type", &HighsCallbackDataOut::log_type)
+      .def_readwrite("running_time", &HighsCallbackDataOut::running_time)
+      .def_readwrite("simplex_iteration_count",
+                     &HighsCallbackDataOut::simplex_iteration_count)
+      .def_readwrite("ipm_iteration_count",
+                     &HighsCallbackDataOut::ipm_iteration_count)
+      .def_readwrite("objective_function_value",
+                     &HighsCallbackDataOut::objective_function_value)
+      .def_readwrite("mip_node_count", &HighsCallbackDataOut::mip_node_count)
+      .def_readwrite("mip_primal_bound",
+                     &HighsCallbackDataOut::mip_primal_bound)
+      .def_readwrite("mip_dual_bound", &HighsCallbackDataOut::mip_dual_bound)
+      .def_readwrite("mip_gap", &HighsCallbackDataOut::mip_gap)
+      .def_property(
+          "mip_solution",
+          [](const HighsCallbackDataOut& self) -> py::array {
+            // XXX: This is clearly wrong, most likely we need to have the
+            // length as an input data parameter
+            return py::array(3, self.mip_solution);
+          },
+          [](HighsCallbackDataOut& self, py::array_t<double> new_mip_solution) {
+                      self.mip_solution = new_mip_solution.mutable_data();
+          });
+  py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
+      .def(py::init<>())
+      .def_readwrite("user_interrupt", &HighsCallbackDataIn::user_interrupt);
 }
