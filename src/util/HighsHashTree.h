@@ -143,38 +143,21 @@ class HighsHashTree {
         --pos;
         while (hashes[pos] > hash) ++pos;
 
-        while (pos != size && hashes[pos] == hash) {
-          if (entry.key() == entries[pos].key())
-            return std::make_pair(&entries[pos].value(), false);
+        if (findKey(entry.key(), hash, pos))
+          return std::make_pair(&entries[pos].value(), false);
 
-          ++pos;
-        }
-
-        if (pos < size) {
-          std::move_backward(&entries[pos], &entries[size], &entries[size + 1]);
-          memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(hashes[0]) * (size - pos));
-        }
-
-        entries[pos] = std::move(entry);
-        hashes[pos] = hash;
-        ++size;
-        hashes[size] = 0;
       } else {
         occupation.set(hashChunk);
 
-        if (pos < size) {
+        if (pos < size)
           while (hashes[pos] > hash) ++pos;
-          std::move_backward(&entries[pos], &entries[size], &entries[size + 1]);
-          memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(hashes[0]) * (size - pos));
-        }
-
-        entries[pos] = std::move(entry);
-        hashes[pos] = hash;
-        ++size;
-        hashes[size] = 0;
       }
+
+      if (pos < size) moveBackward(pos, size);
+      entries[pos] = std::move(entry);
+      hashes[pos] = hash;
+      ++size;
+      hashes[size] = 0;
 
       return std::make_pair(&entries[pos].value(), true);
     }
@@ -187,10 +170,7 @@ class HighsHashTree {
       int pos = occupation.num_set_until(hashChunk) - 1;
       while (hashes[pos] > hash) ++pos;
 
-      while (pos != size && hashes[pos] == hash) {
-        if (key == entries[pos].key()) return &entries[pos].value();
-        ++pos;
-      }
+      if (findKey(key, hash, pos)) return &entries[pos].value();
 
       return nullptr;
     }
@@ -206,26 +186,20 @@ class HighsHashTree {
       int pos = startPos;
       while (hashes[pos] > hash) ++pos;
 
-      while (pos != size && hashes[pos] == hash) {
-        if (key == entries[pos].key()) {
-          --size;
-          if (pos < size) {
-            std::move(&entries[pos + 1], &entries[size + 1], &entries[pos]);
-            memmove(&hashes[pos], &hashes[pos + 1],
-                    sizeof(hashes[0]) * (size - pos));
-            if (get_first_chunk16(hashes[startPos]) != hashChunk)
-              occupation.flip(hashChunk);
-          } else if (startPos == pos)
-            occupation.flip(hashChunk);
+      if (!findKey(key, hash, pos)) return false;
 
-          hashes[size] = 0;
-          return true;
-        }
+      --size;
+      if (pos < size) {
+        std::move(&entries[pos + 1], &entries[size + 1], &entries[pos]);
+        memmove(&hashes[pos], &hashes[pos + 1],
+                sizeof(hashes[0]) * (size - pos));
+        if (get_first_chunk16(hashes[startPos]) != hashChunk)
+          occupation.flip(hashChunk);
+      } else if (startPos == pos)
+        occupation.flip(hashChunk);
 
-        ++pos;
-      }
-
-      return false;
+      hashes[size] = 0;
+      return true;
     }
 
     void rehash(int hashPos) {
@@ -270,14 +244,28 @@ class HighsHashTree {
         if (pos < i) {
           uint64_t hash = hashes[i];
           auto entry = std::move(entries[i]);
-          std::move_backward(&entries[pos], &entries[i], &entries[i + 1]);
-          memmove(&hashes[pos + 1], &hashes[pos],
-                  sizeof(hashes[0]) * (i - pos));
+          moveBackward(pos, i);
           hashes[pos] = hash;
           entries[pos] = std::move(entry);
         }
         ++i;
       }
+    }
+
+    void moveBackward(const int& first, const int& last) {
+      // move elements backwards
+      std::move_backward(&entries[first], &entries[last], &entries[last + 1]);
+      memmove(&hashes[first + 1], &hashes[first],
+              sizeof(hashes[0]) * (last - first));
+    }
+
+    bool findKey(const K& key, const uint16_t& hash, int& pos) {
+      // find key
+      while (pos != size && hashes[pos] == hash) {
+        if (key == entries[pos].key()) return true;
+        ++pos;
+      }
+      return false;
     }
   };
 
