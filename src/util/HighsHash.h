@@ -752,7 +752,8 @@ struct HighsHashHelpers {
     // now be different values which exhibit the same pattern as the 0.5 case,
     // but they do not have a small denominator like 1/2 in their rational
     // representation but are power of two multiples of the golden ratio and
-    // therefore irrational, which we do not expect in non-artificial input data.
+    // therefore irrational, which we do not expect in non-artificial input
+    // data.
     int exponent;
     double hashbits = std::frexp(val * golden_ratio_reciprocal(), &exponent);
 
