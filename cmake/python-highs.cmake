@@ -1,5 +1,20 @@
+# Find Python 3
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
-find_package(pybind11 REQUIRED)
+
+include(FetchContent)
+
+message(CHECK_START "Fetching pybind11")
+list(APPEND CMAKE_MESSAGE_INDENT "  ")
+set(PYBIND11_INSTALL ON)
+set(PYBIND11_TEST OFF)
+FetchContent_Declare(
+  pybind11
+  GIT_REPOSITORY "https://github.com/pybind/pybind11.git"
+  GIT_TAG "v2.11.1"
+)
+FetchContent_MakeAvailable(pybind11)
+list(POP_BACK CMAKE_MESSAGE_INDENT)
+message(CHECK_PASS "fetched")
 
 function(search_python_module)
   set(options NO_VERSION)
@@ -70,22 +85,15 @@ set_target_properties(highs_bindings PROPERTIES
 if(APPLE)
   set_target_properties(highs_bindings PROPERTIES
     SUFFIX ".so"
+    INSTALL_RPATH "@loader_path;@loader_path/../../${PYTHON_PROJECT}/.libs"
+    )
+elseif(UNIX)
+  set_target_properties(highs_bindings PROPERTIES
+    INSTALL_RPATH "$ORIGIN:$ORIGIN/../../${PYTHON_PROJECT}/.libs"
     )
 endif()
 
-# if(APPLE)
-#   set_target_properties(highs_bindings PROPERTIES
-#     SUFFIX ".so"
-#     INSTALL_RPATH "@loader_path;@loader_path/../../${PYTHON_PROJECT}/libs"
-#     )
-# elseif(UNIX)
-#   set_target_properties(highs_bindings PROPERTIES
-#     INSTALL_RPATH "$ORIGIN:$ORIGIN/../../${PYTHON_PROJECT}/libs"
-#     )
-# endif()
-
 add_library(${PROJECT_NAMESPACE}::highs_bindings ALIAS highs_bindings)
-
 
 target_link_libraries(highs_bindings PRIVATE
   ${PROJECT_NAMESPACE}::highs
@@ -99,58 +107,48 @@ file(COPY
   pyproject.toml
   DESTINATION ${PYTHON_PROJECT_DIR})
 
+# add_custom_command(
+#   OUTPUT python/dist/timestamp
+#   # Don't need to copy static lib on Windows.
+#   COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
+#   $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
+#   libs
 
+#   COMMAND ${CMAKE_COMMAND} -E copy $<${TARGET_FILE}::highs> python/
+#   WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
+# )
 
 add_custom_command(
   OUTPUT python/dist/timestamp
+  COMMAND ${CMAKE_COMMAND} -E remove_directory dist
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_PROJECT}/.libs
   # Don't need to copy static lib on Windows.
   COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
   $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
-  libs
+  ${PYTHON_PROJECT}/.libs
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs> ${PYTHON_PROJECT}/.libs
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs_bindings> ${PYTHON_PROJECT}/.libs
 
-  COMMAND ${CMAKE_COMMAND} -E copy $<${TARGET_FILE}::highs> python/
-  WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
-)
+  #COMMAND ${Python3_EXECUTABLE} setup.py bdist_egg bdist_wheel
+  COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
 
-  # add_custom_command(
-  # OUTPUT python/dist/timestamp
-  # COMMAND ${CMAKE_COMMAND} -E remove_directory dist
-  # COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_PROJECT}/.libs
-  # # Don't need to copy static lib on Windows.
-  # COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
-  # $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
-  # ${PYTHON_PROJECT}/.libs
-  # COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs> ${PYTHON_PROJECT}/libs
-  # COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs_bindings> ${PYTHON_PROJECT}/libs
+  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/python/dist/timestamp
 
-  # #COMMAND ${Python3_EXECUTABLE} setup.py bdist_egg bdist_wheel
-  # COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
+  DEPENDS
+    ${PROJECT_NAMESPACE}::highs
+  BYPRODUCTS
+    python/${PYTHON_PROJECT}
+    python/${PYTHON_PROJECT}.egg-info
+    python/build
+    python/dist
+  WORKING_DIRECTORY python/highspy
+  COMMAND_EXPAND_LISTS)
 
-  # COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/python/dist/timestamp
-
-  # DEPENDS
-  #   python/setup.py
-  #   ${PROJECT_NAMESPACE}::highs
-  # BYPRODUCTS
-  #   python/${PYTHON_PROJECT}
-  #   python/${PYTHON_PROJECT}.egg-info
-  #   python/build
-  #   python/dist
-  # WORKING_DIRECTORY python
-  # COMMAND_EXPAND_LISTS)
-
-# Main Target
+# Main Target
 # add_custom_target(python_package ALL
 #   DEPENDS
 #     python/dist/timestamp
 #   WORKING_DIRECTORY python)
-
-# Install rules
-# configure_file(
-#   ${PROJECT_SOURCE_DIR}/cmake/python-install.cmake.in
-#   ${PROJECT_BINARY_DIR}/python/python-install.cmake
-#   @ONLY)
-# install(SCRIPT ${PROJECT_BINARY_DIR}/python/python-install.cmake)
 
 # if(BUILD_VENV)
 #   # make a virtualenv to install our python package in it
