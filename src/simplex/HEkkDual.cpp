@@ -722,6 +722,17 @@ void HEkkDual::solvePhase1() {
     // chooseColumn has failed or excessive primal values have been
     // created Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
+    // Solve error is opaque to users, so put in some logging
+    if (rebuild_reason == kRebuildReasonChooseColumnFail) {
+      highsLogUser(
+          ekk_instance_.options_->log_options, HighsLogType::kError,
+          "Dual simplex ratio test failed due to excessive dual values: "
+          "consider scaling down the LP objective coefficients\n");
+    } else {
+      highsLogUser(ekk_instance_.options_->log_options, HighsLogType::kError,
+                   "Dual simplex detected excessive primal values: consider "
+                   "scaling down the LP bounds\n");
+    }
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
@@ -971,6 +982,17 @@ void HEkkDual::solvePhase2() {
     // chooseColumn has failed or excessive primal values have been
     // created Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
+    // Solve error is opaque to users, so put in some logging
+    if (rebuild_reason == kRebuildReasonChooseColumnFail) {
+      highsLogUser(
+          ekk_instance_.options_->log_options, HighsLogType::kError,
+          "Dual simplex ratio test failed due to excessive dual values: "
+          "consider scaling down the LP objective coefficients\n");
+    } else {
+      highsLogUser(ekk_instance_.options_->log_options, HighsLogType::kError,
+                   "Dual simplex detected excessive primal values: consider "
+                   "scaling down the LP bounds\n");
+    }
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
