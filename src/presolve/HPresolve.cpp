@@ -325,7 +325,7 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   return true;
 }
 
-void HPresolve::link(const HighsInt pos) {
+void HPresolve::link(HighsInt pos) {
   Anext[pos] = colhead[Acol[pos]];
   Aprev[pos] = -1;
   colhead[Acol[pos]] = pos;
@@ -350,7 +350,7 @@ void HPresolve::link(const HighsInt pos) {
     ++rowsizeImplInt[Arow[pos]];
 }
 
-void HPresolve::unlink(const HighsInt pos) {
+void HPresolve::unlink(HighsInt pos) {
   HighsInt next = Anext[pos];
   HighsInt prev = Aprev[pos];
 
