@@ -1735,7 +1735,7 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
-  if (colUpperSource[col] != -1)
+  if (colUpperSource[col] != -1 && colLowerSource[col] != colUpperSource[col])
     colImplSourceByRow[colUpperSource[col]].erase(col);
   if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
@@ -1776,7 +1776,7 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
-  if (colLowerSource[col] != -1)
+  if (colLowerSource[col] != -1 && colLowerSource[col] != colUpperSource[col])
     colImplSourceByRow[colLowerSource[col]].erase(col);
   if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
@@ -2336,8 +2336,25 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 
     // recompute affected implied bounds
     std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
-    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++)
-      recomputeColImpliedBounds(*it);
+    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
+      // set implied bounds to infinite values
+      if (colLowerSource[*it] == colrow)
+        changeImplColLower(*it, -kHighsInf, -1);
+      if (colUpperSource[*it] == colrow) changeImplColUpper(*it, kHighsInf, -1);
+
+      // iterate over column
+      for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
+        updateColImpliedBounds(nonz.index(), *it, nonz.value());
+      }
+    }
+
+    // invalidate affected implied bounds
+    /*std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
+    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
+      if (colUpperSource[*it] == colrow) changeImplColUpper(*it, kHighsInf, -1);
+      if (colLowerSource[*it] == colrow)
+        changeImplColLower(*it, -kHighsInf, -1);
+    }*/
 
     // check if this is an equation row and it now has a different size
     if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
