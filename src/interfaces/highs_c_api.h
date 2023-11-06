@@ -11,7 +11,7 @@
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
 
-//#include "util/HighsInt.h"
+// #include "util/HighsInt.h"
 #include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
@@ -1078,12 +1078,8 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-HighsInt Highs_setCallback(
-    void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
-    void* user_callback_data);
+HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
+                           void* user_callback_data);
 
 /**
  * Start callback of given type

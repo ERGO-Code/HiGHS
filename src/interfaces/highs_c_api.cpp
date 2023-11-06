@@ -625,14 +625,11 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
-HighsInt Highs_setCallback(
-    void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
-    void* user_callback_data) {
-  return (HighsInt)((Highs*)highs)
-      ->setCallback(user_callback, user_callback_data);
+HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
+                           void* user_callback_data) {
+  auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
+                                                        user_callback_data);
+  return static_cast<int>(status);
 }
 
 HighsInt Highs_startCallback(void* highs, const int callback_type) {

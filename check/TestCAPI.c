@@ -13,8 +13,8 @@ const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 static void userCallback(const int callback_type, const char* message,
-			 const struct HighsCallbackDataOut* data_out,
-			 struct HighsCallbackDataIn* data_in,
+			 const HighsCallbackDataOut* data_out,
+			 HighsCallbackDataIn* data_in,
 			 void* user_callback_data) {
   // Extract the double value pointed to from void* user_callback_data
   const double local_callback_data = user_callback_data == NULL ? -1 : *(double*)user_callback_data;
