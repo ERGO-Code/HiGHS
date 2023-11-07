@@ -644,6 +644,23 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
   }
 }
 
+void HPresolve::recomputeColImpliedBounds(HighsInt row) {
+  // recompute implied bounds affected by a modification in a row (removed /
+  // added non-zeros, etc.)
+  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
+  for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
+    // set implied bounds to infinite values if they were deduced from the given
+    // row
+    if (colLowerSource[*it] == row) changeImplColLower(*it, -kHighsInf, -1);
+    if (colUpperSource[*it] == row) changeImplColUpper(*it, kHighsInf, -1);
+
+    // iterate over column and recompute the implied bounds
+    for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
+      updateColImpliedBounds(nonz.index(), *it, nonz.value());
+    }
+  }
+}
+
 HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
   if (rowroot[row] == -1) return -1;
 
@@ -2323,23 +2340,6 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 
   // finally remove the entries of the row that was used for substitution
   for (HighsInt rowiter : rowpositions) unlink(rowiter);
-}
-
-void HPresolve::recomputeColImpliedBounds(HighsInt row) {
-  // recompute implied bounds affected by a modification in a row (removed /
-  // added non-zeros, etc.)
-  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
-  for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
-    // set implied bounds to infinite values if they were deduced from the given
-    // row
-    if (colLowerSource[*it] == row) changeImplColLower(*it, -kHighsInf, -1);
-    if (colUpperSource[*it] == row) changeImplColUpper(*it, kHighsInf, -1);
-
-    // iterate over column and recompute the implied bounds
-    for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
-      updateColImpliedBounds(nonz.index(), *it, nonz.value());
-    }
-  }
 }
 
 void HPresolve::toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
