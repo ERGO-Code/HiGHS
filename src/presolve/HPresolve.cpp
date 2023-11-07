@@ -446,17 +446,6 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   // right hand side -cost which becomes a >= constraint with side +cost.
   // Furthermore, we can ignore strictly redundant primal
   // column bounds and treat them as if they are infinite
-
-  // for debugging!
-  // implied upper bound on variable x_6 (computed using row 1) is incorrect
-  // when entering this method. as a consequence, this subroutine incorrectly
-  // decides that the bounds on x_6 (singleton!) are redundant and computes
-  // incorrect row duals. Why are 'implColLower' and 'implColUpper' not
-  // re-computed when the corresponding rows stored in 'colLowerSource' or
-  // 'colUpperSource' are modified (e.g., non-zeros added by substitution or
-  // constraint bounds modified)?
-  // bool boundsOK = validateColImpliedBounds(col);
-
   double impliedMargin = colsize[col] != 1 ? primal_feastol : -primal_feastol;
   double dualRowLower =
       (model->col_lower_[col] == -kHighsInf) ||
@@ -653,47 +642,6 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       }
     }
   }
-}
-
-void HPresolve::recomputeColImpliedBounds(HighsInt col) {
-  // recompute implied bounds for given column
-
-  // set implied bounds to infinite values
-  changeImplColLower(col, -kHighsInf, -1);
-  changeImplColUpper(col, kHighsInf, -1);
-
-  // iterate over column
-  for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
-    updateColImpliedBounds(nonz.index(), col, nonz.value());
-  }
-}
-
-bool HPresolve::validateColImpliedBounds(HighsInt col) {
-  // check whether current implied column bounds for given column are valid
-
-  // save current implied column bounds
-  double oldImplLower = implColLower[col];
-  double oldImplUpper = implColUpper[col];
-  HighsInt oldImplLowerSource = colLowerSource[col];
-  HighsInt oldImplUpperSource = colUpperSource[col];
-
-  // recompute implied column bounds
-  recomputeColImpliedBounds(col);
-
-  // check if bounds were correct / up-to-date when entering this method
-  if ((colLowerSource[col] != oldImplLowerSource) ||
-      (colUpperSource[col] != oldImplUpperSource))
-    return false;
-
-  if (((oldImplLower != -kHighsInf) || (implColLower[col] != -kHighsInf)) &&
-      (abs(oldImplLower - implColLower[col]) > primal_feastol))
-    return false;
-
-  if (((oldImplUpper != kHighsInf) || (implColUpper[col] != kHighsInf)) &&
-      (abs(oldImplUpper - implColUpper[col]) > primal_feastol))
-    return false;
-
-  return true;
 }
 
 HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
@@ -2334,27 +2282,8 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
         addToMatrix(colrow, Acol[rowiter], scale * Avalue[rowiter]);
     }
 
-    // recompute affected implied bounds
-    std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
-    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
-      // set implied bounds to infinite values
-      if (colLowerSource[*it] == colrow)
-        changeImplColLower(*it, -kHighsInf, -1);
-      if (colUpperSource[*it] == colrow) changeImplColUpper(*it, kHighsInf, -1);
-
-      // iterate over column
-      for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
-        updateColImpliedBounds(nonz.index(), *it, nonz.value());
-      }
-    }
-
-    // invalidate affected implied bounds
-    /*std::set<HighsInt> affectedCols(colImplSourceByRow[colrow]);
-    for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
-      if (colUpperSource[*it] == colrow) changeImplColUpper(*it, kHighsInf, -1);
-      if (colLowerSource[*it] == colrow)
-        changeImplColLower(*it, -kHighsInf, -1);
-    }*/
+    // recompute implied column bounds affected by the substitution
+    recomputeColImpliedBounds(colrow);
 
     // check if this is an equation row and it now has a different size
     if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
@@ -2394,6 +2323,23 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
 
   // finally remove the entries of the row that was used for substitution
   for (HighsInt rowiter : rowpositions) unlink(rowiter);
+}
+
+void HPresolve::recomputeColImpliedBounds(HighsInt row) {
+  // recompute implied bounds affected by a modification in a row (removed /
+  // added non-zeros, etc.)
+  std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
+  for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
+    // set implied bounds to infinite values if they were deduced from the given
+    // row
+    if (colLowerSource[*it] == row) changeImplColLower(*it, -kHighsInf, -1);
+    if (colUpperSource[*it] == row) changeImplColUpper(*it, kHighsInf, -1);
+
+    // iterate over column and recompute the implied bounds
+    for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
+      updateColImpliedBounds(nonz.index(), *it, nonz.value());
+    }
+  }
 }
 
 void HPresolve::toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
