@@ -16,6 +16,7 @@ NumberItems = 40
 ItemWeights = [round(random.uniform(1, 10), 1) for _ in range(NumberItems)]
 BinCapacity = 15
 
+
 #
 # Solve instance with greedy first fit decreasing (FFD) heuristic
 #
