@@ -259,7 +259,7 @@ class HighsHashTree {
               sizeof(hashes[0]) * (last - first));
     }
 
-    bool findKey(const K& key, const uint16_t& hash, int& pos) {
+    bool findKey(const K& key, const uint16_t& hash, int& pos) const {
       // find key
       while (pos != size && hashes[pos] == hash) {
         if (key == entries[pos].key()) return true;
