@@ -767,10 +767,11 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     std::set<HighsInt> newSet;
-    for (auto it = colImplSourceByRow[i].cbegin();
-         it != colImplSourceByRow[i].cend(); it++) {
-      if (newColIndex[*it] != -1) newSet.emplace(newColIndex[*it]);
-    }
+    std::for_each(colImplSourceByRow[i].cbegin(), colImplSourceByRow[i].cend(),
+                  [&](const HighsInt& col) {
+                    if (newColIndex[col] != -1)
+                      newSet.emplace(newColIndex[col]);
+                  });
     colImplSourceByRow[i] = std::move(newSet);
   }
   rowDeleted.assign(model->num_row_, false);
