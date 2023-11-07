@@ -417,6 +417,10 @@ def branchAndPrice(m, vals, columns, start_time=0):
 
 
 if __name__ == '__main__':
+    if max(ItemWeights) > BinCapacity:
+        print(f"Instance is infeasible: item {max(enumerate(ItemWeights), key=itemgetter(1))[0]} has weight {max(ItemWeights)} > {BinCapacity} (bin capacity).")
+        exit()
+
     start_time = time.perf_counter()
     greedy_bins = solveGreedyModel()
     greedy_time = time.perf_counter()-start_time
