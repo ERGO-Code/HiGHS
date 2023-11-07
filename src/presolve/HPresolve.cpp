@@ -645,8 +645,8 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 }
 
 void HPresolve::recomputeColImpliedBounds(HighsInt row) {
-  // recompute implied bounds affected by a modification in a row (removed /
-  // added non-zeros, etc.)
+  // recompute implied column bounds affected by a modification in a row
+  // (removed / added non-zeros, etc.)
   std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
   for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
     // set implied bounds to infinite values if they were deduced from the given
