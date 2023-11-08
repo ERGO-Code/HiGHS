@@ -1679,46 +1679,129 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
   }
 }
 
-// Modify status and info if user cost or bound scaling, or primal/dual feasibility tolerances have changed
-HighsStatus Highs::userScaleAction() {
+// Modify status and info if user bound or cost scaling, or
+// primal/dual feasibility tolerances have changed
+HighsStatus Highs::optionChangeAction() {
   HighsLp& lp = this->model_.lp_;
   HighsOptions& options = this->options_;
-  if (lp.num_col_ == 0 &&
-      lp.num_row_ == 0) return;
+  if (lp.num_col_ == 0 && lp.num_row_ == 0) return;
+  HighsInt dl_user_bound_scale =
+      options.user_bound_scale - lp.user_bound_scale_;
   HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
-  HighsInt dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+
+  double dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
+  if (dl_user_bound_scale) {
+    // Ensure that user bound scaling does not yield infinite bounds
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double new_value = lp.col_lower_[iCol] * dl_user_bound_scale_value;
+      if (lp.col_lower_[iCol] > -kHighsInf &&
+          std::abs(new_value) > options.infinite_bound) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "User bound scaling yields infinite lower bound of %g for "
+                     "variable %d\n",
+                     new_value, int(iCol));
+        return HighsStatus::kError;
+      }
+      new_value = lp.col_upper_[iCol] * dl_user_bound_scale_value;
+      if (lp.col_upper_[iCol] < kHighsInf &&
+          std::abs(new_value) > options.infinite_bound) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "User bound scaling yields infinite upper bound of %g for "
+                     "variable %d\n",
+                     new_value, int(iCol));
+        return HighsStatus::kError;
+      }
+    }
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      double new_value = lp.row_lower_[iRow] * dl_user_bound_scale_value;
+      if (lp.row_lower_[iRow] > -kHighsInf &&
+          std::abs(new_value) > options.infinite_bound) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "User bound scaling yields infinite lower bound of %g for "
+                     "constraint %d\n",
+                     new_value, int(iRow));
+        return HighsStatus::kError;
+      }
+      new_value = lp.row_upper_[iRow] * dl_user_bound_scale_value;
+      if (lp.row_upper_[iRow] < kHighsInf &&
+          std::abs(new_value) > options.infinite_bound) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "User bound scaling yields infinite upper bound of %g for "
+                     "constraint %d\n",
+                     new_value, int(iRow));
+        return HighsStatus::kError;
+      }
+    }
+  }
 
   double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
-
   if (dl_user_cost_scale) {
     // Ensure that user cost scaling does not yield infinite costs
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double new_value = lp.col_cost_[iCol] * dl_user_cost_scale_value;
       if (std::abs(new_value) > options.infinite_cost) {
-	highsLogUser(options_.log_options, HighsLogType::kError,
-	"User cost scaling yields infinite cost of %g for variable %d\n", new_value, int(iCol));
-	return HighsStatus::kError;
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "User cost scaling yields infinite cost of %g for variable %d\n",
+            new_value, int(iCol));
+        return HighsStatus::kError;
       }
     }
     if (this->model_.hessian_.dim_) {
-      for (HighsInt iEl = 0; iEl < this->model_.hessian_.start_[this->model_.hessian_.dim_]; iEl++) {
-	double new_value = this->model_.hessian_.value_[iEl] * dl_user_cost_scale_value;
-	if (std::abs(new_value) > options.large_matrix_value) {
-	  highsLogUser(options_.log_options, HighsLogType::kError,
-	  "User cost scaling yields harge Hessian value of %g\n", new_value, int(iEl));
-	  return HighsStatus::kError;
-								     }
-      }    
+      for (HighsInt iEl = 0;
+           iEl < this->model_.hessian_.start_[this->model_.hessian_.dim_];
+           iEl++) {
+        double new_value =
+            this->model_.hessian_.value_[iEl] * dl_user_cost_scale_value;
+        if (std::abs(new_value) > options.large_matrix_value) {
+          highsLogUser(options_.log_options, HighsLogType::kError,
+                       "User cost scaling yields harge Hessian value of %g\n",
+                       new_value, int(iEl));
+          return HighsStatus::kError;
+        }
+      }
     }
   }
 
-  double new_max_dual_infeasibility = this->info_.max_dual_infeasibility * dl_user_cost_scale_value;
+  double new_max_primal_infeasibility =
+      this->info_.max_primal_infeasibility * dl_user_cost_scale_value;
+  if (new_max_primal_infeasibility > options.primal_feasibility_tolerance) {
+    // Not primal feasible
+    if (this->info_.primal_solution_status == kSolutionStatusFeasible)
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to loss of primal feasibility\n");
+    this->model_status_ = HighsModelStatus::kNotset;
+    this->info_.primal_solution_status = kSolutionStatusInfeasible;
+    this->info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  }
+  if (dl_user_bound_scale) {
+    this->info_.objective_function_value *= dl_user_bound_scale_value;
+    this->info_.max_primal_infeasibility *= dl_user_bound_scale_value;
+    this->info_.sum_primal_infeasibilities *= dl_user_bound_scale_value;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      lp.col_lower_[iCol] *= dl_user_bound_scale_value;
+      lp.col_upper_[iCol] *= dl_user_bound_scale_value;
+      this->solution_.col_value[iCol] *= dl_user_bound_scale_value;
+    }
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      lp.row_lower_[iRow] *= dl_user_bound_scale_value;
+      lp.row_upper_[iRow] *= dl_user_bound_scale_value;
+      this->solution_.row_value[iRow] *= dl_user_bound_scale_value;
+    }
+    lp.user_bound_scale_ = options.user_bound_scale;
+  }
+
+  double new_max_dual_infeasibility =
+      this->info_.max_dual_infeasibility * dl_user_cost_scale_value;
   if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
-    // No longer dual feasible
+    // Not dual feasible
+    if (this->info_.dual_solution_status == kSolutionStatusFeasible)
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to loss of dual feasibility\n");
     this->model_status_ = HighsModelStatus::kNotset;
     this->info_.dual_solution_status = kSolutionStatusInfeasible;
     this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-									      }
+  }
   if (dl_user_cost_scale) {
     this->info_.objective_function_value *= dl_user_cost_scale_value;
     this->info_.max_dual_infeasibility *= dl_user_cost_scale_value;
@@ -1727,6 +1810,8 @@ HighsStatus Highs::userScaleAction() {
       lp.col_cost_[iCol] *= dl_user_cost_scale_value;
       this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
     }
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
     lp.user_cost_scale_ = options.user_cost_scale;
   }
   return HighsStatus::kOk;

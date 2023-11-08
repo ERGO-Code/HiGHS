@@ -77,7 +77,8 @@ HighsStatus Highs::clearSolver() {
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk) {
-    return HighsStatus::kOk;
+    printf("Highs::setOptionValue - bool\n");
+    return optionChangeAction();
   }
   return HighsStatus::kError;
 }
@@ -87,8 +88,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk) {
     printf("Highs::setOptionValue - HighsInt\n");
-    userScaleAction();
-    return HighsStatus::kOk;
+    return optionChangeAction();
   }
   return HighsStatus::kError;
 }
@@ -97,7 +97,8 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk) {
-    return HighsStatus::kOk;
+    printf("Highs::setOptionValue - double\n");
+    return optionChangeAction();
   }
   return HighsStatus::kError;
 }
@@ -108,8 +109,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk) {
     printf("Highs::setOptionValue - string\n");
-    userScaleAction();
-    return HighsStatus::kOk;
+    return optionChangeAction();
   }
   return HighsStatus::kError;
 }
@@ -120,8 +120,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk) {
     printf("Highs::setOptionValue - char*\n");
-    userScaleAction();
-    return HighsStatus::kOk;
+    return optionChangeAction();
   }
   return HighsStatus::kError;
 }
@@ -145,17 +144,14 @@ HighsStatus Highs::readOptions(const std::string& filename) {
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
   if (passLocalOptions(options_.log_options, options, options_) ==
-      OptionStatus::kOk) {
-    userScaleAction();
-    return HighsStatus::kOk;
-  }
+      OptionStatus::kOk)
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
-  userScaleAction();
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
