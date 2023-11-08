@@ -23,7 +23,7 @@
 
 #include "lp_data/HConst.h"
 
-// helper struct to compute the multipicative inverse by using fermats
+// helper struct to compute the multiplicative inverse by using fermats
 // theorem and recursive repeated squaring.
 // Under the assumption that k is a small prime and an 32bit HighsInt is enough
 // to hold the number (k-1)^(k-2) good compilers should be able to optimize this

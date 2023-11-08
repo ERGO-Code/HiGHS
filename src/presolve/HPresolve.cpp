@@ -1708,7 +1708,7 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
   colUpperSource[col] = originRow;
   implColUpper[col] = newUpper;
 
-  // if the old and the new implied bound not better than the upper bound
+  // if the old and the new implied bound are not better than the upper bound,
   // nothing needs to be updated
   if (!newImpliedFree &&
       std::min(oldImplUpper, newUpper) >= model->col_upper_[col])
@@ -1731,8 +1731,7 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
   if (oldImplLower <= model->col_lower_[col] + primal_feastol &&
       newLower > model->col_lower_[col] + primal_feastol) {
     // the dual constraint can additionally be considered a <= constraint and
-    // was free, or a
-    // >= constraint before
+    // was free, or a >= constraint before
     markChangedCol(col);
   }
   bool newImpliedFree =
@@ -1749,7 +1748,7 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
   colLowerSource[col] = originRow;
   implColLower[col] = newLower;
 
-  // if the old and the new implied bound not better than the lower bound
+  // if the old and the new implied bound are not better than the lower bound,
   // nothing needs to be updated
   if (!newImpliedFree &&
       std::max(oldImplLower, newLower) <= model->col_lower_[col])
@@ -1779,8 +1778,8 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
       oldImplUpper > rowDualUpper[row] + options->dual_feasibility_tolerance &&
       newUpper <= rowDualUpper[row] + options->dual_feasibility_tolerance;
 
-  // remember the source of this lower bound, so that we can correctly identify
-  // weakdomination
+  // remember the source of this upper bound, so that we can correctly identify
+  // weak domination
   rowDualUpperSource[row] = originCol;
   implRowDualUpper[row] = newUpper;
 
@@ -1813,7 +1812,7 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
       newLower >= rowDualLower[row] - options->dual_feasibility_tolerance;
 
   // remember the source of this lower bound, so that we can correctly identify
-  // a weakly domination
+  // weak domination
   rowDualLowerSource[row] = originCol;
   implRowDualLower[row] = newLower;
 

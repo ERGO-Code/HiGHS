@@ -617,7 +617,7 @@ class Highs {
    * @brief Get multiple columns from the model given by a set
    */
   HighsStatus getCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
@@ -689,7 +689,7 @@ class Highs {
    * @brief Get multiple rows from the model given by a set
    */
   HighsStatus getRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt*
           set,  //!< Array of size num_set_entries with indices of rows to get
       HighsInt& num_row,  //!< Number of rows got from the model
@@ -1338,7 +1338,7 @@ class Highs {
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
-  // the inumcumbent model.
+  // the incumbent model.
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
