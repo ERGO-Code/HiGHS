@@ -545,13 +545,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_bound", "Objective bound for termination of dual simplex",
-        advanced, &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
+        "objective_bound",
+        "Objective bound for termination of the dual simplex solver", advanced,
+        &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination of MIP solver",
-        advanced,
+        "objective_target",
+        "Objective target for termination of the MIP solver", advanced,
         //"primal simplex and "
         &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
@@ -873,7 +874,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     // Fix the number of user settable options
-    num_user_settable_options_ = records.size();
+    num_user_settable_options_ = static_cast<HighsInt>(records.size());
 
     // Advanced options
     advanced = true;
@@ -1118,7 +1119,7 @@ class HighsOptions : public HighsOptionsStruct {
   }
 
   void deleteRecords() {
-    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
+    for (size_t i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:

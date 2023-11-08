@@ -11,7 +11,7 @@
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
 
-//#include "util/HighsInt.h"
+// #include "util/HighsInt.h"
 #include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
@@ -349,7 +349,7 @@ HighsInt Highs_writeSolution(const void* highs, const char* filename);
  * available) to a file in a human-readable format.
  *
  * The method identical to `Highs_writeSolution`, except that the
- * printout is in a human-readiable format.
+ * printout is in a human-readable format.
  *
  * @param highs     A pointer to the Highs instance.
  * @param filename  The name of the file to write the results to.
@@ -437,7 +437,7 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  * @param q_value     An array of length [q_num_nz] with values of matrix
  *                     entries. If the model is linear, pass NULL.
  * @param integrality An array of length [num_col] containing a `kHighsVarType`
- *                    consatnt for each column.
+ *                    constant for each column.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -967,10 +967,10 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  *
  * @param highs             A pointer to the Highs instance.
  * @param rhs               The right-hand side vector ``b``
- * @param solution_vector   An array of length [num_row] in whcih to store the
+ * @param solution_vector   An array of length [num_row] in which to store the
  *                          values of the non-zero elements.
  * @param solution_num_nz   The number of non-zeros in the solution.
- * @param solution_index    An array of length [num_row] in whcih to store the
+ * @param solution_index    An array of length [num_row] in which to store the
  *                          indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
@@ -1078,12 +1078,8 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-HighsInt Highs_setCallback(
-    void* highs,
-    void (*user_callback)(const int, const char*,
-                          const struct HighsCallbackDataOut*,
-                          struct HighsCallbackDataIn*, void*),
-    void* user_callback_data);
+HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
+                           void* user_callback_data);
 
 /**
  * Start callback of given type
@@ -1930,7 +1926,7 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
 
 /**
  * Compute the ranging information for all costs and bounds. For
- * nonbasic variables the ranging informaiton is relative to the
+ * nonbasic variables the ranging information is relative to the
  * active bound. For basic variables the ranging information relates
  * to...
  *

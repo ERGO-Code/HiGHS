@@ -83,17 +83,27 @@ struct HighsScale {
 };
 
 struct HighsLpMods {
+  // Semi-variables with zero lower bound that are treated as non-semi
   std::vector<HighsInt> save_non_semi_variable_index;
+
+  // Semi-variables with inconsistent bounds that are fixed at zero
   std::vector<HighsInt> save_inconsistent_semi_variable_index;
   std::vector<double> save_inconsistent_semi_variable_lower_bound_value;
   std::vector<double> save_inconsistent_semi_variable_upper_bound_value;
   std::vector<HighsVarType> save_inconsistent_semi_variable_type;
 
+  // Semi-variables whose lower bound is ignored when solving the
+  // relaxation
   std::vector<HighsInt> save_relaxed_semi_variable_lower_bound_index;
   std::vector<double> save_relaxed_semi_variable_lower_bound_value;
+
+  // Semi-variables whose upper bound is too large to be used as a
+  // big-M when converting them to an integer variables plus an
+  // integer/continuous variables as appropriate
   std::vector<HighsInt> save_tightened_semi_variable_upper_bound_index;
   std::vector<double> save_tightened_semi_variable_upper_bound_value;
 
+  // Variables with infinite costs that are fixed during solve
   std::vector<HighsInt> save_inf_cost_variable_index;
   std::vector<double> save_inf_cost_variable_cost;
   std::vector<double> save_inf_cost_variable_lower;

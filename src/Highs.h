@@ -617,7 +617,7 @@ class Highs {
    * @brief Get multiple columns from the model given by a set
    */
   HighsStatus getCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
@@ -689,7 +689,7 @@ class Highs {
    * @brief Get multiple rows from the model given by a set
    */
   HighsStatus getRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt*
           set,  //!< Array of size num_set_entries with indices of rows to get
       HighsInt& num_row,  //!< Number of rows got from the model
@@ -1019,20 +1019,22 @@ class Highs {
   /**
    * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setCallback(void (*user_callback)(const int, const char*,
-                                                const HighsCallbackDataOut*,
-                                                HighsCallbackDataIn*, void*),
+  HighsStatus setCallback(HighsCallbackFunctionType user_callback,
+                          void* user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCCallbackType c_callback,
                           void* user_callback_data = nullptr);
 
   /**
    * @brief Start callback of given type
    */
   HighsStatus startCallback(const int callback_type);
+  HighsStatus startCallback(const HighsCallbackType callback_type);
 
   /**
    * @brief Stop callback of given type
    */
   HighsStatus stopCallback(const int callback_type);
+  HighsStatus stopCallback(const HighsCallbackType callback_type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1301,7 +1303,7 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
-  HighsStatus assignContinuousAtDiscreteSolution();
+  HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
@@ -1336,7 +1338,7 @@ class Highs {
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
-  // the inumcumbent model.
+  // the incumbent model.
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
@@ -1366,7 +1368,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status);
+  HighsStatus returnFromRun(const HighsStatus return_status,
+                            const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
@@ -1455,5 +1458,4 @@ class Highs {
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
 };
-
 #endif

@@ -63,6 +63,8 @@ class HighsLp {
   bool isMip() const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
+  bool hasMods() const;
+  bool needsMods(const double infinite_cost) const;
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();

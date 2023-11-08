@@ -47,6 +47,20 @@ bool HighsLp::hasSemiVariables() const {
   return false;
 }
 
+bool HighsLp::hasMods() const {
+  return this->mods_.save_non_semi_variable_index.size() > 0 ||
+         this->mods_.save_inconsistent_semi_variable_index.size() > 0 ||
+         this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
+         this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
+             0 ||
+         this->mods_.save_inf_cost_variable_index.size() > 0;
+}
+
+bool HighsLp::needsMods(const double infinite_cost) const {
+  assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
+  return this->has_infinite_cost_ || this->hasSemiVariables();
+}
+
 bool HighsLp::operator==(const HighsLp& lp) const {
   bool equal = equalButForNames(lp);
   equal = equalNames(lp) && equal;
@@ -429,9 +443,9 @@ bool HighsLpMods::isClear() {
 }
 
 void HighsNameHash::form(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     const bool duplicate = !this->name2index.emplace(name[index], index).second;
     if (duplicate) {
       // Find the original and mark it as duplicate
@@ -445,10 +459,10 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
 }
 
 bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
   bool has_duplicate = false;
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     has_duplicate = !this->name2index.emplace(name[index], index).second;
     if (has_duplicate) break;
   }

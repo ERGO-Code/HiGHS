@@ -26,7 +26,7 @@ lu_int basiclu_factorize
 {
     struct lu this;
     lu_int status;
-    double tic[2], elapsed, factor_cost;
+    double factor_cost;
 
     status = lu_load(&this, istore, xstore, Li, Lx, Ui, Ux, Wi, Wx);
     if (status != BASICLU_OK)

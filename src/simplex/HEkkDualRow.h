@@ -80,7 +80,7 @@ class HEkkDualRow {
    *
    * Can fail when there are excessive dual values due to EXPAND
    * perturbation not being relatively too small, returns positive if
-   * dual uboundedness is suspected
+   * dual unboundedness is suspected
    */
   HighsInt chooseFinal();
 

@@ -79,7 +79,6 @@ lu_int lu_pivot(struct lu *this)
 
     lu_int room, need, pos, j;
     lu_int status = BASICLU_OK;
-    double tic[2];
 
     assert(nz_row >= 1);
     assert(nz_col >= 1);
@@ -410,8 +409,8 @@ static lu_int lu_pivot_any(struct lu *this)
 
     /*
      * Cleanup:
-     * store pivot elemnt;
-     * remove pivot colum from column file, pivot row from row file;
+     * store pivot element;
+     * remove pivot column from column file, pivot row from row file;
      * remove pivot column/row from column/row counts
      */
     colmax[pivot_col] = pivot;
@@ -726,8 +725,8 @@ static lu_int lu_pivot_small(struct lu *this)
 
     /*
      * Cleanup:
-     * store pivot elemnt;
-     * remove pivot colum from column file, pivot row from row file;
+     * store pivot element;
+     * remove pivot column from column file, pivot row from row file;
      * remove pivot column/row from column/row counts
      */
     colmax[pivot_col] = pivot;
@@ -822,8 +821,8 @@ static lu_int lu_pivot_singleton_row(struct lu *this)
 
     /*
      * Cleanup:
-     * store pivot elemnt;
-     * remove pivot colum from column file, pivot row from row file;
+     * store pivot element;
+     * remove pivot column from column file, pivot row from row file;
      * remove pivot column/row from column/row counts
      */
     colmax[pivot_col] = pivot;
@@ -922,8 +921,8 @@ static lu_int lu_pivot_singleton_col(struct lu *this)
 
     /*
      * Cleanup:
-     * store pivot elemnt;
-     * remove pivot colum from column file, pivot row from row file;
+     * store pivot element;
+     * remove pivot column from column file, pivot row from row file;
      * remove pivot column/row from column/row counts
      */
     colmax[pivot_col] = pivot;
@@ -1186,8 +1185,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
     /*
      * Cleanup:
-     * store pivot elemnt;
-     * remove pivot colum from column file, pivot row from row file;
+     * store pivot element;
+     * remove pivot column from column file, pivot row from row file;
      * remove pivot column/row from column/row counts
      */
     colmax[pivot_col] = pivot;

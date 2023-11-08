@@ -219,7 +219,7 @@ class HighsTimer {
           0  //!< Lower bound on percentage of total time
              //!< before an individual clock is reported
   ) {
-    HighsInt num_clock_list_entries = clock_list.size();
+    size_t num_clock_list_entries = clock_list.size();
     double current_run_highs_time = readRunHighsClock();
     bool non_null_report = false;
 
@@ -228,7 +228,7 @@ class HighsTimer {
     // determine the total clock times
     HighsInt sum_calls = 0;
     double sum_clock_times = 0;
-    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
+    for (size_t i = 0; i < num_clock_list_entries; i++) {
       HighsInt iClock = clock_list[i];
       assert(iClock >= 0);
       assert(iClock < num_clock);
@@ -243,7 +243,7 @@ class HighsTimer {
 
     std::vector<double> percent_sum_clock_times(num_clock_list_entries);
     double max_percent_sum_clock_times = 0;
-    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
+    for (size_t i = 0; i < num_clock_list_entries; i++) {
       HighsInt iClock = clock_list[i];
       percent_sum_clock_times[i] = 100.0 * clock_time[iClock] / sum_clock_times;
       max_percent_sum_clock_times =
@@ -261,7 +261,7 @@ class HighsTimer {
     printf(";  Local):    Calls  Time/Call\n");
     // Convert approximate seconds
     double sum_time = 0;
-    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
+    for (size_t i = 0; i < num_clock_list_entries; i++) {
       HighsInt iClock = clock_list[i];
       double time = clock_time[iClock];
       double percent_run_highs = 100.0 * time / current_run_highs_time;
@@ -275,9 +275,8 @@ class HighsTimer {
             double percent_ideal = 100.0 * time / ideal_sum_time;
             printf("; %5.1f%%", percent_ideal);
           }
-          printf("; %5.1f%%):%9" HIGHSINT_FORMAT " %11.4e\n",
-                 percent_sum_clock_times[i], clock_num_call[iClock],
-                 time_per_call);
+          printf("; %5.1f%%):%9ld %11.4e\n", percent_sum_clock_times[i],
+                 static_cast<long int>(clock_num_call[iClock]), time_per_call);
         }
       }
       sum_time += time;
