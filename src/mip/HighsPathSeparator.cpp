@@ -87,18 +87,21 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       lpRelaxation.getRow(i, len, rowinds, rowvals);
 
-      HighsInt j;
-      for (j = 0; j != len; ++j) {
+      // find continuous variable
+      HighsInt col = -1;
+      double val;
+      for (HighsInt j = 0; j != len; ++j) {
         if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
         if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
-
+        col = rowinds[j];
+        val = rowvals[j];
         break;
       }
 
-      HighsInt col = rowinds[j];
-      double val = rowvals[j];
+      // skip row if sole continuous variable is at one of its bounds
+      if (col == -1) continue;
 
-      assert(mip.variableType(rowinds[j]) == HighsVarType::kContinuous);
+      assert(mip.variableType(col) == HighsVarType::kContinuous);
       assert(transLp.boundDistance(col) > 0.0);
 
       if (colSubstitutions[col].first != -1) continue;
