@@ -256,21 +256,32 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       auto findRow = [&](const HighsInt& arcRow, const HighsInt& bestArcCol,
                          const double& val, const auto& colArcs,
-                         const auto& arcRows, HighsInt& row, double& weight,
-                         bool& foundRow) {
+                         const auto& arcRows, HighsInt& row, double& weight) {
+        HighsInt r;
+        double w;
         for (HighsInt nextRow = arcRow + 1;
-             nextRow < colArcs[bestArcCol].second && !foundRow; ++nextRow) {
-          row = arcRows[nextRow].first;
-          weight = -val / arcRows[nextRow].second;
-          foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
+             nextRow < colArcs[bestArcCol].second; ++nextRow) {
+          r = arcRows[nextRow].first;
+          w = -val / arcRows[nextRow].second;
+          if (!isRowInCurrentPath(r) && checkWeight(w)) {
+            row = r;
+            weight = w;
+            return true;
+          }
         }
 
-        for (HighsInt nextRow = colArcs[bestArcCol].first;
-             nextRow < arcRow && !foundRow; ++nextRow) {
-          row = arcRows[nextRow].first;
-          weight = -val / arcRows[nextRow].second;
-          foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
+        for (HighsInt nextRow = colArcs[bestArcCol].first; nextRow < arcRow;
+             ++nextRow) {
+          r = arcRows[nextRow].first;
+          w = -val / arcRows[nextRow].second;
+          if (!isRowInCurrentPath(r) && checkWeight(w)) {
+            row = r;
+            weight = w;
+            return true;
+          }
         }
+
+        return false;
       };
 
       aggregatedPath.clear();
@@ -356,11 +367,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           double weight = -outArcColVal / inArcRows[inArcRow].second;
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
-            bool foundRow = false;
-            findRow(inArcRow, bestOutArcCol, outArcColVal, colInArcs, inArcRows,
-                    row, weight, foundRow);
-
-            if (!foundRow) {
+            if (!findRow(inArcRow, bestOutArcCol, outArcColVal, colInArcs,
+                         inArcRows, row, weight)) {
               if (bestInArcCol == -1)
                 break;
               else
@@ -379,11 +387,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           double weight = -inArcColVal / outArcRows[outArcRow].second;
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
-            bool foundRow = false;
-            findRow(outArcRow, bestInArcCol, inArcColVal, colOutArcs,
-                    outArcRows, row, weight, foundRow);
-
-            if (!foundRow) break;
+            if (!findRow(outArcRow, bestInArcCol, inArcColVal, colOutArcs,
+                         outArcRows, row, weight))
+              break;
           }
 
           currentPath[currPathLen] = row;
