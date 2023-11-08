@@ -224,6 +224,52 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         return w <= maxWeight && w >= minWeight;
       };
 
+      auto skipCol = [&](const HighsInt& col, const auto& colArcs,
+                         const auto& arcRows, const auto& otherColArcs,
+                         const auto& otherArcRows) {
+        if (currPathLen == 1 && !tryNegatedScale) {
+          if (colArcs[col].second - colArcs[col].first <= currPathLen) {
+            for (HighsInt k = colArcs[col].first; k < colArcs[col].second;
+                 ++k) {
+              if (arcRows[k].first != i) {
+                tryNegatedScale = true;
+                break;
+              }
+            }
+          } else
+            tryNegatedScale = true;
+        }
+
+        if (otherColArcs[col].first == otherColArcs[col].second) return true;
+        if (otherColArcs[col].second - otherColArcs[col].first <= currPathLen) {
+          for (HighsInt k = otherColArcs[col].first;
+               k < otherColArcs[col].second; ++k) {
+            if (!isRowInCurrentPath(otherArcRows[k].first)) return false;
+          }
+          return true;
+        }
+        return false;
+      };
+
+      auto findRow = [&](const HighsInt& arcRow, const HighsInt& bestArcCol,
+                         const double& val, const auto& colArcs,
+                         const auto& arcRows, HighsInt& row, double& weight,
+                         bool& foundRow) {
+        for (HighsInt nextRow = arcRow + 1;
+             nextRow < colArcs[bestArcCol].second && !foundRow; ++nextRow) {
+          row = arcRows[nextRow].first;
+          weight = -val / arcRows[nextRow].second;
+          foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
+        }
+
+        for (HighsInt nextRow = colArcs[bestArcCol].first;
+             nextRow < arcRow && !foundRow; ++nextRow) {
+          row = arcRows[nextRow].first;
+          weight = -val / arcRows[nextRow].second;
+          foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
+        }
+      };
+
       aggregatedPath.clear();
 
       while (currPathLen != maxPathLen) {
@@ -255,33 +301,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           if (addedSubstitutionRows) continue;
 
           if (baseRowVals[j] < 0) {
-            if (currPathLen == 1 && !tryNegatedScale) {
-              if (colOutArcs[col].second - colOutArcs[col].first <=
-                  currPathLen) {
-                for (HighsInt k = colOutArcs[col].first;
-                     k < colOutArcs[col].second; ++k) {
-                  if (outArcRows[k].first != i) {
-                    tryNegatedScale = true;
-                    break;
-                  }
-                }
-              } else
-                tryNegatedScale = true;
-            }
+            if (skipCol(col, colOutArcs, outArcRows, colInArcs, inArcRows))
+              continue;
 
-            if (colInArcs[col].first == colInArcs[col].second) continue;
-            if (colInArcs[col].second - colInArcs[col].first <= currPathLen) {
-              bool haveRow = false;
-              for (HighsInt k = colInArcs[col].first; k < colInArcs[col].second;
-                   ++k) {
-                if (!isRowInCurrentPath(inArcRows[k].first)) {
-                  haveRow = true;
-                  break;
-                }
-              }
-
-              if (!haveRow) continue;
-            }
             if (bestOutArcCol == -1 ||
                 transLp.boundDistance(col) > outArcColBoundDist) {
               bestOutArcCol = col;
@@ -289,32 +311,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               outArcColBoundDist = transLp.boundDistance(col);
             }
           } else {
-            if (currPathLen == 1 && !tryNegatedScale) {
-              if (colInArcs[col].second - colInArcs[col].first <= currPathLen) {
-                for (HighsInt k = colInArcs[col].first;
-                     k < colInArcs[col].second; ++k) {
-                  if (inArcRows[k].first != i) {
-                    tryNegatedScale = true;
-                    break;
-                  }
-                }
-              } else
-                tryNegatedScale = true;
-            }
+            if (skipCol(col, colInArcs, inArcRows, colOutArcs, outArcRows))
+              continue;
 
-            if (colOutArcs[col].first == colOutArcs[col].second) continue;
-            if (colOutArcs[col].second - colOutArcs[col].first <= currPathLen) {
-              bool haveRow = false;
-              for (HighsInt k = colOutArcs[col].first;
-                   k < colOutArcs[col].second; ++k) {
-                if (!isRowInCurrentPath(outArcRows[k].first)) {
-                  haveRow = true;
-                  break;
-                }
-              }
-
-              if (!haveRow) continue;
-            }
             if (bestInArcCol == -1 ||
                 transLp.boundDistance(col) > inArcColBoundDist) {
               bestInArcCol = col;
@@ -341,9 +340,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
 
         // we prefer to use an out edge if the bound distances are equal in
-        // feasibility tolerance otherwise we choose an inArc. This tie breaking
-        // is arbitrary, but we should direct the substitution to prefer one
-        // direction to increase diversity.
+        // feasibility tolerance otherwise we choose an inArc. This tie
+        // breaking is arbitrary, but we should direct the substitution to
+        // prefer one direction to increase diversity.
         if (bestInArcCol == -1 ||
             (bestOutArcCol != -1 &&
              outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
@@ -355,20 +354,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
             bool foundRow = false;
-            for (HighsInt nextRow = inArcRow + 1;
-                 nextRow < colInArcs[bestOutArcCol].second && !foundRow;
-                 ++nextRow) {
-              row = inArcRows[nextRow].first;
-              weight = -outArcColVal / inArcRows[nextRow].second;
-              foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
-            }
-
-            for (HighsInt nextRow = colInArcs[bestOutArcCol].first;
-                 nextRow < inArcRow && !foundRow; ++nextRow) {
-              row = inArcRows[nextRow].first;
-              weight = -outArcColVal / inArcRows[nextRow].second;
-              foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
-            }
+            findRow(inArcRow, bestOutArcCol, outArcColVal, colInArcs, inArcRows,
+                    row, weight, foundRow);
 
             if (!foundRow) {
               if (bestInArcCol == -1)
@@ -390,20 +377,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
             bool foundRow = false;
-            for (HighsInt nextRow = outArcRow + 1;
-                 nextRow < colOutArcs[bestInArcCol].second && !foundRow;
-                 ++nextRow) {
-              row = outArcRows[nextRow].first;
-              weight = -inArcColVal / outArcRows[nextRow].second;
-              foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
-            }
-
-            for (HighsInt nextRow = colOutArcs[bestInArcCol].first;
-                 nextRow < outArcRow && !foundRow; ++nextRow) {
-              row = outArcRows[nextRow].first;
-              weight = -inArcColVal / outArcRows[nextRow].second;
-              foundRow = !isRowInCurrentPath(row) && checkWeight(weight);
-            }
+            findRow(outArcRow, bestInArcCol, inArcColVal, colOutArcs,
+                    outArcRows, row, weight, foundRow);
 
             if (!foundRow) break;
           }
