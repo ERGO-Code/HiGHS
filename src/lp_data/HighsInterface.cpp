@@ -1678,3 +1678,56 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     return_status = highsStatusFromHighsModelStatus(model_status_);
   }
 }
+
+// Modify status and info if user cost or bound scaling, or primal/dual feasibility tolerances have changed
+HighsStatus Highs::userScaleAction() {
+  HighsLp& lp = this->model_.lp_;
+  HighsOptions& options = this->options_;
+  if (lp.num_col_ == 0 &&
+      lp.num_row_ == 0) return;
+  HighsInt dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
+  HighsInt dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+
+  double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
+
+  if (dl_user_cost_scale) {
+    // Ensure that user cost scaling does not yield infinite costs
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      double new_value = lp.col_cost_[iCol] * dl_user_cost_scale_value;
+      if (std::abs(new_value) > options.infinite_cost) {
+	highsLogUser(options_.log_options, HighsLogType::kError,
+	"User cost scaling yields infinite cost of %g for variable %d\n", new_value, int(iCol));
+	return HighsStatus::kError;
+      }
+    }
+    if (this->model_.hessian_.dim_) {
+      for (HighsInt iEl = 0; iEl < this->model_.hessian_.start_[this->model_.hessian_.dim_]; iEl++) {
+	double new_value = this->model_.hessian_.value_[iEl] * dl_user_cost_scale_value;
+	if (std::abs(new_value) > options.large_matrix_value) {
+	  highsLogUser(options_.log_options, HighsLogType::kError,
+	  "User cost scaling yields harge Hessian value of %g\n", new_value, int(iEl));
+	  return HighsStatus::kError;
+								     }
+      }    
+    }
+  }
+
+  double new_max_dual_infeasibility = this->info_.max_dual_infeasibility * dl_user_cost_scale_value;
+  if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
+    // No longer dual feasible
+    this->model_status_ = HighsModelStatus::kNotset;
+    this->info_.dual_solution_status = kSolutionStatusInfeasible;
+    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+									      }
+  if (dl_user_cost_scale) {
+    this->info_.objective_function_value *= dl_user_cost_scale_value;
+    this->info_.max_dual_infeasibility *= dl_user_cost_scale_value;
+    this->info_.sum_dual_infeasibilities *= dl_user_cost_scale_value;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      lp.col_cost_[iCol] *= dl_user_cost_scale_value;
+      this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
+    }
+    lp.user_cost_scale_ = options.user_cost_scale;
+  }
+  return HighsStatus::kOk;
+}

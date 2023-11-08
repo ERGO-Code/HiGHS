@@ -1457,5 +1457,6 @@ class Highs {
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
+  HighsStatus userScaleAction();
 };
 #endif

@@ -303,6 +303,8 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt threads;
+  HighsInt user_cost_scale;
+  HighsInt user_bound_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -565,6 +567,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
         &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "user_cost_scale", "Exponent of power-of-two cost scaling for model", advanced,
+        &user_cost_scale, -30, 0, 30);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "user_bound_scale", "Exponent of power-of-two bound scaling for model", advanced,
+        &user_bound_scale, -30, 0, 30);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("highs_debug_level",
