@@ -227,62 +227,70 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         return w <= maxWeight && w >= minWeight;
       };
 
-      auto skipCol = [&](const HighsInt& col, const auto& colArcs,
-                         const auto& arcRows, const auto& otherColArcs,
-                         const auto& otherArcRows) {
-        if (currPathLen == 1 && !tryNegatedScale) {
-          if (colArcs[col].second - colArcs[col].first <= currPathLen) {
-            for (HighsInt k = colArcs[col].first; k < colArcs[col].second;
-                 ++k) {
-              if (arcRows[k].first != i) {
+      auto skipCol =
+          [&](const HighsInt& col,
+              const std::vector<std::pair<HighsInt, HighsInt>>& colArcs,
+              const std::vector<std::pair<HighsInt, double>>& arcRows,
+              const std::vector<std::pair<HighsInt, HighsInt>>& otherColArcs,
+              const std::vector<std::pair<HighsInt, double>>& otherArcRows) {
+            if (currPathLen == 1 && !tryNegatedScale) {
+              if (colArcs[col].second - colArcs[col].first <= currPathLen) {
+                for (HighsInt k = colArcs[col].first; k < colArcs[col].second;
+                     ++k) {
+                  if (arcRows[k].first != i) {
+                    tryNegatedScale = true;
+                    break;
+                  }
+                }
+              } else
                 tryNegatedScale = true;
-                break;
+            }
+
+            if (otherColArcs[col].first == otherColArcs[col].second)
+              return true;
+            if (otherColArcs[col].second - otherColArcs[col].first <=
+                currPathLen) {
+              for (HighsInt k = otherColArcs[col].first;
+                   k < otherColArcs[col].second; ++k) {
+                if (!isRowInCurrentPath(otherArcRows[k].first)) return false;
+              }
+              return true;
+            }
+            return false;
+          };
+
+      auto findRow =
+          [&](const HighsInt& arcRow, const HighsInt& bestArcCol,
+              const double& val,
+              const std::vector<std::pair<HighsInt, HighsInt>>& colArcs,
+              const std::vector<std::pair<HighsInt, double>>& arcRows,
+              HighsInt& row, double& weight) {
+            HighsInt r;
+            double w;
+            for (HighsInt nextRow = arcRow + 1;
+                 nextRow < colArcs[bestArcCol].second; ++nextRow) {
+              r = arcRows[nextRow].first;
+              w = -val / arcRows[nextRow].second;
+              if (!isRowInCurrentPath(r) && checkWeight(w)) {
+                row = r;
+                weight = w;
+                return true;
               }
             }
-          } else
-            tryNegatedScale = true;
-        }
 
-        if (otherColArcs[col].first == otherColArcs[col].second) return true;
-        if (otherColArcs[col].second - otherColArcs[col].first <= currPathLen) {
-          for (HighsInt k = otherColArcs[col].first;
-               k < otherColArcs[col].second; ++k) {
-            if (!isRowInCurrentPath(otherArcRows[k].first)) return false;
-          }
-          return true;
-        }
-        return false;
-      };
+            for (HighsInt nextRow = colArcs[bestArcCol].first; nextRow < arcRow;
+                 ++nextRow) {
+              r = arcRows[nextRow].first;
+              w = -val / arcRows[nextRow].second;
+              if (!isRowInCurrentPath(r) && checkWeight(w)) {
+                row = r;
+                weight = w;
+                return true;
+              }
+            }
 
-      auto findRow = [&](const HighsInt& arcRow, const HighsInt& bestArcCol,
-                         const double& val, const auto& colArcs,
-                         const auto& arcRows, HighsInt& row, double& weight) {
-        HighsInt r;
-        double w;
-        for (HighsInt nextRow = arcRow + 1;
-             nextRow < colArcs[bestArcCol].second; ++nextRow) {
-          r = arcRows[nextRow].first;
-          w = -val / arcRows[nextRow].second;
-          if (!isRowInCurrentPath(r) && checkWeight(w)) {
-            row = r;
-            weight = w;
-            return true;
-          }
-        }
-
-        for (HighsInt nextRow = colArcs[bestArcCol].first; nextRow < arcRow;
-             ++nextRow) {
-          r = arcRows[nextRow].first;
-          w = -val / arcRows[nextRow].second;
-          if (!isRowInCurrentPath(r) && checkWeight(w)) {
-            row = r;
-            weight = w;
-            return true;
-          }
-        }
-
-        return false;
-      };
+            return false;
+          };
 
       aggregatedPath.clear();
 
