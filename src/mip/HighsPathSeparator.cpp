@@ -257,13 +257,20 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           };
 
       auto findRow =
-          [&](const HighsInt& arcRow, const HighsInt& bestArcCol,
-              const double& val,
+          [&](const HighsInt& bestArcCol, const double& val,
               const std::vector<std::pair<HighsInt, HighsInt>>& colArcs,
               const std::vector<std::pair<HighsInt, double>>& arcRows,
               HighsInt& row, double& weight) {
-            HighsInt r;
-            double w;
+            HighsInt arcRow = randgen.integer(colArcs[bestArcCol].first,
+                                              colArcs[bestArcCol].second);
+            HighsInt r = arcRows[arcRow].first;
+            double w = -val / arcRows[arcRow].second;
+            if (!isRowInCurrentPath(r) && checkWeight(w)) {
+              row = r;
+              weight = w;
+              return true;
+            }
+
             for (HighsInt nextRow = arcRow + 1;
                  nextRow < colArcs[bestArcCol].second; ++nextRow) {
               r = arcRows[nextRow].first;
@@ -367,35 +374,18 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         if (bestInArcCol == -1 ||
             (bestOutArcCol != -1 &&
              outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
-          HighsInt inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
-                                              colInArcs[bestOutArcCol].second);
-
-          row = inArcRows[inArcRow].first;
-          weight = -outArcColVal / inArcRows[inArcRow].second;
-
-          if (isRowInCurrentPath(row) || !checkWeight(weight)) {
-            if (!findRow(inArcRow, bestOutArcCol, outArcColVal, colInArcs,
-                         inArcRows, row, weight)) {
-              if (bestInArcCol == -1)
-                break;
-              else
-                goto check_out_arc_col;
-            }
-          }
-
-        } else {
-        check_out_arc_col:
-          HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
-                                               colOutArcs[bestInArcCol].second);
-
-          row = outArcRows[outArcRow].first;
-          weight = -inArcColVal / outArcRows[outArcRow].second;
-
-          if (isRowInCurrentPath(row) || !checkWeight(weight)) {
-            if (!findRow(outArcRow, bestInArcCol, inArcColVal, colOutArcs,
-                         outArcRows, row, weight))
+          if (!findRow(bestOutArcCol, outArcColVal, colInArcs, inArcRows, row,
+                       weight)) {
+            if (bestInArcCol == -1)
+              break;
+            else if (!findRow(bestInArcCol, inArcColVal, colOutArcs, outArcRows,
+                              row, weight))
               break;
           }
+        } else {
+          if (!findRow(bestInArcCol, inArcColVal, colOutArcs, outArcRows, row,
+                       weight))
+            break;
         }
 
         currentPath[currPathLen] = row;
