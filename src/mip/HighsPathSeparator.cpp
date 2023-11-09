@@ -80,36 +80,35 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   // rows so that we can always substitute such columns away using this equation
   // and block the equation from being used as a start row
   for (HighsInt i = 0; i != lp.num_row_; ++i) {
-    if (rowtype[i] == RowType::kEq && numContinuous[i] == 1) {
-      HighsInt len;
-      const HighsInt* rowinds;
-      const double* rowvals;
+    if (rowtype[i] != RowType::kEq || numContinuous[i] != 1) continue;
 
-      lpRelaxation.getRow(i, len, rowinds, rowvals);
+    HighsInt len;
+    const HighsInt* rowinds;
+    const double* rowvals;
+    lpRelaxation.getRow(i, len, rowinds, rowvals);
 
-      // find continuous variable
-      HighsInt col = -1;
-      double val;
-      for (HighsInt j = 0; j != len; ++j) {
-        if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
-        if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
-        col = rowinds[j];
-        val = rowvals[j];
-        break;
-      }
-
-      // skip row if sole continuous variable is at one of its bounds
-      if (col == -1) continue;
-
-      assert(mip.variableType(col) == HighsVarType::kContinuous);
-      assert(transLp.boundDistance(col) > 0.0);
-
-      if (colSubstitutions[col].first != -1) continue;
-
-      colSubstitutions[col].first = i;
-      colSubstitutions[col].second = val;
-      rowtype[i] = RowType::kUnusuable;
+    // find continuous variable
+    HighsInt col = -1;
+    double val;
+    for (HighsInt j = 0; j != len; ++j) {
+      if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
+      if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
+      col = rowinds[j];
+      val = rowvals[j];
+      break;
     }
+
+    // skip row if sole continuous variable is at one of its bounds
+    if (col == -1) continue;
+
+    assert(mip.variableType(col) == HighsVarType::kContinuous);
+    assert(transLp.boundDistance(col) > 0.0);
+
+    if (colSubstitutions[col].first != -1) continue;
+
+    colSubstitutions[col].first = i;
+    colSubstitutions[col].second = val;
+    rowtype[i] = RowType::kUnusuable;
   }
 
   // for each continuous variable with nonzero transformed solution value
