@@ -634,6 +634,9 @@ HighsStatus Highs::readModel(const std::string& filename) {
   return_status =
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction()),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -881,6 +884,12 @@ HighsStatus Highs::run() {
     return HighsStatus::kError;
   }
 
+  // Check whether model is consistent with any user bound/cost scaling
+  if (optionChangeAction() != HighsStatus::kOk) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Highs::run() called for model inconsistent with user bound/cost scaling\n");
+    return HighsStatus::kError;
+  }
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call

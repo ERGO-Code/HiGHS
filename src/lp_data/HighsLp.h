@@ -79,6 +79,12 @@ class HighsLp {
   void applyScale();
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
+  bool userBoundScaleOk(const HighsInt user_bound_scale,
+			     const double infinite_bound);
+  void userBoundScale(const HighsInt user_bound_scale);
+  bool userCostScaleOk(const HighsInt user_cost_scale,
+			      const double infinite_cost);
+  void userCostScale(const HighsInt user_cost_scale);
   void exactResize();
   void addColNames(const std::string name, const HighsInt num_new_col = 1);
   void addRowNames(const std::string name, const HighsInt num_new_row = 1);
