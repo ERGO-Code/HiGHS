@@ -1683,6 +1683,7 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
 // primal/dual feasibility tolerances have changed
 HighsStatus Highs::optionChangeAction() {
   HighsLp& lp = this->model_.lp_;
+  HighsInfo& info = this->info_;
   HighsOptions& options = this->options_;
   if (lp.num_col_ == 0 && lp.num_row_ == 0) return;
   HighsInt dl_user_bound_scale =
@@ -1764,20 +1765,25 @@ HighsStatus Highs::optionChangeAction() {
   }
 
   double new_max_primal_infeasibility =
-      this->info_.max_primal_infeasibility * dl_user_cost_scale_value;
+      info.max_primal_infeasibility * dl_user_cost_scale_value;
   if (new_max_primal_infeasibility > options.primal_feasibility_tolerance) {
     // Not primal feasible
-    if (this->info_.primal_solution_status == kSolutionStatusFeasible)
+    if (info.primal_solution_status == kSolutionStatusFeasible)
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Option change leads to loss of primal feasibility\n");
     this->model_status_ = HighsModelStatus::kNotset;
-    this->info_.primal_solution_status = kSolutionStatusInfeasible;
-    this->info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+    info.primal_solution_status = kSolutionStatusInfeasible;
+    info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  } else if (info.primal_solution_status == kSolutionStatusInfeasible) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Option change leads to gain of primal feasibility\n");
+    info.primal_solution_status = kSolutionStatusFeasible;
+    info.num_primal_infeasibilities = 0;
   }
   if (dl_user_bound_scale) {
-    this->info_.objective_function_value *= dl_user_bound_scale_value;
-    this->info_.max_primal_infeasibility *= dl_user_bound_scale_value;
-    this->info_.sum_primal_infeasibilities *= dl_user_bound_scale_value;
+    info.objective_function_value *= dl_user_bound_scale_value;
+    info.max_primal_infeasibility *= dl_user_bound_scale_value;
+    info.sum_primal_infeasibilities *= dl_user_bound_scale_value;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       lp.col_lower_[iCol] *= dl_user_bound_scale_value;
       lp.col_upper_[iCol] *= dl_user_bound_scale_value;
@@ -1792,20 +1798,25 @@ HighsStatus Highs::optionChangeAction() {
   }
 
   double new_max_dual_infeasibility =
-      this->info_.max_dual_infeasibility * dl_user_cost_scale_value;
+      info.max_dual_infeasibility * dl_user_cost_scale_value;
   if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
     // Not dual feasible
-    if (this->info_.dual_solution_status == kSolutionStatusFeasible)
+    if (info.dual_solution_status == kSolutionStatusFeasible)
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Option change leads to loss of dual feasibility\n");
     this->model_status_ = HighsModelStatus::kNotset;
-    this->info_.dual_solution_status = kSolutionStatusInfeasible;
-    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    info.dual_solution_status = kSolutionStatusInfeasible;
+    info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Option change leads to gain of dual feasibility\n");
+    info.dual_solution_status = kSolutionStatusFeasible;
+    info.num_dual_infeasibilities = 0;
   }
   if (dl_user_cost_scale) {
-    this->info_.objective_function_value *= dl_user_cost_scale_value;
-    this->info_.max_dual_infeasibility *= dl_user_cost_scale_value;
-    this->info_.sum_dual_infeasibilities *= dl_user_cost_scale_value;
+    info.objective_function_value *= dl_user_cost_scale_value;
+    info.max_dual_infeasibility *= dl_user_cost_scale_value;
+    info.sum_dual_infeasibilities *= dl_user_cost_scale_value;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       lp.col_cost_[iCol] *= dl_user_cost_scale_value;
       this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
@@ -1813,6 +1824,14 @@ HighsStatus Highs::optionChangeAction() {
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
     lp.user_cost_scale_ = options.user_cost_scale;
+  }
+  if (this->model_status_ != HighsModelStatus::kOptimal) {
+    if (info.primal_solution_status == kSolutionStatusFeasible &&
+	info.dual_solution_status == kSolutionStatusFeasible) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to gain of optimality\n");
+      this->model_status_ = HighsModelStatus::kOptimal;
+    }
   }
   return HighsStatus::kOk;
 }
