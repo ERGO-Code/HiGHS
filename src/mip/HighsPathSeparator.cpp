@@ -89,7 +89,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     // find continuous variable
     HighsInt col = -1;
-    double val;
+    double val = 0.0;
     for (HighsInt j = 0; j != len; ++j) {
       if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
       if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
@@ -98,9 +98,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       break;
     }
 
-    // skip row if sole continuous variable is at one of its bounds
-    if (col == -1) continue;
-
+    assert(col != -1);
     assert(mip.variableType(col) == HighsVarType::kContinuous);
     assert(transLp.boundDistance(col) > 0.0);
 
@@ -364,14 +362,16 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         // feasibility tolerance otherwise we choose an inArc. This tie
         // breaking is arbitrary, but we should direct the substitution to
         // prefer one direction to increase diversity.
+        HighsInt row = -1;
+        double weight = 0.0;
         if (bestInArcCol == -1 ||
             (bestOutArcCol != -1 &&
              outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
           HighsInt inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
                                               colInArcs[bestOutArcCol].second);
 
-          HighsInt row = inArcRows[inArcRow].first;
-          double weight = -outArcColVal / inArcRows[inArcRow].second;
+          row = inArcRows[inArcRow].first;
+          weight = -outArcColVal / inArcRows[inArcRow].second;
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
             if (!findRow(inArcRow, bestOutArcCol, outArcColVal, colInArcs,
@@ -383,26 +383,23 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
             }
           }
 
-          currentPath[currPathLen] = row;
-          lpAggregator.addRow(row, weight);
         } else {
         check_out_arc_col:
           HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
                                                colOutArcs[bestInArcCol].second);
 
-          HighsInt row = outArcRows[outArcRow].first;
-          double weight = -inArcColVal / outArcRows[outArcRow].second;
+          row = outArcRows[outArcRow].first;
+          weight = -inArcColVal / outArcRows[outArcRow].second;
 
           if (isRowInCurrentPath(row) || !checkWeight(weight)) {
             if (!findRow(outArcRow, bestInArcCol, inArcColVal, colOutArcs,
                          outArcRows, row, weight))
               break;
           }
-
-          currentPath[currPathLen] = row;
-          lpAggregator.addRow(row, weight);
         }
 
+        currentPath[currPathLen] = row;
+        lpAggregator.addRow(row, weight);
         ++currPathLen;
       }
 
