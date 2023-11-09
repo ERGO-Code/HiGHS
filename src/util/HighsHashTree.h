@@ -143,7 +143,7 @@ class HighsHashTree {
         --pos;
         while (hashes[pos] > hash) ++pos;
 
-        if (findKey(entry.key(), hash, pos))
+        if (find_key(entry.key(), hash, pos))
           return std::make_pair(&entries[pos].value(), false);
 
       } else {
@@ -153,7 +153,7 @@ class HighsHashTree {
           while (hashes[pos] > hash) ++pos;
       }
 
-      if (pos < size) moveBackward(pos, size);
+      if (pos < size) move_backward(pos, size);
       entries[pos] = std::move(entry);
       hashes[pos] = hash;
       ++size;
@@ -170,7 +170,7 @@ class HighsHashTree {
       int pos = occupation.num_set_until(hashChunk) - 1;
       while (hashes[pos] > hash) ++pos;
 
-      if (findKey(key, hash, pos)) return &entries[pos].value();
+      if (find_key(key, hash, pos)) return &entries[pos].value();
 
       return nullptr;
     }
@@ -186,7 +186,7 @@ class HighsHashTree {
       int pos = startPos;
       while (hashes[pos] > hash) ++pos;
 
-      if (!findKey(key, hash, pos)) return false;
+      if (!find_key(key, hash, pos)) return false;
 
       --size;
       if (pos < size) {
@@ -244,7 +244,7 @@ class HighsHashTree {
         if (pos < i) {
           uint64_t hash = hashes[i];
           auto entry = std::move(entries[i]);
-          moveBackward(pos, i);
+          move_backward(pos, i);
           hashes[pos] = hash;
           entries[pos] = std::move(entry);
         }
@@ -252,14 +252,14 @@ class HighsHashTree {
       }
     }
 
-    void moveBackward(const int& first, const int& last) {
+    void move_backward(const int& first, const int& last) {
       // move elements backwards
       std::move_backward(&entries[first], &entries[last], &entries[last + 1]);
       memmove(&hashes[first + 1], &hashes[first],
               sizeof(hashes[0]) * (last - first));
     }
 
-    bool findKey(const K& key, const uint16_t& hash, int& pos) const {
+    bool find_key(const K& key, const uint16_t& hash, int& pos) const {
       // find key
       while (pos != size && hashes[pos] == hash) {
         if (key == entries[pos].key()) return true;
