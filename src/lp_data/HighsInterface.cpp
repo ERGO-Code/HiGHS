@@ -123,9 +123,10 @@ HighsStatus Highs::addColsInterface(
   if (return_status == HighsStatus::kError) return return_status;
   if (lp.user_bound_scale_) {
     // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_, options.infinite_bound)) {
+    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
+                      options.infinite_bound)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite bound\n");
+                   "User bound scaling yields infinite bound\n");
       return HighsStatus::kError;
     }
     double bound_scale_value = std::pow(2, lp.user_bound_scale_);
@@ -136,16 +137,17 @@ HighsStatus Highs::addColsInterface(
   }
   if (lp.user_cost_scale_) {
     // Assess and apply any user cost scaling
-    if (!costScaleOk(local_colCost, lp.user_cost_scale_, options.infinite_cost)) {
+    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
+                     options.infinite_cost)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite cost\n");
+                   "User bound scaling yields infinite cost\n");
       return HighsStatus::kError;
     }
     double cost_scale_value = std::pow(2, lp.user_cost_scale_);
     for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++)
       local_colCost[iCol] *= cost_scale_value;
   }
-    // Append the columns to the LP vectors and matrix
+  // Append the columns to the LP vectors and matrix
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
@@ -272,9 +274,10 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   if (return_status == HighsStatus::kError) return return_status;
   if (lp.user_bound_scale_) {
     // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_, options_.infinite_bound)) {
+    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite bound\n");
+                   "User bound scaling yields infinite bound\n");
       return HighsStatus::kError;
     }
     double bound_scale_value = std::pow(2, lp.user_bound_scale_);
@@ -675,9 +678,10 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   HighsLp& lp = model_.lp_;
   if (lp.user_cost_scale_) {
     // Assess and apply any user cost scaling
-    if (!costScaleOk(local_colCost, lp.user_cost_scale_, options_.infinite_cost)) {
+    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
+                     options_.infinite_cost)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite cost\n");
+                   "User bound scaling yields infinite cost\n");
       return HighsStatus::kError;
     }
     double cost_scale_value = std::pow(2, lp.user_cost_scale_);
@@ -685,7 +689,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
       local_colCost[iCol] *= cost_scale_value;
   }
   changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
-  
+
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
   assert(lp.has_infinite_cost_ == lp.hasInfiniteCost(options_.infinite_cost));
@@ -731,9 +735,10 @@ HighsStatus Highs::changeColBoundsInterface(
   HighsLp& lp = model_.lp_;
   if (lp.user_bound_scale_) {
     // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_, options_.infinite_bound)) {
+    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite bound\n");
+                   "User bound scaling yields infinite bound\n");
       return HighsStatus::kError;
     }
     double bound_scale_value = std::pow(2, lp.user_bound_scale_);
@@ -788,9 +793,10 @@ HighsStatus Highs::changeRowBoundsInterface(
   HighsLp& lp = model_.lp_;
   if (lp.user_bound_scale_) {
     // Assess and apply any user bound scaling
-    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_, options_.infinite_bound)) {
+    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User bound scaling yields infinite bound\n");
+                   "User bound scaling yields infinite bound\n");
       return HighsStatus::kError;
     }
     double bound_scale_value = std::pow(2, lp.user_bound_scale_);
@@ -1764,13 +1770,14 @@ HighsStatus Highs::optionChangeAction() {
   HighsInt dl_user_bound_scale = 0;
   double dl_user_bound_scale_value = 1;
   // Ensure that user bound scaling does not yield infinite bounds
-  bool user_bound_scale_ok = lp.userBoundScaleOk(options.user_bound_scale,
-						 options.infinite_bound);
+  bool user_bound_scale_ok =
+      lp.userBoundScaleOk(options.user_bound_scale, options.infinite_bound);
   if (!user_bound_scale_ok) {
     options.user_bound_scale = lp.user_bound_scale_;
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "New user bound scaling yields infinite bound: reverting user bound scaling to %d\n",
-		 int(options.user_bound_scale));
+                 "New user bound scaling yields infinite bound: reverting user "
+                 "bound scaling to %d\n",
+                 int(options.user_bound_scale));
   } else {
     dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
     dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
@@ -1788,9 +1795,9 @@ HighsStatus Highs::optionChangeAction() {
     info.primal_solution_status = kSolutionStatusInfeasible;
     info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   } else if (!lp.isMip() &&
-	     info.primal_solution_status == kSolutionStatusInfeasible) {
+             info.primal_solution_status == kSolutionStatusInfeasible) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Option change leads to gain of primal feasibility\n");
+                 "Option change leads to gain of primal feasibility\n");
     info.primal_solution_status = kSolutionStatusFeasible;
     info.num_primal_infeasibilities = 0;
   }
@@ -1800,8 +1807,9 @@ HighsStatus Highs::optionChangeAction() {
     if (dl_user_bound_scale < 0) {
       // MIP with negative bound scaling exponent loses feasibility
       if (info.primal_solution_status == kSolutionStatusFeasible) {
-	highsLogUser(options_.log_options, HighsLogType::kInfo,
-		     "Option change leads to loss of primal feasibility for MIP\n");
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Option change leads to loss of primal feasibility for MIP\n");
       }
       info.primal_solution_status = kSolutionStatusInfeasible;
     }
@@ -1811,9 +1819,9 @@ HighsStatus Highs::optionChangeAction() {
     info.objective_function_value *= dl_user_bound_scale_value;
     info.max_primal_infeasibility *= dl_user_bound_scale_value;
     info.sum_primal_infeasibilities *= dl_user_bound_scale_value;
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       this->solution_.col_value[iCol] *= dl_user_bound_scale_value;
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       this->solution_.row_value[iRow] *= dl_user_bound_scale_value;
     // Update LP with respect to non-trivial user bound scaling
     lp.userBoundScale(options_.user_bound_scale);
@@ -1821,15 +1829,15 @@ HighsStatus Highs::optionChangeAction() {
   // Now consider whether options.user_cost_scale has changed
   HighsInt dl_user_cost_scale = 0;
   double dl_user_cost_scale_value = 1;
-  bool user_cost_scale_ok = model.userCostScaleOk(options.user_cost_scale,
-						  options.small_matrix_value,
-						  options.large_matrix_value,
-						  options.infinite_cost);
+  bool user_cost_scale_ok =
+      model.userCostScaleOk(options.user_cost_scale, options.small_matrix_value,
+                            options.large_matrix_value, options.infinite_cost);
   if (!user_cost_scale_ok) {
     options.user_cost_scale = lp.user_cost_scale_;
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "New user cost scaling yields excessive cost coefficient: reverting user cost scaling to %d\n",
-		 int(options.user_cost_scale));
+                 "New user cost scaling yields excessive cost coefficient: "
+                 "reverting user cost scaling to %d\n",
+                 int(options.user_cost_scale));
   } else {
     dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
     dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
@@ -1849,9 +1857,9 @@ HighsStatus Highs::optionChangeAction() {
     info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
     // No MIP should have even an infeasible dual solution
-    assert(!lp.isMip());	     
+    assert(!lp.isMip());
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Option change leads to gain of dual feasibility\n");
+                 "Option change leads to gain of dual feasibility\n");
     info.dual_solution_status = kSolutionStatusFeasible;
     info.num_dual_infeasibilities = 0;
   }
@@ -1873,7 +1881,7 @@ HighsStatus Highs::optionChangeAction() {
   }
   if (this->model_status_ != HighsModelStatus::kOptimal) {
     if (info.primal_solution_status == kSolutionStatusFeasible &&
-	info.dual_solution_status == kSolutionStatusFeasible) {
+        info.dual_solution_status == kSolutionStatusFeasible) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Option change leads to gain of optimality\n");
       this->model_status_ = HighsModelStatus::kOptimal;

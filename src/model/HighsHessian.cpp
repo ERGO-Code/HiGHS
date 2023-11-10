@@ -41,8 +41,8 @@ void HighsHessian::exactResize() {
 }
 
 bool HighsHessian::scaleOk(const HighsInt hessian_scale,
-			   const double small_matrix_value,
-			   const double large_matrix_value) const {
+                           const double small_matrix_value,
+                           const double large_matrix_value) const {
   if (!this->dim_) return true;
   double hessian_scale_value = std::pow(2, hessian_scale);
   for (HighsInt iEl = 0; iEl < this->start_[this->dim_]; iEl++) {

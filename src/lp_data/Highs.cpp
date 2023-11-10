@@ -891,8 +891,8 @@ HighsStatus Highs::run() {
   /*
   if (optionChangeAction() != HighsStatus::kOk) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-                "Highs::run() called for model inconsistent with user bound/cost scaling\n");
-    return HighsStatus::kError;
+                "Highs::run() called for model inconsistent with user bound/cost
+  scaling\n"); return HighsStatus::kError;
   }
   */
   // HiGHS solvers require models with no infinite costs, and no semi-variables

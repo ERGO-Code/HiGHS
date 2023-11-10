@@ -12,10 +12,10 @@
  * @brief
  */
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsLpUtils.h"
 
 #include <cassert>
 
+#include "lp_data/HighsLpUtils.h"
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
@@ -261,12 +261,15 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
 }
 
 bool HighsLp::userBoundScaleOk(const HighsInt user_bound_scale,
-			     const double infinite_bound) const {
+                               const double infinite_bound) const {
   const HighsInt dl_user_bound_scale =
       user_bound_scale - this->user_bound_scale_;
   if (!dl_user_bound_scale) return true;
-  if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale, infinite_bound)) return false;
-  return boundScaleOk(this->row_lower_, this->row_upper_, dl_user_bound_scale, infinite_bound);
+  if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale,
+                    infinite_bound))
+    return false;
+  return boundScaleOk(this->row_lower_, this->row_upper_, dl_user_bound_scale,
+                      infinite_bound);
 }
 
 void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
@@ -287,16 +290,14 @@ void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
 }
 
 bool HighsLp::userCostScaleOk(const HighsInt user_cost_scale,
-			      const double infinite_cost) const {
-  const HighsInt dl_user_cost_scale =
-      user_cost_scale - this->user_cost_scale_;
+                              const double infinite_cost) const {
+  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
   if (!dl_user_cost_scale) return true;
   return costScaleOk(this->col_cost_, dl_user_cost_scale, infinite_cost);
 }
 
 void HighsLp::userCostScale(const HighsInt user_cost_scale) {
-  const HighsInt dl_user_cost_scale =
-      user_cost_scale - this->user_cost_scale_;
+  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
   if (!dl_user_cost_scale) return;
   double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
