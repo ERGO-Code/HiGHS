@@ -117,27 +117,50 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   unscaled_highs.changeColCost(1, unscaled_col1_cost);
   scaled_highs.changeColCost(1, unscaled_col1_cost);
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value0 = {1, 2};
+  std::vector<double> value1 = {1, 4};
+  unscaled_highs.addRow(-kHighsInf, 120, 2, index.data(), value0.data());
+  scaled_highs.addRow(-kHighsInf, 120, 2, index.data(), value0.data());
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+
+  unscaled_highs.addRow(-kHighsInf, 150, 2, index.data(), value1.data());
+  scaled_highs.addRow(-kHighsInf, 150, 2, index.data(), value1.data());
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+
+  std::vector<double> cost = {8, 10};
+  std::vector<double> lower = {-kHighsInf, -kHighsInf};
+  std::vector<double> upper = {120, 150};
+  std::vector<HighsInt> matrix_start = {0, 2};
+  std::vector<HighsInt> matrix_index = {0, 1, 0, 1};
+  std::vector<double> matrix_value = {1, 1, 2, 4};
+  unscaled_highs.addCols(2, cost.data(), lower.data(), upper.data(),
+			 4, matrix_start.data(), matrix_index.data(), matrix_value.data());
+  scaled_highs.addCols(2, cost.data(), lower.data(), upper.data(),
+		       4, matrix_start.data(), matrix_index.data(), matrix_value.data());
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+  
+  lower = {-kHighsInf, -kHighsInf};
+  upper = {120, 150};
+  matrix_start = {0, 2};
+  matrix_index = {0, 2, 1, 3};
+  matrix_value = {1, 1, 2, 4};
+  unscaled_highs.addRows(2, lower.data(), upper.data(),
+			 4, matrix_start.data(), matrix_index.data(), matrix_value.data());
+  scaled_highs.addRows(2, lower.data(), upper.data(),
+		       4, matrix_start.data(), matrix_index.data(), matrix_value.data());
+  
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+
+  
 }
 
 void checkModelScaling(const HighsInt user_bound_scale,
 		       const HighsInt user_cost_scale,
 		       const HighsModel& unscaled_model,
 		       const HighsModel& scaled_model) {
-  const double user_bound_scale_value = std::pow(2, user_bound_scale);
-  const double user_cost_scale_value = std::pow(2, user_cost_scale);
-  for (HighsInt iCol = 0; iCol < unscaled_model.lp_.num_col_; iCol++) {
-    REQUIRE(scaled_model.lp_.col_cost_[iCol] == unscaled_model.lp_.col_cost_[iCol] * user_cost_scale_value);
-    if (unscaled_model.lp_.col_lower_[iCol] > -inf) 
-      REQUIRE(scaled_model.lp_.col_lower_[iCol] == unscaled_model.lp_.col_lower_[iCol] * user_bound_scale_value);
-    if (unscaled_model.lp_.col_upper_[iCol] < inf) 
-      REQUIRE(scaled_model.lp_.col_upper_[iCol] == unscaled_model.lp_.col_upper_[iCol] * user_bound_scale_value);
-  }
-  for (HighsInt iRow = 0; iRow < unscaled_model.lp_.num_row_; iRow++) {
-    if (unscaled_model.lp_.row_lower_[iRow] > -inf) 
-      REQUIRE(scaled_model.lp_.row_lower_[iRow] == unscaled_model.lp_.row_lower_[iRow] * user_bound_scale_value);
-    if (unscaled_model.lp_.row_upper_[iRow] < inf) 
-      REQUIRE(scaled_model.lp_.row_upper_[iRow] == unscaled_model.lp_.row_upper_[iRow] * user_bound_scale_value);
-  }
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_model.lp_, scaled_model.lp_);
 }
 
 void checkLpScaling(const HighsInt user_bound_scale,
@@ -146,6 +169,8 @@ void checkLpScaling(const HighsInt user_bound_scale,
 		    const HighsLp& scaled_lp) {
   const double user_bound_scale_value = std::pow(2, user_bound_scale);
   const double user_cost_scale_value = std::pow(2, user_cost_scale);
+  REQUIRE(unscaled_lp.num_col_ == scaled_lp.num_col_);
+  REQUIRE(unscaled_lp.num_row_ == scaled_lp.num_row_);
   for (HighsInt iCol = 0; iCol < unscaled_lp.num_col_; iCol++) {
     REQUIRE(scaled_lp.col_cost_[iCol] == unscaled_lp.col_cost_[iCol] * user_cost_scale_value);
     if (unscaled_lp.col_lower_[iCol] > -inf) 
