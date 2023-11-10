@@ -1766,11 +1766,14 @@ HighsStatus Highs::optionChangeAction() {
   HighsLp& lp = model.lp_;
   HighsInfo& info = this->info_;
   HighsOptions& options = this->options_;
-
+  const bool is_mip = lp.isMip();
   HighsInt dl_user_bound_scale = 0;
   double dl_user_bound_scale_value = 1;
   // Ensure that user bound scaling does not yield infinite bounds
+  const bool changed_user_bound_scale =
+      options.user_bound_scale != lp.user_bound_scale_;
   bool user_bound_scale_ok =
+      !changed_user_bound_scale ||
       lp.userBoundScaleOk(options.user_bound_scale, options.infinite_bound);
   if (!user_bound_scale_ok) {
     options.user_bound_scale = lp.user_bound_scale_;
@@ -1778,7 +1781,7 @@ HighsStatus Highs::optionChangeAction() {
                  "New user bound scaling yields infinite bound: reverting user "
                  "bound scaling to %d\n",
                  int(options.user_bound_scale));
-  } else {
+  } else if (changed_user_bound_scale) {
     dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
     dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
   }
@@ -1794,14 +1797,14 @@ HighsStatus Highs::optionChangeAction() {
                    "Option change leads to loss of primal feasibility\n");
     info.primal_solution_status = kSolutionStatusInfeasible;
     info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  } else if (!lp.isMip() &&
+  } else if (!is_mip &&
              info.primal_solution_status == kSolutionStatusInfeasible) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Option change leads to gain of primal feasibility\n");
     info.primal_solution_status = kSolutionStatusFeasible;
     info.num_primal_infeasibilities = 0;
   }
-  if (lp.isMip() && dl_user_bound_scale) {
+  if (is_mip && dl_user_bound_scale) {
     // MIP with non-trivial bound scaling loses optimality
     this->model_status_ = HighsModelStatus::kNotset;
     if (dl_user_bound_scale < 0) {
@@ -1829,7 +1832,10 @@ HighsStatus Highs::optionChangeAction() {
   // Now consider whether options.user_cost_scale has changed
   HighsInt dl_user_cost_scale = 0;
   double dl_user_cost_scale_value = 1;
+  const bool changed_user_cost_scale =
+      options.user_cost_scale != lp.user_cost_scale_;
   bool user_cost_scale_ok =
+      !changed_user_cost_scale ||
       model.userCostScaleOk(options.user_cost_scale, options.small_matrix_value,
                             options.large_matrix_value, options.infinite_cost);
   if (!user_cost_scale_ok) {
@@ -1838,36 +1844,36 @@ HighsStatus Highs::optionChangeAction() {
                  "New user cost scaling yields excessive cost coefficient: "
                  "reverting user cost scaling to %d\n",
                  int(options.user_cost_scale));
-  } else {
+  } else if (changed_user_cost_scale) {
     dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
     dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
   }
-  // Now consider impact on dual feasibility of user cost scaling
-  // and/or dual_feasibility_tolerance change
-  double new_max_dual_infeasibility =
-      info.max_dual_infeasibility * dl_user_cost_scale_value;
-  if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
-    // Not dual feasible
-    this->model_status_ = HighsModelStatus::kNotset;
-    if (info.dual_solution_status == kSolutionStatusFeasible) {
+  if (!is_mip) {
+    // Now consider impact on dual feasibility of user cost scaling
+    // and/or dual_feasibility_tolerance change
+    double new_max_dual_infeasibility =
+        info.max_dual_infeasibility * dl_user_cost_scale_value;
+    if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
+      // Not dual feasible
+      this->model_status_ = HighsModelStatus::kNotset;
+      if (info.dual_solution_status == kSolutionStatusFeasible) {
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Option change leads to loss of dual feasibility\n");
+        info.dual_solution_status = kSolutionStatusInfeasible;
+      }
+      info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Option change leads to loss of dual feasibility\n");
-      info.dual_solution_status = kSolutionStatusInfeasible;
+                   "Option change leads to gain of dual feasibility\n");
+      info.dual_solution_status = kSolutionStatusFeasible;
+      info.num_dual_infeasibilities = 0;
     }
-    info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
-    // No MIP should have even an infeasible dual solution
-    assert(!lp.isMip());
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Option change leads to gain of dual feasibility\n");
-    info.dual_solution_status = kSolutionStatusFeasible;
-    info.num_dual_infeasibilities = 0;
-  }
-  if (lp.isMip() && dl_user_cost_scale) {
-    // MIP with non-trivial cost scaling loses optimality
-    this->model_status_ = HighsModelStatus::kNotset;
   }
   if (dl_user_cost_scale) {
+    if (is_mip) {
+      // MIP with non-trivial cost scaling loses optimality
+      this->model_status_ = HighsModelStatus::kNotset;
+    }
     // Now update data and solution with respect to non-trivial user
     // cost scaling
     info.objective_function_value *= dl_user_cost_scale_value;
