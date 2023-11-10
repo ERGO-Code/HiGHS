@@ -104,8 +104,8 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   const HighsInt user_cost_scale = -30;
   const HighsInt user_bound_scale = 10;
   const double unscaled_col0_cost = 1e14;
-  unscaled_highs.addVar(0, 1);
-  scaled_highs.addVar(0, 1);
+  unscaled_highs.addVar(0, kHighsInf);
+  scaled_highs.addVar(0, kHighsInf);
   unscaled_highs.changeColCost(0, unscaled_col0_cost);
   scaled_highs.changeColCost(0, unscaled_col0_cost);
 
@@ -114,8 +114,8 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
   const double unscaled_col1_cost = 1e12;
-  unscaled_highs.addVar(0, 1);
-  scaled_highs.addVar(0, 1);
+  unscaled_highs.addVar(1, kHighsInf);
+  scaled_highs.addVar(1, kHighsInf);
   unscaled_highs.changeColCost(1, unscaled_col1_cost);
   scaled_highs.changeColCost(1, unscaled_col1_cost);
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
@@ -131,9 +131,9 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   scaled_highs.addRow(-kHighsInf, 150, 2, index.data(), value1.data());
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
-  std::vector<double> cost = {8, 10};
-  std::vector<double> lower = {-kHighsInf, -kHighsInf};
-  std::vector<double> upper = {120, 150};
+  std::vector<double> cost = {0, 10};
+  std::vector<double> lower = {2, 4};
+  std::vector<double> upper = {kHighsInf, kHighsInf};
   std::vector<HighsInt> matrix_start = {0, 2};
   std::vector<HighsInt> matrix_index = {0, 1, 0, 1};
   std::vector<double> matrix_value = {1, 1, 2, 4};
@@ -145,7 +145,7 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
                        matrix_value.data());
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
-  lower = {-kHighsInf, -kHighsInf};
+  lower = {-kHighsInf, 0};
   upper = {120, 150};
   matrix_start = {0, 2};
   matrix_index = {0, 2, 1, 3};
@@ -156,6 +156,12 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
                        matrix_index.data(), matrix_value.data());
 
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
+
+  scaled_highs.changeObjectiveSense(ObjSense::kMaximize);
+
+  scaled_highs.writeModel("");
+  scaled_highs.writeModel("test.lp");
+  scaled_highs.run();
 }
 
 void checkModelScaling(const HighsInt user_bound_scale,

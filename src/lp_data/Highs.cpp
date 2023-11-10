@@ -510,6 +510,19 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian_.scaleOk(this->model_.lp_.user_cost_scale_,
+			  this->options_.small_matrix_value,
+			  this->options_.large_matrix_value)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian_.numNz(); iEl++)
+      hessian_.value_[iEl] *= cost_scale_value;
+  }
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
@@ -527,6 +540,7 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
+  
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -895,6 +909,12 @@ HighsStatus Highs::run() {
   scaling\n"); return HighsStatus::kError;
   }
   */
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+  // Assess whether to warn the user about excessive bounds and costs
+  return_status = interpretCallStatus(options_.log_options, excessiveBoundCost(options_.log_options, this->model_),
+				      return_status, "excessiveBoundCost");
+
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call
@@ -944,8 +964,6 @@ HighsStatus Highs::run() {
   // Set this so that calls to returnFromRun() can be checked: from
   // here all return statements execute returnFromRun()
   called_return_from_run = false;
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
   // Clear the run info

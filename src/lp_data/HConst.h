@@ -35,6 +35,11 @@ const std::string kHighsOnString = "on";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
+const double kExcessivelyLargeBoundValue = 1e10;
+const double kExcessivelyLargeCostValue = 1e10;
+const double kExcessivelySmallBoundValue = 1e-4;
+const double kExcessivelySmallCostValue = 1e-4;
+
 
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;

@@ -140,7 +140,7 @@ HighsStatus Highs::addColsInterface(
     if (!costScaleOk(local_colCost, lp.user_cost_scale_,
                      options.infinite_cost)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite cost\n");
+                   "User cost scaling yields infinite cost\n");
       return HighsStatus::kError;
     }
     double cost_scale_value = std::pow(2, lp.user_cost_scale_);
@@ -681,7 +681,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
     if (!costScaleOk(local_colCost, lp.user_cost_scale_,
                      options_.infinite_cost)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "User bound scaling yields infinite cost\n");
+                   "User cost scaling yields infinite cost\n");
       return HighsStatus::kError;
     }
     double cost_scale_value = std::pow(2, lp.user_cost_scale_);
