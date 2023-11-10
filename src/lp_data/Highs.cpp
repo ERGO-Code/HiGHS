@@ -309,7 +309,7 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
 // each
 HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
-  // eventually call it
+  // (and readModel) eventually call it
   this->logHeader();
   // Possibly analyse the LP data
   if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
@@ -374,6 +374,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  // Apply any user scaling in call to optionChangeAction
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction(),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -634,9 +638,6 @@ HighsStatus Highs::readModel(const std::string& filename) {
   return_status =
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
-  return_status =
-      interpretCallStatus(options_.log_options, optionChangeAction(),
-                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -885,11 +886,15 @@ HighsStatus Highs::run() {
   }
 
   // Check whether model is consistent with any user bound/cost scaling
+  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
+  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
+  /*
   if (optionChangeAction() != HighsStatus::kOk) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Highs::run() called for model inconsistent with user bound/cost scaling\n");
     return HighsStatus::kError;
   }
+  */
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call

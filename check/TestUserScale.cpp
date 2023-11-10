@@ -11,6 +11,11 @@ void checkModelScaling(const HighsInt user_bound_scale,
 			 const HighsModel& unscaled_model,
 			 const HighsModel& scaled_model);
 
+void checkLpScaling(const HighsInt user_bound_scale,
+			 const HighsInt user_cost_scale,
+			 const HighsLp& unscaled_lp,
+			 const HighsLp& scaled_lp);
+
 void checkSolutionScaling(const HighsInt user_bound_scale,
 			 const HighsInt user_cost_scale,
 			 const HighsSolution& unscaled_solution,
@@ -26,7 +31,7 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
   highs.run();
   HighsInfo unscaled_info = info;
   HighsSolution unscaled_solution = highs.getSolution();
-  HighsModel unscaled_model = highs.getModel();
+  HighsLp unscaled_lp = highs.getLp();
   double max_primal_infeasibility = info.max_primal_infeasibility;
   double max_dual_infeasibility = info.max_dual_infeasibility;
   double sum_dual_infeasibilities = info.sum_dual_infeasibilities;
@@ -43,9 +48,9 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
   double user_cost_scale_value = std::pow(2, user_cost_scale);
   highs.setOptionValue("user_cost_scale", user_cost_scale);
 
-  HighsModel scaled_model = highs.getModel();
+  HighsLp scaled_lp = highs.getLp();
   HighsSolution scaled_solution = highs.getSolution();
-  checkModelScaling(user_bound_scale, user_cost_scale, unscaled_model, scaled_model);
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
   checkSolutionScaling(user_bound_scale, user_cost_scale, unscaled_solution, scaled_solution);
 
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kNotset);
@@ -67,7 +72,7 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
   highs.setOptionValue("output_flag", dev_run);
 
   highs.readModel(filename);
-  HighsModel unscaled_model = highs.getModel();
+  HighsLp unscaled_lp = highs.getLp();
 
   HighsInt user_bound_scale = 10;
   double user_bound_scale_value = std::pow(2, user_bound_scale);
@@ -78,32 +83,40 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
   highs.setOptionValue("user_cost_scale", user_cost_scale);
 
   highs.readModel(filename);
-  HighsModel scaled_model = highs.getModel();
+  HighsLp scaled_lp = highs.getLp();
 
-  checkModelScaling(user_bound_scale, user_cost_scale, unscaled_model, scaled_model);
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
   //  checkSolutionScaling(user_bound_scale, user_cost_scale, unscaled_solution, scaled_solution);
   highs.run();
 }
 
 TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  const HighsLp& lp = highs.getLp();
-  const HighsInfo& info = highs.getInfo();
-  const HighsSolution& solution = highs.getSolution();
+  Highs unscaled_highs;
+  Highs scaled_highs;
+  unscaled_highs.setOptionValue("output_flag", dev_run);
+  scaled_highs.setOptionValue("output_flag", dev_run);
+  const HighsLp& unscaled_lp = unscaled_highs.getLp();
+  const HighsLp& scaled_lp = scaled_highs.getLp();
+  const HighsInfo& info = scaled_highs.getInfo();
+  const HighsSolution& solution = scaled_highs.getSolution();
   const HighsInt user_cost_scale = -30;
-  const double user_cost_scale_value = std::pow(2, user_cost_scale);
+  const HighsInt user_bound_scale = 10;
   const double unscaled_col0_cost = 1e14;
-  highs.addVar(0, 1);
-  highs.changeColCost(0, unscaled_col0_cost);
+  unscaled_highs.addVar(0, 1);
+  scaled_highs.addVar(0, 1);
+  unscaled_highs.changeColCost(0, unscaled_col0_cost);
+  scaled_highs.changeColCost(0, unscaled_col0_cost);
 
-  highs.setOptionValue("user_cost_scale", user_cost_scale);
-  REQUIRE(lp.col_cost_[0] == unscaled_col0_cost *  user_cost_scale_value);
+  scaled_highs.setOptionValue("user_cost_scale", user_cost_scale);
+  scaled_highs.setOptionValue("user_bound_scale", user_bound_scale);
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
   const double unscaled_col1_cost = 1e12;
-  highs.addVar(0, 1);
-  highs.changeColCost(1, unscaled_col1_cost);
-  REQUIRE(lp.col_cost_[1] == unscaled_col1_cost *  user_cost_scale_value);
+  unscaled_highs.addVar(0, 1);
+  scaled_highs.addVar(0, 1);
+  unscaled_highs.changeColCost(1, unscaled_col1_cost);
+  scaled_highs.changeColCost(1, unscaled_col1_cost);
+  checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 }
 
 void checkModelScaling(const HighsInt user_bound_scale,
@@ -124,6 +137,27 @@ void checkModelScaling(const HighsInt user_bound_scale,
       REQUIRE(scaled_model.lp_.row_lower_[iRow] == unscaled_model.lp_.row_lower_[iRow] * user_bound_scale_value);
     if (unscaled_model.lp_.row_upper_[iRow] < inf) 
       REQUIRE(scaled_model.lp_.row_upper_[iRow] == unscaled_model.lp_.row_upper_[iRow] * user_bound_scale_value);
+  }
+}
+
+void checkLpScaling(const HighsInt user_bound_scale,
+		    const HighsInt user_cost_scale,
+		    const HighsLp& unscaled_lp,
+		    const HighsLp& scaled_lp) {
+  const double user_bound_scale_value = std::pow(2, user_bound_scale);
+  const double user_cost_scale_value = std::pow(2, user_cost_scale);
+  for (HighsInt iCol = 0; iCol < unscaled_lp.num_col_; iCol++) {
+    REQUIRE(scaled_lp.col_cost_[iCol] == unscaled_lp.col_cost_[iCol] * user_cost_scale_value);
+    if (unscaled_lp.col_lower_[iCol] > -inf) 
+      REQUIRE(scaled_lp.col_lower_[iCol] == unscaled_lp.col_lower_[iCol] * user_bound_scale_value);
+    if (unscaled_lp.col_upper_[iCol] < inf) 
+      REQUIRE(scaled_lp.col_upper_[iCol] == unscaled_lp.col_upper_[iCol] * user_bound_scale_value);
+  }
+  for (HighsInt iRow = 0; iRow < unscaled_lp.num_row_; iRow++) {
+    if (unscaled_lp.row_lower_[iRow] > -inf) 
+      REQUIRE(scaled_lp.row_lower_[iRow] == unscaled_lp.row_lower_[iRow] * user_bound_scale_value);
+    if (unscaled_lp.row_upper_[iRow] < inf) 
+      REQUIRE(scaled_lp.row_upper_[iRow] == unscaled_lp.row_upper_[iRow] * user_bound_scale_value);
   }
   
 }
