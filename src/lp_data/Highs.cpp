@@ -893,20 +893,8 @@ HighsStatus Highs::run() {
   // Check whether model is consistent with any user bound/cost scaling
   assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
   assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
-  /*
-  if (optionChangeAction() != HighsStatus::kOk) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Highs::run() called for model inconsistent with user bound/cost
-  scaling\n"); return HighsStatus::kError;
-  }
-  */
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   // Assess whether to warn the user about excessive bounds and costs
-  return_status = interpretCallStatus(
-      options_.log_options,
-      excessiveBoundCost(options_.log_options, this->model_), return_status,
-      "excessiveBoundCost");
+  assessExcessiveBoundCost(options_.log_options, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
@@ -957,6 +945,8 @@ HighsStatus Highs::run() {
   // Set this so that calls to returnFromRun() can be checked: from
   // here all return statements execute returnFromRun()
   called_return_from_run = false;
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
   // Clear the run info
@@ -3820,6 +3810,13 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
                                  const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
+  if (return_status != run_return_status) {
+    printf(
+        "Highs::returnFromRun: return_status = %d != %d = run_return_status "
+        "For model_status_ = %s\n",
+        int(return_status), int(run_return_status),
+        modelStatusToString(model_status_).c_str());
+  }
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
   switch (model_status_) {
