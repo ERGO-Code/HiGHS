@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 void checkModelScaling(const HighsInt user_bound_scale,
@@ -156,12 +156,6 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
                        matrix_index.data(), matrix_value.data());
 
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
-
-  scaled_highs.changeObjectiveSense(ObjSense::kMaximize);
-
-  scaled_highs.writeModel("");
-  scaled_highs.writeModel("test.lp");
-  scaled_highs.run();
 }
 
 void checkModelScaling(const HighsInt user_bound_scale,

@@ -76,30 +76,24 @@ HighsStatus Highs::clearSolver() {
 
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk) {
-    printf("Highs::setOptionValue - bool\n");
+                          value) == OptionStatus::kOk)
     return optionChangeAction();
-  }
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk) {
-    printf("Highs::setOptionValue - HighsInt\n");
+                          value) == OptionStatus::kOk)
     return optionChangeAction();
-  }
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::kOk) {
-    printf("Highs::setOptionValue - double\n");
+                          value) == OptionStatus::kOk)
     return optionChangeAction();
-  }
   return HighsStatus::kError;
 }
 
@@ -107,10 +101,8 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string& value) {
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
-                          options_.records, value) == OptionStatus::kOk) {
-    printf("Highs::setOptionValue - string\n");
+                          options_.records, value) == OptionStatus::kOk)
     return optionChangeAction();
-  }
   return HighsStatus::kError;
 }
 
@@ -118,10 +110,8 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
-                          options_.records, value) == OptionStatus::kOk) {
-    printf("Highs::setOptionValue - char*\n");
+                          options_.records, value) == OptionStatus::kOk)
     return optionChangeAction();
-  }
   return HighsStatus::kError;
 }
 
@@ -510,19 +500,6 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
-  if (this->model_.lp_.user_cost_scale_) {
-    // Assess and apply any user cost scaling
-    if (!hessian_.scaleOk(this->model_.lp_.user_cost_scale_,
-			  this->options_.small_matrix_value,
-			  this->options_.large_matrix_value)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "User cost scaling yields zeroed or excessive Hessian values\n");
-      return HighsStatus::kError;
-    }
-    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
-    for (HighsInt iEl = 0; iEl < hessian_.numNz(); iEl++)
-      hessian_.value_[iEl] *= cost_scale_value;
-  }
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
@@ -540,7 +517,21 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
-  
+
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
+                         this->options_.small_matrix_value,
+                         this->options_.large_matrix_value)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
+      hessian.value_[iEl] *= cost_scale_value;
+  }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -912,8 +903,10 @@ HighsStatus Highs::run() {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Assess whether to warn the user about excessive bounds and costs
-  return_status = interpretCallStatus(options_.log_options, excessiveBoundCost(options_.log_options, this->model_),
-				      return_status, "excessiveBoundCost");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      excessiveBoundCost(options_.log_options, this->model_), return_status,
+      "excessiveBoundCost");
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
