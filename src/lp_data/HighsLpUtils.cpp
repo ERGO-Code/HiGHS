@@ -765,6 +765,32 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
+bool boundScaleOk(const vector<double>& lower,
+		  const vector<double>& upper,
+		  const HighsInt bound_scale,
+		  const double infinite_bound) {
+  if (!bound_scale) return true;
+  double bound_scale_value = std::pow(2, bound_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
+    if (lower[iCol] > -kHighsInf &&
+	std::abs(lower[iCol] * bound_scale_value) > infinite_bound) return false;
+    if (upper[iCol] < kHighsInf &&
+	std::abs(upper[iCol] * bound_scale_value) > infinite_bound) return false;
+  }
+  return true;
+}
+                        
+bool costScaleOk(const vector<double>& cost,
+		 const HighsInt cost_scale,
+		 const double infinite_cost) {
+  if (!cost_scale) return true;
+  double cost_scale_value = std::pow(2, cost_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
+    if (std::abs(cost[iCol]) < kHighsInf &&
+	std::abs(cost[iCol] * cost_scale_value) > infinite_cost) return false;
+  return true;
+}
+
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;

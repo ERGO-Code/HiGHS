@@ -12,6 +12,7 @@
  * @brief
  */
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
 
 #include <cassert>
 
@@ -260,28 +261,12 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
 }
 
 bool HighsLp::userBoundScaleOk(const HighsInt user_bound_scale,
-			     const double infinite_bound) {
+			     const double infinite_bound) const {
   const HighsInt dl_user_bound_scale =
       user_bound_scale - this->user_bound_scale_;
   if (!dl_user_bound_scale) return true;
-  double dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    double new_value = this->col_lower_[iCol] * dl_user_bound_scale_value;
-    if (this->col_lower_[iCol] > -kHighsInf &&
-	std::abs(new_value) > infinite_bound) return false;
-    new_value = this->col_upper_[iCol] * dl_user_bound_scale_value;
-    if (this->col_upper_[iCol] < kHighsInf &&
-	std::abs(new_value) > infinite_bound) return false;
-  }
-  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-    double new_value = this->row_lower_[iRow] * dl_user_bound_scale_value;
-    if (this->row_lower_[iRow] > -kHighsInf &&
-	std::abs(new_value) > infinite_bound) return false;
-    new_value = this->row_upper_[iRow] * dl_user_bound_scale_value;
-    if (this->row_upper_[iRow] < kHighsInf &&
-	std::abs(new_value) > infinite_bound) return false;
-  }
-  return true;
+  if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale, infinite_bound)) return false;
+  return boundScaleOk(this->row_lower_, this->row_upper_, dl_user_bound_scale, infinite_bound);
 }
 
 void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
@@ -302,17 +287,11 @@ void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
 }
 
 bool HighsLp::userCostScaleOk(const HighsInt user_cost_scale,
-			      const double infinite_cost) {
+			      const double infinite_cost) const {
   const HighsInt dl_user_cost_scale =
       user_cost_scale - this->user_cost_scale_;
   if (!dl_user_cost_scale) return true;
-  double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
-  // Ensure that user cost scaling does not yield infinite costs
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    double new_value = this->col_cost_[iCol] * dl_user_cost_scale_value;
-    if (std::abs(new_value) > infinite_cost) return false;
-  }
-  return true;
+  return costScaleOk(this->col_cost_, dl_user_cost_scale, infinite_cost);
 }
 
 void HighsLp::userCostScale(const HighsInt user_cost_scale) {

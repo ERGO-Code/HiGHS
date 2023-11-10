@@ -635,7 +635,7 @@ HighsStatus Highs::readModel(const std::string& filename) {
       interpretCallStatus(options_.log_options, passModel(std::move(model)),
                           return_status, "passModel");
   return_status =
-      interpretCallStatus(options_.log_options, optionChangeAction()),
+      interpretCallStatus(options_.log_options, optionChangeAction(),
                           return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }

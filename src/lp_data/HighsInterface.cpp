@@ -1748,6 +1748,7 @@ HighsStatus Highs::optionChangeAction() {
   HighsInt dl_user_cost_scale = 0;
   double dl_user_cost_scale_value = 1;
   bool user_cost_scale_ok = model.userCostScaleOk(options.user_cost_scale,
+						  options.small_matrix_value,
 						  options.large_matrix_value,
 						  options.infinite_cost);
   if (!user_cost_scale_ok) {

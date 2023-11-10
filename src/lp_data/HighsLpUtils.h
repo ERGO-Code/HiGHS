@@ -57,6 +57,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
+bool boundScaleOk(const std::vector<double>& lower,
+		  const std::vector<double>& upper,
+		  const HighsInt bound_scale,
+		  const double infinite_bound);
+                        
+bool costScaleOk(const std::vector<double>& cost,
+		 const HighsInt cost_scale,
+		 const double infinite_cost);
+
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
 void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
