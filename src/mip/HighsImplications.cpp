@@ -373,6 +373,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
+  assert(vubconstant != kHighsInf);
+
   VarBound vub{vubcoef, vubconstant};
 
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
@@ -396,6 +398,8 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
+  assert(vlbconstant != -kHighsInf);
+
   VarBound vlb{vlbcoef, vlbconstant};
 
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);

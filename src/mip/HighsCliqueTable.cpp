@@ -1164,6 +1164,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               coef = globaldom.col_upper_[col] - implcolub;
               constant = implcolub;
             } else {
+              // make sure that upper bound is not infinite to avoid adding VUB
+              // with coefficient '-inf' and constant 'inf'
+              if (globaldom.col_upper_[col] == kHighsInf) continue;
               coef = implcolub - globaldom.col_upper_[col];
               constant = globaldom.col_upper_[col];
             }
@@ -1186,6 +1189,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               coef = globaldom.col_lower_[col] - implcollb;
               constant = implcollb;
             } else {
+              // make sure that lower bound is not infinite to avoid adding VLB
+              // with coefficient 'inf' and constant '-inf'
+              if (globaldom.col_lower_[col] == -kHighsInf) continue;
               coef = implcollb - globaldom.col_lower_[col];
               constant = globaldom.col_lower_[col];
             }
