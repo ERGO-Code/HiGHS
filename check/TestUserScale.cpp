@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 void checkModelScaling(const HighsInt user_bound_scale,
