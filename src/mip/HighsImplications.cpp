@@ -373,7 +373,9 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
-  assert(vubconstant != kHighsInf);
+  // assume that VUBs do not have infinite coefficients and infinite constant
+  // terms since such VUBs effectively evaluate to NaN.
+  assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
 
   VarBound vub{vubcoef, vubconstant};
 
@@ -398,7 +400,9 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
-  assert(vlbconstant != -kHighsInf);
+  // assume that VLBs do not have infinite coefficients and infinite constant
+  // terms since such VLBs effectively evaluate to NaN.
+  assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
 
   VarBound vlb{vlbcoef, vlbconstant};
 
