@@ -92,6 +92,47 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
   highs.run();
 }
 
+TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
+   Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(solution.col_value[0] == 40);
+  REQUIRE(solution.col_value[1] == 20);
+    
+  highs.setOptionValue("user_cost_scale", -30);
+  highs.clearSolver();
+  highs.run();
+  highs.writeSolution("", 1);
+  REQUIRE(solution.col_value[0] == 0);
+  REQUIRE(solution.col_value[1] == 0);
+
+
+  
+  highs.setOptionValue("user_cost_scale", 0);
+  
+  highs.run();
+  REQUIRE(solution.col_value[0] == 40);
+  REQUIRE(solution.col_value[1] == 20);
+  
+  
+}
+
 TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   Highs unscaled_highs;
   Highs scaled_highs;
@@ -104,8 +145,8 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   const HighsInt user_cost_scale = -30;
   const HighsInt user_bound_scale = 10;
   const double unscaled_col0_cost = 1e14;
-  unscaled_highs.addVar(0, kHighsInf);
-  scaled_highs.addVar(0, kHighsInf);
+  unscaled_highs.addVar(0, inf);
+  scaled_highs.addVar(0, inf);
   unscaled_highs.changeColCost(0, unscaled_col0_cost);
   scaled_highs.changeColCost(0, unscaled_col0_cost);
 
@@ -114,8 +155,8 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
   const double unscaled_col1_cost = 1e12;
-  unscaled_highs.addVar(1, kHighsInf);
-  scaled_highs.addVar(1, kHighsInf);
+  unscaled_highs.addVar(1, inf);
+  scaled_highs.addVar(1, inf);
   unscaled_highs.changeColCost(1, unscaled_col1_cost);
   scaled_highs.changeColCost(1, unscaled_col1_cost);
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
@@ -123,17 +164,17 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value0 = {1, 2};
   std::vector<double> value1 = {1, 4};
-  unscaled_highs.addRow(-kHighsInf, 120, 2, index.data(), value0.data());
-  scaled_highs.addRow(-kHighsInf, 120, 2, index.data(), value0.data());
+  unscaled_highs.addRow(-inf, 120, 2, index.data(), value0.data());
+  scaled_highs.addRow(-inf, 120, 2, index.data(), value0.data());
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
-  unscaled_highs.addRow(-kHighsInf, 150, 2, index.data(), value1.data());
-  scaled_highs.addRow(-kHighsInf, 150, 2, index.data(), value1.data());
+  unscaled_highs.addRow(-inf, 150, 2, index.data(), value1.data());
+  scaled_highs.addRow(-inf, 150, 2, index.data(), value1.data());
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
   std::vector<double> cost = {0, 10};
   std::vector<double> lower = {2, 4};
-  std::vector<double> upper = {kHighsInf, kHighsInf};
+  std::vector<double> upper = {inf, inf};
   std::vector<HighsInt> matrix_start = {0, 2};
   std::vector<HighsInt> matrix_index = {0, 1, 0, 1};
   std::vector<double> matrix_value = {1, 1, 2, 4};
@@ -145,7 +186,7 @@ TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
                        matrix_value.data());
   checkLpScaling(user_bound_scale, user_cost_scale, unscaled_lp, scaled_lp);
 
-  lower = {-kHighsInf, 0};
+  lower = {-inf, 0};
   upper = {120, 150};
   matrix_start = {0, 2};
   matrix_index = {0, 2, 1, 3};
