@@ -253,7 +253,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
   const bool debug_report = false;
 
   auto computeColVal = [&](HighsInt direction) {
-    // choose values that makes all rows feasible
+    // choose solution value that makes all rows feasible
     for (const auto& colVal : colValues) {
       // Row values aren't fully postsolved, so how can this work?
       debug_num_use_row_value++;
@@ -266,6 +266,7 @@ void HighsPostsolveStack::ForcingColumn::undo(
                                 : HighsBasisStatus::kUpper;
       }
     }
+    // round solution value if column is integer-constrained
     if (nonbasicRow != -1 && colIntegral)
       colValFromNonbasicRow =
           direction * std::ceil(direction * colValFromNonbasicRow -
