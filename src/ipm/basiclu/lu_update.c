@@ -180,7 +180,7 @@ static lu_int compress_packed(const lu_int m, lu_int *begin, lu_int *index,
  * When row i was mapped to column jlist[nswap], then it will be mapped to
  * column jlist[0].
  *
- * This requires to update pmap, qmap and the rowwise and columwise storage
+ * This requires to update pmap, qmap and the rowwise and columnwise storage
  * of U. It also changes the pivot elements.
  *
  * Note: This is the most ugly part of the update code and looks horribly
@@ -466,7 +466,6 @@ lu_int lu_update(struct lu *this, double xtbl)
     lu_int have_diag, intersect, istriangular, nz_roweta, nz_spike;
     lu_int nreach, *col_reach, *row_reach;
     double spike_diag, newpiv, piverr;
-    double tic[2], elapsed;
 
     assert(nforrest < m);
 
@@ -519,7 +518,7 @@ lu_int lu_update(struct lu *this, double xtbl)
      * or
      *    newpiv = xtbl * oldpiv,                                 (2)
      *
-     * where spike_diag is the diaognal element in the spike column
+     * where spike_diag is the diagonal element in the spike column
      * before the Forrest-Tomlin update and oldpiv was the pivot element
      * in column jpivot before inserting the spike. This routine uses
      * newpiv from (1) and reports the difference to (2) to the user
@@ -773,7 +772,7 @@ lu_int lu_update(struct lu *this, double xtbl)
          * If U is permuted triangular, then permute to zero-free diagonal.
          * Set up row_reach[0..nreach-1] and col_reach[0..nreach-1] for
          * updating the permutations below. The column reach is the combined
-         * reach of the path nodes. The row reach is is given through pmap.
+         * reach of the path nodes. The row reach is given through pmap.
          */
         if (istriangular)
         {
@@ -880,7 +879,7 @@ lu_int lu_update(struct lu *this, double xtbl)
         assert(nz == Unz);
     }
 
-    /* compress W if used memory is shrinked suficiently */
+    /* compress W if used memory is shrinked sufficiently */
     used = Wbegin[m];
     need = Unz + stretch*Unz + m*pad;
     if ((used-need) > this->compress_thres * used)

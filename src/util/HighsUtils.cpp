@@ -482,13 +482,9 @@ void analyseVectorValues(const HighsLogOptions* log_options,
                          const std::string message, HighsInt vecDim,
                          const std::vector<HighsInt>& vec,
                          std::string model_name) {
-  const bool analyseValueList = true;
   if (vecDim == 0) return;
   const HighsInt VLsMxZ = 10;
   std::vector<std::pair<HighsInt, HighsInt>> VLs;
-  // Ensure that 1.0 and -1.0 are counted
-  const HighsInt PlusOneIx = 0;
-  const HighsInt MinusOneIx = 1;
   bool excessVLsV = false;
   HighsInt VLsZ = 0;
   HighsInt min_value = kHighsIInf;

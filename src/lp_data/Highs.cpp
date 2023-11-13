@@ -16,12 +16,14 @@
 #include <algorithm>
 #include <cassert>
 #include <csignal>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <sstream>
 
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
+#include "lp_data/HighsCallbackStruct.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
@@ -75,7 +77,7 @@ HighsStatus Highs::clearSolver() {
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -83,7 +85,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -91,7 +93,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -100,7 +102,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -109,7 +111,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -133,13 +135,13 @@ HighsStatus Highs::readOptions(const std::string& filename) {
 HighsStatus Highs::passOptions(const HighsOptions& options) {
   if (passLocalOptions(options_.log_options, options, options_) ==
       OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
@@ -292,12 +294,12 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
   return return_status;
 }
 
-// Methods below change the incumbent model or solver infomation
+// Methods below change the incumbent model or solver information
 // associated with it. Hence returnFromHighs is called at the end of
 // each
 HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
-  // eventually call it
+  // (and readModel) eventually call it
   this->logHeader();
   // Possibly analyse the LP data
   if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
@@ -362,6 +364,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  // Apply any user scaling in call to optionChangeAction
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction(),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -510,6 +516,21 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
                    hessian.dim_);
       hessian.clear();
     }
+  }
+
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
+                         this->options_.small_matrix_value,
+                         this->options_.large_matrix_value)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
+      hessian.value_[iEl] *= cost_scale_value;
   }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
@@ -869,7 +890,13 @@ HighsStatus Highs::run() {
     return HighsStatus::kError;
   }
 
-  // HiGHS solvers require models with no inifinite costs, and no semi-variables
+  // Check whether model is consistent with any user bound/cost scaling
+  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
+  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
+  // Assess whether to warn the user about excessive bounds and costs
+  assessExcessiveBoundCost(options_.log_options, this->model_);
+
+  // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call
   // to run() - with initial check that called_return_from_run is true
@@ -986,7 +1013,8 @@ HighsStatus Highs::run() {
       return returnFromRun(HighsStatus::kError, undo_mods);
     }
   }
-  const bool use_simplex_or_ipm = options_.solver.compare(kHighsChooseString);
+  const bool use_simplex_or_ipm =
+      (options_.solver.compare(kHighsChooseString) != 0);
   if (!use_simplex_or_ipm) {
     // Leaving HiGHS to choose method according to model class
     if (model_.isQp()) {
@@ -1117,26 +1145,32 @@ HighsStatus Highs::run() {
     assert(basis_.valid);
   }
 
+  // lambda for Lp solving
+  auto solveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
+                     double& time) {
+    time = -timer_.read(timer_.solve_clock);
+    if (possibly_use_log_dev_level_2) {
+      options_.log_dev_level = use_log_dev_level;
+      options_.output_flag = use_output_flag;
+    }
+    timer_.start(timer_.solve_clock);
+    call_status = callSolveLp(lp, lpSolveDescription);
+    timer_.stop(timer_.solve_clock);
+    if (possibly_use_log_dev_level_2) {
+      options_.log_dev_level = log_dev_level;
+      options_.output_flag = output_flag;
+    }
+    time += timer_.read(timer_.solve_clock);
+  };
+
   if (basis_.valid || options_.presolve == kHighsOffString) {
     // There is a valid basis for the problem or presolve is off
     ekk_instance_.lp_name_ = "LP without presolve or with basis";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
-    this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = use_log_dev_level;
-      options_.output_flag = use_output_flag;
-    }
-    timer_.start(timer_.solve_clock);
-    call_status =
-        callSolveLp(incumbent_lp, "Solving LP without presolve or with basis");
-    timer_.stop(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = log_dev_level;
-      options_.output_flag = output_flag;
-    }
-    this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+    solveLp(incumbent_lp, "Solving LP without presolve or with basis",
+            this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1177,20 +1211,8 @@ HighsStatus Highs::run() {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status =
-            callSolveLp(incumbent_lp, "Not presolved: solving the LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp, "Not presolved: solving the LP",
+                this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1201,20 +1223,8 @@ HighsStatus Highs::run() {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
         reportPresolveReductions(log_options, incumbent_lp, false);
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(
-            incumbent_lp, "Problem not reduced by presolve: solving the LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
+                this_solve_original_lp_time);
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1227,7 +1237,7 @@ HighsStatus Highs::run() {
         if (kAllowDeveloperAssert) {
           // Validate the reduced LP
           //
-          // Although preseolve can yield small values in the matrix,
+          // Although presolve can yield small values in the matrix,
           // they are only stripped out (by assessLp) in debug. This
           // suggests that they are no real danger to the simplex
           // solver. The only danger is pivoting on them, but that
@@ -1261,19 +1271,8 @@ HighsStatus Highs::run() {
         // objective values aren't correct
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
-        this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(reduced_lp, "Solving the presolved LP");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(reduced_lp, "Solving the presolved LP",
+                this_solve_presolved_lp_time);
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
@@ -1327,26 +1326,15 @@ HighsStatus Highs::run() {
           return returnFromRun(return_status, undo_mods);
         }
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
-        // can't reurn this. Use primal simplex solver on the original
+        // can't return this. Use primal simplex solver on the original
         // LP
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
-        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = use_log_dev_level;
-          options_.output_flag = use_output_flag;
-        }
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(incumbent_lp,
-                                  "Solving the original LP with primal simplex "
-                                  "to determine infeasible or unbounded");
-        timer_.stop(timer_.solve_clock);
-        if (possibly_use_log_dev_level_2) {
-          options_.log_dev_level = log_dev_level;
-          options_.output_flag = output_flag;
-        }
-        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        solveLp(incumbent_lp,
+                "Solving the original LP with primal simplex "
+                "to determine infeasible or unbounded",
+                this_solve_original_lp_time);
         // Recover the options
         options_ = save_options;
         if (return_status == HighsStatus::kError)
@@ -1478,23 +1466,11 @@ HighsStatus Highs::run() {
             // adding the corresponding values after callSolveLp gives
             // difference
             postsolve_iteration_count = -info_.simplex_iteration_count;
-            this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-            if (possibly_use_log_dev_level_2) {
-              options_.log_dev_level = use_log_dev_level;
-              options_.output_flag = use_output_flag;
-            }
-            timer_.start(timer_.solve_clock);
-            call_status = callSolveLp(
-                incumbent_lp,
-                "Solving the original LP from the solution after postsolve");
-            timer_.stop(timer_.solve_clock);
-            if (possibly_use_log_dev_level_2) {
-              options_.log_dev_level = log_dev_level;
-              options_.output_flag = output_flag;
-            }
-            // Determine the iteration count and timing records
+            solveLp(incumbent_lp,
+                    "Solving the original LP from the solution after postsolve",
+                    this_solve_original_lp_time);
+            // Determine the iteration count
             postsolve_iteration_count += info_.simplex_iteration_count;
-            this_solve_original_lp_time += timer_.read(timer_.solve_clock);
             return_status =
                 interpretCallStatus(options_.log_options, call_status,
                                     return_status, "callSolveLp");
@@ -1522,7 +1498,7 @@ HighsStatus Highs::run() {
   if (no_incumbent_lp_solution_or_basis) {
     // In solving the (strictly reduced) presolved LP, it is found to
     // be infeasible or unbounded, the time/iteration limit has been
-    // reached, a user interrupt has ocurred, or the status is unknown
+    // reached, a user interrupt has occurred, or the status is unknown
     // (cycling)
     //
     // Hence there's no incumbent lp solution or basis to drive dual
@@ -1797,7 +1773,6 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
 HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                                  HighsInt* row_num_nz, HighsInt* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
-  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -1852,7 +1827,6 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                                     HighsInt* col_num_nz,
                                     HighsInt* col_indices) {
-  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
@@ -1928,12 +1902,25 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setCallback(
-    void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
-                          HighsCallbackDataIn*, void*),
-    void* user_callback_data) {
+HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
+                               void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
+  this->callback_.user_callback_data = user_callback_data;
+
+  options_.log_options.user_callback = this->callback_.user_callback;
+  options_.log_options.user_callback_data = this->callback_.user_callback_data;
+  options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
+                               void* user_callback_data) {
+  this->callback_.clear();
+  this->callback_.user_callback =
+      [c_callback](int a, const std::string& b, const HighsCallbackDataOut* c,
+                   HighsCallbackDataIn* d,
+                   void* e) { c_callback(a, b.c_str(), c, d, e); };
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;
@@ -1960,7 +1947,43 @@ HighsStatus Highs::startCallback(const int callback_type) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::startCallback(const HighsCallbackType callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot start callback when user_callback not defined\n");
+    return HighsStatus::kError;
+  }
+  assert(int(this->callback_.active.size()) == kNumCallbackType);
+  this->callback_.active[callback_type] = true;
+  // Possibly modify the logging callback activity
+  if (callback_type == kCallbackLogging)
+    options_.log_options.user_callback_active = true;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::stopCallback(const int callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot stop callback when user_callback not defined\n");
+    return HighsStatus::kWarning;
+  }
+  assert(int(this->callback_.active.size()) == kNumCallbackType);
+  this->callback_.active[callback_type] = false;
+  // Possibly modify the logging callback activity
+  if (callback_type == kCallbackLogging)
+    options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
   assert(callback_type_ok);
@@ -2235,7 +2258,16 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Set supplied to Highs::changeColsIntegrality contains "
+                 "duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, local_integrality.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2297,7 +2329,16 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeColsCost contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status =
       changeCostsInterface(index_collection, local_cost.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2368,7 +2409,16 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_col_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeColsBounds contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeColBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2441,7 +2491,16 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   HighsIndexCollection index_collection;
   const bool create_ok = create(index_collection, num_set_entries,
                                 local_set.data(), model_.lp_.num_row_);
-  assert(create_ok);
+  if (!create_ok) {
+    // Creating an index_collection data structure for the set
+    // includes a test that the indices increase strictly. If this is
+    // not the case then, since an increasing set was created locally,
+    // it must contain duplicate entries. return with an error
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Set supplied to Highs::changeRowsBounds contains duplicate entries\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeRowBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2854,7 +2913,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   if (options_.ranging == kHighsOnString) {
     if (model_.isMip() || model_.isQp()) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot determing ranging information for MIP or QP\n");
+                   "Cannot determine ranging information for MIP or QP\n");
       return_status = HighsStatus::kError;
       return returnFromWriteSolution(file, return_status);
     }
@@ -2968,7 +3027,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Clear info from previous runs if original_lp has been modified.
+  // Ensure that the RunHighsClock is running
+  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
@@ -3135,7 +3195,7 @@ void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
-  // if not, try to assign values to continous variables to achieve a
+  // if not, try to assign values to continuous variables to achieve a
   // feasible solution. Valuable in the case where users make a
   // heuristic assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
@@ -3155,7 +3215,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   bool is_integer = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
@@ -3207,7 +3267,6 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
@@ -3304,8 +3363,7 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  QpAsmStatus qpstatus =
-      solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
+  solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
@@ -3482,8 +3540,6 @@ HighsStatus Highs::callSolveMip() {
     if (solver.solution_objective_ != kHighsInf) {
       const double mip_max_bound_violation =
           std::max(solver.row_violation_, solver.bound_violation_);
-      const double mip_max_infeasibility =
-          std::max(mip_max_bound_violation, solver.integrality_violation_);
       const double delta_max_bound_violation =
           std::abs(mip_max_bound_violation - info_.max_primal_infeasibility);
       // Possibly report a mis-match between the max bound violation
@@ -3723,8 +3779,8 @@ HighsStatus Highs::openWriteFile(const string filename,
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot open writeable file \"%s\" in %s\n",
-                   filename.c_str(), method_name.c_str());
+                   "Cannot open writable file \"%s\" in %s\n", filename.c_str(),
+                   method_name.c_str());
       return HighsStatus::kError;
     }
     const char* dot = strrchr(filename.c_str(), '.');
@@ -3755,6 +3811,13 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
                                  const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
+  if (return_status != run_return_status) {
+    printf(
+        "Highs::returnFromRun: return_status = %d != %d = run_return_status "
+        "For model_status_ = %s\n",
+        int(return_status), int(run_return_status),
+        modelStatusToString(model_status_).c_str());
+  }
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
   switch (model_status_) {

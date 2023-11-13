@@ -55,8 +55,8 @@ void DiagonalPrecond::_Apply(const Vector& rhs, Vector& lhs,
     Timer timer;
 
     assert(factorized_);
-    assert((Int)lhs.size() == m);
-    assert((Int)rhs.size() == m);
+    assert(lhs.size() == static_cast<size_t>(m));
+    assert(rhs.size() == static_cast<size_t>(m));
 
     for (Int i = 0; i < m; i++) {
         lhs[i] = rhs[i] / diagonal_[i];

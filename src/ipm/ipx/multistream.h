@@ -37,7 +37,7 @@ private:
         }
         int overflow(int c) override {
             for (std::streambuf* b : buffers)
-                b->sputc(c);
+                b->sputc(static_cast<char>(c));
             return c;
         }
     private:

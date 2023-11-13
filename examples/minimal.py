@@ -1,3 +1,6 @@
+# This example cannot be run with the version (1.5.3) of highspy
+# available from PyPI. It requires a local installation of highspy for
+# (at least) HiGHS versoin 1.6.0
 import highspy
 
 h = highspy.Highs()

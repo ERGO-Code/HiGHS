@@ -104,7 +104,8 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-  // std::cout << options_mip_->presolve << std::endl;
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
   timer_.start(timer_.solve_clock);
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -114,6 +115,11 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve();
+  // Identify whether time limit has been reached (in presolve)
+  if (modelstatus_ == HighsModelStatus::kNotset &&
+      timer_.read(timer_.solve_clock) >= options_mip_->time_limit)
+    modelstatus_ = HighsModelStatus::kTimeLimit;
+
   if (modelstatus_ != HighsModelStatus::kNotset) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "Presolve: %s\n",
@@ -173,7 +179,7 @@ restart:
     HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
                                        mipdata_->avgrootlpiters);
     iterlimit = std::max({HighsInt{10000}, iterlimit,
-                          HighsInt(1.5 * mipdata_->firstrootlpiters)});
+                          HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
@@ -235,7 +241,7 @@ restart:
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
-      // printf("continue plunging due to good esitmate\n");
+      // printf("continue plunging due to good estimate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
     search.flushStatistics();
@@ -336,7 +342,7 @@ restart:
         }
 
         int64_t minHugeTreeOffset =
-            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
+            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
         int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
             activeIntegerRatio * (10 + minHugeTreeOffset) *
             std::pow(1.5, nTreeRestarts));
@@ -615,6 +621,10 @@ void HighsMipSolver::cleanupSolve() {
 }
 
 void HighsMipSolver::runPresolve() {
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
+  assert(!timer_.running(timer_.solve_clock));
+  timer_.start(timer_.solve_clock);
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve();

@@ -29,7 +29,7 @@
      pivotcol[0..pivotlen-1]
 
        are vectors of length m <= pivotlen < 2*m which may contain duplicate
-       indices. For each index its last occurance is its position in the pivot
+       indices. For each index its last occurrence is its position in the pivot
        sequence, see lu_garbage_perm().
 
      pmap[0..m-1],
@@ -170,7 +170,7 @@ lu_int lu_build_factors(struct lu *this)
      * Calculate memory and reallocate. The rowwise and columnwise storage of
      * L both need space for Lnz nonzeros + m terminators. The same for the
      * columnwise storage of U except that Uindex[0] = -1 is reserved to
-     * accomodate pointers to empty columns. In the rowwise storage of U each
+     * accommodate pointers to empty columns. In the rowwise storage of U each
      * row with nz nonzeros is padded by stretch*nz + pad elements.
      */
     need = 2*(Lnz+m);

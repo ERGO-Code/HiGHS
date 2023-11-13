@@ -132,7 +132,6 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt col_cost_size = lp.col_cost_.size();
   HighsInt col_lower_size = lp.col_lower_.size();
   HighsInt col_upper_size = lp.col_upper_.size();
-  HighsInt matrix_start_size = lp.a_matrix_.start_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
@@ -510,7 +509,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
       if (lp.col_lower_[iCol] > lp.col_upper_[iCol]) {
-        // Semi-variables with inconsistent bounds become continous
+        // Semi-variables with inconsistent bounds become continuous
         // and fixed at zero
         num_inconsistent_semi++;
         inconsistent_semi_variable_index.push_back(iCol);
@@ -665,7 +664,6 @@ void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
   made_semi_variable_mods = false;
   if (!lp.integrality_.size()) return;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
-  HighsInt num_modified_lower = 0;
   std::vector<HighsInt>& relaxed_semi_variable_lower_index =
       lp.mods_.save_relaxed_semi_variable_lower_bound_index;
   std::vector<double>& relaxed_semi_variable_lower_value =
@@ -716,7 +714,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  " but there is no guarantee\n",
                  min_semi_variable_margin);
   }
-  return num_active_modified_upper;
+  return (num_active_modified_upper != 0);
 }
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
@@ -765,6 +763,32 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
     return HighsStatus::kWarning;
   }
   return HighsStatus::kOk;
+}
+
+bool boundScaleOk(const vector<double>& lower, const vector<double>& upper,
+                  const HighsInt bound_scale, const double infinite_bound) {
+  if (!bound_scale) return true;
+  double bound_scale_value = std::pow(2, bound_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
+    if (lower[iCol] > -kHighsInf &&
+        std::abs(lower[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+    if (upper[iCol] < kHighsInf &&
+        std::abs(upper[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+  }
+  return true;
+}
+
+bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost) {
+  if (!cost_scale) return true;
+  double cost_scale_value = std::pow(2, cost_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
+    if (std::abs(cost[iCol]) < kHighsInf &&
+        std::abs(cost[iCol] * cost_scale_value) > infinite_cost)
+      return false;
+  return true;
 }
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
@@ -830,7 +854,6 @@ void scaleLp(const HighsOptions& options, HighsLp& lp,
     // something more intelligent
     use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-  bool allow_cost_scaling = options.allowed_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -1088,7 +1111,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       exp(sum_log_col_equilibration / numCol);
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
@@ -1134,7 +1157,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       original_matrix_max_value / original_matrix_min_value;
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Extreme equilibration improvement =      ( %11.4g + "
@@ -1176,7 +1199,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
   const bool poor_improvement =
       improvement_factor < improvement_factor_required;
 
-  // Possibly abandon scaling if it's not improved equlibration significantly
+  // Possibly abandon scaling if it's not improved equilibration significantly
   if (possibly_abandon_scaling && poor_improvement) {
     // Unscale the matrix
     for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -1185,14 +1208,18 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                  "[%0.4g, %0.4g] for rows\n",
+                  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
                   improvement_factor, improvement_factor_required);
@@ -1235,8 +1262,6 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Astart = lp.a_matrix_.start_;
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
-
-  HighsInt simplex_scale_strategy = use_scale_strategy;
 
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
@@ -1349,14 +1374,14 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
                   "[%0.4g, %0.4g] for rows\n",
@@ -1420,7 +1445,7 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
-  bool have_names = lp.col_names_.size();
+  bool have_names = (lp.col_names_.size() != 0);
   if (have_names) lp.col_names_.resize(new_num_col);
   for (HighsInt new_col = 0; new_col < num_new_col; new_col++) {
     HighsInt iCol = lp.num_col_ + new_col;
@@ -1440,7 +1465,7 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
-  bool have_names = lp.row_names_.size();
+  bool have_names = (lp.row_names_.size() != 0);
   if (have_names) lp.row_names_.resize(new_num_row);
 
   for (HighsInt new_row = 0; new_row < num_new_row; new_row++) {
@@ -1454,7 +1479,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 
 void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
-  HighsStatus call_status;
   deleteColsFromLpVectors(lp, new_num_col, index_collection);
   lp.a_matrix_.deleteCols(index_collection);
   lp.num_col_ = new_num_col;
@@ -1479,8 +1503,8 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
-  bool have_names = lp.col_names_.size();
-  bool have_integrality = lp.integrality_.size();
+  bool have_names = (lp.col_names_.size() != 0);
+  bool have_integrality = (lp.integrality_.size() != 0);
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -1505,7 +1529,6 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 }
 
 void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsStatus call_status;
   HighsInt new_num_row;
   deleteRowsFromLpVectors(lp, new_num_row, index_collection);
   lp.a_matrix_.deleteRows(index_collection);
@@ -1555,7 +1578,6 @@ void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
 
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1903,8 +1925,8 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   std::string type;
   HighsInt count;
-  bool have_integer_columns = getNumInt(lp);
-  bool have_col_names = lp.col_names_.size();
+  bool have_integer_columns = (getNumInt(lp) != 0);
+  bool have_col_names = (lp.col_names_.size() != 0);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -1946,7 +1968,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_row_ <= 0) return;
   std::string type;
   vector<HighsInt> count;
-  bool have_row_names = lp.row_names_.size();
+  bool have_row_names = (lp.row_names_.size() != 0);
 
   count.resize(lp.num_row_, 0);
   if (lp.num_col_ > 0) {
@@ -1978,7 +2000,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
 void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   if (lp.num_row_) {
-    // With postitive number of rows, can assume that there are index and value
+    // With positive number of rows, can assume that there are index and value
     // vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
                  lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
@@ -2101,7 +2123,7 @@ HighsStatus readSolutionFile(const std::string filename,
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
   const HighsInt lp_num_row = lp.num_row_;
-  // Define idetifiers for reading in
+  // Define identifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
   read_solution.clear();
@@ -2113,7 +2135,6 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  HighsInt status;
   if (!readSolutionFileIgnoreLineOk(in_file))
     return readSolutionFileErrorReturn(in_file);  // Model status
   if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2140,7 +2161,7 @@ HighsStatus readSolutionFile(const std::string filename,
   assert(keyword == "Columns");
   // The default style parameter is kSolutionStyleRaw, and this still
   // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, sinc ethere's nothing to
+  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
   // read either way
   const bool sparse = num_col <= 0;
   if (style == kSolutionStyleSparse) assert(sparse);
@@ -2193,7 +2214,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // OK to read from a file with different number of rows, since the
   // primal solution is all that's important. For example, see #1284,
   // where the user is solving a sequence of MIPs with the same number
-  // of variables, but incresing numbers of constraints, and wants to
+  // of variables, but increasing numbers of constraints, and wants to
   // used the solution from one MIP as the starting solution for the
   // next.
   const bool num_row_ok = num_row == lp_num_row;
@@ -2401,13 +2422,13 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Assessing feasiblity of %s tolerance of %11.4g\n",
+               "Assessing feasibility of %s tolerance of %11.4g\n",
                lp.isMip() ? "MIP using primal feasibility and integrality"
                           : "LP using primal feasibility",
                kPrimalFeasibilityTolerance);
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution.col_value[iCol];
@@ -2917,8 +2938,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool has_col_names = lp.col_names_.size();
-  const bool has_row_names = lp.row_names_.size();
+  const bool has_col_names = (lp.col_names_.size() != 0);
+  const bool has_row_names = (lp.row_names_.size() != 0);
   const bool has_solution = solution.value_valid;
   if (has_solution) {
     // Create zeroed row values for the new rows

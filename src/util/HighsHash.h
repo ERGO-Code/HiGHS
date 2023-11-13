@@ -130,7 +130,7 @@ struct HighsHashHelpers {
 
   static int popcnt(uint64_t x) {
 #ifdef _WIN64
-    return __popcnt64(x);
+    return static_cast<int>(__popcnt64(x));
 #else
     return __popcnt(x & 0xffffffffu) + __popcnt(x >> 32);
 #endif
@@ -253,7 +253,7 @@ struct HighsHashHelpers {
     u64 result = u64(a) * u64(b);
     result = (result >> 31) + (result & M31());
     if (result >= M31()) result -= M31();
-    return result;
+    return static_cast<u32>(result);
   }
 
   static u32 modexp_M31(u32 a, u64 e) {
@@ -277,7 +277,8 @@ struct HighsHashHelpers {
 
   template <HighsInt k>
   static u64 pair_hash(u32 a, u32 b) {
-    return (a + c[2 * k]) * (b + c[2 * k + 1]);
+    return (static_cast<u64>(a) + c[2 * k]) *
+           (static_cast<u64>(b) + c[2 * k + 1]);
   }
 
   static void sparse_combine(u64& hash, HighsInt index, u64 value) {
@@ -383,18 +384,20 @@ struct HighsHashHelpers {
     // which we evaluate at the random vector of 16.
 
     // make sure input value is never zero and at most 31bits are used
-    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+    value = (pair_hash<0>(static_cast<u32>(value), value >> 32) >> 33) | 1;
 
     // make sure that the constant has at most 31 bits, as otherwise the modulo
     // algorithm for multiplication mod M31 might not work properly due to
     // overflow
-    u32 a = c[index & 63] & M31();
+    u32 a = static_cast<u32>(c[index & 63] & M31());
     HighsInt degree = (index >> 6) + 1;
 
-    hash += multiply_modM31(value, modexp_M31(a, degree));
-    hash = (hash >> 31) + (hash & M31());
-    if (hash >= M31()) hash -= M31();
-    assert(hash < M31());
+    u64 result = hash;
+    result += multiply_modM31(static_cast<u32>(value), modexp_M31(a, degree));
+    result = (result >> 31) + (result & M31());
+    if (result >= M31()) result -= M31();
+    assert(result < M31());
+    hash = static_cast<u32>(result);
   }
 
   static void sparse_inverse_combine32(u32& hash, HighsInt index, u64 value) {
@@ -407,16 +410,19 @@ struct HighsHashHelpers {
     // procedure.
 
     // make sure input value is never zero and at most 31bits are used
-    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+    value = (pair_hash<0>(static_cast<u32>(value), value >> 32) >> 33) | 1;
 
-    u32 a = c[index & 63] & M31();
+    u32 a = static_cast<u32>(c[index & 63] & M31());
     HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M31() - hashvalue) instead of the hash value
     // itself
-    hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
-    hash = (hash >> 31) + (hash & M31());
-    if (hash >= M31()) hash -= M31();
-    assert(hash < M31());
+    u64 result = hash;
+    result +=
+        M31() - multiply_modM31(static_cast<u32>(value), modexp_M31(a, degree));
+    result = (result >> 31) + (result & M31());
+    if (result >= M31()) result -= M31();
+    assert(result < M31());
+    hash = static_cast<u32>(result);
   }
 
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
@@ -746,7 +752,8 @@ struct HighsHashHelpers {
     // now be different values which exhibit the same pattern as the 0.5 case,
     // but they do not have a small denominator like 1/2 in their rational
     // representation but are power of two multiples of the golden ratio and
-    // therefore irrational, which we do not expect in non-artifical input data.
+    // therefore irrational, which we do not expect in non-artificial input
+    // data.
     int exponent;
     double hashbits = std::frexp(val * golden_ratio_reciprocal(), &exponent);
 
@@ -813,7 +820,7 @@ struct HighsHashTableEntry {
   // and the value as default
   // the enable if statement makes sure this overload is never selected
   // when the type of the single argument is HighsHashTableEntry<K,V> so that
-  // the default move and copy constructures are preferred when they match
+  // the default move and copy constructors are preferred when they match
   // and this is only used to initialize the key type from a single argument.
   template <
       typename K_,
@@ -868,7 +875,7 @@ struct HighsHashTableEntry<T, void> {
   // Add a constructor to accept an arbitrary argument pack for initialize the
   // underlying value of type T. The enable if statement makes sure this
   // overload is never selected when the type of the single argument is
-  // HighsHashTableEntry<T,void> so that the default move and copy constructures
+  // HighsHashTableEntry<T,void> so that the default move and copy constructors
   // are preferred when they match and this is only used to initialize the value
   // of type from a set of arguments which are properly forwarded.
   // The std::tuple usage in enable_if is a work-around to make the statement
@@ -981,8 +988,8 @@ class HighsHashTable {
 
   HighsHashTable() { makeEmptyTable(128); }
   HighsHashTable(u64 minCapacity) {
-    u64 initCapacity = u64{1} << (u64)std::ceil(
-                           std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
+    u64 initCapacity = u64{1} << (u64)std::ceil(std::log2(std::max(
+                           128.0, 8 * static_cast<double>(minCapacity) / 7)));
     makeEmptyTable(initCapacity);
   }
 

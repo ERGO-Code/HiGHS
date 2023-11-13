@@ -281,7 +281,6 @@ HighsStatus writeInfoToFile(FILE* file, const bool valid,
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
                 const HighsFileType file_type) {
   const bool html_file = file_type == HighsFileType::kHtml;
-  const bool md_file = file_type == HighsFileType::kMd;
   HighsInt num_info = info_records.size();
   for (HighsInt index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;

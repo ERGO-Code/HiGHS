@@ -32,13 +32,14 @@ class HighsRandom {
     assert(sup <= uint32_t{1} << nbits);
     while (true) {
       advance();
-      uint32_t lo = state;
+      uint32_t lo = static_cast<uint32_t>(state);
       uint32_t hi = state >> 32;
 
-      uint64_t val;
+      uint32_t val;
 
-#define HIGHS_RAND_TRY_OUTPUT(n)                                \
-  val = HighsHashHelpers::pair_hash<n>(lo, hi) >> (64 - nbits); \
+#define HIGHS_RAND_TRY_OUTPUT(n)                                        \
+  val = static_cast<uint32_t>(HighsHashHelpers::pair_hash<n>(lo, hi) >> \
+                              (64 - nbits));                            \
   if (val < sup) return val;
 
       HIGHS_RAND_TRY_OUTPUT(0);
@@ -86,7 +87,7 @@ class HighsRandom {
     assert(sup <= uint64_t{1} << nbits);
     while (true) {
       advance();
-      uint32_t lo = state;
+      uint32_t lo = static_cast<uint32_t>(state);
       uint32_t hi = state >> 32;
 
       uint64_t val;
@@ -128,7 +129,8 @@ class HighsRandom {
   void initialise(HighsUInt seed = 0) {
     state = seed;
     do {
-      state = HighsHashHelpers::pair_hash<0>(state, state >> 32);
+      state = HighsHashHelpers::pair_hash<0>(static_cast<uint32_t>(state),
+                                             state >> 32);
       state ^= (HighsHashHelpers::pair_hash<1>(state >> 32, seed) >> 32);
     } while (state == 0);
   }
@@ -154,7 +156,9 @@ class HighsRandom {
            (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> 32);
 #else
     // use 31 bits of the 64 bit result
-    return HighsHashHelpers::pair_hash<0>(state, state >> 32) >> 33;
+    return HighsHashHelpers::pair_hash<0>(static_cast<uint32_t>(state),
+                                          state >> 32) >>
+           33;
 #endif
   }
 
@@ -181,9 +185,12 @@ class HighsRandom {
   double fraction() {
     advance();
     // 52 bit output is in interval [0,2^52-1]
-    uint64_t output =
-        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 52)) ^
-        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26));
+    uint64_t output = (HighsHashHelpers::pair_hash<0>(
+                           static_cast<uint32_t>(state), state >> 32) >>
+                       (64 - 52)) ^
+                      (HighsHashHelpers::pair_hash<1>(
+                           static_cast<uint32_t>(state), state >> 32) >>
+                       (64 - 26));
     // compute (1+output) / (2^52+1) which is strictly between 0 and 1
     return (1 + output) * 2.2204460492503125e-16;
   }
@@ -194,9 +201,12 @@ class HighsRandom {
   double closedFraction() {
     advance();
     // 53 bit result is in interval [0,2^53-1]
-    uint64_t output =
-        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 53)) ^
-        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> 32);
+    uint64_t output = (HighsHashHelpers::pair_hash<0>(
+                           static_cast<uint32_t>(state), state >> 32) >>
+                       (64 - 53)) ^
+                      (HighsHashHelpers::pair_hash<1>(
+                           static_cast<uint32_t>(state), state >> 32) >>
+                       32);
     // compute output / (2^53-1) in double precision which is in the closed
     // interval [0,1]
     return output * 1.1102230246251566e-16;
@@ -212,7 +222,9 @@ class HighsRandom {
    */
   bool bit() {
     advance();
-    return HighsHashHelpers::pair_hash<0>(state, state >> 32) >> 63;
+    return HighsHashHelpers::pair_hash<0>(static_cast<uint32_t>(state),
+                                          state >> 32) >>
+           63;
   }
 
   /**
