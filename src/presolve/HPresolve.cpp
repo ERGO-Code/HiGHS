@@ -4084,10 +4084,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz = Avalue.size() - freeslots.size();
+	const double time = this->timer == nullptr ? -1 : this->timer->readRunHighsClock();
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-                     " cols, %" HIGHSINT_FORMAT " nonzeros\n",
-                     numRow, numCol, numNonz);
+                     " cols, %" HIGHSINT_FORMAT " nonzeros %ds\n",
+                     numRow, numCol, numNonz, int(time));
       }
     };
 
@@ -4105,7 +4106,21 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
     HighsInt lastPrintSize = kHighsIInf;
+    if (this->timer) {
+      printf("HPresolve::Result HPresolve::presolve: time limit = %g\n", options->time_limit );
+      
+      if (!this->timer->runningRunHighsClock())
+	this->timer->startRunHighsClock();
+    }
+
     while (true) {
+      const double time = this->timer == nullptr ? 0 : this->timer->readRunHighsClock();
+      printf("HPresolve::Result HPresolve::presolve: time      = %g\n", time);
+      if (time > options->time_limit) {
+	highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "Time limit reached\n");
+	break;
+      }
       HighsInt currSize =
           model->num_col_ - numDeletedCols + model->num_row_ - numDeletedRows;
       if (currSize < 0.85 * lastPrintSize) {
