@@ -93,7 +93,7 @@ TEST_CASE("user-cost-scale-after-load", "[highs_user_scale]") {
 }
 
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
-   Highs highs;
+  Highs highs;
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
   //  highs.setOptionValue("output_flag", dev_run);
@@ -114,7 +114,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
-    
+
   highs.setOptionValue("user_cost_scale", -30);
   highs.clearSolver();
   highs.run();
@@ -122,15 +122,11 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   REQUIRE(solution.col_value[0] == 0);
   REQUIRE(solution.col_value[1] == 0);
 
-
-  
   highs.setOptionValue("user_cost_scale", 0);
-  
+
   highs.run();
   REQUIRE(solution.col_value[0] == 40);
   REQUIRE(solution.col_value[1] == 20);
-  
-  
 }
 
 TEST_CASE("user-cost-scale-in-build", "[highs_user_scale]") {
