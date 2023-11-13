@@ -178,6 +178,16 @@ class HighsTimer {
   }
 
   /**
+   * @brief Return whether a clock is running
+   */
+  bool running(HighsInt i_clock  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_start[i_clock] < 0;
+  }
+
+  /**
    * @brief Start the RunHighs clock
    */
   void startRunHighsClock() { start(run_highs_clock); }
@@ -195,7 +205,7 @@ class HighsTimer {
   /**
    * @brief Test whether the RunHighs clock is running
    */
-  bool runningRunHighsClock() { return clock_start[run_highs_clock] < 0; }
+  bool runningRunHighsClock() { return running(run_highs_clock); }
 
   /**
    * @brief Report timing information for the clock indices in the list

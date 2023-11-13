@@ -3002,7 +3002,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Clear info from previous runs if original_lp has been modified.
+  // Ensure that the RunHighsClock is running
+  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
