@@ -173,6 +173,7 @@ class HighsPostsolveStack {
     double colBound;
     HighsInt col;
     bool atInfiniteUpper;
+    bool colIntegral;
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
@@ -445,13 +446,14 @@ class HighsPostsolveStack {
   template <typename ColStorageFormat>
   void forcingColumn(HighsInt col,
                      const HighsMatrixSlice<ColStorageFormat>& colVec,
-                     double cost, double boundVal, bool atInfiniteUpper) {
+                     double cost, double boundVal, bool atInfiniteUpper,
+                     bool colIntegral) {
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(
-        ForcingColumn{cost, boundVal, origColIndex[col], atInfiniteUpper});
+    reductionValues.push(ForcingColumn{cost, boundVal, origColIndex[col],
+                                       atInfiniteUpper, colIntegral});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kForcingColumn);
   }

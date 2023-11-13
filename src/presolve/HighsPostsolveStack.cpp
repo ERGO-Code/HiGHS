@@ -251,32 +251,33 @@ void HighsPostsolveStack::ForcingColumn::undo(
 
   HighsInt debug_num_use_row_value = 0;
   const bool debug_report = false;
+
+  auto computeColVal = [&](HighsInt direction) {
+    // choose values that makes all rows feasible
+    for (const auto& colVal : colValues) {
+      // Row values aren't fully postsolved, so how can this work?
+      debug_num_use_row_value++;
+      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
+      if (direction * colValFromRow > direction * colValFromNonbasicRow) {
+        nonbasicRow = colVal.index;
+        colValFromNonbasicRow = colValFromRow;
+        nonbasicRowStatus = direction * colVal.value > 0
+                                ? HighsBasisStatus::kLower
+                                : HighsBasisStatus::kUpper;
+      }
+    }
+    if (nonbasicRow != -1 && colIntegral)
+      colValFromNonbasicRow =
+          direction * std::ceil(direction * colValFromNonbasicRow -
+                                options.mip_feasibility_tolerance);
+  };
+
   if (atInfiniteUpper) {
     // choose largest value as then all rows are feasible
-    for (const auto& colVal : colValues) {
-      // Row values aren't fully postsolved, so how can this work?
-      debug_num_use_row_value++;
-      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
-      if (colValFromRow > colValFromNonbasicRow) {
-        nonbasicRow = colVal.index;
-        colValFromNonbasicRow = colValFromRow;
-        nonbasicRowStatus = colVal.value > 0 ? HighsBasisStatus::kLower
-                                             : HighsBasisStatus::kUpper;
-      }
-    }
+    computeColVal(1);
   } else {
     // choose smallest value, as then all rows are feasible
-    for (const auto& colVal : colValues) {
-      // Row values aren't fully postsolved, so how can this work?
-      debug_num_use_row_value++;
-      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
-      if (colValFromRow < colValFromNonbasicRow) {
-        nonbasicRow = colVal.index;
-        colValFromNonbasicRow = colValFromRow;
-        nonbasicRowStatus = colVal.value > 0 ? HighsBasisStatus::kUpper
-                                             : HighsBasisStatus::kLower;
-      }
-    }
+    computeColVal(-1);
   }
   if (debug_num_use_row_value && debug_report) {
     printf(
@@ -305,8 +306,8 @@ void HighsPostsolveStack::ForcingColumn::undo(
 void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     HighsSolution& solution, HighsBasis& basis) const {
-  // we use the row value as storage for the scaled value implied on the column
-  // dual
+  // we use the row value as storage for the scaled value implied on the
+  // column dual
   HighsCDouble val = rhs;
   for (const auto& rowVal : rowValues)
     val -= rowVal.value * solution.col_value[rowVal.index];
@@ -828,7 +829,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         basis.col_status[col] = HighsBasisStatus::kNonbasic;
         if (debug_report)
           printf(
-              "When demerging, neither col nor duplicateCol can be nonbasic\n");
+              "When demerging, neither col nor duplicateCol can be "
+              "nonbasic\n");
         if (kAllowDeveloperAssert) assert(666 == 999);
       }
     }
@@ -962,7 +964,8 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
       if (abs_scale > scale_limit) {
         if (debug_report)
           printf(
-              "%sDuplicateColumn::checkMerge: scale = %g, but |scale| must be "
+              "%sDuplicateColumn::checkMerge: scale = %g, but |scale| must "
+              "be "
               "at "
               "most %g since x is [%g, %g]\n",
               newline.c_str(), scale, scale_limit, x_lo, x_up);
@@ -1284,14 +1287,16 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   if (!check) {
     if (debug_report)
       printf(
-          "DuplicateColumn::undo error: std::fabs(x_v) < kHighsInf is false\n");
+          "DuplicateColumn::undo error: std::fabs(x_v) < kHighsInf is "
+          "false\n");
     if (allow_assert) assert(check);
   }
   check = std::fabs(y_v) < kHighsInf;
   if (!check) {
     if (debug_report)
       printf(
-          "DuplicateColumn::undo error: std::fabs(y_v) < kHighsInf is false\n");
+          "DuplicateColumn::undo error: std::fabs(y_v) < kHighsInf is "
+          "false\n");
     if (allow_assert) assert(check);
   }
   check = residual <= residual_tolerance;

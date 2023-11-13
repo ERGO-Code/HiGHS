@@ -2792,9 +2792,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       // forcing column of size %" HIGHSINT_FORMAT "\n",
       // colsize[col]);
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
-      postsolve_stack.forcingColumn(col, getColumnVector(col),
-                                    model->col_cost_[col],
-                                    model->col_lower_[col], true);
+      postsolve_stack.forcingColumn(
+          col, getColumnVector(col), model->col_cost_[col],
+          model->col_lower_[col], true,
+          model->integrality_[col] == HighsVarType::kInteger);
       markColDeleted(col);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
@@ -2825,9 +2826,10 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
       // colsize[col]);
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
-      postsolve_stack.forcingColumn(col, getColumnVector(col),
-                                    model->col_cost_[col],
-                                    model->col_upper_[col], false);
+      postsolve_stack.forcingColumn(
+          col, getColumnVector(col), model->col_cost_[col],
+          model->col_upper_[col], false,
+          model->integrality_[col] == HighsVarType::kInteger);
       markColDeleted(col);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
@@ -3850,9 +3852,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       return checkLimits(postsolve_stack);
     } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
-      postsolve_stack.forcingColumn(col, getColumnVector(col),
-                                    model->col_cost_[col],
-                                    model->col_lower_[col], true);
+      postsolve_stack.forcingColumn(
+          col, getColumnVector(col), model->col_cost_[col],
+          model->col_lower_[col], true,
+          model->integrality_[col] == HighsVarType::kInteger);
       markColDeleted(col);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
@@ -3874,9 +3877,10 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
     } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
-      postsolve_stack.forcingColumn(col, getColumnVector(col),
-                                    model->col_cost_[col],
-                                    model->col_upper_[col], false);
+      postsolve_stack.forcingColumn(
+          col, getColumnVector(col), model->col_cost_[col],
+          model->col_upper_[col], false,
+          model->integrality_[col] == HighsVarType::kInteger);
       markColDeleted(col);
       HighsInt coliter = colhead[col];
       while (coliter != -1) {
