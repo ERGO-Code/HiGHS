@@ -4088,7 +4088,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         std::string time_str =
             " " + std::to_string(this->timer->read(run_clock)) + "s";
 #else
-        std::string time_str = " " + std::to_string(int(this->timer->read(run_clock)) + "s";
+        std::string time_str =
+            " " + std::to_string(int(this->timer->read(run_clock))) + "s";
 #endif
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
