@@ -456,15 +456,16 @@ void HighsMipSolverData::runSetup() {
     }
     if (feasible) {
       if (mipsolver.callback_->user_callback) {
-	if (mipsolver.callback_->active[kCallbackMipSolution]) {
-	  mipsolver.callback_->clearHighsCallbackDataOut();
-	  mipsolver.callback_->data_out.objective_function_value =
-	    mipsolver.solution_objective_;
-	  mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
-	  const bool interrupt =
-	    interruptFromCallbackWithData(kCallbackMipSolution, "Feasible solution");
-	  assert(!interrupt);
-	}
+        if (mipsolver.callback_->active[kCallbackMipSolution]) {
+          mipsolver.callback_->clearHighsCallbackDataOut();
+          mipsolver.callback_->data_out.objective_function_value =
+              mipsolver.solution_objective_;
+          mipsolver.callback_->data_out.mip_solution =
+              mipsolver.solution_.data();
+          const bool interrupt = interruptFromCallbackWithData(
+              kCallbackMipSolution, "Feasible solution");
+          assert(!interrupt);
+        }
       }
     }
   }
@@ -1020,16 +1021,17 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
-  const bool execute_mip_solution_callback = mipsolver.callback_->user_callback ?
-    mipsolver.callback_->active[kCallbackMipSolution] : false;
+  const bool execute_mip_solution_callback =
+      mipsolver.callback_->user_callback
+          ? mipsolver.callback_->active[kCallbackMipSolution]
+          : false;
   // Determine whether the potential new incumbent should be
   // transformed
   //
   // Happens if solobj improves on the upper bound or the MIP solution
   // callback is active
   const bool get_transformed_solution =
-    solobj < upper_bound ||
-    execute_mip_solution_callback;
+      solobj < upper_bound || execute_mip_solution_callback;
   // Get the transformed objective and solution if required
   //
   // NB #1463 Still neeed to work out whether extra calls to
@@ -1040,10 +1042,10 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   if (execute_mip_solution_callback) {
     mipsolver.callback_->clearHighsCallbackDataOut();
     mipsolver.callback_->data_out.objective_function_value =
-      mipsolver.solution_objective_;
+        mipsolver.solution_objective_;
     mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
-    const bool interrupt =
-      interruptFromCallbackWithData(kCallbackMipSolution, "Feasible solution");
+    const bool interrupt = interruptFromCallbackWithData(kCallbackMipSolution,
+                                                         "Feasible solution");
     assert(!interrupt);
   }
 

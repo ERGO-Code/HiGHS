@@ -89,9 +89,10 @@ const HighsInt kHighsBasisStatusNonbasic = 4;
 const HighsInt kHighsCallbackLogging = 0;
 const HighsInt kHighsCallbackSimplexInterrupt = 1;
 const HighsInt kHighsCallbackIpmInterrupt = 2;
-const HighsInt kHighsCallbackMipImprovingSolution = 3;
-const HighsInt kHighsCallbackMipLogging = 4;
-const HighsInt kHighsCallbackMipInterrupt = 5;
+const HighsInt kHighsCallbackMipSolution = 3;
+const HighsInt kHighsCallbackMipImprovingSolution = 4;
+const HighsInt kHighsCallbackMipLogging = 5;
+const HighsInt kHighsCallbackMipInterrupt = 6;
 
 #ifdef __cplusplus
 extern "C" {
