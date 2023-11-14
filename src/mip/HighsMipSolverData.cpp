@@ -807,6 +807,18 @@ try_again:
       goto try_again;
     }
   }
+
+  // Possible MIP solution callback
+  if (feasible && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->active[kCallbackMipSolution]) {
+      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->data_out.objective_function_value = double(obj);
+      mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
+      const bool interrupt = interruptFromCallbackWithData(kCallbackMipSolution,
+                                                           "Feasible solution");
+      assert(!interrupt);
+  }
+
   if (possibly_store_as_new_incumbent) {
     // Store the solution as incumbent in the original space if there
     // is no solution or if it is feasible
@@ -1033,29 +1045,17 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   //
   // Happens if solobj improves on the upper bound or the MIP solution
   // callback is active
+  const bool possibly_store_as_new_incumbent = solobj < upper_bound;
   const bool get_transformed_solution =
-      solobj < upper_bound || execute_mip_solution_callback;
+       possibly_store_as_new_incumbent || execute_mip_solution_callback;
   // Get the transformed objective and solution if required
-  //
-  // NB #1463 Still neeed to work out whether extra calls to
-  // transformNewIntegerFeasibleSolution over-write anything necessary
-  //
-  //  const double transformed_solobj = get_transformed_solution ?
-  //    transformNewIntegerFeasibleSolution(sol) : 0;
-  if (execute_mip_solution_callback) {
-    mipsolver.callback_->clearHighsCallbackDataOut();
-    mipsolver.callback_->data_out.objective_function_value =
-        mipsolver.solution_objective_;
-    mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
-    const bool interrupt = interruptFromCallbackWithData(kCallbackMipSolution,
-                                                         "Feasible solution");
-    assert(!interrupt);
-  }
+  const double transformed_solobj = get_transformed_solution ?
+    transformNewIntegerFeasibleSolution(sol, possibly_store_as_new_incumbent) : 0;
 
-  if (solobj < upper_bound) {
-    //  #1463 use pre-computed transformed_solobj
-    // solobj = transformed_solobj;
-    solobj = transformNewIntegerFeasibleSolution(sol);
+  if (possibly_store_as_new_incumbent) {
+    // #1463 use pre-computed transformed_solobj
+    solobj = transformed_solobj;
+    //    solobj = transformNewIntegerFeasibleSolution(sol);
 
     if (solobj >= upper_bound) return false;
     upper_bound = solobj;
