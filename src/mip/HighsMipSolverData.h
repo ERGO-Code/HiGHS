@@ -160,7 +160,8 @@ struct HighsMipSolverData {
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit);
   void runSetup();
-  double transformNewIncumbent(const std::vector<double>& sol);
+  double transformNewIntegerFeasibleSolution(const std::vector<double>& sol,
+					     const bool possibly_store_as_new_incumbent = true);
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;

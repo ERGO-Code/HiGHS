@@ -674,8 +674,8 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-double HighsMipSolverData::transformNewIncumbent(
-    const std::vector<double>& sol) {
+double HighsMipSolverData::transformNewIntegerFeasibleSolution(const std::vector<double>& sol,
+							       const bool possibly_store_as_new_incumbent) {
   HighsSolution solution;
   solution.col_value = sol;
   solution.value_valid = true;
@@ -968,7 +968,7 @@ void HighsMipSolverData::performRestart() {
 
     if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
       mipsolver.mipdata_->upper_bound = 0;
-      mipsolver.mipdata_->transformNewIncumbent(std::vector<double>());
+      mipsolver.mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
     } else
       upper_bound -= mipsolver.model_->offset_;
 
@@ -1035,10 +1035,10 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   // Get the transformed objective and solution if required
   //
   // NB #1463 Still neeed to work out whether extra calls to
-  // transformNewIncumbent over-write anything necessary
+  // transformNewIntegerFeasibleSolution over-write anything necessary
   //
   //  const double transformed_solobj = get_transformed_solution ?
-  //    transformNewIncumbent(sol) : 0;
+  //    transformNewIntegerFeasibleSolution(sol) : 0;
   if (execute_mip_solution_callback) {
     mipsolver.callback_->clearHighsCallbackDataOut();
     mipsolver.callback_->data_out.objective_function_value =
@@ -1052,7 +1052,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   if (solobj < upper_bound) {
     //  #1463 use pre-computed transformed_solobj
     // solobj = transformed_solobj;
-    solobj = transformNewIncumbent(sol);
+    solobj = transformNewIntegerFeasibleSolution(sol);
 
     if (solobj >= upper_bound) return false;
     upper_bound = solobj;
