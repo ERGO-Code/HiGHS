@@ -697,11 +697,11 @@ try_again:
   double row_violation_ = 0;
   double integrality_violation_ = 0;
 
-  // obj is the actual objective of the MIP - including the offset,
-  // and independent of objective sense
+  // Compute to quad precision the objective function value of the MIP
+  // being solved - including the offset, and independent of objective
+  // sense
   //
-  // ToDO Give it a more meaningful name!
-  HighsCDouble obj = mipsolver.orig_model_->offset_;
+  HighsCDouble mipsolver_quad_precision_objective_value = mipsolver.orig_model_->offset_;
   if (kAllowDeveloperAssert)
     assert((HighsInt)solution.col_value.size() ==
            mipsolver.orig_model_->num_col_);
@@ -711,7 +711,7 @@ try_again:
   const bool debug_report = false;
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     const double value = solution.col_value[i];
-    obj += mipsolver.orig_model_->col_cost_[i] * value;
+    mipsolver_quad_precision_objective_value += mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
       double intval = std::floor(value + 0.5);
@@ -808,11 +808,14 @@ try_again:
     }
   }
 
+  // Get a double precision version of the objective function value of
+  // the MIP being solved
+  const double mipsolver_objective_value = double(mipsolver_quad_precision_objective_value);
   // Possible MIP solution callback
   if (feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.objective_function_value = double(obj);
+      mipsolver.callback_->data_out.objective_function_value = mipsolver_objective_value;
       mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
       const bool interrupt = interruptFromCallbackWithData(kCallbackMipSolution,
                                                            "Feasible solution");
@@ -824,13 +827,13 @@ try_again:
     // is no solution or if it is feasible
     if (feasible) {
       // if (!allow_try_again)
-      //   printf("repaired solution with value %g\n", double(obj));
+      //   printf("repaired solution with value %g\n", mipsolver_objective_value);
       // store
       mipsolver.row_violation_ = row_violation_;
       mipsolver.bound_violation_ = bound_violation_;
       mipsolver.integrality_violation_ = integrality_violation_;
       mipsolver.solution_ = std::move(solution.col_value);
-      mipsolver.solution_objective_ = double(obj);
+      mipsolver.solution_objective_ = mipsolver_objective_value;
     } else {
       bool currentFeasible =
           mipsolver.solution_objective_ != kHighsInf &&
@@ -870,7 +873,7 @@ try_again:
                    //    printf(
                    "Solution with objective %g has untransformed violations: "
                    "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
-                   double(obj), bound_violation_, check_col_data.c_str(),
+                   mipsolver_objective_value, bound_violation_, check_col_data.c_str(),
                    integrality_violation_, check_int_data.c_str(),
                    row_violation_, check_row_data.c_str());
 
@@ -892,7 +895,7 @@ try_again:
         mipsolver.bound_violation_ = bound_violation_;
         mipsolver.integrality_violation_ = integrality_violation_;
         mipsolver.solution_ = std::move(solution.col_value);
-        mipsolver.solution_objective_ = double(obj);
+        mipsolver.solution_objective_ = mipsolver_objective_value;
       }
 
       // return infinity so that it is not used for bounding
@@ -901,9 +904,9 @@ try_again:
   }
   // return the objective value in the transformed space
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
-    return -double(obj + mipsolver.model_->offset_);
+    return -double(mipsolver_quad_precision_objective_value + mipsolver.model_->offset_);
 
-  return double(obj - mipsolver.model_->offset_);
+  return double(mipsolver_quad_precision_objective_value - mipsolver.model_->offset_);
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
