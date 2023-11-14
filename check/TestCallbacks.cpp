@@ -26,6 +26,11 @@ using std::strlen;
 using std::strncmp;
 using std::strstr;
 
+struct MipData {
+  HighsInt num_col;
+  HighsVarType* integrality;
+};
+
 // Callback that saves message for comparison
 HighsCallbackFunctionType myLogCallback =
     [](int callback_type, const std::string& message,
@@ -36,19 +41,26 @@ HighsCallbackFunctionType userMipSolutionCallback =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
-      printf("MipSolutionCallback with objective = %15.8g and solution [", data_out->objective_function_value);
-      const int num_col = static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data));
-      for (HighsInt iCol = 0; iCol < HighsInt(num_col); iCol++) {
-	double value = data_out->mip_solution[iCol];
-	if (std::abs(value) < 1e-5) {
-	  printf("0");
-	} else if (std::abs(value-1) < 1e-5) {
-	  printf("1");
-	} else {
-	  printf("-");
-	}
+      if (dev_run) {
+        printf("MipSolutionCallback with objective = %15.8g and solution [",
+               data_out->objective_function_value);
+        MipData callback_data = *(static_cast<MipData*>(user_callback_data));
+        HighsInt num_col = callback_data.num_col;
+        HighsVarType* integrality = callback_data.integrality;
+        for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+          if (integrality[iCol] != HighsVarType::kInteger) continue;
+          double value = data_out->mip_solution[iCol];
+          if (std::abs(value) < 1e-5) {
+            printf("0");
+          } else if (std::abs(value - 1) < 1e-5) {
+            printf("1");
+          } else {
+            printf("*");
+          }
+        }
+        printf("]\n");
+        fflush(stdout);
       }
-      printf("]\n");
     };
 
 HighsCallbackFunctionType userInterruptCallback =
@@ -282,9 +294,15 @@ TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.readModel(filename);
-  int user_callback_data = int(highs.getNumCol());
-  void* p_user_callback_data =
-    reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
+  // To print the values of the integer variables in the callback,
+  // need the number of columns and the integrality. Set this up in a
+  // struct to be passed via user_callback_data
+  HighsLp lp = highs.getLp();
+  MipData user_callback_data;
+  user_callback_data.num_col = int(lp.num_col_);
+  user_callback_data.integrality = lp.integrality_.data();
+  void* p_user_callback_data = &user_callback_data;
+
   highs.setCallback(userMipSolutionCallback, p_user_callback_data);
   highs.startCallback(kCallbackMipSolution);
   highs.run();

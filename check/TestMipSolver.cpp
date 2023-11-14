@@ -586,23 +586,24 @@ TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
   lp.offset_ = offset;
   highs.passModel(lp);
   highs.run();
-  const double offset_optimal_objective = highs.getInfo().objective_function_value;
-  REQUIRE(objectiveOk(offset + og_optimal_objective, offset_optimal_objective, dev_run));
-  
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    lp.col_cost_[iCol] *= -1;
+  const double offset_optimal_objective =
+      highs.getInfo().objective_function_value;
+  REQUIRE(objectiveOk(offset + og_optimal_objective, offset_optimal_objective,
+                      dev_run));
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) lp.col_cost_[iCol] *= -1;
   lp.offset_ *= -1;
   lp.sense_ = ObjSense::kMaximize;
   highs.passModel(lp);
   highs.run();
-  const double max_offset_optimal_objective = highs.getInfo().objective_function_value;
-  REQUIRE(objectiveOk(max_offset_optimal_objective, -offset_optimal_objective, dev_run));
-  
+  const double max_offset_optimal_objective =
+      highs.getInfo().objective_function_value;
+  REQUIRE(objectiveOk(max_offset_optimal_objective, -offset_optimal_objective,
+                      dev_run));
 }
 
 bool objectiveOk(const double optimal_objective,
-                 const double require_optimal_objective,
-                 const bool dev_run) {
+                 const double require_optimal_objective, const bool dev_run) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
                  std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;
