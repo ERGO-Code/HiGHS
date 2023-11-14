@@ -812,7 +812,7 @@ try_again:
   // the MIP being solved
   const double mipsolver_objective_value = double(mipsolver_quad_precision_objective_value);
   // Possible MIP solution callback
-  if (feasible && mipsolver.callback_->user_callback &&
+  if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
       mipsolver.callback_->data_out.objective_function_value = mipsolver_objective_value;

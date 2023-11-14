@@ -32,6 +32,25 @@ HighsCallbackFunctionType myLogCallback =
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) { strcpy(printed_log, message.c_str()); };
 
+HighsCallbackFunctionType userMipSolutionCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      printf("MipSolutionCallback with objective = %15.8g and solution [", data_out->objective_function_value);
+      const int num_col = static_cast<int>(reinterpret_cast<intptr_t>(user_callback_data));
+      for (HighsInt iCol = 0; iCol < HighsInt(num_col); iCol++) {
+	double value = data_out->mip_solution[iCol];
+	if (std::abs(value) < 1e-5) {
+	  printf("0");
+	} else if (std::abs(value-1) < 1e-5) {
+	  printf("1");
+	} else {
+	  printf("-");
+	}
+      }
+      printf("]\n");
+    };
+
 HighsCallbackFunctionType userInterruptCallback =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
@@ -254,5 +273,19 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.readModel(filename);
+  int user_callback_data = int(highs.getNumCol());
+  void* p_user_callback_data =
+    reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
+  highs.setCallback(userMipSolutionCallback, p_user_callback_data);
+  highs.startCallback(kCallbackMipSolution);
   highs.run();
 }
