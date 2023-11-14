@@ -104,7 +104,8 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-  // std::cout << options_mip_->presolve << std::endl;
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
   timer_.start(timer_.solve_clock);
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -114,6 +115,11 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve();
+  // Identify whether time limit has been reached (in presolve)
+  if (modelstatus_ == HighsModelStatus::kNotset &&
+      timer_.read(timer_.solve_clock) >= options_mip_->time_limit)
+    modelstatus_ = HighsModelStatus::kTimeLimit;
+
   if (modelstatus_ != HighsModelStatus::kNotset) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "Presolve: %s\n",
@@ -615,6 +621,10 @@ void HighsMipSolver::cleanupSolve() {
 }
 
 void HighsMipSolver::runPresolve() {
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
+  assert(!timer_.running(timer_.solve_clock));
+  timer_.start(timer_.solve_clock);
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve();

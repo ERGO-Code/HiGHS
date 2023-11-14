@@ -55,6 +55,7 @@ set(TEST_SOURCES
     TestRanging.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
+    TestUserScale.cpp
     Avgas.cpp)
 
 if (NOT APPLE)
