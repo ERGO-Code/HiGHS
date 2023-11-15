@@ -827,6 +827,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       changedRowIndices.end());
 
   for (auto& rowColPair : substitutionOpportunities) {
+    // skip deleted elements
+    if (rowColPair.first == -1) continue;
     rowColPair.first = newRowIndex[rowColPair.first];
     rowColPair.second = newColIndex[rowColPair.second];
   }
