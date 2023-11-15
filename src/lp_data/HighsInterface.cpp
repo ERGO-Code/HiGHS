@@ -2009,14 +2009,52 @@ HighsStatus Highs::computeIllConditioning(HighsIllConditioning& ill_conditioning
     abs_list.push_back(std::make_pair(abs_value, iRow));
   }
   std::sort(abs_list.begin(), abs_list.end());
+  HighsInt vec_dim = std::max(incumbent_lp.num_col_, incumbent_lp.num_row_);
+  HighsInt num_nz;
+  std::vector<HighsInt> index(vec_dim);
+  std::vector<double> value(vec_dim);
+  HighsInt* p_index = index.data();
+  double* p_value = value.data();
+  const bool has_row_names = HighsInt(incumbent_lp.row_names_.size()) == incumbent_lp.num_row_;
+  const bool has_col_names = HighsInt(incumbent_lp.col_names_.size()) == incumbent_lp.num_col_;
+  const double value_zero = 1e-8;
+  const std::string zero = "0";
+  const std::string empty = "";
+  const std::string plus = "+";
+  auto valueToString = [&](const double value) {
+    if (std::abs(value) < value_zero) {
+      return zero;
+    } else if (std::abs(value-1) < value_zero) {
+      return empty;
+    } else if (std::abs(value+1) < value_zero) {
+      return plus;
+    } else if (value < 0) {
+      return std::to_string(value);
+    } else {
+      return "-" + std::to_string(value);
+    }
+  };
+      
   for (HighsInt iX = int(abs_list.size())-1; iX >=0; iX--) {
     HighsInt iRow = abs_list[iX].second;
     HighsIllConditioningRecord record;
     record.index = iRow;
     record.multiplier = solution.col_value[iRow];
     ill_conditioning.record.push_back(record);
-    printf("y[%2d] = %15.8g\n", int(iRow), solution.col_value[iRow]);
-    
+    if (constraint) {
+      // Extract the row corresponding to this constraint
+      
+      incumbent_matrix.getRow(iRow, num_nz, p_index, p_value);
+      std::string row_name = has_row_names ? " (" + incumbent_lp.row_names_[iRow] + ")" : "";
+      printf("Row %d%s: ", int(iRow), row_name.c_str());
+      for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
+	HighsInt iCol = index[iEl];
+	std::string value_string = valueToString(value[iEl]);
+	std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol] : "Col" + std::to_string(iCol);
+	printf("%s%s", value_string.c_str(), col_name.c_str())
+      }
+      printf("y[%2d] = %15.8g\n", int(iRow), solution.col_value[iRow]);
+    }
   }
 
   
