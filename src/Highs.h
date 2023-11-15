@@ -486,7 +486,7 @@ class Highs {
    * @brief Get the ill-conditioning information for the current basis
    */
   HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
-				 const bool constraint = true);
+                                 const bool constraint = true);
 
   /**
    * @brief Get the current model objective value
@@ -1465,6 +1465,6 @@ class Highs {
   void restoreInfCost(HighsStatus& return_status);
   HighsStatus optionChangeAction();
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
-				     const bool constraint);
+                                     const bool constraint);
 };
 #endif

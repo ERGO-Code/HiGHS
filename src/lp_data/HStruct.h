@@ -141,5 +141,4 @@ struct HighsIllConditioning {
   void clear();
 };
 
-  
 #endif /* LP_DATA_HSTRUCT_H_ */
