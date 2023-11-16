@@ -587,3 +587,24 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
 }
+
+TEST_CASE("LP-row-wise", "[highs_data]") {
+  Highs highs;
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {80, 120};
+  highs.passModel(lp);
+  highs.run();
+
+}
+
