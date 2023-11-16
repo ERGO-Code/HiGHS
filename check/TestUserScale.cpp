@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 void checkModelScaling(const HighsInt user_bound_scale,
@@ -34,9 +34,6 @@ TEST_CASE("user-cost-scale-after-run", "[highs_user_scale]") {
   double max_primal_infeasibility = info.max_primal_infeasibility;
   double max_dual_infeasibility = info.max_dual_infeasibility;
   double sum_dual_infeasibilities = info.sum_dual_infeasibilities;
-  printf("Max primal infeasibility = %g\n", max_primal_infeasibility);
-  printf("Max dual infeasibility = %g\n", max_dual_infeasibility);
-  printf("Sum dual infeasibility = %g\n", sum_dual_infeasibilities);
   double objective_function_value = info.objective_function_value;
 
   HighsInt user_bound_scale = 10;
@@ -96,7 +93,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   Highs highs;
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", kHighsOffString);
   HighsLp lp;
   lp.num_col_ = 2;
@@ -118,7 +115,7 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
   highs.setOptionValue("user_cost_scale", -30);
   highs.clearSolver();
   highs.run();
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
   REQUIRE(solution.col_value[0] == 0);
   REQUIRE(solution.col_value[1] == 0);
 
