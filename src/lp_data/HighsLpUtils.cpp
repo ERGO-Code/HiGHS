@@ -43,45 +43,29 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
-  // If the LP has no columns there is nothing left to test
-  if (lp.num_col_ == 0) {
-    HighsInt lp_num_nz = lp.a_matrix_.numNz();
-    if (lp_num_nz) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-		   "LP with no calumns cannot have a matrix with %d nonzeros\n",
-		   int(lp_num_nz));
-      return HighsStatus::kError;
-    }
-    return HighsStatus::kOk;
+  if (lp.num_col_) {
+    // Assess the LP column costs
+    HighsIndexCollection index_collection;
+    index_collection.dimension_ = lp.num_col_;
+    index_collection.is_interval_ = true;
+    index_collection.from_ = 0;
+    index_collection.to_ = lp.num_col_ - 1;
+    call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
+			      lp.has_infinite_cost_, options.infinite_cost);
+    return_status = interpretCallStatus(options.log_options, call_status,
+					return_status, "assessCosts");
+    if (return_status == HighsStatus::kError) return return_status;
+    // Assess the LP column bounds
+    call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
+			       lp.col_upper_, options.infinite_bound,
+			       lp.integrality_.data());
+    return_status = interpretCallStatus(options.log_options, call_status,
+					return_status, "assessBounds");
+    if (return_status == HighsStatus::kError) return return_status;
   }
-  if (!lp.a_matrix_.isColwise()) {
-    printf("!! Assessing rowwise LP !!\n");
-  }
-
-  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
-  // exists (as the number of nonzeros)
-  assert(lp.num_col_ > 0);
-
-  // Assess the LP column costs
-  HighsIndexCollection index_collection;
-  index_collection.dimension_ = lp.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = 0;
-  index_collection.to_ = lp.num_col_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
-                            lp.has_infinite_cost_, options.infinite_cost);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessCosts");
-  if (return_status == HighsStatus::kError) return return_status;
-  // Assess the LP column bounds
-  call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
-                             lp.col_upper_, options.infinite_bound,
-                             lp.integrality_.data());
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessBounds");
-  if (return_status == HighsStatus::kError) return return_status;
   if (lp.num_row_) {
     // Assess the LP row bounds
+    HighsIndexCollection index_collection;
     index_collection.dimension_ = lp.num_row_;
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
@@ -93,6 +77,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  // If the LP has no columns the matrix must be empty and there is
+  // nothing left to test
+  if (lp.num_col_ == 0) {
+    assert(!lp.a_matrix_.numNz());
+    return HighsStatus::kOk;
+  }
+  if (!lp.a_matrix_.isColwise()) {
+    printf("!! Assessing rowwise LP !!\n");
+  }
+
+  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
+  // exists (as the number of nonzeros)
+  assert(lp.num_col_ > 0);
+
   // Assess the LP matrix - even if there are no rows!
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,

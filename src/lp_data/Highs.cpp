@@ -318,6 +318,8 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "Model has either no columns or no rows, so ignoring user constraint matrix data and initialising empty matrix\n");
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
     lp.a_matrix_.index_.clear();
@@ -339,8 +341,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
+  
   if (!lp.a_matrix_.isColwise()) {
     printf("!! Passing rowwise LP !!\n");
+    lp.ensureColwise();
   }
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(

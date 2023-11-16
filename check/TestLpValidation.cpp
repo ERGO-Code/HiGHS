@@ -596,7 +596,8 @@ TEST_CASE("LP-empty-start-error", "[highs_data]") {
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {1};
   lp.a_matrix_.start_ = {1};
-  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
 }
 
 TEST_CASE("LP-row-wise", "[highs_data]") {
