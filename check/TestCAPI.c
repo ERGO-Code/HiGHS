@@ -1426,7 +1426,7 @@ void test_setSolution() {
 }
 */
 int main() {
-  //  minimal_api_illegal_lp();
+  minimal_api_illegal_lp();
   test_callback();
   version_api();
   full_api();

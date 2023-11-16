@@ -319,7 +319,8 @@ HighsStatus Highs::passModel(HighsModel model) {
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "Model has either no columns or no rows, so ignoring user constraint matrix data and initialising empty matrix\n");
+                 "Model has either no columns or no rows, so ignoring user "
+                 "constraint matrix data and initialising empty matrix\n");
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
     lp.a_matrix_.index_.clear();
@@ -340,24 +341,18 @@ HighsStatus Highs::passModel(HighsModel model) {
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
-  // Ensure that the LP is column-wise
-  
-  if (!lp.a_matrix_.isColwise()) {
-    printf("!! Passing rowwise LP !!\n");
-    lp.ensureColwise();
-  }
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Now legality of matrix is established, ensure that it is
+  // column-wise
+  lp.ensureColwise();
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  // Now legality of matrix is established, ensure that it is
-  // column-wise
-  lp.ensureColwise();
   if (hessian.dim_) {
     // Clear any zero Hessian
     if (hessian.numNz() == 0) {
