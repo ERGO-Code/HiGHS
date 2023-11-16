@@ -588,6 +588,17 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   REQUIRE(delta_objective_value < 1e-8);
 }
 
+TEST_CASE("LP-empty-start-error", "[highs_data]") {
+  Highs highs;
+  HighsLp lp;
+  lp.num_col_ = 0;
+  lp.num_row_ = 1;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+}
+
 TEST_CASE("LP-row-wise", "[highs_data]") {
   Highs highs;
   HighsLp lp;

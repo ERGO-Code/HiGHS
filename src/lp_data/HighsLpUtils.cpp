@@ -44,8 +44,19 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the LP has no columns there is nothing left to test
-  if (lp.num_col_ == 0) return HighsStatus::kOk;
-  assert(lp.a_matrix_.isColwise());
+  if (lp.num_col_ == 0) {
+    HighsInt lp_num_nz = lp.a_matrix_.numNz();
+    if (lp_num_nz) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "LP with no calumns cannot have a matrix with %d nonzeros\n",
+		   int(lp_num_nz));
+      return HighsStatus::kError;
+    }
+    return HighsStatus::kOk;
+  }
+  if (!lp.a_matrix_.isColwise()) {
+    printf("!! Assessing rowwise LP !!\n");
+  }
 
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
   // exists (as the number of nonzeros)

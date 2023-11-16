@@ -339,7 +339,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  lp.ensureColwise();
+  if (!lp.a_matrix_.isColwise()) {
+    printf("!! Passing rowwise LP !!\n");
+  }
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
@@ -349,6 +351,9 @@ HighsStatus Highs::passModel(HighsModel model) {
                                       assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
+  // Now legality of matrix is established, ensure that it is
+  // column-wise
+  lp.ensureColwise();
   if (hessian.dim_) {
     // Clear any zero Hessian
     if (hessian.numNz() == 0) {
