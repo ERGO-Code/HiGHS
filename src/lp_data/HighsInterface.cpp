@@ -1919,7 +1919,7 @@ HighsStatus Highs::computeIllConditioning(
     formIllConditioningLp1(ill_conditioning_lp, basic_var, constraint);
   }
 
-  if (dev_conditioning) conditioning.writeModel("");
+  //  if (dev_conditioning) conditioning.writeModel("");
   assert(assessLp(ill_conditioning_lp, this->options_) == HighsStatus::kOk);
   // Solve the ill-conditioning analysis LP
   HighsStatus return_status = conditioning.run();
@@ -2000,7 +2000,9 @@ HighsStatus Highs::computeIllConditioning(
       std::string row_name = has_row_names ? incumbent_lp.row_names_[iRow]
                                            : "R" + std::to_string(iRow);
       ss << "(Mu=" << multiplier << ")" << row_name << ": ";
-      if (incumbent_lp.row_lower_[iRow] > -kHighsInf)
+      const double lower = incumbent_lp.row_lower_[iRow];
+      const double upper = incumbent_lp.row_upper_[iRow];
+      if (lower > -kHighsInf && lower != upper)
         ss << incumbent_lp.row_lower_[iRow] << " <= ";
       for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
         HighsInt iCol = index[iEl];
@@ -2008,9 +2010,21 @@ HighsStatus Highs::computeIllConditioning(
         std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
                                              : "C" + std::to_string(iCol);
         ss << col_name << " ";
+        HighsInt length_ss = ss.str().length();
+        if (length_ss > 72) {
+          highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                       ss.str().c_str());
+          ss.str(std::string());
+          ss << "  ";
+        }
       }
-      if (incumbent_lp.row_upper_[iRow] < kHighsInf)
-        ss << " <= " << incumbent_lp.row_upper_[iRow];
+      if (upper < kHighsInf) {
+        if (lower == upper) {
+          ss << "= " << upper;
+        } else {
+          ss << "<= " << upper;
+        }
+      }
       highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
                    ss.str().c_str());
     }
@@ -2031,6 +2045,13 @@ HighsStatus Highs::computeIllConditioning(
           std::string row_name = has_row_names ? incumbent_lp.row_names_[iRow]
                                                : "R" + std::to_string(iRow);
           ss << row_name;
+          HighsInt length_ss = ss.str().length();
+          if (length_ss > 72) {
+            highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                         ss.str().c_str());
+            ss.str(std::string());
+            ss << "  ";
+          }
         }
       } else {
         HighsInt iRow = iCol - incumbent_lp.num_col_;
