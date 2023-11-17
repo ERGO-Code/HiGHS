@@ -33,6 +33,7 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
   }
+  highs.getIllConditioning(ill_conditioning, false);
 }
 
 TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
@@ -62,6 +63,7 @@ TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
   }
+  highs.getIllConditioning(ill_conditioning, false);
 }
 
 TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
@@ -124,4 +126,5 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   }
   HighsIllConditioning ill_conditioning;
   highs.getIllConditioning(ill_conditioning);
+  highs.getIllConditioning(ill_conditioning, false);
 }

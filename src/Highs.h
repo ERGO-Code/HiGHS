@@ -1466,5 +1466,8 @@ class Highs {
   HighsStatus optionChangeAction();
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint);
+  void formIllConditioningLp0(HighsLp& ill_conditioning_lp,
+			      std::vector<HighsInt>& basic_var,
+			      const bool constraint);
 };
 #endif
