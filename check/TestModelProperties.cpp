@@ -26,14 +26,15 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
   highs.writeSolution("", 1);
   HighsIllConditioning ill_conditioning;
 
-  highs.getIllConditioning(ill_conditioning);
+  const bool constraint = true;
+  highs.getIllConditioning(ill_conditioning, constraint);
   REQUIRE(ill_conditioning.record.size() == 2);
   // Both multipliers should be large
   for (HighsInt iX = 0; iX < 2; iX++) {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
   }
-  highs.getIllConditioning(ill_conditioning, false);
+  highs.getIllConditioning(ill_conditioning, !constraint);
 }
 
 TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
@@ -56,14 +57,15 @@ TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
   highs.run();
   highs.writeSolution("", 1);
   HighsIllConditioning ill_conditioning;
-  highs.getIllConditioning(ill_conditioning);
+  const bool constraint = true;
+  highs.getIllConditioning(ill_conditioning, constraint);
   REQUIRE(ill_conditioning.record.size() == 3);
   // First two multipliers should be the large ones
   for (HighsInt iX = 0; iX < 2; iX++) {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
   }
-  highs.getIllConditioning(ill_conditioning, false);
+  highs.getIllConditioning(ill_conditioning, !constraint);
 }
 
 TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
@@ -125,6 +127,7 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
     }
   }
   HighsIllConditioning ill_conditioning;
-  highs.getIllConditioning(ill_conditioning);
-  highs.getIllConditioning(ill_conditioning, false);
+  const bool constraint = true;
+  highs.getIllConditioning(ill_conditioning, constraint);
+  highs.getIllConditioning(ill_conditioning, !constraint);
 }

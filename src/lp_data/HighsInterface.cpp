@@ -1902,7 +1902,8 @@ HighsStatus Highs::optionChangeAction() {
 void HighsIllConditioning::clear() { this->record.clear(); }
 
 HighsStatus Highs::computeIllConditioning(
-    HighsIllConditioning& ill_conditioning, const bool constraint) {
+    HighsIllConditioning& ill_conditioning, const bool constraint,
+    const HighsInt method) {
   const double kZeroMultiplier = 1e-6;
   ill_conditioning.clear();
   HighsLp& incumbent_lp = this->model_.lp_;
@@ -1911,7 +1912,12 @@ HighsStatus Highs::computeIllConditioning(
   conditioning.setOptionValue("output_flag", dev_conditioning);
   std::vector<HighsInt> basic_var;
   HighsLp& ill_conditioning_lp = conditioning.model_.lp_;
-  formIllConditioningLp0(ill_conditioning_lp, basic_var, constraint);
+  // Form the ill-conditioning LP according to method
+  if (method == 0) {
+    formIllConditioningLp0(ill_conditioning_lp, basic_var, constraint);
+  } else {
+    formIllConditioningLp1(ill_conditioning_lp, basic_var, constraint);
+  }
 
   if (dev_conditioning) conditioning.writeModel("");
   assert(assessLp(ill_conditioning_lp, this->options_) == HighsStatus::kOk);
@@ -1919,7 +1925,9 @@ HighsStatus Highs::computeIllConditioning(
   HighsStatus return_status = conditioning.run();
   const std::string type = constraint ? "Constraint" : "Column";
   if (return_status != HighsStatus::kOk) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo,"\n%s view ill-conditioning analysis has failed\n", type.c_str());
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "\n%s view ill-conditioning analysis has failed\n",
+                 type.c_str());
     return HighsStatus::kError;
   }
   // Extract and normalise the multipliers
@@ -1930,7 +1938,8 @@ HighsStatus Highs::computeIllConditioning(
   assert(multiplier_norm > 0);
   double ill_conditioning_measure =
       conditioning.getInfo().objective_function_value / multiplier_norm;
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo,
       "\n%s view ill-conditioning analysis: 1-norm distance of basis matrix "
       "from singularity is estimated to be %g\n",
       type.c_str(), ill_conditioning_measure);
@@ -1998,11 +2007,12 @@ HighsStatus Highs::computeIllConditioning(
         printCoefficient(value[iEl], iEl == 0);
         std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
                                              : "C" + std::to_string(iCol);
-	ss << col_name << " ";
+        ss << col_name << " ";
       }
       if (incumbent_lp.row_upper_[iRow] < kHighsInf)
         ss << " <= " << incumbent_lp.row_upper_[iRow];
-      highsLogUser(options_.log_options, HighsLogType::kInfo,"%s\n", ss.str().c_str());
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
     }
   } else {
     for (HighsInt iX = 0; iX < HighsInt(ill_conditioning.record.size()); iX++) {
@@ -2029,15 +2039,16 @@ HighsStatus Highs::computeIllConditioning(
                                    : "Slack_R" + std::to_string(iRow);
         ss << "(Mu=" << multiplier << ")" << col_name << ": ";
       }
-      highsLogUser(options_.log_options, HighsLogType::kInfo,"%s\n", ss.str().c_str());
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                   ss.str().c_str());
     }
   }
   return HighsStatus::kOk;
 }
 
 void Highs::formIllConditioningLp0(HighsLp& ill_conditioning_lp,
-				   std::vector<HighsInt>& basic_var,
-				   const bool constraint) {
+                                   std::vector<HighsInt>& basic_var,
+                                   const bool constraint) {
   HighsLp& incumbent_lp = this->model_.lp_;
   // Conditioning LP minimizes the infeasibilities of
   //
@@ -2135,6 +2146,161 @@ void Highs::formIllConditioningLp0(HighsLp& ill_conditioning_lp,
         HighsInt(ill_conditioning_matrix.index_.size()));
   }
   ill_conditioning_lp.num_col_ = 3 * incumbent_lp.num_row_;
+  ill_conditioning_matrix.num_col_ = ill_conditioning_lp.num_col_;
+  ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
+}
+
+void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
+                                   std::vector<HighsInt>& basic_var,
+                                   const bool constraint) {
+  HighsLp& incumbent_lp = this->model_.lp_;
+  //
+  // For constraint view, conditioning LP minimizes the
+  // infeasibilities of
+  //
+  // [B^T]y                   = 0
+  //      y - y^+  +     y^-  = 0
+  //      e^T(y^+) + e^T(y^-) = 1
+  //
+  // y free; y^+ >= 0, y^->=0
+  //
+  // Column view uses B rather than B^T
+  //
+  for (HighsInt iRow = 0; iRow < 2 * incumbent_lp.num_row_; iRow++) {
+    ill_conditioning_lp.row_lower_.push_back(0);
+    ill_conditioning_lp.row_upper_.push_back(0);
+  }
+  HighsSparseMatrix& incumbent_matrix = incumbent_lp.a_matrix_;
+  incumbent_matrix.ensureColwise();
+  HighsSparseMatrix& ill_conditioning_matrix = ill_conditioning_lp.a_matrix_;
+  // Form the basis matrix and
+  //
+  // * For constraint view, add the identity matrix, and transpose the
+  // * resulting matrix
+  //
+  // * For column view, add an identity matrix column below each column
+  //
+  ill_conditioning_lp.num_col_ = 0;
+  for (HighsInt iCol = 0; iCol < incumbent_lp.num_col_; iCol++) {
+    if (this->basis_.col_status[iCol] != HighsBasisStatus::kBasic) continue;
+    // Basic column goes into conditioning LP, possibly with identity
+    // matrix column for constraint y - y^+ + y^- = 0
+    basic_var.push_back(iCol);
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    for (HighsInt iEl = incumbent_matrix.start_[iCol];
+         iEl < incumbent_matrix.start_[iCol + 1]; iEl++) {
+      ill_conditioning_matrix.index_.push_back(incumbent_matrix.index_[iEl]);
+      ill_conditioning_matrix.value_.push_back(incumbent_matrix.value_[iEl]);
+    }
+    if (!constraint) {
+      ill_conditioning_matrix.index_.push_back(incumbent_lp.num_row_ +
+                                               ill_conditioning_lp.num_col_);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    if (this->basis_.row_status[iRow] != HighsBasisStatus::kBasic) continue;
+    // Basic slack goes into conditioning LP
+    basic_var.push_back(incumbent_lp.num_col_ + iRow);
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    if (!constraint) {
+      ill_conditioning_matrix.index_.push_back(incumbent_lp.num_row_ +
+                                               ill_conditioning_lp.num_col_);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  assert(ill_conditioning_lp.num_col_ == incumbent_lp.num_row_);
+  if (constraint) {
+    // Add the identiy matrix, and transpose the resulting matrix
+    for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+      ill_conditioning_matrix.index_.push_back(iRow);
+      ill_conditioning_matrix.value_.push_back(1.0);
+      ill_conditioning_matrix.start_.push_back(
+          HighsInt(ill_conditioning_matrix.index_.size()));
+    }
+    ill_conditioning_matrix.num_row_ = incumbent_lp.num_row_;
+    ill_conditioning_matrix.num_col_ = 2 * incumbent_lp.num_row_;
+    ill_conditioning_matrix.ensureRowwise();
+    ill_conditioning_matrix.format_ = MatrixFormat::kColwise;
+  }
+
+  assert(ill_conditioning_lp.num_col_ == incumbent_lp.num_row_);
+  ill_conditioning_lp.num_row_ = 2 * incumbent_lp.num_row_;
+
+  // Now add the variables to measure the norm of y
+  const HighsInt ill_conditioning_matrix_e_row = ill_conditioning_lp.num_row_;
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    // Adding y_+ with cost 0
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to y - y^+ + y^- = 0
+    ill_conditioning_matrix.index_.push_back(incumbent_lp.num_row_ + iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    // Contribution to e^T(y^+) + e^T(y^-) = 1
+    ill_conditioning_matrix.index_.push_back(ill_conditioning_matrix_e_row);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+    // Subracting y_- with cost 0
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to y - y^+ + y^- = 0
+    ill_conditioning_matrix.index_.push_back(incumbent_lp.num_row_ + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    // Contribution to e^T(y^+) + e^T(y^-) = 1
+    ill_conditioning_matrix.index_.push_back(ill_conditioning_matrix_e_row);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  ill_conditioning_lp.row_lower_.push_back(1);
+  ill_conditioning_lp.row_upper_.push_back(1);
+  ill_conditioning_lp.num_row_++;
+  assert(HighsInt(ill_conditioning_lp.row_lower_.size()) ==
+         ill_conditioning_lp.num_row_);
+  assert(HighsInt(ill_conditioning_lp.row_upper_.size()) ==
+         ill_conditioning_lp.num_row_);
+
+  // Now add the variables to measure the infeasibilities
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    // Adding x_+ with cost 1
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+    // Subracting x_- with cost 1
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  assert(ill_conditioning_lp.num_col_ == 5 * incumbent_lp.num_row_);
+  assert(ill_conditioning_lp.num_row_ == 2 * incumbent_lp.num_row_ + 1);
   ill_conditioning_matrix.num_col_ = ill_conditioning_lp.num_col_;
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
