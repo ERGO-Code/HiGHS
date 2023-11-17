@@ -1934,7 +1934,7 @@ HighsStatus Highs::computeIllConditioning(
   HighsSolution& solution = conditioning.solution_;
   double multiplier_norm = 0;
   for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++)
-    multiplier_norm += std::abs(solution.col_value[iRow]);
+    multiplier_norm += std::fabs(solution.col_value[iRow]);
   assert(multiplier_norm > 0);
   double ill_conditioning_measure =
       conditioning.getInfo().objective_function_value / multiplier_norm;
@@ -1946,7 +1946,7 @@ HighsStatus Highs::computeIllConditioning(
   std::vector<std::pair<double, HighsInt>> abs_list;
   for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
     double abs_multiplier =
-        std::abs(solution.col_value[iRow]) / multiplier_norm;
+        std::fabs(solution.col_value[iRow]) / multiplier_norm;
     if (abs_multiplier <= kZeroMultiplier) continue;
     abs_list.push_back(std::make_pair(abs_multiplier, iRow));
   }
@@ -1959,12 +1959,12 @@ HighsStatus Highs::computeIllConditioning(
       HighsInt(incumbent_lp.col_names_.size()) == incumbent_lp.num_col_;
   const double coefficient_zero_tolerance = 1e-8;
   auto printCoefficient = [&](const double multiplier, const bool first) {
-    if (std::abs(multiplier) < coefficient_zero_tolerance) {
+    if (std::fabs(multiplier) < coefficient_zero_tolerance) {
       ss << "+ 0";
-    } else if (std::abs(multiplier - 1) < coefficient_zero_tolerance) {
+    } else if (std::fabs(multiplier - 1) < coefficient_zero_tolerance) {
       std::string str = first ? "" : "+ ";
       ss << str;
-    } else if (std::abs(multiplier + 1) < coefficient_zero_tolerance) {
+    } else if (std::fabs(multiplier + 1) < coefficient_zero_tolerance) {
       std::string str = first ? "-" : "- ";
       ss << str;
     } else if (multiplier < 0) {
