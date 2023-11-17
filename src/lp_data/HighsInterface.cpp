@@ -1905,7 +1905,7 @@ HighsStatus Highs::computeIllConditioning(
   ill_conditioning.clear();
   HighsLp& incumbent_lp = this->model_.lp_;
   Highs conditioning;
-  const bool dev_conditioning = true;
+  const bool dev_conditioning = false;
   conditioning.setOptionValue("output_flag", dev_conditioning);
   HighsLp& conditioning_lp = conditioning.model_.lp_;
   // Conditioning LP minimizes the infeasibilities of
@@ -2010,40 +2010,46 @@ HighsStatus Highs::computeIllConditioning(
 
   if (dev_conditioning) conditioning.writeModel("");
   assert(assessLp(conditioning_lp, this->options_) == HighsStatus::kOk);
+  // Solve the ill-conditioning analysis LP
   HighsStatus return_status = conditioning.run();
   const std::string type = constraint ? "Constraint" : "Column";
   if (return_status != HighsStatus::kOk) {
     printf("\n%s view ill-conditioning analysis has failed\n", type.c_str());
     return HighsStatus::kError;
   }
-  printf(
-      "\n%s view ill-conditioning analysis: basis matrix is a 1-norm distance "
-      "%g from singularity\n",
-      type.c_str(), conditioning.getInfo().objective_function_value);
+  // Extract and normalise the multipliers
   HighsSolution& solution = conditioning.solution_;
+  double multiplier_norm = 0;
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++)
+    multiplier_norm += std::abs(solution.col_value[iRow]);
+  assert(multiplier_norm>0);
+  double conditioning_measure = conditioning.getInfo().objective_function_value / multiplier_norm;
+  printf(
+      "\n%s view ill-conditioning analysis: 1-norm distance of basis matrix from singularity is estimated to be %g\n",
+      type.c_str(), conditioning_measure);
   std::vector<std::pair<double, HighsInt>> abs_list;
   for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
-    double abs_value = std::abs(solution.col_value[iRow]);
-    if (abs_value <= kZeroMultiplier) continue;
-    abs_list.push_back(std::make_pair(abs_value, iRow));
+    double abs_multiplier = std::abs(solution.col_value[iRow]) / multiplier_norm;
+    if (abs_multiplier <= kZeroMultiplier) continue;
+    abs_list.push_back(std::make_pair(abs_multiplier, iRow));
   }
   std::sort(abs_list.begin(), abs_list.end());
   const bool has_row_names =
       HighsInt(incumbent_lp.row_names_.size()) == incumbent_lp.num_row_;
   const bool has_col_names =
       HighsInt(incumbent_lp.col_names_.size()) == incumbent_lp.num_col_;
-  const double value_zero = 1e-8;
-  auto printValue = [&](const double value, const bool first) {
-    if (std::abs(value) < value_zero) {
+  const double coefficient_zero_tolerance = 1e-8;
+  auto printCoefficient = [&](const double multiplier, const bool first) {
+    if (std::abs(multiplier) < coefficient_zero_tolerance) {
       printf("+ 0");
-    } else if (std::abs(value - 1) < value_zero) {
+    } else if (std::abs(multiplier - 1) < coefficient_zero_tolerance) {
       printf("%s", first ? "" : "+ ");
-    } else if (std::abs(value + 1) < value_zero) {
+    } else if (std::abs(multiplier + 1) < coefficient_zero_tolerance) {
       printf("%s", first ? "-" : "- ");
-    } else if (value < 0) {
-      printf("%s%g ", first ? "-" : "- ", -value);
+    } else if (multiplier < 0) {
+      printf("%s%g ", first ? "-" : "- ", -multiplier);
     } else {
-      printf("%s%g ", first ? "" : "+ ", value);
+      printf("%s%g ", first ? "" : "+ ", multiplier);
     }
   };
 
@@ -2051,7 +2057,7 @@ HighsStatus Highs::computeIllConditioning(
     HighsInt iRow = abs_list[iX].second;
     HighsIllConditioningRecord record;
     record.index = iRow;
-    record.multiplier = solution.col_value[iRow];
+    record.multiplier = solution.col_value[iRow] / multiplier_norm;
     ill_conditioning.record.push_back(record);
   }
   if (constraint) {
@@ -2073,7 +2079,7 @@ HighsStatus Highs::computeIllConditioning(
         printf("%g <= ", incumbent_lp.row_lower_[iRow]);
       for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
         HighsInt iCol = index[iEl];
-        printValue(value[iEl], iEl == 0);
+        printCoefficient(value[iEl], iEl == 0);
         std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
                                              : "C" + std::to_string(iCol);
         printf("%s ", col_name.c_str());
@@ -2094,7 +2100,7 @@ HighsStatus Highs::computeIllConditioning(
              iEl < incumbent_matrix.start_[iCol + 1]; iEl++) {
           if (iEl > incumbent_matrix.start_[iCol]) printf(" | ");
           HighsInt iRow = incumbent_matrix.index_[iEl];
-          printValue(incumbent_matrix.value_[iEl], true);
+          printCoefficient(incumbent_matrix.value_[iEl], true);
           std::string row_name = has_row_names ? incumbent_lp.row_names_[iRow]
                                                : "R" + std::to_string(iRow);
           printf("%s", row_name.c_str());

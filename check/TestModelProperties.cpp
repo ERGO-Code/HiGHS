@@ -28,6 +28,7 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
 
   highs.getIllConditioning(ill_conditioning);
   REQUIRE(ill_conditioning.record.size() == 2);
+  // Both multipliers should be large
   for (HighsInt iX = 0; iX < 2; iX++) {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
@@ -55,7 +56,8 @@ TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
   highs.writeSolution("", 1);
   HighsIllConditioning ill_conditioning;
   highs.getIllConditioning(ill_conditioning);
-  REQUIRE(ill_conditioning.record.size() == 2);
+  REQUIRE(ill_conditioning.record.size() == 3);
+  // First two multipliers should be the large ones
   for (HighsInt iX = 0; iX < 2; iX++) {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) > 0.45);
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
@@ -75,24 +77,31 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   highs.run();
   const HighsBasis& highs_basis = highs.getBasis();
   lp.a_matrix_.getRow(0, num_nz, index.data(), value.data());
-  for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
-    HighsInt iCol = index[iEl];
-    printf("%s: %d %19.12g (%s)\n",
-	   lp.col_names_[iCol].c_str(), int(iCol), value[iEl],
-	   highs.basisStatusToString(highs_basis.col_status[iCol]).c_str());
+  if (dev_run) {
+    for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
+      HighsInt iCol = index[iEl];
+      printf("%s: %d %19.12g (%s)\n",
+	     lp.col_names_[iCol].c_str(), int(iCol), value[iEl],
+	     highs.basisStatusToString(highs_basis.col_status[iCol]).c_str());
+    }
   }
-  value[0] += 1e-10;
+  value[0] += 1e-4;
 
-  for (HighsInt iEl = 0; iEl < num_nz; iEl++) value[iEl] *= -1;
+  const bool negate_bad_row = false;
+  if (negate_bad_row)
+    for (HighsInt iEl = 0; iEl < num_nz; iEl++) value[iEl] *= -1;
 
   highs.addRow(0, 0, num_nz, index.data(), value.data());
   HighsInt bad_row = lp.num_row_-1;
   highs.passRowName(bad_row, "R09bad");
+  // Find a nonbasic row to replace bad row in the basis
   HighsInt nonbasic_row = -1;
   for (HighsInt iRow = 1; iRow < lp.num_row_; iRow++) {
-    printf("Row %d (%s) has status %s\n",
-	   int(iRow), lp.row_names_[iRow].c_str(), 
-	   highs.basisStatusToString(highs_basis.row_status[iRow]).c_str());
+    if (dev_run) {
+      printf("Row %d (%s) has status %s\n",
+	     int(iRow), lp.row_names_[iRow].c_str(), 
+	     highs.basisStatusToString(highs_basis.row_status[iRow]).c_str());
+    }
     if (highs_basis.row_status[iRow] != HighsBasisStatus::kBasic) {
       nonbasic_row = iRow;
       break;
@@ -107,10 +116,12 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   basis.row_status[bad_row] = HighsBasisStatus::kLower;
   basis.row_status[nonbasic_row] = HighsBasisStatus::kBasic;
   highs.setBasis(basis);
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    printf("Row %d (%s) has status %s\n",
-	   int(iRow), lp.row_names_[iRow].c_str(), 
-	   highs.basisStatusToString(highs_basis.row_status[iRow]).c_str());
+  if (dev_run) {
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      printf("Row %d (%s) has status %s\n",
+	     int(iRow), lp.row_names_[iRow].c_str(), 
+	     highs.basisStatusToString(highs_basis.row_status[iRow]).c_str());
+    }
   }
   HighsIllConditioning ill_conditioning;
   highs.getIllConditioning(ill_conditioning);
