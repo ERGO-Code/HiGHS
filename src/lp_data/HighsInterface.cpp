@@ -1905,7 +1905,8 @@ HighsStatus Highs::computeIllConditioning(
   ill_conditioning.clear();
   HighsLp& incumbent_lp = this->model_.lp_;
   Highs conditioning;
-  conditioning.setOptionValue("output_flag", false);
+  const bool dev_conditioning = true;
+  conditioning.setOptionValue("output_flag", dev_conditioning);
   HighsLp& conditioning_lp = conditioning.model_.lp_;
   // Conditioning LP minimizes the infeasibilities of
   //
@@ -2007,6 +2008,7 @@ HighsStatus Highs::computeIllConditioning(
   conditioning_matrix.num_col_ = conditioning_lp.num_col_;
   conditioning_matrix.num_row_ = conditioning_lp.num_row_;
 
+  if (dev_conditioning) conditioning.writeModel("");
   assert(assessLp(conditioning_lp, this->options_) == HighsStatus::kOk);
   HighsStatus return_status = conditioning.run();
   const std::string type = constraint ? "Constraint" : "Column";

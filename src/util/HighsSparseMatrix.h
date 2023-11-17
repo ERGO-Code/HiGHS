@@ -59,9 +59,9 @@ class HighsSparseMatrix {
   void addRows(const HighsSparseMatrix new_rows,
                const int8_t* in_partition = NULL);
   void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
-              double* value);
+              double* value) const;
   void getCol(const HighsInt iCol, HighsInt& num_nz, HighsInt* index,
-              double* value);
+              double* value) const;
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   HighsStatus assessDimensions(const HighsLogOptions& log_options,
