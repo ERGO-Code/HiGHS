@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
@@ -23,7 +23,7 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
   lp.a_matrix_.value_ = {1, 1, 1, 1 + epsilon};
   highs.passModel(lp);
   highs.run();
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
   HighsIllConditioning ill_conditioning;
 
   const bool constraint = true;
@@ -55,7 +55,7 @@ TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {
 
   highs.passModel(lp);
   highs.run();
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
   HighsIllConditioning ill_conditioning;
   const bool constraint = true;
   highs.getIllConditioning(ill_conditioning, constraint);
