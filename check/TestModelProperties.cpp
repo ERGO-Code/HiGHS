@@ -1,5 +1,4 @@
 #include <cmath>
-#include <algorithm>
 
 #include "Highs.h"
 #include "catch.hpp"
