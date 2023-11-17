@@ -2022,14 +2022,17 @@ HighsStatus Highs::computeIllConditioning(
   double multiplier_norm = 0;
   for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++)
     multiplier_norm += std::abs(solution.col_value[iRow]);
-  assert(multiplier_norm>0);
-  double conditioning_measure = conditioning.getInfo().objective_function_value / multiplier_norm;
+  assert(multiplier_norm > 0);
+  double conditioning_measure =
+      conditioning.getInfo().objective_function_value / multiplier_norm;
   printf(
-      "\n%s view ill-conditioning analysis: 1-norm distance of basis matrix from singularity is estimated to be %g\n",
+      "\n%s view ill-conditioning analysis: 1-norm distance of basis matrix "
+      "from singularity is estimated to be %g\n",
       type.c_str(), conditioning_measure);
   std::vector<std::pair<double, HighsInt>> abs_list;
   for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
-    double abs_multiplier = std::abs(solution.col_value[iRow]) / multiplier_norm;
+    double abs_multiplier =
+        std::abs(solution.col_value[iRow]) / multiplier_norm;
     if (abs_multiplier <= kZeroMultiplier) continue;
     abs_list.push_back(std::make_pair(abs_multiplier, iRow));
   }
