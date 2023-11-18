@@ -551,7 +551,7 @@ else(FAST_BUILD)
       "NOT BUILD_TESTING" ON)
     message(STATUS "Python: Create venv: ${BUILD_VENV}")
 
-    option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" OFF)
+    option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" ON)
     message(STATUS "Python: Allow venv to use system site packages: ${VENV_USE_SYSTEM_SITE_PACKAGES}")
 
     option(FETCH_PYTHON_DEPS "Install python required modules if not available" ${BUILD_DEPS})

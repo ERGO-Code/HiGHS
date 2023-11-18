@@ -47,16 +47,7 @@ function(search_python_module)
   if(${_RESULT} STREQUAL "0")
     message(STATUS "Found python module: \"${MODULE_NAME}\" (found version \"${MODULE_VERSION}\")")
   else()
-    if(FETCH_PYTHON_DEPS)
-      message(WARNING "Can't find python module: \"${MODULE_NAME}\", install it using pip...")
-      execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m pip install --user ${MODULE_PACKAGE}
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        COMMAND_ERROR_IS_FATAL ANY
-      )
-    else()
       message(FATAL_ERROR "Can't find python module: \"${MODULE_NAME}\", please install it using your system package manager.")
-    endif()
   endif()
 endfunction()
 
@@ -85,11 +76,11 @@ set_target_properties(highs_bindings PROPERTIES
 if(APPLE)
   set_target_properties(highs_bindings PROPERTIES
     SUFFIX ".so"
-    INSTALL_RPATH "@loader_path;@loader_path/../../${PYTHON_PROJECT}/.libs"
+    INSTALL_RPATH "@loader_path;@loader_path/../../../${PYTHON_PROJECT}/.libs"
     )
 elseif(UNIX)
   set_target_properties(highs_bindings PROPERTIES
-    INSTALL_RPATH "$ORIGIN:$ORIGIN/../../${PYTHON_PROJECT}/.libs"
+    INSTALL_RPATH "$ORIGIN:$ORIGIN/../../../${PYTHON_PROJECT}/.libs"
     )
 endif()
 
@@ -144,29 +135,30 @@ add_custom_command(
   WORKING_DIRECTORY python/highspy
   COMMAND_EXPAND_LISTS)
 
-# Main Target
-# add_custom_target(python_package ALL
-#   DEPENDS
-#     python/dist/timestamp
-#   WORKING_DIRECTORY python)
+# main target
+add_custom_target(python_package all
+  depends
+    python/dist/timestamp
+  working_directory python)
 
-# if(BUILD_VENV)
-#   # make a virtualenv to install our python package in it
-#   add_custom_command(TARGET python_package POST_BUILD
-#     # Clean previous install otherwise pip install may do nothing
-#     COMMAND ${CMAKE_COMMAND} -E remove_directory ${VENV_DIR}
-#     COMMAND ${VENV_EXECUTABLE} -p ${Python3_EXECUTABLE}
-#     $<IF:$<BOOL:${VENV_USE_SYSTEM_SITE_PACKAGES}>,--system-site-packages,-q>
-#       ${VENV_DIR}
-#     #COMMAND ${VENV_EXECUTABLE} ${VENV_DIR}
-#     # Must NOT call it in a folder containing the setup.py otherwise pip call it
-#     # (i.e. "python setup.py bdist") while we want to consume the wheel package
-#     COMMAND ${VENV_Python3_EXECUTABLE} -m pip install
-#       --find-links=${CMAKE_CURRENT_BINARY_DIR}/python/dist ${PYTHON_PROJECT}==${PROJECT_VERSION}
-#     # install modules only required to run examples
-#     COMMAND ${VENV_Python3_EXECUTABLE} -m pip install pandas matplotlib pytest scipy
-#     BYPRODUCTS ${VENV_DIR}
-#     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#     COMMENT "Create venv and install ${PYTHON_PROJECT}"
-#     VERBATIM)
-# endif()
+  set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m virtualenv)
+
+
+set(INSTALL_PYTHON ON)
+
+if(INSTALL_PYTHON)
+  # make a virtualenv to install our python package in it
+  add_custom_command(TARGET python_package POST_BUILD
+    # Clean previous install otherwise pip install may do nothing
+
+    # Must NOT call it in a folder containing the setup.py otherwise pip call it
+    # (i.e. "python setup.py bdist") while we want to consume the wheel package
+    COMMAND ${VENV_Python3_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR}/python
+      
+    # install modules only required to run examples
+    COMMAND ${VENV_Python3_EXECUTABLE} -m pip install pytest
+
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Install ${PYTHON_PROJECT}"
+    VERBATIM)
+endif()
