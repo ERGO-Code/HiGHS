@@ -10,16 +10,10 @@ ext_modules = [
         "highspy.highs_bindings",
          sorted(glob("highspy/*.cpp")),
          ),
-        # language='c++',
-        # include_dir='include'
-        # library_dirs='lib'
-        # libraries=['highs']),
 ]
 
-
+# how to get setup to recognise highs_bindings.so or highs_bindings.dll
 # setup(..., cmdclass={"build_ext": build_ext}, ext_modules=ext_modules)
-
-
 
 setup(name='highspy', 
       cmdclass={"build_ext": build_ext}, 
@@ -27,11 +21,8 @@ setup(name='highspy',
 
       # packages=find_packages(),
       # include_package_data=True,
-    #   package_data={ # 'highspy.highs': ['highs*.so'],
-    #     'highspy.hig'highspy.highs': ['highs*.so'],hs_bindings': ['highs_bindings*.so']}
-      # package_data={ 'highspy.highs': ['build/lib/libhighs.so'],
-      #  'highspy.highs_bindings': ['build/lib/highs_bindings*.so'] }
-      # )
+      # package_data={ # 'highspy.highs': ['highs*.so'],
+      #     'highspy.highs_bindinfs': ['highs_bindings*.so']}
 
 # finally:
     # pybind11.setup_helpers.MACOS = original_pybind11_setup_helpers_macos

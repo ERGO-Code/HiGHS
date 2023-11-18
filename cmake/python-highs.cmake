@@ -57,13 +57,10 @@ search_python_module(
 search_python_module(
   NAME wheel
   PACKAGE wheel)
-# search_python_module(
-#   NAME pybind11
-#   PACKAGE pybind11)
 
 set(PYTHON_PROJECT "highspy")
 message(STATUS "Python project: ${PYTHON_PROJECT}")
-set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/python/${PYTHON_PROJECT})
+set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/${PYTHON_PROJECT})
 message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
 
@@ -93,21 +90,14 @@ target_link_libraries(highs_bindings PRIVATE
 file(GENERATE OUTPUT ${PYTHON_PROJECT_DIR}/__init__.py CONTENT "")
 
 file(COPY
-  highspy/highs_bindings.cpp
   setup.py 
   pyproject.toml
   DESTINATION ${PYTHON_PROJECT_DIR})
 
-# add_custom_command(
-#   OUTPUT python/dist/timestamp
-#   # Don't need to copy static lib on Windows.
-#   COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
-#   $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
-#   libs
+file(COPY
+  highspy/highs_bindings.cpp
+  DESTINATION ${PYTHON_PROJECT_DIR}/highspy)
 
-#   COMMAND ${CMAKE_COMMAND} -E copy $<${TARGET_FILE}::highs> python/
-#   WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
-# )
 
 add_custom_command(
   OUTPUT python/dist/timestamp
@@ -132,33 +122,11 @@ add_custom_command(
     python/${PYTHON_PROJECT}.egg-info
     python/build
     python/dist
-  WORKING_DIRECTORY python/highspy
+  WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
   COMMAND_EXPAND_LISTS)
 
 # main target
 add_custom_target(python_package all
-  depends
+  DEPENDS depends
     python/dist/timestamp
-  working_directory python)
-
-  set(VENV_EXECUTABLE ${Python3_EXECUTABLE} -m virtualenv)
-
-
-set(INSTALL_PYTHON ON)
-
-if(INSTALL_PYTHON)
-  # make a virtualenv to install our python package in it
-  add_custom_command(TARGET python_package POST_BUILD
-    # Clean previous install otherwise pip install may do nothing
-
-    # Must NOT call it in a folder containing the setup.py otherwise pip call it
-    # (i.e. "python setup.py bdist") while we want to consume the wheel package
-    COMMAND ${VENV_Python3_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR}/python
-      
-    # install modules only required to run examples
-    COMMAND ${VENV_Python3_EXECUTABLE} -m pip install pytest
-
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Install ${PYTHON_PROJECT}"
-    VERBATIM)
-endif()
+  WORKING_DIRECTORY ${PYTHON_PROJECT_DIR})
