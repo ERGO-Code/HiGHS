@@ -28,63 +28,59 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# set default build type before project call, as it otherwise seems to fail for some plattforms
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RELEASE)
-endif()
 
-# Default Build Type to be Release
-# get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-# if(isMultiConfig)
-#   if(NOT CMAKE_CONFIGURATION_TYPES)
-#     set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING
-#     "Choose the type of builds, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release;Debug)"
-#     FORCE)
-#   endif()
-#   message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
-# else()
-#   if(NOT CMAKE_BUILD_TYPE)
-#     set(CMAKE_BUILD_TYPE "Release" CACHE STRING
-#     "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
-#     FORCE)
-#   endif()
-#   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-# endif()
+# Default Build Type to be Release
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(isMultiConfig)
+  if(NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING
+    "Choose the type of builds, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release;Debug)"
+    FORCE)
+  endif()
+  message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
+else()
+  if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
+    FORCE)
+  endif()
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+endif()
 
 # Layout build dir like install dir
 include(GNUInstallDirs)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
-# if(UNIX)
-#   option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
-#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-#   # for multi-config build system (e.g. xcode)
-#   foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-#     string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-#     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
-#     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
-#     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-#   endforeach()
-# else()
-#   # Currently Only support static build for windows
-#   option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
-#   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-#   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-#   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-#   # for multi-config builds (e.g. msvc)
-#   foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-#     string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-#     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-#     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-#     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-#   endforeach()
-# endif()
+if(UNIX)
+  option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  # for multi-config build system (e.g. xcode)
+  foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+  endforeach()
+else()
+  # Currently Only support static build for windows
+  option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+  # for multi-config builds (e.g. msvc)
+  foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+  endforeach()
+endif()
 
 if(BUILD_SHARED_LIBS AND MSVC)
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -542,22 +538,6 @@ else(FAST_BUILD)
     "NOT BUILD_DEPS" ON)
   message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
 
-  if(PYTHON)
-    CMAKE_DEPENDENT_OPTION(BUILD_pybind11 "Build the pybind11 dependency Library" OFF
-      "NOT BUILD_DEPS" ON)
-    message(STATUS "Python: Build pybind11: ${BUILD_pybind11}")
-
-    CMAKE_DEPENDENT_OPTION(BUILD_VENV "Create Python venv in BINARY_DIR/python/venv" OFF
-      "NOT BUILD_TESTING" ON)
-    message(STATUS "Python: Create venv: ${BUILD_VENV}")
-
-    option(VENV_USE_SYSTEM_SITE_PACKAGES "Python venv can use system site packages" ON)
-    message(STATUS "Python: Allow venv to use system site packages: ${VENV_USE_SYSTEM_SITE_PACKAGES}")
-
-    option(FETCH_PYTHON_DEPS "Install python required modules if not available" ${BUILD_DEPS})
-    message(STATUS "Python: Fetch dependencies: ${FETCH_PYTHON_DEPS}")
-  endif()
-
   option(JULIA "Build library and executable for Julia" OFF)
 
   include(cpp-highs)
@@ -587,9 +567,4 @@ else(FAST_BUILD)
     target_link_libraries(doctest highs)
   endif()
 
-# install(TARGETS highs EXPORT highs-targets
-# LIBRARY
-# ARCHIVE
-# RUNTIME
-# PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 endif()
