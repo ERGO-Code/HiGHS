@@ -16,12 +16,14 @@
 #include <algorithm>
 #include <cassert>
 #include <csignal>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <sstream>
 
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
+#include "lp_data/HighsCallbackStruct.h"
 #include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
@@ -75,7 +77,7 @@ HighsStatus Highs::clearSolver() {
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -83,7 +85,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -91,7 +93,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -100,7 +102,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -109,7 +111,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -133,13 +135,13 @@ HighsStatus Highs::readOptions(const std::string& filename) {
 HighsStatus Highs::passOptions(const HighsOptions& options) {
   if (passLocalOptions(options_.log_options, options, options_) ==
       OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
@@ -297,7 +299,7 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
 // each
 HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
-  // eventually call it
+  // (and readModel) eventually call it
   this->logHeader();
   // Possibly analyse the LP data
   if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
@@ -316,6 +318,9 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Model has either no columns or no rows, so ignoring user "
+                 "constraint matrix data and initialising empty matrix\n");
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
     lp.a_matrix_.index_.clear();
@@ -336,12 +341,13 @@ HighsStatus Highs::passModel(HighsModel model) {
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Now legality of matrix is established, ensure that it is
+  // column-wise
+  lp.ensureColwise();
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
@@ -362,6 +368,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  // Apply any user scaling in call to optionChangeAction
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction(),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -510,6 +520,21 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
                    hessian.dim_);
       hessian.clear();
     }
+  }
+
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
+                         this->options_.small_matrix_value,
+                         this->options_.large_matrix_value)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
+      hessian.value_[iEl] *= cost_scale_value;
   }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
@@ -868,6 +893,12 @@ HighsStatus Highs::run() {
                 "Highs::run() called with called_return_from_run false\n");
     return HighsStatus::kError;
   }
+
+  // Check whether model is consistent with any user bound/cost scaling
+  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
+  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
+  // Assess whether to warn the user about excessive bounds and costs
+  assessExcessiveBoundCost(options_.log_options, this->model_);
 
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
@@ -1875,10 +1906,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::setCallback(
-    void (*user_callback)(const int, const char*, const HighsCallbackDataOut*,
-                          HighsCallbackDataIn*, void*),
-    void* user_callback_data) {
+HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
+                               void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback = user_callback;
   this->callback_.user_callback_data = user_callback_data;
@@ -1889,7 +1918,40 @@ HighsStatus Highs::setCallback(
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
+                               void* user_callback_data) {
+  this->callback_.clear();
+  this->callback_.user_callback =
+      [c_callback](int a, const std::string& b, const HighsCallbackDataOut* c,
+                   HighsCallbackDataIn* d,
+                   void* e) { c_callback(a, b.c_str(), c, d, e); };
+  this->callback_.user_callback_data = user_callback_data;
+
+  options_.log_options.user_callback = this->callback_.user_callback;
+  options_.log_options.user_callback_data = this->callback_.user_callback_data;
+  options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::startCallback(const int callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot start callback when user_callback not defined\n");
+    return HighsStatus::kError;
+  }
+  assert(int(this->callback_.active.size()) == kNumCallbackType);
+  this->callback_.active[callback_type] = true;
+  // Possibly modify the logging callback activity
+  if (callback_type == kCallbackLogging)
+    options_.log_options.user_callback_active = true;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::startCallback(const HighsCallbackType callback_type) {
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
   assert(callback_type_ok);
@@ -1917,6 +1979,25 @@ HighsStatus Highs::stopCallback(const int callback_type) {
                  "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
+  assert(int(this->callback_.active.size()) == kNumCallbackType);
+  this->callback_.active[callback_type] = false;
+  // Possibly modify the logging callback activity
+  if (callback_type == kCallbackLogging)
+    options_.log_options.user_callback_active = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
+  const bool callback_type_ok =
+      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
+  assert(callback_type_ok);
+  if (!callback_type_ok) return HighsStatus::kError;
+  if (!this->callback_.user_callback) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot stop callback when user_callback not defined\n");
+    return HighsStatus::kWarning;
+  }
+  std::vector<bool>& active = this->callback_.active;
   assert(int(this->callback_.active.size()) == kNumCallbackType);
   this->callback_.active[callback_type] = false;
   // Possibly modify the logging callback activity
@@ -2950,7 +3031,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Clear info from previous runs if original_lp has been modified.
+  // Ensure that the RunHighsClock is running
+  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
@@ -3733,6 +3815,13 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
                                  const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
+  if (return_status != run_return_status) {
+    printf(
+        "Highs::returnFromRun: return_status = %d != %d = run_return_status "
+        "For model_status_ = %s\n",
+        int(return_status), int(run_return_status),
+        modelStatusToString(model_status_).c_str());
+  }
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
   switch (model_status_) {

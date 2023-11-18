@@ -13,8 +13,8 @@ const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 static void userCallback(const int callback_type, const char* message,
-			 const struct HighsCallbackDataOut* data_out,
-			 struct HighsCallbackDataIn* data_in,
+			 const HighsCallbackDataOut* data_out,
+			 HighsCallbackDataIn* data_in,
 			 void* user_callback_data) {
   // Extract the double value pointed to from void* user_callback_data
   const double local_callback_data = user_callback_data == NULL ? -1 : *(double*)user_callback_data;
@@ -73,52 +73,6 @@ void version_api() {
     printf("HiGHS githash: %s\n", Highs_githash());
     printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
-}
-
-void minimal_api() {
-  HighsInt num_col = 2;
-  HighsInt num_row = 2;
-  HighsInt num_nz = 4;
-  HighsInt a_format = kHighsMatrixFormatRowwise;
-  HighsInt sense = kHighsObjSenseMinimize;
-  double offset = 0;
-  HighsInt i;
-
-  double cc[2] = {1.0, -2.0};
-  double cl[2] = {0.0, 0.0};
-  double cu[2] = {10.0, 10.0};
-  double rl[2] = {0.0, 0.0};
-  double ru[2] = {2.0, 1.0};
-  HighsInt a_start[3] = {0, 2, 4};
-  HighsInt a_index[4] = {0, 1, 0, 1};
-  double a_value[4] = {1.0, 2.0, 1.0, 3.0};
-
-  double* cv = (double*)malloc(sizeof(double) * num_col);
-  double* cd = (double*)malloc(sizeof(double) * num_col);
-  double* rv = (double*)malloc(sizeof(double) * num_row);
-  double* rd = (double*)malloc(sizeof(double) * num_row);
-
-  HighsInt* cbs = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
-  HighsInt* rbs = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
-
-  HighsInt model_status;
-
-  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format, sense, offset,
-					cc, cl, cu, rl, ru, a_start, a_index, a_value, cv,
-					cd, rv, rd, cbs, rbs, &model_status);
-  assert( return_status == kHighsStatusOk );
-
-  if (dev_run) {
-    for (i = 0; i < num_col; i++) 
-      printf("x%"HIGHSINT_FORMAT" = %lf\n", i, cv[i]);
-  }
-
-  free(cv);
-  free(cd);
-  free(rv);
-  free(rd);
-  free(cbs);
-  free(rbs);
 }
 
 void minimal_api_lp() {
@@ -206,11 +160,11 @@ void minimal_api_lp() {
   HighsInt model_status;
 
   HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
-				    sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-				    a_start, a_index, a_value,
-				    col_value, col_dual, row_value, row_dual,
-				    col_basis_status, row_basis_status,
-				    &model_status);
+					sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					a_start, a_index, a_value,
+					col_value, col_dual, row_value, row_dual,
+					col_basis_status, row_basis_status,
+					&model_status);
 
   assert( return_status == kHighsStatusOk );
 
@@ -280,23 +234,24 @@ void minimal_api_mip() {
   HighsInt return_status;
 
   return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
-					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-					 a_start, a_index, a_value,
-					 integrality,
-					 col_value, row_value,
-					 &model_status);
-  // Should return error
+				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				a_start, a_index, a_value,
+				integrality,
+				col_value, row_value,
+				&model_status);
+  // Should return error, with model status not set
   assert( return_status == kHighsStatusError );
+  assert( model_status == kHighsModelStatusNotset );
 
   // Correct integrality
   integrality[num_col-1] = kHighsVarTypeInteger;
 
   return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
-					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-					 a_start, a_index, a_value,
-					 integrality,
-					 col_value, row_value,
-					 &model_status);
+				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				a_start, a_index, a_value,
+				integrality,
+				col_value, row_value,
+				&model_status);
   // Should return OK
   assert( return_status == kHighsStatusOk );
 
@@ -367,6 +322,35 @@ void minimal_api_qp() {
     }
   }
   free(col_value);
+}
+
+void minimal_api_illegal_lp() {
+  const double inf = 1e30;
+  HighsInt num_col = 2;
+  HighsInt num_row = 1;
+  HighsInt num_nz = 2;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+  double col_cost[2] = {0.0, -1.0};
+  double col_lower[2] = {-inf, -inf};
+  double col_upper[2] = {inf, inf};
+  double row_lower[1] = {-inf};
+  double row_upper[1] = {2};
+  HighsInt a_start[1] = {0};
+  HighsInt a_index[2] = {0, -1}; // Illegal index
+  double a_value[2] = {1.0, 1.0};
+
+  HighsInt model_status;
+  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
+					sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					a_start, a_index, a_value,
+					NULL, NULL, NULL, NULL, 
+					NULL, NULL, 
+					&model_status);
+  // Should return error, with model status not set
+  assert( return_status == kHighsStatusError );
+  assert( model_status == kHighsModelStatusNotset );
 }
 
 void full_api() {
@@ -1442,9 +1426,9 @@ void test_setSolution() {
 }
 */
 int main() {
+  minimal_api_illegal_lp();
   test_callback();
   version_api();
-  minimal_api();
   full_api();
   minimal_api_lp();
   minimal_api_mip();

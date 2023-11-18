@@ -752,7 +752,8 @@ struct HighsHashHelpers {
     // now be different values which exhibit the same pattern as the 0.5 case,
     // but they do not have a small denominator like 1/2 in their rational
     // representation but are power of two multiples of the golden ratio and
-    // therefore irrational, which we do not expect in non-artifical input data.
+    // therefore irrational, which we do not expect in non-artificial input
+    // data.
     int exponent;
     double hashbits = std::frexp(val * golden_ratio_reciprocal(), &exponent);
 
@@ -819,7 +820,7 @@ struct HighsHashTableEntry {
   // and the value as default
   // the enable if statement makes sure this overload is never selected
   // when the type of the single argument is HighsHashTableEntry<K,V> so that
-  // the default move and copy constructures are preferred when they match
+  // the default move and copy constructors are preferred when they match
   // and this is only used to initialize the key type from a single argument.
   template <
       typename K_,
@@ -874,7 +875,7 @@ struct HighsHashTableEntry<T, void> {
   // Add a constructor to accept an arbitrary argument pack for initialize the
   // underlying value of type T. The enable if statement makes sure this
   // overload is never selected when the type of the single argument is
-  // HighsHashTableEntry<T,void> so that the default move and copy constructures
+  // HighsHashTableEntry<T,void> so that the default move and copy constructors
   // are preferred when they match and this is only used to initialize the value
   // of type from a set of arguments which are properly forwarded.
   // The std::tuple usage in enable_if is a work-around to make the statement

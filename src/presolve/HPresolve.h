@@ -43,6 +43,7 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
+  HighsInt run_clock = -1;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -83,6 +84,7 @@ class HPresolve {
   std::vector<double> implRowDualUpper;
   std::vector<HighsInt> rowDualLowerSource;
   std::vector<HighsInt> rowDualUpperSource;
+  std::vector<std::set<HighsInt>> colImplSourceByRow;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables
@@ -154,6 +156,8 @@ class HPresolve {
   double getMaxAbsRowVal(HighsInt row) const;
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void recomputeColImpliedBounds(HighsInt row);
 
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
 
