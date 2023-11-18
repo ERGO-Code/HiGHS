@@ -420,6 +420,7 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
+  # add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
   set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(highs PUBLIC LIBHIGHS_STATIC_DEFINE)

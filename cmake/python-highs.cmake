@@ -73,11 +73,11 @@ set_target_properties(highs_bindings PROPERTIES
 if(APPLE)
   set_target_properties(highs_bindings PROPERTIES
     SUFFIX ".so"
-    INSTALL_RPATH "@loader_path;@loader_path/../../../${PYTHON_PROJECT}/.libs"
+    INSTALL_RPATH "@loader_path;@loader_path/../../../${PYTHON_PROJECT_DIR}/.libs"
     )
 elseif(UNIX)
   set_target_properties(highs_bindings PROPERTIES
-    INSTALL_RPATH "$ORIGIN:$ORIGIN/../../../${PYTHON_PROJECT}/.libs"
+    INSTALL_RPATH "$ORIGIN:$ORIGIN/../../../${PYTHON_PROJECT_DIR}/.libs"
     )
 endif()
 
@@ -92,36 +92,32 @@ file(GENERATE OUTPUT ${PYTHON_PROJECT_DIR}/__init__.py CONTENT "")
 file(COPY
   setup.py 
   pyproject.toml
+  highspy/README.md
   DESTINATION ${PYTHON_PROJECT_DIR})
 
 file(COPY
   highspy/highs_bindings.cpp
   DESTINATION ${PYTHON_PROJECT_DIR}/highspy)
 
-
 add_custom_command(
-  OUTPUT python/dist/timestamp
-  COMMAND ${CMAKE_COMMAND} -E remove_directory dist
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_PROJECT}/.libs
-  # Don't need to copy static lib on Windows.
-  COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
-  $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
-  ${PYTHON_PROJECT}/.libs
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs> ${PYTHON_PROJECT}/.libs
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs_bindings> ${PYTHON_PROJECT}/.libs
+  OUTPUT highspy/dist/timestamp
+  # COMMAND ${CMAKE_COMMAND} -E remove_directory dist
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_PROJECT_DIR}/.libs
+  # # Don't need to copy static lib on Windows.
+  # COMMAND ${CMAKE_COMMAND} -E $<IF:$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>,copy,true>
+  # $<$<STREQUAL:$<TARGET_PROPERTY:highs,TYPE>,SHARED_LIBRARY>:$<TARGET_SONAME_FILE:highs>>
+  # ${PYTHON_PROJECT_DIR}/.libs
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs> ${PYTHON_PROJECT_DIR}/.libs
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:highs_bindings> ${PYTHON_PROJECT_DIR}/.libs
 
   #COMMAND ${Python3_EXECUTABLE} setup.py bdist_egg bdist_wheel
-  COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
+  # COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
+  # COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/highspy/dist/timestamp
 
-  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/python/dist/timestamp
-
-  DEPENDS
-    ${PROJECT_NAMESPACE}::highs
-  BYPRODUCTS
-    python/${PYTHON_PROJECT}
-    python/${PYTHON_PROJECT}.egg-info
-    python/build
-    python/dist
+  # BYPRODUCTS
+  #   highspy/${PYTHON_PROJECT}.egg-info
+  #   highspy/build
+  #   highspy/dist
   WORKING_DIRECTORY ${PYTHON_PROJECT_DIR}
   COMMAND_EXPAND_LISTS)
 
