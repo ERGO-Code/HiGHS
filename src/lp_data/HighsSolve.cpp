@@ -333,23 +333,19 @@ void assessExcessiveBoundCost(const HighsLogOptions log_options,
     assessFiniteNonzero(lp.a_matrix_.value_[iEl], min_matrix_value,
                         max_matrix_value);
 
-  highsLogUser(log_options, HighsLogType::kInfo, "Coefficient statistics:\n");
+  highsLogUser(log_options, HighsLogType::kInfo, "Coefficient ranges:\n");
   if (num_nz)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "  Matrix range [%5.0e, %5.0e]\n", min_matrix_value,
-                 max_matrix_value);
+    highsLogUser(log_options, HighsLogType::kInfo, "  Matrix [%5.0e, %5.0e]\n",
+                 min_matrix_value, max_matrix_value);
   if (lp.num_col_) {
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "  Cost range   [%5.0e, %5.0e]\n", min_finite_col_cost,
-                 max_finite_col_cost);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "  Bound range  [%5.0e, %5.0e]\n", min_finite_col_bound,
-                 max_finite_col_bound);
+    highsLogUser(log_options, HighsLogType::kInfo, "  Cost   [%5.0e, %5.0e]\n",
+                 min_finite_col_cost, max_finite_col_cost);
+    highsLogUser(log_options, HighsLogType::kInfo, "  Bound  [%5.0e, %5.0e]\n",
+                 min_finite_col_bound, max_finite_col_bound);
   }
   if (lp.num_row_)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "  RHS range    [%5.0e, %5.0e]\n", min_finite_row_bound,
-                 max_finite_row_bound);
+    highsLogUser(log_options, HighsLogType::kInfo, "  RHS    [%5.0e, %5.0e]\n",
+                 min_finite_row_bound, max_finite_row_bound);
 
   // LPs with no columns or no finite nonzero costs will have
   // max_finite_col_cost = 0
