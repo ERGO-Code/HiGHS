@@ -11,6 +11,7 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   const double epsilon = 1e-4;
+  const double ill_conditioning_bound = 1;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
   lp.col_cost_ = {2, 2 + epsilon};
@@ -35,6 +36,13 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
     REQUIRE(std::fabs(ill_conditioning.record[iX].multiplier) < 0.55);
   }
   highs.getIllConditioning(ill_conditioning, !constraint);
+
+  REQUIRE(highs.getIllConditioning(ill_conditioning, constraint, 1, 0.1) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.getIllConditioning(ill_conditioning, constraint, 1,
+                                   ill_conditioning_bound) == HighsStatus::kOk);
+  REQUIRE(highs.getIllConditioning(ill_conditioning, constraint, 1, 10) ==
+          HighsStatus::kOk);
 }
 
 TEST_CASE("simple-ill-conditioning", "[highs_model_properties]") {

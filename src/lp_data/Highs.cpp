@@ -1635,13 +1635,15 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
 
 HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                       const bool constraint,
-                                      const HighsInt method) {
+                                      const HighsInt method,
+                                      const double ill_conditioning_bound) {
   if (!basis_.valid) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Cannot get ill-conditioning without a valid basis\n");
     return HighsStatus::kError;
   }
-  return computeIllConditioning(ill_conditioning, constraint, method);
+  return computeIllConditioning(ill_conditioning, constraint, method,
+                                ill_conditioning_bound);
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }

@@ -486,7 +486,9 @@ class Highs {
    * @brief Get the ill-conditioning information for the current basis
    */
   HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
-                                 bool constraint, HighsInt method = 0);
+                                 const bool constraint,
+                                 const HighsInt method = 0,
+                                 const double ill_conditioning_bound = 1e-4);
 
   /**
    * @brief Get the current model objective value
@@ -1466,12 +1468,14 @@ class Highs {
   HighsStatus optionChangeAction();
   HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
                                      const bool constraint,
-                                     const HighsInt method);
+                                     const HighsInt method,
+                                     const double ill_conditioning_bound);
   void formIllConditioningLp0(HighsLp& ill_conditioning_lp,
                               std::vector<HighsInt>& basic_var,
                               const bool constraint);
   void formIllConditioningLp1(HighsLp& ill_conditioning_lp,
                               std::vector<HighsInt>& basic_var,
-                              const bool constraint);
+                              const bool constraint,
+                              const double ill_conditioning_bound);
 };
 #endif
