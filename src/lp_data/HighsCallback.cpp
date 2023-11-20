@@ -64,6 +64,7 @@ bool HighsCallback::callbackAction(const int callback_type,
 
   // Check for no action if case not handled internally
   if (callback_type == kCallbackMipImprovingSolution ||
+      callback_type == kCallbackMipSolution ||
       callback_type == kCallbackMipLogging)
     assert(!action);
   return action;
