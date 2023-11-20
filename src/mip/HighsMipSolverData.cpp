@@ -454,18 +454,15 @@ void HighsMipSolverData::runSetup() {
         nodequeue.setOptimalityLimit(optimality_limit);
       }
     }
-    if (feasible) {
-      if (mipsolver.callback_->user_callback) {
-        if (mipsolver.callback_->active[kCallbackMipSolution]) {
-          mipsolver.callback_->clearHighsCallbackDataOut();
-          mipsolver.callback_->data_out.mip_solution =
-              mipsolver.solution_.data();
-          const bool interrupt = interruptFromCallbackWithData(
-              kCallbackMipSolution, mipsolver.solution_objective_,
-              "Feasible solution");
-          assert(!interrupt);
-        }
-      }
+    if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
+        mipsolver.callback_->active[kCallbackMipSolution]) {
+      assert(!mipsolver.submip);
+      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      const bool interrupt = interruptFromCallbackWithData(
+          kCallbackMipSolution, mipsolver.solution_objective_,
+          "Feasible solution");
+      assert(!interrupt);
     }
   }
 

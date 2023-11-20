@@ -42,23 +42,49 @@ HighsCallbackFunctionType userMipSolutionCallback =
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
       if (dev_run) {
-        printf("MipSolutionCallback with objective = %15.8g and solution [",
-               data_out->objective_function_value);
+        printf(
+            "MipSolutionCallback with objective = %15.8g and bounds [%15.8g, "
+            "%15.8g]",
+            data_out->objective_function_value, data_out->mip_dual_bound,
+            data_out->mip_primal_bound);
         MipData callback_data = *(static_cast<MipData*>(user_callback_data));
         HighsInt num_col = callback_data.num_col;
         HighsVarType* integrality = callback_data.integrality;
-        for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-          if (integrality[iCol] != HighsVarType::kInteger) continue;
-          double value = data_out->mip_solution[iCol];
-          if (std::abs(value) < 1e-5) {
-            printf("0");
-          } else if (std::abs(value - 1) < 1e-5) {
-            printf("1");
-          } else {
-            printf("*");
+        HighsInt num_integer = 0;
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          if (integrality[iCol] == HighsVarType::kInteger) num_integer++;
+        if (num_integer < 50) {
+          printf(" and solution [");
+          for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+            if (integrality[iCol] != HighsVarType::kInteger) continue;
+            double value = data_out->mip_solution[iCol];
+            if (std::abs(value) < 1e-5) {
+              printf("0");
+            } else if (std::abs(value - 1) < 1e-5) {
+              printf("1");
+            } else {
+              bool printed = false;
+              for (HighsInt k = 2; k < 10; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf("%1d", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              for (HighsInt k = 10; k < 999; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf(" %d ", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              printf("*");
+            }
           }
+          printf("]\n");
+        } else {
+          printf("\n");
         }
-        printf("]\n");
         fflush(stdout);
       }
     };
