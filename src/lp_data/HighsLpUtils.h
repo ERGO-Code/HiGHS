@@ -246,8 +246,6 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp);
-
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,
                    const double* usr_col_upper);

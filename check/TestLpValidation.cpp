@@ -366,7 +366,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // for columns 9 and 10.
 
   // LP is found to be unbounded by presolve, but is primal
-  // infeasible. With isBoundInfeasible check in solveLp,
+  // infeasible. With infeasibleBoundsOk check in solveLp,
   // infeasiblility is identified before reaching a solver, so
   // presolve isn't called
   HighsStatus run_status;
@@ -648,4 +648,33 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
   lp.row_upper_ = {80, 120};
   highs.passModel(lp);
   highs.run();
+}
+
+TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  double epsilon = 1e-10;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {1, 2.5 + epsilon};
+  lp.col_upper_ = {1 - epsilon, 2.5 - 2 * epsilon};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {6, -inf};
+  lp.row_upper_ = {6 - epsilon, 11 - epsilon};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.changeColBounds(0, 0, -1);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
