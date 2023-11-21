@@ -462,29 +462,15 @@ void HighsPostsolveStack::ForcingRow::undo(
   // compute the row dual multiplier and determine the new basic column
   HighsInt basicCol = -1;
   double dualDelta = 0;
-  if (rowType == RowType::kLeq) {
-    for (const auto& rowVal : rowValues) {
-      double colDual =
-          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
-      if (colDual * rowVal.value < 0) {
-        // column is dual infeasible, decrease the row dual such that its
-        // reduced cost become zero and remember this column as the new basic
-        // column for this row
-        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
-        basicCol = rowVal.index;
-      }
-    }
-  } else {
-    for (const auto& rowVal : rowValues) {
-      double colDual =
-          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
-      if (colDual * rowVal.value > 0) {
-        // column is dual infeasible, decrease the row dual such that its
-        // reduced cost become zero and remember this column as the new basic
-        // column for this row
-        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
-        basicCol = rowVal.index;
-      }
+  HighsInt direction = rowType == RowType::kLeq ? 1 : -1;
+  for (const auto& rowVal : rowValues) {
+    double colDual = solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
+    if (direction * colDual * rowVal.value < 0) {
+      // column is dual infeasible, decrease the row dual such that its
+      // reduced cost become zero and remember this column as the new basic
+      // column for this row
+      dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
+      basicCol = rowVal.index;
     }
   }
 
