@@ -2441,3 +2441,82 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   ill_conditioning_matrix.num_col_ = ill_conditioning_lp.num_col_;
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
+
+bool Highs::infeasibleBoundsOk() {
+  const HighsLogOptions& log_options = this->options_.log_options;
+  HighsLp& lp = this->model_.lp_;
+
+  HighsInt num_true_infeasible_bound = 0;
+  HighsInt num_ok_infeasible_bound = 0;
+  const bool has_integrality = lp.integrality_.size() > 0;
+  // Lambda for assessing infeasible bounds
+  auto assessInfeasibleBound = [&](const std::string type, const HighsInt iX,
+                                   double& lower, double& upper) {
+    double range = upper - lower;
+    if (range >= 0) return true;
+    if (range > -this->options_.primal_feasibility_tolerance) {
+      num_ok_infeasible_bound++;
+      bool report = num_ok_infeasible_bound <= 10;
+      bool integer_lower = lower == std::floor(lower + 0.5);
+      bool integer_upper = upper == std::floor(upper + 0.5);
+      assert(!integer_lower || !integer_upper);
+      if (integer_lower) {
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "upper bound to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, lower);
+        upper = lower;
+      } else if (integer_upper) {
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "lower bound to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, upper);
+        lower = upper;
+      } else {
+        double mid = 0.5 * (lower + upper);
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "both bounds to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, mid);
+        lower = mid;
+        upper = mid;
+      }
+      return true;
+    }
+    num_true_infeasible_bound++;
+    if (num_true_infeasible_bound <= 10)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "%s %d bounds [%g, %g] have excessive infeasibility = %g\n",
+                   type.c_str(), int(iX), lower, upper, range);
+    return false;
+  };
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (has_integrality) {
+      // Semi-variables can have inconsistent bounds
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+        continue;
+    }
+    if (lp.col_lower_[iCol] > lp.col_upper_[iCol])
+      assessInfeasibleBound("Column", iCol, lp.col_lower_[iCol],
+                            lp.col_upper_[iCol]);
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
+      assessInfeasibleBound("Row", iRow, lp.row_lower_[iRow],
+                            lp.row_upper_[iRow]);
+  }
+  if (num_ok_infeasible_bound > 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model has %d small inconsistent bound(s): rectified\n",
+                 int(num_ok_infeasible_bound));
+  if (num_true_infeasible_bound > 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model has %d significant inconsistent bound(s): infeasible\n",
+                 int(num_true_infeasible_bound));
+  return num_true_infeasible_bound == 0;
+}

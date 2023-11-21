@@ -964,8 +964,9 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
     return returnFromRun(HighsStatus::kOk, undo_mods);
   }
-  // Return immediately if the model is infeasible due to inconsistent bounds
-  if (isBoundInfeasible(options_.log_options, model_.lp_)) {
+  // Return immediately if the model is infeasible due to inconsistent
+  // bounds, modifying any bounds with tiny infeasibilities
+  if (!infeasibleBoundsOk()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromRun(return_status, undo_mods);
   }

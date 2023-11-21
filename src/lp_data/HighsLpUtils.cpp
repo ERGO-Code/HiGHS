@@ -2712,28 +2712,6 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
   return HighsStatus::kOk;
 }
 
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
-  HighsInt num_bound_infeasible = 0;
-  const bool has_integrality = lp.integrality_.size() > 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (has_integrality) {
-      // Semi-variables can have inconsistent bounds
-      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
-        continue;
-    }
-    if (lp.col_upper_[iCol] < lp.col_lower_[iCol]) num_bound_infeasible++;
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    if (lp.row_upper_[iRow] < lp.row_lower_[iRow]) num_bound_infeasible++;
-  if (num_bound_infeasible > 0)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Model infeasible due to %" HIGHSINT_FORMAT
-                 " inconsistent bound(s)\n",
-                 num_bound_infeasible);
-  return num_bound_infeasible > 0;
-}
-
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,
                    const double* usr_col_upper) {
