@@ -158,7 +158,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // can only do primal postsolve, stop here
   if (row == -1 || !solution.dual_valid) return;
 
-  HighsBasisStatus colStatus =
+  const HighsBasisStatus colStatus =
       computeStatus(solution.col_dual[col], basis.col_status[col],
                     options.dual_feasibility_tolerance, basis.valid);
 
@@ -362,7 +362,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
   // there is no dual solution
   if (!solution.dual_valid) return;
 
-  HighsBasisStatus colStatus =
+  const HighsBasisStatus colStatus =
       computeStatus(solution.col_dual[col], basis.col_status[col],
                     options.dual_feasibility_tolerance, basis.valid);
 
@@ -513,7 +513,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
     return;
   }
 
-  HighsBasisStatus rowStatus =
+  const HighsBasisStatus rowStatus =
       computeStatus(solution.row_dual[row], basis.row_status[row],
                     options.dual_feasibility_tolerance, basis.valid);
 
