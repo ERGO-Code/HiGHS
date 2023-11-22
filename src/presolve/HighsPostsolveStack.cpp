@@ -127,21 +127,20 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   }
 }
 
-HighsBasisStatus computeStatus(HighsInt index, const std::vector<double>& dual,
-                               std::vector<HighsBasisStatus>& status,
+HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
                                double dual_feasibility_tolerance,
                                bool basis_valid) {
   if (basis_valid) {
-    if (dual[index] > dual_feasibility_tolerance)
-      status[index] = HighsBasisStatus::kLower;
-    else if (dual[index] < -dual_feasibility_tolerance)
-      status[index] = HighsBasisStatus::kUpper;
+    if (dual > dual_feasibility_tolerance)
+      status = HighsBasisStatus::kLower;
+    else if (dual < -dual_feasibility_tolerance)
+      status = HighsBasisStatus::kUpper;
 
-    return status[index];
+    return status;
   } else {
-    if (dual[index] > dual_feasibility_tolerance)
+    if (dual > dual_feasibility_tolerance)
       return HighsBasisStatus::kLower;
-    else if (dual[index] < -dual_feasibility_tolerance)
+    else if (dual < -dual_feasibility_tolerance)
       return HighsBasisStatus::kUpper;
     else
       return HighsBasisStatus::kBasic;
@@ -160,7 +159,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   if (row == -1 || !solution.dual_valid) return;
 
   HighsBasisStatus colStatus =
-      computeStatus(col, solution.col_dual, basis.col_status,
+      computeStatus(solution.col_dual[col], basis.col_status[col],
                     options.dual_feasibility_tolerance, basis.valid);
 
   // assert that a valid row index is used.
@@ -364,7 +363,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
   if (!solution.dual_valid) return;
 
   HighsBasisStatus colStatus =
-      computeStatus(col, solution.col_dual, basis.col_status,
+      computeStatus(solution.col_dual[col], basis.col_status[col],
                     options.dual_feasibility_tolerance, basis.valid);
 
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
@@ -515,7 +514,7 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
   }
 
   HighsBasisStatus rowStatus =
-      computeStatus(row, solution.row_dual, basis.row_status,
+      computeStatus(solution.row_dual[row], basis.row_status[row],
                     options.dual_feasibility_tolerance, basis.valid);
 
   auto computeRowDualAndStatus = [&](bool tighened) {
