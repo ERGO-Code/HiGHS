@@ -1380,8 +1380,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
-    for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
-         binaries) {
+    for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
       if (cliquetable.getSubstitution(i) != nullptr) continue;
@@ -1472,11 +1471,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
-    std::vector<std::pair<HighsInt, HighsCliqueTable::CliqueVar>>&
-        extensionvars = cliquetable.getCliqueExtensions();
+    auto& extensionvars = cliquetable.getCliqueExtensions();
     HighsInt addednnz = extensionvars.size();
-    for (std::pair<HighsInt, HighsCliqueTable::CliqueVar> cliqueextension :
-         extensionvars) {
+    for (const auto& cliqueextension : extensionvars) {
       if (rowDeleted[cliqueextension.first]) {
         --addednnz;
         continue;
