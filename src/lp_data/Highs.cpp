@@ -50,12 +50,7 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
-void highsSignalHandler(int signum) {
-  //  std::cout << "Interrupt signal (" << signum << ") received.\n";
-  exit(signum);
-}
-
-Highs::Highs() { signal(SIGINT, highsSignalHandler); }
+Highs::Highs() {}
 
 HighsStatus Highs::clear() {
   resetOptions();
