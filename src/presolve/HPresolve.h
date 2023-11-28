@@ -317,6 +317,10 @@ class HPresolve {
 
   Result removeDependentFreeCols(HighsPostsolveStack& postsolve_stack);
 
+  void impliedDualFreeGetRhsAndRowType(HighsInt row, double& rhs,
+                                       HighsPostsolveStack::RowType& rowType,
+                                       bool modifyRowDualBounds = false);
+
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
   Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);

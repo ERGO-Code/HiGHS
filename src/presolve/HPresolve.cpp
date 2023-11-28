@@ -170,10 +170,7 @@ bool HPresolve::isUpperImplied(HighsInt col) const {
 }
 
 bool HPresolve::isImpliedFree(HighsInt col) const {
-  return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >= model->col_lower_[col] - primal_feastol) &&
-         (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
+  return isLowerImplied(col) && isUpperImplied(col);
 }
 
 bool HPresolve::isDualImpliedFree(HighsInt row) const {
@@ -2878,19 +2875,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     // for substitution
     storeRow(row);
 
-    HighsPostsolveStack::RowType rowType = HighsPostsolveStack::RowType::kEq;
+    HighsPostsolveStack::RowType rowType;
     double rhs;
-    if (model->row_lower_[row] == model->row_upper_[row]) {
-      rhs = model->row_upper_[row];
-      rowType = HighsPostsolveStack::RowType::kEq;
-    } else if ((model->row_upper_[row] != kHighsInf &&
-                implRowDualUpper[row] <= options->dual_feasibility_tolerance)) {
-      rhs = model->row_upper_[row];
-      rowType = HighsPostsolveStack::RowType::kLeq;
-    } else {
-      rhs = model->row_lower_[row];
-      rowType = HighsPostsolveStack::RowType::kGeq;
-    }
+    impliedDualFreeGetRhsAndRowType(row, rhs, rowType);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),
@@ -4662,6 +4649,25 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  return Result::kOk;
 }
 
+void HPresolve::impliedDualFreeGetRhsAndRowType(
+    HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
+    bool modifyRowDualBounds) {
+  assert(isDualImpliedFree(row));
+  if (model->row_lower_[row] == model->row_upper_[row]) {
+    rowType = HighsPostsolveStack::RowType::kEq;
+    rhs = model->row_upper_[row];
+  } else if (model->row_upper_[row] != kHighsInf &&
+             implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
+    rowType = HighsPostsolveStack::RowType::kLeq;
+    rhs = model->row_upper_[row];
+    if (modifyRowDualBounds) changeRowDualUpper(row, kHighsInf);
+  } else {
+    rowType = HighsPostsolveStack::RowType::kGeq;
+    rhs = model->row_lower_[row];
+    if (modifyRowDualBounds) changeRowDualLower(row, -kHighsInf);
+  }
+}
+
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
   assert(analysis_.allow_rule_[kPresolveRuleAggregator]);
   const bool logging_on = analysis_.logging_on_;
@@ -4730,20 +4736,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     if (rowsize[row] == 2 || colsize[col] == 2) {
       double rhs;
       HighsPostsolveStack::RowType rowType;
-      if (model->row_lower_[row] == model->row_upper_[row]) {
-        rowType = HighsPostsolveStack::RowType::kEq;
-        rhs = model->row_upper_[row];
-      } else if ((model->row_upper_[row] != kHighsInf &&
-                  implRowDualUpper[row] <=
-                      options->dual_feasibility_tolerance)) {
-        rowType = HighsPostsolveStack::RowType::kLeq;
-        rhs = model->row_upper_[row];
-        changeRowDualUpper(row, kHighsInf);
-      } else {
-        rowType = HighsPostsolveStack::RowType::kGeq;
-        rhs = model->row_lower_[row];
-        changeRowDualLower(row, -kHighsInf);
-      }
+      impliedDualFreeGetRhsAndRowType(row, rhs, rowType, true);
 
       storeRow(row);
 
@@ -4791,19 +4784,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     nfail = 0;
     double rhs;
     HighsPostsolveStack::RowType rowType;
-    if (model->row_lower_[row] == model->row_upper_[row]) {
-      rowType = HighsPostsolveStack::RowType::kEq;
-      rhs = model->row_upper_[row];
-    } else if ((model->row_upper_[row] != kHighsInf &&
-                implRowDualUpper[row] <= options->dual_feasibility_tolerance)) {
-      rowType = HighsPostsolveStack::RowType::kLeq;
-      rhs = model->row_upper_[row];
-      changeRowDualUpper(row, kHighsInf);
-    } else {
-      rowType = HighsPostsolveStack::RowType::kGeq;
-      rhs = model->row_lower_[row];
-      changeRowDualLower(row, -kHighsInf);
-    }
+    impliedDualFreeGetRhsAndRowType(row, rhs, rowType, true);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),
