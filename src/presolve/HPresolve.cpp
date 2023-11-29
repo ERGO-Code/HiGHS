@@ -732,6 +732,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   implColUpper.resize(model->num_col_);
   colLowerSource.resize(model->num_col_);
   colUpperSource.resize(model->num_col_);
+  implRowDualSourceByCol.resize(model->num_col_);
   colhead.resize(model->num_col_);
   colsize.resize(model->num_col_);
   if (have_col_names) model->col_names_.resize(model->num_col_);
@@ -811,7 +812,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   implRowDualUpper.resize(model->num_row_);
   rowDualLowerSource.resize(model->num_row_);
   rowDualUpperSource.resize(model->num_row_);
-  implRowDualSourceByCol.resize(model->num_col_);
   colImplSourceByRow.resize(model->num_row_);
   rowroot.resize(model->num_row_);
   rowsize.resize(model->num_row_);
