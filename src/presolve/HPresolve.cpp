@@ -2931,7 +2931,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
     HighsPostsolveStack::RowType rowType;
     double rhs;
-    impliedDualFreeGetRhsAndRowType(row, rhs, rowType);
+    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),
@@ -4703,7 +4703,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  return Result::kOk;
 }
 
-void HPresolve::impliedDualFreeGetRhsAndRowType(
+void HPresolve::dualImpliedFreeGetRhsAndRowType(
     HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
     bool modifyRowDualBounds) {
   assert(isDualImpliedFree(row));
@@ -4790,7 +4790,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     if (rowsize[row] == 2 || colsize[col] == 2) {
       double rhs;
       HighsPostsolveStack::RowType rowType;
-      impliedDualFreeGetRhsAndRowType(row, rhs, rowType, true);
+      dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
 
       storeRow(row);
 
@@ -4838,7 +4838,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     nfail = 0;
     double rhs;
     HighsPostsolveStack::RowType rowType;
-    impliedDualFreeGetRhsAndRowType(row, rhs, rowType, true);
+    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),

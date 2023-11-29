@@ -320,7 +320,7 @@ class HPresolve {
 
   Result removeDependentFreeCols(HighsPostsolveStack& postsolve_stack);
 
-  void impliedDualFreeGetRhsAndRowType(HighsInt row, double& rhs,
+  void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
                                        bool modifyRowDualBounds = false);
 
