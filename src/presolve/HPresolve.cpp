@@ -2338,9 +2338,9 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
     for (HighsInt rowiter : rowpositions) {
       assert(Arow[rowiter] == row);
 
-      if (Acol[rowiter] != col) 
+      if (Acol[rowiter] != col)
         addToMatrix(colrow, Acol[rowiter], scale * Avalue[rowiter]);
-  }
+    }
 
     // recompute implied column bounds affected by the substitution
     recomputeColImpliedBounds(colrow);
