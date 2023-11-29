@@ -4932,6 +4932,9 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
 
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros
+  if (!model->a_matrix_.numNz()) {
+    printf("Fixing column with empty matrix\n");
+  }
   postsolve_stack.fixedColAtUpper(col, fixval, model->col_cost_[col],
                                   getColumnVector(col));
   markColDeleted(col);
