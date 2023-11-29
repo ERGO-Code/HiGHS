@@ -670,10 +670,11 @@ void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
       changeImplRowDualLower(*it, -kHighsInf, -1);
     if (rowDualUpperSource[*it] == col)
       changeImplRowDualUpper(*it, kHighsInf, -1);
-  }
-  // iterate over column and recompute the implied bounds
-  for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
-    updateRowDualImpliedBounds(nonz.index(), col, nonz.value());
+
+    // iterate over row and recompute the implied bounds
+    for (const HighsSliceNonzero& nonz : getRowVector(*it)) {
+      updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
+    }
   }
 }
 
