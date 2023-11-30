@@ -4347,6 +4347,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   postsolve_stack.debug_prev_col_upper = 0;
   postsolve_stack.debug_prev_row_lower = 0;
   postsolve_stack.debug_prev_row_upper = 0;
+  // Presolve should not be called with a model that has non nonzeros
+  // in the constraint matrix
+  assert(model->a_matrix_.numNz());
+
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
@@ -4932,9 +4936,6 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
 
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros
-  if (!model->a_matrix_.numNz()) {
-    printf("Fixing column with empty matrix\n");
-  }
   postsolve_stack.fixedColAtUpper(col, fixval, model->col_cost_[col],
                                   getColumnVector(col));
   markColDeleted(col);

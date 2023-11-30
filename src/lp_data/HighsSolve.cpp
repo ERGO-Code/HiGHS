@@ -37,8 +37,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  if (!solver_object.lp_.num_row_) {
-    // Unconstrained LP so solve directly
+  if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
+    // LP is unconstrained due to having no rowws or a zero constraint
+    // matrix, so solve directly
     call_status = solveUnconstrainedLp(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
@@ -142,14 +143,17 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
   // Check that the LP really is unconstrained!
-  assert(lp.num_row_ == 0);
-  if (lp.num_row_ != 0) return HighsStatus::kError;
+  assert(lp.num_row_ == 0 || lp.a_matrix_.numNz() == 0);
+  if (lp.num_row_ > 0) {
+    // LP has rows, but should only be here if the constraint matrix
+    // is zero
+    if (lp.a_matrix_.numNz() > 0) return HighsStatus::kError;
+  }
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Solving an unconstrained LP with %" HIGHSINT_FORMAT
                " columns\n",
                lp.num_col_);
-
   solution.col_value.assign(lp.num_col_, 0);
   solution.col_dual.assign(lp.num_col_, 0);
   basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
@@ -171,6 +175,31 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   highs_info.num_dual_infeasibilities = 0;
   highs_info.max_dual_infeasibility = 0;
   highs_info.sum_dual_infeasibilities = 0;
+
+  if (lp.num_row_ > 0) {
+    // Assign primal, dual and basis status for rows, checking for
+    // infeasiblility
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      double primal_infeasibility = 0;
+      double lower = lp.row_lower_[iRow];
+      double upper = lp.row_upper_[iRow];
+      if (lower > primal_feasibility_tolerance) {
+        // Lower bound too large for zero activity
+        primal_infeasibility = lower;
+      } else if (upper < -primal_feasibility_tolerance) {
+        // Upper bound too small for zero activity
+        primal_infeasibility = -upper;
+      }
+      solution.row_value.push_back(0);
+      solution.row_dual.push_back(0);
+      basis.row_status.push_back(HighsBasisStatus::kBasic);
+      if (primal_infeasibility > primal_feasibility_tolerance)
+        highs_info.num_primal_infeasibilities++;
+      highs_info.sum_primal_infeasibilities += primal_infeasibility;
+      highs_info.max_primal_infeasibility =
+          std::max(primal_infeasibility, highs_info.max_primal_infeasibility);
+    }
+  }
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     double cost = lp.col_cost_[iCol];

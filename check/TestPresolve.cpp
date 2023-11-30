@@ -81,21 +81,26 @@ TEST_CASE("presolve", "[highs_test_presolve]") {
 
 TEST_CASE("empty-row", "[highs_test_presolve]") {
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
-  lp.col_cost_ = { -7.0, -6.0, -5.0 };
-  lp.col_lower_ = { -73.0, -83.0, -94.0 };
-  lp.col_upper_ = { 62.0, 96.0, 62.0 };
-  lp.row_lower_ = { -19.0 };
-  lp.row_upper_ = { 11.0 };
+  lp.col_cost_ = {-7.0, -6.0, -5.0};
+  lp.col_lower_ = {-73.0, -83.0, -94.0};
+  lp.col_upper_ = {62.0, 96.0, 62.0};
+  lp.row_lower_ = {-19.0};
+  lp.row_upper_ = {11.0};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
-  lp.a_matrix_.start_ = { 0, 0 };
-  //  lp.a_index_ = { };
-  //  lp.a_value_ = { };
+  lp.a_matrix_.start_ = {0, 0};
+  // LP has empty constraint matrix so doesn't need to be presolved,
+  // and shouldn't be since this would cause vacuous null pointer
+  // operation in util/HighsMatrixSlice.h (see #1531)
   highs.passModel(lp);
   highs.run();
-  
+  const HighsSolution& solution = highs.getSolution();
+  const HighsBasis& basis = highs.getBasis();
+  REQUIRE(HighsInt(solution.row_value.size()) == lp.num_row_);
+  REQUIRE(HighsInt(basis.row_status.size()) == lp.num_row_);
 }
 
 void presolveSolvePostsolve(const std::string& model_file,
