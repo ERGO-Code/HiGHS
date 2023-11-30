@@ -1169,7 +1169,7 @@ HighsStatus Highs::run() {
   };
 
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
-  assert(!incumbent_lp.num_row_ || unconstrained_lp);
+  assert(incumbent_lp.num_row_ || unconstrained_lp);
   if (basis_.valid || options_.presolve == kHighsOffString ||
       unconstrained_lp) {
     // There is a valid basis for the problem, presolve is off, or LP
@@ -3047,9 +3047,6 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   // Ensure that the LP is column-wise
   HighsLp& original_lp = model_.lp_;
   original_lp.ensureColwise();
-
-  printf("Called Highs::runPresolve for LP with dimensions (%d, %d)\n",
-         int(original_lp.num_col_), int(original_lp.num_row_));
 
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
