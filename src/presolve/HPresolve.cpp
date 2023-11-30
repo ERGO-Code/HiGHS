@@ -4705,7 +4705,7 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
 
 void HPresolve::dualImpliedFreeGetRhsAndRowType(
     HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
-    bool modifyRowDualBounds) {
+    bool relaxRowDualBounds) {
   assert(isDualImpliedFree(row));
   if (model->row_lower_[row] == model->row_upper_[row]) {
     rowType = HighsPostsolveStack::RowType::kEq;
@@ -4714,11 +4714,11 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
              implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
     rowType = HighsPostsolveStack::RowType::kLeq;
     rhs = model->row_upper_[row];
-    if (modifyRowDualBounds) changeRowDualUpper(row, kHighsInf);
+    if (relaxRowDualBounds) changeRowDualUpper(row, kHighsInf);
   } else {
     rowType = HighsPostsolveStack::RowType::kGeq;
     rhs = model->row_lower_[row];
-    if (modifyRowDualBounds) changeRowDualLower(row, -kHighsInf);
+    if (relaxRowDualBounds) changeRowDualLower(row, -kHighsInf);
   }
 }
 

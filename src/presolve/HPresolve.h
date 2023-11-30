@@ -322,7 +322,7 @@ class HPresolve {
 
   void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
-                                       bool modifyRowDualBounds = false);
+                                       bool relaxRowDualBounds = false);
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
