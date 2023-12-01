@@ -1168,20 +1168,26 @@ HighsStatus Highs::run() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  if (basis_.valid || options_.presolve == kHighsOffString) {
-    // There is a valid basis for the problem or presolve is off
-    ekk_instance_.lp_name_ = "LP without presolve or with basis";
+  const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
+  assert(incumbent_lp.num_row_ || unconstrained_lp);
+  if (basis_.valid || options_.presolve == kHighsOffString ||
+      unconstrained_lp) {
+    // There is a valid basis for the problem, presolve is off, or LP
+    // has no constraint matrix
+    ekk_instance_.lp_name_ =
+        "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp, "Solving LP without presolve or with basis",
+    solveLp(incumbent_lp,
+            "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
       return returnFromRun(return_status, undo_mods);
   } else {
-    // No HiGHS basis so consider presolve
+    // Otherwise, consider presolve
     //
     // If using IPX to solve the reduced LP, but not crossover, set
     // lp_presolve_requires_basis_postsolve so that presolve can use
