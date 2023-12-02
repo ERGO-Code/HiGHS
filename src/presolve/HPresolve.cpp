@@ -673,7 +673,8 @@ void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
 
     // iterate over row and recompute the implied bounds
     for (const HighsSliceNonzero& nonz : getRowVector(*it)) {
-      updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
+      if (model->integrality_[nonz.index()] != HighsVarType::kInteger)
+        updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
     }
   }
 }
