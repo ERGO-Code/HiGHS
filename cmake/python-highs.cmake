@@ -65,10 +65,12 @@ message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
 
 
-pybind11_add_module(highs_bindings highspy/highs_bindings.cpp)
+pybind11_add_module(highs_bindings 
+    highspy/highs_bindings.cpp 
+    highspy/highs_options.cpp)
+
 set_target_properties(highs_bindings PROPERTIES
   LIBRARY_OUTPUT_NAME "highs_bindings")
-
 
 if(APPLE)
   set_target_properties(highs_bindings PROPERTIES
@@ -90,14 +92,15 @@ target_link_libraries(highs_bindings PRIVATE
 file(GENERATE OUTPUT ${PYTHON_PROJECT_DIR}/__init__.py CONTENT "")
 
 file(COPY
-  setup.py 
-  pyproject.toml
+  highspy/setup.py 
+  highspy/pyproject.toml
   highspy/README.md
   DESTINATION ${PYTHON_PROJECT_DIR})
 
-file(COPY
-  highspy/highs_bindings.cpp
-  DESTINATION ${PYTHON_PROJECT_DIR}/highspy)
+# file(COPY
+#   highspy/highs_bindings.cpp
+#   highspy/highs_options.cpp
+#   DESTINATION ${PYTHON_PROJECT_DIR}/highspy)
 
 add_custom_command(
   OUTPUT highspy/dist/timestamp
