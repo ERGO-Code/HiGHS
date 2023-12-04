@@ -48,7 +48,7 @@ bool HighsMipSolverData::checkSolution(
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
-                                     const char source) {
+                                     const char solution_source) {
   if (int(solution.size()) != mipsolver.model_->num_col_) return false;
 
   HighsCDouble obj = 0;
@@ -76,7 +76,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
 
-  return addIncumbent(solution, double(obj), source);
+  return addIncumbent(solution, double(obj), solution_source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -1040,7 +1040,7 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 }
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
-                                      double solobj, const char source) {
+                                      double solobj, const char solution_source) {
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1094,7 +1094,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
         return true;
       }
       pruned_treeweight += nodequeue.performBounding(upper_limit);
-      printDisplayLine(source);
+      printDisplayLine(solution_source);
     }
   } else if (incumbent.empty())
     incumbent = sol;
@@ -1159,7 +1159,7 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printDisplayLine(const char source) {
+void HighsMipSolverData::printDisplayLine(const char solution_source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1174,7 +1174,7 @@ void HighsMipSolverData::printDisplayLine(const char source) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (source == ' ' &&
+  if (solution_source == ' ' &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
@@ -1245,7 +1245,7 @@ void HighsMipSolverData::printDisplayLine(const char source) {
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        solution_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap_string.data(),
         cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
         conflictPool.getNumConflicts(), print_lp_iters.data(), time);
@@ -1266,7 +1266,7 @@ void HighsMipSolverData::printDisplayLine(const char source) {
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        solution_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);

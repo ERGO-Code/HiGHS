@@ -826,7 +826,7 @@ retry:
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
-                                            const char source) {
+                                            const char solution_source) {
   auto localdom = mipsolver.mipdata_->domain;
 
   HighsInt numintcols = intcols.size();
@@ -878,17 +878,17 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     } else if (lprelax.unscaledPrimalFeasible(st)) {
       mipsolver.mipdata_->addIncumbent(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-          source);
+          solution_source);
       return true;
     }
   }
 
-  return mipsolver.mipdata_->trySolution(localdom.col_lower_, source);
+  return mipsolver.mipdata_->trySolution(localdom.col_lower_, solution_source);
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
     const std::vector<double>& point1, const std::vector<double>& point2,
-    const char source) {
+    const char solution_source) {
   std::vector<double> roundedpoint;
 
   HighsInt numintcols = intcols.size();
@@ -932,7 +932,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
       if (tmpalpha < nextalpha && tmpalpha > alpha + 1e-2) nextalpha = tmpalpha;
     }
 
-    if (tryRoundedPoint(roundedpoint, source)) return true;
+    if (tryRoundedPoint(roundedpoint, solution_source)) return true;
 
     if (reachedpoint2) return false;
 

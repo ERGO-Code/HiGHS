@@ -177,16 +177,16 @@ struct HighsMipSolverData {
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;
-  bool trySolution(const std::vector<double>& solution, const char source);
+  bool trySolution(const std::vector<double>& solution, const char solution_source);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
-  bool addIncumbent(const std::vector<double>& sol, double solobj, const char source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj, const char solution_source);
 
   const std::vector<double>& getSolution() const;
 
-  void printDisplayLine(const char source = ' ');
+  void printDisplayLine(const char solution_source = ' ');
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
