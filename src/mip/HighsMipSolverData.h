@@ -165,6 +165,8 @@ struct HighsMipSolverData {
       const bool possibly_store_as_new_incumbent = true);
   double percentageInactiveIntegers() const;
   void performRestart();
+  bool solutionColFeasible(const std::vector<double>& solution, double& obj) const;
+  bool solutionRowFeasible(const std::vector<double>& solution) const;
   bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,

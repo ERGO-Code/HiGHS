@@ -21,16 +21,25 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
-bool HighsMipSolverData::checkSolution(
-    const std::vector<double>& solution) const {
+bool HighsMipSolverData::solutionColFeasible(
+    const std::vector<double>& solution, double& obj) const {
+  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
+
+  HighsCDouble cdouble_obj = 0;
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
+    cdouble_obj += mipsolver.colCost(i) * solution[i];
   }
+  obj = double(cdouble_obj);
+  return true;
+}
 
+bool HighsMipSolverData::solutionRowFeasible(
+    const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
     double rowactivity = 0.0;
 
@@ -43,40 +52,22 @@ bool HighsMipSolverData::checkSolution(
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
-
   return true;
+}
+
+bool HighsMipSolverData::checkSolution(
+    const std::vector<double>& solution) const {
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  return solutionRowFeasible(solution);
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
                                      char source) {
-  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
-
-  HighsCDouble obj = 0;
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-    if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
-    if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
-    if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
-      return false;
-
-    obj += mipsolver.colCost(i) * solution[i];
-  }
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
-    double rowactivity = 0.0;
-
-    HighsInt start = ARstart_[i];
-    HighsInt end = ARstart_[i + 1];
-
-    for (HighsInt j = start; j != end; ++j)
-      rowactivity += solution[ARindex_[j]] * ARvalue_[j];
-
-    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
-    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
-  }
-
-  return addIncumbent(solution, double(obj), source);
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  if (!solutionRowFeasible(solution)) return false;
+  return addIncumbent(solution, obj, source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
