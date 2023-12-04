@@ -466,7 +466,8 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
+  if (mipsolver.numCol() == 0)
+    addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -1040,7 +1041,8 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 }
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
-                                      double solobj, const char solution_source) {
+                                      double solobj,
+                                      const char solution_source) {
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1245,10 +1247,11 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        solution_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap_string.data(),
-        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
+        solution_source, print_nodes.data(), queue_nodes.data(),
+        print_leaves.data(), explored, lb_string.data(), ub_string.data(),
+        gap_string.data(), cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
   } else {
     std::array<char, 22> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1266,10 +1269,10 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        solution_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        solution_source, print_nodes.data(), queue_nodes.data(),
+        print_leaves.data(), explored, lb_string.data(), ub_string.data(), gap,
+        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
+        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and

@@ -166,7 +166,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
   if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
-    mipsolver.mipdata_->trySolution(submipsolver.solution_, kSolutionSourceSubMip);
+    mipsolver.mipdata_->trySolution(submipsolver.solution_,
+                                    kSolutionSourceSubMip);
   }
 
   if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
@@ -1003,7 +1004,8 @@ void HighsPrimalHeuristics::randomizedRounding(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
           kSolutionSourceRandomizedRounding);
   } else {
-    mipsolver.mipdata_->trySolution(localdom.col_lower_, kSolutionSourceRandomizedRounding);
+    mipsolver.mipdata_->trySolution(localdom.col_lower_,
+                                    kSolutionSourceRandomizedRounding);
   }
 }
 
@@ -1080,7 +1082,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     if (havecycle) return;
 
-    if (linesearchRounding(lpsol, roundedsol, kSolutionSourceFeasibilityPump)) return;
+    if (linesearchRounding(lpsol, roundedsol, kSolutionSourceFeasibilityPump))
+      return;
 
     if (lprelax.getNumLpIterations() >=
         1000 + mipsolver.mipdata_->avgrootlpiters * 5)
@@ -1119,13 +1122,16 @@ void HighsPrimalHeuristics::centralRounding() {
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->firstlpsol,
-                       mipsolver.mipdata_->analyticCenter, kSolutionSourceCentralRounding);
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
   else if (!mipsolver.mipdata_->rootlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->rootlpsol,
-                       mipsolver.mipdata_->analyticCenter, kSolutionSourceCentralRounding);
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
   else
     linesearchRounding(mipsolver.mipdata_->analyticCenter,
-                       mipsolver.mipdata_->analyticCenter, kSolutionSourceCentralRounding);
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
 }
 
 #if 0
