@@ -33,17 +33,16 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
-const char kIncumbentSourceBranching = 'B';
-const char kIncumbentSourceCentralRounding = 'C';
-const char kIncumbentSourceFeasibilityPump = 'F';
-const char kIncumbentSourceHeuristic = 'H';
-const char kIncumbentSourceSubMip = 'L';
-const char kIncumbentSourceEmptyMip = 'P';
-const char kIncumbentSourceRandomizedRounding = 'R';
-const char kIncumbentSourceSolveLp = 'S';
-const char kIncumbentSourceEvaluateNode = 'T';
-const char kIncumbentSourceUnbounded = 'T';
-//const char kIncumbentSource = '';
+const char kSolutionSourceBranching = 'B';
+const char kSolutionSourceCentralRounding = 'C';
+const char kSolutionSourceFeasibilityPump = 'F';
+const char kSolutionSourceHeuristic = 'H';
+const char kSolutionSourceSubMip = 'L';
+const char kSolutionSourceEmptyMip = 'P';
+const char kSolutionSourceRandomizedRounding = 'R';
+const char kSolutionSourceSolveLp = 'S';
+const char kSolutionSourceEvaluateNode = 'T';
+const char kSolutionSourceUnbounded = 'U';
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -178,7 +177,7 @@ struct HighsMipSolverData {
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;
-  bool trySolution(const std::vector<double>& solution, const char source = ' ');
+  bool trySolution(const std::vector<double>& solution, const char source);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();

@@ -466,7 +466,7 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kIncumbentSourceEmptyMip);
+  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -1183,8 +1183,9 @@ void HighsMipSolverData::printDisplayLine(const char source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
+	"\nSrc: B => Branching; C => Central rounding; F => Feasibility pump; H => Heuristic; L => Sub-MIP\nSrc: P => Empty MIP; R => Randomized rounding; S => Solve LP; T => Evaluate node; U => Unbounded\n" 
         "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
-          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
+          "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
         // clang-format on
     );
 
@@ -1359,7 +1360,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
           addIncumbent(lp.getLpSolver().getSolution().col_value,
-                       lp.getObjective(), kIncumbentSourceEvaluateNode)) {
+                       lp.getObjective(), kSolutionSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;
         pruned_treeweight = 1.0;
