@@ -166,7 +166,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
   if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
-    mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
+    mipsolver.mipdata_->trySolution(submipsolver.solution_, kIncumbentSourceSubMip);
   }
 
   if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
@@ -826,7 +826,7 @@ retry:
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
-                                            char source) {
+                                            const char source) {
   auto localdom = mipsolver.mipdata_->domain;
 
   HighsInt numintcols = intcols.size();
@@ -888,7 +888,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 
 bool HighsPrimalHeuristics::linesearchRounding(
     const std::vector<double>& point1, const std::vector<double>& point2,
-    char source) {
+    const char source) {
   std::vector<double> roundedpoint;
 
   HighsInt numintcols = intcols.size();
@@ -1001,9 +1001,9 @@ void HighsPrimalHeuristics::randomizedRounding(
     } else if (lprelax.unscaledPrimalFeasible(st))
       mipsolver.mipdata_->addIncumbent(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-          'R');
+          kIncumbentSourceRandomizedRounding);
   } else {
-    mipsolver.mipdata_->trySolution(localdom.col_lower_, 'R');
+    mipsolver.mipdata_->trySolution(localdom.col_lower_, kIncumbentSourceRandomizedRounding);
   }
 }
 
@@ -1080,7 +1080,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     if (havecycle) return;
 
-    if (linesearchRounding(lpsol, roundedsol, 'F')) return;
+    if (linesearchRounding(lpsol, roundedsol, kIncumbentSourceFeasibilityPump)) return;
 
     if (lprelax.getNumLpIterations() >=
         1000 + mipsolver.mipdata_->avgrootlpiters * 5)
@@ -1110,7 +1110,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       lprelax.unscaledPrimalFeasible(status))
     mipsolver.mipdata_->addIncumbent(
         lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-        'F');
+        kIncumbentSourceFeasibilityPump);
 }
 
 void HighsPrimalHeuristics::centralRounding() {
@@ -1119,13 +1119,13 @@ void HighsPrimalHeuristics::centralRounding() {
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->firstlpsol,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter, kIncumbentSourceCentralRounding);
   else if (!mipsolver.mipdata_->rootlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->rootlpsol,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter, kIncumbentSourceCentralRounding);
   else
     linesearchRounding(mipsolver.mipdata_->analyticCenter,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter, kIncumbentSourceCentralRounding);
 }
 
 #if 0

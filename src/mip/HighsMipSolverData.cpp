@@ -48,7 +48,7 @@ bool HighsMipSolverData::checkSolution(
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
-                                     char source) {
+                                     const char source) {
   if (int(solution.size()) != mipsolver.model_->num_col_) return false;
 
   HighsCDouble obj = 0;
@@ -466,7 +466,7 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
+  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kIncumbentSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -1040,7 +1040,7 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 }
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
-                                      double solobj, char source) {
+                                      double solobj, const char source) {
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1159,7 +1159,7 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printDisplayLine(char first) {
+void HighsMipSolverData::printDisplayLine(const char source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1174,7 +1174,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (first == ' ' &&
+  if (source == ' ' &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
@@ -1244,7 +1244,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap_string.data(),
         cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
         conflictPool.getNumConflicts(), print_lp_iters.data(), time);
@@ -1265,7 +1265,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
@@ -1359,7 +1359,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
           addIncumbent(lp.getLpSolver().getSolution().col_value,
-                       lp.getObjective(), 'T')) {
+                       lp.getObjective(), kIncumbentSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;
         pruned_treeweight = 1.0;

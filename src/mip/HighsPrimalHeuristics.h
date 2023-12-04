@@ -57,10 +57,10 @@ class HighsPrimalHeuristics {
 
   void flushStatistics();
 
-  bool tryRoundedPoint(const std::vector<double>& point, char source);
+  bool tryRoundedPoint(const std::vector<double>& point, const char source);
 
   bool linesearchRounding(const std::vector<double>& point1,
-                          const std::vector<double>& point2, char source);
+                          const std::vector<double>& point2, const char source);
 
   void randomizedRounding(const std::vector<double>& relaxationsol);
 };
