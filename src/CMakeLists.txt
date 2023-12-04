@@ -341,8 +341,8 @@ if(NOT FAST_BUILD)
   endif()
 
   # set the install rpath to the installed destination
-  set_target_properties(libhighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  # set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+  #   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   # install the header files of highs
   foreach(file ${headers})

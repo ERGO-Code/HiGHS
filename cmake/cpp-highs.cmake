@@ -1,3 +1,7 @@
+set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 if(NOT BUILD_CXX)
   return()
 endif()
@@ -73,12 +77,12 @@ function(add_cxx_test FILE_NAME)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
   get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
 
-  if(APPLE)
-    set(CMAKE_INSTALL_RPATH
-      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
-  elseif(UNIX)
-    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
-  endif()
+  # if(APPLE)
+  #   set(CMAKE_INSTALL_RPATH
+  #     "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  # elseif(UNIX)
+  #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
+  # endif()
 
   add_executable(${TEST_NAME} ${FILE_NAME})
   target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -90,3 +94,23 @@ function(add_cxx_test FILE_NAME)
   endif()
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
+
+
+
+
+# # Properties
+# if(NOT APPLE)
+#   set_target_properties(highs PROPERTIES VERSION ${PROJECT_VERSION})
+# else()
+#   # Clang don't support version x.y.z with z > 255
+#   set_target_properties(highs PROPERTIES
+#     INSTALL_RPATH "@loader_path"
+#     VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+# endif()
+# set_target_properties(highs PROPERTIES
+#   SOVERSION ${PROJECT_VERSION_MAJOR}
+#   POSITION_INDEPENDENT_CODE ON
+#   INTERFACE_POSITION_INDEPENDENT_CODE ON
+# )
+# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
