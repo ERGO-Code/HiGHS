@@ -668,6 +668,69 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
+  const bool try_trivial_heuristics = false;
+  if (!try_trivial_heuristics) return;
+  // Now try trivial heuristics
+  const HighsInt num_try_heuristic = 2;
+  //  printf("Number of continuous columns is %d\n", int(continuous_cols.size()));
+  assert(continuous_cols.size() == 0);
+  
+  const std::vector<double>& col_lower = mipsolver.model_->col_lower_;
+  const std::vector<double>& col_upper = mipsolver.model_->col_upper_;
+  const std::vector<double>& row_lower = mipsolver.model_->row_lower_;
+  const std::vector<double>& row_upper = mipsolver.model_->row_upper_;
+  // Determine the following properties, according to which some
+  // trivial heuristics are duplicated or fail immediately
+  bool all_integer_lower_non_positive = true;
+  bool all_integer_lower_zero = true;
+  bool all_integer_upper_finite = true;
+  for (HighsInt integer_col = 0; integer_col < numintegercols; integer_col++) {
+    HighsInt iCol = integer_cols[integer_col];
+    if (col_lower[iCol] > 0) all_integer_lower_non_positive = false;
+    if (col_lower[iCol]) all_integer_lower_zero = false;
+    if (col_upper[iCol] >= kHighsInf) all_integer_upper_finite = false;
+    // Only continue if one of the properties still holds
+    if (!(all_integer_lower_non_positive || all_integer_lower_zero || all_integer_upper_finite)) break;
+  }
+  printf("\nTrying trivial heuristics\n"
+	 "   all_integer_lower_non_positive = %d\n"
+	 "   all_integer_lower_zero = %d\n"
+	 "   all_integer_upper_finite = %d\n",
+	 all_integer_lower_non_positive, all_integer_lower_zero, all_integer_upper_finite);
+  const double feasibility_tolerance = mipsolver.options_mip_->mip_feasibility_tolerance;
+  for (HighsInt try_heuristic = 0; try_heuristic < num_try_heuristic; try_heuristic++) {
+    if (try_heuristic == 0) {
+      // First heuristic is to see whether all-zero for integer
+      // variables is feasible
+      //
+      // If there is a positive lower bound then the heuristic fails
+      if (!all_integer_lower_non_positive) continue;
+      // Determine whether a zero row activity is feasible
+      bool heuristic_failed = false;
+      for (HighsInt iRow = 0; iRow < mipsolver.model_->num_row_; iRow++) {
+	if (row_lower[iRow] > feasibility_tolerance ||
+	    row_upper[iRow] < -feasibility_tolerance) {
+	  printf("Tivial heuristic 0 fails due to row %d having bounds of [%g, %g]\n",
+		 int(iRow), row_lower[iRow], row_upper[iRow]);
+	  heuristic_failed = true;
+	  break;
+	}
+      }
+      if (heuristic_failed) continue;
+    } else if (try_heuristic == 1) {
+      // Second heuristic is to see whether all-upper for integer
+      // variables is feasible
+      //
+      // If there is an infinite upper bound then the heuristic fails
+      if (!all_integer_upper_finite) continue;
+    } else {
+      assert(123==456);
+    }
+  //  HighsLp lc_lp = *(mipsolver.model_);
+  //  Highs lc_highs;
+  //  lc_highs.passModel(lc_lp);
+  }
+
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
