@@ -645,6 +645,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 void HPresolve::recomputeColImpliedBounds(HighsInt row) {
   // recompute implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
+  if (colImplSourceByRow[row].empty()) return;
   std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
   for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
     // set implied bounds to infinite values if they were deduced from the given
@@ -660,8 +661,12 @@ void HPresolve::recomputeColImpliedBounds(HighsInt row) {
 }
 
 void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
+  // integer columns should not be source for implied bounds on dual multipliers
+  assert(model->integrality_[col] != HighsVarType::kInteger ||
+         implRowDualSourceByCol[col].empty());
   // recompute implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
+  if (implRowDualSourceByCol[col].empty()) return;
   std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
   for (auto it = affectedRows.cbegin(); it != affectedRows.cend(); it++) {
     // set implied bounds to infinite values if they were deduced from the given
