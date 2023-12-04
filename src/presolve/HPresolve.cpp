@@ -661,9 +661,6 @@ void HPresolve::recomputeColImpliedBounds(HighsInt row) {
 }
 
 void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
-  // integer columns should not be source for implied bounds on dual multipliers
-  assert(model->integrality_[col] != HighsVarType::kInteger ||
-         implRowDualSourceByCol[col].empty());
   // recompute implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
