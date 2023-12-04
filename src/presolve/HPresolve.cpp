@@ -673,6 +673,7 @@ void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
 
     // iterate over row and recompute the implied bounds
     for (const HighsSliceNonzero& nonz : getRowVector(*it)) {
+      // integer columns cannot be used to tighten bounds on dual multipliers
       if (model->integrality_[nonz.index()] != HighsVarType::kInteger)
         updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
     }
