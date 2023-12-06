@@ -2260,8 +2260,6 @@ void HPresolve::scaleRow(HighsInt row, double scale, bool integral) {
 }
 
 void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
-  HighsInt rowlen = rowpositions.size();
-
   model->row_upper_[row] *= scale;
   model->row_lower_[row] *= scale;
   implRowDualLower[row] /= scale;
@@ -2272,17 +2270,13 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
       model->row_upper_[row] = std::round(model->row_upper_[row]);
     if (model->row_lower_[row] != kHighsInf)
       model->row_lower_[row] = std::round(model->row_lower_[row]);
-    for (HighsInt j = 0; j < rowlen; ++j) {
-      Avalue[rowpositions[j]] *= scale;
-      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
-        unlink(rowpositions[j]);
-    }
-  } else
-    for (HighsInt j = 0; j < rowlen; ++j) {
-      Avalue[rowpositions[j]] *= scale;
-      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
-        unlink(rowpositions[j]);
-    }
+  }
+
+  for (size_t j = 0; j < rowpositions.size(); ++j) {
+    Avalue[rowpositions[j]] *= scale;
+    if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
+      unlink(rowpositions[j]);
+  }
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
