@@ -1966,6 +1966,9 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
-  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
+  // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,
+  // whereas mip_rel_gap in logging output (mimicked by
+  // limitsToBounds) gives a percentage, so convert it a fraction
+  mipsolver.callback_->data_out.mip_gap = 1e-2 * mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
