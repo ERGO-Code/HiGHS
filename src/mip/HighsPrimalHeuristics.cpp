@@ -1203,3 +1203,23 @@ void HighsPrimalHeuristics::flushStatistics() {
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;
 }
+
+void HighsPrimalHeuristics::initialiseTrivialHeuristicsData() {
+  this->trivial_heuristics_data_.clear();
+  std::vector<HighsInt> record;
+  record.assign(kTrivialHeuristicRecordCount, 0);
+  for (HighsInt heuristic = kTrivialHeuristicZero;
+       heuristic < kTrivialHeuristicCount; heuristic++) 
+    this->trivial_heuristics_data_.push_back(record);
+}
+
+void HighsPrimalHeuristics::copyTrivialHeuristicsData() {
+  for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) 
+    this->trivial_heuristics_data_[heuristic] = mipsolver.mipdata_->submip_trivial_heuristics_data_[heuristic];
+}
+
+void HighsPrimalHeuristics::flushTrivialHeuristicsData() {
+  for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++)
+    for (HighsInt iX = kTrivialHeuristicRecordNotRun; iX < kTrivialHeuristicRecordCount; iX++) 
+      mipsolver.mipdata_->submip_trivial_heuristics_data_[heuristic][iX] += this->trivial_heuristics_data_[heuristic][iX];
+}

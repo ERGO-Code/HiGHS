@@ -415,6 +415,9 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
+  printf("HighsMipSolverData::runSetup() submip = %d: solution_objective = %g\n",
+	 mipsolver.submip, mipsolver.solution_objective_);
+
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
@@ -765,7 +768,7 @@ void HighsMipSolverData::runSetup() {
     double obj = double(cdouble_obj);
     const double save_upper_bound = upper_bound;
     const bool new_incumbent = addIncumbent(solution, obj, heuristic_source[try_heuristic]);
-    const bool lc_report = true;
+    const bool lc_report = false;
     if (lc_report) {
       printf("Trivial heuristic %d has succeeded: objective = %g", int(try_heuristic), obj);
       if (new_incumbent) {
