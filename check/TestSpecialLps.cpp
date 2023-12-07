@@ -605,7 +605,10 @@ void unconstrained(Highs& highs) {
   lp.a_matrix_.start_ = {0, 0, 0};
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+  // No need to turn off presolve, since unconstrained LPs are
+  // automatically solved directly
+  //
+  //  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == 1);
