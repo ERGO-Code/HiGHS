@@ -136,14 +136,6 @@ bool HighsPrimalHeuristics::solveSubMip(
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true);
-  // Set up the data to control the trivial heuristics, and record
-  // their success/failure, taking any sub-MIP data accumulated in the
-  // MIP solver instance
-  if (mipsolver.submip) {
-    printf("HighsPrimalHeuristics::solveSubMip when MIP itself is submip\n");
-  }
-  initialiseTrivialHeuristicsData(trivial_heuristics_data_);
-  this->copyTrivialHeuristicsData();
 
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
@@ -1214,6 +1206,168 @@ void HighsPrimalHeuristics::flushStatistics() {
 }
 
 void HighsPrimalHeuristics::trivial() {
+  printf("HighsPrimalHeuristics::trivial() submip = %d; numRestarts = %d; dimensions (%d, %d); solution_objective = %g\n",
+	 mipsolver.submip,
+	 int(mipsolver.mipdata_->numRestarts),
+	 int(mipsolver.model_->num_col_),
+	 int(mipsolver.model_->num_row_),
+	 mipsolver.solution_objective_);
+
+  const HighsInt use_num_try_heuristic = 1;
+  const bool try_trivial_heuristics = true;
+  if (!try_trivial_heuristics) {
+    for (HighsInt try_heuristic = 0; try_heuristic < use_num_try_heuristic;
+	 try_heuristic++)
+      trivial_heuristics_data_.record[try_heuristic].not_run++;
+    return;
+  }
+
+  const std::vector<HighsInt>& integer_cols = mipsolver.mipdata_->integer_cols;
+  const std::vector<HighsInt>& continuous_cols = mipsolver.mipdata_->continuous_cols;
+  HighsInt num_integer_col = integer_cols.size();
+  HighsInt num_continuous_col = continuous_cols.size();
+
+  // Now try trivial heuristics
+  const std::vector<char> heuristic_source = {'z', 'u', 'l', 'p'};
+  //  printf("Number of continuous columns is %d\n", int(num_continuous_col));
+  assert(num_continuous_col == 0);
+
+  const std::vector<double>& col_lower = mipsolver.model_->col_lower_;
+  const std::vector<double>& col_upper = mipsolver.model_->col_upper_;
+  const std::vector<double>& row_lower = mipsolver.model_->row_lower_;
+  const std::vector<double>& row_upper = mipsolver.model_->row_upper_;
+  const HighsSparseMatrix& matrix = mipsolver.model_->a_matrix_;
+  // Determine the following properties, according to which some
+  // trivial heuristics are duplicated or fail immediately
+  bool all_integer_lower_non_positive = true;
+  bool all_integer_lower_zero = true;
+  bool all_integer_lower_finite = true;
+  bool all_integer_upper_finite = true;
+  for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+    HighsInt iCol = integer_cols[integerCol];
+    if (col_lower[iCol] > 0) all_integer_lower_non_positive = false;
+    if (col_lower[iCol]) all_integer_lower_zero = false;
+    if (col_lower[iCol] <= -kHighsInf) all_integer_lower_finite = false;
+    if (col_upper[iCol] >= kHighsInf) all_integer_upper_finite = false;
+    // Only continue if one of the properties still holds
+    if (!(all_integer_lower_non_positive || all_integer_lower_zero ||
+          all_integer_upper_finite))
+      break;
+  }
+  const bool all_integer_boxed = all_integer_lower_finite && all_integer_upper_finite;
+  /*
+  printf(
+      "\nTrying trivial heuristics\n"
+      "   all_integer_lower_non_positive = %d\n"
+      "   all_integer_lower_zero = %d\n"
+      "   all_integer_upper_finite = %d\n"
+      "   all_integer_boxed = %d\n",
+      all_integer_lower_non_positive, all_integer_lower_zero,
+      all_integer_upper_finite, all_integer_boxed);
+  */
+  const double feasibility_tolerance =
+      mipsolver.options_mip_->mip_feasibility_tolerance;
+  // Loop through the trivial heuristics
+  std::vector<double> solution(mipsolver.model_->num_col_);
+  std::vector<HighsInt> prev_num_try;
+  for (HighsInt try_heuristic = 0; try_heuristic < use_num_try_heuristic;
+       try_heuristic++) {
+    TrivialHeuristicRecord& record = trivial_heuristics_data_.record[try_heuristic];
+    prev_num_try.push_back(record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement);
+    if (try_heuristic == 0) {
+      // First heuristic is to see whether all-zero for integer
+      // variables is feasible
+      //
+      // If there is a positive lower bound then the heuristic fails
+      if (!all_integer_lower_non_positive) {
+	record.cannot_run++;
+	continue;
+      }
+      // Determine whether a zero row activity is feasible
+      bool heuristic_failed = false;
+      for (HighsInt iRow = 0; iRow < mipsolver.model_->num_row_; iRow++) {
+        if (row_lower[iRow] > feasibility_tolerance ||
+            row_upper[iRow] < -feasibility_tolerance) {
+          heuristic_failed = true;
+          break;
+        }
+      }
+      if (heuristic_failed) {
+	record.fail++;
+	continue;
+      }
+      solution.assign(mipsolver.model_->num_col_, 0);
+    } else if (try_heuristic == 1) {
+      // Second heuristic is to see whether all-upper for integer
+      // variables is feasible
+      //
+      // If there is an infinite upper bound then the heuristic fails
+      if (!all_integer_upper_finite) continue;
+      // Trivially feasible for columns
+      if (!mipsolver.mipdata_->solutionRowFeasible(col_upper)) continue;
+      solution = col_upper;
+    } else if (try_heuristic == 2) {
+      // Third heuristic is to see whether all-lower for integer
+      // variables (if distinct from all-zero) is feasible
+      if (all_integer_lower_zero) continue;
+      // Trivially feasible for columns
+      if (!mipsolver.mipdata_->solutionRowFeasible(col_lower)) continue;
+      solution = col_lower;
+    } else if (try_heuristic == 3) {
+      // Fourth heuristic is to see whether the "lock point" is feasible
+      if (!all_integer_boxed) continue;
+      for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+	HighsInt iCol = integer_cols[integerCol];
+	HighsInt num_positive_values = 0;
+	HighsInt num_negative_values = 0;
+	for (HighsInt iEl = matrix.start_[iCol]; iEl < matrix.start_[iCol+1]; iEl++) {
+	  if (matrix.value_[iEl] > 0)
+	    num_positive_values++;
+	  else
+	    num_negative_values++;
+	}
+	solution[iCol] = num_positive_values > num_negative_values ? col_lower[iCol] : col_upper[iCol];
+      }
+      // Trivially feasible for columns
+      if (!mipsolver.mipdata_->solutionRowFeasible(solution)) continue;
+    }
+
+    HighsCDouble cdouble_obj = 0.0;   
+    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
+      cdouble_obj += mipsolver.colCost(iCol) * solution[iCol];
+    double obj = double(cdouble_obj);
+    const double save_upper_bound = mipsolver.mipdata_->upper_bound;
+    const bool new_incumbent = mipsolver.mipdata_->addIncumbent(solution, obj, heuristic_source[try_heuristic]);
+    if (new_incumbent) {
+      record.improvement++;
+    } else {
+      record.feasible++;
+    }
+    const bool lc_report = false;
+    if (lc_report) {
+      printf("Trivial heuristic %d has succeeded: objective = %g", int(try_heuristic), obj);
+      if (new_incumbent) {
+	printf("; upper bound from %g to %g\n", save_upper_bound, mipsolver.mipdata_->upper_bound);
+      } else {
+	printf("\n");
+      }
+    }
+
+    
+    //  HighsLp lc_lp = *(mipsolver.model_);
+    //  Highs lc_highs;
+    //  lc_highs.passModel(lc_lp);
+  }
+  for (HighsInt try_heuristic = 0; try_heuristic < use_num_try_heuristic;
+       try_heuristic++) {
+    TrivialHeuristicRecord& record = trivial_heuristics_data_.record[try_heuristic];
+    const HighsInt num_try = record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement;
+    const bool num_try_ok = num_try == prev_num_try[try_heuristic]+1;
+    if (!num_try_ok) 
+      printf("HighsPrimalHeuristics::trivial() Heuristic %d: %d = num_try != prev_num_try[try_heuristic]+1 = %d\n",
+	     int(try_heuristic), int(num_try), int(prev_num_try[try_heuristic]+1));
+    assert(num_try_ok);
+  }
 }
 
 void HighsPrimalHeuristics::copyTrivialHeuristicsData() {
@@ -1223,7 +1377,8 @@ void HighsPrimalHeuristics::copyTrivialHeuristicsData() {
     to_record.not_run = from_record.not_run;
     to_record.cannot_run = from_record.cannot_run;
     to_record.fail = from_record.fail;
-    to_record.success = from_record.success;
+    to_record.feasible = from_record.feasible;
+    to_record.improvement = from_record.improvement;
   }
 }
 
@@ -1234,8 +1389,17 @@ void HighsPrimalHeuristics::flushTrivialHeuristicsData() {
     to_record.not_run += from_record.not_run;
     to_record.cannot_run += from_record.cannot_run;
     to_record.fail += from_record.fail;
-    to_record.success += from_record.success;
+    to_record.feasible += from_record.feasible;
+    to_record.improvement += from_record.improvement;
   }
+}
+
+void HighsPrimalHeuristics::initialiseTrivialHeuristicsData() {
+  this->trivial_heuristics_data_.record.clear();
+  TrivialHeuristicRecord record_;
+  for (HighsInt heuristic = kTrivialHeuristicZero;
+       heuristic < kTrivialHeuristicCount; heuristic++) 
+    this->trivial_heuristics_data_.record.push_back(record_);
 }
 
 // Not in class since it's called from methods in ?????

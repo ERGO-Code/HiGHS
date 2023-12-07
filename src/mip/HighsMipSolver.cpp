@@ -134,6 +134,13 @@ void HighsMipSolver::run() {
   }
 
   mipdata_->runSetup();
+  // Set up the data to control the trivial heuristics, and record
+  // their success/failure, taking any sub-MIP data accumulated in the
+  // MIP solver instance
+  HighsPrimalHeuristics& heuristics = mipdata_->heuristics;
+  heuristics.initialiseTrivialHeuristicsData();
+  heuristics.copyTrivialHeuristicsData();
+
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     mipdata_->evaluateRootNode();

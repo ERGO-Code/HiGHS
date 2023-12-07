@@ -21,7 +21,8 @@ struct TrivialHeuristicRecord {
   HighsInt not_run = 0;
   HighsInt cannot_run = 0;
   HighsInt fail = 0;
-  HighsInt success = 0;
+  HighsInt feasible = 0;
+  HighsInt improvement = 0;
 };  
 
 enum TrivialHeuristic {
@@ -87,6 +88,7 @@ class HighsPrimalHeuristics {
   void trivial();
   void copyTrivialHeuristicsData();
   void flushTrivialHeuristicsData();
+  void initialiseTrivialHeuristicsData();
 };
 
 void initialiseTrivialHeuristicsData(TrivialHeuristicData& data);
