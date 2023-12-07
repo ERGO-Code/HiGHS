@@ -415,8 +415,17 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
-  printf("HighsMipSolverData::runSetup() submip = %d: solution_objective = %g\n",
-	 mipsolver.submip, mipsolver.solution_objective_);
+  printf("HighsMipSolverData::runSetup() submip = %d; numRestarts = %d; dimensions (%d, %d); solution_objective = %g\n",
+	 mipsolver.submip, int(numRestarts), int(model.num_col_), int(model.num_row_), mipsolver.solution_objective_);
+
+  if (numRestarts == 0) {
+    // Set up the data to control the trivial heuristics, and record
+    // their success/failure. MIP trivial heuristics data exists
+    // separately for the original MIP - since that's the whole problem
+    // being solved - and any sub-MIPs
+    initialiseTrivialHeuristicsData(mip_trivial_heuristics_data_);
+    initialiseTrivialHeuristicsData(submip_trivial_heuristics_data_);
+  }
 
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -1789,6 +1798,16 @@ restart:
 
       printDisplayLine();
     }
+
+    // --->
+    // End of primal heuristics, unless not a sub-MIP, and no feasible
+    // point found
+    //
+    // Try trivial heuristics
+    if (checkLimits()) return;
+    heuristics.trivial();
+    heuristics.flushStatistics();
+    // <---
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
 

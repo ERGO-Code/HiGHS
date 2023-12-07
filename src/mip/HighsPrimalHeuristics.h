@@ -17,12 +17,11 @@
 #include "lp_data/HighsLp.h"
 #include "util/HighsRandom.h"
 
-enum TrivialHeuristicRecord {
-  kTrivialHeuristicRecordNotRun = 0,
-  kTrivialHeuristicRecordCannotRun,
-  kTrivialHeuristicRecordFail,
-  kTrivialHeuristicRecordSuccess,
-  kTrivialHeuristicRecordCount
+struct TrivialHeuristicRecord {
+  HighsInt not_run = 0;
+  HighsInt cannot_run = 0;
+  HighsInt fail = 0;
+  HighsInt success = 0;
 };  
 
 enum TrivialHeuristic {
@@ -31,7 +30,11 @@ enum TrivialHeuristic {
   kTrivialHeuristicLower,
   kTrivialHeuristicLock,
   kTrivialHeuristicCount
-};  
+};
+
+struct TrivialHeuristicData {
+  std::vector<TrivialHeuristicRecord> record;
+};
 
 class HighsMipSolver;
 
@@ -48,7 +51,7 @@ class HighsPrimalHeuristics {
   HighsRandom randgen;
 
   std::vector<HighsInt> intcols;
-  std::vector<std::vector<HighsInt>> trivial_heuristics_data_;
+  TrivialHeuristicData trivial_heuristics_data_;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
@@ -81,9 +84,11 @@ class HighsPrimalHeuristics {
 
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
-  void initialiseTrivialHeuristicsData();
+  void trivial();
   void copyTrivialHeuristicsData();
   void flushTrivialHeuristicsData();
 };
+
+void initialiseTrivialHeuristicsData(TrivialHeuristicData& data);
 
 #endif
