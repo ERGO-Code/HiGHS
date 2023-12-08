@@ -182,6 +182,25 @@ bool HPresolve::isDualImpliedFree(HighsInt row) const {
           implRowDualLower[row] >= -options->dual_feasibility_tolerance);
 }
 
+void HPresolve::dualImpliedFreeGetRhsAndRowType(
+    HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
+    bool relaxRowDualBounds) {
+  assert(isDualImpliedFree(row));
+  if (model->row_lower_[row] == model->row_upper_[row]) {
+    rowType = HighsPostsolveStack::RowType::kEq;
+    rhs = model->row_upper_[row];
+  } else if (model->row_upper_[row] != kHighsInf &&
+             implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
+    rowType = HighsPostsolveStack::RowType::kLeq;
+    rhs = model->row_upper_[row];
+    if (relaxRowDualBounds) changeRowDualUpper(row, kHighsInf);
+  } else {
+    rowType = HighsPostsolveStack::RowType::kGeq;
+    rhs = model->row_lower_[row];
+    if (relaxRowDualBounds) changeRowDualLower(row, -kHighsInf);
+  }
+}
+
 bool HPresolve::isImpliedIntegral(HighsInt col) {
   bool runDualDetection = true;
 
@@ -4703,25 +4722,6 @@ HPresolve::Result HPresolve::removeDependentFreeCols(
   //  analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
   //
   //  return Result::kOk;
-}
-
-void HPresolve::dualImpliedFreeGetRhsAndRowType(
-    HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
-    bool relaxRowDualBounds) {
-  assert(isDualImpliedFree(row));
-  if (model->row_lower_[row] == model->row_upper_[row]) {
-    rowType = HighsPostsolveStack::RowType::kEq;
-    rhs = model->row_upper_[row];
-  } else if (model->row_upper_[row] != kHighsInf &&
-             implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
-    rowType = HighsPostsolveStack::RowType::kLeq;
-    rhs = model->row_upper_[row];
-    if (relaxRowDualBounds) changeRowDualUpper(row, kHighsInf);
-  } else {
-    rowType = HighsPostsolveStack::RowType::kGeq;
-    rhs = model->row_lower_[row];
-    if (relaxRowDualBounds) changeRowDualLower(row, -kHighsInf);
-  }
 }
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {

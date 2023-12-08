@@ -170,6 +170,10 @@ class HPresolve {
 
   bool isDualImpliedFree(HighsInt row) const;
 
+  void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
+                                       HighsPostsolveStack::RowType& rowType,
+                                       bool relaxRowDualBounds = false);
+
   bool isImpliedIntegral(HighsInt col);
 
   bool isImpliedInteger(HighsInt col);
@@ -298,9 +302,6 @@ class HPresolve {
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  Result solveOneRowComponent(HighsPostsolveStack& postsolve_stack,
-                              HighsInt row);
-
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
@@ -319,10 +320,6 @@ class HPresolve {
   Result removeDependentEquations(HighsPostsolveStack& postsolve_stack);
 
   Result removeDependentFreeCols(HighsPostsolveStack& postsolve_stack);
-
-  void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
-                                       HighsPostsolveStack::RowType& rowType,
-                                       bool relaxRowDualBounds = false);
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
 
