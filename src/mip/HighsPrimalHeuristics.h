@@ -86,11 +86,12 @@ class HighsPrimalHeuristics {
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
   void trivial();
-  void copyTrivialHeuristicsData();
-  void flushTrivialHeuristicsData();
-  void initialiseTrivialHeuristicsData();
+  void initialiseTrivialHeuristicsStatistics();
+  void copyTrivialHeuristicsStatistics();
+  void flushTrivialHeuristicsStatistics();
+  void reportTrivialHeuristicsStatistics();
 };
 
-void initialiseTrivialHeuristicsData(TrivialHeuristicData& data);
+void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& data);
 
 #endif

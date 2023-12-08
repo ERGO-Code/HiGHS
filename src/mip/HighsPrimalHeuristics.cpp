@@ -1206,6 +1206,7 @@ void HighsPrimalHeuristics::flushStatistics() {
 }
 
 void HighsPrimalHeuristics::trivial() {
+  if (mipsolver.options_mip_->mip_trivial_heuristics == kHighsOffString) return;
   printf("HighsPrimalHeuristics::trivial() submip = %d; numRestarts = %d; dimensions (%d, %d); solution_objective = %g\n",
 	 mipsolver.submip,
 	 int(mipsolver.mipdata_->numRestarts),
@@ -1385,7 +1386,15 @@ void HighsPrimalHeuristics::trivial() {
   }
 }
 
-void HighsPrimalHeuristics::copyTrivialHeuristicsData() {
+void HighsPrimalHeuristics::initialiseTrivialHeuristicsStatistics() {
+  this->trivial_heuristics_data_.record.clear();
+  TrivialHeuristicRecord record_;
+  for (HighsInt heuristic = kTrivialHeuristicZero;
+       heuristic < kTrivialHeuristicCount; heuristic++) 
+    this->trivial_heuristics_data_.record.push_back(record_);
+}
+
+void HighsPrimalHeuristics::copyTrivialHeuristicsStatistics() {
   for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
     const TrivialHeuristicRecord& from_record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
     TrivialHeuristicRecord& to_record = this->trivial_heuristics_data_.record[heuristic];
@@ -1397,7 +1406,7 @@ void HighsPrimalHeuristics::copyTrivialHeuristicsData() {
   }
 }
 
-void HighsPrimalHeuristics::flushTrivialHeuristicsData() {
+void HighsPrimalHeuristics::flushTrivialHeuristicsStatistics() {
   for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
     const TrivialHeuristicRecord& from_record = this->trivial_heuristics_data_.record[heuristic];
     TrivialHeuristicRecord& to_record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
@@ -1409,16 +1418,25 @@ void HighsPrimalHeuristics::flushTrivialHeuristicsData() {
   }
 }
 
-void HighsPrimalHeuristics::initialiseTrivialHeuristicsData() {
-  this->trivial_heuristics_data_.record.clear();
-  TrivialHeuristicRecord record_;
-  for (HighsInt heuristic = kTrivialHeuristicZero;
-       heuristic < kTrivialHeuristicCount; heuristic++) 
-    this->trivial_heuristics_data_.record.push_back(record_);
+void HighsPrimalHeuristics::reportTrivialHeuristicsStatistics() {
+  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
+  const bool is_submip = mipsolver.submip;
+  printf("Reporting on trivial heuristics: submip = %d\n", is_submip); fflush(stdout);
+  // If presolve is sufficient to determine the status of a sub-MIP,
+  // then there is no record of trivial heuristic statistics
+  if (!mipsolver.mipdata_->submip_trivial_heuristics_data_.record.size()) return;
+  for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
+    const TrivialHeuristicRecord& record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
+    HighsInt num_try = record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement;
+        highsLogUser(log_options, HighsLogType::kInfo,
+		     "Heuristic %d tried %d times\n",
+		     int(heuristic), int(num_try));
+  }
+ 
 }
 
 // Not in class since it's called from methods in ?????
-void initialiseTrivialHeuristicsData(TrivialHeuristicData& data) {
+void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& data) {
   data.record.clear();
   TrivialHeuristicRecord record_;
   for (HighsInt heuristic = kTrivialHeuristicZero;

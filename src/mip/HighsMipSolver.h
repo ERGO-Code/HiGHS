@@ -45,6 +45,7 @@ class HighsMipSolver {
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
+  HighsInt submip_level;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
   const HighsCliqueTable* clqtableinit;

@@ -415,13 +415,13 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
-  if (numRestarts == 0) {
+  if (numRestarts == 0 && mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
     // Set up the data to control the trivial heuristics, and record
     // their success/failure. MIP trivial heuristics data exists
     // separately for the original MIP - since that's the whole problem
     // being solved - and any sub-MIPs
-    initialiseTrivialHeuristicsData(mip_trivial_heuristics_data_);
-    initialiseTrivialHeuristicsData(submip_trivial_heuristics_data_);
+    initialiseTrivialHeuristicsStatistics(mip_trivial_heuristics_data_);
+    initialiseTrivialHeuristicsStatistics(submip_trivial_heuristics_data_);
   }
 
   if (mipsolver.solution_objective_ != kHighsInf) {
@@ -1674,15 +1674,21 @@ restart:
 
       printDisplayLine();
     }
+    if (checkLimits()) return;
 
     // --->
     // End of primal heuristics, unless not a sub-MIP, and no feasible
     // point found
     //
-    // Try trivial heuristics
-    if (checkLimits()) return;
-    heuristics.trivial();
-    heuristics.flushStatistics();
+    if (mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
+      // Try trivial heuristics
+      heuristics.initialiseTrivialHeuristicsStatistics();
+      heuristics.copyTrivialHeuristicsStatistics();
+      heuristics.trivial();
+      heuristics.flushStatistics();
+      heuristics.flushTrivialHeuristicsStatistics();
+      
+    }    
     // <---
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
