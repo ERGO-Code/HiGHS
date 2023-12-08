@@ -4386,6 +4386,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   postsolve_stack.debug_prev_col_upper = 0;
   postsolve_stack.debug_prev_row_lower = 0;
   postsolve_stack.debug_prev_row_upper = 0;
+  // Presolve should only be called with a model that has a non-empty
+  // constraint matrix unless it has no rows
+  assert(model->a_matrix_.numNz() || model->num_row_ == 0);
+
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
