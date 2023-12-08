@@ -135,14 +135,16 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.dual_valid = false;
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
-                              solution, true);
+                              solution, true, mipsolver.submip_level+1);
 
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
   submipsolver.clqtableinit = &mipsolver.mipdata_->cliquetable;
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
+  // Solve the sub-MIP
   submipsolver.run();
+  mipsolver.max_submip_level = std::max(submipsolver.max_submip_level+1, mipsolver.max_submip_level);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -1207,8 +1209,8 @@ void HighsPrimalHeuristics::flushStatistics() {
 
 void HighsPrimalHeuristics::trivial() {
   if (mipsolver.options_mip_->mip_trivial_heuristics == kHighsOffString) return;
-  printf("HighsPrimalHeuristics::trivial() submip = %d; numRestarts = %d; dimensions (%d, %d); solution_objective = %g\n",
-	 mipsolver.submip,
+  printf("HighsPrimalHeuristics::trivial() submip = %d(%d); numRestarts = %d; dimensions (%d, %d); solution_objective = %g\n",
+	 mipsolver.submip, int(mipsolver.submip_level),
 	 int(mipsolver.mipdata_->numRestarts),
 	 int(mipsolver.model_->num_col_),
 	 int(mipsolver.model_->num_row_),
@@ -1420,8 +1422,7 @@ void HighsPrimalHeuristics::flushTrivialHeuristicsStatistics() {
 
 void HighsPrimalHeuristics::reportTrivialHeuristicsStatistics() {
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  const bool is_submip = mipsolver.submip;
-  printf("Reporting on trivial heuristics: submip = %d\n", is_submip); fflush(stdout);
+  printf("Reporting on trivial heuristics: submip = %d(%d)\n", mipsolver.submip, int(mipsolver.submip_level));
   // If presolve is sufficient to determine the status of a sub-MIP,
   // then there is no record of trivial heuristic statistics
   if (!mipsolver.mipdata_->submip_trivial_heuristics_data_.record.size()) return;

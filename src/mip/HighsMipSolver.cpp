@@ -31,17 +31,21 @@ using std::fabs;
 
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                                const HighsOptions& options, const HighsLp& lp,
-                               const HighsSolution& solution, bool submip)
+                               const HighsSolution& solution, bool submip,
+			       HighsInt submip_level)
     : callback_(&callback),
       options_mip_(&options),
       model_(&lp),
       orig_model_(&lp),
       solution_objective_(kHighsInf),
       submip(submip),
+      submip_level(submip_level),
       rootbasis(nullptr),
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
+  assert(!submip || submip_level>0);
+  max_submip_level = 0;
   if (solution.value_valid) {
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
@@ -627,6 +631,7 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
+  printf(" sub-MIP depth: this = %d; max = %d\n", int(submip_level), int(max_submip_level));
   assert(modelstatus_ != HighsModelStatus::kNotset);
   if (options_mip_->mip_trivial_heuristics != kHighsOffString)
     mipdata_->heuristics.reportTrivialHeuristicsStatistics();
