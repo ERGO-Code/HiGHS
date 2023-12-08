@@ -52,7 +52,7 @@ class HighsPrimalHeuristics {
   HighsRandom randgen;
 
   std::vector<HighsInt> intcols;
-  TrivialHeuristicData trivial_heuristics_data_;
+  TrivialHeuristicData trivial_heuristics_statistics_;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
@@ -86,12 +86,15 @@ class HighsPrimalHeuristics {
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
   void trivial();
-  void initialiseTrivialHeuristicsStatistics();
-  void copyTrivialHeuristicsStatistics();
-  void flushTrivialHeuristicsStatistics();
-  void reportTrivialHeuristicsStatistics();
+  void initialiseLocalTrivialHeuristicsStatistics();
+  void downCopyLocalTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics);
+  void upCopyLocalTrivialHeuristicsStatistics(TrivialHeuristicData& to_statistics);
 };
 
-void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& data);
+void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& statistics);
+void copyTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics,
+				     TrivialHeuristicData& to_statistics);
+void reportTrivialHeuristicsStatistics(const HighsLogOptions& log_options,
+				       const TrivialHeuristicData& to_statistics);
 
 #endif

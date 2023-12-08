@@ -420,8 +420,8 @@ void HighsMipSolverData::runSetup() {
     // their success/failure. MIP trivial heuristics data exists
     // separately for the original MIP - since that's the whole problem
     // being solved - and any sub-MIPs
-    initialiseTrivialHeuristicsStatistics(mip_trivial_heuristics_data_);
-    initialiseTrivialHeuristicsStatistics(submip_trivial_heuristics_data_);
+    initialiseTrivialHeuristicsStatistics(mip_trivial_heuristics_statistics_);
+    initialiseTrivialHeuristicsStatistics(submip_trivial_heuristics_statistics_);
   }
 
   if (mipsolver.solution_objective_ != kHighsInf) {
@@ -668,6 +668,8 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
+  heuristics.initialiseLocalTrivialHeuristicsStatistics();
+  heuristics.downCopyLocalTrivialHeuristicsStatistics(submip_trivial_heuristics_statistics_);
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
@@ -1682,12 +1684,8 @@ restart:
     //
     if (mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
       // Try trivial heuristics
-      heuristics.initialiseTrivialHeuristicsStatistics();
-      heuristics.copyTrivialHeuristicsStatistics();
       heuristics.trivial();
       heuristics.flushStatistics();
-      heuristics.flushTrivialHeuristicsStatistics();
-      
     }    
     // <---
 

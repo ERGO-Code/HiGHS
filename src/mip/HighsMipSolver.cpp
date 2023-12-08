@@ -138,16 +138,6 @@ void HighsMipSolver::run() {
   }
 
   mipdata_->runSetup();
-  /*
-  if (options_mip_->mip_trivial_heuristics != kHighsOffString) {
-    // Set up the data to control the trivial heuristics, and record
-    // their success/failure, taking any sub-MIP data accumulated in the
-    // MIP solver instance
-    HighsPrimalHeuristics& heuristics = mipdata_->heuristics;
-    heuristics.initialiseTrivialHeuristicsStatistics();
-    heuristics.copyTrivialHeuristicsStatistics();
-  }
-  */
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     mipdata_->evaluateRootNode();
@@ -633,8 +623,11 @@ void HighsMipSolver::cleanupSolve() {
 
   printf(" sub-MIP depth: this = %d; max = %d\n", int(submip_level), int(max_submip_level));
   assert(modelstatus_ != HighsModelStatus::kNotset);
-  if (options_mip_->mip_trivial_heuristics != kHighsOffString)
-    mipdata_->heuristics.reportTrivialHeuristicsStatistics();
+  if (options_mip_->mip_trivial_heuristics != kHighsOffString) {
+    printf("Reporting on trivial heuristics: submip = %d(%d)\n", submip, int(submip_level));
+    reportTrivialHeuristicsStatistics(options_mip_->log_options,
+				      mipdata_->submip_trivial_heuristics_statistics_);
+  }
 }
 
 void HighsMipSolver::runPresolve() {

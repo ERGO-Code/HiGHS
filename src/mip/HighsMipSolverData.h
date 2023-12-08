@@ -73,8 +73,8 @@ struct HighsMipSolverData {
   HighsSymmetries symmetries;
   std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
-  TrivialHeuristicData mip_trivial_heuristics_data_;
-  TrivialHeuristicData submip_trivial_heuristics_data_;
+  TrivialHeuristicData mip_trivial_heuristics_statistics_;
+  TrivialHeuristicData submip_trivial_heuristics_statistics_;
 
   double feastol;
   double epsilon;

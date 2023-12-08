@@ -157,6 +157,8 @@ bool HighsPrimalHeuristics::solveSubMip(
     if (mipsolver.submip)
       mipsolver.mipdata_->num_nodes += std::max(
           int64_t{1}, int64_t(adjustmentfactor * submipsolver.node_count_));
+    TrivialHeuristicData& mipsolver_submip_statistics = mipsolver.mipdata_->submip_trivial_heuristics_statistics_;
+    upCopyLocalTrivialHeuristicsStatistics(mipsolver_submip_statistics);
   }
 
   if (submipsolver.modelstatus_ == HighsModelStatus::kInfeasible) {
@@ -1220,7 +1222,7 @@ void HighsPrimalHeuristics::trivial() {
   const bool try_heuristics = true;
   if (!try_heuristics) {
     for (HighsInt heuristic = 0; heuristic < use_num_heuristic; heuristic++)
-      trivial_heuristics_data_.record[heuristic].not_run++;
+      trivial_heuristics_statistics_.record[heuristic].not_run++;
     return;
   }
 
@@ -1273,7 +1275,7 @@ void HighsPrimalHeuristics::trivial() {
   std::vector<double> solution(mipsolver.model_->num_col_);
   std::vector<HighsInt> prev_num_try;
   for (HighsInt heuristic = 0; heuristic < use_num_heuristic; heuristic++) {
-    TrivialHeuristicRecord& record = trivial_heuristics_data_.record[heuristic];
+    TrivialHeuristicRecord& record = trivial_heuristics_statistics_.record[heuristic];
     prev_num_try.push_back(record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement);
     if (heuristic == 0) {
       // First heuristic is to see whether all-zero for integer
@@ -1378,7 +1380,7 @@ void HighsPrimalHeuristics::trivial() {
     //  lc_highs.passModel(lc_lp);
   }
   for (HighsInt heuristic = 0; heuristic < use_num_heuristic; heuristic++) {
-    TrivialHeuristicRecord& record = trivial_heuristics_data_.record[heuristic];
+    TrivialHeuristicRecord& record = trivial_heuristics_statistics_.record[heuristic];
     const HighsInt num_try = record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement;
     const bool num_try_ok = num_try == prev_num_try[heuristic]+1;
     if (!num_try_ok) 
@@ -1388,18 +1390,34 @@ void HighsPrimalHeuristics::trivial() {
   }
 }
 
-void HighsPrimalHeuristics::initialiseTrivialHeuristicsStatistics() {
-  this->trivial_heuristics_data_.record.clear();
+void HighsPrimalHeuristics::initialiseLocalTrivialHeuristicsStatistics() {
+  initialiseTrivialHeuristicsStatistics(this->trivial_heuristics_statistics_);
+}
+
+void HighsPrimalHeuristics::downCopyLocalTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics) {
+  copyTrivialHeuristicsStatistics(from_statistics, this->trivial_heuristics_statistics_);
+}
+
+void HighsPrimalHeuristics::upCopyLocalTrivialHeuristicsStatistics(TrivialHeuristicData& to_statistics) {
+  copyTrivialHeuristicsStatistics(this->trivial_heuristics_statistics_, to_statistics);
+}
+
+// Not in class since they are called from methods in HighsMipSolverData::runSetup()
+void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& statistics) {
+  statistics.record.clear();
   TrivialHeuristicRecord record_;
   for (HighsInt heuristic = kTrivialHeuristicZero;
        heuristic < kTrivialHeuristicCount; heuristic++) 
-    this->trivial_heuristics_data_.record.push_back(record_);
+    statistics.record.push_back(record_);
 }
 
-void HighsPrimalHeuristics::copyTrivialHeuristicsStatistics() {
+void copyTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics,
+				     TrivialHeuristicData& to_statistics) {
+  if (!(from_statistics.record.size() == kTrivialHeuristicCount)) return;
+  assert(to_statistics.record.size() == kTrivialHeuristicCount);
   for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
-    const TrivialHeuristicRecord& from_record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
-    TrivialHeuristicRecord& to_record = this->trivial_heuristics_data_.record[heuristic];
+    const TrivialHeuristicRecord& from_record = from_statistics.record[heuristic];
+    TrivialHeuristicRecord& to_record = to_statistics.record[heuristic];
     to_record.not_run = from_record.not_run;
     to_record.cannot_run = from_record.cannot_run;
     to_record.fail = from_record.fail;
@@ -1408,40 +1426,18 @@ void HighsPrimalHeuristics::copyTrivialHeuristicsStatistics() {
   }
 }
 
-void HighsPrimalHeuristics::flushTrivialHeuristicsStatistics() {
-  for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
-    const TrivialHeuristicRecord& from_record = this->trivial_heuristics_data_.record[heuristic];
-    TrivialHeuristicRecord& to_record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
-    to_record.not_run += from_record.not_run;
-    to_record.cannot_run += from_record.cannot_run;
-    to_record.fail += from_record.fail;
-    to_record.feasible += from_record.feasible;
-    to_record.improvement += from_record.improvement;
-  }
-}
-
-void HighsPrimalHeuristics::reportTrivialHeuristicsStatistics() {
-  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  printf("Reporting on trivial heuristics: submip = %d(%d)\n", mipsolver.submip, int(mipsolver.submip_level));
+void reportTrivialHeuristicsStatistics(const HighsLogOptions& log_options,
+				       const TrivialHeuristicData& statistics) {
   // If presolve is sufficient to determine the status of a sub-MIP,
   // then there is no record of trivial heuristic statistics
-  if (!mipsolver.mipdata_->submip_trivial_heuristics_data_.record.size()) return;
+  if (!(statistics.record.size() == kTrivialHeuristicCount)) return;
   for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
-    const TrivialHeuristicRecord& record = mipsolver.mipdata_->submip_trivial_heuristics_data_.record[heuristic];
+    const TrivialHeuristicRecord& record = statistics.record[heuristic];
     HighsInt num_try = record.not_run + record.cannot_run + record.fail + record.feasible + record.improvement;
         highsLogUser(log_options, HighsLogType::kInfo,
 		     "Heuristic %d tried %d times\n",
 		     int(heuristic), int(num_try));
   }
  
-}
-
-// Not in class since it's called from methods in ?????
-void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& data) {
-  data.record.clear();
-  TrivialHeuristicRecord record_;
-  for (HighsInt heuristic = kTrivialHeuristicZero;
-       heuristic < kTrivialHeuristicCount; heuristic++) 
-    data.record.push_back(record_);
 }
 
