@@ -1217,6 +1217,7 @@ void HighsPrimalHeuristics::trivial() {
 	 int(mipsolver.model_->num_col_),
 	 int(mipsolver.model_->num_row_),
 	 mipsolver.solution_objective_);
+  fflush(stdout);
 
   const HighsInt use_num_heuristic = kTrivialHeuristicCount;
   const bool try_heuristics = true;
@@ -1413,8 +1414,17 @@ void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& statistics) {
 
 void copyTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics,
 				     TrivialHeuristicData& to_statistics) {
-  if (!(from_statistics.record.size() == kTrivialHeuristicCount)) return;
+  if (!(from_statistics.record.size() == kTrivialHeuristicCount)) {
+    printf("Cannot copy from statistics\n");
+    return;
+  }
   assert(to_statistics.record.size() == kTrivialHeuristicCount);
+  HighsInt data = from_statistics.record[0].not_run +
+    from_statistics.record[0].cannot_run +
+    from_statistics.record[0].fail +
+    from_statistics.record[0].feasible +
+    from_statistics.record[0].improvement;
+  printf("Can    copy from statistics: %d\n", int(data));
   for (HighsInt heuristic = kTrivialHeuristicZero; heuristic < kTrivialHeuristicCount; heuristic++) {
     const TrivialHeuristicRecord& from_record = from_statistics.record[heuristic];
     TrivialHeuristicRecord& to_record = to_statistics.record[heuristic];
@@ -1423,6 +1433,7 @@ void copyTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics
     to_record.fail = from_record.fail;
     to_record.feasible = from_record.feasible;
     to_record.improvement = from_record.improvement;
+    data += from_record.not_run;
   }
 }
 
