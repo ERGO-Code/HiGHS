@@ -21,16 +21,25 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
-bool HighsMipSolverData::checkSolution(
-    const std::vector<double>& solution) const {
+bool HighsMipSolverData::solutionColFeasible(
+    const std::vector<double>& solution, double& obj) const {
+  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
+
+  HighsCDouble cdouble_obj = 0;
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
+    cdouble_obj += mipsolver.colCost(i) * solution[i];
   }
+  obj = double(cdouble_obj);
+  return true;
+}
 
+bool HighsMipSolverData::solutionRowFeasible(
+    const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
     double rowactivity = 0.0;
 
@@ -43,40 +52,22 @@ bool HighsMipSolverData::checkSolution(
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
-
   return true;
+}
+
+bool HighsMipSolverData::checkSolution(
+    const std::vector<double>& solution) const {
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  return solutionRowFeasible(solution);
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
                                      const char solution_source) {
-  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
-
-  HighsCDouble obj = 0;
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-    if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
-    if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
-    if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
-      return false;
-
-    obj += mipsolver.colCost(i) * solution[i];
-  }
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
-    double rowactivity = 0.0;
-
-    HighsInt start = ARstart_[i];
-    HighsInt end = ARstart_[i + 1];
-
-    for (HighsInt j = start; j != end; ++j)
-      rowactivity += solution[ARindex_[j]] * ARvalue_[j];
-
-    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
-    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
-  }
-
-  return addIncumbent(solution, double(obj), solution_source);
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  if (!solutionRowFeasible(solution)) return false;
+  return addIncumbent(solution, obj, solution_source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -424,6 +415,17 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
+  if (numRestarts == 0 &&
+      mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
+    // Set up the data to control the trivial heuristics, and record
+    // their success/failure. MIP trivial heuristics data exists
+    // separately for the original MIP - since that's the whole problem
+    // being solved - and any sub-MIPs
+    initialiseTrivialHeuristicsStatistics(mip_trivial_heuristics_statistics_);
+    initialiseTrivialHeuristicsStatistics(
+        submip_trivial_heuristics_statistics_);
+  }
+
   if (mipsolver.solution_objective_ != kHighsInf) {
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
@@ -669,6 +671,9 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
+  heuristics.initialiseLocalTrivialHeuristicsStatistics();
+  heuristics.downCopyLocalTrivialHeuristicsStatistics(
+      submip_trivial_heuristics_statistics_);
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
@@ -1678,6 +1683,18 @@ restart:
 
       printDisplayLine();
     }
+    if (checkLimits()) return;
+
+    // --->
+    // End of primal heuristics, unless not a sub-MIP, and no feasible
+    // point found
+    //
+    if (mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
+      // Try trivial heuristics
+      heuristics.trivial();
+      heuristics.flushStatistics();
+    }
+    // <---
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
 

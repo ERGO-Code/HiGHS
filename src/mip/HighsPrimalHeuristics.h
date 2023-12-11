@@ -13,9 +13,30 @@
 
 #include <vector>
 
-#include "lp_data/HStruct.h"
-#include "lp_data/HighsLp.h"
-#include "util/HighsRandom.h"
+#include "Highs.h"
+//#include "lp_data/HStruct.h"
+//#include "lp_data/HighsLp.h"
+//#include "util/HighsRandom.h"
+
+struct TrivialHeuristicRecord {
+  HighsInt not_run = 0;
+  HighsInt cannot_run = 0;
+  HighsInt fail = 0;
+  HighsInt feasible = 0;
+  HighsInt improvement = 0;
+};
+
+enum TrivialHeuristic {
+  kTrivialHeuristicZero = 0,
+  kTrivialHeuristicUpper,
+  kTrivialHeuristicLower,
+  kTrivialHeuristicLock,
+  kTrivialHeuristicCount
+};
+
+struct TrivialHeuristicData {
+  std::vector<TrivialHeuristicRecord> record;
+};
 
 class HighsMipSolver;
 
@@ -32,6 +53,7 @@ class HighsPrimalHeuristics {
   HighsRandom randgen;
 
   std::vector<HighsInt> intcols;
+  TrivialHeuristicData trivial_heuristics_statistics_;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
@@ -63,6 +85,22 @@ class HighsPrimalHeuristics {
                           const std::vector<double>& point2, const char source);
 
   void randomizedRounding(const std::vector<double>& relaxationsol);
+
+  void trivial();
+  void runTrivial(Highs* highs = nullptr);
+  void initialiseLocalTrivialHeuristicsStatistics();
+  void downCopyLocalTrivialHeuristicsStatistics(
+      const TrivialHeuristicData& from_statistics);
+  void upCopyLocalTrivialHeuristicsStatistics(
+      TrivialHeuristicData& to_statistics);
 };
+
+void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& statistics);
+void copyTrivialHeuristicsStatistics(
+    const TrivialHeuristicData& from_statistics,
+    TrivialHeuristicData& to_statistics);
+void reportTrivialHeuristicsStatistics(
+    const HighsLogOptions& log_options,
+    const TrivialHeuristicData& to_statistics);
 
 #endif

@@ -31,17 +31,21 @@ using std::fabs;
 
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                                const HighsOptions& options, const HighsLp& lp,
-                               const HighsSolution& solution, bool submip)
+                               const HighsSolution& solution, bool submip,
+                               HighsInt submip_level)
     : callback_(&callback),
       options_mip_(&options),
       model_(&lp),
       orig_model_(&lp),
       solution_objective_(kHighsInf),
       submip(submip),
+      submip_level(submip_level),
       rootbasis(nullptr),
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
+  assert(!submip || submip_level > 0);
+  max_submip_level = 0;
   if (solution.value_valid) {
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
@@ -604,6 +608,7 @@ void HighsMipSolver::cleanupSolve() {
                "                    %.2f (presolve)\n"
                "                    %.2f (postsolve)\n"
                "  Nodes             %llu\n"
+               "  Max sub-MIP depth %d\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
@@ -611,13 +616,22 @@ void HighsMipSolver::cleanupSolve() {
                timer_.read(timer_.solve_clock),
                timer_.read(timer_.presolve_clock),
                timer_.read(timer_.postsolve_clock),
-               (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->num_nodes, int(max_submip_level),
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
-  assert(modelstatus_ != HighsModelStatus::kNotset);
+  /*
+  //  printf(" sub-MIP depth: this = %d; max = %d\n", int(submip_level),
+  int(max_submip_level)); assert(modelstatus_ != HighsModelStatus::kNotset); if
+  (options_mip_->mip_trivial_heuristics != kHighsOffString) {
+    //    printf("Reporting on trivial heuristics: submip = %d(%d)\n", submip,
+  int(submip_level));
+    reportTrivialHeuristicsStatistics(options_mip_->log_options,
+                                      mipdata_->submip_trivial_heuristics_statistics_);
+  }
+  */
 }
 
 void HighsMipSolver::runPresolve() {

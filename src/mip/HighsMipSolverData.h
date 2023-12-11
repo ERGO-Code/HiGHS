@@ -84,6 +84,9 @@ struct HighsMipSolverData {
   HighsSymmetries symmetries;
   std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
+  TrivialHeuristicData mip_trivial_heuristics_statistics_;
+  TrivialHeuristicData submip_trivial_heuristics_statistics_;
+
   double feastol;
   double epsilon;
   double heuristic_effort;
@@ -176,6 +179,9 @@ struct HighsMipSolverData {
       const bool possibly_store_as_new_incumbent = true);
   double percentageInactiveIntegers() const;
   void performRestart();
+  bool solutionColFeasible(const std::vector<double>& solution,
+                           double& obj) const;
+  bool solutionRowFeasible(const std::vector<double>& solution) const;
   bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
                    const char solution_source);
