@@ -13,9 +13,10 @@
 
 #include <vector>
 
-#include "lp_data/HStruct.h"
-#include "lp_data/HighsLp.h"
-#include "util/HighsRandom.h"
+#include "Highs.h"
+//#include "lp_data/HStruct.h"
+//#include "lp_data/HighsLp.h"
+//#include "util/HighsRandom.h"
 
 struct TrivialHeuristicRecord {
   HighsInt not_run = 0;
@@ -23,7 +24,7 @@ struct TrivialHeuristicRecord {
   HighsInt fail = 0;
   HighsInt feasible = 0;
   HighsInt improvement = 0;
-};  
+};
 
 enum TrivialHeuristic {
   kTrivialHeuristicZero = 0,
@@ -86,15 +87,20 @@ class HighsPrimalHeuristics {
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
   void trivial();
+  void runTrivial(Highs* highs = nullptr);
   void initialiseLocalTrivialHeuristicsStatistics();
-  void downCopyLocalTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics);
-  void upCopyLocalTrivialHeuristicsStatistics(TrivialHeuristicData& to_statistics);
+  void downCopyLocalTrivialHeuristicsStatistics(
+      const TrivialHeuristicData& from_statistics);
+  void upCopyLocalTrivialHeuristicsStatistics(
+      TrivialHeuristicData& to_statistics);
 };
 
 void initialiseTrivialHeuristicsStatistics(TrivialHeuristicData& statistics);
-void copyTrivialHeuristicsStatistics(const TrivialHeuristicData& from_statistics,
-				     TrivialHeuristicData& to_statistics);
-void reportTrivialHeuristicsStatistics(const HighsLogOptions& log_options,
-				       const TrivialHeuristicData& to_statistics);
+void copyTrivialHeuristicsStatistics(
+    const TrivialHeuristicData& from_statistics,
+    TrivialHeuristicData& to_statistics);
+void reportTrivialHeuristicsStatistics(
+    const HighsLogOptions& log_options,
+    const TrivialHeuristicData& to_statistics);
 
 #endif

@@ -415,13 +415,15 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
-  if (numRestarts == 0 && mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
+  if (numRestarts == 0 &&
+      mipsolver.options_mip_->mip_trivial_heuristics != kHighsOffString) {
     // Set up the data to control the trivial heuristics, and record
     // their success/failure. MIP trivial heuristics data exists
     // separately for the original MIP - since that's the whole problem
     // being solved - and any sub-MIPs
     initialiseTrivialHeuristicsStatistics(mip_trivial_heuristics_statistics_);
-    initialiseTrivialHeuristicsStatistics(submip_trivial_heuristics_statistics_);
+    initialiseTrivialHeuristicsStatistics(
+        submip_trivial_heuristics_statistics_);
   }
 
   if (mipsolver.solution_objective_ != kHighsInf) {
@@ -669,7 +671,8 @@ void HighsMipSolverData::runSetup() {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
   heuristics.initialiseLocalTrivialHeuristicsStatistics();
-  heuristics.downCopyLocalTrivialHeuristicsStatistics(submip_trivial_heuristics_statistics_);
+  heuristics.downCopyLocalTrivialHeuristicsStatistics(
+      submip_trivial_heuristics_statistics_);
 }
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
@@ -1686,7 +1689,7 @@ restart:
       // Try trivial heuristics
       heuristics.trivial();
       heuristics.flushStatistics();
-    }    
+    }
     // <---
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
