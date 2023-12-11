@@ -622,16 +622,6 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
-  /*
-  //  printf(" sub-MIP depth: this = %d; max = %d\n", int(submip_level),
-  int(max_submip_level)); assert(modelstatus_ != HighsModelStatus::kNotset); if
-  (options_mip_->mip_trivial_heuristics != kHighsOffString) {
-    //    printf("Reporting on trivial heuristics: submip = %d(%d)\n", submip,
-  int(submip_level));
-    reportTrivialHeuristicsStatistics(options_mip_->log_options,
-                                      mipdata_->submip_trivial_heuristics_statistics_);
-  }
-  */
 }
 
 void HighsMipSolver::runPresolve() {
