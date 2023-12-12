@@ -621,7 +621,6 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
-
 }
 
 void HighsMipSolver::runPresolve() {

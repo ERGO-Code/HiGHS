@@ -448,8 +448,10 @@ void HighsMipSolverData::runSetup() {
       }
     } else if (!feasible) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		   "HighsMipSolverData::runSetup: Incumbent has infeasiblities (%g, %g, %g)\n",
-		   mipsolver.bound_violation_, mipsolver.integrality_violation_, mipsolver.row_violation_);
+                   "HighsMipSolverData::runSetup: Incumbent has infeasiblities "
+                   "(%g, %g, %g)\n",
+                   mipsolver.bound_violation_, mipsolver.integrality_violation_,
+                   mipsolver.row_violation_);
     }
     // MIP solution callback
     if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
@@ -462,10 +464,18 @@ void HighsMipSolverData::runSetup() {
           "Feasible solution");
       assert(!interrupt);
     }
+    if (feasible) {
+      // Assess this IFS, indicating that the recursion depth is 0,
+      // and that the solution is already an incumbent
+      const bool already_incumbent = true;
+      assessIntegerFeasibleSolution(incumbent, solobj, kSolutionSourceInitial,
+                                    0, already_incumbent);
+    }
   }
 
   if (mipsolver.numCol() == 0)
-    assessIntegerFeasibleSolution(std::vector<double>(), 0, kSolutionSourceEmptyMip);
+    assessIntegerFeasibleSolution(std::vector<double>(), 0,
+                                  kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -891,15 +901,18 @@ try_again:
         mipsolver.integrality_violation_ = integrality_violation_;
         mipsolver.solution_ = std::move(solution.col_value);
         mipsolver.solution_objective_ = mipsolver_objective_value;
-	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		     "HighsMipSolverData::runSetup: Incumbent has infeasiblities (%g, %g, %g)\n",
-		     mipsolver.bound_violation_, mipsolver.integrality_violation_, mipsolver.row_violation_);
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "HighsMipSolverData::runSetup: Incumbent has "
+                     "infeasiblities (%g, %g, %g)\n",
+                     mipsolver.bound_violation_,
+                     mipsolver.integrality_violation_,
+                     mipsolver.row_violation_);
       }
 
       // return infinity so that it is not used for bounding
       return kHighsInf;
     }
-  } // possibly_store_as_new_incumbent = true
+  }  // possibly_store_as_new_incumbent = true
   // return the objective value in the transformed space
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
     return -double(mipsolver_quad_precision_objective_value +
@@ -1037,10 +1050,11 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
   return incumbent;
 }
 
-bool HighsMipSolverData::assessIntegerFeasibleSolution(const std::vector<double>& sol,
-						       double solobj,
-						       const char solution_source,
-						       const bool already_incumbent) {
+bool HighsMipSolverData::assessIntegerFeasibleSolution(
+    const std::vector<double>& sol, double solobj, const char solution_source,
+    const HighsInt recursion_depth, const bool already_incumbent) {
+  // Called whenever a promising integer feasible solution is found,
+  // allowing opt-1 and opt-2 heuristic to be applied recursively
   if (already_incumbent) return true;
   return addIncumbent(sol, solobj, solution_source);
 }
@@ -1166,6 +1180,17 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
+void HighsMipSolverData::printSolutionSourceKey() {
+  highsLogUser(
+      mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+      "\nSrc: B => Branching; C => Central rounding; F => Feasibility pump; "
+      "H => Heuristic; I => Initial; L => Sub-MIP; ");
+  highsLogUser(
+      mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+      "\n     P => Empty MIP; R => Randomized rounding; S => Solve LP; "
+      "T => Evaluate node; U => Unbounded\n");
+}
+
 void HighsMipSolverData::printDisplayLine(const char solution_source) {
   // MIP logging method
   //
@@ -1187,11 +1212,11 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
   last_disptime = time;
 
   if (num_disp_lines % 20 == 0) {
+    if (num_disp_lines == 0) printSolutionSourceKey();
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-	"\nSrc: B => Branching; C => Central rounding; F => Feasibility pump; H => Heuristic; L => Sub-MIP\nSrc: P => Empty MIP; R => Randomized rounding; S => Solve LP; T => Evaluate node; U => Unbounded\n" 
-        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
+	"\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
           "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
         // clang-format on
     );
@@ -1367,8 +1392,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
-          assessIntegerFeasibleSolution(lp.getLpSolver().getSolution().col_value,
-                       lp.getObjective(), kSolutionSourceEvaluateNode)) {
+          assessIntegerFeasibleSolution(
+              lp.getLpSolver().getSolution().col_value, lp.getObjective(),
+              kSolutionSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;
         pruned_treeweight = 1.0;

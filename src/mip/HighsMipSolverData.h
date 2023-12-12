@@ -37,6 +37,7 @@ const char kSolutionSourceBranching = 'B';
 const char kSolutionSourceCentralRounding = 'C';
 const char kSolutionSourceFeasibilityPump = 'F';
 const char kSolutionSourceHeuristic = 'H';
+const char kSolutionSourceInitial = 'I';
 const char kSolutionSourceSubMip = 'L';
 const char kSolutionSourceEmptyMip = 'P';
 const char kSolutionSourceRandomizedRounding = 'R';
@@ -186,14 +187,16 @@ struct HighsMipSolverData {
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
-  bool assessIntegerFeasibleSolution(const std::vector<double>& sol, double solobj,
-				     const char solution_source,
-				     const bool already_incumbent = false);
+  bool assessIntegerFeasibleSolution(const std::vector<double>& sol,
+                                     double solobj, const char solution_source,
+                                     const HighsInt recursion_depth = 0,
+                                     const bool already_incumbent = false);
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const char solution_source);
 
   const std::vector<double>& getSolution() const;
 
+  void printSolutionSourceKey();
   void printDisplayLine(const char solution_source = ' ');
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,

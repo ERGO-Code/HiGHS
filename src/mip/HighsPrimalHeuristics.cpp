@@ -1213,4 +1213,3 @@ void HighsPrimalHeuristics::flushStatistics() {
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;
 }
-
