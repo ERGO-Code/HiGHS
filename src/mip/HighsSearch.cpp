@@ -598,7 +598,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
           double cutoffbnd = getCutoffBound();
-          mipsolver.mipdata_->addIncumbent(
+          mipsolver.mipdata_->assessIntegerFeasibleSolution(
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? kSolutionSourceHeuristic
                           : kSolutionSourceBranching);
@@ -732,7 +732,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
           double cutoffbnd = getCutoffBound();
-          mipsolver.mipdata_->addIncumbent(
+          mipsolver.mipdata_->assessIntegerFeasibleSolution(
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? kSolutionSourceHeuristic
                           : kSolutionSourceBranching);
@@ -1063,7 +1063,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       if (lp->unscaledPrimalFeasible(status)) {
         if (lp->getFractionalIntegers().empty()) {
           double cutoffbnd = getCutoffBound();
-          mipsolver.mipdata_->addIncumbent(
+          mipsolver.mipdata_->assessIntegerFeasibleSolution(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
               inheuristic ? kSolutionSourceHeuristic
                           : kSolutionSourceEvaluateNode);

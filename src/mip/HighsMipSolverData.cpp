@@ -67,7 +67,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   double obj;
   if (!solutionColFeasible(solution, obj)) return false;
   if (!solutionRowFeasible(solution)) return false;
-  return addIncumbent(solution, obj, solution_source);
+  return assessIntegerFeasibleSolution(solution, obj, solution_source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -416,6 +416,8 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   if (mipsolver.solution_objective_ != kHighsInf) {
+    // There is already an incumbent solution, but it may not be
+    // feasible - Only if it corresponds to a user-supplied solution?
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
     double solobj =
@@ -444,7 +446,12 @@ void HighsMipSolverData::runSetup() {
                                  mipsolver.options_mip_->mip_rel_gap);
         nodequeue.setOptimalityLimit(optimality_limit);
       }
+    } else if (!feasible) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		   "HighsMipSolverData::runSetup: Incumbent has infeasiblities (%g, %g, %g)\n",
+		   mipsolver.bound_violation_, mipsolver.integrality_violation_, mipsolver.row_violation_);
     }
+    // MIP solution callback
     if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
         mipsolver.callback_->active[kCallbackMipSolution]) {
       assert(!mipsolver.submip);
@@ -458,7 +465,7 @@ void HighsMipSolverData::runSetup() {
   }
 
   if (mipsolver.numCol() == 0)
-    addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
+    assessIntegerFeasibleSolution(std::vector<double>(), 0, kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -816,10 +823,6 @@ try_again:
     // Store the solution as incumbent in the original space if there
     // is no solution or if it is feasible
     if (feasible) {
-      // if (!allow_try_again)
-      //   printf("repaired solution with value %g\n",
-      //   mipsolver_objective_value);
-      // store
       mipsolver.row_violation_ = row_violation_;
       mipsolver.bound_violation_ = bound_violation_;
       mipsolver.integrality_violation_ = integrality_violation_;
@@ -888,12 +891,15 @@ try_again:
         mipsolver.integrality_violation_ = integrality_violation_;
         mipsolver.solution_ = std::move(solution.col_value);
         mipsolver.solution_objective_ = mipsolver_objective_value;
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		     "HighsMipSolverData::runSetup: Incumbent has infeasiblities (%g, %g, %g)\n",
+		     mipsolver.bound_violation_, mipsolver.integrality_violation_, mipsolver.row_violation_);
       }
 
       // return infinity so that it is not used for bounding
       return kHighsInf;
     }
-  }
+  } // possibly_store_as_new_incumbent = true
   // return the objective value in the transformed space
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
     return -double(mipsolver_quad_precision_objective_value +
@@ -1029,6 +1035,14 @@ void HighsMipSolverData::basisTransfer() {
 
 const std::vector<double>& HighsMipSolverData::getSolution() const {
   return incumbent;
+}
+
+bool HighsMipSolverData::assessIntegerFeasibleSolution(const std::vector<double>& sol,
+						       double solobj,
+						       const char solution_source,
+						       const bool already_incumbent) {
+  if (already_incumbent) return true;
+  return addIncumbent(sol, solobj, solution_source);
 }
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
@@ -1353,7 +1367,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
-          addIncumbent(lp.getLpSolver().getSolution().col_value,
+          assessIntegerFeasibleSolution(lp.getLpSolver().getSolution().col_value,
                        lp.getObjective(), kSolutionSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;

@@ -881,7 +881,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
-      mipsolver.mipdata_->addIncumbent(
+      mipsolver.mipdata_->assessIntegerFeasibleSolution(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
           solution_source);
       return true;
@@ -1004,7 +1004,7 @@ void HighsPrimalHeuristics::randomizedRounding(
       }
 
     } else if (lprelax.unscaledPrimalFeasible(st))
-      mipsolver.mipdata_->addIncumbent(
+      mipsolver.mipdata_->assessIntegerFeasibleSolution(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
           kSolutionSourceRandomizedRounding);
   } else {
@@ -1115,7 +1115,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
   if (lprelax.getFractionalIntegers().empty() &&
       lprelax.unscaledPrimalFeasible(status))
-    mipsolver.mipdata_->addIncumbent(
+    mipsolver.mipdata_->assessIntegerFeasibleSolution(
         lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
         kSolutionSourceFeasibilityPump);
 }

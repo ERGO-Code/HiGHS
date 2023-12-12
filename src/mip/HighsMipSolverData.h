@@ -186,6 +186,9 @@ struct HighsMipSolverData {
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
+  bool assessIntegerFeasibleSolution(const std::vector<double>& sol, double solobj,
+				     const char solution_source,
+				     const bool already_incumbent = false);
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const char solution_source);
 
