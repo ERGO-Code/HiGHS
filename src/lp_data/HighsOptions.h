@@ -396,6 +396,8 @@ struct HighsOptionsStruct {
   double mip_abs_gap;
   double mip_heuristic_effort;
   std::string mip_trivial_heuristics;
+  HighsInt mip_opt_1_heuristic;
+  HighsInt mip_opt_2_heuristic;
   double mip_min_logging_interval;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -867,6 +869,16 @@ class HighsOptions : public HighsOptionsStruct {
         "MIP trivial heuristics option: \"off\", \"choose\" or \"on\"",
         advanced, &mip_trivial_heuristics, kHighsChooseString);
     records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "mip_opt_1_heuristic", "MIP opt-1 heuristic option: 0 => off; 1 => mild; 2 => agressive", advanced,
+        &mip_opt_1_heuristic, 0, 1, 1);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_opt_2_heuristic", "MIP opt-2 heuristic option: 0 => off; 1 => mild; 2 => agressive", advanced,
+        &mip_opt_2_heuristic, 0, 0, 1);
+    records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "mip_rel_gap",

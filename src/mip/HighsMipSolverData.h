@@ -44,6 +44,8 @@ const char kSolutionSourceRandomizedRounding = 'R';
 const char kSolutionSourceSolveLp = 'S';
 const char kSolutionSourceEvaluateNode = 'T';
 const char kSolutionSourceUnbounded = 'U';
+const char kSolutionSourceOpt1 = '1';
+const char kSolutionSourceOpt2 = '2';
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -177,6 +179,11 @@ struct HighsMipSolverData {
       const bool possibly_store_as_new_incumbent = true);
   double percentageInactiveIntegers() const;
   void performRestart();
+
+  double translateObjective(const double objective);
+  std::string solutionStatusToString(const HighsInt solution_status,
+				     const bool code = true);
+
   bool solutionColFeasible(const std::vector<double>& solution,
                            double& obj) const;
   bool solutionRowFeasible(const std::vector<double>& solution) const;
@@ -191,7 +198,8 @@ struct HighsMipSolverData {
                                      double solobj, const char solution_source,
                                      const HighsInt recursion_depth = 0,
                                      const bool already_incumbent = false);
-  bool addIncumbent(const std::vector<double>& sol, double solobj,
+  bool addIncumbent(bool& is_improving,
+		    const std::vector<double>& sol, double solobj,
                     const char solution_source);
 
   const std::vector<double>& getSolution() const;

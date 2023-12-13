@@ -21,6 +21,13 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
+double HighsMipSolverData::translateObjective(const double objective) {
+ return objective * (int)mipsolver.orig_model_->sense_ + mipsolver.model_->offset_;
+}
+
+std::string HighsMipSolverData::solutionStatusToString(const HighsInt solution_status, const bool code) {
+}
+
 bool HighsMipSolverData::solutionColFeasible(
     const std::vector<double>& solution, double& obj) const {
   if (int(solution.size()) != mipsolver.model_->num_col_) return false;
@@ -913,6 +920,7 @@ try_again:
       return kHighsInf;
     }
   }  // possibly_store_as_new_incumbent = true
+  //
   // return the objective value in the transformed space
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
     return -double(mipsolver_quad_precision_objective_value +
@@ -1052,16 +1060,165 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 
 bool HighsMipSolverData::assessIntegerFeasibleSolution(
     const std::vector<double>& sol, double solobj, const char solution_source,
-    const HighsInt recursion_depth, const bool already_incumbent) {
+    const HighsInt recursion_depth,
+    const bool already_incumbent) {
+  const HighsInt kMaxRecursionDepth = 1;
   // Called whenever a promising integer feasible solution is found,
-  // allowing opt-1 and opt-2 heuristic to be applied recursively
-  if (already_incumbent) return true;
-  return addIncumbent(sol, solobj, solution_source);
+  // allowing opt-1 to be applied (recursively) and opt-2 heuristic to
+  // be applied once
+  //
+  // Return value is only used in HighsMipSolverData::trySolution and
+  // HighsMipSolverData::evaluateRootLp
+  //
+  // If solution is not already the incumbent, see whether it becomes one
+  bool addIncumbent_return = already_incumbent;
+  bool is_improving = false;
+  if (!addIncumbent_return)
+    addIncumbent_return = addIncumbent(is_improving, sol, solobj, solution_source);
+  // Need to reproduce the return value of addIncumbent
+  const bool original_solution_addIncumbent_return = addIncumbent_return;
+  // Solution is not improving, so return - or is it worth being more
+  // agressive?
+  if (!is_improving) return addIncumbent_return;
+
+  // If neither heuristic option is set, then return
+  if (!mipsolver.options_mip_->mip_opt_1_heuristic &&
+       !mipsolver.options_mip_->mip_opt_2_heuristic) {
+    assert(recursion_depth == 0);
+    return original_solution_addIncumbent_return;
+  }
+  // If the maximum recursion level has been reached, then return
+  if (recursion_depth > kMaxRecursionDepth)
+    return original_solution_addIncumbent_return;
+    
+  // One or other of the heuristics will be used, so set up a
+  // reference to the LP, and compute the row activities
+  const HighsLp& lp = *mipsolver.model_;
+  const HighsInt num_integer_col = integer_cols.size();
+  std::vector<double> row_value;
+  lp.a_matrix_.product(row_value, sol);
+
+  if (mipsolver.options_mip_->mip_opt_1_heuristic) {
+    // Consider 1-opt heuristic on solution
+    //  printf("\nHighsMipSolverData::assessIntegerFeasibleSolution: 1-opt heuristic with %d integer columns at level %d\n",
+    //	 int(num_integer_col), int(recursion_depth));
+    for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+      HighsInt iCol = integer_cols[integerCol];
+      double delta_value = 0;
+      if (lp.col_cost_[iCol] > 0) {
+	// Positive cost, so only of interest if value can be reduced
+	double down_value = std::floor(sol[iCol]-0.5);
+	if (down_value < lp.col_lower_[iCol]) continue;
+	delta_value = -1;
+      } else if (lp.col_cost_[iCol] < 0) {
+	// Negative cost, so only of interest if value can be increased
+	double up_value = std::ceil(sol[iCol]+0.5);
+	if (up_value > lp.col_upper_[iCol]) continue;
+	delta_value = 1;
+      } else {
+	continue; // Zero cost, so no interest
+      }
+      //    printf("Consider change of %g in variable %d\n", delta_value, int(iCol));
+      bool infeasible = false;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	double rowactivity = row_value[iRow] + delta_value * lp.a_matrix_.value_[iEl];
+	if (rowactivity < lp.row_lower_[iRow] - feastol ||
+	    rowactivity > lp.row_upper_[iRow] + feastol) {
+	  infeasible = true;
+	  break;
+	}
+      }
+      if (infeasible) continue;
+      // Solution is feasible with this integer variable changed by
+      // delta_value
+      std::vector<double> local_sol = sol;
+      double local_solobj = solobj;
+      local_sol[iCol] += delta_value;
+      local_solobj += lp.col_cost_[iCol] * delta_value;
+      assert(local_solobj < solobj);
+      printf("1-opt heuristic with %d integer columns at level %d: Success for change of %g in variable %d so recur: %g = local_solobj < solobj = %g\n",
+	     int(num_integer_col), int(recursion_depth), delta_value, int(iCol),
+	     translateObjective(local_solobj), translateObjective(solobj)); 
+      assert(111==456);
+      assessIntegerFeasibleSolution(local_sol, local_solobj, kSolutionSourceOpt1,
+				    recursion_depth+1, false);
+    }
+  }
+  if (mipsolver.options_mip_->mip_opt_2_heuristic) {
+    // Consider 2-opt heuristic on solution
+    //
+    // Prepare sets of columns that are integer with
+    // negative/non-negative objective change if the value is pushed
+    // up or down
+    std::vector<HighsInt> up_negative_objective_change;
+    std::vector<HighsInt> up_non_negative_objective_change;
+    std::vector<HighsInt> down_non_negative_objective_change;
+    std::vector<HighsInt> down_negative_objective_change;
+    printf("  Ix Cost Lower Value Upper\n");
+    for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+      HighsInt iCol = integer_cols[integerCol];
+      printf("%4d %11.6g %11.6g %11.6g  %11.6g\n",
+	     iCol, lp.col_cost_[iCol], lp.col_lower_[iCol], sol[iCol], lp.col_upper_[iCol]);
+      if (lp.col_cost_[iCol] > 0) {
+	// Positive cost, so...
+	if (std::floor(sol[iCol]-0.5) >= lp.col_lower_[iCol]) {
+	  // Negative cost change since value can be reduced
+	  down_negative_objective_change.push_back(iCol);
+	} else if (std::ceil(sol[iCol]+0.5) <= lp.col_upper_[iCol]) {
+	  // Non-negative cost change since value can be increased
+	  up_non_negative_objective_change.push_back(iCol);
+	}
+      } else if (lp.col_cost_[iCol] < 0) {
+	// Negative cost, so...
+	if (std::floor(sol[iCol]-0.5) >= lp.col_lower_[iCol]) {
+	  // Non-negative cost change since value can be reduced
+	  down_non_negative_objective_change.push_back(iCol);
+	} else if (std::ceil(sol[iCol]+0.5) <= lp.col_upper_[iCol]) {
+	  // Negative cost change since value can be increased
+	  up_negative_objective_change.push_back(iCol);
+	}
+      } else {
+	// Zero cost, so...
+	if (std::floor(sol[iCol]-0.5) >= lp.col_lower_[iCol]) {
+	  // Non-negative cost change since value can be reduced
+	  down_non_negative_objective_change.push_back(iCol);
+	} else if (std::ceil(sol[iCol]+0.5) <= lp.col_upper_[iCol]) {
+	  // Non-negative cost change since value can be increased
+	  up_non_negative_objective_change.push_back(iCol);
+	} 
+      }
+    }
+    printf("\nup_negative_objective_change\n");
+    for (HighsInt iX = 0; iX < HighsInt(up_negative_objective_change.size()); iX++)
+      printf(" %d", up_negative_objective_change[iX]);
+    printf("\n");
+    printf("\nup_non_negative_objective_change\n");
+    for (HighsInt iX = 0; iX < HighsInt(up_non_negative_objective_change.size()); iX++)
+      printf(" %d", up_non_negative_objective_change[iX]);
+    printf("\n");
+    printf("\ndown_non_negative_objective_change\n");
+    for (HighsInt iX = 0; iX < HighsInt(down_non_negative_objective_change.size()); iX++)
+      printf(" %d", down_non_negative_objective_change[iX]);
+    printf("\n");
+    printf("\ndown_negative_objective_change\n");
+    for (HighsInt iX = 0; iX < HighsInt(down_negative_objective_change.size()); iX++)
+      printf(" %d", down_negative_objective_change[iX]);
+    printf("\n");
+      
+  }
+  
+  return original_solution_addIncumbent_return;
 }
 
-bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
+bool HighsMipSolverData::addIncumbent(bool& is_improving,
+				      const std::vector<double>& sol,
                                       double solobj,
                                       const char solution_source) {
+  // addIncumbent returns true if (solobj < upper_bound) and
+  // incumbent.empty() are both false, so cannot be used to determine
+  // whether sol is an improving solution
+  is_improving = false;
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1082,11 +1239,10 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                : 0;
 
   if (possibly_store_as_new_incumbent) {
-    // #1463 use pre-computed transformed_solobj
+    // As of #1463, use pre-computed transformed_solobj
     solobj = transformed_solobj;
-    //    solobj = transformNewIntegerFeasibleSolution(sol);
-
     if (solobj >= upper_bound) return false;
+    is_improving = true;
     upper_bound = solobj;
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
@@ -1103,23 +1259,36 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       domain.propagate();
       if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
 
+      // Two calls to printDisplayLine added for completeness,
+      // ensuring that when the root node has an integer solution, a
+      // logging line is issued
+
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+	printDisplayLine(solution_source); // Added for completeness
         return true;
       }
       cliquetable.extractObjCliques(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+	printDisplayLine(solution_source); // Added for completeness
         return true;
       }
       pruned_treeweight += nodequeue.performBounding(upper_limit);
       printDisplayLine(solution_source);
     }
-  } else if (incumbent.empty())
+  } else if (incumbent.empty()) {
+    printf("HighsMipSolverData::addIncumbent: "
+	   "incumbent.empty() with translated solobj = %g and upper_bound = %g\n",
+	   translateObjective(solobj), translateObjective(upper_bound));
     incumbent = sol;
-
+  } else {
+    printf("HighsMipSolverData::addIncumbent: Questionable return since "
+	   "solobj >= upper_bound and !incumbent.empty() with translated solobj = %g and upper_bound = %g\n",
+	   translateObjective(solobj), translateObjective(upper_bound));
+  }
   return true;
 }
 
