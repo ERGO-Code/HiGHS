@@ -174,13 +174,14 @@ struct HighsMipSolverData {
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit);
   void runSetup();
-  double transformNewIntegerFeasibleSolution(
+  double transformAndPossiblyStoreSolution(
       const std::vector<double>& sol,
-      const bool possibly_store_as_new_incumbent = true);
+      const bool ideally_store_as_solution = true);
   double percentageInactiveIntegers() const;
   void performRestart();
 
-  double translateObjective(const double objective);
+  double offsetObjective(const double objective);
+  double transformObjective(const double objective);
   std::string solutionStatusToString(const HighsInt solution_status,
 				     const bool code = true);
 

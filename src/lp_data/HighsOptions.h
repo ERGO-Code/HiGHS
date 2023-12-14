@@ -871,13 +871,13 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
-        "mip_opt_1_heuristic", "MIP opt-1 heuristic option: 0 => off; 1 => mild; 2 => agressive", advanced,
-        &mip_opt_1_heuristic, 0, 1, 1);
+        "mip_opt_1_heuristic", "MIP opt-1 heuristic option: -1 => off, otherwise max recursion level", advanced,
+        &mip_opt_1_heuristic, -1, 1, 1);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "mip_opt_2_heuristic", "MIP opt-2 heuristic option: 0 => off; 1 => mild; 2 => agressive", advanced,
-        &mip_opt_2_heuristic, 0, 0, 1);
+        "mip_opt_2_heuristic", "MIP opt-2 heuristic option: 0 => off, otherwise max recursion level", advanced,
+        &mip_opt_2_heuristic, -1, -1, 1);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
