@@ -31,7 +31,9 @@ double HighsMipSolverData::transformObjective(const double objective) {
 }
 
 std::string HighsMipSolverData::solutionStatusToString(
-    const HighsInt solution_status, const bool code) {}
+    const HighsInt solution_status, const bool code) {
+  return "";
+}
 
 bool HighsMipSolverData::solutionColFeasible(
     const std::vector<double>& solution, double& obj) const {
