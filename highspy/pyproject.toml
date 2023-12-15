@@ -1,33 +1,9 @@
-# [tool.poetry]
-# name = "highspy"
-# version = "1.6.0.dev4"
-# description = "A thin set of pybind11 wrappers to HiGHS"
-# authors = [ "HiGHS developers <highsopt@gmail.com>"]
-# readme = "README.md"
-
-# [tool.poetry.dependencies]
-# python = "^3.11"
-# numpy = "^1.7"
-
-# [build-system]
-# requires = ["poetry-core"]
-# build-backend = "poetry.core.masonry.api"
-
-# [tool.poetry.build]
-# script = "build.py"
-
-
 [project]
 name = "highspy"
-version = "1.6.0.dev2"
+version = "1.6.0.dev5"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [
     {name = "HiGHS developers", email = "highsopt@gmail.com"},
-]
-dependencies = [
-    # pybind11/numpy runtime dep
-    # https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
-    "numpy>=1.7.0",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -43,17 +19,10 @@ requires = [
   "setuptools>=45",
   "pybind11>=2.4",
   "wheel>=0.2",
+  "numpy>=1.7.0",
 ] 
 
 build-backend = "setuptools.build_meta"
-
-# [tool.meson-python.args]
-# setup = ['-Dwith_pybind11=True',
-#         '-Dhighsint64=False',
-#         '-Dwrap_mode=forcefallback',
-#          # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
-#         ]
-# dist = ['--include-subprojects']
 
 [tool.cibuildwheel]
 build = "*"
@@ -73,7 +42,7 @@ repair-wheel-command = [
   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
 ]
 
-[tool.cibuildwheel.windows]
-# Use delvewheel on windows, and install the project so delvewheel can find it
-before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
-repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"
+# [tool.cibuildwheel.windows]
+# # Use delvewheel on windows, and install the project so delvewheel can find it
+# before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
+# repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"

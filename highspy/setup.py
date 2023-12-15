@@ -1,6 +1,4 @@
-import platform
-# from setuptools import setup, Extension, find_packages, 
-from setuptools import setup, find_packages 
+from setuptools import setup, find_packages
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 import os
@@ -13,17 +11,18 @@ def path_to_build_folder():
     dir_name = f.format(dirname='lib',
                         platform=sysconfig.get_platform(),
                         version=sys.version_info)
-    return os.path.join('build', dir_name, 'grumbo')
+    return os.path.join('build', dir_name, 'highspy')
 
-def pick_library():
-    my_system = platform.system()
-    if my_system == 'Linux':
-        return "highs_bindings"
-    if my_system == 'Darwin':
-        return "highs_bindings"
-    if my_system == 'Windows':
-        return "highs_bindings"
-    raise ValueError("Unknown platform: " + my_system)
+
+# def pick_library():
+#     my_system = platform.system()
+#     if my_system == 'Linux':
+#         return "highs_bindings"
+#     if my_system == 'Darwin':
+#         return "highs_bindings"
+#     if my_system == 'Windows':
+#         return "highs_bindings"
+#     raise ValueError("Unknown platform: " + my_system)
 
 
 # def get_extra_link_args():
@@ -32,13 +31,14 @@ def pick_library():
 #     else:
 #         return ["-Wl,-rpath=$ORIGIN/lib/."]
     
+
 ext_modules = [
     Pybind11Extension(
-        "highs_bindings",
-        ["highspy/highs_bindings.cpp"],
-        # include_dirs=['highspy/include']
+        "highspy.highs_bindings",
+        sources=["highspy/highs_bindings.cpp"],
+        language='c++',
         include_dirs=['highspy/include/highs'],
-        library_dirs=['highspy/lib'],
+        library_dirs=[os.path.join(path_to_build_folder(), 'lib')],
         libraries=['highs'],
     ),
 ]
@@ -47,25 +47,34 @@ ext_modules = [
 # native_module = Extension(
 #     name='highspy.highs_bindinds',
 #     sources=["highspy/highs_bindings.cpp"],
-#     # include_dirs=[os.path.join(path_to_build_folder(), 'highspy/include')],
-#     libraries=[pick_library()],
+#     libraries=['highs_bindings', 'highs'],
+#     include_dirs=['highspy/include/highs',
+#                   'highspy/include/pybind11',
+#                   'highspy/include'],
 #     library_dirs=['highspy/lib'],
-#     # library_dirs=[os.path.join(path_to_build_folder(), 'highspy/lib')],
-#     extra_link_args=get_extra_link_args(),
-    
+#     # extra_link_args=get_extra_link_args(),
+#     extra_compile_args=['-std=c++11'],
 # )
 
 kwargs = {
     'name': 'highspy',
-    'version': '1.6.0.dev4',
-    # 'ext_modules':  [native_module],
+    # 'version': '1.6.0.dev5',
     'packages': find_packages(),
-    # 'package_dir': {"": "highspy"},
-    # 'package_data': {'highspy': ['highspy/include/*.h', 'highspy/lib/*.so',
-    #                              'highspy/lib/*.lib', 'highspy/*.dll',      # for windows
-    #                              ]},
-    'ext_modules' : ext_modules,
+    'include_package_data': True,
+    'package_dir': {'highspy': "highspy"},
+    'package_data': {'highspy': ['highspy/*.so','lib/*.so', 'lib/*.dylib',
+                                 'lib/*.lib', '*.dll',
+                                 'include/highs/*.h',
+                                 'include/highs/lp_data/*.h',
+                                 'include/highs/util/*.h',
+                                 'include/highs/io/*.h',
+                                 'include/highs/simplex/*.h',
+                                 'include/highs/model/*.h',
+                                 'include/highs/presolve/*.h',
+                                 ]},
+    # 'ext_modules':  [native_module],
     'cmdclass' : {"build_ext": build_ext},
+    'ext_modules' : ext_modules,
 }
 
 setup(**kwargs)
