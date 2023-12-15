@@ -964,8 +964,9 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
     return returnFromRun(HighsStatus::kOk, undo_mods);
   }
-  // Return immediately if the model is infeasible due to inconsistent bounds
-  if (isBoundInfeasible(options_.log_options, model_.lp_)) {
+  // Return immediately if the model is infeasible due to inconsistent
+  // bounds, modifying any bounds with tiny infeasibilities
+  if (!infeasibleBoundsOk()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromRun(return_status, undo_mods);
   }
@@ -1167,20 +1168,26 @@ HighsStatus Highs::run() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  if (basis_.valid || options_.presolve == kHighsOffString) {
-    // There is a valid basis for the problem or presolve is off
-    ekk_instance_.lp_name_ = "LP without presolve or with basis";
+  const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
+  assert(incumbent_lp.num_row_ || unconstrained_lp);
+  if (basis_.valid || options_.presolve == kHighsOffString ||
+      unconstrained_lp) {
+    // There is a valid basis for the problem, presolve is off, or LP
+    // has no constraint matrix
+    ekk_instance_.lp_name_ =
+        "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp, "Solving LP without presolve or with basis",
+    solveLp(incumbent_lp,
+            "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
       return returnFromRun(return_status, undo_mods);
   } else {
-    // No HiGHS basis so consider presolve
+    // Otherwise, consider presolve
     //
     // If using IPX to solve the reduced LP, but not crossover, set
     // lp_presolve_requires_basis_postsolve so that presolve can use
@@ -1631,6 +1638,19 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   HighsStatus return_status = getRangingInterface();
   ranging = this->ranging_;
   return return_status;
+}
+
+HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
+                                      const bool constraint,
+                                      const HighsInt method,
+                                      const double ill_conditioning_bound) {
+  if (!basis_.valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot get ill-conditioning without a valid basis\n");
+    return HighsStatus::kError;
+  }
+  return computeIllConditioning(ill_conditioning, constraint, method,
+                                ill_conditioning_bound);
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }

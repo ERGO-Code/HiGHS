@@ -131,4 +131,14 @@ struct HighsPresolveLog {
   void clear();
 };
 
+struct HighsIllConditioningRecord {
+  HighsInt index;
+  double multiplier;
+};
+
+struct HighsIllConditioning {
+  std::vector<HighsIllConditioningRecord> record;
+  void clear();
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

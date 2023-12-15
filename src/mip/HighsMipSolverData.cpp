@@ -454,6 +454,16 @@ void HighsMipSolverData::runSetup() {
         nodequeue.setOptimalityLimit(optimality_limit);
       }
     }
+    if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
+        mipsolver.callback_->active[kCallbackMipSolution]) {
+      assert(!mipsolver.submip);
+      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      const bool interrupt = interruptFromCallbackWithData(
+          kCallbackMipSolution, mipsolver.solution_objective_,
+          "Feasible solution");
+      assert(!interrupt);
+    }
   }
 
   if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
@@ -660,8 +670,9 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-double HighsMipSolverData::transformNewIncumbent(
-    const std::vector<double>& sol) {
+double HighsMipSolverData::transformNewIntegerFeasibleSolution(
+    const std::vector<double>& sol,
+    const bool possibly_store_as_new_incumbent) {
   HighsSolution solution;
   solution.col_value = sol;
   solution.value_valid = true;
@@ -682,11 +693,12 @@ try_again:
   double row_violation_ = 0;
   double integrality_violation_ = 0;
 
-  // obj is the actual objective of the MIP - including the offset,
-  // and independent of objective sense
+  // Compute to quad precision the objective function value of the MIP
+  // being solved - including the offset, and independent of objective
+  // sense
   //
-  // ToDO Give it a more meaningful name!
-  HighsCDouble obj = mipsolver.orig_model_->offset_;
+  HighsCDouble mipsolver_quad_precision_objective_value =
+      mipsolver.orig_model_->offset_;
   if (kAllowDeveloperAssert)
     assert((HighsInt)solution.col_value.size() ==
            mipsolver.orig_model_->num_col_);
@@ -696,7 +708,8 @@ try_again:
   const bool debug_report = false;
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     const double value = solution.col_value[i];
-    obj += mipsolver.orig_model_->col_cost_[i] * value;
+    mipsolver_quad_precision_objective_value +=
+        mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
       double intval = std::floor(value + 0.5);
@@ -792,90 +805,110 @@ try_again:
       goto try_again;
     }
   }
-  // store the solution as incumbent in the original space if there is no
-  // solution or if it is feasible
-  if (feasible) {
-    // if (!allow_try_again)
-    //   printf("repaired solution with value %g\n", double(obj));
-    // store
-    mipsolver.row_violation_ = row_violation_;
-    mipsolver.bound_violation_ = bound_violation_;
-    mipsolver.integrality_violation_ = integrality_violation_;
-    mipsolver.solution_ = std::move(solution.col_value);
-    mipsolver.solution_objective_ = double(obj);
-  } else {
-    bool currentFeasible =
-        mipsolver.solution_objective_ != kHighsInf &&
-        mipsolver.bound_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance &&
-        mipsolver.integrality_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance &&
-        mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance;
-    //    check_col = 37;//mipsolver.mipdata_->presolve.debugGetCheckCol();
-    //    check_row = 37;//mipsolver.mipdata_->presolve.debugGetCheckRow();
-    std::string check_col_data = "";
-    if (check_col >= 0) {
-      check_col_data = " (col " + std::to_string(check_col);
-      if (mipsolver.orig_model_->col_names_.size())
-        check_col_data +=
-            "[" + mipsolver.orig_model_->col_names_[check_col] + "]";
-      check_col_data += ")";
-    }
-    std::string check_int_data = "";
-    if (check_int >= 0) {
-      check_int_data = " (col " + std::to_string(check_int);
-      if (mipsolver.orig_model_->col_names_.size())
-        check_int_data +=
-            "[" + mipsolver.orig_model_->col_names_[check_int] + "]";
-      check_int_data += ")";
-    }
-    std::string check_row_data = "";
-    if (check_row >= 0) {
-      check_row_data = " (row " + std::to_string(check_row);
-      if (mipsolver.orig_model_->row_names_.size())
-        check_row_data +=
-            "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
-      check_row_data += ")";
-    }
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                 //    printf(
-                 "Solution with objective %g has untransformed violations: "
-                 "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
-                 double(obj), bound_violation_, check_col_data.c_str(),
-                 integrality_violation_, check_int_data.c_str(), row_violation_,
-                 check_row_data.c_str());
 
-    const bool debug_repeat = false;  // true;//
-    if (debug_repeat) {
-      HighsSolution check_solution;
-      check_solution.col_value = sol;
-      check_solution.value_valid = true;
-      postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
-                                check_col);
-      fflush(stdout);
-      if (kAllowDeveloperAssert) assert(111 == 999);
-    }
+  // Get a double precision version of the objective function value of
+  // the MIP being solved
+  const double mipsolver_objective_value =
+      double(mipsolver_quad_precision_objective_value);
+  // Possible MIP solution callback
+  if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->active[kCallbackMipSolution]) {
+    mipsolver.callback_->clearHighsCallbackDataOut();
+    mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
+    const bool interrupt = interruptFromCallbackWithData(
+        kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
+    assert(!interrupt);
+  }
 
-    if (!currentFeasible) {
-      // if the current incumbent is non existent or also not feasible we still
-      // store the new one
+  if (possibly_store_as_new_incumbent) {
+    // Store the solution as incumbent in the original space if there
+    // is no solution or if it is feasible
+    if (feasible) {
+      // if (!allow_try_again)
+      //   printf("repaired solution with value %g\n",
+      //   mipsolver_objective_value);
+      // store
       mipsolver.row_violation_ = row_violation_;
       mipsolver.bound_violation_ = bound_violation_;
       mipsolver.integrality_violation_ = integrality_violation_;
       mipsolver.solution_ = std::move(solution.col_value);
-      mipsolver.solution_objective_ = double(obj);
+      mipsolver.solution_objective_ = mipsolver_objective_value;
+    } else {
+      bool currentFeasible =
+          mipsolver.solution_objective_ != kHighsInf &&
+          mipsolver.bound_violation_ <=
+              mipsolver.options_mip_->mip_feasibility_tolerance &&
+          mipsolver.integrality_violation_ <=
+              mipsolver.options_mip_->mip_feasibility_tolerance &&
+          mipsolver.row_violation_ <=
+              mipsolver.options_mip_->mip_feasibility_tolerance;
+      //    check_col = 37;//mipsolver.mipdata_->presolve.debugGetCheckCol();
+      //    check_row = 37;//mipsolver.mipdata_->presolve.debugGetCheckRow();
+      std::string check_col_data = "";
+      if (check_col >= 0) {
+        check_col_data = " (col " + std::to_string(check_col);
+        if (mipsolver.orig_model_->col_names_.size())
+          check_col_data +=
+              "[" + mipsolver.orig_model_->col_names_[check_col] + "]";
+        check_col_data += ")";
+      }
+      std::string check_int_data = "";
+      if (check_int >= 0) {
+        check_int_data = " (col " + std::to_string(check_int);
+        if (mipsolver.orig_model_->col_names_.size())
+          check_int_data +=
+              "[" + mipsolver.orig_model_->col_names_[check_int] + "]";
+        check_int_data += ")";
+      }
+      std::string check_row_data = "";
+      if (check_row >= 0) {
+        check_row_data = " (row " + std::to_string(check_row);
+        if (mipsolver.orig_model_->row_names_.size())
+          check_row_data +=
+              "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
+        check_row_data += ")";
+      }
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+                   //    printf(
+                   "Solution with objective %g has untransformed violations: "
+                   "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
+                   mipsolver_objective_value, bound_violation_,
+                   check_col_data.c_str(), integrality_violation_,
+                   check_int_data.c_str(), row_violation_,
+                   check_row_data.c_str());
+
+      const bool debug_repeat = false;  // true;//
+      if (debug_repeat) {
+        HighsSolution check_solution;
+        check_solution.col_value = sol;
+        check_solution.value_valid = true;
+        postSolveStack.undoPrimal(*mipsolver.options_mip_, check_solution,
+                                  check_col);
+        fflush(stdout);
+        if (kAllowDeveloperAssert) assert(111 == 999);
+      }
+
+      if (!currentFeasible) {
+        // if the current incumbent is non existent or also not feasible we
+        // still store the new one
+        mipsolver.row_violation_ = row_violation_;
+        mipsolver.bound_violation_ = bound_violation_;
+        mipsolver.integrality_violation_ = integrality_violation_;
+        mipsolver.solution_ = std::move(solution.col_value);
+        mipsolver.solution_objective_ = mipsolver_objective_value;
+      }
+
+      // return infinity so that it is not used for bounding
+      return kHighsInf;
     }
-
-    // return infinity so that it is not used for bounding
-    return kHighsInf;
   }
-
   // return the objective value in the transformed space
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
-    return -double(obj + mipsolver.model_->offset_);
+    return -double(mipsolver_quad_precision_objective_value +
+                   mipsolver.model_->offset_);
 
-  return double(obj - mipsolver.model_->offset_);
+  return double(mipsolver_quad_precision_objective_value -
+                mipsolver.model_->offset_);
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
@@ -954,7 +987,8 @@ void HighsMipSolverData::performRestart() {
 
     if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
       mipsolver.mipdata_->upper_bound = 0;
-      mipsolver.mipdata_->transformNewIncumbent(std::vector<double>());
+      mipsolver.mipdata_->transformNewIntegerFeasibleSolution(
+          std::vector<double>());
     } else
       upper_bound -= mipsolver.model_->offset_;
 
@@ -1007,8 +1041,30 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
-  if (solobj < upper_bound) {
-    solobj = transformNewIncumbent(sol);
+  const bool execute_mip_solution_callback =
+      !mipsolver.submip &&
+      (mipsolver.callback_->user_callback
+           ? mipsolver.callback_->active[kCallbackMipSolution]
+           : false);
+  // Determine whether the potential new incumbent should be
+  // transformed
+  //
+  // Happens if solobj improves on the upper bound or the MIP solution
+  // callback is active
+  const bool possibly_store_as_new_incumbent = solobj < upper_bound;
+  const bool get_transformed_solution =
+      possibly_store_as_new_incumbent || execute_mip_solution_callback;
+  // Get the transformed objective and solution if required
+  const double transformed_solobj =
+      get_transformed_solution ? transformNewIntegerFeasibleSolution(
+                                     sol, possibly_store_as_new_incumbent)
+                               : 0;
+
+  if (possibly_store_as_new_incumbent) {
+    // #1463 use pre-computed transformed_solobj
+    solobj = transformed_solobj;
+    //    solobj = transformNewIntegerFeasibleSolution(sol);
+
     if (solobj >= upper_bound) return false;
     upper_bound = solobj;
     incumbent = sol;
@@ -1226,8 +1282,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
   assert(mip_rel_gap == gap);
   // Possibly interrupt from MIP logging callback
   mipsolver.callback_->clearHighsCallbackDataOut();
-  const bool interrupt =
-      interruptFromCallbackWithData(kCallbackMipLogging, "MIP logging");
+  const bool interrupt = interruptFromCallbackWithData(
+      kCallbackMipLogging, mipsolver.solution_objective_, "MIP logging");
   assert(!interrupt);
 }
 
@@ -1698,6 +1754,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   if (!mipsolver.submip && mipsolver.callback_->user_callback) {
     mipsolver.callback_->clearHighsCallbackDataOut();
     if (interruptFromCallbackWithData(kCallbackMipInterrupt,
+                                      mipsolver.solution_objective_,
                                       "MIP check limits")) {
       if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
         highsLogDev(options.log_options, HighsLogType::kInfo,
@@ -1833,11 +1890,10 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.objective_function_value =
-          mipsolver.solution_objective_;
       mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
       const bool interrupt = interruptFromCallbackWithData(
-          kCallbackMipImprovingSolution, "Improving solution");
+          kCallbackMipImprovingSolution, mipsolver.solution_objective_,
+          "Improving solution");
       assert(!interrupt);
     }
   }
@@ -1889,8 +1945,13 @@ void HighsMipSolverData::limitsToBounds(double& dual_bound,
   }
 }
 
+// Interface to callbackAction, with mipsolver_objective_value since
+// incumbent value (mipsolver.solution_objective_) is not right for
+// callback_type = kCallbackMipSolution
+
 bool HighsMipSolverData::interruptFromCallbackWithData(
-    const int callback_type, const std::string message) const {
+    const int callback_type, const double mipsolver_objective_value,
+    const std::string message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
 
@@ -1901,10 +1962,13 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.running_time =
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   mipsolver.callback_->data_out.objective_function_value =
-      mipsolver.solution_objective_;
+      mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
-  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
+  // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,
+  // whereas mip_rel_gap in logging output (mimicked by
+  // limitsToBounds) gives a percentage, so convert it a fraction
+  mipsolver.callback_->data_out.mip_gap = 1e-2 * mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }

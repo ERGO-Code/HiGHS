@@ -127,7 +127,7 @@ void HighsMipSolver::run() {
     if (modelstatus_ == HighsModelStatus::kOptimal) {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
-      mipdata_->transformNewIncumbent(std::vector<double>());
+      mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
     }
     cleanupSolve();
     return;

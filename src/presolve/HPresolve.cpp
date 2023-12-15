@@ -79,6 +79,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   implColLower.resize(model->num_col_, -kHighsInf);
   implColUpper.resize(model->num_col_, kHighsInf);
   colImplSourceByRow.resize(model->num_row_, std::set<HighsInt>());
+  implRowDualSourceByCol.resize(model->num_col_, std::set<HighsInt>());
 
   rowDualLower.resize(model->num_row_, -kHighsInf);
   rowDualUpper.resize(model->num_row_, kHighsInf);
@@ -170,10 +171,7 @@ bool HPresolve::isUpperImplied(HighsInt col) const {
 }
 
 bool HPresolve::isImpliedFree(HighsInt col) const {
-  return (model->col_lower_[col] == -kHighsInf ||
-          implColLower[col] >= model->col_lower_[col] - primal_feastol) &&
-         (model->col_upper_[col] == kHighsInf ||
-          implColUpper[col] <= model->col_upper_[col] + primal_feastol);
+  return isLowerImplied(col) && isUpperImplied(col);
 }
 
 bool HPresolve::isDualImpliedFree(HighsInt row) const {
@@ -182,6 +180,25 @@ bool HPresolve::isDualImpliedFree(HighsInt row) const {
           implRowDualUpper[row] <= options->dual_feasibility_tolerance) ||
          (model->row_lower_[row] != -kHighsInf &&
           implRowDualLower[row] >= -options->dual_feasibility_tolerance);
+}
+
+void HPresolve::dualImpliedFreeGetRhsAndRowType(
+    HighsInt row, double& rhs, HighsPostsolveStack::RowType& rowType,
+    bool relaxRowDualBounds) {
+  assert(isDualImpliedFree(row));
+  if (model->row_lower_[row] == model->row_upper_[row]) {
+    rowType = HighsPostsolveStack::RowType::kEq;
+    rhs = model->row_upper_[row];
+  } else if (model->row_upper_[row] != kHighsInf &&
+             implRowDualUpper[row] <= options->dual_feasibility_tolerance) {
+    rowType = HighsPostsolveStack::RowType::kLeq;
+    rhs = model->row_upper_[row];
+    if (relaxRowDualBounds) changeRowDualUpper(row, kHighsInf);
+  } else {
+    rowType = HighsPostsolveStack::RowType::kGeq;
+    rhs = model->row_lower_[row];
+    if (relaxRowDualBounds) changeRowDualLower(row, -kHighsInf);
+  }
 }
 
 bool HPresolve::isImpliedIntegral(HighsInt col) {
@@ -647,6 +664,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 void HPresolve::recomputeColImpliedBounds(HighsInt row) {
   // recompute implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
+  if (colImplSourceByRow[row].empty()) return;
   std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
   for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
     // set implied bounds to infinite values if they were deduced from the given
@@ -657,6 +675,28 @@ void HPresolve::recomputeColImpliedBounds(HighsInt row) {
     // iterate over column and recompute the implied bounds
     for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
       updateColImpliedBounds(nonz.index(), *it, nonz.value());
+    }
+  }
+}
+
+void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
+  // recompute implied row dual bounds affected by a modification in a column
+  // (removed / added non-zeros, etc.)
+  if (implRowDualSourceByCol[col].empty()) return;
+  std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
+  for (auto it = affectedRows.cbegin(); it != affectedRows.cend(); it++) {
+    // set implied bounds to infinite values if they were deduced from the given
+    // column
+    if (rowDualLowerSource[*it] == col)
+      changeImplRowDualLower(*it, -kHighsInf, -1);
+    if (rowDualUpperSource[*it] == col)
+      changeImplRowDualUpper(*it, kHighsInf, -1);
+
+    // iterate over row and recompute the implied bounds
+    for (const HighsSliceNonzero& nonz : getRowVector(*it)) {
+      // integer columns cannot be used to tighten bounds on dual multipliers
+      if (model->integrality_[nonz.index()] != HighsVarType::kInteger)
+        updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
     }
   }
 }
@@ -697,6 +737,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         implColUpper[newColIndex[i]] = implColUpper[i];
         colLowerSource[newColIndex[i]] = colLowerSource[i];
         colUpperSource[newColIndex[i]] = colUpperSource[i];
+        implRowDualSourceByCol[newColIndex[i]] = implRowDualSourceByCol[i];
         colhead[newColIndex[i]] = colhead[i];
         colsize[newColIndex[i]] = colsize[i];
         if (have_col_names)
@@ -714,6 +755,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   implColUpper.resize(model->num_col_);
   colLowerSource.resize(model->num_col_);
   colUpperSource.resize(model->num_col_);
+  implRowDualSourceByCol.resize(model->num_col_);
   colhead.resize(model->num_col_);
   colsize.resize(model->num_col_);
   if (have_col_names) model->col_names_.resize(model->num_col_);
@@ -763,6 +805,16 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
       rowDualLowerSource[i] = newColIndex[rowDualLowerSource[i]];
     if (rowDualUpperSource[i] != -1)
       rowDualUpperSource[i] = newColIndex[rowDualUpperSource[i]];
+  }
+
+  for (HighsInt i = 0; i != model->num_col_; ++i) {
+    std::set<HighsInt> newSet;
+    std::for_each(implRowDualSourceByCol[i].cbegin(),
+                  implRowDualSourceByCol[i].cend(), [&](const HighsInt& row) {
+                    if (newRowIndex[row] != -1)
+                      newSet.emplace(newRowIndex[row]);
+                  });
+    implRowDualSourceByCol[i] = std::move(newSet);
   }
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
@@ -1380,8 +1432,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
-    for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
-         binaries) {
+    for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
       if (cliquetable.getSubstitution(i) != nullptr) continue;
@@ -1472,11 +1523,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
-    std::vector<std::pair<HighsInt, HighsCliqueTable::CliqueVar>>&
-        extensionvars = cliquetable.getCliqueExtensions();
+    auto& extensionvars = cliquetable.getCliqueExtensions();
     HighsInt addednnz = extensionvars.size();
-    for (std::pair<HighsInt, HighsCliqueTable::CliqueVar> cliqueextension :
-         extensionvars) {
+    for (const auto& cliqueextension : extensionvars) {
       if (rowDeleted[cliqueextension.first]) {
         --addednnz;
         continue;
@@ -1608,6 +1657,12 @@ void HPresolve::markRowDeleted(HighsInt row) {
   changedRowFlag[row] = true;
   rowDeleted[row] = true;
   ++numDeletedRows;
+
+  // remove row from column-wise implied bound storage
+  if (rowDualLowerSource[row] != -1)
+    implRowDualSourceByCol[rowDualLowerSource[row]].erase(row);
+  if (rowDualUpperSource[row] != -1)
+    implRowDualSourceByCol[rowDualUpperSource[row]].erase(row);
 }
 
 void HPresolve::markColDeleted(HighsInt col) {
@@ -1782,6 +1837,11 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
+  if (rowDualUpperSource[row] != -1 &&
+      rowDualLowerSource[row] != rowDualUpperSource[row])
+    implRowDualSourceByCol[rowDualUpperSource[row]].erase(row);
+  if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
+
   rowDualUpperSource[row] = originCol;
   implRowDualUpper[row] = newUpper;
 
@@ -1815,6 +1875,11 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
+  if (rowDualLowerSource[row] != -1 &&
+      rowDualLowerSource[row] != rowDualUpperSource[row])
+    implRowDualSourceByCol[rowDualLowerSource[row]].erase(row);
+  if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
+
   rowDualLowerSource[row] = originCol;
   implRowDualLower[row] = newLower;
 
@@ -2214,8 +2279,6 @@ void HPresolve::scaleRow(HighsInt row, double scale, bool integral) {
 }
 
 void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
-  HighsInt rowlen = rowpositions.size();
-
   model->row_upper_[row] *= scale;
   model->row_lower_[row] *= scale;
   implRowDualLower[row] /= scale;
@@ -2226,17 +2289,13 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
       model->row_upper_[row] = std::round(model->row_upper_[row]);
     if (model->row_lower_[row] != kHighsInf)
       model->row_lower_[row] = std::round(model->row_lower_[row]);
-    for (HighsInt j = 0; j < rowlen; ++j) {
-      Avalue[rowpositions[j]] *= scale;
-      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
-        unlink(rowpositions[j]);
-    }
-  } else
-    for (HighsInt j = 0; j < rowlen; ++j) {
-      Avalue[rowpositions[j]] *= scale;
-      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
-        unlink(rowpositions[j]);
-    }
+  }
+
+  for (size_t j = 0; j < rowpositions.size(); ++j) {
+    Avalue[rowpositions[j]] *= scale;
+    if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
+      unlink(rowpositions[j]);
+  }
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
@@ -2338,6 +2397,12 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
            std::max(options->dual_feasibility_tolerance,
                     kHighsTiny * std::abs(double(objscale))));
     model->col_cost_[col] = 0.0;
+  }
+
+  // recompute implied row dual bounds affected by substitution
+  for (HighsInt rowiter : rowpositions) {
+    if (Acol[rowiter] == col) continue;
+    recomputeRowDualImpliedBounds(Acol[rowiter]);
   }
 
   // finally remove the entries of the row that was used for substitution
@@ -2881,19 +2946,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     // for substitution
     storeRow(row);
 
-    HighsPostsolveStack::RowType rowType = HighsPostsolveStack::RowType::kEq;
+    HighsPostsolveStack::RowType rowType;
     double rhs;
-    if (model->row_lower_[row] == model->row_upper_[row]) {
-      rhs = model->row_upper_[row];
-      rowType = HighsPostsolveStack::RowType::kEq;
-    } else if ((model->row_upper_[row] != kHighsInf &&
-                implRowDualUpper[row] <= options->dual_feasibility_tolerance)) {
-      rhs = model->row_upper_[row];
-      rowType = HighsPostsolveStack::RowType::kLeq;
-    } else {
-      rhs = model->row_lower_[row];
-      rowType = HighsPostsolveStack::RowType::kGeq;
-    }
+    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),
@@ -4350,6 +4405,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   postsolve_stack.debug_prev_col_upper = 0;
   postsolve_stack.debug_prev_row_lower = 0;
   postsolve_stack.debug_prev_row_upper = 0;
+  // Presolve should only be called with a model that has a non-empty
+  // constraint matrix unless it has no rows
+  assert(model->a_matrix_.numNz() || model->num_row_ == 0);
+
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
@@ -4733,20 +4792,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     if (rowsize[row] == 2 || colsize[col] == 2) {
       double rhs;
       HighsPostsolveStack::RowType rowType;
-      if (model->row_lower_[row] == model->row_upper_[row]) {
-        rowType = HighsPostsolveStack::RowType::kEq;
-        rhs = model->row_upper_[row];
-      } else if ((model->row_upper_[row] != kHighsInf &&
-                  implRowDualUpper[row] <=
-                      options->dual_feasibility_tolerance)) {
-        rowType = HighsPostsolveStack::RowType::kLeq;
-        rhs = model->row_upper_[row];
-        changeRowDualUpper(row, kHighsInf);
-      } else {
-        rowType = HighsPostsolveStack::RowType::kGeq;
-        rhs = model->row_lower_[row];
-        changeRowDualLower(row, -kHighsInf);
-      }
+      dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
 
       storeRow(row);
 
@@ -4794,19 +4840,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     nfail = 0;
     double rhs;
     HighsPostsolveStack::RowType rowType;
-    if (model->row_lower_[row] == model->row_upper_[row]) {
-      rowType = HighsPostsolveStack::RowType::kEq;
-      rhs = model->row_upper_[row];
-    } else if ((model->row_upper_[row] != kHighsInf &&
-                implRowDualUpper[row] <= options->dual_feasibility_tolerance)) {
-      rowType = HighsPostsolveStack::RowType::kLeq;
-      rhs = model->row_upper_[row];
-      changeRowDualUpper(row, kHighsInf);
-    } else {
-      rowType = HighsPostsolveStack::RowType::kGeq;
-      rhs = model->row_lower_[row];
-      changeRowDualLower(row, -kHighsInf);
-    }
+    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
 
     postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
                                         rowType, getStoredRow(),
