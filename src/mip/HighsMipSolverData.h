@@ -183,7 +183,7 @@ struct HighsMipSolverData {
   double offsetObjective(const double objective);
   double transformObjective(const double objective);
   std::string solutionStatusToString(const HighsInt solution_status,
-				     const bool code = true);
+                                     const bool code = true);
 
   bool solutionColFeasible(const std::vector<double>& solution,
                            double& obj) const;
@@ -197,11 +197,9 @@ struct HighsMipSolverData {
   void evaluateRootNode();
   bool assessIntegerFeasibleSolution(const std::vector<double>& sol,
                                      double solobj, const char solution_source,
-                                     const HighsInt recursion_depth = 0,
                                      const bool already_incumbent = false);
-  bool addIncumbent(bool& is_improving,
-		    const std::vector<double>& sol, double solobj,
-                    const char solution_source);
+  bool addIncumbent(bool& is_improving, const std::vector<double>& sol,
+                    double solobj, const char solution_source);
 
   const std::vector<double>& getSolution() const;
 
