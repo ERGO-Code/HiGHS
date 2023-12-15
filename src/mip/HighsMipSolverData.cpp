@@ -1228,7 +1228,7 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
         double abs_delta_value = std::fabs(delta_value);
         if (abs_delta_value >= kHighsInf) {
           //	  highsLogUser(mipsolver.options_mip_->log_options,
-          //HighsLogType::kError,
+          // HighsLogType::kError,
           printf(
               "1-opt heuristic detects unboundedness: ignoring this column\n");
           assert(abs_delta_value < kHighsInf);
