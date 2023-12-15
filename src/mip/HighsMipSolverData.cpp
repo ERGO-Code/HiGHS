@@ -1096,9 +1096,13 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
   // Need to reproduce the return value of addIncumbent
   const bool original_solution_feasible = already_incumbent ? true :
     addIncumbent(is_improving, sol, solobj, solution_source);
-  printf("\nUpper_bound is now T(%g) = %19.12g; solution objective is T(%g) = %19.12g\n",
-	 upper_bound, offsetObjective(upper_bound),
-	 solobj, offsetObjective(solobj));
+
+  const bool report_upper_bound = false;
+  if (report_upper_bound) {
+    printf("\nUpper_bound is now T(%g) = %19.12g; solution objective is T(%g) = %19.12g\n",
+	   upper_bound, offsetObjective(upper_bound),
+	   solobj, offsetObjective(solobj));
+  }
   //
   // Solution is not improving, so return
   if (!is_improving) return original_solution_feasible;
@@ -1144,7 +1148,7 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 	if (!attractive[integerCol]) continue;
 	HighsInt iCol = integer_cols[integerCol];
 	if (integerCol == 15) {
-	  printf("integerCol = 15\n");
+	  //	  printf("integerCol = 15\n");
 	}
 	// If this variable is attractive to move, perform a line
 	// search to see how far it can be moved
@@ -1154,17 +1158,17 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 	    // Positive cost, so only of interest if value can be reduced
 	    delta_value = (lp.col_lower_[iCol] - local_sol[iCol]) - feastol;
 	    bool attractive_col = delta_value <= -1;
-	    assert(!attractive_col);
+	    assert(attractive_col);
 	    if (!attractive_col) attractive[integerCol] = false;
 	  } else if (lp.col_cost_[iCol] < 0) {
 	    // Negative cost, so only of interest if value can be increased
 	    delta_value = (lp.col_upper_[iCol] - local_sol[iCol]) + feastol;
 	    bool attractive_col = delta_value >= 1;
-	    assert(!attractive_col);
+	    assert(attractive_col);
 	    if (!attractive_col) attractive[integerCol] = false;
 	  } else {
 	    bool attractive_col = false;
-	    assert(!attractive_col); // Zero cost, so no interest
+	    assert(attractive_col); // Zero cost, so no interest
 	    attractive[integerCol] = false;
 	  }
 	} else {
@@ -1226,7 +1230,7 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 	if (abs_delta_value >= kHighsInf) {
 	  //	  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
 	  printf(
-		       "Opt-1 heuristic detects unboundedness: ignoring this column\n");
+		       "1-opt heuristic detects unboundedness: ignoring this column\n");
 	  assert(abs_delta_value < kHighsInf);
 	  continue;
 	}
@@ -1249,7 +1253,7 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 	  integer_change = new_integer < old_integer;
 	}
 	if (!integer_change) {
-	  printf("Opt-1: line search fail for integer column %d\n", int(integerCol));
+	  printf("1-opt: line search fail for integer column %d\n", int(integerCol));
 	  assert(integer_change);
 	  continue;
 	}
@@ -1281,30 +1285,64 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 	for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol+1]; iEl++)
 	  row_value[lp.a_matrix_.index_[iEl]] += delta_value * lp.a_matrix_.value_[iEl];
 
+	// Determine whether this column is now unattractive
+	if (delta_value < 0) {
+	  assert(lp.col_cost_[iCol] > 0);
+	  delta_value = (lp.col_lower_[iCol] - local_sol[iCol]) - feastol;
+	  bool attractive_col = delta_value <= -1;
+	  if (!attractive_col) attractive[integerCol] = false;
+	} else {
+	  assert(lp.col_cost_[iCol] < 0);
+	  delta_value = (lp.col_upper_[iCol] - local_sol[iCol]) + feastol;
+	  bool attractive_col = delta_value >= 1;
+	  if (!attractive_col) attractive[integerCol] = false;
+	}
+
 	const bool check_step = true;
 	if (check_step) {
 	  bool error = false;
 	  if (delta_value) {
-	    error = local_sol[iCol] > lp.col_upper_[iCol] + feastol;
+	    error = local_sol[iCol] - lp.col_upper_[iCol] > feastol;
 	  } else {
-	    error = local_sol[iCol] < lp.col_lower_[iCol] - feastol;
+	    error = local_sol[iCol] - lp.col_lower_[iCol] < feastol;
+	  }
+	  if (error) {
+	    double residual = std::max(local_sol[iCol] - lp.col_upper_[iCol],
+				       lp.col_lower_[iCol] - local_sol[iCol]);
+	    printf("Col %d [%g, %g, %g] has residual %g\n",
+			      int(iCol), lp.col_lower_[iCol], local_sol[iCol], lp.col_upper_[iCol], residual);
 	  }
 	  assert(!error);
 	  for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol+1]; iEl++) {
-	    error =
-	      row_value[lp.a_matrix_.index_[iEl]] > lp.row_upper_[iCol] + feastol ||
-	      row_value[lp.a_matrix_.index_[iEl]] < lp.row_lower_[iCol] - feastol || error;
+	    HighsInt iRow = lp.a_matrix_.index_[iEl];
+	    double residual = std::max(row_value[iRow] - lp.row_upper_[iRow],
+				       lp.row_lower_[iRow] - row_value[iRow]);
+	    bool local_error =
+	      row_value[iRow] - lp.row_upper_[iRow] > feastol ||
+	      row_value[iRow] - lp.row_lower_[iRow] < -feastol;
+	    if (local_error)
+	      printf("Row %d [%g, %g, %g] has residual %g\n",
+		     int(iRow), lp.row_lower_[iRow], row_value[iRow], lp.row_upper_[iRow], residual);
+	    error = local_error || error;
 	    assert(!error);
 	  }
 	  if (error) {
-	    printf("Opt-1: line search fail for integer column %d\n", int(integerCol));
+	    printf("1-opt: line search fail for integer column %d\n", int(integerCol));
 	    attractive[integerCol] = false;
 	    continue;
 	  }	    
 	}
-	no_improvement = false;
-	assessIntegerFeasibleSolution(local_sol, local_solobj, kSolutionSourceOpt1,
-				      kHighsIInf, false);
+	is_improving = false;
+	const bool solution_feasible = addIncumbent(is_improving, local_sol, local_solobj, kSolutionSourceOpt1);
+	if (!solution_feasible) {
+	  printf("1-opt: transformed feasibility lost for integer column %d\n", int(integerCol));
+	  no_improvement = true;
+	} else if (!is_improving) {
+	  printf("1-opt: improvement not recognised in addIncumbent for integer column %d\n", int(integerCol));
+	  no_improvement = true;
+	} else {
+	  no_improvement = false;
+	}
       }
       pass_num++;
       if (
