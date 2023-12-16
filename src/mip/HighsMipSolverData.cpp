@@ -1176,90 +1176,27 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
   std::vector<double> local_sol = sol;
   double local_solobj = solobj;
   if (mipsolver.options_mip_->mip_opt_1_heuristic) {
-    const bool one_opt_improvement =
-      oneOptImprovement(local_sol, local_solobj);
+    oneOptImprovement(local_sol, local_solobj);
   }
-
-
   if (mipsolver.options_mip_->mip_opt_2_heuristic) {
-    // Consider 2-opt heuristic on solution
-    //
-    // Prepare sets of columns that are integer with
-    // negative/non-negative objective change if the value is pushed
-    // up or down
-    std::vector<HighsInt> up_negative_objective_change;
-    std::vector<HighsInt> up_non_negative_objective_change;
-    std::vector<HighsInt> down_non_negative_objective_change;
-    std::vector<HighsInt> down_negative_objective_change;
-    printf("  Ix Cost Lower Value Upper\n");
-    for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
-      HighsInt iCol = integer_cols[integerCol];
-      printf("%4d %11.6g %11.6g %11.6g  %11.6g\n", iCol, lp.col_cost_[iCol],
-             lp.col_lower_[iCol], sol[iCol], lp.col_upper_[iCol]);
-      if (lp.col_cost_[iCol] > 0) {
-        // Positive cost, so...
-        if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
-          // Negative cost change since value can be reduced
-          down_negative_objective_change.push_back(iCol);
-        } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
-          // Non-negative cost change since value can be increased
-          up_non_negative_objective_change.push_back(iCol);
-        }
-      } else if (lp.col_cost_[iCol] < 0) {
-        // Negative cost, so...
-        if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
-          // Non-negative cost change since value can be reduced
-          down_non_negative_objective_change.push_back(iCol);
-        } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
-          // Negative cost change since value can be increased
-          up_negative_objective_change.push_back(iCol);
-        }
-      } else {
-        // Zero cost, so...
-        if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
-          // Non-negative cost change since value can be reduced
-          down_non_negative_objective_change.push_back(iCol);
-        } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
-          // Non-negative cost change since value can be increased
-          up_non_negative_objective_change.push_back(iCol);
-        }
-      }
-    }
-    printf("\nup_negative_objective_change\n");
-    for (HighsInt iX = 0; iX < HighsInt(up_negative_objective_change.size());
-         iX++)
-      printf(" %d", up_negative_objective_change[iX]);
-    printf("\n");
-    printf("\nup_non_negative_objective_change\n");
-    for (HighsInt iX = 0;
-         iX < HighsInt(up_non_negative_objective_change.size()); iX++)
-      printf(" %d", up_non_negative_objective_change[iX]);
-    printf("\n");
-    printf("\ndown_non_negative_objective_change\n");
-    for (HighsInt iX = 0;
-         iX < HighsInt(down_non_negative_objective_change.size()); iX++)
-      printf(" %d", down_non_negative_objective_change[iX]);
-    printf("\n");
-    printf("\ndown_negative_objective_change\n");
-    for (HighsInt iX = 0; iX < HighsInt(down_negative_objective_change.size());
-         iX++)
-      printf(" %d", down_negative_objective_change[iX]);
-    printf("\n");
+    twoOptImprovement(local_sol, local_solobj);
   }
+
+
 
   return original_solution_feasible;
 }
 
-bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, double& local_solobj) {
+bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol, double& solobj) {
   bool finds_improvement = false;
-  bool is_improving = false;
-  double initial_local_solobj = local_solobj;
   assert(mipsolver.options_mip_->mip_opt_1_heuristic);
   if (!mipsolver.options_mip_->mip_opt_1_heuristic) return finds_improvement;
+  bool is_improving = false;
+  double initial_solobj = solobj;
   const HighsLp& lp = *mipsolver.model_;
   const HighsInt num_integer_col = integer_cols.size();
   std::vector<double> row_value;
-  lp.a_matrix_.product(row_value, local_sol);
+  lp.a_matrix_.product(row_value, sol);
   // Consider 1-opt heuristic on solution Keep track of integer
   // variables that are attractive to modify due to the objective
   // being reduced if they are moved from their current value (and
@@ -1269,7 +1206,7 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
   // Possibly loop until no improvement is possible
   HighsInt pass_num = 0;
   for (;;) {
-    bool no_improvement = true;
+    bool finds_local_improvement = false;
     for (HighsInt integerCol = 0; integerCol < num_integer_col;
 	 integerCol++) {
       if (!attractive[integerCol]) continue;
@@ -1283,13 +1220,13 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       if (pass_num) {
 	if (lp.col_cost_[iCol] > 0) {
 	  // Positive cost, so only of interest if value can be reduced
-	  delta_value = (lp.col_lower_[iCol] - local_sol[iCol]) - feastol;
+	  delta_value = (lp.col_lower_[iCol] - sol[iCol]) - feastol;
 	  bool attractive_col = delta_value <= -1;
 	  assert(attractive_col);
 	  if (!attractive_col) attractive[integerCol] = false;
 	} else if (lp.col_cost_[iCol] < 0) {
 	  // Negative cost, so only of interest if value can be increased
-	  delta_value = (lp.col_upper_[iCol] - local_sol[iCol]) + feastol;
+	  delta_value = (lp.col_upper_[iCol] - sol[iCol]) + feastol;
 	  bool attractive_col = delta_value >= 1;
 	  assert(attractive_col);
 	  if (!attractive_col) attractive[integerCol] = false;
@@ -1301,12 +1238,12 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       } else {
 	if (lp.col_cost_[iCol] > 0) {
 	  // Positive cost, so only of interest if value can be reduced
-	  delta_value = (lp.col_lower_[iCol] - local_sol[iCol]) - feastol;
+	  delta_value = (lp.col_lower_[iCol] - sol[iCol]) - feastol;
 	  bool attractive_col = delta_value <= -1;
 	  if (!attractive_col) attractive[integerCol] = false;
 	} else if (lp.col_cost_[iCol] < 0) {
 	  // Negative cost, so only of interest if value can be increased
-	  delta_value = (lp.col_upper_[iCol] - local_sol[iCol]) + feastol;
+	  delta_value = (lp.col_upper_[iCol] - sol[iCol]) + feastol;
 	  bool attractive_col = delta_value >= 1;
 	  if (!attractive_col) attractive[integerCol] = false;
 	} else {
@@ -1375,14 +1312,14 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       bool integer_change = false;
       if (delta_value > 0) {
 	delta_value = std::floor(delta_value);
-	const double new_col_value = local_sol[iCol] + delta_value;
-	const double old_integer = std::floor(local_sol[iCol] + 0.5);
+	const double new_col_value = sol[iCol] + delta_value;
+	const double old_integer = std::floor(sol[iCol] + 0.5);
 	const double new_integer = std::floor(new_col_value + 0.5);
 	integer_change = new_integer > old_integer;
       } else {
 	delta_value = std::ceil(delta_value);
-	const double new_col_value = local_sol[iCol] + delta_value;
-	const double old_integer = std::floor(local_sol[iCol] + 0.5);
+	const double new_col_value = sol[iCol] + delta_value;
+	const double old_integer = std::floor(sol[iCol] + 0.5);
 	const double new_integer = std::floor(new_col_value + 0.5);
 	integer_change = new_integer < old_integer;
       }
@@ -1398,24 +1335,24 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       //
       // Successful if new objective improves on the upper bound
       
-      local_solobj += lp.col_cost_[iCol] * delta_value;
+      solobj += lp.col_cost_[iCol] * delta_value;
       const bool report_success = true;
       if (report_success) {
 	printf(
 	       "1-opt: submip=%d; col %4d/%4d: "
 	       "change %9.2g in %4d [%9.2g, %9.2g, %9.2g]: "
-	       "%19.12g = T(%9.2g) = T(local_solobj) < T(upper_bound) = "
+	       "%19.12g = T(%9.2g) = T(solobj) < T(upper_bound) = "
 	       "%19.12g: diff = %9.2g\n",
 	       mipsolver.submip, int(integerCol), int(num_integer_col),
-	       delta_value, int(iCol), lp.col_lower_[iCol], local_sol[iCol],
-	       lp.col_upper_[iCol], offsetObjective(local_solobj), local_solobj,
-	       offsetObjective(upper_bound), upper_bound - local_solobj);
+	       delta_value, int(iCol), lp.col_lower_[iCol], sol[iCol],
+	       lp.col_upper_[iCol], offsetObjective(solobj), solobj,
+	       offsetObjective(upper_bound), upper_bound - solobj);
 	fflush(stdout);
       }
       //	assert(111==456);
-      local_sol[iCol] += delta_value;
-      assert(local_solobj < upper_bound);
-      assert(local_solobj < initial_local_solobj);
+      sol[iCol] += delta_value;
+      assert(solobj < upper_bound);
+      assert(solobj < initial_solobj);
       
       // Update the row activities
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
@@ -1426,12 +1363,12 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       // Determine whether this column is now unattractive
       if (delta_value < 0) {
 	assert(lp.col_cost_[iCol] > 0);
-	delta_value = (lp.col_lower_[iCol] - local_sol[iCol]) - feastol;
+	delta_value = (lp.col_lower_[iCol] - sol[iCol]) - feastol;
 	bool attractive_col = delta_value <= -1;
 	if (!attractive_col) attractive[integerCol] = false;
       } else {
 	assert(lp.col_cost_[iCol] < 0);
-	delta_value = (lp.col_upper_[iCol] - local_sol[iCol]) + feastol;
+	delta_value = (lp.col_upper_[iCol] - sol[iCol]) + feastol;
 	bool attractive_col = delta_value >= 1;
 	if (!attractive_col) attractive[integerCol] = false;
       }
@@ -1440,15 +1377,15 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
       if (check_step) {
 	bool error = false;
 	if (delta_value) {
-	  error = local_sol[iCol] - lp.col_upper_[iCol] > feastol;
+	  error = sol[iCol] - lp.col_upper_[iCol] > feastol;
 	} else {
-	  error = local_sol[iCol] - lp.col_lower_[iCol] < feastol;
+	  error = sol[iCol] - lp.col_lower_[iCol] < feastol;
 	}
 	if (error) {
-	  double residual = std::max(local_sol[iCol] - lp.col_upper_[iCol],
-				     lp.col_lower_[iCol] - local_sol[iCol]);
+	  double residual = std::max(sol[iCol] - lp.col_upper_[iCol],
+				     lp.col_lower_[iCol] - sol[iCol]);
 	  printf("Col %d [%g, %g, %g] has residual %g\n", int(iCol),
-		 lp.col_lower_[iCol], local_sol[iCol], lp.col_upper_[iCol],
+		 lp.col_lower_[iCol], sol[iCol], lp.col_upper_[iCol],
 		 residual);
 	}
 	assert(!error);
@@ -1475,29 +1412,105 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& local_sol, doubl
 	}
       }
       is_improving = false;
-      const bool solution_feasible = addIncumbent(
-						  is_improving, local_sol, local_solobj, kSolutionSourceOpt1);
+      const bool solution_feasible = addIncumbent(is_improving, sol, solobj, kSolutionSourceOpt1);
       if (!solution_feasible) {
 	printf("1-opt: transformed feasibility lost for integer column %d\n",
 	       int(integerCol));
-	no_improvement = true;
+	finds_local_improvement = false;
       } else if (!is_improving) {
 	printf(
 	       "1-opt: improvement not recognised in addIncumbent for integer "
 	       "column %d\n",
 	       int(integerCol));
-	no_improvement = true;
+	finds_local_improvement = false;
       } else {
-	no_improvement = false;
+	finds_local_improvement = true;
+	finds_improvement = true;
       }
     }
     pass_num++;
     // Aggressive setting repeats the heuristic until there is no
     // improvement
-    if (mipsolver.options_mip_->mip_opt_1_heuristic == 1 || no_improvement)
+    if (mipsolver.options_mip_->mip_opt_1_heuristic == 1 || !finds_local_improvement)
       break;
   }
   return finds_improvement;  
+}
+
+
+bool HighsMipSolverData::twoOptImprovement(std::vector<double>& sol, double& solobj) {
+  bool finds_improvement = false;
+  assert(mipsolver.options_mip_->mip_opt_2_heuristic);
+  if (!mipsolver.options_mip_->mip_opt_2_heuristic) return finds_improvement;
+  bool is_improving = false;
+  double initial_solobj = solobj;
+  const HighsLp& lp = *mipsolver.model_;
+  const HighsInt num_integer_col = integer_cols.size();
+  std::vector<double> row_value;
+  lp.a_matrix_.product(row_value, sol);
+  // Consider 2-opt heuristic on solution
+  //
+  // Prepare sets of columns that are integer with
+  // negative/non-negative objective change if the value is pushed
+  // up or down
+  std::vector<HighsInt> up_negative_objective_change;
+  std::vector<HighsInt> up_non_negative_objective_change;
+  std::vector<HighsInt> down_non_negative_objective_change;
+  std::vector<HighsInt> down_negative_objective_change;
+  printf("  Ix Cost Lower Value Upper\n");
+  for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+    HighsInt iCol = integer_cols[integerCol];
+    printf("%4d %11.6g %11.6g %11.6g  %11.6g\n", iCol, lp.col_cost_[iCol],
+	   lp.col_lower_[iCol], sol[iCol], lp.col_upper_[iCol]);
+    if (lp.col_cost_[iCol] > 0) {
+      // Positive cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+	// Negative cost change since value can be reduced
+	down_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+	// Non-negative cost change since value can be increased
+	up_non_negative_objective_change.push_back(iCol);
+      }
+    } else if (lp.col_cost_[iCol] < 0) {
+      // Negative cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+	// Non-negative cost change since value can be reduced
+	down_non_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+	// Negative cost change since value can be increased
+	up_negative_objective_change.push_back(iCol);
+      }
+    } else {
+      // Zero cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+	// Non-negative cost change since value can be reduced
+	down_non_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+	// Non-negative cost change since value can be increased
+	up_non_negative_objective_change.push_back(iCol);
+      }
+    }
+  }
+  printf("\nup_negative_objective_change\n");
+  for (HighsInt iX = 0; iX < HighsInt(up_negative_objective_change.size());
+       iX++)
+    printf(" %d", up_negative_objective_change[iX]);
+  printf("\n");
+  printf("\nup_non_negative_objective_change\n");
+  for (HighsInt iX = 0;
+       iX < HighsInt(up_non_negative_objective_change.size()); iX++)
+    printf(" %d", up_non_negative_objective_change[iX]);
+  printf("\n");
+  printf("\ndown_non_negative_objective_change\n");
+  for (HighsInt iX = 0;
+       iX < HighsInt(down_non_negative_objective_change.size()); iX++)
+    printf(" %d", down_non_negative_objective_change[iX]);
+  printf("\n");
+  printf("\ndown_negative_objective_change\n");
+  for (HighsInt iX = 0; iX < HighsInt(down_negative_objective_change.size());
+       iX++)
+    printf(" %d", down_negative_objective_change[iX]);
+  printf("\n");
 }
 
 
