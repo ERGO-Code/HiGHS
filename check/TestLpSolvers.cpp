@@ -301,7 +301,7 @@ TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
+      std::string(HIGHS_DIR) + "/check/instances/small_mip0.mps";
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
   highs.setOptionValue("solver", kIpmString);

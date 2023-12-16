@@ -163,7 +163,7 @@ set(failInstances
     )
  
 set(mipInstances 
-    "small_mip\;3.2368421\;"
+    "small_mip0\;3.2368421\;"
     "flugpl\;1201500\;"
     "lseu\;1120|1119.9999999\;"
     "egout\;(568.1007|568.1006999)\;"
