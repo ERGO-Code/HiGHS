@@ -205,6 +205,8 @@ struct HighsMipSolverData {
                                      const bool already_incumbent = false);
   bool addIncumbent(bool& is_improving, const std::vector<double>& sol,
                     double solobj, const int solution_source);
+  bool oneOptImprovement(std::vector<double>& sol, double& solobj);
+  bool twoOptImprovement(std::vector<double>& sol, double& solobj);
 
   const std::vector<double>& getSolution() const;
 
