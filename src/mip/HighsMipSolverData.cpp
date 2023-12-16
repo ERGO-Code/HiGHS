@@ -30,9 +30,57 @@ double HighsMipSolverData::transformObjective(const double objective) {
          mipsolver.model_->offset_;
 }
 
-std::string HighsMipSolverData::solutionStatusToString(
-    const HighsInt solution_status, const bool code) {
-  return "";
+std::string HighsMipSolverData::solutionSourceToString(
+    const int solution_source, const bool code) {
+  if (solution_source == kSolutionSourceNone) {
+    if (code) return " ";
+    return "None";
+  } else if (solution_source == kSolutionSourceBranching) {
+    if (code) return "B";
+    return "Branching";
+  } else if (solution_source == kSolutionSourceCentralRounding) {
+    if (code) return "C";
+    return "Central rounding";
+  } else if (solution_source == kSolutionSourceFeasibilityPump) {
+    if (code) return "F";
+    return "Feasibility pump";
+  } else if (solution_source == kSolutionSourceHeuristic) {
+    if (code) return "H";
+    return "Heuristic";
+  } else if (solution_source == kSolutionSourceInitial) {
+    if (code) return "I";
+    return "Initial";
+  } else if (solution_source == kSolutionSourceSubMip) {
+    if (code) return "L";
+    return "Sub-MIP";
+  } else if (solution_source == kSolutionSourceEmptyMip) {
+    if (code) return "P";
+    return "Empty MIP";
+  } else if (solution_source == kSolutionSourceRandomizedRounding) {
+    if (code) return "R";
+    return "Randomized rounding";
+  } else if (solution_source == kSolutionSourceSolveLp) {
+    if (code) return "S";
+    return "Solve LP";
+  } else if (solution_source == kSolutionSourceEvaluateNode) {
+    if (code) return "T";
+    return "Evaluate node";
+  } else if (solution_source == kSolutionSourceUnbounded) {
+    if (code) return "U";
+    return "Unbounded";
+  } else if (solution_source == kSolutionSourceOpt1) {
+    if (code) return "1";
+    return "1-opt";
+  } else if (solution_source == kSolutionSourceOpt2) {
+    if (code) return "2";
+    return "2-opt";
+  } else {
+    printf("HighsMipSolverData::solutionSourceToString: Unknown source = %d\n",
+           solution_source);
+    assert(0 == 111);
+    if (code) return "*";
+    return "None";
+  }
 }
 
 bool HighsMipSolverData::solutionColFeasible(
@@ -77,7 +125,7 @@ bool HighsMipSolverData::checkSolution(
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
-                                     const char solution_source) {
+                                     const int solution_source) {
   double obj;
   if (!solutionColFeasible(solution, obj)) return false;
   if (!solutionRowFeasible(solution)) return false;
@@ -1080,7 +1128,7 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 }
 
 bool HighsMipSolverData::assessIntegerFeasibleSolution(
-    const std::vector<double>& sol, double solobj, const char solution_source,
+    const std::vector<double>& sol, double solobj, const int solution_source,
     const bool already_incumbent) {
   // Called when (previously) addIncumbent was called, but introduced
   // so that the 1-opt and 2-opt heuristics can be applied. Hence it
@@ -1438,7 +1486,7 @@ bool HighsMipSolverData::assessIntegerFeasibleSolution(
 bool HighsMipSolverData::addIncumbent(bool& is_improving,
                                       const std::vector<double>& sol,
                                       double solobj,
-                                      const char solution_source) {
+                                      const int solution_source) {
   // addIncumbent returns true if (solobj < upper_bound) and
   // incumbent.empty() are both false, so cannot be used to determine
   // whether sol is an improving solution
@@ -1610,17 +1658,36 @@ static std::array<char, 22> convertToPrintString(double val,
 }
 
 void HighsMipSolverData::printSolutionSourceKey() {
-  highsLogUser(
-      mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-      "\nSrc: B => Branching; C => Central rounding; F => Feasibility pump; "
-      "H => Heuristic; I => Initial; L => Sub-MIP; ");
-  highsLogUser(
-      mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-      "\n     P => Empty MIP; R => Randomized rounding; S => Solve LP; "
-      "T => Evaluate node; U => Unbounded\n");
+  std::stringstream ss;
+  int half_list = kSolutionSourceCount / 2;
+  ss.str(std::string());
+  for (int k = 0; k < half_list; k++) {
+    if (k == 0) {
+      ss << "\nSrc: ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+
+  ss.str(std::string());
+  for (int k = half_list; k < kSolutionSourceCount; k++) {
+    if (k == half_list) {
+      ss << "     ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
 }
 
-void HighsMipSolverData::printDisplayLine(const char solution_source) {
+void HighsMipSolverData::printDisplayLine(const int solution_source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1635,7 +1702,7 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (solution_source == ' ' &&
+  if (solution_source == kSolutionSourceNone &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
@@ -1704,11 +1771,11 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        solution_source, print_nodes.data(), queue_nodes.data(),
-        print_leaves.data(), explored, lb_string.data(), ub_string.data(),
-        gap_string.data(), cutpool.getNumCuts(),
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   } else {
@@ -1726,12 +1793,13 @@ void HighsMipSolverData::printDisplayLine(const char solution_source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        solution_source, print_nodes.data(), queue_nodes.data(),
-        print_leaves.data(), explored, lb_string.data(), ub_string.data(), gap,
-        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap, cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and

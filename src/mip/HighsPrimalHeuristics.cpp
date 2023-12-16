@@ -831,7 +831,7 @@ retry:
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
-                                            const char solution_source) {
+                                            const int solution_source) {
   auto localdom = mipsolver.mipdata_->domain;
 
   HighsInt numintcols = intcols.size();
@@ -893,7 +893,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 
 bool HighsPrimalHeuristics::linesearchRounding(
     const std::vector<double>& point1, const std::vector<double>& point2,
-    const char solution_source) {
+    const int solution_source) {
   std::vector<double> roundedpoint;
 
   HighsInt numintcols = intcols.size();

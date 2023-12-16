@@ -33,19 +33,24 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
-const char kSolutionSourceBranching = 'B';
-const char kSolutionSourceCentralRounding = 'C';
-const char kSolutionSourceFeasibilityPump = 'F';
-const char kSolutionSourceHeuristic = 'H';
-const char kSolutionSourceInitial = 'I';
-const char kSolutionSourceSubMip = 'L';
-const char kSolutionSourceEmptyMip = 'P';
-const char kSolutionSourceRandomizedRounding = 'R';
-const char kSolutionSourceSolveLp = 'S';
-const char kSolutionSourceEvaluateNode = 'T';
-const char kSolutionSourceUnbounded = 'U';
-const char kSolutionSourceOpt1 = '1';
-const char kSolutionSourceOpt2 = '2';
+enum MipSolutionSource : int {
+  kSolutionSourceNone = -1,
+  kSolutionSourceMin = kSolutionSourceNone,
+  kSolutionSourceBranching,
+  kSolutionSourceCentralRounding,
+  kSolutionSourceFeasibilityPump,
+  kSolutionSourceHeuristic,
+  kSolutionSourceInitial,
+  kSolutionSourceSubMip,
+  kSolutionSourceEmptyMip,
+  kSolutionSourceRandomizedRounding,
+  kSolutionSourceSolveLp,
+  kSolutionSourceEvaluateNode,
+  kSolutionSourceUnbounded,
+  kSolutionSourceOpt1,
+  kSolutionSourceOpt2,
+  kSolutionSourceCount
+};
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -182,7 +187,7 @@ struct HighsMipSolverData {
 
   double offsetObjective(const double objective);
   double transformObjective(const double objective);
-  std::string solutionStatusToString(const HighsInt solution_status,
+  std::string solutionSourceToString(const int solution_source,
                                      const bool code = true);
 
   bool solutionColFeasible(const std::vector<double>& solution,
@@ -190,21 +195,21 @@ struct HighsMipSolverData {
   bool solutionRowFeasible(const std::vector<double>& solution) const;
   bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
-                   const char solution_source);
+                   const int solution_source);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
   bool assessIntegerFeasibleSolution(const std::vector<double>& sol,
-                                     double solobj, const char solution_source,
+                                     double solobj, const int solution_source,
                                      const bool already_incumbent = false);
   bool addIncumbent(bool& is_improving, const std::vector<double>& sol,
-                    double solobj, const char solution_source);
+                    double solobj, const int solution_source);
 
   const std::vector<double>& getSolution() const;
 
   void printSolutionSourceKey();
-  void printDisplayLine(const char solution_source = ' ');
+  void printDisplayLine(const int solution_source = kSolutionSourceNone);
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
