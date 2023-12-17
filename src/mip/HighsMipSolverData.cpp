@@ -1297,9 +1297,9 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
         if (row_delta > 0) {
           // Row activity increasing, so see whether upper bound is exceeded
 	  const double lhs = activity + row_delta;
-	  const double rhs = row_upper + feastol;
-          if (activity + row_delta > row_upper + feastol) {
-            delta_value = ((row_upper - activity) + feastol) / matrix_value;
+	  const double rhs = row_upper;
+          if (activity + row_delta > row_upper) {
+            delta_value = (row_upper - activity) / matrix_value;
 	    double new_activity = activity + matrix_value * delta_value;
 	    double residual = new_activity - row_upper;
 	    const bool residual_ok = residual <= feastol;
@@ -1312,9 +1312,9 @@ bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
         } else {
           // Row activity decreasing, so see whether lower bound is exceeded
 	  const double lhs = activity + row_delta;
-	  const double rhs = row_lower - feastol;
-          if (activity + row_delta < row_lower - feastol) {
-            delta_value = ((row_lower - activity) - feastol) / matrix_value;
+	  const double rhs = row_lower;
+          if (activity + row_delta < row_lower) {
+            delta_value = (row_lower - activity) / matrix_value;
 	    double new_activity = activity + matrix_value * delta_value;
 	    double residual = row_lower - new_activity;
 	    const bool residual_ok = residual <= feastol;
