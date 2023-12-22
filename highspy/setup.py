@@ -5,13 +5,13 @@ import os
 import sys
 import sysconfig
 
-def path_to_build_folder():
-    """Returns the name of a distutils build directory"""
-    f = "{dirname}.{platform}-{version[0]}.{version[1]}"
-    dir_name = f.format(dirname='lib',
-                        platform=sysconfig.get_platform(),
-                        version=sys.version_info)
-    return os.path.join('build', dir_name, 'highspy')
+# def path_to_build_folder():
+#     """Returns the name of a distutils build directory"""
+#     f = "{dirname}.{platform}-{version[0]}.{version[1]}"
+#     dir_name = f.format(dirname='lib',
+#                         platform=sysconfig.get_platform(),
+#                         version=sys.version_info)
+#     return os.path.join('build', dir_name, 'highspy')
 
 
 # def pick_library():
@@ -38,7 +38,8 @@ ext_modules = [
         sources=["highspy/highs_bindings.cpp"],
         language='c++',
         include_dirs=['highspy/include/highs'],
-        library_dirs=[os.path.join(path_to_build_folder(), 'lib')],
+        include_dirs=['highspy/lib'],
+        # library_dirs=[os.path.join(path_to_build_folder(), 'lib')],
         libraries=['highs'],
     ),
 ]
