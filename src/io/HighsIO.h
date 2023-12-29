@@ -17,6 +17,7 @@
 #include <array>
 #include <iostream>
 
+#include "HConfig.h"
 #include "lp_data/HighsCallback.h"
 //#include "util/HighsInt.h"
 

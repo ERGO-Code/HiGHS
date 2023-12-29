@@ -21,9 +21,15 @@
 #include "lp_data/HighsOptions.h"
 
 void highsLogHeader(const HighsLogOptions& log_options) {
+  #ifdef PRINT_GITHASH
   highsLogUser(log_options, HighsLogType::kInfo, "Running HiGHS %d.%d.%d (git hash: %s): %s\n",
                (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
                (int)HIGHS_VERSION_PATCH, HIGHS_GITHASH, kHighsCopyrightStatement.c_str());
+  #else
+  highsLogUser(log_options, HighsLogType::kInfo, "Running HiGHS %d.%d.%d %s\n",
+              (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
+              (int)HIGHS_VERSION_PATCH, kHighsCopyrightStatement.c_str());
+  #endif
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

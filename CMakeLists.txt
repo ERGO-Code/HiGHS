@@ -103,6 +103,7 @@ if(MSVC)
 endif()
 
 option(FAST_BUILD "Fast build: " ON)
+option(PRINT_GITHASH "Print git hash: " ON)
 
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
