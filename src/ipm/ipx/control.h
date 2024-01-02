@@ -137,7 +137,7 @@ inline std::string fix8(double d) { return Fixed(d,0,8); }
 // consistently using
 //
 //   control.Log() << Textline("Number of variables:") << 1464 << '\n'
-//                 << Textline("Number of contraints:") << 696 << '\n';
+//                 << Textline("Number of constraints:") << 696 << '\n';
 //
 template <typename T>
 std::string Textline(const T& text) {

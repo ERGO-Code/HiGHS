@@ -24,10 +24,11 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
                       HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, a_format, sense, offset, col_cost, col_lower,
       col_upper, row_lower, row_upper, a_start, a_index, a_value);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 
@@ -77,10 +78,11 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
                        double* row_value, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, a_format, sense, offset, col_cost, col_lower,
       col_upper, row_lower, row_upper, a_start, a_index, a_value, integrality);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 
@@ -120,11 +122,12 @@ HighsInt Highs_qpCall(
     HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
       col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
       a_value, q_start, q_index, q_value);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 

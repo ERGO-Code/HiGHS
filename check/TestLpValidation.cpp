@@ -78,6 +78,35 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
 
   if (dev_run) printf("Give valid row_upper.size()\n");
   lp.row_upper_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.start_[0]\n");
+  lp.a_matrix_.start_[0] = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run)
+    printf("Give valid a_matrix_.start_[2] and a_matrix_.start_[3]\n");
+  lp.a_matrix_.start_[2] = 2;
+  lp.a_matrix_.start_[3] = 2;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.index_[0]\n");
+  // Yields duplicate index, but values are still zero, so both are
+  // discarded and a warning is returned
+  lp.a_matrix_.index_[0] = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+
+  if (dev_run)
+    printf("Give nonzero a_matrix_.value_[0] and a_matrix_.value_[1]\n");
+  // Yields duplicate index, but values are still zero, so both are
+  // discarded and a warning is returned
+  lp.a_matrix_.value_[0] = 1;
+  lp.a_matrix_.value_[1] = 1;
+  // Now the duplicate indices yield an erorr
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.index_[1]\n");
+  lp.a_matrix_.index_[1] = 1;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   /*
@@ -337,7 +366,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // for columns 9 and 10.
 
   // LP is found to be unbounded by presolve, but is primal
-  // infeasible. With isBoundInfeasible check in solveLp,
+  // infeasible. With infeasibleBoundsOk check in solveLp,
   // infeasiblility is identified before reaching a solver, so
   // presolve isn't called
   HighsStatus run_status;
@@ -586,4 +615,66 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   delta_objective_value = std::fabs(required_objective_value -
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
+}
+
+TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 0;
+  lp.num_row_ = 1;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
+}
+
+TEST_CASE("LP-row-wise", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {80, 120};
+  highs.passModel(lp);
+  highs.run();
+}
+
+TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  double epsilon = 1e-10;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {1, 2.5 + epsilon};
+  lp.col_upper_ = {1 - epsilon, 2.5 - 2 * epsilon};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {6, -inf};
+  lp.row_upper_ = {6 - epsilon, 11 - epsilon};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.changeColBounds(0, 0, -1);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }

@@ -43,6 +43,7 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
+  HighsInt run_clock = -1;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -83,6 +84,8 @@ class HPresolve {
   std::vector<double> implRowDualUpper;
   std::vector<HighsInt> rowDualLowerSource;
   std::vector<HighsInt> rowDualUpperSource;
+  std::vector<std::set<HighsInt>> colImplSourceByRow;
+  std::vector<std::set<HighsInt>> implRowDualSourceByCol;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables
@@ -155,6 +158,10 @@ class HPresolve {
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
+  void recomputeColImpliedBounds(HighsInt row);
+
+  void recomputeRowDualImpliedBounds(HighsInt col);
+
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
@@ -162,6 +169,10 @@ class HPresolve {
   bool isImpliedFree(HighsInt col) const;
 
   bool isDualImpliedFree(HighsInt row) const;
+
+  void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
+                                       HighsPostsolveStack::RowType& rowType,
+                                       bool relaxRowDualBounds = false);
 
   bool isImpliedIntegral(HighsInt col);
 
@@ -290,9 +301,6 @@ class HPresolve {
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
-
-  Result solveOneRowComponent(HighsPostsolveStack& postsolve_stack,
-                              HighsInt row);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 

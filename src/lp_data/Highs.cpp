@@ -77,7 +77,7 @@ HighsStatus Highs::clearSolver() {
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -85,7 +85,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -93,7 +93,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -102,7 +102,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -111,7 +111,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
@@ -135,13 +135,13 @@ HighsStatus Highs::readOptions(const std::string& filename) {
 HighsStatus Highs::passOptions(const HighsOptions& options) {
   if (passLocalOptions(options_.log_options, options, options_) ==
       OptionStatus::kOk)
-    return HighsStatus::kOk;
+    return optionChangeAction();
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::resetOptions() {
   resetLocalOptions(options_.records);
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
@@ -299,7 +299,7 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
 // each
 HighsStatus Highs::passModel(HighsModel model) {
   // This is the "master" Highs::passModel, in that all the others
-  // eventually call it
+  // (and readModel) eventually call it
   this->logHeader();
   // Possibly analyse the LP data
   if (kHighsAnalysisLevelModelData & options_.highs_analysis_level)
@@ -318,6 +318,9 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Model has either no columns or no rows, so ignoring user "
+                 "constraint matrix data and initialising empty matrix\n");
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
     lp.a_matrix_.index_.clear();
@@ -338,12 +341,13 @@ HighsStatus Highs::passModel(HighsModel model) {
     return HighsStatus::kError;
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Now legality of matrix is established, ensure that it is
+  // column-wise
+  lp.ensureColwise();
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(options_.log_options,
                                       assessHessian(hessian, options_),
@@ -364,6 +368,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   // model object for this LP
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
+  // Apply any user scaling in call to optionChangeAction
+  return_status =
+      interpretCallStatus(options_.log_options, optionChangeAction(),
+                          return_status, "optionChangeAction");
   return returnFromHighs(return_status);
 }
 
@@ -512,6 +520,21 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
                    hessian.dim_);
       hessian.clear();
     }
+  }
+
+  if (this->model_.lp_.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!hessian.scaleOk(this->model_.lp_.user_cost_scale_,
+                         this->options_.small_matrix_value,
+                         this->options_.large_matrix_value)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "User cost scaling yields zeroed or excessive Hessian values\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, this->model_.lp_.user_cost_scale_);
+    for (HighsInt iEl = 0; iEl < hessian.numNz(); iEl++)
+      hessian.value_[iEl] *= cost_scale_value;
   }
   return_status = interpretCallStatus(options_.log_options, clearSolver(),
                                       return_status, "clearSolver");
@@ -871,6 +894,12 @@ HighsStatus Highs::run() {
     return HighsStatus::kError;
   }
 
+  // Check whether model is consistent with any user bound/cost scaling
+  assert(this->model_.lp_.user_bound_scale_ == this->options_.user_bound_scale);
+  assert(this->model_.lp_.user_cost_scale_ == this->options_.user_cost_scale);
+  // Assess whether to warn the user about excessive bounds and costs
+  assessExcessiveBoundCost(options_.log_options, this->model_);
+
   // HiGHS solvers require models with no infinite costs, and no semi-variables
   //
   // Since completeSolutionFromDiscreteAssignment() may require a call
@@ -935,8 +964,9 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
     return returnFromRun(HighsStatus::kOk, undo_mods);
   }
-  // Return immediately if the model is infeasible due to inconsistent bounds
-  if (isBoundInfeasible(options_.log_options, model_.lp_)) {
+  // Return immediately if the model is infeasible due to inconsistent
+  // bounds, modifying any bounds with tiny infeasibilities
+  if (!infeasibleBoundsOk()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromRun(return_status, undo_mods);
   }
@@ -1138,20 +1168,26 @@ HighsStatus Highs::run() {
     time += timer_.read(timer_.solve_clock);
   };
 
-  if (basis_.valid || options_.presolve == kHighsOffString) {
-    // There is a valid basis for the problem or presolve is off
-    ekk_instance_.lp_name_ = "LP without presolve or with basis";
+  const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
+  assert(incumbent_lp.num_row_ || unconstrained_lp);
+  if (basis_.valid || options_.presolve == kHighsOffString ||
+      unconstrained_lp) {
+    // There is a valid basis for the problem, presolve is off, or LP
+    // has no constraint matrix
+    ekk_instance_.lp_name_ =
+        "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
-    solveLp(incumbent_lp, "Solving LP without presolve or with basis",
+    solveLp(incumbent_lp,
+            "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
       return returnFromRun(return_status, undo_mods);
   } else {
-    // No HiGHS basis so consider presolve
+    // Otherwise, consider presolve
     //
     // If using IPX to solve the reduced LP, but not crossover, set
     // lp_presolve_requires_basis_postsolve so that presolve can use
@@ -1602,6 +1638,19 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   HighsStatus return_status = getRangingInterface();
   ranging = this->ranging_;
   return return_status;
+}
+
+HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
+                                      const bool constraint,
+                                      const HighsInt method,
+                                      const double ill_conditioning_bound) {
+  if (!basis_.valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot get ill-conditioning without a valid basis\n");
+    return HighsStatus::kError;
+  }
+  return computeIllConditioning(ill_conditioning, constraint, method,
+                                ill_conditioning_bound);
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
@@ -3005,7 +3054,8 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Clear info from previous runs if original_lp has been modified.
+  // Ensure that the RunHighsClock is running
+  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
@@ -3791,6 +3841,13 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
                                  const bool undo_mods) {
   assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
+  if (return_status != run_return_status) {
+    printf(
+        "Highs::returnFromRun: return_status = %d != %d = run_return_status "
+        "For model_status_ = %s\n",
+        int(return_status), int(run_return_status),
+        modelStatusToString(model_status_).c_str());
+  }
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
   switch (model_status_) {

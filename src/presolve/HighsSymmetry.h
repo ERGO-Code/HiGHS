@@ -25,7 +25,7 @@
 #include "util/HighsHash.h"
 #include "util/HighsInt.h"
 
-/// class that is responsible for assiging distinct colors for each distinct
+/// class that is responsible for assigning distinct colors for each distinct
 /// double value
 class HighsMatrixColoring {
   using u32 = std::uint32_t;
