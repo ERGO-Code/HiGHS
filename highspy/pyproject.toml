@@ -25,7 +25,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-build = "cp311-*"
+build = "*"
 skip = "cp36-*"
 test-skip = ""
 
@@ -35,7 +35,7 @@ manylinux-i686-image = "manylinux2014"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-archs = ["arm64"]
+archs = ["x86_64 arm64"]
 environment = { RUNNER_OS="macOS" }
 
 repair-wheel-command = """\
