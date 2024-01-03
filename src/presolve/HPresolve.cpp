@@ -69,7 +69,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 #endif
 
 void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
-			 const HighsInt presolve_reduction_limit,
+                         const HighsInt presolve_reduction_limit,
                          HighsTimer* timer) {
   model = &model_;
   options = &options_;
@@ -119,18 +119,21 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   changedColIndices.reserve(model->num_col_);
   numDeletedCols = 0;
   numDeletedRows = 0;
-  reductionLimit = options->presolve_reduction_limit < 0
-                       ? kHighsSize_tInf
-                       : options->presolve_reduction_limit;
-  if (options->presolve != kHighsOffString && reductionLimit < kHighsSize_tInf)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "HPresolve::setInput reductionLimit = %d\n",
-                 int(reductionLimit));
+  // Take value passed in as reduction limit, allowing different
+  // values to be used for initial presolve, and after restart
+  reductionLimit =
+      presolve_reduction_limit < 0 ? kHighsSize_tInf : presolve_reduction_limit;
+  if (options->presolve != kHighsOffString &&
+      reductionLimit < kHighsSize_tInf) {
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "HPresolve::setInput reductionLimit = %d\n",
+                int(reductionLimit));
+  }
 }
 
 // for MIP presolve
 void HPresolve::setInput(HighsMipSolver& mipsolver,
-			 const HighsInt presolve_reduction_limit) {
+                         const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -149,8 +152,7 @@ void HPresolve::setInput(HighsMipSolver& mipsolver,
   }
 
   setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-	   presolve_reduction_limit,
-           &mipsolver.timer_);
+           presolve_reduction_limit, &mipsolver.timer_);
 }
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
@@ -4380,7 +4382,6 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
       return Result::kStopped;
     }
   }
-
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 

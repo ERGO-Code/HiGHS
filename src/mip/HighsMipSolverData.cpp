@@ -983,9 +983,33 @@ void HighsMipSolverData::performRestart() {
 
   // Need to be able to set presolve reduction limit separately when
   // restarting - so that bugs in presolve restart can be investigated
-  // independently (see #1553) - so switch to
-  // restart_presolve_reduction_limit
-  runPresolve(mipsolver.options_mip_->restart_presolve_reduction_limit);
+  // independently (see #1553)
+  //
+  // However, when restarting, presolve is (naturally) applied to the
+  // presolved problem, so have to control the number of _further_
+  // presolve reductions
+  //
+  // The number of further presolve reductions must be positive,
+  // otherwise the MIP solver cycles, hence
+  // restart_presolve_reduction_limit cannot be zero
+  //
+  // Although postSolveStack.numReductions() is size_t, it makes no
+  // sense to use presolve_reduction_limit when the number of
+  // reductions is vast
+  HighsInt num_reductions = HighsInt(postSolveStack.numReductions());
+  HighsInt restart_presolve_reduction_limit =
+      mipsolver.options_mip_->restart_presolve_reduction_limit;
+  assert(restart_presolve_reduction_limit);
+  HighsInt further_presolve_reduction_limit =
+      restart_presolve_reduction_limit >= 0
+          ? num_reductions + restart_presolve_reduction_limit
+          : -1;
+  printf(
+      "HighsMipSolverData::performRestart Reductions = %d; "
+      "restart_presolve_reduction_limit = %d; new limit = %d\n",
+      int(num_reductions), int(restart_presolve_reduction_limit),
+      int(further_presolve_reduction_limit));
+  runPresolve(further_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     // transform the objective limit to the current model
@@ -1722,9 +1746,8 @@ restart:
   printDisplayLine();
 
   if (lower_bound <= upper_limit) {
-    if (!mipsolver.submip &&
-        mipsolver.options_mip_->mip_allow_restart &&
-	mipsolver.options_mip_->presolve != kHighsOffString) {
+    if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
+        mipsolver.options_mip_->presolve != kHighsOffString) {
       if (!analyticCenterComputed) finishAnalyticCenterComputation(tg);
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||

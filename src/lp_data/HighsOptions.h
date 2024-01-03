@@ -757,12 +757,14 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_model_to_file, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_detect_symmetry", "Whether MIP symmetry should be detected",
-				       advanced, &mip_detect_symmetry, true);
+    record_bool = new OptionRecordBool(
+        "mip_detect_symmetry", "Whether MIP symmetry should be detected",
+        advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
-    
-    record_bool = new OptionRecordBool("mip_allow_restart", "Whether MIP restart is permitted",
-				       advanced, &mip_allow_restart, true);
+
+    record_bool = new OptionRecordBool("mip_allow_restart",
+                                       "Whether MIP restart is permitted",
+                                       advanced, &mip_allow_restart, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",
@@ -1077,8 +1079,9 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "restart_presolve_reduction_limit",
-        "Limit on number of presolve reductions on restart in MIP solver -1 => no limit", advanced,
-        &restart_presolve_reduction_limit, -1, -1, kHighsIInf);
+        "Limit on number of further presolve reductions on restart in MIP "
+        "solver -1 => no limit, otherwise, must be positive",
+        advanced, &restart_presolve_reduction_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
