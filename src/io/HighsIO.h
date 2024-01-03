@@ -58,7 +58,7 @@ struct HighsLogOptions {
 /**
  * @brief Write the HiGHS version and copyright statement
  */
-void highsLogHeader(const HighsLogOptions& log_options);
+void highsLogHeader(const HighsLogOptions& log_options, const bool log_githash);
 
 /**
  * @brief Convert a double number to a string using given tolerance

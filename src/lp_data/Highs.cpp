@@ -3726,7 +3726,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 // End of public methods
 void Highs::logHeader() {
   if (written_log_header) return;
-  highsLogHeader(options_.log_options);
+  highsLogHeader(options_.log_options, options_.log_githash);
   written_log_header = true;
   return;
 }
