@@ -392,7 +392,7 @@ void HighsMipSolverData::init() {
     dispfreq = 100;
 }
 
-void HighsMipSolverData::runPresolve() {
+void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 #ifdef HIGHS_DEBUGSOL
   bool debugSolActive = false;
   std::swap(debugSolution.debugSolActive, debugSolActive);
@@ -400,7 +400,7 @@ void HighsMipSolverData::runPresolve() {
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  presolve.setInput(mipsolver);
+  presolve.setInput(mipsolver, presolve_reduction_limit);
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
@@ -981,7 +981,11 @@ void HighsMipSolverData::performRestart() {
   nodequeue.clear();
   globalOrbits.reset();
 
-  runPresolve();
+  // Need to be able to set presolve reduction limit separately when
+  // restarting - so that bugs in presolve restart can be investigated
+  // independently (see #1553) - so switch to
+  // restart_presolve_reduction_limit
+  runPresolve(mipsolver.options_mip_->restart_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     // transform the objective limit to the current model
@@ -1494,7 +1498,8 @@ restart:
 
   rootlpsolobj = firstlpsolobj;
   removeFixedIndices();
-  if (mipsolver.options_mip_->presolve != kHighsOffString) {
+  if (mipsolver.options_mip_->mip_allow_restart &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     double fixingRate = percentageInactiveIntegers();
     if (fixingRate >= 10.0) {
       tg.cancel();
@@ -1718,7 +1723,8 @@ restart:
 
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip &&
-        mipsolver.options_mip_->presolve != kHighsOffString) {
+        mipsolver.options_mip_->mip_allow_restart &&
+	mipsolver.options_mip_->presolve != kHighsOffString) {
       if (!analyticCenterComputed) finishAnalyticCenterComputation(tg);
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||

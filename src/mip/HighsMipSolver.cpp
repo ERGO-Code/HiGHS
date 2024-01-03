@@ -341,13 +341,19 @@ restart:
           lowerBoundLastCheck = mipdata_->lower_bound;
         }
 
-        int64_t minHugeTreeOffset =
+	// Possibly prevent restart - necessary for debugging presolve
+	// errors: see #1553
+	if (options_mip_->mip_allow_restart) {
+	  int64_t minHugeTreeOffset =
             (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
-        int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
-            activeIntegerRatio * (10 + minHugeTreeOffset) *
-            std::pow(1.5, nTreeRestarts));
-
-        doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+	  int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+								   activeIntegerRatio * (10 + minHugeTreeOffset) *
+								   std::pow(1.5, nTreeRestarts));
+	  
+	  doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+	} else {
+	  doRestart = false;
+	}
       } else {
         // count restart due to many fixings within the first 1000 nodes as
         // root restart

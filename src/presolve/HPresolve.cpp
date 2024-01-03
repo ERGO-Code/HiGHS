@@ -69,6 +69,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 #endif
 
 void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
+			 const HighsInt presolve_reduction_limit,
                          HighsTimer* timer) {
   model = &model_;
   options = &options_;
@@ -128,7 +129,8 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
 }
 
 // for MIP presolve
-void HPresolve::setInput(HighsMipSolver& mipsolver) {
+void HPresolve::setInput(HighsMipSolver& mipsolver,
+			 const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -147,6 +149,7 @@ void HPresolve::setInput(HighsMipSolver& mipsolver) {
   }
 
   setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
+	   presolve_reduction_limit,
            &mipsolver.timer_);
 }
 
@@ -6300,7 +6303,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   {
     HPresolve presolve;
-    presolve.setInput(model, options);
+    presolve.setInput(model, options, options.presolve_reduction_limit);
     // presolve.setReductionLimit(1622017);
     if (presolve.run(postsolve_stack) != HighsModelStatus::kNotset) return;
     Highs highs;
@@ -6364,14 +6367,14 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     {
       HPresolve presolve;
-      presolve.setInput(model, options);
+      presolve.setInput(model, options, options.presolve_reduction_limit);
       presolve.computeIntermediateMatrix(flagRow, flagCol, reductionLim);
     }
 #if 1
     model = lp;
     model.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HPresolve presolve;
-    presolve.setInput(model, options);
+    presolve.setInput(model, options, options.presolve_reduction_limit);
     HighsPostsolveStack tmp;
     tmp.initializeIndexMaps(model.num_row_, model.num_col_);
     presolve.setReductionLimit(reductionLim);
