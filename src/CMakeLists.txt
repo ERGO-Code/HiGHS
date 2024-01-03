@@ -749,6 +749,8 @@ else()
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
   endif()
 
+  if (NOT PYTHON)
+
   # Configure the config file for the build tree:
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
@@ -773,6 +775,9 @@ else()
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
   install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    
+endif()
+
 endif()
 
 if(FORTRAN_FOUND)

@@ -26,6 +26,15 @@ target_include_directories(highs INTERFACE
   $<INSTALL_INTERFACE:include>
   )
 
+if (PYTHON)
+
+install(TARGETS highs
+   EXPORT ${lower}-targets
+   INCLUDES DESTINATION include
+   ARCHIVE DESTINATION .libs
+   LIBRARY DESTINATION .libs)
+
+else()
 ###################
 ## Install rules ##
 ###################
@@ -64,6 +73,8 @@ write_basic_package_version_file(
   "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config-version.cmake"
   COMPATIBILITY SameMajorVersion
   )
+
+endif()
 
 # add_cxx_test()
 # CMake function to generate and build C++ test.
