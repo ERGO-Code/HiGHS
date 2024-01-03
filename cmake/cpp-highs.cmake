@@ -1,6 +1,8 @@
-set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+if (PYTHON)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/.libs")
+endif()
+# set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(NOT BUILD_CXX)
   return()
@@ -9,6 +11,25 @@ endif()
 # Main Target
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+if (PYTHON)
+  # set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+  # use, i.e. don't skip the full RPATH for the build tree
+  # set(CMAKE_SKIP_BUILD_RPATH FALSE)
+  # set(CMAKE_MACOSX_RPATH ON)
+  
+  # when building, don't use the install RPATH already
+  # (but later on when installing)
+  # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+  # set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/.libs")
+  
+  # set(INSTALL_RPATH "@loader_path;@loader_path/../../${PROJECT_NAME}/.libs") 
+
+  # add the automatically determined parts of the RPATH
+  # which point to directories outside the build tree to the install RPATH
+  # set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+endif()
 
 add_subdirectory(src)
 
@@ -25,6 +46,21 @@ target_include_directories(highs INTERFACE
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
   $<INSTALL_INTERFACE:include>
   )
+
+# # Properties
+# if(NOT APPLE)
+#   set_target_properties(highs PROPERTIES VERSION ${PROJECT_VERSION})
+# else()
+#   # Clang don't support version x.y.z with z > 255
+#   set_target_properties(highs PROPERTIES
+#     INSTALL_RPATH "@loader_path"
+#     VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+# endif()
+# set_target_properties(highs PROPERTIES
+#   SOVERSION ${PROJECT_VERSION_MAJOR}
+#   POSITION_INDEPENDENT_CODE ON
+#   INTERFACE_POSITION_INDEPENDENT_CODE ON
+# )
 
 if (PYTHON)
 

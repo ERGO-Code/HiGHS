@@ -56,7 +56,7 @@ include(GNUInstallDirs)
 
 if(UNIX)
   option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
-  # set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
@@ -115,9 +115,9 @@ message(STATUS "Build CSharp: ${CSHARP}")
 option(ZLIB "Fast build: " ON)
 
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-# if(PYTHON OR FORTRAN OR CSHARP)
-#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-# endif()
+if(PYTHON OR FORTRAN OR CSHARP)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
 
 # # For Python interface
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)

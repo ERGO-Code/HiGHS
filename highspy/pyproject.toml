@@ -25,7 +25,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-build = "*"
+build = "cp311-*"
 skip = "cp36-*"
 test-skip = ""
 
@@ -35,12 +35,14 @@ manylinux-i686-image = "manylinux2014"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64 arm64"]
+archs = ["arm64"]
 environment = { RUNNER_OS="macOS" }
-repair-wheel-command = [
+
+repair-wheel-command = """\
   "delocate-listdeps {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-]
+  DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel \
+  --require-archs {delocate_archs} -w {dest_dir} -v {wheel}\
+  """
 
 # [tool.cibuildwheel.windows]
 # # Use delvewheel on windows, and install the project so delvewheel can find it
