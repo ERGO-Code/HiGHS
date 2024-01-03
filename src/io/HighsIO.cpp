@@ -20,12 +20,15 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-void highsLogHeader(const HighsLogOptions& log_options) {
+void highsLogHeader(const HighsLogOptions& log_options,
+                    const bool log_githash) {
+  const std::string githash_string(HIGHS_GITHASH);
+  const std::string githash_text =
+      log_githash ? " (git hash: " + githash_string + ")" : "";
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d (git hash: %s): %s\n",
-               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_GITHASH,
-               kHighsCopyrightStatement.c_str());
+               "Running HiGHS %d.%d.%d%s: %s\n", (int)HIGHS_VERSION_MAJOR,
+               (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
+               githash_text.c_str(), kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,

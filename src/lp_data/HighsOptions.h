@@ -332,6 +332,7 @@ struct HighsOptionsStruct {
 
   // Advanced options
   HighsInt log_dev_level;
+  bool log_githash;
   bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
@@ -904,6 +905,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
         kHighsLogDevLevelMax);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("log_githash", "Log the githash",
+                                       advanced, &log_githash, true);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "solve_relaxation", "Solve the relaxation of discrete model components",
