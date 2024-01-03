@@ -189,13 +189,13 @@ class Highs {
    * @brief Postsolve the incumbent model using a solution
    */
   HighsStatus postsolve(const HighsSolution& solution,
-                        const bool noReoptimization = false);
+                        bool no_reoptimization = false);
 
   /**
    * @brief Postsolve the incumbent model using a solution and basis
    */
   HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis,
-                        const bool noReoptimization = false);
+                        bool no_reoptimization = false);
 
   /**
    * @brief Write the current solution to a file in a given style
@@ -1320,7 +1320,7 @@ class Highs {
   HighsStatus callSolveMip();
   HighsStatus callRunPostsolve(const HighsSolution& solution,
                                const HighsBasis& basis,
-                               const bool noReoptimization = false);
+                               bool no_reoptimization = false);
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,

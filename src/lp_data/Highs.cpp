@@ -2891,14 +2891,13 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
 }
 
 HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const bool noReoptimization) {
+                             bool no_reoptimization) {
   HighsBasis basis;
-  return this->postsolve(solution, basis, noReoptimization);
+  return this->postsolve(solution, basis, no_reoptimization);
 }
 
 HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const HighsBasis& basis,
-                             const bool noReoptimization) {
+                             const HighsBasis& basis, bool no_reoptimization) {
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
@@ -2911,7 +2910,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
     return HighsStatus::kWarning;
   }
   HighsStatus return_status =
-      callRunPostsolve(solution, basis, noReoptimization);
+      callRunPostsolve(solution, basis, no_reoptimization);
   return returnFromHighs(return_status);
 }
 
@@ -3594,7 +3593,7 @@ HighsStatus Highs::callSolveMip() {
 // Only called from Highs::postsolve
 HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                                     const HighsBasis& basis,
-                                    const bool noReoptimization) {
+                                    bool no_reoptimization) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
@@ -3679,7 +3678,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
-      if (!noReoptimization) {
+      if (!no_reoptimization) {
         // Save the options to allow the best simplex strategy to
         // be used
         HighsOptions save_options = options_;
