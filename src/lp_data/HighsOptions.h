@@ -349,6 +349,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_reduction_limit;
+  HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
@@ -381,6 +382,7 @@ struct HighsOptionsStruct {
 
   // Options for MIP solver
   bool mip_detect_symmetry;
+  bool mip_allow_restart;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -760,6 +762,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("mip_allow_restart",
+                                       "Whether MIP restart is permitted",
+                                       advanced, &mip_allow_restart, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -1068,6 +1075,13 @@ class HighsOptions : public HighsOptionsStruct {
         "presolve_reduction_limit",
         "Limit on number of presolve reductions -1 => no limit", advanced,
         &presolve_reduction_limit, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "restart_presolve_reduction_limit",
+        "Limit on number of further presolve reductions on restart in MIP "
+        "solver -1 => no limit, otherwise, must be positive",
+        advanced, &restart_presolve_reduction_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

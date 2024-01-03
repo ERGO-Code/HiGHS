@@ -156,7 +156,7 @@ struct HighsMipSolverData {
   void init();
   void basisTransfer();
   void checkObjIntegrality();
-  void runPresolve();
+  void runPresolve(const HighsInt presolve_reduction_limit);
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit);
   void runSetup();
