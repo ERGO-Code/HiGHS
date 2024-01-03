@@ -76,8 +76,11 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
     HighsBasis& basis) {
-  double colCoef = 0;
+  // a (removed) cut may have been used in this reduction.
+  bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
+
   // compute primal values
+  double colCoef = 0;
   HighsCDouble rowValue = 0;
   for (const auto& rowVal : rowValues) {
     if (rowVal.index == col)
@@ -88,34 +91,60 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   assert(colCoef != 0);
   // Row values aren't fully postsolved, so why do this?
-  solution.row_value[row] =
-      double(rowValue + colCoef * solution.col_value[col]);
+  if (isModelRow)
+    solution.row_value[row] =
+        double(rowValue + colCoef * solution.col_value[col]);
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
 
   // if no dual values requested, return here
   if (!solution.dual_valid) return;
 
   // compute the row dual value such that reduced cost of basic column is 0
-  solution.row_dual[row] = 0;
-  HighsCDouble dualval = colCost;
-  for (const auto& colVal : colValues)
-    dualval -= colVal.value * solution.row_dual[colVal.index];
+  if (isModelRow) {
+    HighsCDouble dualval = colCost;
+    for (const auto& colVal : colValues) {
+      assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
+      dualval -= colVal.value * solution.row_dual[colVal.index];
+    }
+    solution.row_dual[row] = double(dualval / colCoef);
+  }
 
   solution.col_dual[col] = 0;
-  solution.row_dual[row] = double(dualval / colCoef);
 
   // set basis status if necessary
   if (!basis.valid) return;
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  if (rowType == RowType::kEq)
-    basis.row_status[row] = solution.row_dual[row] < 0
-                                ? HighsBasisStatus::kUpper
-                                : HighsBasisStatus::kLower;
-  else if (rowType == RowType::kGeq)
-    basis.row_status[row] = HighsBasisStatus::kLower;
-  else
-    basis.row_status[row] = HighsBasisStatus::kUpper;
+  if (isModelRow) {
+    if (rowType == RowType::kEq)
+      basis.row_status[row] = solution.row_dual[row] < 0
+                                  ? HighsBasisStatus::kUpper
+                                  : HighsBasisStatus::kLower;
+    else if (rowType == RowType::kGeq)
+      basis.row_status[row] = HighsBasisStatus::kLower;
+    else
+      basis.row_status[row] = HighsBasisStatus::kUpper;
+  }
+}
+
+HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
+                               double dual_feasibility_tolerance,
+                               bool basis_valid) {
+  if (basis_valid) {
+    if (dual > dual_feasibility_tolerance)
+      status = HighsBasisStatus::kLower;
+    else if (dual < -dual_feasibility_tolerance)
+      status = HighsBasisStatus::kUpper;
+
+    return status;
+  } else {
+    if (dual > dual_feasibility_tolerance)
+      return HighsBasisStatus::kLower;
+    else if (dual < -dual_feasibility_tolerance)
+      return HighsBasisStatus::kUpper;
+    else
+      return HighsBasisStatus::kBasic;
+  }
 }
 
 void HighsPostsolveStack::DoubletonEquation::undo(
@@ -129,23 +158,12 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // can only do primal postsolve, stop here
   if (row == -1 || !solution.dual_valid) return;
 
-  HighsBasisStatus colStatus;
+  const HighsBasisStatus colStatus =
+      computeStatus(solution.col_dual[col], basis.col_status[col],
+                    options.dual_feasibility_tolerance, basis.valid);
 
-  if (basis.valid) {
-    if (solution.col_dual[col] > options.dual_feasibility_tolerance)
-      basis.col_status[col] = HighsBasisStatus::kLower;
-    else if (solution.col_dual[col] < -options.dual_feasibility_tolerance)
-      basis.col_status[col] = HighsBasisStatus::kUpper;
-
-    colStatus = basis.col_status[col];
-  } else {
-    if (solution.col_dual[col] > options.dual_feasibility_tolerance)
-      colStatus = HighsBasisStatus::kLower;
-    else if (solution.col_dual[col] < -options.dual_feasibility_tolerance)
-      colStatus = HighsBasisStatus::kUpper;
-    else
-      colStatus = HighsBasisStatus::kBasic;
-  }
+  // assert that a valid row index is used.
+  assert(static_cast<size_t>(row) < solution.row_value.size());
 
   // compute the current dual values of the row and the substituted column
   // before deciding on which column becomes basic
@@ -155,8 +173,10 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // equation row with that scale.
   HighsCDouble rowDual = 0.0;
   solution.row_dual[row] = 0;
-  for (const auto& colVal : colValues)
+  for (const auto& colVal : colValues) {
+    assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
     rowDual -= colVal.value * solution.row_dual[colVal.index];
+  }
   rowDual /= coefSubst;
   solution.row_dual[row] = double(rowDual);
 
@@ -208,6 +228,10 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 void HighsPostsolveStack::EqualityRowAddition::undo(
     const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
     HighsSolution& solution, HighsBasis& basis) const {
+  // assert that valid row indices are used.
+  assert(static_cast<size_t>(row) < solution.row_value.size() &&
+         static_cast<size_t>(addedEqRow) < solution.row_value.size());
+
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (!solution.dual_valid || solution.row_dual[row] == 0.0) return;
@@ -225,6 +249,9 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
     const HighsOptions& options, const std::vector<Nonzero>& eqRowValues,
     const std::vector<Nonzero>& targetRows, HighsSolution& solution,
     HighsBasis& basis) const {
+  // assert that a valid row index is used.
+  assert(static_cast<size_t>(addedEqRow) < solution.row_value.size());
+
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (!solution.dual_valid) return;
@@ -233,10 +260,11 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
   // increases the dual multiplier of the equation with the scale that was used
   // for adding the equation
   HighsCDouble eqRowDual = solution.row_dual[addedEqRow];
-  for (const auto& targetRow : targetRows)
+  for (const auto& targetRow : targetRows) {
+    assert(static_cast<size_t>(targetRow.index) < solution.row_dual.size());
     eqRowDual +=
         HighsCDouble(targetRow.value) * solution.row_dual[targetRow.index];
-
+  }
   solution.row_dual[addedEqRow] = double(eqRowDual);
 
   assert(!basis.valid);
@@ -251,32 +279,35 @@ void HighsPostsolveStack::ForcingColumn::undo(
 
   HighsInt debug_num_use_row_value = 0;
   const bool debug_report = false;
+
+  auto computeColVal = [&](HighsInt direction) {
+    // choose solution value that makes all rows feasible
+    for (const auto& colVal : colValues) {
+      // Row values aren't fully postsolved, so how can this work?
+      debug_num_use_row_value++;
+      assert(static_cast<size_t>(colVal.index) < solution.row_value.size());
+      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
+      if (direction * colValFromRow > direction * colValFromNonbasicRow) {
+        nonbasicRow = colVal.index;
+        colValFromNonbasicRow = colValFromRow;
+        nonbasicRowStatus = direction * colVal.value > 0
+                                ? HighsBasisStatus::kLower
+                                : HighsBasisStatus::kUpper;
+      }
+    }
+    // round solution value if column is integer-constrained
+    if (nonbasicRow != -1 && colIntegral)
+      colValFromNonbasicRow =
+          direction * std::ceil(direction * colValFromNonbasicRow -
+                                options.mip_feasibility_tolerance);
+  };
+
   if (atInfiniteUpper) {
     // choose largest value as then all rows are feasible
-    for (const auto& colVal : colValues) {
-      // Row values aren't fully postsolved, so how can this work?
-      debug_num_use_row_value++;
-      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
-      if (colValFromRow > colValFromNonbasicRow) {
-        nonbasicRow = colVal.index;
-        colValFromNonbasicRow = colValFromRow;
-        nonbasicRowStatus = colVal.value > 0 ? HighsBasisStatus::kLower
-                                             : HighsBasisStatus::kUpper;
-      }
-    }
+    computeColVal(1);
   } else {
     // choose smallest value, as then all rows are feasible
-    for (const auto& colVal : colValues) {
-      // Row values aren't fully postsolved, so how can this work?
-      debug_num_use_row_value++;
-      double colValFromRow = solution.row_value[colVal.index] / colVal.value;
-      if (colValFromRow < colValFromNonbasicRow) {
-        nonbasicRow = colVal.index;
-        colValFromNonbasicRow = colValFromRow;
-        nonbasicRowStatus = colVal.value > 0 ? HighsBasisStatus::kUpper
-                                             : HighsBasisStatus::kLower;
-      }
-    }
+    computeColVal(-1);
   }
   if (debug_num_use_row_value && debug_report) {
     printf(
@@ -305,8 +336,11 @@ void HighsPostsolveStack::ForcingColumn::undo(
 void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     HighsSolution& solution, HighsBasis& basis) const {
-  // we use the row value as storage for the scaled value implied on the column
-  // dual
+  // assert that a valid row index is used.
+  assert(static_cast<size_t>(row) < solution.row_value.size());
+
+  // we use the row value as storage for the scaled value implied on the
+  // column dual
   HighsCDouble val = rhs;
   for (const auto& rowVal : rowValues)
     val -= rowVal.value * solution.col_value[rowVal.index];
@@ -321,27 +355,16 @@ void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
 void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) const {
+  // assert that a valid row index is used.
+  assert(static_cast<size_t>(row) < solution.row_value.size());
+
   // nothing to do if the rows dual value is zero in the dual solution or
   // there is no dual solution
   if (!solution.dual_valid) return;
 
-  HighsBasisStatus colStatus;
-
-  if (basis.valid) {
-    if (solution.col_dual[col] > options.dual_feasibility_tolerance)
-      basis.col_status[col] = HighsBasisStatus::kLower;
-    else if (solution.col_dual[col] < -options.dual_feasibility_tolerance)
-      basis.col_status[col] = HighsBasisStatus::kUpper;
-
-    colStatus = basis.col_status[col];
-  } else {
-    if (solution.col_dual[col] > options.dual_feasibility_tolerance)
-      colStatus = HighsBasisStatus::kLower;
-    else if (solution.col_dual[col] < -options.dual_feasibility_tolerance)
-      colStatus = HighsBasisStatus::kUpper;
-    else
-      colStatus = HighsBasisStatus::kBasic;
-  }
+  const HighsBasisStatus colStatus =
+      computeStatus(solution.col_dual[col], basis.col_status[col],
+                    options.dual_feasibility_tolerance, basis.valid);
 
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
@@ -400,7 +423,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 
   HighsCDouble reducedCost = colCost;
   for (const auto& colVal : colValues) {
-    assert((HighsInt)solution.row_dual.size() > colVal.index);
+    assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
     reducedCost -= colVal.value * solution.row_dual[colVal.index];
   }
 
@@ -419,6 +442,9 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 void HighsPostsolveStack::RedundantRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) const {
+  // a (removed) cut may have been used in this reduction.
+  if (static_cast<size_t>(row) >= solution.row_value.size()) return;
+
   // set row dual to zero if dual solution requested
   if (!solution.dual_valid) return;
 
@@ -435,33 +461,20 @@ void HighsPostsolveStack::ForcingRow::undo(
   // compute the row dual multiplier and determine the new basic column
   HighsInt basicCol = -1;
   double dualDelta = 0;
-  if (rowType == RowType::kLeq) {
-    for (const auto& rowVal : rowValues) {
-      double colDual =
-          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
-      if (colDual * rowVal.value < 0) {
-        // column is dual infeasible, decrease the row dual such that its
-        // reduced cost become zero and remember this column as the new basic
-        // column for this row
-        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
-        basicCol = rowVal.index;
-      }
-    }
-  } else {
-    for (const auto& rowVal : rowValues) {
-      double colDual =
-          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
-      if (colDual * rowVal.value > 0) {
-        // column is dual infeasible, decrease the row dual such that its
-        // reduced cost become zero and remember this column as the new basic
-        // column for this row
-        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
-        basicCol = rowVal.index;
-      }
+  HighsInt direction = rowType == RowType::kLeq ? 1 : -1;
+  for (const auto& rowVal : rowValues) {
+    double colDual = solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
+    if (direction * colDual * rowVal.value < 0) {
+      // column is dual infeasible, decrease the row dual such that its
+      // reduced cost become zero and remember this column as the new basic
+      // column for this row
+      dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
+      basicCol = rowVal.index;
     }
   }
 
   if (basicCol != -1) {
+    assert(static_cast<size_t>(row) < solution.row_dual.size());
     solution.row_dual[row] = solution.row_dual[row] + dualDelta;
     for (const auto& rowVal : rowValues) {
       solution.col_dual[rowVal.index] =
@@ -483,32 +496,47 @@ void HighsPostsolveStack::ForcingRow::undo(
 void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) const {
+  // (removed) cuts may have been used in this reduction.
+  if (static_cast<size_t>(row) >= solution.row_value.size()) return;
+  bool duplicateIsModelRow =
+      static_cast<size_t>(duplicateRow) < solution.row_value.size();
+
   if (!solution.dual_valid) return;
   if (!rowUpperTightened && !rowLowerTightened) {
     // simple case of row2 being redundant, in which case it just gets a
     // dual multiplier of 0 and is made basic
-    solution.row_dual[duplicateRow] = 0.0;
-    if (basis.valid) basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
+    if (duplicateIsModelRow) {
+      solution.row_dual[duplicateRow] = 0.0;
+      if (basis.valid)
+        basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
+    }
     return;
   }
 
-  HighsBasisStatus rowStatus;
+  const HighsBasisStatus rowStatus =
+      computeStatus(solution.row_dual[row], basis.row_status[row],
+                    options.dual_feasibility_tolerance, basis.valid);
 
-  if (basis.valid) {
-    if (solution.row_dual[row] < -options.dual_feasibility_tolerance)
-      basis.row_status[row] = HighsBasisStatus::kUpper;
-    else if (solution.row_dual[row] > options.dual_feasibility_tolerance)
-      basis.row_status[row] = HighsBasisStatus::kLower;
-
-    rowStatus = basis.row_status[row];
-  } else {
-    if (solution.row_dual[row] < -options.dual_feasibility_tolerance)
-      rowStatus = HighsBasisStatus::kUpper;
-    else if (solution.row_dual[row] > options.dual_feasibility_tolerance)
-      rowStatus = HighsBasisStatus::kLower;
-    else
-      rowStatus = HighsBasisStatus::kBasic;
-  }
+  auto computeRowDualAndStatus = [&](bool tighened) {
+    if (tighened) {
+      if (duplicateIsModelRow) {
+        solution.row_dual[duplicateRow] =
+            solution.row_dual[row] / duplicateRowScale;
+        if (basis.valid) {
+          if (duplicateRowScale > 0)
+            basis.row_status[duplicateRow] = HighsBasisStatus::kUpper;
+          else
+            basis.row_status[duplicateRow] = HighsBasisStatus::kLower;
+        }
+      }
+      solution.row_dual[row] = 0.0;
+      if (basis.valid) basis.row_status[row] = HighsBasisStatus::kBasic;
+    } else if (duplicateIsModelRow) {
+      solution.row_dual[duplicateRow] = 0.0;
+      if (basis.valid)
+        basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
+    }
+  };
 
   // at least one bound of the row was tightened by using the bound of the
   // scaled parallel row, hence we might need to make the parallel row
@@ -517,48 +545,20 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
   switch (rowStatus) {
     case HighsBasisStatus::kBasic:
       // if row is basic the parallel row is also basic
-      solution.row_dual[duplicateRow] = 0.0;
-      if (basis.valid)
-        basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
+      if (duplicateIsModelRow) {
+        solution.row_dual[duplicateRow] = 0.0;
+        if (basis.valid)
+          basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
+      }
       break;
     case HighsBasisStatus::kUpper:
       // if row sits on its upper bound, and the row upper bound was
       // tightened using the parallel row we make the row basic and
       // transfer its dual value to the parallel row with the proper scale
-      if (rowUpperTightened) {
-        solution.row_dual[duplicateRow] =
-            solution.row_dual[row] / duplicateRowScale;
-        solution.row_dual[row] = 0.0;
-        if (basis.valid) {
-          basis.row_status[row] = HighsBasisStatus::kBasic;
-          if (duplicateRowScale > 0)
-            basis.row_status[duplicateRow] = HighsBasisStatus::kUpper;
-          else
-            basis.row_status[duplicateRow] = HighsBasisStatus::kLower;
-        }
-      } else {
-        solution.row_dual[duplicateRow] = 0.0;
-        if (basis.valid)
-          basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
-      }
+      computeRowDualAndStatus(rowUpperTightened);
       break;
     case HighsBasisStatus::kLower:
-      if (rowLowerTightened) {
-        solution.row_dual[duplicateRow] =
-            solution.row_dual[row] / duplicateRowScale;
-        solution.row_dual[row] = 0.0;
-        if (basis.valid) {
-          basis.row_status[row] = HighsBasisStatus::kBasic;
-          if (duplicateRowScale > 0)
-            basis.row_status[duplicateRow] = HighsBasisStatus::kUpper;
-          else
-            basis.row_status[duplicateRow] = HighsBasisStatus::kLower;
-        }
-      } else {
-        solution.row_dual[duplicateRow] = 0.0;
-        if (basis.valid)
-          basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
-      }
+      computeRowDualAndStatus(rowLowerTightened);
       break;
     default:
       assert(false);
@@ -828,7 +828,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         basis.col_status[col] = HighsBasisStatus::kNonbasic;
         if (debug_report)
           printf(
-              "When demerging, neither col nor duplicateCol can be nonbasic\n");
+              "When demerging, neither col nor duplicateCol can be "
+              "nonbasic\n");
         if (kAllowDeveloperAssert) assert(666 == 999);
       }
     }
@@ -962,7 +963,8 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
       if (abs_scale > scale_limit) {
         if (debug_report)
           printf(
-              "%sDuplicateColumn::checkMerge: scale = %g, but |scale| must be "
+              "%sDuplicateColumn::checkMerge: scale = %g, but |scale| must "
+              "be "
               "at "
               "most %g since x is [%g, %g]\n",
               newline.c_str(), scale, scale_limit, x_lo, x_up);
@@ -1284,14 +1286,16 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   if (!check) {
     if (debug_report)
       printf(
-          "DuplicateColumn::undo error: std::fabs(x_v) < kHighsInf is false\n");
+          "DuplicateColumn::undo error: std::fabs(x_v) < kHighsInf is "
+          "false\n");
     if (allow_assert) assert(check);
   }
   check = std::fabs(y_v) < kHighsInf;
   if (!check) {
     if (debug_report)
       printf(
-          "DuplicateColumn::undo error: std::fabs(y_v) < kHighsInf is false\n");
+          "DuplicateColumn::undo error: std::fabs(y_v) < kHighsInf is "
+          "false\n");
     if (allow_assert) assert(check);
   }
   check = residual <= residual_tolerance;

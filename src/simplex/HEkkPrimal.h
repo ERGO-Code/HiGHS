@@ -179,6 +179,11 @@ class HEkkPrimal {
   HVector col_steepest_edge;
   HighsRandom random_;  // Just for checking PSE weights
 
+  double max_max_local_primal_infeasibility_;
+  double max_max_ignored_violation_;
+  double max_max_primal_correction_;
+  HighsInt last_header_iteration_count_;
+
   const HighsInt primal_correction_strategy =
       kSimplexPrimalCorrectionStrategyAlways;
   double debug_max_relative_primal_steepest_edge_weight_error = 0;

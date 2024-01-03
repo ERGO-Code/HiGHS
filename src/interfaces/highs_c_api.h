@@ -10,8 +10,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
-
-// #include "util/HighsInt.h"
+//
+// Welcome to the HiGHS C API!
+//
+// The simplest way to use HiGHS to solve an LP, MIP or QP from C is
+// to pass the problem data to the appropriate method Highs_lpCall,
+// Highs_mipCall or Highs_qpCall, and these methods return the
+// appropriate solution information
+//
+// For sophisticated applications, where esoteric solutiuon
+// information is needed, or if a sequence of modified models need to
+// be solved, use the Highs_create method to generate a pointer to an
+// instance of the C++ Highs class, and then use any of a large number
+// of models for which this pointer is the first parameter.
+//
 #include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
@@ -89,9 +101,10 @@ const HighsInt kHighsBasisStatusNonbasic = 4;
 const HighsInt kHighsCallbackLogging = 0;
 const HighsInt kHighsCallbackSimplexInterrupt = 1;
 const HighsInt kHighsCallbackIpmInterrupt = 2;
-const HighsInt kHighsCallbackMipImprovingSolution = 3;
-const HighsInt kHighsCallbackMipLogging = 4;
-const HighsInt kHighsCallbackMipInterrupt = 5;
+const HighsInt kHighsCallbackMipSolution = 3;
+const HighsInt kHighsCallbackMipImprovingSolution = 4;
+const HighsInt kHighsCallbackMipLogging = 5;
+const HighsInt kHighsCallbackMipInterrupt = 6;
 
 #ifdef __cplusplus
 extern "C" {
