@@ -581,7 +581,7 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
 
 void IPM::PrintHeader() {
     control_.Log()
-        << "\n"
+        << (kTerminationLogging ? "\n" : "")
         << " "  << Format("Iter", 4)
         << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
         << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
@@ -598,7 +598,8 @@ void IPM::PrintHeader() {
 
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
-    PrintHeader();
+
+    if (kTerminationLogging) PrintHeader();
     control_.Log()
         << " "  << Format(info_->iter, 3)
         << (ipm_optimal ? "*" : " ")

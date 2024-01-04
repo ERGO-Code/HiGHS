@@ -226,8 +226,14 @@ bool Iterate::feasible() const {
     const bool primal_feasible = presidual_ <= feasibility_tol_ * (bounds_measure);
     const bool dual_feasible = dresidual_ <= feasibility_tol_ * (costs_measure);
     const bool is_feasible = primal_feasible && dual_feasible;
-    printf("\nIterate::feasible presidual_ = %11.4g; bounds_measure = %11.4g; rel_presidual = %11.4g; feasibility_tol = %11.4g: primal_feasible = %d\n", presidual_, bounds_measure, rel_presidual, feasibility_tol_, primal_feasible);
-    printf("Iterate::feasible dresidual_ = %11.4g; bounds_measure = %11.4g; rel_dresidual = %11.4g; feasibility_tol = %11.4g:   dual_feasible = %d\n", dresidual_, bounds_measure, rel_dresidual, feasibility_tol_, dual_feasible);
+    if (kTerminationLogging) {
+      printf("\nIterate::feasible presidual_ = %11.4g; bounds_measure = %11.4g; "
+	     "rel_presidual = %11.4g; feasibility_tol = %11.4g: primal_feasible = %d\n",
+	     presidual_, bounds_measure, rel_presidual, feasibility_tol_, primal_feasible);
+      printf("Iterate::feasible dresidual_ = %11.4g;  costs_measure = %11.4g; "
+	     "rel_dresidual = %11.4g; feasibility_tol = %11.4g:   dual_feasible = %d\n",
+	     dresidual_, costs_measure, rel_dresidual, feasibility_tol_, dual_feasible);
+    }
     return is_feasible;
 }
 
@@ -238,10 +244,15 @@ bool Iterate::optimal() const {
     double obj = 0.5 * (pobj + dobj);
     double gap = pobj - dobj;
     const double abs_gap = std::abs(gap);
-    const double rel_gap = abs_gap / (1.0+std::abs(obj)); 
-    const bool is_optimal = abs_gap <= optimality_tol_ * (1.0+std::abs(obj));
-    printf("Iterate::optimal     abs_gap = %11.4g;                               rel_gap       = %11.4g;  optimality_tol = %11.4g:   optimal       = %d\n",
-	   abs_gap, rel_gap, optimality_tol_, is_optimal);
+    const double obj_measure = 1.0+std::abs(obj);
+    const bool is_optimal = abs_gap <= optimality_tol_ * obj_measure;
+    if (kTerminationLogging) {
+      const double rel_gap = abs_gap / obj_measure; 
+      printf("Iterate::optimal     abs_gap = %11.4g;"
+	     " obj_measure    = %11.4g; rel_gap       = %11.4g;"
+	     "  optimality_tol = %11.4g:   optimal       = %d\n",
+	     abs_gap, obj_measure, rel_gap, optimality_tol_, is_optimal);
+    }
     return is_optimal;
 }
 
