@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -50,12 +50,7 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
-void highsSignalHandler(int signum) {
-  //  std::cout << "Interrupt signal (" << signum << ") received.\n";
-  exit(signum);
-}
-
-Highs::Highs() { signal(SIGINT, highsSignalHandler); }
+Highs::Highs() {}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -3082,7 +3077,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
-    solver.runPresolve();
+    solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
@@ -3737,7 +3732,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 // End of public methods
 void Highs::logHeader() {
   if (written_log_header) return;
-  highsLogHeader(options_.log_options);
+  highsLogHeader(options_.log_options, options_.log_githash);
   written_log_header = true;
   return;
 }
