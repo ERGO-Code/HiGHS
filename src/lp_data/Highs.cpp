@@ -1882,10 +1882,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   // the old solution and any basis are cleared
   const bool new_primal_solution =
       model_.lp_.num_col_ > 0 &&
-      solution.col_value.size() >= static_cast<size_t>(model_.lp_.num_col_);
+      (HighsInt)solution.col_value.size() >= model_.lp_.num_col_;
   const bool new_dual_solution =
       model_.lp_.num_row_ > 0 &&
-      solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
+      (HighsInt)solution.row_dual.size() >= model_.lp_.num_row_;
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) invalidateUserSolverData();
@@ -2675,7 +2675,7 @@ HighsStatus Highs::getColIntegrality(const HighsInt col,
                  int(col), int(num_col));
     return HighsStatus::kError;
   }
-  if (static_cast<size_t>(col) < this->model_.lp_.integrality_.size()) {
+  if (col < int(this->model_.lp_.integrality_.size())) {
     integrality = this->model_.lp_.integrality_[col];
     return HighsStatus::kOk;
   } else {
@@ -2885,15 +2885,13 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const bool noReoptimization) {
+HighsStatus Highs::postsolve(const HighsSolution& solution) {
   HighsBasis basis;
-  return this->postsolve(solution, basis, noReoptimization);
+  return this->postsolve(solution, basis);
 }
 
 HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const HighsBasis& basis,
-                             const bool noReoptimization) {
+                             const HighsBasis& basis) {
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
@@ -2905,8 +2903,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
                  presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
-  HighsStatus return_status =
-      callRunPostsolve(solution, basis, noReoptimization);
+  HighsStatus return_status = callRunPostsolve(solution, basis);
   return returnFromHighs(return_status);
 }
 
@@ -3588,8 +3585,7 @@ HighsStatus Highs::callSolveMip() {
 
 // Only called from Highs::postsolve
 HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
-                                    const HighsBasis& basis,
-                                    const bool noReoptimization) {
+                                    const HighsBasis& basis) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
@@ -3599,8 +3595,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     // would imply that the relaxation had been solved, a case handled
     // below
     presolve_.data_.recovered_solution_ = solution;
-    if (presolve_.data_.recovered_solution_.col_value.size() <
-        static_cast<size_t>(presolved_lp.num_col_)) {
+    if (HighsInt(presolve_.data_.recovered_solution_.col_value.size()) <
+        presolved_lp.num_col_) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Solution provided to postsolve is incorrect size\n");
       return HighsStatus::kError;
@@ -3674,42 +3670,40 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
-      if (!noReoptimization) {
-        // Save the options to allow the best simplex strategy to
-        // be used
-        HighsOptions save_options = options_;
-        options_.simplex_strategy = kSimplexStrategyChoose;
-        // Ensure that the parallel solver isn't used
-        options_.simplex_min_concurrency = 1;
-        options_.simplex_max_concurrency = 1;
-        // Use any pivot threshold resulting from solving the presolved LP
-        // if (factor_pivot_threshold > 0)
-        //    options_.factor_pivot_threshold = factor_pivot_threshold;
-        // The basis returned from postsolve is just basic/nonbasic
-        // and EKK expects a refined basis, so set it up now
-        HighsLp& incumbent_lp = model_.lp_;
-        refineBasis(incumbent_lp, solution_, basis_);
-        // Scrap the EKK data from solving the presolved LP
-        ekk_instance_.invalidate();
-        ekk_instance_.lp_name_ = "Postsolve LP";
-        // Set up the timing record so that adding the corresponding
-        // values after callSolveLp gives difference
-        timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(
-            incumbent_lp,
-            "Solving the original LP from the solution after postsolve");
-        // Determine the timing record
-        timer_.stop(timer_.solve_clock);
-        return_status = interpretCallStatus(options_.log_options, call_status,
-                                            return_status, "callSolveLp");
-        // Recover the options
-        options_ = save_options;
-        if (return_status == HighsStatus::kError) {
-          // Set undo_mods = false, since passing models requiring
-          // modification to Highs::presolve is illegal
-          const bool undo_mods = false;
-          return returnFromRun(return_status, undo_mods);
-        }
+      // Save the options to allow the best simplex strategy to
+      // be used
+      HighsOptions save_options = options_;
+      options_.simplex_strategy = kSimplexStrategyChoose;
+      // Ensure that the parallel solver isn't used
+      options_.simplex_min_concurrency = 1;
+      options_.simplex_max_concurrency = 1;
+      // Use any pivot threshold resulting from solving the presolved LP
+      // if (factor_pivot_threshold > 0)
+      //    options_.factor_pivot_threshold = factor_pivot_threshold;
+      // The basis returned from postsolve is just basic/nonbasic
+      // and EKK expects a refined basis, so set it up now
+      HighsLp& incumbent_lp = model_.lp_;
+      refineBasis(incumbent_lp, solution_, basis_);
+      // Scrap the EKK data from solving the presolved LP
+      ekk_instance_.invalidate();
+      ekk_instance_.lp_name_ = "Postsolve LP";
+      // Set up the timing record so that adding the corresponding
+      // values after callSolveLp gives difference
+      timer_.start(timer_.solve_clock);
+      call_status = callSolveLp(
+          incumbent_lp,
+          "Solving the original LP from the solution after postsolve");
+      // Determine the timing record
+      timer_.stop(timer_.solve_clock);
+      return_status = interpretCallStatus(options_.log_options, call_status,
+                                          return_status, "callSolveLp");
+      // Recover the options
+      options_ = save_options;
+      if (return_status == HighsStatus::kError) {
+        // Set undo_mods = false, since passing models requiring
+        // modification to Highs::presolve is illegal
+        const bool undo_mods = false;
+        return returnFromRun(return_status, undo_mods);
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3764,11 +3758,11 @@ void Highs::forceHighsSolutionBasisSize() {
   solution_.row_dual.resize(model_.lp_.num_row_);
   // Ensure that the HiGHS basis vectors are the right size,
   // invalidating the basis if they aren't
-  if (basis_.col_status.size() != static_cast<size_t>(model_.lp_.num_col_)) {
+  if ((HighsInt)basis_.col_status.size() != model_.lp_.num_col_) {
     basis_.col_status.resize(model_.lp_.num_col_);
     basis_.valid = false;
   }
-  if (basis_.row_status.size() != static_cast<size_t>(model_.lp_.num_row_)) {
+  if ((HighsInt)basis_.row_status.size() != model_.lp_.num_row_) {
     basis_.row_status.resize(model_.lp_.num_row_);
     basis_.valid = false;
   }
