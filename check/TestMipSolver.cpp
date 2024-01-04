@@ -6,6 +6,10 @@
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
+bool objectiveOk(const double optimal_objective,
+                 const double require_optimal_objective,
+                 const bool dev_run = false);
+
 void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
@@ -570,9 +574,36 @@ TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 }
 
+TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  const double offset = 100;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  highs.run();
+  const double og_optimal_objective = highs.getInfo().objective_function_value;
+  HighsLp lp = highs.getLp();
+  lp.offset_ = offset;
+  highs.passModel(lp);
+  highs.run();
+  const double offset_optimal_objective =
+      highs.getInfo().objective_function_value;
+  REQUIRE(objectiveOk(offset + og_optimal_objective, offset_optimal_objective,
+                      dev_run));
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) lp.col_cost_[iCol] *= -1;
+  lp.offset_ *= -1;
+  lp.sense_ = ObjSense::kMaximize;
+  highs.passModel(lp);
+  highs.run();
+  const double max_offset_optimal_objective =
+      highs.getInfo().objective_function_value;
+  REQUIRE(objectiveOk(max_offset_optimal_objective, -offset_optimal_objective,
+                      dev_run));
+}
+
 bool objectiveOk(const double optimal_objective,
-                 const double require_optimal_objective,
-                 const bool dev_run = false) {
+                 const double require_optimal_objective, const bool dev_run) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
                  std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;

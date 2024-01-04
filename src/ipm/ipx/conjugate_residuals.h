@@ -35,7 +35,7 @@ public:
     // some LP models with m << n, e.g. "rvb-sub" from MIPLIB2010, that the CR
     // method did not reach the termination criterion within m iterations,
     // causing the IPM to fail. Giving the CR method 100 extra iterations
-    // resolved the issue on all LP models from our test set where it occured.)
+    // resolved the issue on all LP models from our test set where it occurred.)
     //
     // If the @P argument is given, it is used as preconditioner (which
     // approximates inverse(C)) and must be symmetric positive definite.
@@ -50,7 +50,7 @@ public:
     // IPX_ERROR_cr_iter_limit          if iteration limit was reached
     // IPX_ERROR_cr_matrix_not_posdef   if v'*C*v <= 0 for some vector v
     // IPX_ERROR_cr_precond_not_posdef  if v'*P*v <= 0 for some vector v
-    // IPX_ERROR_cr_inf_or_nan          if overflow occured
+    // IPX_ERROR_cr_inf_or_nan          if overflow occurred
     // IPX_ERROR_cr_no_progress         if no progress due to round-off errors
     // IPX_ERROR_user_interrupt         if interrupted by user in control
     // IPX_ERROR_time_interrupt         if interrupted by time limit in control

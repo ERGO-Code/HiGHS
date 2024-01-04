@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -43,34 +43,29 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
-  // If the LP has no columns there is nothing left to test
-  if (lp.num_col_ == 0) return HighsStatus::kOk;
-  assert(lp.a_matrix_.isColwise());
-
-  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
-  // exists (as the number of nonzeros)
-  assert(lp.num_col_ > 0);
-
-  // Assess the LP column costs
-  HighsIndexCollection index_collection;
-  index_collection.dimension_ = lp.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = 0;
-  index_collection.to_ = lp.num_col_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
-                            lp.has_infinite_cost_, options.infinite_cost);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessCosts");
-  if (return_status == HighsStatus::kError) return return_status;
-  // Assess the LP column bounds
-  call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
-                             lp.col_upper_, options.infinite_bound,
-                             lp.integrality_.data());
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessBounds");
-  if (return_status == HighsStatus::kError) return return_status;
+  if (lp.num_col_) {
+    // Assess the LP column costs
+    HighsIndexCollection index_collection;
+    index_collection.dimension_ = lp.num_col_;
+    index_collection.is_interval_ = true;
+    index_collection.from_ = 0;
+    index_collection.to_ = lp.num_col_ - 1;
+    call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
+                              lp.has_infinite_cost_, options.infinite_cost);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessCosts");
+    if (return_status == HighsStatus::kError) return return_status;
+    // Assess the LP column bounds
+    call_status = assessBounds(options, "Col", 0, index_collection,
+                               lp.col_lower_, lp.col_upper_,
+                               options.infinite_bound, lp.integrality_.data());
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessBounds");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
   if (lp.num_row_) {
     // Assess the LP row bounds
+    HighsIndexCollection index_collection;
     index_collection.dimension_ = lp.num_row_;
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
@@ -82,6 +77,16 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  // If the LP has no columns the matrix must be empty and there is
+  // nothing left to test
+  if (lp.num_col_ == 0) {
+    assert(!lp.a_matrix_.numNz());
+    return HighsStatus::kOk;
+  }
+  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
+  // exists (as the number of nonzeros)
+  assert(lp.num_col_ > 0);
+
   // Assess the LP matrix - even if there are no rows!
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
@@ -89,22 +94,13 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
-  HighsInt lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
+  HighsInt lp_num_nz = lp.a_matrix_.numNz();
   if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
     lp.a_matrix_.index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
-    lp.a_matrix_.index_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
-    lp.a_matrix_.value_.resize(lp_num_nz);
-
-  //  if (return_status == HighsStatus::kError)
-  //    return_status = HighsStatus::kError;
-  //  else
-  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
@@ -765,6 +761,32 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
+bool boundScaleOk(const vector<double>& lower, const vector<double>& upper,
+                  const HighsInt bound_scale, const double infinite_bound) {
+  if (!bound_scale) return true;
+  double bound_scale_value = std::pow(2, bound_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
+    if (lower[iCol] > -kHighsInf &&
+        std::abs(lower[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+    if (upper[iCol] < kHighsInf &&
+        std::abs(upper[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+  }
+  return true;
+}
+
+bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost) {
+  if (!cost_scale) return true;
+  double cost_scale_value = std::pow(2, cost_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
+    if (std::abs(cost[iCol]) < kHighsInf &&
+        std::abs(cost[iCol] * cost_scale_value) > infinite_cost)
+      return false;
+  return true;
+}
+
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;
@@ -1085,7 +1107,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       exp(sum_log_col_equilibration / numCol);
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
@@ -1131,7 +1153,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       original_matrix_max_value / original_matrix_min_value;
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Extreme equilibration improvement =      ( %11.4g + "
@@ -1182,14 +1204,18 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                  "[%0.4g, %0.4g] for rows\n",
+                  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
                   improvement_factor, improvement_factor_required);
@@ -1344,14 +1370,14 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
                   "[%0.4g, %0.4g] for rows\n",
@@ -2684,28 +2710,6 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                  [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
-}
-
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
-  HighsInt num_bound_infeasible = 0;
-  const bool has_integrality = lp.integrality_.size() > 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (has_integrality) {
-      // Semi-variables can have inconsistent bounds
-      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
-        continue;
-    }
-    if (lp.col_upper_[iCol] < lp.col_lower_[iCol]) num_bound_infeasible++;
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    if (lp.row_upper_[iRow] < lp.row_lower_[iRow]) num_bound_infeasible++;
-  if (num_bound_infeasible > 0)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Model infeasible due to %" HIGHSINT_FORMAT
-                 " inconsistent bound(s)\n",
-                 num_bound_infeasible);
-  return num_bound_infeasible > 0;
 }
 
 bool isColDataNull(const HighsLogOptions& log_options,

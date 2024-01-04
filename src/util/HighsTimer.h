@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -178,6 +178,16 @@ class HighsTimer {
   }
 
   /**
+   * @brief Return whether a clock is running
+   */
+  bool running(HighsInt i_clock  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_start[i_clock] < 0;
+  }
+
+  /**
    * @brief Start the RunHighs clock
    */
   void startRunHighsClock() { start(run_highs_clock); }
@@ -195,7 +205,7 @@ class HighsTimer {
   /**
    * @brief Test whether the RunHighs clock is running
    */
-  bool runningRunHighsClock() { return clock_start[run_highs_clock] < 0; }
+  bool runningRunHighsClock() { return running(run_highs_clock); }
 
   /**
    * @brief Report timing information for the clock indices in the list

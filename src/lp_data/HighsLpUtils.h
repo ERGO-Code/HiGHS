@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -56,6 +56,13 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsVarType* integrality = nullptr);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
+
+bool boundScaleOk(const std::vector<double>& lower,
+                  const std::vector<double>& upper, const HighsInt bound_scale,
+                  const double infinite_bound);
+
+bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost);
 
 HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
                                 bool& made_semi_variable_mods);
@@ -238,8 +245,6 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
-
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp);
 
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,

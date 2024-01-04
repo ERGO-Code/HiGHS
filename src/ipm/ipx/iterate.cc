@@ -551,7 +551,7 @@ void Iterate::ComputeResiduals() const {
     rb_ = model_.b();
     MultiplyAdd(AI, x_, -1.0, rb_, 'N');
 
-    // Dual residual: rc = c-AI'y-zl+zu. If the iteate has not been
+    // Dual residual: rc = c-AI'y-zl+zu. If the iterate has not been
     // postprocessed, then the dual residual for fixed variables is zero
     // because these variables are treated as non-existent by the IPM.
     rc_ = model_.c() - zl_ + zu_;

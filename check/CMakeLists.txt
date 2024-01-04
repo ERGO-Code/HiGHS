@@ -49,12 +49,14 @@ set(TEST_SOURCES
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
+    TestModelProperties.cpp
     TestPresolve.cpp
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
+    TestUserScale.cpp
     Avgas.cpp)
 
 if (NOT APPLE)

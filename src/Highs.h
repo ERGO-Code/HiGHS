@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -483,6 +483,14 @@ class Highs {
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
+   * @brief Get the ill-conditioning information for the current basis
+   */
+  HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
+                                 const bool constraint,
+                                 const HighsInt method = 0,
+                                 const double ill_conditioning_bound = 1e-4);
+
+  /**
    * @brief Get the current model objective value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
@@ -617,7 +625,7 @@ class Highs {
    * @brief Get multiple columns from the model given by a set
    */
   HighsStatus getCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
@@ -689,7 +697,7 @@ class Highs {
    * @brief Get multiple rows from the model given by a set
    */
   HighsStatus getRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt*
           set,  //!< Array of size num_set_entries with indices of rows to get
       HighsInt& num_row,  //!< Number of rows got from the model
@@ -1338,7 +1346,7 @@ class Highs {
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
-  // the inumcumbent model.
+  // the incumbent model.
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
@@ -1457,5 +1465,18 @@ class Highs {
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
+  HighsStatus optionChangeAction();
+  HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
+                                     const bool constraint,
+                                     const HighsInt method,
+                                     const double ill_conditioning_bound);
+  void formIllConditioningLp0(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint);
+  void formIllConditioningLp1(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint,
+                              const double ill_conditioning_bound);
+  bool infeasibleBoundsOk();
 };
 #endif

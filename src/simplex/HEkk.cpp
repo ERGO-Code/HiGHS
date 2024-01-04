@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -745,7 +745,7 @@ HighsStatus HEkk::dualize() {
       lp_.scale_.num_row = dual_num_row;
     }
   }
-  // Change optimzation sense
+  // Change optimization sense
   if (lp_.sense_ == ObjSense::kMinimize) {
     lp_.sense_ = ObjSense::kMaximize;
   } else {
@@ -944,7 +944,7 @@ HighsStatus HEkk::undualize() {
       lp_.scale_.num_row = original_num_row_;
     }
   }
-  // Change optimzation sense
+  // Change optimization sense
   if (lp_.sense_ == ObjSense::kMinimize) {
     lp_.sense_ = ObjSense::kMaximize;
   } else {
@@ -1756,7 +1756,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
       simplex_strategy = kSimplexStrategyDualMulti;
   }
   //
-  // If parallel stratgies are used, the minimum concurrency will be
+  // If parallel strategies are used, the minimum concurrency will be
   // set to be at least the minimum required for the strategy
   //
   // All this is independent of the number of threads available, since
