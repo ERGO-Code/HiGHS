@@ -385,6 +385,13 @@ class Highs {
   double getInfinity() { return kHighsInf; }
 
   /**
+   * @brief Get the size of HighsInt
+   */
+  HighsInt getSizeofHighsInt() {
+    return sizeof(options_.num_user_settable_options_);
+  }
+
+  /**
    * @brief Get the run time of HiGHS
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
