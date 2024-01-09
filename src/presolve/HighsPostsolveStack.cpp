@@ -128,23 +128,23 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 }
 
 HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
-                               double dual_feasibility_tolerance,
-                               bool basis_valid) {
-  if (basis_valid) {
-    if (dual > dual_feasibility_tolerance)
-      status = HighsBasisStatus::kLower;
-    else if (dual < -dual_feasibility_tolerance)
-      status = HighsBasisStatus::kUpper;
+                               double dual_feasibility_tolerance) {
+  if (dual > dual_feasibility_tolerance)
+    status = HighsBasisStatus::kLower;
+  else if (dual < -dual_feasibility_tolerance)
+    status = HighsBasisStatus::kUpper;
 
-    return status;
-  } else {
-    if (dual > dual_feasibility_tolerance)
-      return HighsBasisStatus::kLower;
-    else if (dual < -dual_feasibility_tolerance)
-      return HighsBasisStatus::kUpper;
-    else
-      return HighsBasisStatus::kBasic;
-  }
+  return status;
+}
+
+HighsBasisStatus computeStatus(const double& dual,
+                               double dual_feasibility_tolerance) {
+  if (dual > dual_feasibility_tolerance)
+    return HighsBasisStatus::kLower;
+  else if (dual < -dual_feasibility_tolerance)
+    return HighsBasisStatus::kUpper;
+  else
+    return HighsBasisStatus::kBasic;
 }
 
 void HighsPostsolveStack::DoubletonEquation::undo(
@@ -159,8 +159,11 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   if (row == -1 || !solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =
-      computeStatus(solution.col_dual[col], basis.col_status[col],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.col_dual[col],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.col_dual[col], basis.col_status[col],
+                          options.dual_feasibility_tolerance);
 
   // assert that a valid row index is used.
   assert(static_cast<size_t>(row) < solution.row_value.size());
@@ -363,8 +366,11 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
   if (!solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =
-      computeStatus(solution.col_dual[col], basis.col_status[col],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.col_dual[col],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.col_dual[col], basis.col_status[col],
+                          options.dual_feasibility_tolerance);
 
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
@@ -514,8 +520,11 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
   }
 
   const HighsBasisStatus rowStatus =
-      computeStatus(solution.row_dual[row], basis.row_status[row],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.row_dual[row],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.row_dual[row], basis.row_status[row],
+                          options.dual_feasibility_tolerance);
 
   auto computeRowDualAndStatus = [&](bool tighened) {
     if (tighened) {
