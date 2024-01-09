@@ -127,7 +127,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   }
 }
 
-HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
+HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
                                double dual_feasibility_tolerance) {
   if (dual > dual_feasibility_tolerance)
     status = HighsBasisStatus::kLower;
@@ -137,8 +137,7 @@ HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
   return status;
 }
 
-HighsBasisStatus computeStatus(const double& dual,
-                               double dual_feasibility_tolerance) {
+HighsBasisStatus computeStatus(double dual, double dual_feasibility_tolerance) {
   if (dual > dual_feasibility_tolerance)
     return HighsBasisStatus::kLower;
   else if (dual < -dual_feasibility_tolerance)
