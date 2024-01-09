@@ -335,6 +335,15 @@ HighsInt Highs_clearModel(void* highs);
 HighsInt Highs_clearSolver(void* highs);
 
 /**
+ * Presolve a model.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_presolve(void* highs);
+
+/**
  * Optimize a model. The algorithm used by HiGHS depends on the options that
  * have been set.
  *
@@ -343,6 +352,23 @@ HighsInt Highs_clearSolver(void* highs);
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_run(void* highs);
+
+/**
+ * Postsolve a model using a primal (and possibly dual) solution.
+ *
+ * @param highs       A pointer to the Highs instance.
+ * @param col_value   An array of length [num_col] with the column solution
+ *                    values.
+ * @param col_dual    An array of length [num_col] with the column dual
+ *                    values, or a null pointer if not known.
+ * @param row_dual    An array of length [num_row] with the row dual values,
+ *                    or a null pointer if not known.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+  HighsInt Highs_postsolve(void* highs,
+			   const double* col_value,
+			   const double* col_dual, const double* row_dual);
 
 /**
  * Write the solution information (including dual and basis status, if

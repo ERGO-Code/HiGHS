@@ -177,7 +177,26 @@ HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
 const char* Highs_githash(void) { return highsGithash(); }
 const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
+HighsInt Highs_presolve(void* highs) { return (HighsInt)((Highs*)highs)->presolve(); }
+
 HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
+
+HighsInt Highs_postsolve(void* highs,
+			 const double* col_value,
+			 const double* col_dual, const double* row_dual) {
+  HighsInt num_col = ((Highs*)highs)->getNumCol();
+  HighsInt num_row = ((Highs*)highs)->getNumRow();
+  HighsSolution solution;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (col_value) solution.col_value[iCol] = col_value[iCol];
+    if (col_dual) solution.col_dual[iCol] = col_dual[iCol];
+  }
+  if (row_dual) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+      solution.row_dual[iRow] = row_dual[iRow];
+  }
+  return (HighsInt)((Highs*)highs)->postsolve(solution);
+}
 
 HighsInt Highs_readModel(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->readModel(std::string(filename));

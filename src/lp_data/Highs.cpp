@@ -3141,6 +3141,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     default:
       break;
   }
+  // Presolve creates integrality vector for an LP, so clear it
+  if (!model_.isMip()) presolve_.data_.reduced_lp_.integrality_.clear();
+  
   return presolve_return_status;
 }
 
