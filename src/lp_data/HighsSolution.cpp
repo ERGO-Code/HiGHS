@@ -1372,11 +1372,13 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
 
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution) {
+  if (!solution.value_valid) return true;
   return (HighsInt)solution.col_value.size() == lp.num_col_ &&
          (HighsInt)solution.row_value.size() == lp.num_row_;
 }
 
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
+  if (!solution.dual_valid) return true;
   return (HighsInt)solution.col_dual.size() == lp.num_col_ &&
          (HighsInt)solution.row_dual.size() == lp.num_row_;
 }

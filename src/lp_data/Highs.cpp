@@ -3673,47 +3673,82 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       // Set solution and its status
       solution_.clear();
       solution_ = presolve_.data_.recovered_solution_;
-      solution_.value_valid = true;
-      solution_.dual_valid = true;
+      assert(solution_.value_valid);
+      printf("Recovered solution has value.valid = %d;   col_value.size() = %d;  row_value.size() = %d\n",
+	     solution_.value_valid, int(solution_.col_value.size()), int(solution_.row_value.size()));
+      printf("Recovered solution has  dual.valid = %d;    col_dual.size() = %d;   row_dual.size() = %d\n",
+	     solution_.dual_valid, int(solution_.col_dual.size()), int(solution_.row_dual.size()));
+      basis_ = presolve_.data_.recovered_basis_;
+      printf("Recovered    basis has       valid = %d;  col_status.size() = %d; row_status.size() = %d\n",
+	     presolve_.data_.recovered_basis_.valid,
+	     int(presolve_.data_.recovered_basis_.col_status.size()),
+	     int(presolve_.data_.recovered_basis_.row_status.size()));
+      // Validity of the solution and basis should be inherited
+      //
+      // solution_.value_valid = true;
+      // solution_.dual_valid = true;
+      //
       // Set basis and its status
-      basis_.valid = true;
-      basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-      basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+      //
+      // basis_.valid = true;
+      // basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+      // basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
-      // Save the options to allow the best simplex strategy to
-      // be used
-      HighsOptions save_options = options_;
-      options_.simplex_strategy = kSimplexStrategyChoose;
-      // Ensure that the parallel solver isn't used
-      options_.simplex_min_concurrency = 1;
-      options_.simplex_max_concurrency = 1;
-      // Use any pivot threshold resulting from solving the presolved LP
-      // if (factor_pivot_threshold > 0)
-      //    options_.factor_pivot_threshold = factor_pivot_threshold;
-      // The basis returned from postsolve is just basic/nonbasic
-      // and EKK expects a refined basis, so set it up now
-      HighsLp& incumbent_lp = model_.lp_;
-      refineBasis(incumbent_lp, solution_, basis_);
-      // Scrap the EKK data from solving the presolved LP
-      ekk_instance_.invalidate();
-      ekk_instance_.lp_name_ = "Postsolve LP";
-      // Set up the timing record so that adding the corresponding
-      // values after callSolveLp gives difference
-      timer_.start(timer_.solve_clock);
-      call_status = callSolveLp(
-          incumbent_lp,
-          "Solving the original LP from the solution after postsolve");
-      // Determine the timing record
-      timer_.stop(timer_.solve_clock);
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "callSolveLp");
-      // Recover the options
-      options_ = save_options;
-      if (return_status == HighsStatus::kError) {
-        // Set undo_mods = false, since passing models requiring
-        // modification to Highs::presolve is illegal
-        const bool undo_mods = false;
-        return returnFromRun(return_status, undo_mods);
+      if (basis_.valid) {
+	// Save the options to allow the best simplex strategy to be
+	// used
+	HighsOptions save_options = options_;
+	options_.simplex_strategy = kSimplexStrategyChoose;
+	// Ensure that the parallel solver isn't used
+	options_.simplex_min_concurrency = 1;
+	options_.simplex_max_concurrency = 1;
+	// Use any pivot threshold resulting from solving the presolved LP
+	// if (factor_pivot_threshold > 0)
+	//    options_.factor_pivot_threshold = factor_pivot_threshold;
+	// The basis returned from postsolve is just basic/nonbasic
+	// and EKK expects a refined basis, so set it up now
+	HighsLp& incumbent_lp = model_.lp_;
+	refineBasis(incumbent_lp, solution_, basis_);
+	// Scrap the EKK data from solving the presolved LP
+	ekk_instance_.invalidate();
+	ekk_instance_.lp_name_ = "Postsolve LP";
+	// Set up the timing record so that adding the corresponding
+	// values after callSolveLp gives difference
+	timer_.start(timer_.solve_clock);
+	call_status = callSolveLp(incumbent_lp,
+				  "Solving the original LP from the solution after postsolve");
+	// Determine the timing record
+	timer_.stop(timer_.solve_clock);
+	return_status = interpretCallStatus(options_.log_options, call_status,
+					    return_status, "callSolveLp");
+	// Recover the options
+	options_ = save_options;
+	if (return_status == HighsStatus::kError) {
+	  // Set undo_mods = false, since passing models requiring
+	  // modification to Highs::presolve is illegal
+	  const bool undo_mods = false;
+	  return returnFromRun(return_status, undo_mods);
+	} 
+      } else {
+	info_.objective_function_value =
+	  model_.lp_.objectiveValue(solution_.col_value);
+	getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
+	for (HighsInt iCol = 0; iCol< model_.lp_.num_col_; iCol++) 
+	  printf("Col %1d: primal [%11.6g, %11.6g, %11.6g] dual %11.6g\n",
+		 int(iCol), model_.lp_.col_lower_[iCol], solution_.col_value[iCol], model_.lp_.col_upper_[iCol],
+		 solution_.col_dual[iCol]);
+	for (HighsInt iRow = 0; iRow< model_.lp_.num_row_; iRow++) 
+	  printf("Row %1d: primal [%11.6g, %11.6g, %11.6g] dual %11.6g\n",
+		 int(iRow), model_.lp_.row_lower_[iRow], solution_.row_value[iRow], model_.lp_.row_upper_[iRow],
+		 solution_.row_dual[iRow]);
+
+	printf("getLpKktFailures yields %d primal and %d dual infeasibilities\n",
+	       int(info_.num_primal_infeasibilities),
+	       int(info_.num_dual_infeasibilities));
+	highsLogUser(options_.log_options, HighsLogType::kInfo,
+		     "Postsolve yields primal %ssolution, but no basis: model status is %s; return_status is %s\n",
+		     solution_.dual_valid ? "and dual " : "",
+		     modelStatusToString(model_status_).c_str());
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,

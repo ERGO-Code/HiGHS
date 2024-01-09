@@ -184,9 +184,26 @@ HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
 HighsInt Highs_postsolve(void* highs,
 			 const double* col_value,
 			 const double* col_dual, const double* row_dual) {
-  HighsInt num_col = ((Highs*)highs)->getNumCol();
-  HighsInt num_row = ((Highs*)highs)->getNumRow();
+  const HighsLp& presolved_lp = ((Highs*)highs)->getPresolvedLp();
+  HighsInt num_col = presolved_lp.num_col_;
+  HighsInt num_row = presolved_lp.num_row_;
+  // Create a HighsSolution from what's been passed
   HighsSolution solution;
+  if (col_value) {
+    solution.value_valid = true;
+    solution.col_value.resize(num_col);
+    // No need for primal row values, but resize the vector for later
+    // use
+    solution.row_value.resize(num_row);
+  }
+  if (col_dual || row_dual) {
+    // If column or row duals are passed, assume that they are
+    // valid. If either is a null pointer, then the corresponding
+    // vector will have no data, and the size check will fail
+    solution.dual_valid = true;
+    if (col_dual) solution.col_dual.resize(num_col);
+    if (row_dual) solution.row_dual.resize(num_row);
+  }
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (col_value) solution.col_value[iCol] = col_value[iCol];
     if (col_dual) solution.col_dual[iCol] = col_dual[iCol];

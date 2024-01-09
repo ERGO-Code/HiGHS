@@ -1159,37 +1159,72 @@ void pass_presolve_get_lp() {
 
   return_status = Highs_presolve(highs);
   assert( return_status == kHighsStatusOk );
-  HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
-  HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
-  HighsInt presolved_num_nz = Highs_getPresolvedNumNz(highs);
-  HighsInt presolved_a_format = kHighsMatrixFormatColwise;
-  HighsInt presolved_sense;
-  double presolved_offset;
-  double* presolved_col_cost = (double*)malloc(sizeof(double) * presolved_num_col);
-  double* presolved_col_lower = (double*)malloc(sizeof(double) * presolved_num_col);
-  double* presolved_col_upper = (double*)malloc(sizeof(double) * presolved_num_col);
-  double* presolved_row_lower = (double*)malloc(sizeof(double) * presolved_num_row);
-  double* presolved_row_upper = (double*)malloc(sizeof(double) * presolved_num_row);
-  HighsInt* presolved_a_start = (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col+1));
-  HighsInt* presolved_a_index = (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
-  double* presolved_a_value = (double*)malloc(sizeof(double) * presolved_num_nz);
+  for (HighsInt k = 0; k < 2; k++) {
+    // Loop twice: once for col-wise; once for row-wise
+    HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
+    HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
+    HighsInt presolved_num_nz = Highs_getPresolvedNumNz(highs);
+    HighsInt presolved_a_format = k == 0 ? kHighsMatrixFormatColwise : kHighsMatrixFormatRowwise;
+    HighsInt presolved_sense;
+    double presolved_offset;
+    double* presolved_col_cost = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_col_lower = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_col_upper = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_row_lower = (double*)malloc(sizeof(double) * presolved_num_row);
+    double* presolved_row_upper = (double*)malloc(sizeof(double) * presolved_num_row);
+    HighsInt* presolved_a_start = (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col+1));
+    HighsInt* presolved_a_index = (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
+    double* presolved_a_value = (double*)malloc(sizeof(double) * presolved_num_nz);
   
-  return_status = Highs_getPresolvedLp(highs, presolved_a_format,
-				       &presolved_num_col, &presolved_num_row, &presolved_num_nz,
-				       &presolved_sense, &presolved_offset,
-				       presolved_col_cost, presolved_col_lower, presolved_col_upper,
-				       presolved_row_lower, presolved_row_upper,
-				       presolved_a_start, presolved_a_index, presolved_a_value, NULL);
-  assert( return_status == kHighsStatusOk );
+    return_status = Highs_getPresolvedLp(highs, presolved_a_format,
+					 &presolved_num_col, &presolved_num_row, &presolved_num_nz,
+					 &presolved_sense, &presolved_offset,
+					 presolved_col_cost, presolved_col_lower, presolved_col_upper,
+					 presolved_row_lower, presolved_row_upper,
+					 presolved_a_start, presolved_a_index, presolved_a_value, NULL);
+    assert( return_status == kHighsStatusOk );
+    printf("\n%s presolved LP has %d cols; %d rows and %d nonzeros\n\n",
+	   k == 0 ? "Col-wise" : "Row-wise",
+	   (int)presolved_num_col, (int)presolved_num_row, (int)presolved_num_nz);
+    // Solve the presolved LP within a local version of HiGHS
+    void* local_highs;
+    local_highs = Highs_create();
+    Highs_setStringOptionValue(local_highs, "presolve", "off");
+    return_status = Highs_passLp(local_highs,
+				 presolved_num_col, presolved_num_row, presolved_num_nz,
+				 presolved_a_format, presolved_sense, presolved_offset,
+				 presolved_col_cost, presolved_col_lower, presolved_col_upper,
+				 presolved_row_lower, presolved_row_upper,
+				 presolved_a_start, presolved_a_index, presolved_a_value);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_run(local_highs);
+    
+    double* col_value = (double*)malloc(sizeof(double) * num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * num_row);
 
-  free(presolved_col_cost);
-  free(presolved_col_lower);
-  free(presolved_col_upper);
-  free(presolved_row_lower);
-  free(presolved_row_upper);
-  free(presolved_a_start);
-  free(presolved_a_index);
-  free(presolved_a_value);
+    return_status = Highs_getSolution(local_highs, col_value, NULL, col_dual, row_dual);
+    assert( return_status == kHighsStatusOk );
+
+    return_status = Highs_postsolve(highs, col_value, col_dual, row_dual);
+    assert( return_status == kHighsStatusOk );
+
+    
+
+    free(presolved_col_cost);
+    free(presolved_col_lower);
+    free(presolved_col_upper);
+    free(presolved_row_lower);
+    free(presolved_row_upper);
+    free(presolved_a_start);
+    free(presolved_a_index);
+    free(presolved_a_value);
+    free(col_value);
+    free(col_dual);
+    free(row_dual);
+
+    
+  }
 }
 
 void options() {
