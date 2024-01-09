@@ -1217,7 +1217,7 @@ void pass_presolve_get_lp() {
     double* col_dual = (double*)malloc(sizeof(double) * num_col);
     double* row_dual = (double*)malloc(sizeof(double) * num_row);
 
-    return_status = Highs_getSolution(local_highs, col_value, NULL, col_dual, row_dual);
+    return_status = Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);
     assert( return_status == kHighsStatusOk );
 
     return_status = Highs_postsolve(highs, col_value, col_dual, row_dual);

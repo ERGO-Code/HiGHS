@@ -2901,6 +2901,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
                              const HighsBasis& basis) {
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
+      model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
       model_presolve_status_ == HighsPresolveStatus::kTimeout;
@@ -3745,6 +3746,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 	printf("getLpKktFailures yields %d primal and %d dual infeasibilities\n",
 	       int(info_.num_primal_infeasibilities),
 	       int(info_.num_dual_infeasibilities));
+	if (info_.num_primal_infeasibilities == 0 &&
+	    info_.num_dual_infeasibilities == 0) model_status_ = HighsModelStatus::kOptimal;
 	highsLogUser(options_.log_options, HighsLogType::kInfo,
 		     "Postsolve yields primal %ssolution, but no basis: model status is %s; return_status is %s\n",
 		     solution_.dual_valid ? "and dual " : "",
