@@ -1133,14 +1133,15 @@ void pass_presolve_get_lp() {
   HighsInt return_status;
   
   //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-   const HighsInt num_col = 2;
-  const HighsInt num_row = 3;
-  const HighsInt num_nz = 5;
-
   HighsInt a_format = kHighsMatrixFormatColwise;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   // Define the column costs, lower bounds and upper bounds
+  /*
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  const HighsInt num_nz = 5;
+
   double col_cost[2] = {2.0, 3.0};
   double col_lower[2] = {0.0, 1.0};
   double col_upper[2] = {3.0, kHighsInf};
@@ -1150,7 +1151,20 @@ void pass_presolve_get_lp() {
   HighsInt a_start[2] = {0, 2};
   HighsInt a_index[5] = {1, 2, 0, 1, 2};
   double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  */
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 2;
+  const HighsInt num_nz = 4;
 
+  double col_cost[2] = {-10, -25};
+  double col_lower[2] = {0.0, 0.0};
+  double col_upper[2] = {kHighsInf, kHighsInf};
+  // Define the row lower bounds and upper bounds
+  double row_lower[2] = {-kHighsInf, -kHighsInf};
+  double row_upper[2] = {80.0, 120};
+  HighsInt a_start[2] = {0, 2};
+  HighsInt a_index[4] = {0, 1, 0, 1};
+  double a_value[4] = {1.0, 1.0, 2.0, 4.0};
   return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense, offset,
 			       col_cost, col_lower, col_upper,
 			       row_lower, row_upper,
