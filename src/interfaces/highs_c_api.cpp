@@ -1039,6 +1039,64 @@ HighsInt Highs_getPresolvedNumNz(const void* highs) {
   return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
 }
 
+HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
+			      HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz, 
+			      HighsInt* sense, double* offset, double* col_cost,
+			      double* col_lower, double* col_upper, double* row_lower,
+			      double* row_upper, HighsInt* a_start, HighsInt* a_index,
+			      double* a_value, HighsInt* integrality) {
+  *sense = (HighsInt)lp.sense_;
+  *offset = lp.offset_;
+  *num_col = lp.num_col_;
+  *num_row = lp.num_row_;
+  if (*num_col > 0) {
+    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
+    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
+    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
+  }
+  if (*num_row > 0) {
+    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
+    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
+  }
+
+  // Nothing to do if one of the matrix dimensions is zero
+  if (*num_col > 0 && *num_row > 0) {
+    // Determine the desired orientation and number of start entries to
+    // be copied
+    const HighsInt num_start_entries =
+      a_format == MatrixFormat::kColwise ? *num_col : *num_row;
+    if ((a_format == MatrixFormat::kColwise && lp.a_matrix_.isColwise()) ||
+	(a_format == MatrixFormat::kRowwise && lp.a_matrix_.isRowwise())) {
+      // Incumbent format is OK
+      *num_nz = lp.a_matrix_.numNz();
+      memcpy(a_start, lp.a_matrix_.start_.data(),
+	     num_start_entries * sizeof(HighsInt));
+      memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
+      memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
+    } else {
+      // Take a copy and transpose it
+      HighsSparseMatrix local_matrix = lp.a_matrix_;
+      if (a_format == MatrixFormat::kColwise) {
+	assert(local_matrix.isRowwise());
+	local_matrix.ensureColwise();
+      } else {
+	assert(local_matrix.isColwise());
+	local_matrix.ensureRowwise();
+      }
+      *num_nz = local_matrix.numNz();
+      memcpy(a_start, local_matrix.start_.data(),
+	     num_start_entries * sizeof(HighsInt));
+      memcpy(a_index, local_matrix.index_.data(), *num_nz * sizeof(HighsInt));
+      memcpy(a_value, local_matrix.value_.data(), *num_nz * sizeof(double));
+    }
+  }    
+  if (HighsInt(lp.integrality_.size())) {
+    for (int iCol = 0; iCol < *num_col; iCol++)
+      integrality[iCol] = HighsInt(lp.integrality_[iCol]);
+  }
+  return kHighsStatusOk;
+}
+
 HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         const HighsInt q_format, HighsInt* num_col,
                         HighsInt* num_row, HighsInt* num_nz, HighsInt* q_num_nz,
@@ -1102,68 +1160,6 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   return kHighsStatusOk;
 }
 
-HighsInt Highs_getLpData(const HighsLp& lp, const HighsInt a_format,
-			 HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz, 
-			 HighsInt* sense, double* offset, double* col_cost,
-			 double* col_lower, double* col_upper, double* row_lower,
-			 double* row_upper, HighsInt* a_start, HighsInt* a_index,
-			 double* a_value, HighsInt* integrality) {
-  *sense = (HighsInt)lp.sense_;
-  *offset = lp.offset_;
-  *num_col = lp.num_col_;
-  *num_row = lp.num_row_;
-  if (*num_col > 0) {
-    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
-    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
-    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
-  }
-  if (*num_row > 0) {
-    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
-    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
-  }
-
-  // Nothing to do if one of the matrix dimensions is zero
-  if (*num_col > 0 && *num_row > 0) {
-    // Determine the desired orientation and number of start entries to
-    // be copied
-    MatrixFormat desired_a_format = MatrixFormat::kColwise;
-    HighsInt num_start_entries = *num_col;
-    if (a_format == (HighsInt)MatrixFormat::kRowwise) {
-      desired_a_format = MatrixFormat::kRowwise;
-      num_start_entries = *num_row;
-    }
-    if ((desired_a_format == MatrixFormat::kColwise && lp.a_matrix_.isColwise()) ||
-	(desired_a_format == MatrixFormat::kRowwise && lp.a_matrix_.isRowwise())) {
-      // Incumbent format is OK
-      *num_nz = lp.a_matrix_.numNz();
-      memcpy(a_start, lp.a_matrix_.start_.data(),
-	     num_start_entries * sizeof(HighsInt));
-      memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
-      memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
-    } else {
-      // Take a copy and transpose it
-      HighsSparseMatrix local_matrix = lp.a_matrix_;
-      if (desired_a_format == MatrixFormat::kColwise) {
-	assert(local_matrix.isRowwise());
-	local_matrix.ensureColwise();
-      } else {
-	assert(local_matrix.isColwise());
-	local_matrix.ensureRowwise();
-      }
-      *num_nz = local_matrix.numNz();
-      memcpy(a_start, local_matrix.start_.data(),
-	     num_start_entries * sizeof(HighsInt));
-      memcpy(a_index, local_matrix.index_.data(), *num_nz * sizeof(HighsInt));
-      memcpy(a_value, local_matrix.value_.data(), *num_nz * sizeof(double));
-    }
-  }    
-  if ((HighsInt)lp.integrality_.size()) {
-    for (int iCol = 0; iCol < *num_col; iCol++)
-      integrality[iCol] = (HighsInt)lp.integrality_[iCol];
-  }
-  return kHighsStatusOk;
-}
-
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
 			      HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz, 
 			      HighsInt* sense, double* offset, double* col_cost,
@@ -1171,12 +1167,16 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
 			      double* row_upper, HighsInt* a_start, HighsInt* a_index,
 			      double* a_value, HighsInt* integrality) {
   const HighsLp& lp = ((Highs*)highs)->getPresolvedLp();
-  return Highs_getLpData(lp, a_format,
-			 num_col,  num_row,  num_nz, 
-			 sense,  offset,  col_cost,
-			 col_lower,  col_upper,  row_lower,
-			 row_upper,  a_start,  a_index,
-			 a_value,  integrality);
+  const MatrixFormat desired_a_format =
+    a_format == HighsInt(MatrixFormat::kColwise) ?
+    MatrixFormat::kColwise :
+    MatrixFormat::kRowwise;
+  return Highs_getHighsLpData(lp, desired_a_format,
+			      num_col, num_row, num_nz, 
+			      sense, offset, col_cost,
+			      col_lower, col_upper, row_lower,
+			      row_upper, a_start, a_index,
+			      a_value, integrality);
 }
 
 HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
