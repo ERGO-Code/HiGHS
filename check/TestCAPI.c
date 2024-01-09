@@ -1137,7 +1137,7 @@ void pass_presolve_get_lp() {
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
   // Define the column costs, lower bounds and upper bounds
-  /*
+
   const HighsInt num_col = 2;
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
@@ -1151,20 +1151,7 @@ void pass_presolve_get_lp() {
   HighsInt a_start[2] = {0, 2};
   HighsInt a_index[5] = {1, 2, 0, 1, 2};
   double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
-  */
-  const HighsInt num_col = 2;
-  const HighsInt num_row = 2;
-  const HighsInt num_nz = 4;
 
-  double col_cost[2] = {-10, -25};
-  double col_lower[2] = {0.0, 0.0};
-  double col_upper[2] = {kHighsInf, kHighsInf};
-  // Define the row lower bounds and upper bounds
-  double row_lower[2] = {-kHighsInf, -kHighsInf};
-  double row_upper[2] = {80.0, 120};
-  HighsInt a_start[2] = {0, 2};
-  HighsInt a_index[4] = {0, 1, 0, 1};
-  double a_value[4] = {1.0, 1.0, 2.0, 4.0};
   return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense, offset,
 			       col_cost, col_lower, col_upper,
 			       row_lower, row_upper,
@@ -1223,7 +1210,16 @@ void pass_presolve_get_lp() {
     return_status = Highs_postsolve(highs, col_value, col_dual, row_dual);
     assert( return_status == kHighsStatusOk );
 
+    model_status = Highs_getModelStatus(highs);
+    assert( model_status == kHighsModelStatusOptimal );
     
+    // With just the primal solution, optimality cannot be determined
+
+    return_status = Highs_postsolve(highs, col_value, NULL, NULL);
+    assert( return_status == kHighsStatusWarning );
+
+    model_status = Highs_getModelStatus(highs);
+    assert( model_status == kHighsModelStatusUnknown );
 
     free(presolved_col_cost);
     free(presolved_col_lower);

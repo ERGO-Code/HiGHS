@@ -366,9 +366,8 @@ HighsInt Highs_run(void* highs);
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-  HighsInt Highs_postsolve(void* highs,
-			   const double* col_value,
-			   const double* col_dual, const double* row_dual);
+HighsInt Highs_postsolve(void* highs, const double* col_value,
+                         const double* col_dual, const double* row_dual);
 
 /**
  * Write the solution information (including dual and basis status, if
@@ -1943,11 +1942,13 @@ HighsInt Highs_getPresolvedNumCol(const void* highs);
 HighsInt Highs_getPresolvedNumRow(const void* highs);
 
 /**
- * Return the number of nonzeros in the constraint matrix of the presolved model.
+ * Return the number of nonzeros in the constraint matrix of the presolved
+ * model.
  *
  * @param highs     A pointer to the Highs instance.
  *
- * @returns The number of nonzeros in the constraint matrix of the presolved model.
+ * @returns The number of nonzeros in the constraint matrix of the presolved
+ * model.
  */
 HighsInt Highs_getPresolvedNumNz(const void* highs);
 
@@ -1993,12 +1994,13 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
-			      HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
-			      HighsInt* sense,
-			      double* offset, double* col_cost, double* col_lower,
-			      double* col_upper, double* row_lower, double* row_upper,
-			      HighsInt* a_start, HighsInt* a_index, double* a_value,
-			      HighsInt* integrality);
+                              HighsInt* num_col, HighsInt* num_row,
+                              HighsInt* num_nz, HighsInt* sense, double* offset,
+                              double* col_cost, double* col_lower,
+                              double* col_upper, double* row_lower,
+                              double* row_upper, HighsInt* a_start,
+                              HighsInt* a_index, double* a_value,
+                              HighsInt* integrality);
 
 /**
  * Set a primal (and possibly dual) solution as a starting point, then run

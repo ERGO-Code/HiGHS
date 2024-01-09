@@ -177,13 +177,14 @@ HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
 const char* Highs_githash(void) { return highsGithash(); }
 const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
-HighsInt Highs_presolve(void* highs) { return (HighsInt)((Highs*)highs)->presolve(); }
+HighsInt Highs_presolve(void* highs) {
+  return (HighsInt)((Highs*)highs)->presolve();
+}
 
 HighsInt Highs_run(void* highs) { return (HighsInt)((Highs*)highs)->run(); }
 
-HighsInt Highs_postsolve(void* highs,
-			 const double* col_value,
-			 const double* col_dual, const double* row_dual) {
+HighsInt Highs_postsolve(void* highs, const double* col_value,
+                         const double* col_dual, const double* row_dual) {
   const HighsLp& presolved_lp = ((Highs*)highs)->getPresolvedLp();
   HighsInt num_col = presolved_lp.num_col_;
   HighsInt num_row = presolved_lp.num_row_;
@@ -209,7 +210,7 @@ HighsInt Highs_postsolve(void* highs,
     if (col_dual) solution.col_dual[iCol] = col_dual[iCol];
   }
   if (row_dual) {
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) 
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
       solution.row_dual[iRow] = row_dual[iRow];
   }
   return (HighsInt)((Highs*)highs)->postsolve(solution);
@@ -1076,11 +1077,13 @@ HighsInt Highs_getPresolvedNumNz(const void* highs) {
 }
 
 HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
-			      HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz, 
-			      HighsInt* sense, double* offset, double* col_cost,
-			      double* col_lower, double* col_upper, double* row_lower,
-			      double* row_upper, HighsInt* a_start, HighsInt* a_index,
-			      double* a_value, HighsInt* integrality) {
+                              HighsInt* num_col, HighsInt* num_row,
+                              HighsInt* num_nz, HighsInt* sense, double* offset,
+                              double* col_cost, double* col_lower,
+                              double* col_upper, double* row_lower,
+                              double* row_upper, HighsInt* a_start,
+                              HighsInt* a_index, double* a_value,
+                              HighsInt* integrality) {
   *sense = (HighsInt)lp.sense_;
   *offset = lp.offset_;
   *num_col = lp.num_col_;
@@ -1100,32 +1103,32 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
     // Determine the desired orientation and number of start entries to
     // be copied
     const HighsInt num_start_entries =
-      a_format == MatrixFormat::kColwise ? *num_col : *num_row;
+        a_format == MatrixFormat::kColwise ? *num_col : *num_row;
     if ((a_format == MatrixFormat::kColwise && lp.a_matrix_.isColwise()) ||
-	(a_format == MatrixFormat::kRowwise && lp.a_matrix_.isRowwise())) {
+        (a_format == MatrixFormat::kRowwise && lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
       *num_nz = lp.a_matrix_.numNz();
       memcpy(a_start, lp.a_matrix_.start_.data(),
-	     num_start_entries * sizeof(HighsInt));
+             num_start_entries * sizeof(HighsInt));
       memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
       memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
     } else {
       // Take a copy and transpose it
       HighsSparseMatrix local_matrix = lp.a_matrix_;
       if (a_format == MatrixFormat::kColwise) {
-	assert(local_matrix.isRowwise());
-	local_matrix.ensureColwise();
+        assert(local_matrix.isRowwise());
+        local_matrix.ensureColwise();
       } else {
-	assert(local_matrix.isColwise());
-	local_matrix.ensureRowwise();
+        assert(local_matrix.isColwise());
+        local_matrix.ensureRowwise();
       }
       *num_nz = local_matrix.numNz();
       memcpy(a_start, local_matrix.start_.data(),
-	     num_start_entries * sizeof(HighsInt));
+             num_start_entries * sizeof(HighsInt));
       memcpy(a_index, local_matrix.index_.data(), *num_nz * sizeof(HighsInt));
       memcpy(a_value, local_matrix.value_.data(), *num_nz * sizeof(double));
     }
-  }    
+  }
   if (HighsInt(lp.integrality_.size())) {
     for (int iCol = 0; iCol < *num_col; iCol++)
       integrality[iCol] = HighsInt(lp.integrality_[iCol]);
@@ -1197,22 +1200,21 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
 }
 
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
-			      HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz, 
-			      HighsInt* sense, double* offset, double* col_cost,
-			      double* col_lower, double* col_upper, double* row_lower,
-			      double* row_upper, HighsInt* a_start, HighsInt* a_index,
-			      double* a_value, HighsInt* integrality) {
+                              HighsInt* num_col, HighsInt* num_row,
+                              HighsInt* num_nz, HighsInt* sense, double* offset,
+                              double* col_cost, double* col_lower,
+                              double* col_upper, double* row_lower,
+                              double* row_upper, HighsInt* a_start,
+                              HighsInt* a_index, double* a_value,
+                              HighsInt* integrality) {
   const HighsLp& lp = ((Highs*)highs)->getPresolvedLp();
   const MatrixFormat desired_a_format =
-    a_format == HighsInt(MatrixFormat::kColwise) ?
-    MatrixFormat::kColwise :
-    MatrixFormat::kRowwise;
-  return Highs_getHighsLpData(lp, desired_a_format,
-			      num_col, num_row, num_nz, 
-			      sense, offset, col_cost,
-			      col_lower, col_upper, row_lower,
-			      row_upper, a_start, a_index,
-			      a_value, integrality);
+      a_format == HighsInt(MatrixFormat::kColwise) ? MatrixFormat::kColwise
+                                                   : MatrixFormat::kRowwise;
+  return Highs_getHighsLpData(lp, desired_a_format, num_col, num_row, num_nz,
+                              sense, offset, col_cost, col_lower, col_upper,
+                              row_lower, row_upper, a_start, a_index, a_value,
+                              integrality);
 }
 
 HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
