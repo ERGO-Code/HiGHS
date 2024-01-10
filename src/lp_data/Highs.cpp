@@ -3668,7 +3668,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       solution_.value_valid = true;
       solution_.dual_valid = true;
       // Set basis and its status
-      basis_.valid = presolve_.data_.recovered_basis_.valid;
+      basis_.valid = true;
       basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
@@ -3685,7 +3685,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       // The basis returned from postsolve is just basic/nonbasic
       // and EKK expects a refined basis, so set it up now
       HighsLp& incumbent_lp = model_.lp_;
-      if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
+      refineBasis(incumbent_lp, solution_, basis_);
       // Scrap the EKK data from solving the presolved LP
       ekk_instance_.invalidate();
       ekk_instance_.lp_name_ = "Postsolve LP";
