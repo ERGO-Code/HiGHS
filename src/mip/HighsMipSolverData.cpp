@@ -1004,11 +1004,6 @@ void HighsMipSolverData::performRestart() {
       restart_presolve_reduction_limit >= 0
           ? num_reductions + restart_presolve_reduction_limit
           : -1;
-  printf(
-      "HighsMipSolverData::performRestart Reductions = %d; "
-      "restart_presolve_reduction_limit = %d; new limit = %d\n",
-      int(num_reductions), int(restart_presolve_reduction_limit),
-      int(further_presolve_reduction_limit));
   runPresolve(further_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
