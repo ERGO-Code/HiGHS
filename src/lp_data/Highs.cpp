@@ -3623,6 +3623,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   // Ignore any row values
   presolve_.data_.recovered_solution_.row_value.assign(presolved_lp.num_row_,
                                                        0);
+  presolve_.data_.recovered_solution_.value_valid = true;
+  
   if (this->model_.isMip() && !basis.valid) {
     // Postsolving a MIP without a valid basis - which, if valid,
     // would imply that the relaxation had been solved, a case handled
@@ -3679,6 +3681,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                      "Dual solution provided to postsolve is incorrect size\n");
         return HighsStatus::kError;
       }
+    } else {
+      presolve_.data_.recovered_solution_.dual_valid = false;
     }
     // Copy in the basis provided. It's already been checked for
     // consistency, so assume that it's valid
