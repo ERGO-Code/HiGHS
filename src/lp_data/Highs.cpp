@@ -289,6 +289,11 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
   return return_status;
 }
 
+/**
+ * @brief Get the size of HighsInt
+ */
+// HighsInt getSizeofHighsInt() {
+
 // Methods below change the incumbent model or solver information
 // associated with it. Hence returnFromHighs is called at the end of
 // each
