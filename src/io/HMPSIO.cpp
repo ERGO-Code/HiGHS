@@ -633,6 +633,7 @@ HighsStatus writeMps(
         "Cannot write fixed MPS with names of length (up to) %" HIGHSINT_FORMAT
         "\n",
         max_name_length);
+    fclose(file);
     return HighsStatus::kError;
   }
   assert(objective_name != "");
