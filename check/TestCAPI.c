@@ -985,9 +985,9 @@ void full_api_qp() {
   HighsInt q_dim = 1;
   HighsInt q_num_nz = 1;
   HighsInt q_format = kHighsHessianFormatTriangular;
-  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt*) * q_dim);
-  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt*) * q_num_nz);
-  double* q_value = (double*)malloc(sizeof(double*) * q_num_nz);
+  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
+  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
+  double* q_value = (double*)malloc(sizeof(double) * q_num_nz);
   q_start[0] = 0;
   q_index[0] = 0;
   q_value[0] = 2.0;
