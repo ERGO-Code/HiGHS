@@ -802,6 +802,14 @@ class Highs {
                                     const HighsVarType* integrality);
 
   /**
+   * @brief Clear the integrality of all columns
+   */
+  HighsStatus clearIntegrality() {
+    this->model_.lp_.integrality_.clear();
+    return HighsStatus::kOk;
+  }
+
+  /**
    * @brief Change the cost of a column
    */
   HighsStatus changeColCost(const HighsInt col, const double cost);

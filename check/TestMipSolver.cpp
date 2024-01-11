@@ -156,6 +156,20 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(std::fabs(info.mip_gap) < 1e-12);
 }
 
+TEST_CASE("MIP-clear-integrality", "[highs_test_mip_solver]") {
+  SpecialLps special_lps;
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.distillationMip(lp, require_model_status, optimal_objective);
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  REQUIRE(highs.getLp().integrality_.size() > 0);
+  highs.clearIntegrality();
+  REQUIRE(highs.getLp().integrality_.size() == 0);
+}
+
 TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);

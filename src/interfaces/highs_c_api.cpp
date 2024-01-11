@@ -791,6 +791,10 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
       ->changeColsIntegrality(mask, pass_integrality.data());
 }
 
+HighsInt Highs_clearIntegrality(void* highs) {
+  return (HighsInt)((Highs*)highs)->clearIntegrality();
+}
+
 HighsInt Highs_changeColCost(void* highs, const HighsInt col,
                              const double cost) {
   return (HighsInt)((Highs*)highs)->changeColCost(col, cost);

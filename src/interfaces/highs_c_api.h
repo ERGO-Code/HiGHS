@@ -1360,6 +1360,15 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
                                            const HighsInt* integrality);
 
 /**
+ * Clear the integrality of all columns
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_clearIntegrality(void* highs);
+
+/**
  * Change the objective coefficient of a column.
  *
  * @param highs     A pointer to the Highs instance.
