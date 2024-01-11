@@ -3624,7 +3624,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   presolve_.data_.recovered_solution_.row_value.assign(presolved_lp.num_row_,
                                                        0);
   presolve_.data_.recovered_solution_.value_valid = true;
-  
+
   if (this->model_.isMip() && !basis.valid) {
     // Postsolving a MIP without a valid basis - which, if valid,
     // would imply that the relaxation had been solved, a case handled
@@ -3681,7 +3681,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                      "Dual solution provided to postsolve is incorrect size\n");
         return HighsStatus::kError;
       }
-      presolve_.data_.recovered_solution_.dual_valid = true;      
+      presolve_.data_.recovered_solution_.dual_valid = true;
     } else {
       presolve_.data_.recovered_solution_.dual_valid = false;
     }
@@ -3699,27 +3699,11 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       solution_.clear();
       solution_ = presolve_.data_.recovered_solution_;
       assert(solution_.value_valid);
-      printf(
-          "Recovered solution has value.valid = %d;   col_value.size() = %d;  "
-          "row_value.size() = %d\n",
-          solution_.value_valid, int(solution_.col_value.size()),
-          int(solution_.row_value.size()));
-      printf(
-          "Recovered solution has  dual.valid = %d;    col_dual.size() = %d;   "
-          "row_dual.size() = %d\n",
-          solution_.dual_valid, int(solution_.col_dual.size()),
-          int(solution_.row_dual.size()));
       if (!solution_.dual_valid) {
         solution_.col_dual.assign(model_.lp_.num_col_, 0);
         solution_.row_dual.assign(model_.lp_.num_row_, 0);
       }
       basis_ = presolve_.data_.recovered_basis_;
-      printf(
-          "Recovered    basis has       valid = %d;  col_status.size() = %d; "
-          "row_status.size() = %d\n",
-          presolve_.data_.recovered_basis_.valid,
-          int(presolve_.data_.recovered_basis_.col_status.size()),
-          int(presolve_.data_.recovered_basis_.row_status.size()));
       // Validity of the solution and basis should be inherited
       //
       // solution_.value_valid = true;
@@ -3772,32 +3756,18 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         info_.objective_function_value =
             model_.lp_.objectiveValue(solution_.col_value);
         getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
-        for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
-          printf("Col %1d: primal [%11.6g, %11.6g, %11.6g] dual %11.6g\n",
-                 int(iCol), model_.lp_.col_lower_[iCol],
-                 solution_.col_value[iCol], model_.lp_.col_upper_[iCol],
-                 solution_.col_dual[iCol]);
-        for (HighsInt iRow = 0; iRow < model_.lp_.num_row_; iRow++)
-          printf("Row %1d: primal [%11.6g, %11.6g, %11.6g] dual %11.6g\n",
-                 int(iRow), model_.lp_.row_lower_[iRow],
-                 solution_.row_value[iRow], model_.lp_.row_upper_[iRow],
-                 solution_.row_dual[iRow]);
-
-        printf(
-            "getLpKktFailures yields %d primal and %d dual infeasibilities\n",
-            int(info_.num_primal_infeasibilities),
-            int(info_.num_dual_infeasibilities));
         if (info_.num_primal_infeasibilities == 0 &&
             info_.num_dual_infeasibilities == 0) {
           model_status_ = HighsModelStatus::kOptimal;
         } else {
           model_status_ = HighsModelStatus::kUnknown;
         }
-        highsLogUser(options_.log_options, HighsLogType::kInfo,
-                     "Postsolve yields primal %ssolution, but no basis: model "
-                     "status is %s\n",
-                     solution_.dual_valid ? "and dual " : "",
-                     modelStatusToString(model_status_).c_str());
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Pure postsolve yields primal %ssolution, but no basis: model "
+            "status is %s\n",
+            solution_.dual_valid ? "and dual " : "",
+            modelStatusToString(model_status_).c_str());
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,

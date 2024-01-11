@@ -1076,7 +1076,9 @@ HighsInt Highs_getPresolvedNumNz(const void* highs) {
   return ((Highs*)highs)->getPresolvedLp().a_matrix_.numNz();
 }
 
-HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
+// Gets pointers to all the public data members of HighsLp: avoids
+// duplicate code in Highs_getModel, Highs_getPresolvedLp,
+HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
                               HighsInt* num_col, HighsInt* num_row,
                               HighsInt* num_nz, HighsInt* sense, double* offset,
                               double* col_cost, double* col_lower,
@@ -1084,6 +1086,9 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
                               double* row_upper, HighsInt* a_start,
                               HighsInt* a_index, double* a_value,
                               HighsInt* integrality) {
+  const MatrixFormat desired_a_format =
+      a_format == HighsInt(MatrixFormat::kColwise) ? MatrixFormat::kColwise
+                                                   : MatrixFormat::kRowwise;
   *sense = (HighsInt)lp.sense_;
   *offset = lp.offset_;
   *num_col = lp.num_col_;
@@ -1103,9 +1108,11 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
     // Determine the desired orientation and number of start entries to
     // be copied
     const HighsInt num_start_entries =
-        a_format == MatrixFormat::kColwise ? *num_col : *num_row;
-    if ((a_format == MatrixFormat::kColwise && lp.a_matrix_.isColwise()) ||
-        (a_format == MatrixFormat::kRowwise && lp.a_matrix_.isRowwise())) {
+        desired_a_format == MatrixFormat::kColwise ? *num_col : *num_row;
+    if ((desired_a_format == MatrixFormat::kColwise &&
+         lp.a_matrix_.isColwise()) ||
+        (desired_a_format == MatrixFormat::kRowwise &&
+         lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
       *num_nz = lp.a_matrix_.numNz();
       memcpy(a_start, lp.a_matrix_.start_.data(),
@@ -1115,7 +1122,7 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const MatrixFormat a_format,
     } else {
       // Take a copy and transpose it
       HighsSparseMatrix local_matrix = lp.a_matrix_;
-      if (a_format == MatrixFormat::kColwise) {
+      if (desired_a_format == MatrixFormat::kColwise) {
         assert(local_matrix.isRowwise());
         local_matrix.ensureColwise();
       } else {
@@ -1144,11 +1151,10 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         double* row_upper, HighsInt* a_start, HighsInt* a_index,
                         double* a_value, HighsInt* q_start, HighsInt* q_index,
                         double* q_value, HighsInt* integrality) {
-  const HighsLp& lp = ((Highs*)highs)->getModel().lp_;
-  HighsInt return_status = Highs_getHighsLpData(lp, a_format, num_col, num_row, num_nz,
-						sense, offset, col_cost, col_lower, col_upper,
-						row_lower, row_upper, a_start, a_index, a_value,
-						integrality);
+  HighsInt return_status = Highs_getHighsLpData(
+      ((Highs*)highs)->getLp(), a_format, num_col, num_row, num_nz, sense,
+      offset, col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
+      a_index, a_value, integrality);
   if (return_status != kHighsStatusOk) return return_status;
   const HighsHessian& hessian = ((Highs*)highs)->getModel().hessian_;
   if (hessian.dim_ > 0) {
@@ -1160,6 +1166,18 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   return kHighsStatusOk;
 }
 
+HighsInt Highs_getLp(const void* highs, const HighsInt a_format,
+                     HighsInt* num_col, HighsInt* num_row, HighsInt* num_nz,
+                     HighsInt* sense, double* offset, double* col_cost,
+                     double* col_lower, double* col_upper, double* row_lower,
+                     double* row_upper, HighsInt* a_start, HighsInt* a_index,
+                     double* a_value, HighsInt* integrality) {
+  return Highs_getHighsLpData(((Highs*)highs)->getLp(), a_format, num_col,
+                              num_row, num_nz, sense, offset, col_cost,
+                              col_lower, col_upper, row_lower, row_upper,
+                              a_start, a_index, a_value, integrality);
+}
+
 HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               HighsInt* num_col, HighsInt* num_row,
                               HighsInt* num_nz, HighsInt* sense, double* offset,
@@ -1168,14 +1186,10 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               double* row_upper, HighsInt* a_start,
                               HighsInt* a_index, double* a_value,
                               HighsInt* integrality) {
-  const HighsLp& lp = ((Highs*)highs)->getPresolvedLp();
-  const MatrixFormat desired_a_format =
-      a_format == HighsInt(MatrixFormat::kColwise) ? MatrixFormat::kColwise
-                                                   : MatrixFormat::kRowwise;
-  return Highs_getHighsLpData(lp, desired_a_format, num_col, num_row, num_nz,
-                              sense, offset, col_cost, col_lower, col_upper,
-                              row_lower, row_upper, a_start, a_index, a_value,
-                              integrality);
+  return Highs_getHighsLpData(((Highs*)highs)->getPresolvedLp(), a_format,
+                              num_col, num_row, num_nz, sense, offset, col_cost,
+                              col_lower, col_upper, row_lower, row_upper,
+                              a_start, a_index, a_value, integrality);
 }
 
 HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,

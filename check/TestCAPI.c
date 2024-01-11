@@ -1132,7 +1132,7 @@ void pass_presolve_get_lp() {
   HighsInt model_status;
   HighsInt return_status;
   
-  //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt a_format = kHighsMatrixFormatColwise;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
@@ -1184,12 +1184,10 @@ void pass_presolve_get_lp() {
 					 presolved_row_lower, presolved_row_upper,
 					 presolved_a_start, presolved_a_index, presolved_a_value, NULL);
     assert( return_status == kHighsStatusOk );
-    printf("\n%s presolved LP has %d cols; %d rows and %d nonzeros\n\n",
-	   k == 0 ? "Col-wise" : "Row-wise",
-	   (int)presolved_num_col, (int)presolved_num_row, (int)presolved_num_nz);
     // Solve the presolved LP within a local version of HiGHS
     void* local_highs;
     local_highs = Highs_create();
+    Highs_setBoolOptionValue(local_highs, "output_flag", dev_run);
     Highs_setStringOptionValue(local_highs, "presolve", "off");
     return_status = Highs_passLp(local_highs,
 				 presolved_num_col, presolved_num_row, presolved_num_nz,
@@ -1546,22 +1544,22 @@ void test_setSolution() {
 }
 */
 int main() {
-  //  minimal_api_illegal_lp();
-  //  test_callback();
-  //  version_api();
-  //  full_api();
-  //  minimal_api_lp();
-  //  minimal_api_mip();
-  //  minimal_api_qp();
-  //  full_api_options();
-  //  full_api_lp();
-  //  full_api_mip();
-  //  full_api_qp();
+  minimal_api_illegal_lp();
+  test_callback();
+  version_api();
+  full_api();
+  minimal_api_lp();
+  minimal_api_mip();
+  minimal_api_qp();
+  full_api_options();
+  full_api_lp();
+  full_api_mip();
+  full_api_qp();
   pass_presolve_get_lp();
-  //  options();
-  //  test_getColsByRange();
-  //  test_passHessian();
-  //  test_ranging();
-  //  //  test_setSolution();
+  options();
+  test_getColsByRange();
+  test_passHessian();
+  test_ranging();
+  //  test_setSolution();
   return 0;
 }
