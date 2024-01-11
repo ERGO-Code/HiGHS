@@ -782,7 +782,9 @@ HighsStatus Highs::presolve() {
         // No reduction, so fill Highs presolved model with the
         // incumbent model
         presolved_model_ = model_;
-      } else if (model_presolve_status_ == HighsPresolveStatus::kReduced) {
+      } else if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
+                 model_presolve_status_ ==
+                     HighsPresolveStatus::kReducedToEmpty) {
         // Nontrivial reduction, so fill Highs presolved model with the
         // presolved model
         using_reduced_lp = true;
