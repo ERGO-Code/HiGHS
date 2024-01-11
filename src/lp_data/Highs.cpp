@@ -3681,13 +3681,14 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                      "Dual solution provided to postsolve is incorrect size\n");
         return HighsStatus::kError;
       }
+      presolve_.data_.recovered_solution_.dual_valid = true;      
     } else {
       presolve_.data_.recovered_solution_.dual_valid = false;
     }
     // Copy in the basis provided. It's already been checked for
-    // consistency, so assume that it's valid
+    // consistency, so the basis is valid iff it was supplied
     presolve_.data_.recovered_basis_ = basis;
-    if (basis_supplied) presolve_.data_.recovered_basis_.valid = true;
+    presolve_.data_.recovered_basis_.valid = basis_supplied;
 
     HighsPostsolveStatus postsolve_status = runPostsolve();
 
@@ -3794,7 +3795,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         }
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Postsolve yields primal %ssolution, but no basis: model "
-                     "status is %s; return_status is %s\n",
+                     "status is %s\n",
                      solution_.dual_valid ? "and dual " : "",
                      modelStatusToString(model_status_).c_str());
       }

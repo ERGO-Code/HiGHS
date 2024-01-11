@@ -1144,58 +1144,19 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
                         double* row_upper, HighsInt* a_start, HighsInt* a_index,
                         double* a_value, HighsInt* q_start, HighsInt* q_index,
                         double* q_value, HighsInt* integrality) {
-  const HighsModel& model = ((Highs*)highs)->getModel();
-  const HighsLp& lp = model.lp_;
-  const HighsHessian& hessian = model.hessian_;
-  *sense = (HighsInt)lp.sense_;
-  *offset = lp.offset_;
-  *num_col = lp.num_col_;
-  *num_row = lp.num_row_;
-  if (*num_col > 0) {
-    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
-    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
-    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
-  }
-  if (*num_row > 0) {
-    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
-    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
-  }
-
-  // Save the original orientation so that it is recovered
-  MatrixFormat original_a_format = lp.a_matrix_.format_;
-  // Determine the desired orientation and number of start entries to
-  // be copied
-  MatrixFormat desired_a_format = MatrixFormat::kColwise;
-  HighsInt num_start_entries = *num_col;
-  if (a_format == (HighsInt)MatrixFormat::kRowwise) {
-    desired_a_format = MatrixFormat::kRowwise;
-    num_start_entries = *num_row;
-  }
-  // Ensure the desired orientation
-  HighsInt return_status;
-  return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(desired_a_format);
+  const HighsLp& lp = ((Highs*)highs)->getModel().lp_;
+  HighsInt return_status = Highs_getHighsLpData(lp, a_format, num_col, num_row, num_nz,
+						sense, offset, col_cost, col_lower, col_upper,
+						row_lower, row_upper, a_start, a_index, a_value,
+						integrality);
   if (return_status != kHighsStatusOk) return return_status;
-
-  if (*num_col > 0 && *num_row > 0) {
-    *num_nz = lp.a_matrix_.numNz();
-    memcpy(a_start, lp.a_matrix_.start_.data(),
-           num_start_entries * sizeof(HighsInt));
-    memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
-    memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
-  }
+  const HighsHessian& hessian = ((Highs*)highs)->getModel().hessian_;
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*num_col];
     memcpy(q_start, hessian.start_.data(), *num_col * sizeof(HighsInt));
     memcpy(q_index, hessian.index_.data(), *q_num_nz * sizeof(HighsInt));
     memcpy(q_value, hessian.value_.data(), *q_num_nz * sizeof(double));
   }
-  if ((HighsInt)lp.integrality_.size()) {
-    for (int iCol = 0; iCol < *num_col; iCol++)
-      integrality[iCol] = (HighsInt)lp.integrality_[iCol];
-  }
-  // Restore the original orientation
-  return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(original_a_format);
-  if (return_status != kHighsStatusOk) return return_status;
   return kHighsStatusOk;
 }
 
