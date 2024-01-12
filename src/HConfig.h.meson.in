@@ -3,6 +3,7 @@
 
 #mesondefine FAST_BUILD
 #mesondefine ZLIB_FOUND
+#mesondefine CUPDLP_CPU
 #mesondefine HIGHSINT64
 #mesondefine HIGHS_HAVE_MM_PAUSE
 #mesondefine HIGHS_HAVE_BUILTIN_CLZ

@@ -10,7 +10,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ipm/IpxWrapper.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ * @author Julian Hall, Ivet Galabova and Michael Feldmeier
  */
 #include "ipm/IpxWrapper.h"
 

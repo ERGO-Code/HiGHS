@@ -1,6 +1,17 @@
 # Define library.
 # Outdated CMake approach: update in progress
 
+set(cupdlp_sources
+  pdlp/cupdlp/cupdlp_solver.c
+  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_restart.c
+  pdlp/cupdlp/cupdlp_proj.c
+  pdlp/cupdlp/cupdlp_mps.c
+  pdlp/cupdlp/cupdlp_linalg.c
+  pdlp/cupdlp/cupdlp_cs.c
+  pdlp/cupdlp/cupdlp_utils.c
+  pdlp/cupdlp/cupdlp_step.c)
+
 set(basiclu_sources
   ipm/basiclu/basiclu_factorize.c
   ipm/basiclu/basiclu_solve_dense.c
@@ -68,6 +79,7 @@ set(ipx_sources
 if(NOT FAST_BUILD)
   include_directories(ipm/ipx)
   include_directories(ipm/basiclu)
+  include_directories(pdlp/cupdlp)
 
   set(sources
     ../extern/filereaderlp/reader.cpp
@@ -309,8 +321,9 @@ if(NOT FAST_BUILD)
   )
 
   set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
-    ${ipx_headers})
-  set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
+    ${ipx_headers} pdlp/CupdlpWrapper.h ${cupdlp_headers})
+  set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources}
+    ${ipx_sources} pdlp/CupdlpWrapper.cpp ${cupdlp_sources})
 
   add_library(libhighs ${sources})
 
@@ -548,6 +561,8 @@ else()
   target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp/cupdlp>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
@@ -719,7 +734,7 @@ else()
   )
 
   set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-    ${ipx_headers})
+    ${ipx_headers} pdlp/CupdlpWrapper.h ${cupdlp_headers})
 
   # set_target_properties(highs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
@@ -741,7 +756,7 @@ else()
 
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
+  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp)
 
   if(UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
