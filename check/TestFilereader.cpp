@@ -300,7 +300,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("filereader-nan", "[highs_filereader]") {
-  // Check that if 
+  // Check that if
   std::string model_file;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
