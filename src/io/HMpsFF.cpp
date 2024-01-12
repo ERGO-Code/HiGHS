@@ -833,6 +833,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           marker.c_str());
     } else {
       double value = atof(word.c_str());
+      if (std::isnan(value)) {
+      }
       if (value) {
         parseName(marker);  // rowidx set and num_nz incremented
         if (rowidx >= 0) {
