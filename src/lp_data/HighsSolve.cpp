@@ -13,6 +13,7 @@
  */
 
 #include "ipm/IpxWrapper.h"
+#include "pdlp/CupdlpWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HApp.h"
 
@@ -105,6 +106,20 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         }
       }  // options.run_crossover == kHighsOnString
     }    // unwelcome_ipx_status
+  } else if (options.solver == kPdlpString) {
+    // Use PDLP
+    // Use cuPDLP-C to solve the LP
+    try {
+      call_status = solveLpCupdlp(solver_object);
+    } catch (const std::exception& exception) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "Exception %s in solveLpCupdlp\n", exception.what());
+      call_status = HighsStatus::kError;
+    }
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpCupdlp");
+    if (return_status == HighsStatus::kError) return return_status;
+
   } else {
     // Use Simplex
     call_status = solveLpSimplex(solver_object);

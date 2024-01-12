@@ -257,6 +257,7 @@ void reportOption(FILE* file, const OptionRecordString& option,
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
+const string kPdlpString = "pdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -476,8 +477,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "Solver option: \"simplex\", \"choose\" or \"ipm\". If "
-        "\"simplex\"/\"ipm\" is chosen then, for a MIP (QP) the integrality "
+        "Solver option: \"simplex\", \"choose\", \"ipm\" or \"pdlp\". If "
+        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
