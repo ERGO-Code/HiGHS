@@ -320,6 +320,8 @@ if(NOT FAST_BUILD)
     interfaces/highs_c_api.h
   )
 
+# ToDo What's this for? None of $basiclu_headers, $ipx_headers - and hence $cupdlp_headers - appears to be set
+
   set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
     ${ipx_headers} pdlp/CupdlpWrapper.h ${cupdlp_headers})
   set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources}

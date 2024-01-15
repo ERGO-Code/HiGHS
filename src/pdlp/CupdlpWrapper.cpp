@@ -14,7 +14,7 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 //#include "mps_lp.h"
-#include "pdlp/cupdlp/cupdlp_linalg.h"
+//#include "pdlp/cupdlp/cupdlp_linalg.h"
 
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
@@ -130,9 +130,28 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 		csc_cpu, src_matrix_format, dst_matrix_format, rhs,
 		lower, upper, &alloc_matrix_time, &copy_vec_time);
 
-    assert(111==000);
+  w->problem = prob;
+  w->scaling = scaling;
+  PDHG_Alloc(w);
+  w->timers->dScalingTime = scaling_time;
+  w->timers->dPresolveTime = 0;//presolve_time;
+  cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
+  cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
+
+  cupdlp_printf("--------------------------------------------------\n");
+  cupdlp_printf("enter main solve loop\n");
+  cupdlp_printf("--------------------------------------------------\n");
+  // CUPDLP_CALL(LP_SolvePDHG(prob, cupdlp_NULL, cupdlp_NULL, cupdlp_NULL,
+  // cupdlp_NULL));
+  //   CUPDLP_CALL(LP_SolvePDHG(prob, ifChangeIntParam, intParam,
+  //                               ifChangeFloatParam, floatParam, fout));
+
+  cupdlp_init_double(x_origin, nCols_origin);
+  cupdlp_init_double(y_origin, nRows);
+
+  assert(111==000);
   HighsStatus return_status = HighsStatus::kError;
-  
+
   return return_status;
 }
 
@@ -414,12 +433,8 @@ cupdlp_retcode problem_alloc(
                          dst_matrix_format);
   *alloc_matrix_time = getTimeStamp() - begin;
 
-  // Keep
-  //  prob->data->csc_matrix->MatElemNormInf = infNorm(
-  //      ((CUPDLPcsc *)matrix)->colMatElem, ((CUPDLPcsc *)matrix)->nMatElem);
-
-
-
+  prob->data->csc_matrix->MatElemNormInf = infNorm(
+        ((CUPDLPcsc *)matrix)->colMatElem, ((CUPDLPcsc *)matrix)->nMatElem);
 
   begin = getTimeStamp();
   cupdlp_copy_vec(prob->cost, cost, cupdlp_float, nCols);
@@ -436,3 +451,27 @@ cupdlp_retcode problem_alloc(
 
   return retcode;
 }
+
+// ToDo: Why can linker not pick up infNorm, cupdlp_haslb and
+// cupdlp_hasub from pdlp/cupdlp/cupdlp_linalg.c?
+double infNorm(double *x, cupdlp_int n) {
+  double norm = 0;
+  for (HighsInt iX = 0; iX < n; iX++)
+    norm = std::max(std::fabs(x[iX]), norm);
+  return norm;
+}
+void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+                  const cupdlp_float bound, const cupdlp_int len) {
+  for (int i = 0; i < len; i++) {
+    haslb[i] = lb[i] > bound ? 1.0 : 0.0;
+  }
+}
+
+void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+                  const cupdlp_float bound, const cupdlp_int len) {
+  for (int i = 0; i < len; i++) {
+    hasub[i] = ub[i] < bound ? 1.0 : 0.0;
+  }
+}
+
+

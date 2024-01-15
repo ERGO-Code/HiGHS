@@ -81,7 +81,16 @@ cupdlp_retcode data_alloc(CUPDLPdata *data, cupdlp_int nRows, cupdlp_int nCols,
                           void *matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
                           CUPDLP_MATRIX_FORMAT dst_matrix_format);
 
-HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object);
+double infNorm(double *x, cupdlp_int n);
+
+void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+                  const cupdlp_float bound, const cupdlp_int len);
+
+void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+                  const cupdlp_float bound, const cupdlp_int len);
+
+
+HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object); 
 
 HighsStatus solveLpCupdlp(const HighsOptions& options,
 			  HighsTimer& timer,
