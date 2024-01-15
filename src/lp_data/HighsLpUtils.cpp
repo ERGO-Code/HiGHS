@@ -56,9 +56,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                         return_status, "assessCosts");
     if (return_status == HighsStatus::kError) return return_status;
     // Assess the LP column bounds
-    call_status = assessBounds(options, "Col", 0, index_collection,
-                               lp.col_lower_, lp.col_upper_,
-                               options.infinite_bound, lp.integrality_.data());
+    call_status = assessBounds(
+        options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
+        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
