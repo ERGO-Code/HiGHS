@@ -560,12 +560,12 @@ cupdlp_retcode getUserParam(int argc, char **argv,
     }
   }
 
-  if (strcmp(argv[argc - 1], "-h") == 0) {
-    PDHG_PrintUserParamHelper();
-
-    retcode = RETCODE_FAILED;
-    goto exit_cleanup;
-  }
+  //  if (strcmp(argv[argc - 1], "-h") == 0) {
+  //    PDHG_PrintUserParamHelper();
+  //
+  //    retcode = RETCODE_FAILED;
+  //    goto exit_cleanup;
+  //  }
 
 exit_cleanup:
   return retcode;

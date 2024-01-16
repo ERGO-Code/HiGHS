@@ -18,6 +18,11 @@
 
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
+void reportParams(CUPDLPwork *w,
+	     cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
+	     cupdlp_bool *ifChangeFloatParam,
+	     cupdlp_float *floatParam);
+
 HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object) {
   return solveLpCupdlp(solver_object.options_, solver_object.timer_, solver_object.lp_, 
 		       solver_object.basis_, solver_object.solution_, 
@@ -40,6 +45,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   highs_solution.dual_valid = false;
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
+
+  char *fout;
 
   int nCols;
   int nRows;
@@ -84,12 +91,14 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // Transfer from options_
 
   // set solver parameters
-  //  cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
-  //  cupdlp_int intParam[N_INT_USER_PARAM] = {0};
-  //  cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
-  //  cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
-  //  CUPDLP_CALL(getUserParam(argc, argv, ifChangeIntParam, intParam,
-  //                           ifChangeFloatParam, floatParam));
+  cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
+  cupdlp_int intParam[N_INT_USER_PARAM] = {0};
+  cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
+  cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
+  int argc = 0;
+  char **argv;
+  getUserParam(argc, argv, ifChangeIntParam, intParam,
+	       ifChangeFloatParam, floatParam);
 
   formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs,
 		    &csc_beg, &csc_idx, &csc_val, &rhs, &lower,
@@ -148,7 +157,10 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 
   cupdlp_init_double(x_origin, nCols_origin);
   cupdlp_init_double(y_origin, nRows);
-
+  LP_SolvePDHG(w, ifChangeIntParam, intParam, ifChangeFloatParam,
+	       floatParam, fout, x_origin, nCols_origin, y_origin,
+	       ifSaveSol, constraint_new_idx);
+ 
   assert(111==000);
   HighsStatus return_status = HighsStatus::kError;
 
@@ -475,3 +487,9 @@ void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
 }
 
 
+void reportParams(CUPDLPwork *w,
+	     cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
+	     cupdlp_bool *ifChangeFloatParam,
+	     cupdlp_float *floatParam) {
+  PDHG_PrintPDHGParam(w);  
+}
