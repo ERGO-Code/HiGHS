@@ -166,6 +166,8 @@ extern "C" {
     }                           \
   }
 
+#define I_INFINITY 2147483647
+
 #ifndef SFLOAT
 #ifdef DLONG
 typedef long long cupdlp_int;

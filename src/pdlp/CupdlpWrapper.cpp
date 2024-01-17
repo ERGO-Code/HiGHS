@@ -46,7 +46,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  char *fout;
+  char *fout = nullptr;
 
   int nCols;
   int nRows;
@@ -96,7 +96,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
   int argc = 0;
-  char **argv;
+  char **argv = nullptr;
   getUserParam(argc, argv, ifChangeIntParam, intParam,
 	       ifChangeFloatParam, floatParam);
 

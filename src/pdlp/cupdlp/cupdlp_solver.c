@@ -11,6 +11,20 @@
 #include "cupdlp_utils.h"
 #include "glbopts.h"
 
+void debugPrintCupdlpVector(const char* name, const CUPDLPvec* vector) {
+  printf("Variable %s: ", name);
+  for (int ix = 0; ix < vector->len; ix++)
+    printf("%11.6g ", vector->data[ix]);
+  printf("\n");
+}
+
+void debugPrintDoubleVector(const char* name, const double* vector, const int n) {
+  printf("Variable %s: ", name);
+  for (int ix = 0; ix < n; ix++)
+    printf("%11.6g ", vector[ix]);
+  printf("\n");
+}
+
 void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
                                      const double *ax, const double *x,
                                      double *dPrimalFeasibility,
@@ -113,8 +127,14 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
   // cupdlp_projPositive(resobj->dSlackPos, resobj->dSlackPos, lp->nCols);
   cupdlp_projPos(resobj->dSlackPos, lp->nCols);
 
+  debugPrintDoubleVector("problem->hasLower", problem->hasLower, lp->nCols);
+  debugPrintDoubleVector("problem->hasUpper", problem->hasUpper, lp->nCols);
+
   // cupdlp_cdot_fb(resobj->dSlackPos, problem->hasLower, lp->nCols);
   cupdlp_edot(resobj->dSlackPos, problem->hasLower, lp->nCols);
+
+  debugPrintDoubleVector("resobj->dSlackPos1", resobj->dSlackPos, lp->nCols);
+  //  debugPrintDoubleVector("resobj->dSlackNeg1", resobj->dSlackNeg, lp->nCols);
 
   cupdlp_float temp = 0.0;
   cupdlp_dot(work, lp->nCols, x, resobj->dSlackPos, &temp);
@@ -471,6 +491,8 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   // PDHG_Print_Header(pdhg);
 
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
+    //    debugPrintCupdlpVector("x", iterates->x);
+    debugPrintCupdlpVector("y", iterates->y);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);
