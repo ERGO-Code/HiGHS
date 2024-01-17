@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -158,9 +158,9 @@ class HighsCliqueTable {
   int64_t numNeighbourhoodQueries;
 
   HighsCliqueTable(HighsInt ncols) {
-    invertedHashList.resize(2 * ncols);
-    invertedHashListSizeTwo.resize(2 * ncols);
-    numcliquesvar.resize(2 * ncols, 0);
+    invertedHashList.resize(2 * static_cast<size_t>(ncols));
+    invertedHashListSizeTwo.resize(2 * static_cast<size_t>(ncols));
+    numcliquesvar.resize(2 * static_cast<size_t>(ncols), 0);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
     nfixings = 0;

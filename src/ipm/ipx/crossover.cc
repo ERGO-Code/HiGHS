@@ -43,8 +43,8 @@ void Crossover::PushAll(Basis* basis, Vector& x, Vector& y, Vector& z,
     // Run primal push phase. Because z[j]==0 for all basic variables, none of
     // the primal variables is fixed at its bound.
     std::vector<Int> primal_superbasics;
-    for (Int p = perm.size()-1; p >= 0; p--) {
-        Int j = perm[p];
+    for (size_t p = perm.size(); p > 0; p--) {
+        Int j = perm[p - 1];
         if (basis->IsNonbasic(j) && x[j] != lb[j] && x[j] != ub[j] &&
             !(std::isinf(lb[j]) && std::isinf(ub[j]) && x[j] == 0.0))
             primal_superbasics.push_back(j);
@@ -110,8 +110,8 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
     }
 
     control_.ResetPrintInterval();
-    Int next = 0;
-    while (next < (Int)variables.size()) {
+    size_t next = 0;
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -203,7 +203,10 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
         x[(*basis)[p]] = xbasic[p];
 
     // Set status flag.
-    if (info->errflag == IPX_ERROR_interrupt_time) {
+    if (info->errflag == IPX_ERROR_user_interrupt) {
+        info->errflag = 0;
+	info->status_ipm = IPX_STATUS_user_interrupt;
+    } else if (info->errflag == IPX_ERROR_time_interrupt) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
     } else if (info->errflag != 0) {
@@ -247,8 +250,8 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     }
 
     control_.ResetPrintInterval();
-    Int next = 0;
-    while (next < (Int)variables.size()) {
+    size_t next = 0;
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -323,7 +326,10 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     }
 
     // Set status flag.
-    if (info->errflag == IPX_ERROR_interrupt_time) {
+    if (info->errflag == IPX_ERROR_user_interrupt) {
+        info->errflag = 0;
+        info->status_ipm = IPX_STATUS_user_interrupt;
+    } else if (info->errflag == IPX_ERROR_time_interrupt) {
         info->errflag = 0;
         info->status_crossover = IPX_STATUS_time_limit;
     } else if (info->errflag != 0) {

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -303,6 +303,8 @@ struct HighsOptionsStruct {
   double objective_bound;
   double objective_target;
   HighsInt threads;
+  HighsInt user_bound_scale;
+  HighsInt user_cost_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -330,6 +332,7 @@ struct HighsOptionsStruct {
 
   // Advanced options
   HighsInt log_dev_level;
+  bool log_githash;
   bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
@@ -347,6 +350,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_reduction_limit;
+  HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
@@ -379,6 +383,7 @@ struct HighsOptionsStruct {
 
   // Options for MIP solver
   bool mip_detect_symmetry;
+  bool mip_allow_restart;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -393,6 +398,7 @@ struct HighsOptionsStruct {
   double mip_rel_gap;
   double mip_abs_gap;
   double mip_heuristic_effort;
+  double mip_min_logging_interval;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
@@ -499,31 +505,32 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
     //
     // Options read from the file
-    record_double =
-        new OptionRecordDouble("infinite_cost",
-                               "Limit on cost coefficient: values larger than "
-                               "this will be treated as infinite",
-                               advanced, &infinite_cost, 1e15, 1e20, kHighsInf);
+    record_double = new OptionRecordDouble(
+        "infinite_cost",
+        "Limit on |cost coefficient|: values greater than or equal to "
+        "this will be treated as infinite",
+        advanced, &infinite_cost, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "infinite_bound",
-        "Limit on |constraint bound|: values larger "
-        "than this will be treated as infinite",
+        "Limit on |constraint bound|: values greater than or equal to "
+        "this will be treated as infinite",
         advanced, &infinite_bound, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "small_matrix_value",
-        "Lower limit on |matrix entries|: values smaller than this will be "
+        "Lower limit on |matrix entries|: values less than or equal to this "
+        "will be "
         "treated as zero",
         advanced, &small_matrix_value, 1e-12, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "large_matrix_value",
-        "Upper limit on |matrix entries|: values larger "
-        "than this will be treated as infinite",
+        "Upper limit on |matrix entries|: values greater than or equal to "
+        "this will be treated as infinite",
         advanced, &large_matrix_value, 1e0, 1e15, kHighsInf);
     records.push_back(record_double);
 
@@ -543,12 +550,15 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_bound", "Objective bound for termination", advanced,
+        "objective_bound",
+        "Objective bound for termination of the dual simplex solver", advanced,
         &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination", now_advanced,
+        "objective_target",
+        "Objective target for termination of the MIP solver", advanced,
+        //"primal simplex and "
         &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
 
@@ -560,6 +570,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "threads", "Number of threads used by HiGHS (0: automatic)", advanced,
         &threads, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "user_bound_scale", "Exponent of power-of-two bound scaling for model",
+        advanced, &user_bound_scale, -kHighsIInf, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "user_cost_scale", "Exponent of power-of-two cost scaling for model",
+        advanced, &user_cost_scale, -kHighsIInf, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("highs_debug_level",
@@ -743,6 +763,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("mip_allow_restart",
+                                       "Whether MIP restart is permitted",
+                                       advanced, &mip_allow_restart, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -775,7 +800,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         "mip_improving_solution_file",
-        "File for reporting improving MIP solutions: not reported if \"\"",
+        "File for reporting improving MIP solutions: not reported for an empty "
+        "string \"\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
@@ -857,13 +883,18 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_abs_gap, 0.0, 1e-6, kHighsInf);
     records.push_back(record_double);
 
+    record_double = new OptionRecordDouble(
+        "mip_min_logging_interval", "MIP minimum logging interval", advanced,
+        &mip_min_logging_interval, 0, 5, kHighsInf);
+    records.push_back(record_double);
+
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
     // Fix the number of user settable options
-    num_user_settable_options_ = records.size();
+    num_user_settable_options_ = static_cast<HighsInt>(records.size());
 
     // Advanced options
     advanced = true;
@@ -874,6 +905,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
         kHighsLogDevLevelMax);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("log_githash", "Log the githash",
+                                       advanced, &log_githash, true);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "solve_relaxation", "Solve the relaxation of discrete model components",
@@ -1048,6 +1083,13 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
+        "restart_presolve_reduction_limit",
+        "Limit on number of further presolve reductions on restart in MIP "
+        "solver -1 => no limit, otherwise, must be positive",
+        advanced, &restart_presolve_reduction_limit, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
     records.push_back(record_int);
@@ -1099,18 +1141,16 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     // Set up the log_options aliases
+    log_options.clear();
     log_options.log_stream =
-        log_file.empty() ? NULL : fopen(log_file.c_str(), "w");
+        log_file.empty() ? nullptr : fopen(log_file.c_str(), "w");
     log_options.output_flag = &output_flag;
     log_options.log_to_console = &log_to_console;
     log_options.log_dev_level = &log_dev_level;
-    log_options.log_highs_callback = nullptr;
-    log_options.log_user_callback = nullptr;
-    log_options.log_user_callback_data = nullptr;
   }
 
   void deleteRecords() {
-    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
+    for (size_t i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:

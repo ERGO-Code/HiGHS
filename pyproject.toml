@@ -1,13 +1,15 @@
-[tool.pdm]
-
 [project]
 name = "highspy"
-version = "1.5.3"
+version = "1.6.0.dev0"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [
     {name = "HiGHS developers", email = "highsopt@gmail.com"},
 ]
-dependencies = []
+dependencies = [
+    # pybind11/numpy runtime dep
+    # https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
+    "numpy>=1.7.0",
+]
 requires-python = ">=3.8"
 readme = "README.md"
 license = {text = "MIT"}
@@ -17,7 +19,7 @@ license = {text = "MIT"}
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python"]
+requires = ["meson-python<0.14.0", "meson>=1.2.0"]
 build-backend = "mesonpy"
 
 [tool.meson-python.args]
@@ -27,6 +29,7 @@ setup = ['-Dwith_pybind11=True',
          # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
         ]
 dist = ['--include-subprojects']
+install = ['--skip-subprojects']
 
 [tool.cibuildwheel]
 build = "*"

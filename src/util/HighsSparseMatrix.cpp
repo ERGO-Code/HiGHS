@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -171,7 +171,6 @@ void HighsSparseMatrix::ensureRowwise() {
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
-  bool empty_matrix = num_col == 0 || num_row == 0;
   if (num_nz == 0) {
     // Empty matrix, so just ensure that there are enough zero starts
     // for the new orientation
@@ -529,6 +528,58 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
   this->num_row_ += num_new_row;
 }
 
+void HighsSparseMatrix::getCol(const HighsInt iCol, HighsInt& num_nz,
+                               HighsInt* index, double* value) const {
+  assert(iCol >= 0 && iCol < this->num_row_);
+  num_nz = 0;
+  if (this->isColwise()) {
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+         iEl++) {
+      index[num_nz] = this->index_[iEl];
+      value[num_nz] = this->value_[iEl];
+      num_nz++;
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
+        if (this->index_[iEl] == iCol) {
+          index[num_nz] = iRow;
+          value[num_nz] = this->value_[iEl];
+          num_nz++;
+          break;
+        }
+      }
+    }
+  }
+}
+
+void HighsSparseMatrix::getRow(const HighsInt iRow, HighsInt& num_nz,
+                               HighsInt* index, double* value) const {
+  assert(iRow >= 0 && iRow < this->num_row_);
+  num_nz = 0;
+  if (this->isRowwise()) {
+    for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+         iEl++) {
+      index[num_nz] = this->index_[iEl];
+      value[num_nz] = this->value_[iEl];
+      num_nz++;
+    }
+  } else {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++) {
+        if (this->index_[iEl] == iRow) {
+          index[num_nz] = iCol;
+          value[num_nz] = this->value_[iEl];
+          num_nz++;
+          break;
+        }
+      }
+    }
+  }
+}
+
 void HighsSparseMatrix::deleteCols(
     const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
@@ -559,9 +610,9 @@ void HighsSparseMatrix::deleteCols(
     }
     // Ensure that the starts of the deleted columns are zeroed to
     // avoid redundant start information for columns whose indices
-    // are't used after the deletion takes place. In particular, if
+    // aren't used after the deletion takes place. In particular, if
     // all columns are deleted then something must be done to ensure
-    // that the matrix isn't magially recreated by increasing the
+    // that the matrix isn't magically recreated by increasing the
     // number of columns from zero when there are no rows in the
     // matrix.
     for (HighsInt col = delete_from_col; col <= delete_to_col; col++)
@@ -705,7 +756,7 @@ void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
 
 bool HighsSparseMatrix::hasLargeValue(const double large_matrix_value) {
   for (HighsInt iEl = 0; iEl < this->numNz(); iEl++)
-    if (std::abs(this->value_[iEl]) > large_matrix_value) return true;
+    if (std::abs(this->value_[iEl]) >= large_matrix_value) return true;
   return false;
 }
 
@@ -903,9 +954,7 @@ void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
   assert(matrix.formatOk());
   assert(matrix.isColwise());
   assert(this->formatOk());
-  HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& a_start = matrix.start_;
   const vector<HighsInt>& a_index = matrix.index_;
   const vector<double>& a_value = matrix.value_;
@@ -1032,8 +1081,10 @@ void HighsSparseMatrix::alphaProductPlusY(const double alpha,
                                           const std::vector<double>& x,
                                           std::vector<double>& y,
                                           const bool transpose) const {
-  assert(int(x.size()) >= transpose ? this->num_row_ : this->num_col_);
-  assert(int(y.size()) >= transpose ? this->num_col_ : this->num_row_);
+  assert(x.size() >= static_cast<size_t>(transpose) ? this->num_row_
+                                                    : this->num_col_);
+  assert(y.size() >= static_cast<size_t>(transpose) ? this->num_col_
+                                                    : this->num_row_);
   if (this->isColwise()) {
     if (transpose) {
       for (int iCol = 0; iCol < this->num_col_; iCol++)
@@ -1328,7 +1379,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   // Possibly don't perform hyper-sparse PRICE based on historical density
   //
   // Ensure that result was set up for this number of columns, and
-  // that result.index is still of corect size
+  // that result.index is still of correct size
   assert(HighsInt(result.size) == this->num_col_);
   assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {

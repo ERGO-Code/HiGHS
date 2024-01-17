@@ -20,7 +20,7 @@
  * columnwise and additionally the nonzero pattern rowwise:
  *
  *  Wbegin[j]   points to the first element in column j.
- *  Wend[j]     points to one past the last element in colum j.
+ *  Wend[j]     points to one past the last element in column j.
  *  Wbegin[m+i] points to the first element in row i.
  *  Wend[m+i]   points to one past the last element in row i.
  *

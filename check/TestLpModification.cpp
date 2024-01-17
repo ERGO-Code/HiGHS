@@ -1,13 +1,14 @@
 #include "Avgas.h"
 #include "HCheckConfig.h"
 #include "Highs.h"
+#include "SpecialLps.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
 const bool dev_run = false;
-const double inf = kHighsInf;
+// const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status);
@@ -912,11 +913,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Attempting to set a cost to infinity may return error
   return_status = highs.changeColCost(7, kHighsInf);
-  if (kHighsAllowInfiniteCosts) {
-    REQUIRE(return_status == HighsStatus::kOk);
-  } else {
-    REQUIRE(return_status == HighsStatus::kError);
-  }
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77) == HighsStatus::kOk);
@@ -1457,6 +1454,42 @@ TEST_CASE("LP-free-row", "[highs_data]") {
   REQUIRE(highs.getInfo().objective_function_value == -3);
 }
 
+TEST_CASE("LP-delete-ip-var", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsInt num_var = 5;
+  std::vector<double> lower = {1, 2, 3, 4, 5};
+  std::vector<double> upper = {1, 2, 3, 4, 5};
+  highs.addVars(num_var, lower.data(), upper.data());
+  const HighsInt og_ip_var = 3;
+  const std::vector<HighsInt> og_ip_var_set = {og_ip_var};
+  const std::vector<HighsVarType> og_ip_var_integrality = {
+      HighsVarType::kInteger};
+  const HighsInt delete_var = 2;
+  const std::vector<HighsInt> delete_var_set = {delete_var};
+  const HighsInt later_ip_var = 2;
+  highs.changeColsIntegrality(1, og_ip_var_set.data(),
+                              og_ip_var_integrality.data());
+
+  for (HighsInt iCol = 0; iCol < num_var; iCol++) {
+    if (iCol == og_ip_var) {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kInteger);
+    } else {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kContinuous);
+    }
+  }
+  highs.deleteVars(1, delete_var_set.data());
+  // Now that #1386 is fixed, the integrality should be correct
+  num_var--;
+  for (HighsInt iCol = 0; iCol < num_var; iCol++) {
+    if (iCol == later_ip_var) {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kInteger);
+    } else {
+      REQUIRE(highs.getLp().integrality_[iCol] == HighsVarType::kContinuous);
+    }
+  }
+}
+
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
   if (!dev_run) return;
@@ -1809,4 +1842,89 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting Matrix: %s\n",
               message);
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
+}
+
+TEST_CASE("mod-duplicate-indices", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  highs.readModel(filename);
+  std::vector<double> lower = {0, 0, 0, 0};
+  std::vector<HighsInt> set0 = {5, 2, 7, 3};
+  std::vector<double> lower0 = {1, 1, 1, 1};
+  std::vector<double> upper0 = {1, 1, 1, 1};
+  std::vector<HighsInt> set1 = {5, 2, 7, 3, 2};
+  std::vector<double> lower1 = {0, 0, 0, 0, 0};
+  std::vector<double> upper1 = {1, 1, 1, 1, 1};
+  REQUIRE(highs.changeColsBounds(HighsInt(set0.size()), set0.data(),
+                                 lower0.data(),
+                                 upper0.data()) == HighsStatus::kOk);
+  highs.run();
+  double objective1 = highs.getInfo().objective_function_value;
+  // Reverting the change with duplicate index should fail
+  REQUIRE(highs.changeColsBounds(HighsInt(set1.size()), set1.data(),
+                                 lower1.data(),
+                                 upper1.data()) == HighsStatus::kError);
+  // Reverting the change without duplicate index should be OK
+  REQUIRE(highs.changeColsBounds(HighsInt(set0.size()), set0.data(),
+                                 lower.data(),
+                                 upper0.data()) == HighsStatus::kOk);
+  highs.run();
+  double objective0 = highs.getInfo().objective_function_value;
+  REQUIRE(objective0 < objective1);
+  REQUIRE(objective0 == -7.75);
+}
+
+TEST_CASE("resize-integrality", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  SpecialLps special_lps;
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.distillationLp(lp, require_model_status, optimal_objective);
+  HighsInt original_num_col = lp.num_col_;
+  for (HighsInt k = 0; k < 4; k++) {
+    // k = 0: Add continuous column to LP, so final integrality.size() should be
+    // 0
+    //
+    // k = 1: Add continuous column to IP, so final integrality.size() should be
+    // full
+    //
+    // k = 2: Add integer column to LP, so final integrality.size() should be
+    // full
+    //
+    // k = 3: Add integer column to IP, so final integrality.size() should be
+    // full
+    if (k == 1 || k == 3) {
+      lp.integrality_.assign(original_num_col, HighsVarType::kInteger);
+    } else {
+      lp.integrality_.clear();
+    }
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(highs.getNumCol() == original_num_col);
+    double cost = 0.0;
+    double lower = 0.0;
+    double upper = 1.0;
+    highs.addCols(1, &cost, &lower, &upper, 0, nullptr, nullptr, nullptr);
+    const std::vector<HighsVarType>& integrality = highs.getLp().integrality_;
+    if (k == 0 || k == 2) {
+      // Model is LP
+      REQUIRE(int(integrality.size()) == 0);
+    } else {
+      // Model is MIP
+      REQUIRE(int(integrality.size()) == int(original_num_col + 1));
+    }
+    if (k >= 2)
+      REQUIRE(highs.changeColIntegrality(2, HighsVarType::kInteger) ==
+              HighsStatus::kOk);
+    if (k == 0) {
+      // Model is LP
+      REQUIRE(int(integrality.size()) == 0);
+    } else {
+      // Model is MIP
+      REQUIRE(int(integrality.size()) == int(original_num_col + 1));
+    }
+  }
 }

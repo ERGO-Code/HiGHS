@@ -8,6 +8,7 @@
 #include "ipm/ipx/ipx_internal.h"
 #include "ipm/ipx/multistream.h"
 #include "ipm/ipx/timer.h"
+#include "lp_data/HighsCallback.h"
 
 namespace ipx {
 
@@ -36,7 +37,7 @@ public:
     Control(const Control&&) = delete;
 
     // Returns IPX_ERROR_* if interrupt is requested, 0 otherwise.
-    Int InterruptCheck() const;
+    Int InterruptCheck(const Int ipm_iteration_count = -1) const;
 
     // Returns output streams for log and debugging messages. The streams
     // evaluate to false if they discard output, so that we can write
@@ -84,6 +85,7 @@ public:
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);
+    void callback(HighsCallback* callback);
 
     // Opens the log file defined in parameters.logfile, if any.
     // Ignores if an error occurs; in this case no file log is written.
@@ -98,6 +100,7 @@ public:
 private:
     void MakeStream();           // composes output_
     Parameters parameters_;
+    HighsCallback* callback_ = nullptr;
     std::ofstream logfile_;
     Timer timer_;                // total runtime
     mutable Timer interval_;     // time since last interval log
@@ -134,7 +137,7 @@ inline std::string fix8(double d) { return Fixed(d,0,8); }
 // consistently using
 //
 //   control.Log() << Textline("Number of variables:") << 1464 << '\n'
-//                 << Textline("Number of contraints:") << 696 << '\n';
+//                 << Textline("Number of constraints:") << 696 << '\n';
 //
 template <typename T>
 std::string Textline(const T& text) {

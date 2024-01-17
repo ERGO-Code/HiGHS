@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -141,7 +141,7 @@ class RbTree {
   }
 
   void setColor(LinkType node, HighsUInt color) {
-    static_cast<Impl*>(this)->getRbTreeLinks(node).setColor(color);
+    static_cast<Impl*>(this)->getRbTreeLinks(node).setColor(color != 0);
   }
 
   HighsUInt getColor(LinkType node) const {

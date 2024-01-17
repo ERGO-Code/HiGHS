@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 // gcc call_highs_from_c.c -o highstest -I install_folder/include/ -L install_folder/lib/ -lhighs
 
@@ -297,7 +298,7 @@ void minimal_api_mps() {
   double objective_function_value;
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   printf("Optimal objective value = %g\n", objective_function_value);
-  assert(abs(objective_function_value+7.75)<1e-5);
+  assert(fabs(objective_function_value+7.75)<1e-5);
 }
 
 void full_api() {

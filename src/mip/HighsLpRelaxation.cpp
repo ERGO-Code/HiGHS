@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -52,7 +52,7 @@ bool HighsLpRelaxation::LpRow::isIntegral(
     case kCutPool:
       return mipsolver.mipdata_->cutpool.cutIsIntegral(index);
     case kModel:
-      return mipsolver.mipdata_->rowintegral[index];
+      return (mipsolver.mipdata_->rowintegral[index] != 0);
   };
 
   assert(false);
@@ -296,7 +296,6 @@ void HighsLpRelaxation::computeBasicDegenerateDuals(double threshold,
         HighsInt iRow = row_ep.index[i];
         const double lb = lp.row_lower_[iRow];
         const double ub = lp.row_upper_[iRow];
-        const double dual = solution.row_dual[iRow];
 
         double val = sign * row_ep.array[iRow];
         if (ub == lb || val > mipsolver.mipdata_->epsilon) {
@@ -343,9 +342,9 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
     // fractionality.
 
     HighsCDouble increase = 0.0;
-    double offset = mipsolver.mipdata_->feastol *
-                    std::max(std::abs(objective), 1.0) /
-                    mipsolver.mipdata_->integral_cols.size();
+    double offset =
+        mipsolver.mipdata_->feastol * std::max(std::abs(objective), 1.0) /
+        static_cast<double>(mipsolver.mipdata_->integral_cols.size());
 
     for (const std::pair<HighsInt, double>& f : fractionalints) {
       increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),
@@ -1063,7 +1062,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //                 HighsLogType::kWarning,
       //                 "LP failed to reliably determine infeasibility\n");
 
-      // printf("error: unreliable infeasiblities, modelstatus = %"
+      // printf("error: unreliable infeasibilities, modelstatus = %"
       // HIGHSINT_FORMAT " (scaled
       // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),

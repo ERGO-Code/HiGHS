@@ -29,7 +29,10 @@ void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info) {
     if (info->errflag == 0)
         PrintOutput();
     // Set status_ipm.
-    if (info->errflag == IPX_ERROR_interrupt_time) {
+    if (info->errflag == IPX_ERROR_user_interrupt) {
+        info->errflag = 0;
+        info->status_ipm = IPX_STATUS_user_interrupt;
+    } else if (info->errflag == IPX_ERROR_time_interrupt) {
         info->errflag = 0;
         info->status_ipm = IPX_STATUS_time_limit;
     } else if (info->errflag) {
@@ -81,7 +84,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             info->status_ipm = IPX_STATUS_iter_limit;
             break;
         }
-        if ((info->errflag = control_.InterruptCheck()) != 0)
+        if ((info->errflag = control_.InterruptCheck(info->iter)) != 0)
             break;
         kkt->Factorize(iterate, info);
         if (info->errflag)
@@ -99,7 +102,10 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 
     // Set status_ipm if errflag terminated IPM.
     if (info->errflag) {
-        if (info->errflag == IPX_ERROR_interrupt_time) {
+        if (info->errflag == IPX_ERROR_user_interrupt) {
+	    info->errflag = 0;
+	    info->status_ipm = IPX_STATUS_user_interrupt;
+	} else if (info->errflag == IPX_ERROR_time_interrupt) {
             info->errflag = 0;
             info->status_ipm = IPX_STATUS_time_limit;
         } else {
@@ -178,9 +184,9 @@ void IPM::ComputeStartingPoint() {
 
         // When c lies in range(AI'), then the dual slack variables are (close
         // to) zero, and the initial point would be almost complementary but
-        // ususally not primal feasible. To prevent this from happening, add
+        // usually not primal feasible. To prevent this from happening, add
         // a fraction of the objective to zl and adjust y. In exact computation
-        // this does not affect dual feasiblity.
+        // this does not affect dual feasibility.
         const double znorm = Twonorm(zl);
         const double rho = 0.05;
         if (znorm < rho*cnorm) {
@@ -376,7 +382,6 @@ void IPM::StepSizes(const Step& step) {
     const Vector& dxu = step.xu;
     const Vector& dzl = step.zl;
     const Vector& dzu = step.zu;
-    const double mu = iterate_->mu();
     const double gammaf = 0.9;
     const double gammaa = 1.0 / (1.0-gammaf);
 
@@ -576,6 +581,7 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
 
 void IPM::PrintHeader() {
     control_.Log()
+        << (kTerminationLogging ? "\n" : "")
         << " "  << Format("Iter", 4)
         << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
         << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
@@ -593,6 +599,7 @@ void IPM::PrintHeader() {
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
 
+    if (kTerminationLogging) PrintHeader();
     control_.Log()
         << " "  << Format(info_->iter, 3)
         << (ipm_optimal ? "*" : " ")

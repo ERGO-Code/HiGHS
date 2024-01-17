@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -82,7 +82,6 @@ HighsStatus assessMatrix(
   if (partitioned) this_p_end = matrix_p_end[0];
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     this_start = matrix_start[ix];
-    HighsInt next_start = matrix_start[ix + 1];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -176,7 +175,7 @@ HighsStatus assessMatrix(
                      matrix_name.c_str(), ix, el, component, vec_dim);
         return HighsStatus::kError;
       }
-      // Check that the index has not already ocurred.
+      // Check that the index has not already occurred.
       legal_component = index_set.find(component) == nullptr;
       if (!legal_component) {
         highsLogUser(log_options, HighsLogType::kError,
@@ -189,7 +188,7 @@ HighsStatus assessMatrix(
       // Check the value
       double abs_value = fabs(matrix_value[el]);
       // Check that the value is not too large
-      bool large_value = abs_value > large_matrix_value;
+      bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
         if (max_large_value < abs_value) max_large_value = abs_value;
         if (min_large_value > abs_value) min_large_value = abs_value;

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -24,10 +24,11 @@ HighsInt Highs_lpCall(const HighsInt num_col, const HighsInt num_row,
                       HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, a_format, sense, offset, col_cost, col_lower,
       col_upper, row_lower, row_upper, a_start, a_index, a_value);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 
@@ -77,10 +78,11 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
                        double* row_value, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, a_format, sense, offset, col_cost, col_lower,
       col_upper, row_lower, row_upper, a_start, a_index, a_value, integrality);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 
@@ -120,11 +122,12 @@ HighsInt Highs_qpCall(
     HighsInt* row_basis_status, HighsInt* model_status) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
+  *model_status = kHighsModelStatusNotset;
   HighsStatus status = highs.passModel(
       num_col, num_row, num_nz, q_num_nz, a_format, q_format, sense, offset,
       col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index,
       a_value, q_start, q_index, q_value);
-  if (status != HighsStatus::kOk) return (HighsInt)status;
+  if (status == HighsStatus::kError) return (HighsInt)status;
 
   status = highs.run();
 
@@ -432,25 +435,25 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
+    for (size_t i = 0; i < solution.col_value.size(); i++) {
       col_value[i] = solution.col_value[i];
     }
   }
 
   if (col_dual != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.col_dual.size(); i++) {
+    for (size_t i = 0; i < solution.col_dual.size(); i++) {
       col_dual[i] = solution.col_dual[i];
     }
   }
 
   if (row_value != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.row_value.size(); i++) {
+    for (size_t i = 0; i < solution.row_value.size(); i++) {
       row_value[i] = solution.row_value[i];
     }
   }
 
   if (row_dual != nullptr) {
-    for (HighsInt i = 0; i < (HighsInt)solution.row_dual.size(); i++) {
+    for (size_t i = 0; i < solution.row_dual.size(); i++) {
       row_dual[i] = solution.row_dual[i];
     }
   }
@@ -460,12 +463,12 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
-  for (HighsInt i = 0; i < (HighsInt)basis.col_status.size(); i++) {
-    col_status[i] = (HighsInt)basis.col_status[i];
+  for (size_t i = 0; i < basis.col_status.size(); i++) {
+    col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }
 
-  for (HighsInt i = 0; i < (HighsInt)basis.row_status.size(); i++) {
-    row_status[i] = (HighsInt)basis.row_status[i];
+  for (size_t i = 0; i < basis.row_status.size(); i++) {
+    row_status[i] = static_cast<HighsInt>(basis.row_status[i]);
   }
   return kHighsStatusOk;
 }
@@ -623,6 +626,21 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   }
 
   return (HighsInt)((Highs*)highs)->setSolution(solution);
+}
+
+HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
+                           void* user_callback_data) {
+  auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
+                                                        user_callback_data);
+  return static_cast<int>(status);
+}
+
+HighsInt Highs_startCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->startCallback(callback_type);
+}
+
+HighsInt Highs_stopCallback(void* highs, const int callback_type) {
+  return (HighsInt)((Highs*)highs)->stopCallback(callback_type);
 }
 
 double Highs_getRunTime(const void* highs) {
@@ -989,6 +1007,10 @@ double Highs_getInfinity(const void* highs) {
   return ((Highs*)highs)->getInfinity();
 }
 
+HighsInt Highs_getSizeofHighsInt(const void* highs) {
+  return ((Highs*)highs)->getSizeofHighsInt();
+}
+
 HighsInt Highs_getNumCol(const void* highs) {
   return ((Highs*)highs)->getNumCol();
 }
@@ -1195,7 +1217,7 @@ HighsInt Highs_getRanging(
 }
 
 void Highs_resetGlobalScheduler(HighsInt blocking) {
-  Highs::resetGlobalScheduler(blocking);
+  Highs::resetGlobalScheduler(blocking != 0);
 }
 
 // *********************

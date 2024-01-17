@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -15,6 +15,7 @@
 
 #include <cassert>
 
+#include "lp_data/HighsLpUtils.h"
 #include "util/HighsMatrixUtils.h"
 
 bool HighsLp::isMip() const {
@@ -23,6 +24,14 @@ bool HighsLp::isMip() const {
     assert(integrality_size == this->num_col_);
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
       if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
+  }
+  return false;
+}
+
+bool HighsLp::hasInfiniteCost(const double infinite_cost) const {
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (this->col_cost_[iCol] >= infinite_cost) return true;
+    if (this->col_cost_[iCol] <= -infinite_cost) return true;
   }
   return false;
 }
@@ -37,6 +46,20 @@ bool HighsLp::hasSemiVariables() const {
         return true;
   }
   return false;
+}
+
+bool HighsLp::hasMods() const {
+  return this->mods_.save_non_semi_variable_index.size() > 0 ||
+         this->mods_.save_inconsistent_semi_variable_index.size() > 0 ||
+         this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
+         this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
+             0 ||
+         this->mods_.save_inf_cost_variable_index.size() > 0;
+}
+
+bool HighsLp::needsMods(const double infinite_cost) const {
+  assert(this->has_infinite_cost_ == this->hasInfiniteCost(infinite_cost));
+  return this->has_infinite_cost_ || this->hasSemiVariables();
 }
 
 bool HighsLp::operator==(const HighsLp& lp) const {
@@ -153,10 +176,14 @@ void HighsLp::clear() {
   this->col_hash_.clear();
   this->row_hash_.clear();
 
+  this->user_cost_scale_ = 0;
+  this->user_bound_scale_ = 0;
+
   this->clearScale();
   this->is_scaled_ = false;
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
+  this->has_infinite_cost_ = false;
   this->mods_.clear();
 }
 
@@ -231,6 +258,51 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
   *this = std::move(lp);
   this->unapplyScale();
   assert(this->is_moved_ == false);
+}
+
+bool HighsLp::userBoundScaleOk(const HighsInt user_bound_scale,
+                               const double infinite_bound) const {
+  const HighsInt dl_user_bound_scale =
+      user_bound_scale - this->user_bound_scale_;
+  if (!dl_user_bound_scale) return true;
+  if (!boundScaleOk(this->col_lower_, this->col_upper_, dl_user_bound_scale,
+                    infinite_bound))
+    return false;
+  return boundScaleOk(this->row_lower_, this->row_upper_, dl_user_bound_scale,
+                      infinite_bound);
+}
+
+void HighsLp::userBoundScale(const HighsInt user_bound_scale) {
+  const HighsInt dl_user_bound_scale =
+      user_bound_scale - this->user_bound_scale_;
+  if (!dl_user_bound_scale) return;
+  double dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    this->col_lower_[iCol] *= dl_user_bound_scale_value;
+    this->col_upper_[iCol] *= dl_user_bound_scale_value;
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    this->row_lower_[iRow] *= dl_user_bound_scale_value;
+    this->row_upper_[iRow] *= dl_user_bound_scale_value;
+  }
+  // Record the current user bound scaling applied to the LP
+  this->user_bound_scale_ = user_bound_scale;
+}
+
+bool HighsLp::userCostScaleOk(const HighsInt user_cost_scale,
+                              const double infinite_cost) const {
+  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
+  if (!dl_user_cost_scale) return true;
+  return costScaleOk(this->col_cost_, dl_user_cost_scale, infinite_cost);
+}
+
+void HighsLp::userCostScale(const HighsInt user_cost_scale) {
+  const HighsInt dl_user_cost_scale = user_cost_scale - this->user_cost_scale_;
+  if (!dl_user_cost_scale) return;
+  double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+    this->col_cost_[iCol] *= dl_user_cost_scale_value;
+  this->user_cost_scale_ = user_cost_scale;
 }
 
 void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
@@ -398,6 +470,10 @@ void HighsLpMods::clear() {
   this->save_relaxed_semi_variable_lower_bound_value.clear();
   this->save_tightened_semi_variable_upper_bound_index.clear();
   this->save_tightened_semi_variable_upper_bound_value.clear();
+  this->save_inf_cost_variable_index.clear();
+  this->save_inf_cost_variable_cost.clear();
+  this->save_inf_cost_variable_lower.clear();
+  this->save_inf_cost_variable_upper.clear();
 }
 
 bool HighsLpMods::isClear() {
@@ -416,9 +492,9 @@ bool HighsLpMods::isClear() {
 }
 
 void HighsNameHash::form(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     const bool duplicate = !this->name2index.emplace(name[index], index).second;
     if (duplicate) {
       // Find the original and mark it as duplicate
@@ -432,10 +508,10 @@ void HighsNameHash::form(const std::vector<std::string>& name) {
 }
 
 bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
-  HighsInt num_name = name.size();
+  size_t num_name = name.size();
   this->clear();
   bool has_duplicate = false;
-  for (HighsInt index = 0; index < num_name; index++) {
+  for (size_t index = 0; index < num_name; index++) {
     has_duplicate = !this->name2index.emplace(name[index], index).second;
     if (has_duplicate) break;
   }

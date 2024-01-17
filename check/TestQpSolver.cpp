@@ -5,7 +5,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -86,7 +86,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(solution.row_dual[1] - required_row_dual1) <
           double_equal_tolerance);
 
-  highs.writeSolution("", 1);
+  if (dev_run) highs.writeSolution("", 1);
 
   // Check with qjh.mps
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";

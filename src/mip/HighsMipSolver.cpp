@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -29,9 +29,11 @@
 
 using std::fabs;
 
-HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+HighsMipSolver::HighsMipSolver(HighsCallback& callback,
+                               const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
-    : options_mip_(&options),
+    : callback_(&callback),
+      options_mip_(&options),
       model_(&lp),
       orig_model_(&lp),
       solution_objective_(kHighsInf),
@@ -102,7 +104,8 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-  // std::cout << options_mip_->presolve << std::endl;
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
   timer_.start(timer_.solve_clock);
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -111,7 +114,12 @@ void HighsMipSolver::run() {
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
-  mipdata_->runPresolve();
+  mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
+  // Identify whether time limit has been reached (in presolve)
+  if (modelstatus_ == HighsModelStatus::kNotset &&
+      timer_.read(timer_.solve_clock) >= options_mip_->time_limit)
+    modelstatus_ = HighsModelStatus::kTimeLimit;
+
   if (modelstatus_ != HighsModelStatus::kNotset) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "Presolve: %s\n",
@@ -119,7 +127,7 @@ void HighsMipSolver::run() {
     if (modelstatus_ == HighsModelStatus::kOptimal) {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
-      mipdata_->transformNewIncumbent(std::vector<double>());
+      mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
     }
     cleanupSolve();
     return;
@@ -171,7 +179,7 @@ restart:
     HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
                                        mipdata_->avgrootlpiters);
     iterlimit = std::max({HighsInt{10000}, iterlimit,
-                          HighsInt(1.5 * mipdata_->firstrootlpiters)});
+                          HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
@@ -233,7 +241,7 @@ restart:
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
-      // printf("continue plunging due to good esitmate\n");
+      // printf("continue plunging due to good estimate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
     search.flushStatistics();
@@ -333,13 +341,19 @@ restart:
           lowerBoundLastCheck = mipdata_->lower_bound;
         }
 
-        int64_t minHugeTreeOffset =
-            (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
-        int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
-            activeIntegerRatio * (10 + minHugeTreeOffset) *
-            std::pow(1.5, nTreeRestarts));
+        // Possibly prevent restart - necessary for debugging presolve
+        // errors: see #1553
+        if (options_mip_->mip_allow_restart) {
+          int64_t minHugeTreeOffset =
+              (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
+          int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+              activeIntegerRatio * (10 + minHugeTreeOffset) *
+              std::pow(1.5, nTreeRestarts));
 
-        doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+          doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+        } else {
+          doRestart = false;
+        }
       } else {
         // count restart due to many fixings within the first 1000 nodes as
         // root restart
@@ -612,10 +626,14 @@ void HighsMipSolver::cleanupSolve() {
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }
 
-void HighsMipSolver::runPresolve() {
+void HighsMipSolver::runPresolve(const HighsInt presolve_reduction_limit) {
+  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // instance
+  assert(!timer_.running(timer_.solve_clock));
+  timer_.start(timer_.solve_clock);
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
-  mipdata_->runPresolve();
+  mipdata_->runPresolve(presolve_reduction_limit);
 }
 
 const HighsLp& HighsMipSolver::getPresolvedModel() const {
@@ -624,4 +642,8 @@ const HighsLp& HighsMipSolver::getPresolvedModel() const {
 
 HighsPresolveStatus HighsMipSolver::getPresolveStatus() const {
   return mipdata_->presolve_status;
+}
+
+presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
+  return mipdata_->postSolveStack;
 }

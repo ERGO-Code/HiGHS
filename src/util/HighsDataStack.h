@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -29,7 +29,7 @@
 
 class HighsDataStack {
   std::vector<char> data;
-  HighsInt position;
+  std::size_t position;
 
  public:
   void resetPosition() { position = data.size(); }
@@ -78,9 +78,9 @@ class HighsDataStack {
     }
   }
 
-  void setPosition(HighsInt position_) { this->position = position_; }
+  void setPosition(size_t position_) { this->position = position_; }
 
-  HighsInt getCurrentDataSize() const { return data.size(); }
+  size_t getCurrentDataSize() const { return data.size(); }
 };
 
 #endif

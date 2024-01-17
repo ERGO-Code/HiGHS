@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -57,7 +57,7 @@ HighsDebugStatus debugHighsSolution(const string message,
   //
   // Set up a HighsModelStatus and HighsInfo just to
   // complete the parameter list.By setting
-  // check_model_status_and_highs_info to be false they waren't
+  // check_model_status_and_highs_info to be false they aren't
   // used.
   HighsModelStatus dummy_model_status;
   HighsInfo dummy_highs_info;
@@ -152,7 +152,7 @@ HighsDebugStatus debugHighsSolution(
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
                   "debugHighsLpSolution: %" HIGHSINT_FORMAT
-                  " primal infeasiblilities but model status is %s\n",
+                  " primal infeasibilities but model status is %s\n",
                   num_primal_infeasibility,
                   utilModelStatusToString(model_status).c_str());
     }
@@ -160,7 +160,7 @@ HighsDebugStatus debugHighsSolution(
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
                   "debugHighsLpSolution: %" HIGHSINT_FORMAT
-                  " dual infeasiblilities but model status is %s\n",
+                  " dual infeasibilities but model status is %s\n",
                   num_dual_infeasibility,
                   utilModelStatusToString(model_status).c_str());
     }

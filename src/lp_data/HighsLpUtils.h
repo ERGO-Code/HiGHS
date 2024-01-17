@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -45,7 +45,8 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        vector<double>& cost, const double infinite_cost);
+                        vector<double>& cost, bool& has_infinite_cost,
+                        const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const HighsInt ml_ix_os,
@@ -56,13 +57,23 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options);
-void relaxSemiVariables(HighsLp& lp);
+bool boundScaleOk(const std::vector<double>& lower,
+                  const std::vector<double>& upper, const HighsInt bound_scale,
+                  const double infinite_bound);
+
+bool costScaleOk(const std::vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost);
+
+HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
+                                bool& made_semi_variable_mods);
+void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
+
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
-void scaleLp(const HighsOptions& options, HighsLp& lp);
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling = false);
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
                               const HighsInt use_scale_strategy);
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
@@ -105,7 +116,8 @@ void changeLpIntegrality(HighsLp& lp,
                          const vector<HighsVarType>& new_integrality);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
-                   const vector<double>& new_col_cost);
+                   const vector<double>& new_col_cost,
+                   const double infinite_cost);
 
 void changeLpColBounds(HighsLp& lp,
                        const HighsIndexCollection& index_collection,
@@ -233,8 +245,6 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
-
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp);
 
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,

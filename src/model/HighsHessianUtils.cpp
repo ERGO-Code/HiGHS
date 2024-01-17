@@ -221,7 +221,6 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
   const HighsInt dim = hessian.dim_;
   HighsInt nnz = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    double diagonal_value = 0;
     const HighsInt nnz0 = nnz;
     for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
          iEl++) {

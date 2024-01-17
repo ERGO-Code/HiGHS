@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -106,7 +106,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool& have_basis = basis.valid;
-  const bool have_integrality = lp.integrality_.size() > 0;
+  const bool have_integrality = (lp.integrality_.size() != 0);
   // Check that there is no dual solution if there's no primal solution
   assert(have_primal_solution || !have_dual_solution);
   // Check that there is no basis if there's no dual solution
@@ -228,8 +228,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       dual_negative_sum.resize(lp.num_col_);
     }
   }
-  HighsInt num_basic_var = 0;
-  HighsInt num_non_basic_var = 0;
 
   // Set status to a value so the compiler doesn't think it might be unassigned.
   HighsBasisStatus status = HighsBasisStatus::kNonbasic;
@@ -272,7 +270,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
         value, dual, status_pointer, integrality, absolute_primal_infeasibility,
         relative_primal_infeasibility, dual_infeasibility, value_residual);
-    // Accumulate primal infeasiblilties
+    // Accumulate primal infeasibilities
     if (absolute_primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
     if (max_absolute_primal_infeasibility_value <
@@ -288,7 +286,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     sum_primal_infeasibility += absolute_primal_infeasibility;
 
     if (have_dual_solution) {
-      // Accumulate dual infeasiblilties
+      // Accumulate dual infeasibilities
       if (dual_infeasibility > dual_feasibility_tolerance)
         num_dual_infeasibility++;
       if (max_dual_infeasibility_value < dual_infeasibility) {
@@ -299,7 +297,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     if (have_basis) {
       if (status == HighsBasisStatus::kBasic) {
-        num_basic_var++;
         double abs_basic_dual = dual_infeasibility;
         if (abs_basic_dual > 0) {
           num_nonzero_basic_duals++;
@@ -310,7 +307,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
           sum_nonzero_basic_duals += abs_basic_dual;
         }
       } else {
-        num_non_basic_var++;
         double off_bound_nonbasic = value_residual;
         if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
         max_off_bound_nonbasic =
@@ -455,7 +451,6 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& relative_primal_infeasibility,
                             double& dual_infeasibility,
                             double& value_residual) {
-  const double middle = (lower + upper) * 0.5;
   // @primal_infeasibility calculation
   absolute_primal_infeasibility = 0;
   relative_primal_infeasibility = 0;
@@ -656,8 +651,6 @@ HighsStatus ipxSolutionToHighsSolution(
   assert(ipx_num_row == lp.num_row_);
   double dual_residual_norm = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    double lower = lp.col_lower_[col];
-    double upper = lp.col_upper_[col];
     double value = ipx_col_value[col];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
@@ -730,7 +723,7 @@ HighsStatus ipxSolutionToHighsSolution(
     HighsInt num_col_primal_truncations = 0;
     HighsInt num_col_dual_truncations = 0;
     HighsInt col = 0, row = 0;
-    double lower, upper, value, dual, residual;
+    double lower, upper, value, dual;
     const HighsInt check_col = -127;
     const HighsInt check_row = -37;
     // Truncating to tolerances can lead to infeasibilities by margin
@@ -934,6 +927,14 @@ HighsStatus ipxSolutionToHighsSolution(
   }
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
+  }
+
   // Indicate that the primal and dual solution are known
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
@@ -974,8 +975,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   HighsInt num_basic_variables = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     bool unrecognised = false;
-    const double lower = lp.col_lower_[col];
-    const double upper = lp.col_upper_[col];
     if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
       highs_basis.col_status[col] = HighsBasisStatus::kBasic;
@@ -1172,12 +1171,12 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
 
-  // Flip dual according to lp.sense_
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    highs_solution.col_dual[iCol] *= (HighsInt)lp.sense_;
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
   }
 
   if (num_boxed_rows)
@@ -1220,7 +1219,6 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   HighsBasis& basis = solver_object.basis_;
   HighsOptions& options = solver_object.options_;
   HEkk& ekk_instance = solver_object.ekk_instance_;
-  HighsLp& ekk_lp = ekk_instance.lp_;
   HighsSimplexStatus& ekk_status = ekk_instance.status_;
   lp.ensureColwise();
   // Consider scaling the LP

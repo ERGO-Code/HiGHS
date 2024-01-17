@@ -109,8 +109,7 @@ class HighsTask {
   }
 
   void cancel() {
-    uintptr_t state =
-        metadata.stealer.fetch_or(kCancelFlag, std::memory_order_release);
+    metadata.stealer.fetch_or(kCancelFlag, std::memory_order_release);
   }
 
   /// run task as owner, if not cancelled

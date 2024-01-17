@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -24,7 +24,8 @@ using std::min;
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
                     solver_object.basis_, solver_object.solution_, 
-                    solver_object.model_status_, solver_object.highs_info_);
+                    solver_object.model_status_, solver_object.highs_info_,
+		    solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options,
@@ -33,7 +34,8 @@ HighsStatus solveLpIpx(const HighsOptions& options,
                        HighsBasis& highs_basis,
 		       HighsSolution& highs_solution,
                        HighsModelStatus& model_status,
-                       HighsInfo& highs_info) {
+                       HighsInfo& highs_info,
+		       HighsCallback& callback) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -137,6 +139,9 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
+  // Set pointer to any callback
+  lps.SetCallback(&callback);
+
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
@@ -234,10 +239,14 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     // time limit, and this is why crossover returns are tested first
     if (illegalIpxStoppedIpmStatus(ipx_info, options))
       return HighsStatus::kError;
+    // Can stop with user interrupt
     // Can stop with time limit
     // Can stop with iter limit
     // Can stop with no progress
-    if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
+    if (ipx_info.status_ipm == IPX_STATUS_user_interrupt) {
+      model_status = HighsModelStatus::kInterrupt;
+      return HighsStatus::kWarning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
       model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
@@ -563,8 +572,8 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     // not "on"
     return HighsStatus::kOk;
   } else if (status == IPX_STATUS_optimal) {
-    highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: %s optimal\n",
-                 method_name.c_str());
+    highsLogUser(options.log_options, HighsLogType::kInfo, 
+                 "Ipx: %s optimal\n", method_name.c_str());
     return HighsStatus::kOk;
   } else if (status == IPX_STATUS_imprecise) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -578,6 +587,10 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s dual infeasible\n", method_name.c_str());
     return HighsStatus::kWarning;
+  } else if (status == IPX_STATUS_user_interrupt) {
+    highsLogUser(options.log_options, HighsLogType::kWarning, 
+                 "Ipx: %s user interrupt\n", method_name.c_str());
+    return HighsStatus::kOk;
   } else if (status == IPX_STATUS_time_limit) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s reached time limit\n", method_name.c_str());
@@ -912,9 +925,9 @@ void reportSolveData(const HighsLogOptions& log_options, const ipx::Info& ipx_in
   highsLogDev(log_options, HighsLogType::kInfo,
 	 "    Objective value       = %11.4g\n", ipx_info.objval);
   highsLogDev(log_options, HighsLogType::kInfo,
-	 "    Primal infeasiblility = %11.4g\n", ipx_info.primal_infeas);
+	 "    Primal infeasibility = %11.4g\n", ipx_info.primal_infeas);
   highsLogDev(log_options, HighsLogType::kInfo,
-	 "    Dual infeasiblility   = %11.4g\n\n", ipx_info.dual_infeas);
+	 "    Dual infeasibility   = %11.4g\n\n", ipx_info.dual_infeas);
   
   highsLogDev(log_options, HighsLogType::kInfo,
 	 "    IPM iter   = %d\n", (int)ipx_info.iter);

@@ -12,6 +12,26 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
+static void userCallback(const int callback_type, const char* message,
+			 const HighsCallbackDataOut* data_out,
+			 HighsCallbackDataIn* data_in,
+			 void* user_callback_data) {
+  // Extract the double value pointed to from void* user_callback_data
+  const double local_callback_data = user_callback_data == NULL ? -1 : *(double*)user_callback_data;
+
+  if (callback_type == kHighsCallbackLogging) {
+    if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
+  } else if (callback_type == kHighsCallbackMipImprovingSolution) {
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, data_out->objective_function_value);
+  } else if (callback_type == kHighsCallbackMipLogging) {
+    if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
+    data_in->user_interrupt = 1;
+  } else if (callback_type == kHighsCallbackMipInterrupt) {
+    if (dev_run) printf("userCallback(%11.4g): MIP interrupt\n", local_callback_data);
+    data_in->user_interrupt = 1;
+  }
+}
+
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
@@ -53,52 +73,6 @@ void version_api() {
     printf("HiGHS githash: %s\n", Highs_githash());
     printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
-}
-
-void minimal_api() {
-  HighsInt num_col = 2;
-  HighsInt num_row = 2;
-  HighsInt num_nz = 4;
-  HighsInt a_format = kHighsMatrixFormatRowwise;
-  HighsInt sense = kHighsObjSenseMinimize;
-  double offset = 0;
-  HighsInt i;
-
-  double cc[2] = {1.0, -2.0};
-  double cl[2] = {0.0, 0.0};
-  double cu[2] = {10.0, 10.0};
-  double rl[2] = {0.0, 0.0};
-  double ru[2] = {2.0, 1.0};
-  HighsInt a_start[3] = {0, 2, 4};
-  HighsInt a_index[4] = {0, 1, 0, 1};
-  double a_value[4] = {1.0, 2.0, 1.0, 3.0};
-
-  double* cv = (double*)malloc(sizeof(double) * num_col);
-  double* cd = (double*)malloc(sizeof(double) * num_col);
-  double* rv = (double*)malloc(sizeof(double) * num_row);
-  double* rd = (double*)malloc(sizeof(double) * num_row);
-
-  HighsInt* cbs = (HighsInt*)malloc(sizeof(HighsInt) * num_col);
-  HighsInt* rbs = (HighsInt*)malloc(sizeof(HighsInt) * num_row);
-
-  HighsInt model_status;
-
-  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format, sense, offset,
-					cc, cl, cu, rl, ru, a_start, a_index, a_value, cv,
-					cd, rv, rd, cbs, rbs, &model_status);
-  assert( return_status == kHighsStatusOk );
-
-  if (dev_run) {
-    for (i = 0; i < num_col; i++) 
-      printf("x%"HIGHSINT_FORMAT" = %lf\n", i, cv[i]);
-  }
-
-  free(cv);
-  free(cd);
-  free(rv);
-  free(rd);
-  free(cbs);
-  free(rbs);
 }
 
 void minimal_api_lp() {
@@ -186,11 +160,11 @@ void minimal_api_lp() {
   HighsInt model_status;
 
   HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
-				    sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-				    a_start, a_index, a_value,
-				    col_value, col_dual, row_value, row_dual,
-				    col_basis_status, row_basis_status,
-				    &model_status);
+					sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					a_start, a_index, a_value,
+					col_value, col_dual, row_value, row_dual,
+					col_basis_status, row_basis_status,
+					&model_status);
 
   assert( return_status == kHighsStatusOk );
 
@@ -260,23 +234,24 @@ void minimal_api_mip() {
   HighsInt return_status;
 
   return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
-					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-					 a_start, a_index, a_value,
-					 integrality,
-					 col_value, row_value,
-					 &model_status);
-  // Should return error
+				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				a_start, a_index, a_value,
+				integrality,
+				col_value, row_value,
+				&model_status);
+  // Should return error, with model status not set
   assert( return_status == kHighsStatusError );
+  assert( model_status == kHighsModelStatusNotset );
 
   // Correct integrality
   integrality[num_col-1] = kHighsVarTypeInteger;
 
   return_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
-					 sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
-					 a_start, a_index, a_value,
-					 integrality,
-					 col_value, row_value,
-					 &model_status);
+				sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+				a_start, a_index, a_value,
+				integrality,
+				col_value, row_value,
+				&model_status);
   // Should return OK
   assert( return_status == kHighsStatusOk );
 
@@ -347,6 +322,35 @@ void minimal_api_qp() {
     }
   }
   free(col_value);
+}
+
+void minimal_api_illegal_lp() {
+  const double inf = 1e30;
+  HighsInt num_col = 2;
+  HighsInt num_row = 1;
+  HighsInt num_nz = 2;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+  double col_cost[2] = {0.0, -1.0};
+  double col_lower[2] = {-inf, -inf};
+  double col_upper[2] = {inf, inf};
+  double row_lower[1] = {-inf};
+  double row_upper[1] = {2};
+  HighsInt a_start[1] = {0};
+  HighsInt a_index[2] = {0, -1}; // Illegal index
+  double a_value[2] = {1.0, 1.0};
+
+  HighsInt model_status;
+  HighsInt return_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
+					sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+					a_start, a_index, a_value,
+					NULL, NULL, NULL, NULL, 
+					NULL, NULL, 
+					&model_status);
+  // Should return error, with model status not set
+  assert( return_status == kHighsStatusError );
+  assert( model_status == kHighsModelStatusNotset );
 }
 
 void full_api() {
@@ -965,9 +969,9 @@ void full_api_qp() {
   HighsInt q_dim = 1;
   HighsInt q_num_nz = 1;
   HighsInt q_format = kHighsHessianFormatTriangular;
-  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt*) * q_dim);
-  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt*) * q_num_nz);
-  double* q_value = (double*)malloc(sizeof(double*) * q_num_nz);
+  HighsInt* q_start = (HighsInt*)malloc(sizeof(HighsInt) * q_dim);
+  HighsInt* q_index = (HighsInt*)malloc(sizeof(HighsInt) * q_num_nz);
+  double* q_value = (double*)malloc(sizeof(double) * q_num_nz);
   q_start[0] = 0;
   q_index[0] = 0;
   q_value[0] = 2.0;
@@ -1323,6 +1327,59 @@ void test_ranging() {
 
 }
 
+void test_callback() {
+  HighsInt num_col = 7;
+  HighsInt num_row = 1;
+  HighsInt num_nz = num_col;
+  HighsInt a_format = kHighsMatrixFormatRowwise;
+  HighsInt sense = kHighsObjSenseMaximize;
+  double offset = 0;
+  double col_cost[7] = {8, 1, 7, 2, 1, 2, 1};
+  double col_lower[7] = {0, 0, 0, 0, 0, 0, 0};
+  double col_upper[7] = {1, 1, 1, 1, 1, 1, 1};
+  double row_lower[1] = {0};
+  double row_upper[1] = {28};
+  HighsInt a_start[2] = {0, 7};
+  HighsInt a_index[7] = {0, 1, 2, 3, 4, 5, 6};
+  double a_value[7] = {9, 6, 7, 9, 7, 9, 9};
+  HighsInt integrality[7] = {kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger, kHighsVarTypeInteger,
+			     kHighsVarTypeInteger};
+
+  void* highs;
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		col_cost, col_lower, col_upper,
+		row_lower, row_upper,
+		a_start, a_index, a_value,
+		integrality);
+  
+  Highs_setCallback(highs, userCallback, NULL);
+  Highs_startCallback(highs, kHighsCallbackLogging);
+  Highs_startCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  double inf = Highs_getInfinity(highs);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, inf);
+  Highs_stopCallback(highs, kHighsCallbackMipInterrupt);
+  Highs_run(highs);
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, 17);
+
+  double user_callback_data = inf;
+  void* p_user_callback_data = (void*)(&user_callback_data);
+  
+  Highs_setCallback(highs, userCallback, p_user_callback_data);
+  Highs_clearSolver(highs);
+  Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
+  Highs_run(highs);
+  
+
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1369,8 +1426,9 @@ void test_setSolution() {
 }
 */
 int main() {
+  minimal_api_illegal_lp();
+  test_callback();
   version_api();
-  minimal_api();
   full_api();
   minimal_api_lp();
   minimal_api_mip();

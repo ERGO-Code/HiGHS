@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -50,10 +50,13 @@ class HighsLp {
   HighsNameHash col_hash_;
   HighsNameHash row_hash_;
 
+  HighsInt user_bound_scale_;
+  HighsInt user_cost_scale_;
   HighsScale scale_;
   bool is_scaled_;
   bool is_moved_;
   HighsInt cost_row_location_;
+  bool has_infinite_cost_;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -61,6 +64,9 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool isMip() const;
   bool hasSemiVariables() const;
+  bool hasInfiniteCost(const double infinite_cost) const;
+  bool hasMods() const;
+  bool needsMods(const double infinite_cost) const;
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
@@ -73,6 +79,12 @@ class HighsLp {
   void applyScale();
   void unapplyScale();
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
+  bool userBoundScaleOk(const HighsInt user_bound_scale,
+                        const double infinite_bound) const;
+  void userBoundScale(const HighsInt user_bound_scale);
+  bool userCostScaleOk(const HighsInt user_cost_scale,
+                       const double infinite_cost) const;
+  void userCostScale(const HighsInt user_cost_scale);
   void exactResize();
   void addColNames(const std::string name, const HighsInt num_new_col = 1);
   void addRowNames(const std::string name, const HighsInt num_new_row = 1);

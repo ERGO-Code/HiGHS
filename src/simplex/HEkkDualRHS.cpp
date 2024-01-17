@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -29,8 +29,6 @@ using std::pair;
 
 void HEkkDualRHS::setup() {
   const HighsInt numRow = ekk_instance_.lp_.num_row_;
-  const HighsInt numTot =
-      ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
   workMark.resize(numRow);
   workIndex.resize(numRow);
   work_infeasibility.resize(numRow);

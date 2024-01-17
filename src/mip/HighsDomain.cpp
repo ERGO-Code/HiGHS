@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -150,7 +150,6 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
   HighsInt numWatched = 0;
   for (HighsInt i = start; i != end; ++i) {
     if (domain->isActive(conflictEntries[i])) continue;
-    HighsInt col = conflictEntries[i].column;
     HighsInt watchPos = 2 * conflict + numWatched;
     watchedLiterals_[watchPos].domchg = conflictEntries[i];
     linkWatchedLiteral(watchPos);
@@ -231,15 +230,12 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
     HighsInt col, double oldbound, double newbound) {
   assert(!domain->infeasible_);
 
-  const std::vector<HighsDomainChange>& conflictEntries =
-      conflictpool_->getConflictEntryVector();
-
   for (HighsInt i = colLowerWatched_[col]; i != -1;
        i = watchedLiterals_[i].next) {
     HighsInt conflict = i >> 1;
 
     const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
-    HighsInt numInactiveDelta =
+    uint8_t numInactiveDelta =
         (domchg.boundval > newbound) - (domchg.boundval > oldbound);
     if (numInactiveDelta != 0) {
       conflictFlag_[conflict] += numInactiveDelta;
@@ -251,9 +247,6 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
 void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
     HighsInt col, double oldbound, double newbound) {
   assert(!domain->infeasible_);
-
-  const std::vector<HighsDomainChange>& conflictEntries =
-      conflictpool_->getConflictEntryVector();
 
   for (HighsInt i = colUpperWatched_[col]; i != -1;
        i = watchedLiterals_[i].next) {
@@ -291,7 +284,6 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
   WatchedLiteral* watched = watchedLiterals_.data() + 2 * conflict;
 
   HighsInt inactive[2];
-  HighsInt latestactive[2];
   HighsInt numInactive = 0;
   for (HighsInt i = start; i != end; ++i) {
     if (domain->isActive(entries[i])) continue;
@@ -712,10 +704,6 @@ HighsDomain::ObjectivePropagation::ObjectivePropagation(HighsDomain* domain)
     }
   }
 
-  double lb = numInfObjLower == 0
-                  ? double(objectiveLower) + domain->mipsolver->model_->offset_
-                  : -kHighsInf;
-
   recomputeCapacityThreshold();
   debugCheckObjectiveLower();
 }
@@ -867,7 +855,7 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -988,7 +976,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
             objectiveLowerContributions[partitionPos].contribution;
 
         // update the capacity threshold with the difference of the new highest
-        // contribution position to the lowest consitribution as the column with
+        // contribution position to the lowest contribution as the column with
         // the lowest contribution can be fixed to its bound that yields the
         // highest objective value.
         HighsInt bestPos = contributionTree.last();
@@ -1001,7 +989,7 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
         // the new linked column could be the one with the new lowest
         // contribution so update the capacity threshold to ensure propagation
         // runs when it can be fixed to the bound that yields the highest
-        // objective valueu
+        // objective value
         capacityThreshold =
             std::max((oldContribution -
                       objectiveLowerContributions[partitionPos].contribution) *
@@ -2174,7 +2162,6 @@ void HighsDomain::setDomainChangeStack(
   domchgreason_.clear();
   branchPos_.clear();
   HighsInt stacksize = domchgstack.size();
-  HighsInt nextBranchPos = -1;
   HighsInt k = 0;
   for (HighsInt branchPos : branchingPositions) {
     for (; k < branchPos; ++k) {
@@ -2418,13 +2405,10 @@ bool HighsDomain::propagate() {
     if (!propagateinds_.empty()) {
       propagateinds.swap(propagateinds_);
 
-      HighsInt propnnz = 0;
       HighsInt numproprows = propagateinds.size();
       for (HighsInt i = 0; i != numproprows; ++i) {
         HighsInt row = propagateinds[i];
         propagateflags_[row] = 0;
-        propnnz += mipsolver->mipdata_->ARstart_[i + 1] -
-                   mipsolver->mipdata_->ARstart_[i];
       }
 
       if (!infeasible_) {
@@ -2511,14 +2495,10 @@ bool HighsDomain::propagate() {
       if (!cutpoolprop.propagatecutinds_.empty()) {
         propagateinds.swap(cutpoolprop.propagatecutinds_);
 
-        HighsInt propnnz = 0;
         HighsInt numproprows = propagateinds.size();
-
         for (HighsInt i = 0; i != numproprows; ++i) {
           HighsInt cut = propagateinds[i];
           cutpoolprop.propagatecutflags_[cut] &= 2;
-          propnnz += cutpoolprop.cutpool->getMatrix().getRowEnd(cut) -
-                     cutpoolprop.cutpool->getMatrix().getRowStart(cut);
         }
 
         if (!infeasible_) {
@@ -2646,8 +2626,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
           proofinds, proofvals, prooflen, proofrhs, double(activitymin)))
     return;
 
-  if (conflictSet.resolvedDomainChanges.size() >
-      100 + 0.3 * mipsolver->mipdata_->integral_cols.size())
+  if (10 * conflictSet.resolvedDomainChanges.size() >
+      1000 + 3 * mipsolver->mipdata_->integral_cols.size())
     return;
 
   conflictSet.reconvergenceFrontier.insert(
@@ -2851,7 +2831,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
@@ -2961,7 +2941,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
-    // accomodate for tiny rounding errors
+    // accommodate for tiny rounding errors
     if (domchg.domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
@@ -3008,8 +2988,8 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
     if (covered < -localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3035,14 +3015,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             // bound can be relaxed
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3066,14 +3046,14 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mupper);
@@ -3122,8 +3102,8 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
     if (covered > localdom.feastol()) {
       // there is room for relaxing bounds / dropping unneeded bound changes
       // from the explanation
-      HighsInt numRelaxed = 0;
-      HighsInt numDropped = 0;
+      // HighsInt numRelaxed = 0;
+      // HighsInt numDropped = 0;
       for (HighsInt k = resolvedDomainChanges.size() - 1; k >= 0; --k) {
         ResolveCandidate& reasonDomchg = resolveBuffer[k];
         LocalDomChg& locdomchg = resolvedDomainChanges[k];
@@ -3149,14 +3129,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxLb <= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxLb - lb);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);
@@ -3181,14 +3161,14 @@ bool HighsDomain::ConflictSet::resolveLinearLeq(HighsCDouble M, double Mlower,
             resolvedDomainChanges.resize(last);
 
             M -= reasonDomchg.delta;
-            ++numDropped;
+            // ++numDropped;
           } else {
             // bound can be relaxed
             while (relaxUb >= localdom.prevboundval_[locdomchg.pos].first)
               locdomchg.pos = localdom.prevboundval_[locdomchg.pos].second;
 
             M += vals[i] * (relaxUb - ub);
-            ++numRelaxed;
+            // ++numRelaxed;
           }
 
           covered = double(M - Mlower);
@@ -3837,8 +3817,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           locdomchg.domchg.column);
   }
 
-  if (resolvedDomainChanges.size() >
-      100 + 0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+  if (10 * resolvedDomainChanges.size() >
+      1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),
@@ -3911,8 +3891,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
           locdomchg.domchg.column);
   }
 
-  if (resolvedDomainChanges.size() >
-      100 + 0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+  if (10 * resolvedDomainChanges.size() >
+      1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),

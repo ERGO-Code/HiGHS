@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -12,6 +12,7 @@
 #define MIP_HIGHS_MIP_SOLVER_H_
 
 #include "Highs.h"
+#include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 
 struct HighsMipSolverData;
@@ -22,6 +23,7 @@ class HighsImplications;
 
 class HighsMipSolver {
  public:
+  HighsCallback* callback_;
   const HighsOptions* options_mip_;
   const HighsLp* model_;
   const HighsLp* orig_model_;
@@ -31,6 +33,8 @@ class HighsMipSolver {
   double bound_violation_;
   double integrality_violation_;
   double row_violation_;
+  // The following are only to return data to HiGHS, and are set in
+  // HighsMipSolver::cleanupSolve
   double dual_bound_;
   double primal_bound_;
   double gap_;
@@ -76,8 +80,9 @@ class HighsMipSolver {
     return model_->integrality_[col];
   }
 
-  HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
-                 const HighsSolution& solution, bool submip = false);
+  HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
+                 const HighsLp& lp, const HighsSolution& solution,
+                 bool submip = false);
 
   ~HighsMipSolver();
 
@@ -89,9 +94,10 @@ class HighsMipSolver {
   mutable HighsTimer timer_;
   void cleanupSolve();
 
-  void runPresolve();
+  void runPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
   HighsPresolveStatus getPresolveStatus() const;
+  presolve::HighsPostsolveStack getPostsolveStack() const;
 };
 
 #endif

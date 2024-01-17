@@ -23,7 +23,7 @@
 
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, HighsTimer& timer) {
+static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, HighsTimer& timer) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
@@ -196,7 +196,8 @@ static void regularize(Runtime& rt) {
   }
 }
 
-void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dual_con, Vector& dual_var) {
+#if 0
+static void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dual_con, Vector& dual_var) {
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
     BasisStatus status = basis.getstatus(e);
@@ -210,7 +211,7 @@ void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dua
         dual_var.value[var] = lambda.value[indexinbasis];
       } else {
         assert(lambda.value[indexinbasis] == 0);
-        dual_var.value[var];
+        (void) dual_var.value[var];
       }
         
     } else {
@@ -228,7 +229,7 @@ void compute_actual_duals(Runtime& rt, Basis& basis, Vector& lambda, Vector& dua
   dual_var.resparsify();
 }
 
-double compute_primal_violation(Runtime& rt) {
+static double compute_primal_violation(Runtime& rt) {
   double maxviolation = 0.0;
   Vector rowact = rt.instance.A.mat_vec(rt.primal);
   for (HighsInt i = 0; i < rt.instance.num_con; i++) {
@@ -246,7 +247,7 @@ double compute_primal_violation(Runtime& rt) {
   return maxviolation;
 }
 
-double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_con, Vector& dual_var) {
+static double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_con, Vector& dual_var) {
   double maxviolation = 0.0;
 
   Vector residuals = instance.Q.mat_vec(primal) + instance.c + instance.A.t().mat_vec(dual_con) + dual_var;
@@ -259,6 +260,7 @@ double compute_dual_violation(Instance& instance, Vector& primal, Vector& dual_c
   }
   return maxviolation;
 }
+#endif
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
@@ -338,7 +340,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       tidyup(p, rowmove, basis, runtime);
       maxsteplength = std::numeric_limits<double>::infinity();
       // if (runtime.instance.Q.mat.value.size() > 0) {
-      double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
@@ -417,7 +418,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   Vector lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
-    BasisStatus status = basis.getstatus(e);
     if (e >= runtime.instance.num_con) {
       // active variable bound
       HighsInt var = e - runtime.instance.num_con;

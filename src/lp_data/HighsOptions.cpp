@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -470,10 +470,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                value_bool);
   } else if (type == HighsOptionType::kInt) {
     // Check that the string only contains legitimate characters
-    HighsInt illegal = value_trim.find_first_not_of("+-0123456789eE");
-    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
-    // Check that the string contains a numerical character
-    HighsInt found_digit = value_trim.find_first_of("0123456789");
+    if (value_trim.find_first_not_of("+-0123456789eE") != std::string::npos)
+      return OptionStatus::kIllegalValue;
     HighsInt value_int;
     int scanned_num_char;
     const char* value_char = value_trim.c_str();
@@ -497,10 +495,8 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                value_int);
   } else if (type == HighsOptionType::kDouble) {
     // Check that the string only contains legitimate characters
-    HighsInt illegal = value_trim.find_first_not_of("+-.0123456789eE");
-    if (int(illegal) >= 0) return OptionStatus::kIllegalValue;
-    // Check that the string contains a numerical character
-    HighsInt found_digit = value_trim.find_first_of("0123456789");
+    if (value_trim.find_first_not_of("+-.0123456789eE") != std::string::npos)
+      return OptionStatus::kIllegalValue;
     HighsInt value_int = atoi(value_trim.c_str());
     double value_double = atof(value_trim.c_str());
     double value_int_double = value_int;
@@ -813,7 +809,6 @@ HighsStatus writeOptionsToFile(FILE* file,
                                const bool report_only_deviations,
                                const HighsFileType file_type) {
   const bool html_file = file_type == HighsFileType::kHtml;
-  const bool md_file = file_type == HighsFileType::kMd;
   if (html_file) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Options</title>\n");
@@ -839,8 +834,6 @@ HighsStatus writeOptionsToFile(FILE* file,
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations,
                    const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
-  const bool md_file = file_type == HighsFileType::kMd;
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;

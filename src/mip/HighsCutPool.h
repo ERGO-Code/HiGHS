@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -136,7 +136,7 @@ class HighsCutPool {
 
   void separateLpCutsAfterRestart(HighsCutSet& cutset);
 
-  bool cutIsIntegral(HighsInt cut) const { return rowintegral[cut]; }
+  bool cutIsIntegral(HighsInt cut) const { return (rowintegral[cut] != 0); }
 
   HighsInt getNumCuts() const {
     return matrix_.getNumRows() - matrix_.getNumDelRows();

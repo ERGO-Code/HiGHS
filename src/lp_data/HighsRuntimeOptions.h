@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -90,8 +90,8 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
     }
     if (result.count("version")) {
       std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
-                << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
-                << std::endl;
+                << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH;
+      std::cout << " Githash " << HIGHS_GITHASH << ". ";
       std::cout << kHighsCopyrightStatement << std::endl;
       exit(0);
     }
@@ -119,7 +119,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
       auto& v = result[kReadSolutionFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
         HighsInt nonEmpty = 0;
-        for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
+        for (size_t i = 0; i < v.size(); i++) {
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;

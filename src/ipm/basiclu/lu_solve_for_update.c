@@ -45,7 +45,6 @@ lu_int lu_solve_for_update(
 
     const lu_int want_solution = p_nlhs && ilhs && xlhs;
     lu_int Lflops = 0, Uflops = 0, Rflops = 0;
-    double tic[2], elapsed;
 
     if (trans == 't' || trans == 'T')
     {

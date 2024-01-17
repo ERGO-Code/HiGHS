@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -466,8 +466,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
   const HighsLp& lp = model.lp_;
-  const bool have_col_names = lp.col_names_.size();
-  const bool have_row_names = lp.row_names_.size();
+  const bool have_col_names = (lp.col_names_.size() != 0);
+  const bool have_row_names = (lp.row_names_.size() != 0);
   // Determine number of nonzeros including the objective function
   // and, hence, determine whether there is an objective function
   HighsInt num_nz = lp.a_matrix_.numNz();
@@ -484,12 +484,12 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   // the (inconsistent) behaviour of Glpsol.
   //
   // If Glpsol is run from a .mod file then the cost row is reported
-  // unless there is no objecive [minimize/maximize "objname"]
+  // unless there is no objective [minimize/maximize "objname"]
   // statement in the .mod file. In this case, the N-row in the MPS
   // file is called "R0000000" and referred to below as being artificial.
   //
   // However, the position of a defined cost row depends on where the
-  // objecive appears in the .mod file. If Glpsol is run from a .mod
+  // objective appears in the .mod file. If Glpsol is run from a .mod
   // file, and reads a .sol file, it must be in the right format.
   //
   // HiGHS can't read ..mod files, so works from an MPS or LP file
@@ -758,7 +758,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     std::string status_text = "  ";
     std::string status_char = "";
     if (have_basis) {
-      const HighsBasisStatus status = basis.row_status[iRow];
       switch (basis.row_status[iRow]) {
         case HighsBasisStatus::kBasic:
           status_text = "B ";
@@ -873,7 +872,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
     std::string status_text = "  ";
     std::string status_char = "";
     if (have_basis) {
-      const HighsBasisStatus status = basis.col_status[iCol];
       switch (basis.col_status[iCol]) {
         case HighsBasisStatus::kBasic:
           status_text = "B ";
@@ -1260,6 +1258,9 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kSolutionLimit:
       return "Solution limit reached";
       break;
+    case HighsModelStatus::kInterrupt:
+      return "Interrupted by user";
+      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
       break;
@@ -1338,6 +1339,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kWarning;
     case HighsModelStatus::kSolutionLimit:
       return HighsStatus::kWarning;
+    case HighsModelStatus::kInterrupt:
+      return HighsStatus::kWarning;
     case HighsModelStatus::kUnknown:
       return HighsStatus::kWarning;
     default:
@@ -1362,7 +1365,7 @@ std::string findModelObjectiveName(const HighsLp* lp,
   if (!has_objective && hessian) {
     // Zero cost vector, so only chance of an objective comes from any
     // Hessian
-    has_objective = hessian->dim_;
+    has_objective = (hessian->dim_ != 0);
   }
   HighsInt pass = 0;
   for (;;) {

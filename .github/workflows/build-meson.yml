@@ -23,6 +23,7 @@ jobs:
             ninja
             zlib
             catch2
+            numpy
           cache-environment: true
           init-shell: >-
             bash
@@ -30,5 +31,13 @@ jobs:
       - name: Build and test
         shell: bash -l {0}
         run: |
-          meson setup bbdir_test -Duse_zlib=enabled -Dwith_tests=True --prefix $CONDA_PREFIX
-          meson test -C bbdir_test
+          meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
+          meson test -C bbdir
+      - name: Test compiled highspy
+        shell: bash -l {0}
+        run: |
+          meson configure bbdir -Dwith_pybind11=True
+          meson compile -C bbdir
+          LD_LIBRARY_PATH=$(pwd)/bbdir/src \
+          PYTHONPATH=$(pwd)/bbdir \
+          python examples/call_highs_from_python.py

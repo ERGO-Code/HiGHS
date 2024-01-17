@@ -78,6 +78,35 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
 
   if (dev_run) printf("Give valid row_upper.size()\n");
   lp.row_upper_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.start_[0]\n");
+  lp.a_matrix_.start_[0] = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run)
+    printf("Give valid a_matrix_.start_[2] and a_matrix_.start_[3]\n");
+  lp.a_matrix_.start_[2] = 2;
+  lp.a_matrix_.start_[3] = 2;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.index_[0]\n");
+  // Yields duplicate index, but values are still zero, so both are
+  // discarded and a warning is returned
+  lp.a_matrix_.index_[0] = 0;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+
+  if (dev_run)
+    printf("Give nonzero a_matrix_.value_[0] and a_matrix_.value_[1]\n");
+  // Yields duplicate index, but values are still zero, so both are
+  // discarded and a warning is returned
+  lp.a_matrix_.value_[0] = 1;
+  lp.a_matrix_.value_[1] = 1;
+  // Now the duplicate indices yield an erorr
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid a_matrix_.index_[1]\n");
+  lp.a_matrix_.index_[1] = 1;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   /*
@@ -178,6 +207,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(num_col, colCost.data(), colLower.data(), colUpper.data(),
                     num_col_nz, Astart.data(), Aindex.data(), Avalue.data());
   REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
 
   // Create an empty column
   HighsInt XnumNewCol = 1;
@@ -200,27 +230,25 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
   REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
+
   XcolUpper[0] = my_infinity;
   //  reportLp(lp, HighsLogType::kVerbose);
 
-  // Try to add a column with illegal cost
-  HighsStatus require_return_status;
-  if (kHighsAllowInfiniteCosts) {
-    require_return_status = HighsStatus::kOk;
-  } else {
-    require_return_status = HighsStatus::kError;
-  }
+  // Try to add a column with infinite cost
   XcolCost[0] = my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
 
   XcolCost[0] = -my_infinity;
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
 
   // Reset to a legitimate cost
   XcolCost[0] = 1;
@@ -338,15 +366,16 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // for columns 9 and 10.
 
   // LP is found to be unbounded by presolve, but is primal
-  // infeasible. With isBoundInfeasible check in solveLp,
+  // infeasible. With infeasibleBoundsOk check in solveLp,
   // infeasiblility is identified before reaching a solver, so
   // presolve isn't called
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::kOk);
+  // LP has free variable with infinite costs so cannot be solved
+  REQUIRE(run_status == HighsStatus::kError);
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+  REQUIRE(model_status == HighsModelStatus::kUnknown);
 
   REQUIRE(highs.changeCoeff(-1, 0, check_value) == HighsStatus::kError);
   REQUIRE(highs.changeCoeff(0, -1, check_value) == HighsStatus::kError);
@@ -419,6 +448,130 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
+TEST_CASE("LP-inf-cost", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  const double my_infinite_bound = 1e30;
+  const double my_infinite_cost = kHighsInf;
+  const double my_large_cost = 1e20;
+  highs.setOptionValue("infinite_cost", my_infinite_cost);
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-3, -2, -my_infinite_cost};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {my_infinite_bound, my_infinite_bound, 1};
+  lp.row_lower_ = {-my_infinite_bound, 12};
+  lp.row_upper_ = {7.0, 12.0};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1.0, 4.0, 1.0, 2.0, 1, 1.0};
+
+  lp.integrality_.resize(lp.num_col_);
+  lp.integrality_[0] = HighsVarType::kContinuous;
+  lp.integrality_[0] = HighsVarType::kContinuous;
+  lp.integrality_[0] = HighsVarType::kInteger;
+
+  HighsStatus status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // Now just make the cost large
+  status = highs.changeColCost(2, -my_large_cost);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // Now transform to LP and make cost infinite
+  status = highs.changeColCost(2, -my_infinite_cost);
+  status = highs.changeColIntegrality(2, HighsVarType::kContinuous);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  highs.clearModel();
+
+  // Formulate min -inf x s.t. x <= 2; 1 <= x <= 3
+  //
+  // Fixing x at 3 is infeasible, so kUnknown status should be
+  // returned with kWarning
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-my_infinite_cost};
+  lp.col_lower_ = {1};
+  lp.col_upper_ = {3};
+  lp.row_lower_ = {-my_infinite_bound};
+  lp.row_upper_ = {2};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+
+  lp.integrality_.clear();
+
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+
+  highs.changeObjectiveSense(ObjSense::kMaximize);
+  // Switching to maximization, fixing x at 1 is feasible, so kOk
+  // status should be returned with kOptimal and objective = -inf
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
+
+  // Formulate min -inf x s.t. x <= 2; 0.5 <= x <= 3.5; x integer
+  //
+  // Fixing x at 3 is infeasible, so kUnknown status should be
+  // returned with kWarning
+
+  highs.clearModel();
+
+  lp.num_col_ = 1;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-my_infinite_cost};
+  lp.col_lower_ = {0.5};
+  lp.col_upper_ = {3.5};
+  lp.row_lower_ = {-my_infinite_bound};
+  lp.row_upper_ = {2};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  lp.integrality_ = {HighsVarType::kInteger};
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getLp().has_infinite_cost_);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+
+  highs.changeObjectiveSense(ObjSense::kMaximize);
+  // Switching to maximization, fixing x at 1 is feasible, so kOk
+  // status should be returned with kOptimal and objective = -inf
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().objective_function_value == -my_infinite_cost);
+  // Check that x was fixed at 1, not 0.5
+  REQUIRE(highs.getSolution().col_value[0] == 1);
+}
+
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
@@ -462,4 +615,66 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   delta_objective_value = std::fabs(required_objective_value -
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
+}
+
+TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 0;
+  lp.num_row_ = 1;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
+}
+
+TEST_CASE("LP-row-wise", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {80, 120};
+  highs.passModel(lp);
+  highs.run();
+}
+
+TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
+  Highs highs;
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  double epsilon = 1e-10;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {1, 2.5 + epsilon};
+  lp.col_upper_ = {1 - epsilon, 2.5 - 2 * epsilon};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 1, 4};
+  lp.row_lower_ = {6, -inf};
+  lp.row_upper_ = {6 - epsilon, 11 - epsilon};
+  highs.passModel(lp);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  if (dev_run) highs.writeSolution("", 1);
+
+  highs.changeColBounds(0, 0, -1);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }

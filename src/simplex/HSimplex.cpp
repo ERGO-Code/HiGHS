@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -198,7 +198,7 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
   for (HighsInt iVar = 0; iVar < scale.num_col + scale.num_row; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
-    // No dual infeasiblity for fixed rows and columns
+    // No dual infeasibility for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
     bool col = iVar < scale.num_col;
     HighsInt iCol = 0;

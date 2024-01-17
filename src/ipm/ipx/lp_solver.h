@@ -7,6 +7,7 @@
 #include "ipm/ipx/ipm.h"
 #include "ipm/ipx/iterate.h"
 #include "ipm/ipx/model.h"
+#include "lp_data/HighsCallback.h"
 
 namespace ipx {
 
@@ -97,6 +98,9 @@ public:
     // uses the default values of a Parameters object.
     Parameters GetParameters() const;
     void SetParameters(Parameters new_parameters);
+
+    // Sets the callback in control
+    void SetCallback(HighsCallback* callback);
 
     // Discards the model and solution (if any) but keeps the parameters.
     void ClearModel();

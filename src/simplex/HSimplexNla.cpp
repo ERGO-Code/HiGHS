@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -177,7 +177,6 @@ double HSimplexNla::rowEp2NormInScaledSpace(const HighsInt iRow,
   if (scale_ == NULL) {
     return row_ep.norm2();
   }
-  const vector<double>& col_scale = scale_->col;
   const vector<double>& row_scale = scale_->row;
   // Get the 2-norm of row_ep in the scaled space otherwise for
   // checking
@@ -286,7 +285,6 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 
 void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
   if (scale_ == NULL) return;
-  const vector<double>& col_scale = scale_->col;
   const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
@@ -317,7 +315,6 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
 
 void HSimplexNla::unapplyBasisMatrixRowScale(HVector& rhs) const {
   if (scale_ == NULL) return;
-  const vector<double>& col_scale = scale_->col;
   const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
@@ -449,7 +446,6 @@ void HSimplexNla::reportPackValue(const std::string message,
                                   const HVector* vector,
                                   const bool force) const {
   if (!report_ && !force) return;
-  const HighsInt num_row = lp_->num_row_;
   if (vector->packCount > kReportItemLimit) {
     analyseVectorValues(nullptr, message, vector->packCount, vector->packValue,
                         true);

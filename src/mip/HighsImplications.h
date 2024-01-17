@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -54,7 +54,7 @@ class HighsImplications {
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * numcol);
+    implications.resize(2 * static_cast<size_t>(numcol));
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
@@ -69,7 +69,7 @@ class HighsImplications {
     implications.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
-    implications.resize(2 * numcol);
+    implications.resize(2 * static_cast<size_t>(numcol));
     colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();

@@ -17,6 +17,7 @@ set(TEST_SOURCES
     TestHighsVersion.cpp
     TestAlienBasis.cpp
     TestDualize.cpp
+    TestCallbacks.cpp
     TestCheckSolution.cpp
     TestEkk.cpp
     TestFactor.cpp
@@ -48,12 +49,14 @@ set(TEST_SOURCES
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpOrientation.cpp
+    TestModelProperties.cpp
     TestPresolve.cpp
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
+    TestUserScale.cpp
     Avgas.cpp)
 
 if (NOT APPLE)
@@ -109,6 +112,7 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

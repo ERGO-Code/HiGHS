@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -137,6 +137,16 @@ void analyseVectorValues(
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
+    std::string model_name =
+        "Unknown"  //!< Model name to report if analysing distribution of
+                   //!< different values in the vector
+);
+
+void analyseVectorValues(
+    const HighsLogOptions* log_options,
+    const std::string message,         //!< Message to be printed
+    HighsInt vecDim,                   //!< Dimension of vector
+    const std::vector<HighsInt>& vec,  //!< Vector of values
     std::string model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector

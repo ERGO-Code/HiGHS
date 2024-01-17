@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -43,34 +43,29 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                       return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
-  // If the LP has no columns there is nothing left to test
-  if (lp.num_col_ == 0) return HighsStatus::kOk;
-  assert(lp.a_matrix_.isColwise());
-
-  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
-  // exists (as the number of nonzeros)
-  assert(lp.num_col_ > 0);
-
-  // Assess the LP column costs
-  HighsIndexCollection index_collection;
-  index_collection.dimension_ = lp.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = 0;
-  index_collection.to_ = lp.num_col_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
-                            options.infinite_cost);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessCosts");
-  if (return_status == HighsStatus::kError) return return_status;
-  // Assess the LP column bounds
-  call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
-                             lp.col_upper_, options.infinite_bound,
-                             lp.integrality_.data());
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessBounds");
-  if (return_status == HighsStatus::kError) return return_status;
+  if (lp.num_col_) {
+    // Assess the LP column costs
+    HighsIndexCollection index_collection;
+    index_collection.dimension_ = lp.num_col_;
+    index_collection.is_interval_ = true;
+    index_collection.from_ = 0;
+    index_collection.to_ = lp.num_col_ - 1;
+    call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
+                              lp.has_infinite_cost_, options.infinite_cost);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessCosts");
+    if (return_status == HighsStatus::kError) return return_status;
+    // Assess the LP column bounds
+    call_status = assessBounds(
+        options, "Col", 0, index_collection, lp.col_lower_, lp.col_upper_,
+        options.infinite_bound, lp.isMip() ? lp.integrality_.data() : nullptr);
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessBounds");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
   if (lp.num_row_) {
     // Assess the LP row bounds
+    HighsIndexCollection index_collection;
     index_collection.dimension_ = lp.num_row_;
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
@@ -82,6 +77,16 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                                         return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
+  // If the LP has no columns the matrix must be empty and there is
+  // nothing left to test
+  if (lp.num_col_ == 0) {
+    assert(!lp.a_matrix_.numNz());
+    return HighsStatus::kOk;
+  }
+  // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_]
+  // exists (as the number of nonzeros)
+  assert(lp.num_col_ > 0);
+
   // Assess the LP matrix - even if there are no rows!
   call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
@@ -89,22 +94,13 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return_status = interpretCallStatus(options.log_options, call_status,
                                       return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
-  HighsInt lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
+  HighsInt lp_num_nz = lp.a_matrix_.numNz();
   if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
     lp.a_matrix_.index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
     lp.a_matrix_.value_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
-    lp.a_matrix_.index_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
-    lp.a_matrix_.value_.resize(lp_num_nz);
-
-  //  if (return_status == HighsStatus::kError)
-  //    return_status = HighsStatus::kError;
-  //  else
-  //    return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "assessLp returns HighsStatus = %s\n",
@@ -132,7 +128,6 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt col_cost_size = lp.col_cost_.size();
   HighsInt col_lower_size = lp.col_lower_.size();
   HighsInt col_upper_size = lp.col_upper_.size();
-  HighsInt matrix_start_size = lp.a_matrix_.start_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
@@ -278,7 +273,8 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        vector<double>& cost, const double infinite_cost) {
+                        vector<double>& cost, bool& has_infinite_cost,
+                        const double infinite_cost) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -287,7 +283,6 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   if (from_k > to_k) return return_status;
 
   return_status = HighsStatus::kOk;
-  bool error_found = false;
   // Work through the data to be assessed.
   //
   // Loop is k \in [from_k...to_k) covering the entries in the
@@ -310,8 +305,8 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
   // columns in the model.
   //
   HighsInt local_col;
-  HighsInt ml_col;
   HighsInt usr_col = -1;
+  HighsInt num_infinite_cost = 0;
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
@@ -323,25 +318,24 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     } else {
       usr_col = k;
     }
-    ml_col = ml_col_os + local_col;
     if (index_collection.is_mask_ && !index_collection.mask_[local_col])
       continue;
-    double abs_cost = fabs(cost[usr_col]);
-    bool legal_cost = abs_cost < infinite_cost;
-    if (!legal_cost) {
-      error_found = !kHighsAllowInfiniteCosts;
-      HighsLogType log_type = HighsLogType::kWarning;
-      if (error_found) log_type = HighsLogType::kError;
-      highsLogUser(options.log_options, log_type,
-                   "Col  %12" HIGHSINT_FORMAT " has |cost| of %12g >= %12g\n",
-                   ml_col, abs_cost, infinite_cost);
+    if (cost[usr_col] >= infinite_cost) {
+      num_infinite_cost++;
+      cost[usr_col] = kHighsInf;
+    } else if (cost[usr_col] <= -infinite_cost) {
+      num_infinite_cost++;
+      cost[usr_col] = -kHighsInf;
     }
   }
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
-
+  if (num_infinite_cost > 0) {
+    has_infinite_cost = true;
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "%" HIGHSINT_FORMAT
+                 " |cost| values greater than or equal to %12g are treated as "
+                 "Infinity\n",
+                 num_infinite_cost, infinite_cost);
+  }
   return return_status;
 }
 
@@ -457,13 +451,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   if (num_infinite_lower_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " lower bounds exceeding %12g are treated as -Infinity\n",
+                 " lower bounds    less than or equal to %12g are treated as "
+                 "-Infinity\n",
                  type, num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%3ss:%12" HIGHSINT_FORMAT
-                 " upper bounds exceeding %12g are treated as +Infinity\n",
+                 " upper bounds greater than or equal to %12g are treated as "
+                 "+Infinity\n",
                  type, num_infinite_upper_bound, infinite_bound);
   }
 
@@ -477,7 +473,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
-HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
+HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
+                                bool& made_semi_variable_mods) {
+  made_semi_variable_mods = false;
   HighsStatus return_status = HighsStatus::kOk;
   if (!lp.integrality_.size()) return return_status;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
@@ -507,7 +505,7 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
     if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
         lp.integrality_[iCol] == HighsVarType::kSemiInteger) {
       if (lp.col_lower_[iCol] > lp.col_upper_[iCol]) {
-        // Semi-variables with inconsistent bounds become continous
+        // Semi-variables with inconsistent bounds become continuous
         // and fixed at zero
         num_inconsistent_semi++;
         inconsistent_semi_variable_index.push_back(iCol);
@@ -648,16 +646,20 @@ HighsStatus assessIntegrality(HighsLp& lp, const HighsOptions& options) {
         num_illegal_upper, kMaxSemiVariableUpper);
     return_status = HighsStatus::kError;
   }
+  made_semi_variable_mods =
+      lp.mods_.save_non_semi_variable_index.size() > 0 ||
+      inconsistent_semi_variable_index.size() > 0 ||
+      tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
-void relaxSemiVariables(HighsLp& lp) {
+void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
   // When solving relaxation, semi-variables are continuous between 0
   // and their upper bound, so have to modify the lower bound to be
   // zero
+  made_semi_variable_mods = false;
   if (!lp.integrality_.size()) return;
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
-  HighsInt num_modified_lower = 0;
   std::vector<HighsInt>& relaxed_semi_variable_lower_index =
       lp.mods_.save_relaxed_semi_variable_lower_bound_index;
   std::vector<double>& relaxed_semi_variable_lower_value =
@@ -671,6 +673,7 @@ void relaxSemiVariables(HighsLp& lp) {
       lp.col_lower_[iCol] = 0;
     }
   }
+  made_semi_variable_mods = relaxed_semi_variable_lower_index.size() > 0;
 }
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
@@ -707,7 +710,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  " but there is no guarantee\n",
                  min_semi_variable_margin);
   }
-  return num_active_modified_upper;
+  return (num_active_modified_upper != 0);
 }
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
@@ -758,6 +761,32 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
+bool boundScaleOk(const vector<double>& lower, const vector<double>& upper,
+                  const HighsInt bound_scale, const double infinite_bound) {
+  if (!bound_scale) return true;
+  double bound_scale_value = std::pow(2, bound_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(lower.size()); iCol++) {
+    if (lower[iCol] > -kHighsInf &&
+        std::abs(lower[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+    if (upper[iCol] < kHighsInf &&
+        std::abs(upper[iCol] * bound_scale_value) > infinite_bound)
+      return false;
+  }
+  return true;
+}
+
+bool costScaleOk(const vector<double>& cost, const HighsInt cost_scale,
+                 const double infinite_cost) {
+  if (!cost_scale) return true;
+  double cost_scale_value = std::pow(2, cost_scale);
+  for (HighsInt iCol = 0; iCol < HighsInt(cost.size()); iCol++)
+    if (std::abs(cost[iCol]) < kHighsInf &&
+        std::abs(cost[iCol] * cost_scale_value) > infinite_cost)
+      return false;
+  return true;
+}
+
 bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Indicate whether new scaling has been determined in the return value.
   bool new_scaling = false;
@@ -798,7 +827,8 @@ bool considerScaling(const HighsOptions& options, HighsLp& lp) {
   return new_scaling;
 }
 
-void scaleLp(const HighsOptions& options, HighsLp& lp) {
+void scaleLp(const HighsOptions& options, HighsLp& lp,
+             const bool force_scaling) {
   lp.clearScaling();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
@@ -820,7 +850,6 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
     // something more intelligent
     use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
   }
-  bool allow_cost_scaling = options.allowed_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -828,14 +857,15 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
-  bool no_scaling =
-      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
-      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
-  if (force_scaling) {
-    no_scaling = false;
-    printf("!!!! FORCE SCALING !!!!\n");
-  }
+  // Possibly force scaling, otherwise base the decision on the range
+  // of values in the matrix, values that will be used later for
+  // reporting
+  const bool no_scaling = force_scaling
+                              ? false
+                              : (original_matrix_min_value >=
+                                 no_scaling_original_matrix_min_value) &&
+                                    (original_matrix_max_value <=
+                                     no_scaling_original_matrix_max_value);
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
@@ -1077,7 +1107,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       exp(sum_log_col_equilibration / numCol);
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
@@ -1123,7 +1153,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
       original_matrix_max_value / original_matrix_min_value;
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
-  if (options.highs_analysis_level) {
+  if (options.log_dev_level) {
     highsLogDev(
         options.log_options, HighsLogType::kInfo,
         "Scaling: Extreme equilibration improvement =      ( %11.4g + "
@@ -1165,7 +1195,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
   const bool poor_improvement =
       improvement_factor < improvement_factor_required;
 
-  // Possibly abandon scaling if it's not improved equlibration significantly
+  // Possibly abandon scaling if it's not improved equilibration significantly
   if (possibly_abandon_scaling && poor_improvement) {
     // Unscale the matrix
     for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -1174,14 +1204,18 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                  "[%0.4g, %0.4g] for rows\n",
+                  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
                   improvement_factor, improvement_factor_required);
@@ -1225,10 +1259,26 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
 
-  HighsInt simplex_scale_strategy = use_scale_strategy;
-
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
+
+  // The 015(7) values refer to bit settings in FICO's scaling options.
+  // Specifically
+  //
+  // 0: Row scaling
+  //
+  // 1: Column scaling
+  //
+  // 5: Scale by maximum element
+  //
+  // 7: Scale objective function for the simplex method
+  //
+  // Note that 7 is not yet implemented, so
+  // kSimplexScaleStrategyMaxValue015 and
+  // kSimplexScaleStrategyMaxValue0157 are equivalent. However, cost
+  // scaling could be well worth adding, now that the unscaled problem
+  // can be solved using scaled NLA
+
   const double log2 = log(2.0);
   const double max_allow_scale = pow(2.0, options.allowed_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
@@ -1310,7 +1360,7 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
 
   const double improvement_factor_required = 1.0;
   const bool poor_improvement =
-      improvement_factor < improvement_factor_required;
+      improvement_factor <= improvement_factor_required;
 
   if (poor_improvement) {
     // Unscale the matrix
@@ -1320,14 +1370,14 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
         Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    if (options.highs_analysis_level)
+    if (options.log_dev_level)
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Improvement factor %0.4g < %0.4g required, so no "
                   "scaling applied\n",
                   improvement_factor, improvement_factor_required);
     return false;
   } else {
-    if (options.highs_analysis_level) {
+    if (options.log_dev_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
                   "[%0.4g, %0.4g] for rows\n",
@@ -1391,7 +1441,12 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
-  bool have_names = lp.col_names_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
+  if (have_integrality) {
+    assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
+    lp.integrality_.resize(new_num_col);
+  }
+  bool have_names = (lp.col_names_.size() != 0);
   if (have_names) lp.col_names_.resize(new_num_col);
   for (HighsInt new_col = 0; new_col < num_new_col; new_col++) {
     HighsInt iCol = lp.num_col_ + new_col;
@@ -1400,6 +1455,7 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_upper_[iCol] = colUpper[new_col];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
+    if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
   }
 }
 
@@ -1411,7 +1467,7 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
-  bool have_names = lp.row_names_.size();
+  bool have_names = (lp.row_names_.size() != 0);
   if (have_names) lp.row_names_.resize(new_num_row);
 
   for (HighsInt new_row = 0; new_row < num_new_row; new_row++) {
@@ -1425,7 +1481,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 
 void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
-  HighsStatus call_status;
   deleteColsFromLpVectors(lp, new_num_col, index_collection);
   lp.a_matrix_.deleteCols(index_collection);
   lp.num_col_ = new_num_col;
@@ -1450,7 +1505,8 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 
   HighsInt col_dim = lp.num_col_;
   new_num_col = 0;
-  bool have_names = lp.col_names_.size();
+  bool have_names = (lp.col_names_.size() != 0);
+  bool have_integrality = (lp.integrality_.size() != 0);
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -1463,6 +1519,7 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
       lp.col_lower_[new_num_col] = lp.col_lower_[col];
       lp.col_upper_[new_num_col] = lp.col_upper_[col];
       if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
+      if (have_integrality) lp.integrality_[new_num_col] = lp.integrality_[col];
       new_num_col++;
     }
     if (keep_to_col >= col_dim - 1) break;
@@ -1474,7 +1531,6 @@ void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
 }
 
 void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsStatus call_status;
   HighsInt new_num_row;
   deleteRowsFromLpVectors(lp, new_num_row, index_collection);
   lp.a_matrix_.deleteRows(index_collection);
@@ -1524,7 +1580,6 @@ void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
 
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1620,9 +1675,12 @@ void changeLpIntegrality(HighsLp& lp,
   // technique
   HighsInt lp_col;
   HighsInt usr_col = -1;
-  // May be adding integrality to a pure LP for which lp.integrality_
-  // is of size 0.
-  lp.integrality_.resize(lp.num_col_);
+  // If changing integrality for a problem without an integrality
+  // vector (ie an LP), have to create it for the incumbent columns -
+  // which are naturally continuous
+  if (lp.integrality_.size() == 0)
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+  assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
       lp_col = k;
@@ -1641,7 +1699,8 @@ void changeLpIntegrality(HighsLp& lp,
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
-                   const vector<double>& new_col_cost) {
+                   const vector<double>& new_col_cost,
+                   const double infinite_cost) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1671,6 +1730,9 @@ void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
     if (mask && !col_mask[col]) continue;
     lp.col_cost_[col] = new_col_cost[usr_col];
   }
+  // Check whether the LP still has an infinite cost
+  if (lp.has_infinite_cost_)
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(infinite_cost);
 }
 
 void changeLpColBounds(HighsLp& lp,
@@ -1868,8 +1930,8 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   std::string type;
   HighsInt count;
-  bool have_integer_columns = getNumInt(lp);
-  bool have_col_names = lp.col_names_.size();
+  bool have_integer_columns = (getNumInt(lp) != 0);
+  bool have_col_names = (lp.col_names_.size() != 0);
 
   highsLogUser(log_options, HighsLogType::kInfo,
                "  Column        Lower        Upper         Cost       "
@@ -1911,7 +1973,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_row_ <= 0) return;
   std::string type;
   vector<HighsInt> count;
-  bool have_row_names = lp.row_names_.size();
+  bool have_row_names = (lp.row_names_.size() != 0);
 
   count.resize(lp.num_row_, 0);
   if (lp.num_col_ > 0) {
@@ -1943,7 +2005,7 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
 void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.num_col_ <= 0) return;
   if (lp.num_row_) {
-    // With postitive number of rows, can assume that there are index and value
+    // With positive number of rows, can assume that there are index and value
     // vectors to pass
     reportMatrix(log_options, "Column", lp.num_col_,
                  lp.a_matrix_.start_[lp.num_col_], lp.a_matrix_.start_.data(),
@@ -2066,7 +2128,7 @@ HighsStatus readSolutionFile(const std::string filename,
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
   const HighsInt lp_num_row = lp.num_row_;
-  // Define idetifiers for reading in
+  // Define identifiers for reading in
   HighsSolution read_solution = solution;
   HighsBasis read_basis = basis;
   read_solution.clear();
@@ -2078,7 +2140,6 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  HighsInt status;
   if (!readSolutionFileIgnoreLineOk(in_file))
     return readSolutionFileErrorReturn(in_file);  // Model status
   if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2105,7 +2166,7 @@ HighsStatus readSolutionFile(const std::string filename,
   assert(keyword == "Columns");
   // The default style parameter is kSolutionStyleRaw, and this still
   // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, sinc ethere's nothing to
+  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
   // read either way
   const bool sparse = num_col <= 0;
   if (style == kSolutionStyleSparse) assert(sparse);
@@ -2158,7 +2219,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // OK to read from a file with different number of rows, since the
   // primal solution is all that's important. For example, see #1284,
   // where the user is solving a sequence of MIPs with the same number
-  // of variables, but incresing numbers of constraints, and wants to
+  // of variables, but increasing numbers of constraints, and wants to
   // used the solution from one MIP as the starting solution for the
   // next.
   const bool num_row_ok = num_row == lp_num_row;
@@ -2339,6 +2400,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   }
 }
 
+// Determine validity, primal feasibility and (when relevant) integer
+// feasibility of a solution
 HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2360,9 +2423,17 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
   double sum_row_residuals = 0;
   const double kRowResidualTolerance =
       options.primal_feasibility_tolerance;  // 1e-12;
+  const double kPrimalFeasibilityTolerance =
+      lp.isMip() ? options.mip_feasibility_tolerance
+                 : options.primal_feasibility_tolerance;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Assessing feasibility of %s tolerance of %11.4g\n",
+               lp.isMip() ? "MIP using primal feasibility and integrality"
+                          : "LP using primal feasibility",
+               kPrimalFeasibilityTolerance);
   vector<double> row_value;
   row_value.assign(lp.num_row_, 0);
-  const bool have_integrality = lp.integrality_.size();
+  const bool have_integrality = (lp.integrality_.size() != 0);
   if (!solution.value_valid) return HighsStatus::kError;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution.col_value[iCol];
@@ -2377,7 +2448,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     assessColPrimalSolution(options, primal, lower, upper, type,
                             col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
-      if (col_infeasibility > options.primal_feasibility_tolerance) {
+      if (col_infeasibility > kPrimalFeasibilityTolerance) {
         if (col_infeasibility > 2 * max_col_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Col %6d has         infeasibility of %11.4g from "
@@ -2411,13 +2482,13 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     const double upper = lp.row_upper_[iRow];
     // @primal_infeasibility calculation
     double row_infeasibility = 0;
-    if (primal < lower - options.primal_feasibility_tolerance) {
+    if (primal < lower - kPrimalFeasibilityTolerance) {
       row_infeasibility = lower - primal;
-    } else if (primal > upper + options.primal_feasibility_tolerance) {
+    } else if (primal > upper + kPrimalFeasibilityTolerance) {
       row_infeasibility = primal - upper;
     }
     if (row_infeasibility > 0) {
-      if (row_infeasibility > options.primal_feasibility_tolerance) {
+      if (row_infeasibility > kPrimalFeasibilityTolerance) {
         if (row_infeasibility > 2 * max_row_infeasibility)
           highsLogUser(options.log_options, HighsLogType::kWarning,
                        "Row %6d has         infeasibility of %11.4g from "
@@ -2650,28 +2721,6 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
   return HighsStatus::kOk;
 }
 
-bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
-  HighsInt num_bound_infeasible = 0;
-  const bool has_integrality = lp.integrality_.size() > 0;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (has_integrality) {
-      // Semi-variables can have inconsistent bounds
-      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
-          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
-        continue;
-    }
-    if (lp.col_upper_[iCol] < lp.col_lower_[iCol]) num_bound_infeasible++;
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    if (lp.row_upper_[iRow] < lp.row_lower_[iRow]) num_bound_infeasible++;
-  if (num_bound_infeasible > 0)
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Model infeasible due to %" HIGHSINT_FORMAT
-                 " inconsistent bound(s)\n",
-                 num_bound_infeasible);
-  return num_bound_infeasible > 0;
-}
-
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,
                    const double* usr_col_upper) {
@@ -2872,8 +2921,8 @@ HighsLp withoutSemiVariables(const HighsLp& lp_, HighsSolution& solution,
   HighsInt semi_row_num = 0;
   // Insert the new variables and their coefficients
   std::stringstream ss;
-  const bool has_col_names = lp.col_names_.size();
-  const bool has_row_names = lp.row_names_.size();
+  const bool has_col_names = (lp.col_names_.size() != 0);
+  const bool has_row_names = (lp.row_names_.size() != 0);
   const bool has_solution = solution.value_valid;
   if (has_solution) {
     // Create zeroed row values for the new rows

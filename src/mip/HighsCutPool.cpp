@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -301,7 +301,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                        }) -
       efficacious_cuts.begin();
 
-  HighsInt lowerThreshold = 0.05 * efficacious_cuts.size();
+  HighsInt lowerThreshold = efficacious_cuts.size() / 20;
   HighsInt upperThreshold = efficacious_cuts.size() - 1;
 
   if (numefficacious <= lowerThreshold) {

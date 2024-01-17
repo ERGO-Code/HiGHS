@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -17,7 +17,8 @@
 #include <array>
 #include <iostream>
 
-#include "util/HighsInt.h"
+#include "lp_data/HighsCallback.h"
+//#include "util/HighsInt.h"
 
 class HighsOptions;
 
@@ -28,8 +29,6 @@ enum class HighsFileType { kNone = 0, kOther, kMps, kLp, kMd, kHtml };
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
-
 const char* const HighsLogTypeTag[] = {"", "",          "",
                                        "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {
@@ -46,16 +45,20 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
-  void (*log_highs_callback)(HighsLogType, const char*, void*) = nullptr;
-  void (*log_user_callback)(HighsLogType, const char*, void*) = nullptr;
-  void* log_user_callback_data = nullptr;
+  void (*user_log_callback)(HighsLogType, const char*, void*) = nullptr;
+  void* user_log_callback_data = nullptr;
+  std::function<void(int, const std::string&, const HighsCallbackDataOut*,
+                     HighsCallbackDataIn*, void*)>
+      user_callback;
+  void* user_callback_data = nullptr;
+  bool user_callback_active = false;
+  void clear();
 };
 
 /**
- * @brief Write the HiGHS version, compilation date, git hash and
- * copyright statement
+ * @brief Write the HiGHS version and copyright statement
  */
-void highsLogHeader(const HighsLogOptions& log_options);
+void highsLogHeader(const HighsLogOptions& log_options, const bool log_githash);
 
 /**
  * @brief Convert a double number to a string using given tolerance

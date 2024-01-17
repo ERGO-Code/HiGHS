@@ -279,7 +279,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 0);
 
-  REQUIRE(info.simplex_iteration_count == 476);  // 444);
+  REQUIRE(info.simplex_iteration_count == 472);  // 476);  // 444);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -292,7 +292,21 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 621);  // 584);  //
+  REQUIRE(info.simplex_iteration_count == 592);  // 621);  // 584);  //
+}
+
+TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
+  // When solving the relaxation of a MIP. Exposed #1406
+  HighsStatus status;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::kOk);
+  highs.setOptionValue("solver", kIpmString);
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

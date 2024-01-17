@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -20,7 +20,7 @@
 HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                           HighsBasis& highs_basis,
                           HighsSolution& highs_solution,
-                          HighsModelStatus& model_status,
-                          HighsInfo& highs_info);
+                          HighsModelStatus& model_status, HighsInfo& highs_info,
+                          HighsCallback& highs_callback);
 
 #endif

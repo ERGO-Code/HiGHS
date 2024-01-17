@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -20,13 +20,15 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-void highsLogHeader(const HighsLogOptions& log_options) {
+void highsLogHeader(const HighsLogOptions& log_options,
+                    const bool log_githash) {
+  const std::string githash_string(HIGHS_GITHASH);
+  const std::string githash_text =
+      log_githash ? " (git hash: " + githash_string + ")" : "";
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
-               (int)HIGHS_VERSION_MAJOR, (int)HIGHS_VERSION_MINOR,
-               (int)HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-               kHighsCopyrightStatement.c_str());
+               "Running HiGHS %d.%d.%d%s: %s\n", (int)HIGHS_VERSION_MAJOR,
+               (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
+               githash_text.c_str(), kHighsCopyrightStatement.c_str());
 }
 
 std::array<char, 32> highsDoubleToString(const double val,
@@ -107,13 +109,18 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_user_callback) {
+  const bool use_log_callback =
+      log_options_.user_log_callback ||
+      (log_options_.user_callback && log_options_.user_callback_active);
+
+  if (!use_log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_stream) {
       if (prefix)
         fprintf(log_options_.log_stream, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(log_options_.log_stream, format, argptr);
       if (flush_streams) fflush(log_options_.log_stream);
+      va_end(argptr);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
@@ -135,8 +142,17 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer,
-                                   log_options_.log_user_callback_data);
+    if (log_options_.user_log_callback) {
+      log_options_.user_log_callback(type, msgbuffer,
+                                     log_options_.user_log_callback_data);
+    }
+    if (log_options_.user_callback_active) {
+      assert(log_options_.user_callback);
+      HighsCallbackDataOut data_out;
+      data_out.log_type = int(type);
+      log_options_.user_callback(kCallbackLogging, msgbuffer, &data_out,
+                                 nullptr, log_options_.user_callback_data);
+    }
   }
   va_end(argptr);
 }
@@ -164,12 +180,16 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   const bool flush_streams = true;
-  if (!log_options_.log_user_callback) {
+  const bool use_log_callback =
+      log_options_.user_log_callback ||
+      (log_options_.user_callback && log_options_.user_callback_active);
+  if (!use_log_callback) {
     // Write to log file stream unless it is NULL
     if (log_options_.log_stream) {
       // Write to log file stream
       vfprintf(log_options_.log_stream, format, argptr);
       if (flush_streams) fflush(log_options_.log_stream);
+      va_end(argptr);
       va_start(argptr, format);
     }
     // Write to stdout unless log file stream is stdout
@@ -185,8 +205,16 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    log_options_.log_user_callback(type, msgbuffer,
-                                   log_options_.log_user_callback_data);
+    if (log_options_.user_log_callback) {
+      log_options_.user_log_callback(type, msgbuffer,
+                                     log_options_.user_log_callback_data);
+    } else if (log_options_.user_callback_active) {
+      assert(log_options_.user_callback);
+      HighsCallbackDataOut data_out;
+      data_out.log_type = int(type);
+      log_options_.user_callback(kCallbackLogging, msgbuffer, &data_out,
+                                 nullptr, log_options_.user_callback_data);
+    }
   }
   va_end(argptr);
 }
@@ -255,4 +283,16 @@ const std::string highsInsertMdEscapes(const std::string from_string) {
     to_string += from_string[p];
   }
   return to_string;
+}
+
+void HighsLogOptions::clear() {
+  this->log_stream = nullptr;
+  this->output_flag = nullptr;
+  this->log_to_console = nullptr;
+  this->log_dev_level = nullptr;
+  this->user_log_callback = nullptr;
+  this->user_log_callback_data = nullptr;
+  this->user_callback = nullptr;
+  this->user_callback_data = nullptr;
+  this->user_callback_active = false;
 }

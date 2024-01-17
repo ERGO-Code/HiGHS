@@ -1,7 +1,7 @@
 # -------------------------- Configuration
 test_data_conf = configuration_data()
 test_data_conf.set_quoted('HIGHS_DIR',
-                          meson.source_root())
+                          meson.project_source_root())
 configure_file(
   input: 'HCheckConfig.h.meson.in',
   output: 'HCheckConfig.h',
@@ -13,6 +13,7 @@ test_array = [
   ['test_alienbasis', 'TestAlienBasis.cpp'],
   ['test_dualize', 'TestDualize.cpp'],
   ['test_checksolution', 'TestCheckSolution.cpp'],
+  ['test_callbacks', 'TestCallbacks.cpp'],
   ['test_ekk', 'TestEkk.cpp'],
   ['test_factor', 'TestFactor.cpp'],
   ['test_freezebasis', 'TestFreezeBasis.cpp'],

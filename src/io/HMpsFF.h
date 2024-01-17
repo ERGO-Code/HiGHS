@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -192,8 +192,8 @@ class HMpsFF {
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
   // Checks first word of strline and wraps it by it_begin and it_end
-  HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
-                                  HighsInt& end, std::string& word) const;
+  HMpsFF::Parsekey checkFirstWord(std::string& strline, size_t& start,
+                                  size_t& end, std::string& word) const;
 
   // Get index of column from column name, possibly adding new column
   // if no index is found

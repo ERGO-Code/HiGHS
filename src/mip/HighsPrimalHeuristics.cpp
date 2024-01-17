@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -133,7 +133,9 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;
-  HighsMipSolver submipsolver(submipoptions, submip, solution, true);
+  // Create HighsMipSolver instance for sub-MIP
+  HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
+                              solution, true);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
@@ -224,7 +226,9 @@ class HeuristicNeighbourhood {
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
 
-    return numTotal ? fixedCols.size() / (double)numTotal : 0.0;
+    return numTotal ? static_cast<double>(fixedCols.size()) /
+                          static_cast<double>(numTotal)
+                    : 0.0;
   }
 
   void backtracked() {
@@ -236,7 +240,7 @@ class HeuristicNeighbourhood {
 void HighsPrimalHeuristics::rootReducedCost() {
   std::vector<std::pair<double, HighsDomainChange>> lurkingBounds =
       mipsolver.mipdata_->redcostfixing.getLurkingBounds(mipsolver);
-  if (lurkingBounds.size() < 0.1 * mipsolver.mipdata_->integral_cols.size())
+  if (10 * lurkingBounds.size() < mipsolver.mipdata_->integral_cols.size())
     return;
   pdqsort(lurkingBounds.begin(), lurkingBounds.end(),
           [](const std::pair<double, HighsDomainChange>& a,
@@ -288,7 +292,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
-              200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12);
+              200 + mipsolver.mipdata_->num_nodes / 20, 12);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
@@ -510,7 +514,7 @@ retry:
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -527,7 +531,7 @@ retry:
       return;
     }
     maxfixingrate = fixingrate * 0.5;
-    // printf("infeasible in in root node, trying with lower fixing rate %g\n",
+    // printf("infeasible in root node, trying with lower fixing rate %g\n",
     //        maxfixingrate);
     goto retry;
   }
@@ -631,7 +635,7 @@ retry:
         // reinforce direction of this solution away from root
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
-        // if objcetive is zero round to nearest integer
+        // if objective is zero round to nearest integer
         double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
         if (rootchange >= 0.4)
           fixval = std::ceil(fracval);
@@ -665,7 +669,6 @@ retry:
         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
             mipsolver.mipdata_->feastol) {
           double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
-          HighsInt oldNumBranched = numBranched;
           if (localdom.col_lower_[i] < fixval) {
             ++numBranched;
             heur.branchUpwards(i, fixval, fixval - 0.5);
@@ -703,7 +706,7 @@ retry:
       }
 
       if (fixingrate >= minfixingrate)
-        break;  // if the RINS neigborhood achieved a high enough fixing rate
+        break;  // if the RINS neighbourhood achieved a high enough fixing rate
                 // by itself we stop here
       fixcandend = heurlp.getFractionalIntegers().end();
       // now sort the variables by their distance towards the value they will
@@ -798,7 +801,7 @@ retry:
                    localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
+                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -814,7 +817,7 @@ retry:
       lp_iterations = new_lp_iterations;
       return;
     }
-    // printf("infeasible in in root node, trying with lower fixing rate\n");
+    // printf("infeasible in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;
   }
@@ -977,7 +980,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if (intcols.size() / (double)mipsolver.numCol() >= 0.2)
+    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", "on");
     else
       lprelax.getLpSolver().setBasis(

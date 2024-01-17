@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -10,8 +10,21 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
-
-#include "util/HighsInt.h"
+//
+// Welcome to the HiGHS C API!
+//
+// The simplest way to use HiGHS to solve an LP, MIP or QP from C is
+// to pass the problem data to the appropriate method Highs_lpCall,
+// Highs_mipCall or Highs_qpCall, and these methods return the
+// appropriate solution information
+//
+// For sophisticated applications, where esoteric solutiuon
+// information is needed, or if a sequence of modified models need to
+// be solved, use the Highs_create method to generate a pointer to an
+// instance of the C++ Highs class, and then use any of a large number
+// of models for which this pointer is the first parameter.
+//
+#include "lp_data/HighsCallbackStruct.h"
 
 const HighsInt kHighsMaximumStringLength = 512;
 
@@ -77,12 +90,21 @@ const HighsInt kHighsModelStatusTimeLimit = 13;
 const HighsInt kHighsModelStatusIterationLimit = 14;
 const HighsInt kHighsModelStatusUnknown = 15;
 const HighsInt kHighsModelStatusSolutionLimit = 16;
+const HighsInt kHighsModelStatusInterrupt = 17;
 
 const HighsInt kHighsBasisStatusLower = 0;
 const HighsInt kHighsBasisStatusBasic = 1;
 const HighsInt kHighsBasisStatusUpper = 2;
 const HighsInt kHighsBasisStatusZero = 3;
 const HighsInt kHighsBasisStatusNonbasic = 4;
+
+const HighsInt kHighsCallbackLogging = 0;
+const HighsInt kHighsCallbackSimplexInterrupt = 1;
+const HighsInt kHighsCallbackIpmInterrupt = 2;
+const HighsInt kHighsCallbackMipSolution = 3;
+const HighsInt kHighsCallbackMipImprovingSolution = 4;
+const HighsInt kHighsCallbackMipLogging = 5;
+const HighsInt kHighsCallbackMipInterrupt = 6;
 
 #ifdef __cplusplus
 extern "C" {
@@ -340,7 +362,7 @@ HighsInt Highs_writeSolution(const void* highs, const char* filename);
  * available) to a file in a human-readable format.
  *
  * The method identical to `Highs_writeSolution`, except that the
- * printout is in a human-readiable format.
+ * printout is in a human-readable format.
  *
  * @param highs     A pointer to the Highs instance.
  * @param filename  The name of the file to write the results to.
@@ -428,7 +450,7 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  * @param q_value     An array of length [q_num_nz] with values of matrix
  *                     entries. If the model is linear, pass NULL.
  * @param integrality An array of length [num_col] containing a `kHighsVarType`
- *                    consatnt for each column.
+ *                    constant for each column.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
@@ -958,10 +980,10 @@ HighsInt Highs_getBasisSolve(const void* highs, const double* rhs,
  *
  * @param highs             A pointer to the Highs instance.
  * @param rhs               The right-hand side vector ``b``
- * @param solution_vector   An array of length [num_row] in whcih to store the
+ * @param solution_vector   An array of length [num_row] in which to store the
  *                          values of the non-zero elements.
  * @param solution_num_nz   The number of non-zeros in the solution.
- * @param solution_index    An array of length [num_row] in whcih to store the
+ * @param solution_index    An array of length [num_row] in which to store the
  *                          indices of the non-zero elements.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
@@ -1059,6 +1081,38 @@ HighsInt Highs_setLogicalBasis(void* highs);
 HighsInt Highs_setSolution(void* highs, const double* col_value,
                            const double* row_value, const double* col_dual,
                            const double* row_dual);
+
+/**
+ * Set the callback method to use for HiGHS
+ *
+ * @param highs              A pointer to the Highs instance.
+ * @param user_callback      A pointer to the user callback
+ * @param user_callback_data A pointer to the user callback data
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
+                           void* user_callback_data);
+
+/**
+ * Start callback of given type
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be started
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_startCallback(void* highs, const int callback_type);
+
+/**
+ * Stop callback of given type
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param callback_type The type of callback to be stopped
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_stopCallback(void* highs, const int callback_type);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.
@@ -1800,6 +1854,15 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row, const double scaleval);
 double Highs_getInfinity(const void* highs);
 
 /**
+ * Return the size of HighsInt used by HiGHS.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns The value of HighsInt used by HiGHS.
+ */
+HighsInt Highs_getSizeofHighsInt(const void* highs);
+
+/**
  * Return the number of columns in the model.
  *
  * @param highs     A pointer to the Highs instance.
@@ -1885,7 +1948,7 @@ HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
 
 /**
  * Compute the ranging information for all costs and bounds. For
- * nonbasic variables the ranging informaiton is relative to the
+ * nonbasic variables the ranging information is relative to the
  * active bound. For basic variables the ranging information relates
  * to...
  *

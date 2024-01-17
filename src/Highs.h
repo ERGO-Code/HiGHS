@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -16,6 +16,7 @@
 
 #include <sstream>
 
+#include "lp_data/HighsCallback.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -185,7 +186,12 @@ class Highs {
   HighsStatus run();
 
   /**
-   * @brief Postsolve the incumbent model
+   * @brief Postsolve the incumbent model using a solution
+   */
+  HighsStatus postsolve(const HighsSolution& solution);
+
+  /**
+   * @brief Postsolve the incumbent model using a solution and basis
    */
   HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
 
@@ -379,6 +385,13 @@ class Highs {
   double getInfinity() { return kHighsInf; }
 
   /**
+   * @brief Get the size of HighsInt
+   */
+  HighsInt getSizeofHighsInt() {
+    return sizeof(options_.num_user_settable_options_);
+  }
+
+  /**
    * @brief Get the run time of HiGHS
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
@@ -475,6 +488,14 @@ class Highs {
    * @brief Get the ranging information for the current LP
    */
   HighsStatus getRanging(HighsRanging& ranging);
+
+  /**
+   * @brief Get the ill-conditioning information for the current basis
+   */
+  HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
+                                 const bool constraint,
+                                 const HighsInt method = 0,
+                                 const double ill_conditioning_bound = 1e-4);
 
   /**
    * @brief Get the current model objective value
@@ -611,7 +632,7 @@ class Highs {
    * @brief Get multiple columns from the model given by a set
    */
   HighsStatus getCols(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt* set,  //!< Array of size num_set_entries with indices of
                             //!< columns to get
       HighsInt& num_col,    //!< Number of columns got from the model
@@ -683,7 +704,7 @@ class Highs {
    * @brief Get multiple rows from the model given by a set
    */
   HighsStatus getRows(
-      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt num_set_entries,  //!< The number of indices in the set
       const HighsInt*
           set,  //!< Array of size num_set_entries with indices of rows to get
       HighsInt& num_row,  //!< Number of rows got from the model
@@ -1011,11 +1032,24 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Set the callback method and user data to use for logging
+   * @brief Set the callback method to use for HiGHS
    */
-  HighsStatus setLogCallback(void (*log_user_callback)(HighsLogType,
-                                                       const char*, void*),
-                             void* log_user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCallbackFunctionType user_callback,
+                          void* user_callback_data = nullptr);
+  HighsStatus setCallback(HighsCCallbackType c_callback,
+                          void* user_callback_data = nullptr);
+
+  /**
+   * @brief Start callback of given type
+   */
+  HighsStatus startCallback(const int callback_type);
+  HighsStatus startCallback(const HighsCallbackType callback_type);
+
+  /**
+   * @brief Stop callback of given type
+   */
+  HighsStatus stopCallback(const int callback_type);
+  HighsStatus stopCallback(const HighsCallbackType callback_type);
 
   /**
    * @brief Use the HighsBasis passed to set the internal HighsBasis
@@ -1146,6 +1180,10 @@ class Highs {
 
   // Start of deprecated methods
 
+  HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
+                                                       const char*, void*),
+                             void* user_log_callback_data = nullptr);
+
   HighsInt getNumCols() const {
     deprecationMessage("getNumCols", "getNumCol");
     return getNumCol();
@@ -1250,6 +1288,7 @@ class Highs {
   HighsModel presolved_model_;
   HighsTimer timer_;
 
+  HighsCallback callback_;
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
@@ -1279,7 +1318,7 @@ class Highs {
     this->model_.hessian_.exactResize();
   }
 
-  HighsStatus assignContinuousAtDiscreteSolution();
+  HighsStatus completeSolutionFromDiscreteAssignment();
 
   HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
@@ -1288,7 +1327,8 @@ class Highs {
                                const HighsBasis& basis);
 
   PresolveComponent presolve_;
-  HighsPresolveStatus runPresolve(const bool force_presolve = false);
+  HighsPresolveStatus runPresolve(const bool force_lp_presolve,
+                                  const bool force_presolve = false);
   HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
@@ -1313,7 +1353,7 @@ class Highs {
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
-  // the inumcumbent model.
+  // the incumbent model.
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
@@ -1343,7 +1383,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status);
+  HighsStatus returnFromRun(const HighsStatus return_status,
+                            const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
@@ -1428,6 +1469,21 @@ class Highs {
                               HighsStatus return_status);
   HighsStatus invertRequirementError(std::string method_name);
   HighsStatus lpInvertRequirementError(std::string method_name);
-};
 
+  HighsStatus handleInfCost();
+  void restoreInfCost(HighsStatus& return_status);
+  HighsStatus optionChangeAction();
+  HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
+                                     const bool constraint,
+                                     const HighsInt method,
+                                     const double ill_conditioning_bound);
+  void formIllConditioningLp0(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint);
+  void formIllConditioningLp1(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint,
+                              const double ill_conditioning_bound);
+  bool infeasibleBoundsOk();
+};
 #endif

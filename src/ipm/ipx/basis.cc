@@ -353,8 +353,6 @@ void Basis::ComputeBasicSolution(Vector& x, Vector& y, Vector& z) const {
 }
 
 void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
-    const Int m = model_.rows();
-    const Int n = model_.cols();
     assert(colscale);
     info->errflag = 0;
     info->dependent_rows = 0;

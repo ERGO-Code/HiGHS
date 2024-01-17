@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -42,7 +42,6 @@ void HighsSymmetryDetection::removeFixPoints() {
                      [&](HighsInt vertex) {
                        if (cellSize(vertexToCell[vertex]) == 1) {
                          --unitCellIndex;
-                         HighsInt oldCellStart = vertexToCell[vertex];
                          vertexToCell[vertex] = unitCellIndex;
                          return true;
                        }
@@ -74,7 +73,7 @@ void HighsSymmetryDetection::removeFixPoints() {
       // if the cell number is different to the current cell number this is the
       // start of a new cell
       if (cellNumber != vertexToCell[vertex]) {
-        // remember the number of this cell to indetify its end
+        // remember the number of this cell to identify its end
         cellNumber = vertexToCell[vertex];
         // set the link of the cell start to point to its end
         currentPartitionLinks[cellStart] = i;
@@ -179,7 +178,6 @@ std::shared_ptr<const StabilizerOrbits>
 HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
   const auto& domchgStack = localdom.getDomainChangeStack();
   const auto& branchingPos = localdom.getBranchingPositions();
-  const auto& prevBounds = localdom.getPreviousBounds();
 
   StabilizerOrbits stabilizerOrbits;
   stabilizerOrbits.stabilizedCols.reserve(permutationColumns.size());
@@ -275,7 +273,6 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
     if (fixcol != -1) {
       HighsInt oldNumFixed = numFixed;
-      double fixVal = domain.col_lower_[fixcol];
       auto oldSize = domain.getDomainChangeStack().size();
       if (domain.col_lower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
@@ -542,7 +539,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
         ++numFixed;
         if (domain.infeasible()) {
           // this can happen due to deductions from earlier fixings
-          // otherwise it would have been caughgt by the infeasibility
+          // otherwise it would have been caught by the infeasibility
           // check within the next loop that goes over i
           // printf("packing orbitope propagation found infeasibility\n");
           return numFixed;
@@ -575,7 +572,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
       ++numFixed;
       if (domain.infeasible()) {
         // this can happen due to deductions from earlier fixings
-        // otherwise it would have been caughgt by the infeasibility
+        // otherwise it would have been caught by the infeasibility
         // check within the next loop that goes over i
         // printf("packing orbitope propagation found infeasibility\n");
         return numFixed;
@@ -815,7 +812,6 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
   HighsInt vertex = currentPartition[i];
   if (vertexToCell[vertex] != cell) {
     // set new cell id
-    HighsInt oldCellStart = vertexToCell[vertex];
     vertexToCell[vertex] = cell;
     if (i != cell) currentPartitionLinks[i] = cell;
 
@@ -1289,7 +1285,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
     // if the cell number is different to the current cell number this is the
     // start of a new cell
     if (cellNumber != vertexToCell[vertex]) {
-      // remember the number of this cell to indetify its end
+      // remember the number of this cell to identify its end
       cellNumber = vertexToCell[vertex];
       // set the link of the cell start to point to its end
       currentPartitionLinks[cellStart] = i;
@@ -1503,7 +1499,7 @@ HighsSymmetryDetection::computeComponentData(
          componentData.componentStarts.size());
   componentData.permComponentStarts.push_back(numUsedPerms);
 
-  HighsInt numComponents = componentData.componentStarts.size();
+  // HighsInt numComponents = componentData.componentStarts.size();
   // printf("found %d components\n", numComponents);
   componentData.componentStarts.push_back(numActiveCols);
 
@@ -1578,7 +1574,6 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   orbitopeMatrix.numRows = orbitopeNumRows;
   orbitopeMatrix.rowLength = orbitopeOrbitSize;
   assert(componentSize == orbitopeMatrix.numRows * orbitopeMatrix.rowLength);
-  HighsInt orbitopeIndex = symmetries.orbitopes.size();
 
   const HighsInt* perm = symmetries.permutations.data() + p0 * numActiveCols;
   HighsHashTable<HighsInt> colSet;
@@ -1811,7 +1806,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           // than the best leaves and it would have been already pruned if
           // it's certificate value was larger unless it is equal to the first
           // leave nodes certificate value which is caught by the first case
-          // of the if confition. Hence, having a lexicographically smaller
+          // of the if condition. Hence, having a lexicographically smaller
           // certificate value than the best leave is the only way to get
           // here.
           assert(bestLeaveCertificate[bestLeavePrefixLen] >
