@@ -119,7 +119,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
 static double computemaxsteplength(Runtime& runtime, const Vector& p,
                             Gradient& gradient, Vector& buffer_Qp, bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
-  if (fabs(denominator) > 10E-5) {
+  if (fabs(denominator) > runtime.settings.pQp_zero_threshold) {
     double numerator = -(p * gradient.getGradient());
     if (numerator < 0.0) {
       return 0.0;
