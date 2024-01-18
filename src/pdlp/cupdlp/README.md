@@ -1,3 +1,7 @@
+# cuPDLP-C observations
+
+This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues expereinced when integrating them into HiGHS.
+
 ## Preprocessing issue
 
 The following line is not recognised by g++, 
@@ -33,6 +37,23 @@ When definitions in [glbopts.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp
       goto exit_cleanup;                                        \
     }                                                           \
   }
+
+Hence there is a set of type-specific definitions in `CupdlpWrapper.h`, such as 
+
+>#define cupdlp_init_double(var, size)\
+   {\
+     (var) = (double*)malloc((size) * sizeof(double));\
+   }
+
+## C methods not picked up by g++
+
+Three methods
+* `double infNorm(double *x, cupdlp_int n);`
+* `void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb, const cupdlp_float bound, const cupdlp_int len);`
+* `void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub, const cupdlp_float bound, const cupdlp_int len);`
+
+are declared in [cupdlp_linalg.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.h) and defined in [cupdlp_linalg.c](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.c) but not picked up by g++. Hence duplicate methods are declared and defined in [CupdlpWrapper.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.h) and [CupdlpWrapper.cpp](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.cpp).
+
 
 ## Overflow when setting nIterLim
 
