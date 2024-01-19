@@ -3075,24 +3075,23 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
   }
 
-  // Remember original row type for doubleton equation elimination
-  HighsPostsolveStack::RowType rowType;
-  if (rowLower == rowUpper) {
-    rowType = HighsPostsolveStack::RowType::kEq;
-  } else if (rowUpper != kHighsInf) {
-    rowType = HighsPostsolveStack::RowType::kLeq;
-  } else {
-    rowType = HighsPostsolveStack::RowType::kGeq;
+  if (rowsize[row] == 2 && model->row_lower_[row] == model->row_upper_[row] &&
+      analysis_.allow_rule_[kPresolveRuleDoubletonEquation]) {
+    // Remember original row type for doubleton equation elimination
+    HighsPostsolveStack::RowType rowType;
+    if (rowLower == rowUpper) {
+      rowType = HighsPostsolveStack::RowType::kEq;
+    } else if (rowUpper != kHighsInf) {
+      rowType = HighsPostsolveStack::RowType::kLeq;
+    } else {
+      rowType = HighsPostsolveStack::RowType::kGeq;
+    }
+    return doubletonEq(postsolve_stack, row, rowType);
   }
 
   // Get (potentially modified) row bounds
   rowUpper = model->row_upper_[row];
   rowLower = model->row_lower_[row];
-
-  if (rowsize[row] == 2 && rowLower == rowUpper) {
-    if (analysis_.allow_rule_[kPresolveRuleDoubletonEquation])
-      return doubletonEq(postsolve_stack, row, rowType);
-  }
 
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
