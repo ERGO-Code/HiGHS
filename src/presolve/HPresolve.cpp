@@ -3023,55 +3023,32 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
+  auto checkRedundantBounds = [&](HighsInt col) {
+    // check if column singleton has redundant bounds
+    assert(model->col_cost_[col] != 0.0);
+    if (colsize[col] != 1) return;
+    if (model->col_cost_[col] > 0) {
+      assert(model->col_lower_[col] == -kHighsInf ||
+             (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
+              colLowerSource[col] == row));
+      if (model->col_lower_[col] > implColLower[col] - primal_feastol)
+        changeColLower(col, -kHighsInf);
+    } else {
+      assert(model->col_upper_[col] == kHighsInf ||
+             (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
+              colUpperSource[col] == row));
+      if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
+        changeColUpper(col, kHighsInf);
+    }
+  };
+
   if (rowLower != rowUpper) {
     if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
       model->row_upper_[row] = rowLower;
-      if (mipsolver == nullptr) {
-        HighsInt col = rowDualLowerSource[row];
-        assert(model->col_cost_[col] != 0.0);
-        if (colsize[col] == 1) {
-          if (model->col_cost_[col] > 0) {
-            assert(
-                model->col_lower_[col] == -kHighsInf ||
-                (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
-                 colLowerSource[col] == row));
-            if (model->col_lower_[col] > implColLower[col] - primal_feastol)
-              changeColLower(col, -kHighsInf);
-          } else {
-            assert(
-                model->col_upper_[col] == kHighsInf ||
-                (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
-                 colUpperSource[col] == row));
-            if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
-              changeColUpper(col, kHighsInf);
-          }
-        }
-      }
-    }
-
-    if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
+      if (mipsolver == nullptr) checkRedundantBounds(rowDualLowerSource[row]);
+    } else if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
       model->row_lower_[row] = rowUpper;
-      if (mipsolver == nullptr) {
-        HighsInt col = rowDualUpperSource[row];
-        assert(model->col_cost_[col] != 0.0);
-        if (colsize[col] == 1) {
-          if (model->col_cost_[col] > 0) {
-            assert(
-                model->col_lower_[col] == -kHighsInf ||
-                (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
-                 colLowerSource[col] == row));
-            if (model->col_lower_[col] > implColLower[col] - primal_feastol)
-              changeColLower(col, -kHighsInf);
-          } else {
-            assert(
-                model->col_upper_[col] == kHighsInf ||
-                (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
-                 colUpperSource[col] == row));
-            if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
-              changeColUpper(col, kHighsInf);
-          }
-        }
-      }
+      if (mipsolver == nullptr) checkRedundantBounds(rowDualUpperSource[row]);
     }
   }
 
