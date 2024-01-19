@@ -104,6 +104,7 @@ class HighsPostsolveStack {
     HighsInt col;
     bool lowerTightened;
     bool upperTightened;
+    RowType rowType;
 
     void undo(const HighsOptions& options,
               const std::vector<Nonzero>& colValues, HighsSolution& solution,
@@ -322,6 +323,7 @@ class HighsPostsolveStack {
                          double coefSubst, double coef, double rhs,
                          double substLower, double substUpper, double substCost,
                          bool lowerTightened, bool upperTightened,
+                         RowType rowType,
                          const HighsMatrixSlice<ColStorageFormat>& colVec) {
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
@@ -330,7 +332,7 @@ class HighsPostsolveStack {
     reductionValues.push(DoubletonEquation{
         coef, coefSubst, rhs, substLower, substUpper, substCost,
         row == -1 ? -1 : origRowIndex[row], origColIndex[colSubst],
-        origColIndex[col], lowerTightened, upperTightened});
+        origColIndex[col], lowerTightened, upperTightened, rowType});
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kDoubletonEquation);
   }

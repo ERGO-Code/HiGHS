@@ -1960,12 +1960,12 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
 
     ++probingNumDelCol;
 
-    postsolve_stack.doubletonEquation(-1, substitution.substcol,
-                                      substitution.staycol, 1.0,
-                                      -substitution.scale, substitution.offset,
-                                      model->col_lower_[substitution.substcol],
-                                      model->col_upper_[substitution.substcol],
-                                      0.0, false, false, HighsEmptySlice());
+    postsolve_stack.doubletonEquation(
+        -1, substitution.substcol, substitution.staycol, 1.0,
+        -substitution.scale, substitution.offset,
+        model->col_lower_[substitution.substcol],
+        model->col_upper_[substitution.substcol], 0.0, false, false,
+        HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
     markColDeleted(substitution.substcol);
     substitute(substitution.substcol, substitution.staycol, substitution.offset,
                substitution.scale);
@@ -1993,7 +1993,8 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
     postsolve_stack.doubletonEquation(
         -1, subst.substcol, subst.replace.col, 1.0, -scale, offset,
         model->col_lower_[subst.substcol], model->col_upper_[subst.substcol],
-        0.0, false, false, HighsEmptySlice());
+        0.0, false, false, HighsPostsolveStack::RowType::kEq,
+        HighsEmptySlice());
     markColDeleted(subst.substcol);
     substitute(subst.substcol, subst.replace.col, offset, scale);
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
@@ -2473,7 +2474,8 @@ void HPresolve::toCSR(std::vector<double>& ARval,
 }
 
 HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
-                                         HighsInt row) {
+                                         HighsInt row,
+                                         HighsPostsolveStack::RowType rowType) {
   assert(analysis_.allow_rule_[kPresolveRuleDoubletonEquation]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on)
@@ -2639,10 +2641,10 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
     changeColUpper(staycol, stayImplUpper);
   }
 
-  postsolve_stack.doubletonEquation(row, substcol, staycol, substcoef, staycoef,
-                                    rhs, substLower, substUpper,
-                                    model->col_cost_[substcol], lowerTightened,
-                                    upperTightened, getColumnVector(substcol));
+  postsolve_stack.doubletonEquation(
+      row, substcol, staycol, substcoef, staycoef, rhs, substLower, substUpper,
+      model->col_cost_[substcol], lowerTightened, upperTightened, rowType,
+      getColumnVector(substcol));
 
   // finally modify matrix
   markColDeleted(substcol);
@@ -2975,14 +2977,17 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row) {
   assert(!rowDeleted[row]);
 
+  // Get row bounds
+  double rowUpper = model->row_upper_[row];
+  double rowLower = model->row_lower_[row];
+
   const bool logging_on = analysis_.logging_on_;
   // handle special cases directly via a call to the specialized procedure
   switch (rowsize[row]) {
     default:
       break;
     case 0:
-      if (model->row_upper_[row] < -primal_feastol ||
-          model->row_lower_[row] > primal_feastol)
+      if (rowUpper < -primal_feastol || rowLower > primal_feastol)
         // model infeasible
         return Result::kPrimalInfeasible;
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleEmptyRow);
@@ -3001,14 +3006,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double impliedRowLower = impliedRowBounds.getSumLower(row);
 
   // Allow removal of redundant rows
-  if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
-      impliedRowUpper < model->row_lower_[row] - primal_feastol) {
+  if (impliedRowLower > rowUpper + primal_feastol ||
+      impliedRowUpper < rowLower - primal_feastol) {
     // model infeasible
     return Result::kPrimalInfeasible;
   }
 
-  if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
-      impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
+  if (impliedRowLower >= rowLower - primal_feastol &&
+      impliedRowUpper <= rowUpper + primal_feastol) {
     // row is redundant
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
     postsolve_stack.redundantRow(row);
@@ -3018,9 +3023,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  if (model->row_lower_[row] != model->row_upper_[row]) {
+  if (rowLower != rowUpper) {
     if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
-      model->row_upper_[row] = model->row_lower_[row];
+      model->row_upper_[row] = rowLower;
       if (mipsolver == nullptr) {
         HighsInt col = rowDualLowerSource[row];
         assert(model->col_cost_[col] != 0.0);
@@ -3045,7 +3050,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
 
     if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
-      model->row_lower_[row] = model->row_upper_[row];
+      model->row_lower_[row] = rowUpper;
       if (mipsolver == nullptr) {
         HighsInt col = rowDualUpperSource[row];
         assert(model->col_cost_[col] != 0.0);
@@ -3070,12 +3075,23 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
   }
 
-  double rowUpper = model->row_upper_[row];
-  double rowLower = model->row_lower_[row];
+  // Remember original row type for doubleton equation elimination
+  HighsPostsolveStack::RowType rowType;
+  if (rowLower == rowUpper) {
+    rowType = HighsPostsolveStack::RowType::kEq;
+  } else if (rowUpper != kHighsInf) {
+    rowType = HighsPostsolveStack::RowType::kLeq;
+  } else {
+    rowType = HighsPostsolveStack::RowType::kGeq;
+  }
+
+  // Get (potentially modified) row bounds
+  rowUpper = model->row_upper_[row];
+  rowLower = model->row_lower_[row];
 
   if (rowsize[row] == 2 && rowLower == rowUpper) {
     if (analysis_.allow_rule_[kPresolveRuleDoubletonEquation])
-      return doubletonEq(postsolve_stack, row);
+      return doubletonEq(postsolve_stack, row, rowType);
   }
 
   // todo: do additional single row presolve for mip here. It may assume a
@@ -3158,7 +3174,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   -1, nonz.index(), binCol, 1.0, -scale, offset,
                   model->col_lower_[nonz.index()],
                   model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsEmptySlice());
+                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
               substitute(nonz.index(), binCol, offset, scale);
             } else {
               // This case yields the following implications:
@@ -3176,7 +3192,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   -1, nonz.index(), binCol, 1.0, -scale, offset,
                   model->col_lower_[nonz.index()],
                   model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsEmptySlice());
+                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
               substitute(nonz.index(), binCol, offset, scale);
             }
           }
