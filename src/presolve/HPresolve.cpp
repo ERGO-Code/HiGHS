@@ -119,6 +119,19 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   changedColIndices.reserve(model->num_col_);
   numDeletedCols = 0;
   numDeletedRows = 0;
+
+  // store original row type
+  origRowType.resize(model->num_row_);
+  for (HighsInt i = 0; i != model->num_row_; ++i) {
+    if (model->row_lower_[i] == model->row_upper_[i]) {
+      origRowType[i] = HighsPostsolveStack::RowType::kEq;
+    } else if (model->row_upper_[i] != kHighsInf) {
+      origRowType[i] = HighsPostsolveStack::RowType::kLeq;
+    } else {
+      origRowType[i] = HighsPostsolveStack::RowType::kGeq;
+    }
+  }
+
   // Take value passed in as reduction limit, allowing different
   // values to be used for initial presolve, and after restart
   reductionLimit =
@@ -792,6 +805,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
         rowsize[newRowIndex[i]] = rowsize[i];
         rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
         rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
+        origRowType[newRowIndex[i]] = origRowType[i];
         if (have_row_names)
           model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
         changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
@@ -845,6 +859,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsize.resize(model->num_row_);
   rowsizeInteger.resize(model->num_row_);
   rowsizeImplInt.resize(model->num_row_);
+  origRowType.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
 
@@ -2474,8 +2489,7 @@ void HPresolve::toCSR(std::vector<double>& ARval,
 }
 
 HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
-                                         HighsInt row,
-                                         HighsPostsolveStack::RowType rowType) {
+                                         HighsInt row) {
   assert(analysis_.allow_rule_[kPresolveRuleDoubletonEquation]);
   const bool logging_on = analysis_.logging_on_;
   if (logging_on)
@@ -2643,8 +2657,8 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
 
   postsolve_stack.doubletonEquation(
       row, substcol, staycol, substcoef, staycoef, rhs, substLower, substUpper,
-      model->col_cost_[substcol], lowerTightened, upperTightened, rowType,
-      getColumnVector(substcol));
+      model->col_cost_[substcol], lowerTightened, upperTightened,
+      origRowType[row], getColumnVector(substcol));
 
   // finally modify matrix
   markColDeleted(substcol);
@@ -2977,17 +2991,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                                          HighsInt row) {
   assert(!rowDeleted[row]);
 
-  // Get row bounds
-  double rowUpper = model->row_upper_[row];
-  double rowLower = model->row_lower_[row];
-
   const bool logging_on = analysis_.logging_on_;
   // handle special cases directly via a call to the specialized procedure
   switch (rowsize[row]) {
     default:
       break;
     case 0:
-      if (rowUpper < -primal_feastol || rowLower > primal_feastol)
+      if (model->row_upper_[row] < -primal_feastol ||
+          model->row_lower_[row] > primal_feastol)
         // model infeasible
         return Result::kPrimalInfeasible;
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleEmptyRow);
@@ -3006,14 +3017,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double impliedRowLower = impliedRowBounds.getSumLower(row);
 
   // Allow removal of redundant rows
-  if (impliedRowLower > rowUpper + primal_feastol ||
-      impliedRowUpper < rowLower - primal_feastol) {
+  if (impliedRowLower > model->row_upper_[row] + primal_feastol ||
+      impliedRowUpper < model->row_lower_[row] - primal_feastol) {
     // model infeasible
     return Result::kPrimalInfeasible;
   }
 
-  if (impliedRowLower >= rowLower - primal_feastol &&
-      impliedRowUpper <= rowUpper + primal_feastol) {
+  if (impliedRowLower >= model->row_lower_[row] - primal_feastol &&
+      impliedRowUpper <= model->row_upper_[row] + primal_feastol) {
     // row is redundant
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleRedundantRow);
     postsolve_stack.redundantRow(row);
@@ -3042,33 +3053,23 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
   };
 
-  if (rowLower != rowUpper) {
+  if (model->row_lower_[row] != model->row_upper_[row]) {
     if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
-      model->row_upper_[row] = rowLower;
+      model->row_upper_[row] = model->row_lower_[row];
       if (mipsolver == nullptr) checkRedundantBounds(rowDualLowerSource[row]);
     } else if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
-      model->row_lower_[row] = rowUpper;
+      model->row_lower_[row] = model->row_upper_[row];
       if (mipsolver == nullptr) checkRedundantBounds(rowDualUpperSource[row]);
     }
   }
 
   if (rowsize[row] == 2 && model->row_lower_[row] == model->row_upper_[row] &&
-      analysis_.allow_rule_[kPresolveRuleDoubletonEquation]) {
-    // Remember original row type for doubleton equation elimination
-    HighsPostsolveStack::RowType rowType;
-    if (rowLower == rowUpper) {
-      rowType = HighsPostsolveStack::RowType::kEq;
-    } else if (rowUpper != kHighsInf) {
-      rowType = HighsPostsolveStack::RowType::kLeq;
-    } else {
-      rowType = HighsPostsolveStack::RowType::kGeq;
-    }
-    return doubletonEq(postsolve_stack, row, rowType);
-  }
+      analysis_.allow_rule_[kPresolveRuleDoubletonEquation])
+    return doubletonEq(postsolve_stack, row);
 
-  // Get (potentially modified) row bounds
-  rowUpper = model->row_upper_[row];
-  rowLower = model->row_lower_[row];
+  // Get row bounds
+  double rowUpper = model->row_upper_[row];
+  double rowLower = model->row_lower_[row];
 
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
