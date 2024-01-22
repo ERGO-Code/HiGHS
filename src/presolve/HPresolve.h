@@ -99,7 +99,7 @@ class HPresolve {
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
-  std::vector<HighsInt> origRowType;
+  std::vector<HighsPostsolveStack::RowType> origRowType;
 
   // set with the sizes and indices of equation rows sorted by the size and a
   // vector to access there iterator positions in the set by index for quick

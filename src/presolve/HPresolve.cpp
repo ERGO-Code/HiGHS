@@ -121,16 +121,15 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   numDeletedRows = 0;
 
   // store original row type
-  origRowType.resize(model->num_row_, -1);
+  origRowType.resize(model->num_row_);
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == model->row_upper_[i]) {
-      origRowType[i] = static_cast<HighsInt>(HighsPostsolveStack::RowType::kEq);
+      origRowType[i] = HighsPostsolveStack::RowType::kEq;
     } else if (model->row_upper_[i] != kHighsInf) {
-      origRowType[i] =
-          static_cast<HighsInt>(HighsPostsolveStack::RowType::kLeq);
-    } else if (model->row_lower_[i] != -kHighsInf) {
-      origRowType[i] =
-          static_cast<HighsInt>(HighsPostsolveStack::RowType::kGeq);
+      origRowType[i] = HighsPostsolveStack::RowType::kLeq;
+    } else {
+      assert(model->row_lower_[i] != -kHighsInf);
+      origRowType[i] = HighsPostsolveStack::RowType::kGeq;
     }
   }
 
@@ -2499,7 +2498,6 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   assert(!rowDeleted[row]);
   assert(rowsize[row] == 2);
   assert(model->row_lower_[row] == model->row_upper_[row]);
-  assert(origRowType[row] != -1);
 
   // printf("doubleton equation: ");
   // debugPrintRow(row);
@@ -2661,8 +2659,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   postsolve_stack.doubletonEquation(
       row, substcol, staycol, substcoef, staycoef, rhs, substLower, substUpper,
       model->col_cost_[substcol], lowerTightened, upperTightened,
-      static_cast<HighsPostsolveStack::RowType>(origRowType[row]),
-      getColumnVector(substcol));
+      origRowType[row], getColumnVector(substcol));
 
   // finally modify matrix
   markColDeleted(substcol);
