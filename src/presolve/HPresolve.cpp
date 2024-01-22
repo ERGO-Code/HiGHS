@@ -120,7 +120,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   numDeletedCols = 0;
   numDeletedRows = 0;
 
-  // store original row type
+  // Store original row type. Note that this row type will be incorrect for free
+  // (redundant) rows. However, such rows should be immediately detected and
+  // removed by the row presolve.
   origRowType.resize(model->num_row_);
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == model->row_upper_[i]) {
@@ -128,7 +130,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
     } else if (model->row_upper_[i] != kHighsInf) {
       origRowType[i] = HighsPostsolveStack::RowType::kLeq;
     } else {
-      assert(model->row_lower_[i] != -kHighsInf);
       origRowType[i] = HighsPostsolveStack::RowType::kGeq;
     }
   }
