@@ -3063,13 +3063,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
   }
 
-  if (rowsize[row] == 2 && model->row_lower_[row] == model->row_upper_[row] &&
-      analysis_.allow_rule_[kPresolveRuleDoubletonEquation])
-    return doubletonEq(postsolve_stack, row);
-
   // Get row bounds
   double rowUpper = model->row_upper_[row];
   double rowLower = model->row_lower_[row];
+
+  // Handle doubleton equations
+  if (rowsize[row] == 2 && rowLower == rowUpper &&
+      analysis_.allow_rule_[kPresolveRuleDoubletonEquation])
+    return doubletonEq(postsolve_stack, row);
 
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
