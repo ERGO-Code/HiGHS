@@ -2494,11 +2494,11 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
       if (model->integrality_[Acol[nzPos2]] == HighsVarType::kInteger) {
         // both columns integer. For substitution choose smaller absolute
         // coefficient value, or sparser column if values are equal
-        if (std::abs(Avalue[nzPos1]) <
-            std::abs(Avalue[nzPos2]) - options->small_matrix_value) {
+        if (std::fabs(Avalue[nzPos1]) <
+            std::fabs(Avalue[nzPos2]) - options->small_matrix_value) {
           return true;
-        } else if (std::abs(Avalue[nzPos2]) <
-                   std::abs(Avalue[nzPos1]) - options->small_matrix_value) {
+        } else if (std::fabs(Avalue[nzPos2]) <
+                   std::fabs(Avalue[nzPos1]) - options->small_matrix_value) {
           return false;
         } else if (colsize[Acol[nzPos1]] < colsize[Acol[nzPos2]]) {
           return true;
@@ -2564,11 +2564,11 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
       model->integrality_[staycol] == HighsVarType::kInteger) {
     // check integrality conditions
     double roundCoef = std::round(staycoef / substcoef) * substcoef;
-    if (std::abs(roundCoef - staycoef) > options->small_matrix_value)
+    if (std::fabs(roundCoef - staycoef) > options->small_matrix_value)
       return Result::kOk;
     staycoef = roundCoef;
     double roundRhs = std::round(rhs / substcoef) * substcoef;
-    if (std::abs(rhs - roundRhs) > primal_feastol)
+    if (std::fabs(rhs - roundRhs) > primal_feastol)
       return Result::kPrimalInfeasible;
     rhs = roundRhs;
   }
