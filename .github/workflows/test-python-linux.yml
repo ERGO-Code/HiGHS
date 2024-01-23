@@ -1,5 +1,5 @@
 # python release WIP
-name: test-python-api
+name: test-python-linux
 
 on: []
 #on: [push, pull_request]
