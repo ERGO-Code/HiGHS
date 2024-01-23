@@ -2626,17 +2626,11 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
   }
 
   // possibly tighten bounds of the column that stays
-  bool lowerTightened = false;
-  bool upperTightened = false;
-  if (stayImplLower > oldStayLower + primal_feastol) {
-    lowerTightened = true;
-    changeColLower(staycol, stayImplLower);
-  }
+  bool lowerTightened = stayImplLower > oldStayLower + primal_feastol;
+  if (lowerTightened) changeColLower(staycol, stayImplLower);
 
-  if (stayImplUpper < oldStayUpper - primal_feastol) {
-    upperTightened = true;
-    changeColUpper(staycol, stayImplUpper);
-  }
+  bool upperTightened = stayImplUpper < oldStayUpper - primal_feastol;
+  if (upperTightened) changeColUpper(staycol, stayImplUpper);
 
   postsolve_stack.doubletonEquation(
       row, substcol, staycol, substcoef, staycoef, rhs, substLower, substUpper,
