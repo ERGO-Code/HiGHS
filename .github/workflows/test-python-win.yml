@@ -1,5 +1,5 @@
 # python release WIP
-name: test-python-api
+name: test-python-win
 
 on: [push]
 
@@ -18,11 +18,23 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+  
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake -S $GITHUB_WORKSPACE -B ${{runner.workspace}}/build /
+           -DPYTHON=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/build/highspy/
+
       - name: Test Python Interface
         shell: bash
         run: |
-          # No need to separately install highs,
-          # shared library lookups are good enough
+          cmake --build ${{runner.workspace}}/build --parallel 
+          cmake --install ${{runner.workspace}}/build
+          cd ${{runner.workspace}}/build/highspy
           pip install -vvv .
           pip install pytest numpy
           pytest -v ./highspy/tests/
