@@ -136,7 +136,7 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     parameters.start_crossover_tol = -1;
   }
 
-  parameters.run_centring = options.run_centring;
+  parameters.run_centring = options.run_centring ? 1 : 0;
   parameters.max_centring_steps = options.max_centring_steps;
   parameters.centring_ratio_tolerance = options.centring_ratio_tolerance;
 

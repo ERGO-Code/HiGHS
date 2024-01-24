@@ -17,7 +17,7 @@ TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   HighsLp lp = highs.getLp();
   lp.col_cost_.assign(lp.num_col_, 0);
   highs.passModel(lp);
-  highs.setOptionValue("run_centring", 1);
+  highs.setOptionValue("run_centring", true);
   highs.setOptionValue("solver", kIpmString);
   highs.setOptionValue("run_crossover", false);
   highs.run();

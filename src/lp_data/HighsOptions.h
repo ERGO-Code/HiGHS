@@ -368,7 +368,7 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
-  HighsInt run_centring;
+  bool run_centring;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
 
@@ -1124,10 +1124,10 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt(
-        "run_centring", "Perform centring steps (1) or not (0) (default = 0)",
-        advanced, &run_centring, 0, 0, 1);
-    records.push_back(record_int);
+    record_bool = new OptionRecordBool(
+        "run_centring", "Perform centring steps or not",
+        advanced, &run_centring, false);
+    records.push_back(record_bool);
 
     record_int =
         new OptionRecordInt("max_centring_steps",
