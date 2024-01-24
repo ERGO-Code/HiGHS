@@ -478,7 +478,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(
         kSolverString,
         "Solver option: \"simplex\", \"choose\", \"ipm\" or \"pdlp\". If "
-        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the integrality "
+        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
+        "integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);

@@ -456,8 +456,8 @@ cupdlp_retcode problem_alloc(
   *copy_vec_time = getTimeStamp() - begin;
 
   // Keep
-  //  cupdlp_haslb(prob->hasLower, prob->lower, -INFINITY, nCols);
-  //  cupdlp_hasub(prob->hasUpper, prob->upper, +INFINITY, nCols);
+  cupdlp_haslb(prob->hasLower, prob->lower, -INFINITY, nCols);
+  cupdlp_hasub(prob->hasUpper, prob->upper, +INFINITY, nCols);
 
   // TODO: cal dMaxCost, dMaxRhs, dMaxRowBound
 

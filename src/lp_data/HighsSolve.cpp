@@ -13,8 +13,8 @@
  */
 
 #include "ipm/IpxWrapper.h"
-#include "pdlp/CupdlpWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
 // The method below runs simplex or ipx solver on the lp.
