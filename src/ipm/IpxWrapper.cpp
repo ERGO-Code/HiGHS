@@ -136,6 +136,10 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     parameters.start_crossover_tol = -1;
   }
 
+  parameters.run_centring = options.run_centring;
+  parameters.max_centring_steps = options.max_centring_steps;
+  parameters.centring_ratio_tolerance = options.centring_ratio_tolerance;
+
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 

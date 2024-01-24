@@ -368,9 +368,9 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
+  HighsInt run_centring;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
-  double centring_ratio_reduction;
 
   // Options for iCrash
   bool icrash;
@@ -1125,25 +1125,23 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_int =
+        new OptionRecordInt("run_centring",
+                            "Perform centring steps (1) or not (0) (default = 0)",
+                            advanced, &run_centring, 0, 0, 1);
+    records.push_back(record_int);
+
+    record_int =
         new OptionRecordInt("max_centring_steps",
-                            "Maximum number of steps to use (default = 50) "
+                            "Maximum number of steps to use (default = 5) "
                             "when computing the analytic centre",
-                            advanced, &max_centring_steps, 0, 50, kHighsIInf);
+                            advanced, &max_centring_steps, 0, 5, kHighsIInf);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "centring_ratio_tolerance",
         "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
-        "this tolerance (default = 50)",
-        advanced, &centring_ratio_tolerance, 0, 50, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "centring_ratio_reduction",
-        "When the ratio of successive ratios max(x_j*s_j) / min(x_j*s_j) is "
-        "greater than this tolerance (default = 1.1) the new step is rejected "
-        "and centring is stopped",
-        advanced, &centring_ratio_reduction, 0, 1.1, kHighsInf);
+        "this tolerance (default = 100)",
+        advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
     records.push_back(record_double);
 
     // Set up the log_options aliases
