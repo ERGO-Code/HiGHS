@@ -10,7 +10,7 @@ const double inf = kHighsInf;
 
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";  // adlittle.mps";
+    std::string(HIGHS_DIR) + "/check/instances/greenbea.mps";//adlittle.mps";// afiro.mps";  // adlittle.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
@@ -20,12 +20,7 @@ TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   highs.setOptionValue("run_centring", true);
   highs.setOptionValue("solver", kIpmString);
   highs.setOptionValue("run_crossover", false);
-  highs.run();
-  // Set up a problem for which analytic centre calculations are
-  // required, followed by sanity test(s) on the results.
-  HighsInt chalk = 0;
-  HighsInt cheese = 0;
-  // REQUIRE is like assert, but feeds back to the unit test mechanism
-  // "catch.hpp"
-  REQUIRE(chalk == cheese);
+  highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
+  HighsStatus run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
 }
