@@ -528,7 +528,7 @@ void IPM::AssessCentrality(const Vector& xl, const Vector& xu,
   centring_ratio = maxxz / minxz;
 
   if (print) {
-    control_.Log() << "\t xj*zj in [ "
+    control_.Log() << "\txj*zj in [ "
 		   << Scientific(minxz / mu, 8, 2) << ", "
 		   << Scientific(maxxz / mu, 8, 2) << "]; Ratio = "
 		   << Scientific(centring_ratio, 8, 2) << "; (xj*zj / mu) not_in [0.1, 10]: "

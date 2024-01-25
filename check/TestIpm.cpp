@@ -22,13 +22,40 @@ TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   highs.setOptionValue("run_centring", true);
   highs.setOptionValue("solver", kIpmString);
   highs.setOptionValue("run_crossover", kHighsOffString);
-  //  highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
+  highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 }
+
+TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, inf);
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {-1};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  highs.passModel(lp);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("run_centring", true);
+  highs.setOptionValue("solver", kIpmString);
+  highs.setOptionValue("run_crossover", kHighsOffString);
+  highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
+  HighsStatus run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   Highs highs;
-  const HighsInt dim = 2;
+   highs.setOptionValue("output_flag", dev_run);
+ const HighsInt dim = 2;
   HighsLp lp;
   lp.num_col_ = dim;
   lp.col_cost_.assign(dim, 0);
