@@ -3366,7 +3366,7 @@ HighsStatus Highs::callSolveQp() {
   Settings settings;
   Statistics stats;
 
-  settings.reportingfequency = 1000;
+  settings.reportingfequency = 100;
 
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
@@ -3404,6 +3404,8 @@ HighsStatus Highs::callSolveQp() {
                       ? HighsModelStatus::kInfeasible
                   : qp_model_status == QpModelStatus::ITERATIONLIMIT
                       ? HighsModelStatus::kIterationLimit
+                  : qp_model_status == QpModelStatus::LARGE_NULLSPACE
+                      ? HighsModelStatus::kSolveError
                   : qp_model_status == QpModelStatus::TIMELIMIT
                       ? HighsModelStatus::kTimeLimit
                       : HighsModelStatus::kNotset;
