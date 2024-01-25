@@ -1124,9 +1124,9 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "run_centring", "Perform centring steps or not",
-        advanced, &run_centring, false);
+    record_bool =
+        new OptionRecordBool("run_centring", "Perform centring steps or not",
+                             advanced, &run_centring, false);
     records.push_back(record_bool);
 
     record_int =

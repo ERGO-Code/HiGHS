@@ -11,7 +11,7 @@ const double inf = kHighsInf;
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   //  std::string model = "greenbea.mps";
   //  std::string model = "adlittle.mps";
-    std::string model = "afiro.mps"; 
+  std::string model = "afiro.mps";
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -54,8 +54,8 @@ TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
 
 TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   Highs highs;
-   highs.setOptionValue("output_flag", dev_run);
- const HighsInt dim = 2;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInt dim = 2;
   HighsLp lp;
   lp.num_col_ = dim;
   lp.col_cost_.assign(dim, 0);
@@ -78,8 +78,9 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   HighsStatus run_status = highs.run();
   const HighsSolution& solution = highs.getSolution();
   double solution_norm = 0;
-  for(HighsInt ix = 0; ix< dim; ix++) {
-    printf("Analytic centre solution %d is %g\n", int(ix), solution.col_value[ix]);
+  for (HighsInt ix = 0; ix < dim; ix++) {
+    printf("Analytic centre solution %d is %g\n", int(ix),
+           solution.col_value[ix]);
     solution_norm += std::fabs(solution.col_value[ix]);
   }
   REQUIRE(solution_norm < 1e-6);
