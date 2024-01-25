@@ -377,7 +377,8 @@ void LpSolver::InteriorPointSolve() {
 
 void LpSolver::RunIPM() {
     IPM ipm(control_);
-    info_.centring_done = false;
+    info_.centring_tried = false;
+    info_.centring_success = false;
 
     if (x_start_.size() != 0) {
         control_.Log() << " Using starting point provided by user."
@@ -395,7 +396,7 @@ void LpSolver::RunIPM() {
     }
     BuildStartingBasis();
     if (info_.status_ipm != IPX_STATUS_not_run || 
-        info_.centring_done)
+        info_.centring_tried)
         return;
     RunMainIPM(ipm);
 }

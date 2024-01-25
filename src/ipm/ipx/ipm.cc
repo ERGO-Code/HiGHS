@@ -113,22 +113,22 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         }
     }
 
-    if (control_.runCentring()) {
-    // Centrality of a point is evaluated by the quantities
-    //  min (xj * zj) / mu
-    //  max (xj * zj) / mu
-    // Ideally, they are in the interval [0.1,10.0].
-    // As soon as the ratio
-    //  max (xj * zj) / min (xj * zj)
-    // is below centringRatioTolerance, the point is considered centred.
-    // If the new point after centring has a ratio that is lower than the
-    // previous ratio times centringRatioReduction, then the step is
-    // accepted. Otherwise, the step is rejected and no more centring steps are
-    // performed.
-
-    // If IPM is optimal and centring has not yet run, run centring
-    // (to avoid running it twice during initial IPM and main IPM).
-    if (info->status_ipm == IPX_STATUS_optimal && !info->centring_done) {
+    if (control_.runCentring() &&
+	info->status_ipm == IPX_STATUS_optimal && !info->centring_tried) {
+      // Centrality of a point is evaluated by the quantities
+      //  min (xj * zj) / mu
+      //  max (xj * zj) / mu
+      // Ideally, they are in the interval [0.1,10.0].
+      // As soon as the ratio
+      //  max (xj * zj) / min (xj * zj)
+      // is below centringRatioTolerance, the point is considered centred.
+      // If the new point after centring has a ratio that is lower than the
+      // previous ratio times centringRatioReduction, then the step is
+      // accepted. Otherwise, the step is rejected and no more centring steps are
+      // performed.
+      //
+      // If IPM is optimal and centring has not yet run, run centring
+      // (to avoid running it twice during initial IPM and main IPM).
       control_.Log() << "Performing centring steps...\n";
 
       // freeze mu to its current value
@@ -136,52 +136,55 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 
       // assess and print centrality of current point
       AssessCentrality(iterate_->xl(), iterate_->xu(), iterate_->zl(),
-                       iterate_->zu(), iterate_->mu());
+		       iterate_->zu(), iterate_->mu());
       double prev_ratio = centring_ratio;
       Int prev_bad_products = bad_products;
 
+      info->centring_success = false;
       // if ratio is below tolerance, point is centred
       if (prev_ratio < control_.centringRatioTolerance()) {
-        control_.Log() << "\tPoint is now centred\n";
+	control_.Log() << "\tPoint is now centred\n";
+	info->centring_success = true;
       } else {
-        // perform centring steps
-        bool centring_complete = false;
-        for (int ii = 0; ii < control_.maxCentringSteps(); ++ii) {
-          // compute centring step
-          Centring(step, mu_frozen);
+	// perform centring steps
+	bool centring_complete = false;
+	for (int ii = 0; ii < control_.maxCentringSteps(); ++ii) {
+	  // compute centring step
+	  Centring(step, mu_frozen);
+	  
+	  // assess whether to take the step
+	  bool accept = EvaluateCentringStep(step, prev_ratio, prev_bad_products);
+	  if (!accept) {
+	    control_.Log() << "\tPoint cannot be centred further\n";
+	    centring_complete = true;
+	    break;
+	  }
 
-          // assess whether to take the step
-          bool accept = EvaluateCentringStep(step, prev_ratio, prev_bad_products);
-          if (!accept) {
-            control_.Log() << "\tPoint cannot be centred further\n";
-            centring_complete = true;
-            break;
-          }
-
-          // take the step and print output
-          MakeStep(step, true);
-          info->iter++;
-          PrintOutput();
-          AssessCentrality(iterate_->xl(), iterate_->xu(), iterate_->zl(),
-                           iterate_->zu(), iterate_->mu());
-          prev_ratio = centring_ratio;
-          prev_bad_products = bad_products;
-
-          // if ratio is below tolerance, point is centred
-          if (prev_ratio < control_.centringRatioTolerance()) {
-            control_.Log() << "\tPoint is now centred\n";
-            centring_complete = true;
-            break;
-          }
-        }
-        if (!centring_complete){
-            control_.Log() << "\tPoint could not be centred within "
-                           << control_.maxCentringSteps() << " iterations\n";
-        }
+	  // take the step and print output
+	  MakeStep(step, true);
+	  info->iter++;
+	  PrintOutput();
+	  AssessCentrality(iterate_->xl(), iterate_->xu(), iterate_->zl(),
+			   iterate_->zu(), iterate_->mu());
+	  prev_ratio = centring_ratio;
+	  prev_bad_products = bad_products;
+	    
+	  // if ratio is below tolerance, point is centred
+	  if (prev_ratio < control_.centringRatioTolerance()) {
+	    control_.Log() << "\tPoint is now centred\n";
+	    info->centring_success = true;
+	    centring_complete = true;
+	    break;
+	  }
+	}
+	if (!centring_complete) {
+	  control_.Log() << "\tPoint could not be centred within "
+			 << control_.maxCentringSteps() << " iterations\n";
+	}
       }
-      info->centring_done = true;
-    }
-  }
+      info->centring_tried = true;
+    } // if (control_.runCentring() && info->status_ipm ==
+      // IPX_STATUS_optimal && !info->centring_tried)
 }
 
 void IPM::ComputeStartingPoint() {
