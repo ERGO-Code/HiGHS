@@ -50,6 +50,11 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
   HighsStatus run_status = highs.run();
   const HighsSolution& solution = highs.getSolution();
-  for(HighsInt ix = 0; ix< dim; ix++)
-    printf("Analytic centre component %d is %g\n", int(ix), solution.col_value[ix]);
+  double solution_norm = 0;
+  for(HighsInt ix = 0; ix< dim; ix++) {
+    printf("Analytic centre solution %d is %g\n", int(ix), solution.col_value[ix]);
+    solution_norm += std::fabs(solution.col_value[ix]);
+  }
+  REQUIRE(solution_norm < 1e-6);
+  printf("Analytic centre solution norm is %g\n", solution_norm);
 }

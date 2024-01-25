@@ -528,11 +528,11 @@ void IPM::AssessCentrality(const Vector& xl, const Vector& xu,
   centring_ratio = maxxz / minxz;
 
   if (print) {
-    control_.Log() << "\t(min xj*zj / mu): " << minxz / mu << '\n';
-    control_.Log() << "\t(max xj*zj / mu): " << maxxz / mu << '\n';
-    control_.Log() << "\tRatio: " << centring_ratio << '\n';
-    control_.Log() << "\t(xj*zj / mu) \\notin [0.1, 10]: " << bad_products << '\n';
-    control_.Log() << "\t----------------------------------\n";
+    control_.Log() << "\t xj*zj in [ "
+		   << Scientific(minxz / mu, 8, 2) << ", "
+		   << Scientific(maxxz / mu, 8, 2) << "]; Ratio = "
+		   << Scientific(centring_ratio, 8, 2) << "; (xj*zj / mu) not_in [0.1, 10]: "
+		   << bad_products << "\n"; 
   }
 }
 
