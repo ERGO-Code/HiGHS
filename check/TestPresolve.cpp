@@ -14,6 +14,52 @@ TEST_CASE("presolve-solve-postsolve-lp", "[highs_test_presolve]") {
   presolveSolvePostsolve(model_file);
 }
 
+TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  highs.readModel(model_file);
+  highs.run();
+  const double objective_function_value =
+      highs.getInfo().objective_function_value;
+  highs.clearSolver();
+  highs.presolve();
+  HighsLp presolved_lp = highs.getPresolvedLp();
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  if (dev_run)
+    printf("presolved_lp.integrality_.size() = %d\n",
+           int(presolved_lp.integrality_.size()));
+  presolved_lp.integrality_.clear();
+  highs1.setOptionValue("presolve", kHighsOffString);
+  highs1.passModel(presolved_lp);
+  highs1.run();
+  HighsSolution solution = highs1.getSolution();
+  HighsStatus status;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run)
+      printf(
+          "Calling highs.postsolve(solution) with solution.col_value.size() = "
+          "%d solution.col_dual.size() = %d\n",
+          int(solution.col_value.size()), int(solution.col_dual.size()));
+    status = highs.postsolve(solution);
+    if (k == 0) {
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    } else {
+      REQUIRE(status == HighsStatus::kWarning);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    }
+    REQUIRE(std::fabs(highs.getInfo().objective_function_value -
+                      objective_function_value) <=
+            1e-8 * std::max(1.0, std::fabs(objective_function_value)));
+    solution.dual_valid = false;
+    solution.col_dual.clear();
+    solution.row_dual.clear();
+  }
+}
+
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
