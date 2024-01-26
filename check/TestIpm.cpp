@@ -55,7 +55,7 @@ TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
 TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  const HighsInt dim = 2;
+  const HighsInt dim = 4;
   HighsLp lp;
   lp.num_col_ = dim;
   lp.col_cost_.assign(dim, 0);
@@ -70,8 +70,8 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   highs.addRow(-root2, root2, 2, index.data(), value.data());
   value[1] = -1;
   highs.addRow(-root2, root2, 2, index.data(), value.data());
-
   highs.setOptionValue("run_centring", true);
+  highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("solver", kIpmString);
   highs.setOptionValue("run_crossover", kHighsOffString);
   highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
