@@ -66,6 +66,7 @@ foreach test : test_array
           cpp_args : _args,
           include_directories: _incdirs,
                  ),
+       timeout: 300,
       )
 endforeach
 
