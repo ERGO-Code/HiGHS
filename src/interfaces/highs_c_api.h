@@ -1854,11 +1854,11 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row, const double scaleval);
 double Highs_getInfinity(const void* highs);
 
 /**
- * Return the size of HighsInt used by HiGHS.
+ * Return the size of integers used by HiGHS.
  *
  * @param highs     A pointer to the Highs instance.
  *
- * @returns The value of HighsInt used by HiGHS.
+ * @returns The size of integers used by HiGHS.
  */
 HighsInt Highs_getSizeofHighsInt(const void* highs);
 
