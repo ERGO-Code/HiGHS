@@ -488,7 +488,6 @@ else(FAST_BUILD)
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
 
-  option(EXP "Experimental mode: run unit tests with doctest." OFF)
 
   if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
@@ -571,25 +570,4 @@ else(FAST_BUILD)
   add_subdirectory(examples)
 
   add_subdirectory(app)
-
-  if(EXP)
-    add_executable(doctest)
-
-    # target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
-    target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
-
-    if(NOT APPLE)
-      # triggers hanging on macOS
-      target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
-    endif()
-
-    target_include_directories(doctest PRIVATE extern)
-    target_link_libraries(doctest highs)
-  endif()
-
-# install(TARGETS highs EXPORT highs-targets
-# LIBRARY
-# ARCHIVE
-# RUNTIME
-# PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 endif()
