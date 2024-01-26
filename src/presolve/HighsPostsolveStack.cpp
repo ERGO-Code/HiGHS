@@ -101,6 +101,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // compute the row dual value such that reduced cost of basic column is 0
   if (isModelRow) {
+    solution.row_dual[row] = 0;
     HighsCDouble dualval = colCost;
     for (const auto& colVal : colValues) {
       assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
