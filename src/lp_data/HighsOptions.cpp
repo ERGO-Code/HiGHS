@@ -146,9 +146,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       bool* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordBool& check_option =
-            ((OptionRecordBool*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kBool) {
+        if (option_records[check_index]->type == HighsOptionType::kBool) {
+          OptionRecordBool& check_option =
+              ((OptionRecordBool*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -170,9 +170,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       HighsInt* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordInt& check_option =
-            ((OptionRecordInt*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kInt) {
+        if (option_records[check_index]->type == HighsOptionType::kInt) {
+          OptionRecordInt& check_option =
+              ((OptionRecordInt*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -195,9 +195,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       double* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordDouble& check_option =
-            ((OptionRecordDouble*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kDouble) {
+        if (option_records[check_index]->type == HighsOptionType::kDouble) {
+          OptionRecordDouble& check_option =
+              ((OptionRecordDouble*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -218,9 +218,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       std::string* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordString& check_option =
-            ((OptionRecordString*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kString) {
+        if (option_records[check_index]->type == HighsOptionType::kString) {
+          OptionRecordString& check_option =
+              ((OptionRecordString*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
