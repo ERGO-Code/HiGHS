@@ -1419,6 +1419,11 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
+  const bool have_integrality = (lp.integrality_.size() != 0);
+  if (have_integrality) {
+    assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
+    lp.integrality_.resize(new_num_col);
+  }
   bool have_names = (lp.col_names_.size() != 0);
   if (have_names) lp.col_names_.resize(new_num_col);
   for (HighsInt new_col = 0; new_col < num_new_col; new_col++) {
@@ -1428,6 +1433,7 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     lp.col_upper_[iCol] = colUpper[new_col];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
+    if (have_integrality) lp.integrality_[iCol] = HighsVarType::kContinuous;
   }
 }
 
@@ -1647,9 +1653,12 @@ void changeLpIntegrality(HighsLp& lp,
   // technique
   HighsInt lp_col;
   HighsInt usr_col = -1;
-  // May be adding integrality to a pure LP for which lp.integrality_
-  // is of size 0.
-  lp.integrality_.resize(lp.num_col_);
+  // If changing integrality for a problem without an integrality
+  // vector (ie an LP), have to create it for the incumbent columns -
+  // which are naturally continuous
+  if (lp.integrality_.size() == 0)
+    lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
+  assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
       lp_col = k;
