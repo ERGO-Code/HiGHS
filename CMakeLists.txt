@@ -491,10 +491,7 @@ if(NOT FAST_BUILD)
 
 else(FAST_BUILD)
 
-  message(STATUS "FAST_BUILD set to on.
- Note: The HiGHS team is preparing for our first official release. If you
-       experience any issues please let us know via email or on GitHub.")
-
+  message(STATUS "FAST_BUILD set to on.")
 
   if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
