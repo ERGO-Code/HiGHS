@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -199,7 +199,8 @@ class HighsMatrixSlice<HighsTripletListSlice> {
     iterator(HighsInt node) : currentNode(node) {}
     iterator(const HighsInt* nodeIndex, const double* nodeValue,
              const HighsInt* nodeNext, HighsInt node)
-        : pos_(nodeIndex + node, nodeValue + node),
+        : pos_(node == -1 ? nullptr : nodeIndex + node,
+               node == -1 ? nullptr : nodeValue + node),
           nodeNext(nodeNext),
           currentNode(node) {}
     iterator() = default;

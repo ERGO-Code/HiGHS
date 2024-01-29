@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -1852,6 +1852,15 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row, const double scaleval);
  * @returns The value of infinity used by HiGHS.
  */
 double Highs_getInfinity(const void* highs);
+
+/**
+ * Return the size of integers used by HiGHS.
+ *
+ * @param highs     A pointer to the Highs instance.
+ *
+ * @returns The size of integers used by HiGHS.
+ */
+HighsInt Highs_getSizeofHighsInt(const void* highs);
 
 /**
  * Return the number of columns in the model.

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -72,6 +72,16 @@ void HighsPostsolveStack::LinearTransform::transformToPresolvedSpace(
   primalSol[col] /= scale;
 }
 
+HighsBasisStatus computeRowStatus(double dual,
+                                  HighsPostsolveStack::RowType rowType) {
+  if (rowType == HighsPostsolveStack::RowType::kEq)
+    return dual < 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+  else if (rowType == HighsPostsolveStack::RowType::kGeq)
+    return HighsBasisStatus::kLower;
+  else
+    return HighsBasisStatus::kUpper;
+}
+
 void HighsPostsolveStack::FreeColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
@@ -101,6 +111,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // compute the row dual value such that reduced cost of basic column is 0
   if (isModelRow) {
+    solution.row_dual[row] = 0;
     HighsCDouble dualval = colCost;
     for (const auto& colVal : colValues) {
       assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
@@ -115,36 +126,27 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   if (!basis.valid) return;
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  if (isModelRow) {
-    if (rowType == RowType::kEq)
-      basis.row_status[row] = solution.row_dual[row] < 0
-                                  ? HighsBasisStatus::kUpper
-                                  : HighsBasisStatus::kLower;
-    else if (rowType == RowType::kGeq)
-      basis.row_status[row] = HighsBasisStatus::kLower;
-    else
-      basis.row_status[row] = HighsBasisStatus::kUpper;
-  }
+  if (isModelRow)
+    basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
-HighsBasisStatus computeStatus(const double& dual, HighsBasisStatus& status,
-                               double dual_feasibility_tolerance,
-                               bool basis_valid) {
-  if (basis_valid) {
-    if (dual > dual_feasibility_tolerance)
-      status = HighsBasisStatus::kLower;
-    else if (dual < -dual_feasibility_tolerance)
-      status = HighsBasisStatus::kUpper;
+HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
+                               double dual_feasibility_tolerance) {
+  if (dual > dual_feasibility_tolerance)
+    status = HighsBasisStatus::kLower;
+  else if (dual < -dual_feasibility_tolerance)
+    status = HighsBasisStatus::kUpper;
 
-    return status;
-  } else {
-    if (dual > dual_feasibility_tolerance)
-      return HighsBasisStatus::kLower;
-    else if (dual < -dual_feasibility_tolerance)
-      return HighsBasisStatus::kUpper;
-    else
-      return HighsBasisStatus::kBasic;
-  }
+  return status;
+}
+
+HighsBasisStatus computeStatus(double dual, double dual_feasibility_tolerance) {
+  if (dual > dual_feasibility_tolerance)
+    return HighsBasisStatus::kLower;
+  else if (dual < -dual_feasibility_tolerance)
+    return HighsBasisStatus::kUpper;
+  else
+    return HighsBasisStatus::kBasic;
 }
 
 void HighsPostsolveStack::DoubletonEquation::undo(
@@ -159,18 +161,21 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   if (row == -1 || !solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =
-      computeStatus(solution.col_dual[col], basis.col_status[col],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.col_dual[col],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.col_dual[col], basis.col_status[col],
+                          options.dual_feasibility_tolerance);
 
   // assert that a valid row index is used.
   assert(static_cast<size_t>(row) < solution.row_value.size());
 
   // compute the current dual values of the row and the substituted column
   // before deciding on which column becomes basic
-  // for each entry in a row i of the substituted column we added the doubleton
-  // equation row with scale -a_i/substCoef. Therefore the dual multiplier of
-  // this row i implicitly increases the dual multiplier of this doubleton
-  // equation row with that scale.
+  // for each entry in a row i of the substituted column we added the
+  // doubleton equation row with scale -a_i/substCoef. Therefore the dual
+  // multiplier of this row i implicitly increases the dual multiplier of this
+  // doubleton equation row with that scale.
   HighsCDouble rowDual = 0.0;
   solution.row_dual[row] = 0;
   for (const auto& colVal : colValues) {
@@ -180,8 +185,8 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   rowDual /= coefSubst;
   solution.row_dual[row] = double(rowDual);
 
-  // the equation was also added to the objective, so the current values need to
-  // be changed
+  // the equation was also added to the objective, so the current values need
+  // to be changed
   solution.col_dual[colSubst] = substCost;
   solution.col_dual[col] += substCost * coef / coefSubst;
 
@@ -219,10 +224,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 
   if (!basis.valid) return;
 
-  if (solution.row_dual[row] < 0)
-    basis.row_status[row] = HighsBasisStatus::kLower;
-  else
-    basis.row_status[row] = HighsBasisStatus::kUpper;
+  basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
@@ -257,8 +259,8 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
   if (!solution.dual_valid) return;
 
   // the dual multiplier of the rows where the eq row was added implicitly
-  // increases the dual multiplier of the equation with the scale that was used
-  // for adding the equation
+  // increases the dual multiplier of the equation with the scale that was
+  // used for adding the equation
   HighsCDouble eqRowDual = solution.row_dual[addedEqRow];
   for (const auto& targetRow : targetRows) {
     assert(static_cast<size_t>(targetRow.index) < solution.row_dual.size());
@@ -363,8 +365,11 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
   if (!solution.dual_valid) return;
 
   const HighsBasisStatus colStatus =
-      computeStatus(solution.col_dual[col], basis.col_status[col],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.col_dual[col],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.col_dual[col], basis.col_status[col],
+                          options.dual_feasibility_tolerance);
 
   if ((!colLowerTightened || colStatus != HighsBasisStatus::kLower) &&
       (!colUpperTightened || colStatus != HighsBasisStatus::kUpper)) {
@@ -514,8 +519,11 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
   }
 
   const HighsBasisStatus rowStatus =
-      computeStatus(solution.row_dual[row], basis.row_status[row],
-                    options.dual_feasibility_tolerance, basis.valid);
+      !basis.valid
+          ? computeStatus(solution.row_dual[row],
+                          options.dual_feasibility_tolerance)
+          : computeStatus(solution.row_dual[row], basis.row_status[row],
+                          options.dual_feasibility_tolerance);
 
   auto computeRowDualAndStatus = [&](bool tighened) {
     if (tighened) {

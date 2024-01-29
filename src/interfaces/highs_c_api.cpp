@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -1005,6 +1005,10 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row,
 
 double Highs_getInfinity(const void* highs) {
   return ((Highs*)highs)->getInfinity();
+}
+
+HighsInt Highs_getSizeofHighsInt(const void* highs) {
+  return ((Highs*)highs)->getSizeofHighsInt();
 }
 
 HighsInt Highs_getNumCol(const void* highs) {

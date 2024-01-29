@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -50,12 +50,7 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
 
-void highsSignalHandler(int signum) {
-  //  std::cout << "Interrupt signal (" << signum << ") received.\n";
-  exit(signum);
-}
-
-Highs::Highs() { signal(SIGINT, highsSignalHandler); }
+Highs::Highs() {}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -293,6 +288,11 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
   if (file != stdout) fclose(file);
   return return_status;
 }
+
+/**
+ * @brief Get the size of HighsInt
+ */
+// HighsInt getSizeofHighsInt() {
 
 // Methods below change the incumbent model or solver information
 // associated with it. Hence returnFromHighs is called at the end of
@@ -787,7 +787,9 @@ HighsStatus Highs::presolve() {
         // No reduction, so fill Highs presolved model with the
         // incumbent model
         presolved_model_ = model_;
-      } else if (model_presolve_status_ == HighsPresolveStatus::kReduced) {
+      } else if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
+                 model_presolve_status_ ==
+                     HighsPresolveStatus::kReducedToEmpty) {
         // Nontrivial reduction, so fill Highs presolved model with the
         // presolved model
         using_reduced_lp = true;
@@ -2017,7 +2019,6 @@ HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
                  "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
-  std::vector<bool>& active = this->callback_.active;
   assert(int(this->callback_.active.size()) == kNumCallbackType);
   this->callback_.active[callback_type] = false;
   // Possibly modify the logging callback activity
@@ -3079,7 +3080,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
-    solver.runPresolve();
+    solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
     presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
@@ -3364,7 +3365,7 @@ HighsStatus Highs::callSolveQp() {
   Settings settings;
   Statistics stats;
 
-  settings.reportingfequency = 1000;
+  settings.reportingfequency = 100;
 
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
@@ -3402,6 +3403,8 @@ HighsStatus Highs::callSolveQp() {
                       ? HighsModelStatus::kInfeasible
                   : qp_model_status == QpModelStatus::ITERATIONLIMIT
                       ? HighsModelStatus::kIterationLimit
+                  : qp_model_status == QpModelStatus::LARGE_NULLSPACE
+                      ? HighsModelStatus::kSolveError
                   : qp_model_status == QpModelStatus::TIMELIMIT
                       ? HighsModelStatus::kTimeLimit
                       : HighsModelStatus::kNotset;
@@ -3731,7 +3734,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 // End of public methods
 void Highs::logHeader() {
   if (written_log_header) return;
-  highsLogHeader(options_.log_options);
+  highsLogHeader(options_.log_options, options_.log_githash);
   written_log_header = true;
   return;
 }

@@ -366,12 +366,9 @@ def branchAndPrice(m, vals, columns, start_time=0):
         mp_is_feasible, m, node = solveNode(node, columns, m)
         count_nodes_visited += 1
 
-        # Prune nodes that cannot lead to optimal solution        
-        if node.value >= best_obj:
-            continue
-
         # Only add columns if the master problem is feasible
-        if mp_is_feasible:
+        # Prune nodes that cannot lead to optimal solution        
+        if mp_is_feasible and node.value < best_obj:
             columns = node.final_columns            
             count_fractional_columns = len(node.final_fractional_columns)
 
