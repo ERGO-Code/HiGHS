@@ -16,12 +16,12 @@
 #ifndef PRESOLVE_HIGHS_POSTSOLVE_STACK_H_
 #define PRESOLVE_HIGHS_POSTSOLVE_STACK_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <numeric>
 #include <tuple>
 #include <vector>
-#include <algorithm>
 
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
