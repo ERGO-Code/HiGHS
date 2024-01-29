@@ -551,7 +551,9 @@ class HighsPostsolveStack {
 
   template <typename T>
   void undoIterateBackwards(std::vector<T>& values,
-                            const std::vector<HighsInt>& index) {
+                            const std::vector<HighsInt>& index,
+                            HighsInt origSize) {
+    values.resize(origSize);
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
       values[index[i - 1]] = values[i - 1];
@@ -570,30 +572,24 @@ class HighsPostsolveStack {
 
     // expand solution to original index space
     assert(origNumCol > 0);
-    solution.col_value.resize(origNumCol);
-    undoIterateBackwards(solution.col_value, origColIndex);
+    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
 
     assert(origNumRow >= 0);
-    solution.row_value.resize(origNumRow);
-    undoIterateBackwards(solution.row_value, origRowIndex);
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      solution.col_dual.resize(origNumCol);
-      undoIterateBackwards(solution.col_dual, origColIndex);
+      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      solution.row_dual.resize(origNumRow);
-      undoIterateBackwards(solution.row_dual, origRowIndex);
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      basis.col_status.resize(origNumCol);
-      undoIterateBackwards(basis.col_status, origColIndex);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      basis.row_status.resize(origNumRow);
-      undoIterateBackwards(basis.row_status, origRowIndex);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
     }
 
     // now undo the changes
@@ -750,29 +746,23 @@ class HighsPostsolveStack {
     bool perform_basis_postsolve = basis.valid;
 
     // expand solution to original index space
-    solution.col_value.resize(origNumCol);
-    undoIterateBackwards(solution.col_value, origColIndex);
+    undoIterateBackwards(solution.col_value, origColIndex, origNumCol);
 
-    solution.row_value.resize(origNumRow);
-    undoIterateBackwards(solution.row_value, origRowIndex);
+    undoIterateBackwards(solution.row_value, origRowIndex, origNumRow);
 
     if (perform_dual_postsolve) {
       // if dual solution is given, expand dual solution and basis to original
       // index space
-      solution.col_dual.resize(origNumCol);
-      undoIterateBackwards(solution.col_dual, origColIndex);
+      undoIterateBackwards(solution.col_dual, origColIndex, origNumCol);
 
-      solution.row_dual.resize(origNumRow);
-      undoIterateBackwards(solution.row_dual, origRowIndex);
+      undoIterateBackwards(solution.row_dual, origRowIndex, origNumRow);
     }
 
     if (perform_basis_postsolve) {
       // if basis is given, expand basis status values to original index space
-      basis.col_status.resize(origNumCol);
-      undoIterateBackwards(basis.col_status, origColIndex);
+      undoIterateBackwards(basis.col_status, origColIndex, origNumCol);
 
-      basis.row_status.resize(origNumRow);
-      undoIterateBackwards(basis.row_status, origRowIndex);
+      undoIterateBackwards(basis.row_status, origRowIndex, origNumRow);
     }
 
     // now undo the changes
