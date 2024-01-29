@@ -298,7 +298,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   regularize(runtime);
 
   if (basis.getnuminactive() > 4000) {
-    printf("nullspace too larg %d\n", basis.getnuminactive());
+    printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
     runtime.status = QpModelStatus::LARGE_NULLSPACE;
     return;
   }

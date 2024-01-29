@@ -1,4 +1,4 @@
-name: Meson Builds with Conda
+name: build-meson
 on: [push, pull_request]
 
 jobs:
