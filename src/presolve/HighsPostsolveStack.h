@@ -553,18 +553,17 @@ class HighsPostsolveStack {
   void undoIterateBackwards(std::vector<T>& values,
                             const std::vector<HighsInt>& index,
                             HighsInt origSize) {
+    values.resize(origSize);
 #ifdef DEBUG_EXTRA
     // Fill vector with NaN for debugging purposes
     std::vector<T> valuesNew;
     valuesNew.resize(origSize, std::numeric_limits<T>::signaling_NaN());
-    values.resize(origSize);
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
       valuesNew[index[i - 1]] = values[i - 1];
     }
     std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
 #else
-    values.resize(origSize);
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
       values[index[i - 1]] = values[i - 1];
