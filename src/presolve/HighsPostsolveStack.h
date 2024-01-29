@@ -553,11 +553,30 @@ class HighsPostsolveStack {
   void undoIterateBackwards(std::vector<T>& values,
                             const std::vector<HighsInt>& index,
                             HighsInt origSize) {
+#ifdef DEBUG_EXTRA
+    // Fill vector with NaN for debugging purposes
+    std::vector<T> valuesNew;
+    valuesNew.resize(origSize, std::numeric_limits<T>::signaling_NaN());
+    values.resize(origSize);
+    for (size_t i = index.size(); i > 0; --i) {
+      assert(static_cast<size_t>(index[i - 1]) >= i - 1);
+      valuesNew[index[i - 1]] = values[i - 1];
+    }
+    std::copy(valuesNew.cbegin(), valuesNew.cend(), values.begin());
+#else
     values.resize(origSize);
     for (size_t i = index.size(); i > 0; --i) {
       assert(static_cast<size_t>(index[i - 1]) >= i - 1);
       values[index[i - 1]] = values[i - 1];
     }
+#endif
+  }
+
+  /// check if vector contains NaN or Inf
+  bool containsNanOrInf(const std::vector<double>& v) const {
+    return std::find_if(v.cbegin(), v.cend(), [](const double& d) {
+             return (std::isnan(d) || std::isinf(d));
+           }) != v.cend();
   }
 
   /// undo presolve steps for primal dual solution and basis
@@ -696,6 +715,15 @@ class HighsPostsolveStack {
     if (report_col >= 0)
       printf("After last reduction: col_value[%2d] = %g\n", int(report_col),
              solution.col_value[report_col]);
+
+#ifdef DEBUG_EXTRA
+    // solution should not contain NaN or Inf
+    assert(!containsNanOrInf(solution.col_value));
+    // row values are not determined by postsolve
+    // assert(!containsNanOrInf(solution.row_value));
+    assert(!containsNanOrInf(solution.col_dual));
+    assert(!containsNanOrInf(solution.row_dual));
+#endif
   }
 
   /// undo presolve steps for primal solution
@@ -857,6 +885,14 @@ class HighsPostsolveStack {
         }
       }
     }
+#ifdef DEBUG_EXTRA
+    // solution should not contain NaN or Inf
+    assert(!containsNanOrInf(solution.col_value));
+    // row values are not determined by postsolve
+    // assert(!containsNanOrInf(solution.row_value));
+    assert(!containsNanOrInf(solution.col_dual));
+    assert(!containsNanOrInf(solution.row_dual));
+#endif
   }
 
   size_t numReductions() const { return reductions.size(); }
