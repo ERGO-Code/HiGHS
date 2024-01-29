@@ -1,6 +1,6 @@
 name: build-mingw
 
-on: [pull_request]
+on: [push, pull_request]
 
 jobs:
   mingw:
@@ -46,7 +46,7 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          cmake .. -DFAST_BUILD=${{ matrix.fast-build }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }}
+          cmake .. -DFAST_BUILD=${{ matrix.fast-build }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }} -DHIGHS_NO_DEFAULT_THREADS=ON
 
       - name: Build
         # Execute the build.  You can specify a specific target with "--target <NAME>"
