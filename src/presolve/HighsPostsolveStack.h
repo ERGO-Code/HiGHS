@@ -21,6 +21,7 @@
 #include <numeric>
 #include <tuple>
 #include <vector>
+#include <algorithm>
 
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
