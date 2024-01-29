@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <fenv.h>
 
 #include "Highs.h"
 #include "qpsolver/basis.hpp"
@@ -119,7 +120,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
 static double computemaxsteplength(Runtime& runtime, const Vector& p,
                             Gradient& gradient, Vector& buffer_Qp, bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
-  if (fabs(denominator) > 10E-5) {
+  if (fabs(denominator) > runtime.settings.pQp_zero_threshold) {
     double numerator = -(p * gradient.getGradient());
     if (numerator < 0.0) {
       return 0.0;
@@ -263,6 +264,9 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
 #endif
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
+
+  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;
@@ -292,6 +296,13 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   Vector buffer_d(runtime.instance.num_var);
 
   regularize(runtime);
+
+  if (basis.getnuminactive() > 4000) {
+    printf("nullspace too larg %d\n", basis.getnuminactive());
+    runtime.status = QpModelStatus::LARGE_NULLSPACE;
+    return;
+  }
+
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
@@ -357,7 +368,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
     }
 
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0 || fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold) {
+        maxsteplength == 0.0 || (false && fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold)) {
       atfsep = true;
     } else {
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);

@@ -11,6 +11,7 @@ enum class QpModelStatus {
   INFEASIBLE,
   ITERATIONLIMIT,
   TIMELIMIT,
+  LARGE_NULLSPACE,
   ERROR
 };
 

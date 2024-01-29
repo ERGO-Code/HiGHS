@@ -106,8 +106,8 @@ class HighsNodeQueue {
               reinterpret_cast<FreelistNode*>(state->freeListHead)->next;
         } else {
           ptr = reinterpret_cast<T*>(state->currChunkStart);
-          state->currChunkStart += sizeof(FreelistNode);
-          if (state->currChunkStart > state->currChunkEnd) {
+          if (!ptr || state->currChunkStart + sizeof(FreelistNode) >
+                          state->currChunkEnd) {
             auto newChunk = new Chunk;
             newChunk->next = state->chunkListHead;
             state->chunkListHead = newChunk;
@@ -115,6 +115,8 @@ class HighsNodeQueue {
             state->currChunkEnd =
                 state->currChunkStart + sizeof(newChunk->storage);
             ptr = reinterpret_cast<T*>(state->currChunkStart);
+            state->currChunkStart += sizeof(FreelistNode);
+          } else {
             state->currChunkStart += sizeof(FreelistNode);
           }
         }
