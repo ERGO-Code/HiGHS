@@ -1,7 +1,9 @@
 # set(CMAKE_VERBOSE_MAKEFILE ON)
-if (PYTHON)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/.libs")
-endif()
+
+# if (PYTHON)
+#   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/.libs")
+# endif()
+
 # set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(NOT BUILD_CXX)
@@ -62,15 +64,18 @@ target_include_directories(highs INTERFACE
 #   INTERFACE_POSITION_INDEPENDENT_CODE ON
 # )
 
-if (PYTHON)
+# if (PYTHON)
 
-install(TARGETS highs
-   EXPORT ${lower}-targets
-   INCLUDES DESTINATION include
-   ARCHIVE DESTINATION .libs
-   LIBRARY DESTINATION .libs)
 
-else()
+
+# install(TARGETS highs
+#    EXPORT ${lower}-targets
+#    INCLUDES DESTINATION include
+#    ARCHIVE DESTINATION .libs
+#    LIBRARY DESTINATION .libs)
+
+# else()
+
 ###################
 ## Install rules ##
 ###################
@@ -81,7 +86,8 @@ install(FILES ${PROJECT_BINARY_DIR}/highs_export.h
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 string (TOLOWER ${PROJECT_NAME} lower)
- install(TARGETS highs
+
+install(TARGETS highs
    EXPORT ${lower}-targets
    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -89,6 +95,8 @@ string (TOLOWER ${PROJECT_NAME} lower)
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
   
+if (NOT PYTHON)
+
 # Add library targets to the build-tree export set
 export(TARGETS highs
     NAMESPACE ${PROJECT_NAMESPACE}::
@@ -141,8 +149,6 @@ function(add_cxx_test FILE_NAME)
   endif()
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
-
-
 
 
 # # Properties

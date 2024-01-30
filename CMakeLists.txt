@@ -50,10 +50,6 @@ endif()
 # Layout build dir like install dir
 include(GNUInstallDirs)
 
-# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-
 if(UNIX)
   option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -82,7 +78,11 @@ else()
   endforeach()
 endif()
 
+# Best link static on Windows, if possible. Check : todo
 if(BUILD_SHARED_LIBS AND MSVC)
+  # message( SEND_ERROR "Best link static on Windows, if possible.")
+  # message( FATAL_ERROR "You can not do this at all, CMake will exit." )
+
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
@@ -495,35 +495,6 @@ else(FAST_BUILD)
     add_compile_definitions("NDEBUG")
   endif()
   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
-  # configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
-
-  # set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
-  option(BUILD_SHARED_LIBS "Build shared libraries." ON)
-
-  # static build for windows
-  if(NOT UNIX)
-    option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-    # for multi-config builds (e.g. msvc)
-    foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-      string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-    endforeach()
-  endif()
-
-  if(BUILD_SHARED_LIBS AND MSVC)
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-  endif()
-
-  # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-  # if(BUILD_PYTHON)
-  #   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-  # endif()
 
   include(CMakeDependentOption)
 

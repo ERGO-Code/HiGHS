@@ -30,15 +30,16 @@ import sysconfig
 #         return []
 #     else:
 #         return ["-Wl,-rpath=$ORIGIN/lib/."]
-    
+
 
 ext_modules = [
+    
     Pybind11Extension(
         "highspy.highs_bindings",
         sources=["highspy/highs_bindings.cpp"],
         language='c++',
         include_dirs=['include/highs'],
-        library_dirs=['.libs'],
+        library_dirs=['lib', 'bin'],
         # library_dirs=[os.path.join(path_to_build_folder(), 'lib')],
         libraries=['highs'],
     ),
@@ -63,19 +64,26 @@ kwargs = {
     'packages': find_packages(),
     'include_package_data': True,
     'package_dir': {'highspy': "highspy"},
-    'package_data': {'highspy': ['highspy/*.so','lib/*.so', 'lib/*.dylib',
-                                 'lib/*.lib', '*.dll',
-                                 'include/highs/*.h',
-                                 'include/highs/lp_data/*.h',
-                                 'include/highs/util/*.h',
-                                 'include/highs/io/*.h',
-                                 'include/highs/simplex/*.h',
-                                 'include/highs/model/*.h',
-                                 'include/highs/presolve/*.h',
-                                 ]},
+    'package_data': {'highspy': [
+        '*.so',
+        '*.pyd',
+        'highspy/*.so',
+        # '.libs/*.so',
+        'lib/*.so',
+        'lib/*.dylib',
+        'lib/*.lib',
+        'bin/*.dll',
+        'include/highs/*.h',
+        'include/highs/lp_data/*.h',
+        'include/highs/util/*.h',
+        'include/highs/io/*.h',
+        'include/highs/simplex/*.h',
+        'include/highs/model/*.h',
+        'include/highs/presolve/*.h',
+    ]},
     # 'ext_modules':  [native_module],
-    'cmdclass' : {"build_ext": build_ext},
-    'ext_modules' : ext_modules,
+    'cmdclass': {"build_ext": build_ext},
+    'ext_modules': ext_modules,
 }
 
 setup(**kwargs)
