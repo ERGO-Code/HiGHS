@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [self-hosted, windows, x64]
+        os: [self-hosted]
         # os: [windows]
         python: [3.12]
     steps:
@@ -28,4 +28,4 @@ jobs:
         run: |
           pip install -vvv .
           pytest -v ./highspy/tests/
-          
+
