@@ -241,6 +241,7 @@ if(NOT FAST_BUILD)
   enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
   enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
   enable_cxx_compiler_flag_if_supported("-pedantic")
+  enable_cxx_compiler_flag_if_supported("-g")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")

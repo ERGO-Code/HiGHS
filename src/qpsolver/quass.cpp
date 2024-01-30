@@ -297,6 +297,8 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
 
   regularize(runtime);
 
+  runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
+
   if (basis.getnuminactive() > 4000) {
     printf("nullspace too larg %d\n", basis.getnuminactive());
     runtime.status = QpModelStatus::LARGE_NULLSPACE;
