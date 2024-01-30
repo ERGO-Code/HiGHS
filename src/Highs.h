@@ -1017,6 +1017,14 @@ class Highs {
    */
   HighsStatus scaleRow(const HighsInt row, const double scale_value);
 
+  bool considerScalingPresolvedLp(const HighsOptions& options) {
+    return considerScaling(options, presolved_model_.lp_);
+  };
+
+  void unscaleSolutionPresolvedLp(HighsSolution& solution) {
+    unscaleSolution(solution, presolved_model_.lp_.scale_);
+  }
+
   /**
    * Other methods for specialist applications
    */
