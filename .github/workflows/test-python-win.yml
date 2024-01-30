@@ -10,7 +10,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [self-hosted, windows, x64]
+        # os: [self-hosted, windows, x64]
+        os: [windows]
         python: [3.12]
     steps:
       - uses: actions/checkout@v3
@@ -19,22 +20,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Install build dependencies
+        run: pip install numpy setuptools wheel pytest 
   
-      - name: Configure CMake
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake -S $GITHUB_WORKSPACE -B ${{runner.workspace}}/build /
-           -DPYTHON=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/build/highspy/
-
-      - name: Test Python Interface
+      - name: Test python install
         shell: bash
         run: |
-          cmake --build ${{runner.workspace}}/build --parallel 
-          cmake --install ${{runner.workspace}}/build
-          cd ${{runner.workspace}}/build/highspy
           pip install -vvv .
-          pip install pytest numpy
           pytest -v ./highspy/tests/
