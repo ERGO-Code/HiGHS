@@ -1019,7 +1019,9 @@ class Highs {
 
   bool considerScalingPresolvedLp(const HighsOptions& options) {
     return considerScaling(options, presolved_model_.lp_);
-  };
+  }
+
+  void unapplyScalePresolvedLp() { presolved_model_.lp_.unapplyScale(); }
 
   void unscaleSolutionPresolvedLp(HighsSolution& solution) {
     unscaleSolution(solution, presolved_model_.lp_.scale_);
