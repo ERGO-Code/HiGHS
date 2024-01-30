@@ -119,6 +119,10 @@ if(PYTHON OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
+if (PYTHON) 
+  set(BUILD_CXX OFF)
+endif()
+
 # # For Python interface
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 

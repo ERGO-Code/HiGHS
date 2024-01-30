@@ -1,3 +1,5 @@
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 include(sources)
 
 # Find Python 3
@@ -66,16 +68,34 @@ message(STATUS "Python project: ${PYTHON_PROJECT}")
 set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/${PYTHON_PROJECT})
 message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
-
-
 pybind11_add_module(highs_bindings 
-    highspy/highs_bindings.cpp 
-    highspy/highs_options.cpp)
+    highspy/highs_bindings.cpp
+    ) 
+    # highspy/highs_options.cpp)
 
 set_target_properties(highs_bindings PROPERTIES
   LIBRARY_OUTPUT_NAME "highs_bindings")
 
-# if(APPLE)
+
+target_include_directories(highs_bindings PUBLIC ${include_dirs})
+
+target_sources(highs_bindings PUBLIC
+    ${ipx_sources}
+    ${basiclu_sources}
+    ${highs_sources}
+)
+
+# target_include_directories(highs_bindings PUBLIC src)
+#  target_include_directories(highs_bindings PUBLIC ${CMAKE_SOURCE_DIR}/src)
+
+  # target_include_directories(highs_bindings PUBLIC
+  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  #   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+  #   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+  # )
+
+
+  # if(APPLE)
 #   set_target_properties(highs_bindings PROPERTIES
 #     SUFFIX ".so"
 #     INSTALL_RPATH "@loader_path;@loader_path/../../../${PYTHON_PROJECT_DIR}/.libs"
