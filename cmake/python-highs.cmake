@@ -68,18 +68,18 @@ message(STATUS "Python project: ${PYTHON_PROJECT}")
 set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/${PYTHON_PROJECT})
 message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
-pybind11_add_module(highs_bindings 
+pybind11_add_module(highspy
     highspy/highs_bindings.cpp
     ) 
     # highspy/highs_options.cpp)
 
-set_target_properties(highs_bindings PROPERTIES
-  LIBRARY_OUTPUT_NAME "highs_bindings")
+# set_target_properties(highspy PROPERTIES
+#   LIBRARY_OUTPUT_NAME "highspy")
 
 
-target_include_directories(highs_bindings PUBLIC ${include_dirs})
+target_include_directories(highspy PUBLIC ${include_dirs})
 
-target_sources(highs_bindings PUBLIC
+target_sources(highspy PUBLIC
     ${ipx_sources}
     ${basiclu_sources}
     ${highs_sources}
@@ -106,7 +106,10 @@ target_sources(highs_bindings PUBLIC
 #     )
 # endif()
 
-add_library(${PROJECT_NAMESPACE}::highs_bindings ALIAS highs_bindings)
+add_library(${PROJECT_NAMESPACE}::highspy ALIAS highspy)
+
+target_compile_definitions(highspy
+                           PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
 # target_link_libraries(highs_bindings PRIVATE
 #   ${PROJECT_NAMESPACE}::highs

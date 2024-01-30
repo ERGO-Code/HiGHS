@@ -1,4 +1,4 @@
-from .highs_bindings  import (
+from highs_bindings  import (
     ObjSense,
     MatrixFormat,
     HessianFormat,

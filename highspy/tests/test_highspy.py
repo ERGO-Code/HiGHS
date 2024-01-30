@@ -79,7 +79,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(lp.row_lower_[0], 5)
         self.assertAlmostEqual(lp.row_upper_[0], 15)
         self.assertAlmostEqual(lp.row_lower_[1], 6)
-        self.assertAlmostEqual(lp.row_upper_[1], h.inf)
+        self.assertAlmostEqual(lp.row_upper_[1], highspy.kHighsInf)
 
     def get_infeasible_model(self):
         inf = highspy.kHighsInf
@@ -434,8 +434,8 @@ class TestHighsPy(unittest.TestCase):
 
     def test_constraint_removal(self):
         h = highspy.Highs()
-        x = h.addVar(lb=-h.inf)
-        y = h.addVar(lb=-h.inf)
+        x = h.addVar(lb=-highspy.kHighsInf)
+        y = h.addVar(lb=-highspy.kHighsInf)
         c1 = h.addConstr(-x + y >= 2)
         c2 = h.addConstr(x + y >= 0)
         self.assertEqual(h.numConstrs, 2)
@@ -463,8 +463,8 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
 
-        x = h.addVar(lb=-h.inf)
-        y = h.addVar(lb=-h.inf)
+        x = h.addVar(lb=highspy.kHighsInf)
+        y = h.addVar(lb=highspy.kHighsInf)
 
         c1 = h.addConstr(-x + y >= 2)
         c2 = h.addConstr(x + y >= 0)
@@ -480,7 +480,7 @@ class TestHighsPy(unittest.TestCase):
         -x + y >= 3
         x + y >= 0
         """
-        h.changeRowBounds(0, 3, h.inf)
+        h.changeRowBounds(0, 3, highspy.kHighsInf)
         h.run()
 
         self.assertAlmostEqual(h.val(x), -1.5)
@@ -511,15 +511,15 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.val(y), 0)
 
         # change the upper bound of x to -5
-        h.changeColsBounds(1, np.array([0]), np.array([-h.inf], dtype=np.double),
+        h.changeColsBounds(1, np.array([0]), np.array([-highspy.kHighsInf], dtype=np.double),
                            np.array([-5], dtype=np.double))
         h.run()
         self.assertAlmostEqual(h.val(x), -5)
         self.assertAlmostEqual(h.val(y), 5)
 
         # now maximize
-        h.changeRowBounds(1, -h.inf, 0)
-        h.changeRowBounds(0, -h.inf, 0)
+        h.changeRowBounds(1, -highspy.kHighsInf, 0)
+        h.changeRowBounds(0, -highspy.kHighsInf, 0)
         h.minimize(-y)
 
         self.assertAlmostEqual(h.val(x), -5)
@@ -540,7 +540,7 @@ class TestHighsPy(unittest.TestCase):
 
     def test_addVar(self):  
         h = highspy.Highs()  
-        h.addVar()
+        h.addEmptyVar()
         h.update()
         self.assertEqual(h.numVars, 1)  
   
@@ -565,7 +565,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.getNumNz(), 2)
 
         lp = h.getLp()
-        self.assertAlmostEqual(lp.row_lower_[0], -h.inf)
+        self.assertAlmostEqual(lp.row_lower_[0], -highspy.kHighsInf)
         self.assertAlmostEqual(lp.row_upper_[0], 10)
 
         self.assertEqual(lp.a_matrix_.index_[0], 0)
@@ -684,27 +684,27 @@ class TestHighsPy(unittest.TestCase):
 
         # -inf <= 2x + 3y <= inf
         c1 = 2*x + 3*y 
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, h.inf, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, highspy.kHighsInf, 0))
 
         # -inf <= 2x + 3y <= 2x
         c1 = 2*x + 3*y <= 2*x
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, 0, 0))
 
         # -inf <= 2x + 3y <= 2x
         c1 = 2*x >= 2*x + 3*y 
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, 0, 0))
 
         # max{1,4} <= 2x + 3y <= inf
         c1 = 1 <= (4 <= 2*x + 3*y)
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (4, h.inf, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (4, highspy.kHighsInf, 0))
 
         # -inf <= 2x + 3y <= min{1,4}
         c1 = 2 >= (4 >= 2*x + 3*y)
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 2, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, 2, 0))
         c1 = 2*x + 3*y <= (2 <= 4)
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, True, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, True, 0))
         c1 = (2*x + 3*y <= 2) <= 4
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 2, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, 2, 0))
 
         # 1 <= 2x + 3y <= 5
         c1 = (1 <= 2*x + 3*y) <= 5
@@ -732,7 +732,7 @@ class TestHighsPy(unittest.TestCase):
         # failure, order matters when having variables on both sides of inequality
         # -inf <= 4*x - t <= min{0, 5}
         c1 = (4*x <= 2*x + 3*y) <= 5
-        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-h.inf, 0, 0))
+        self.assertAlmostEqual((c1.LHS, c1.RHS, c1.constant), (-highspy.kHighsInf, 0, 0))
 
         #4*x <= (2*x + 3*y <= 5) 
         self.assertRaises(Exception, lambda: 4*x <= (2*x + 3*y <= 5), None)

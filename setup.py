@@ -135,16 +135,16 @@ class CMakeBuild(build_ext):
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="highspy",
-    version="0.0.1",
-    author="author",
-    author_email="email",
-    description="highspy",
+    version="1.6.0.dev8",
+    author="HiGHS developers",
+    author_email="highsopt@gmail.com",
+    description = "A thin set of pybind11 wrappers to HiGHS",
     long_description="",
-    ext_modules=[CMakeExtension("highs_bindings")],
+    ext_modules=[CMakeExtension("highspy")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     # extras_require={"test": ["pytest>=6.0"]},
-    # python_requires=">=3.7",
+    python_requires=">=3.9",
 )
 
 # class CMakeBuild(build_ext):

@@ -29,6 +29,26 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 
+option(PYTHON "Build Python interface" OFF)
+message(STATUS "Build Python: ${PYTHON}")
+
+option(FAST_BUILD "Fast build: " ON)
+
+# By default only build the C++ library.
+option(BUILD_CXX "Build C++ library" ON)
+message(STATUS "Build C++ library: ${BUILD_CXX}")
+
+if (PYTHON) 
+  set(BUILD_CXX OFF)
+endif()
+
+
+
+
+
+
+if (NOT PYTHON)
+
 # Default Build Type to be Release
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(isMultiConfig)
@@ -43,6 +63,8 @@ else()
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING
     "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
     FORCE)
+    set(HiGHSRELEASE ON)
+    add_compile_definitions("NDEBUG")
   endif()
   message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 endif()
@@ -98,14 +120,7 @@ if(MSVC)
   option(STDCALL "Build highs with the __stdcall convention" OFF)
 endif()
 
-option(FAST_BUILD "Fast build: " ON)
 
-# By default only build the C++ library.
-option(BUILD_CXX "Build C++ library" ON)
-message(STATUS "Build C++ library: ${BUILD_CXX}")
-
-option(PYTHON "Build Python interface" OFF)
-message(STATUS "Build Python: ${PYTHON}")
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
@@ -114,13 +129,10 @@ message(STATUS "Build CSharp: ${CSHARP}")
 # ZLIB can be switched off, for building interfaces
 option(ZLIB "Fast build: " ON)
 
+
 # If wrapper are built, we need to have the install rpath in BINARY_DIR to package
 if(PYTHON OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
-
-if (PYTHON) 
-  set(BUILD_CXX OFF)
 endif()
 
 # # For Python interface
@@ -174,6 +186,8 @@ endif()
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
+
+endif() 
 
 set(CMAKE_MACOSX_RPATH ON)
 
@@ -494,11 +508,9 @@ else(FAST_BUILD)
 
   option(EXP "Experimental mode: run unit tests with doctest." OFF)
 
-  if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
-    set(HiGHSRELEASE ON)
-    add_compile_definitions("NDEBUG")
-  endif()
-  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+  # if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
+  # endif()
+  # message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
   include(CMakeDependentOption)
 
@@ -520,17 +532,16 @@ else(FAST_BUILD)
   option(JULIA "Build library and executable for Julia" OFF)
 
   include(cpp-highs)
-  include(c-highs)
 
   if(PYTHON)
     # set (BUILD_RPATH_USE_ORIGIN ON)
     include(python-highs)
+  else()
+    include(c-highs)
+    # Add tests in examples/tests
+    add_subdirectory(examples)
+    add_subdirectory(app)
   endif()
-
-  # Add tests in examples/tests
-  add_subdirectory(examples)
-
-  add_subdirectory(app)
 
   if(EXP)
     add_executable(doctest)

@@ -1,17 +1,6 @@
-[project]
-name = "highspy"
-version = "1.6.0.dev5"
-description = "A thin set of pybind11 wrappers to HiGHS"
-authors = [
-    {name = "HiGHS developers", email = "highsopt@gmail.com"},
-]
-requires-python = ">=3.8"
-readme = "README.md"
-license = {text = "MIT"}
-
-[project.urls]
-"Source Code" = "https://github.com/ERGO-Code/HiGHS"
-"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+# [project.urls]
+# "Source Code" = "https://github.com/ERGO-Code/HiGHS"
+# "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
 # Minimum requirements for the build system to execute.
@@ -24,25 +13,38 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
-[tool.cibuildwheel]
-build = "*"
-skip = "cp36-*"
-test-skip = ""
+[tool.mypy]
+files = "setup.py"
+python_version = "3.7"
+strict = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
 
-[tool.cibuildwheel.linux]
-manylinux-x86_64-image = "manylinux2014"
-manylinux-i686-image = "manylinux2014"
-repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+[[tool.mypy.overrides]]
+module = ["ninja"]
+ignore_missing_imports = true
 
-[tool.cibuildwheel.macos]
-archs = ["x86_64 arm64"]
-environment = { RUNNER_OS="macOS" }
 
-repair-wheel-command = """\
-  "delocate-listdeps {wheel}",
-  DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel \
-  --require-archs {delocate_archs} -w {dest_dir} -v {wheel}\
-  """
+# [tool.cibuildwheel]
+# build = "*"
+# skip = "cp36-*"
+# test-skip = ""
+
+# [tool.cibuildwheel.linux]
+# manylinux-x86_64-image = "manylinux2014"
+# manylinux-i686-image = "manylinux2014"
+# repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+
+# [tool.cibuildwheel.macos]
+# archs = ["x86_64 arm64"]
+# environment = { RUNNER_OS="macOS" }
+
+# repair-wheel-command = """\
+#   "delocate-listdeps {wheel}",
+#   DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel \
+#   --require-archs {delocate_archs} -w {dest_dir} -v {wheel}\
+#   """
 
 # [tool.cibuildwheel.windows]
 # # Use delvewheel on windows, and install the project so delvewheel can find it
