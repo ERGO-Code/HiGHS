@@ -10,13 +10,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [self-hosted, windows, x64]
-        os: [windows]
+        os: [self-hosted, windows, x64]
+        # os: [windows]
         python: [3.12]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install correct python version
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
 
@@ -28,3 +28,4 @@ jobs:
         run: |
           pip install -vvv .
           pytest -v ./highspy/tests/
+          
