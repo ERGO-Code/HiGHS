@@ -157,7 +157,7 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void unscaleSolution(HighsSolution& solution, const HighsScale scale) {
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
   for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
     solution.col_value[iCol] *= scale.col[iCol];
     solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
