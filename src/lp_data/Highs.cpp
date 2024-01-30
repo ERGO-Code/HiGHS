@@ -2019,7 +2019,6 @@ HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
                  "Cannot stop callback when user_callback not defined\n");
     return HighsStatus::kWarning;
   }
-  std::vector<bool>& active = this->callback_.active;
   assert(int(this->callback_.active.size()) == kNumCallbackType);
   this->callback_.active[callback_type] = false;
   // Possibly modify the logging callback activity

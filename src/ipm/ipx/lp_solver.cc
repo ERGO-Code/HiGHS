@@ -373,10 +373,17 @@ void LpSolver::InteriorPointSolve() {
             info_.rel_dresidual > control_.ipm_feasibility_tol())
             info_.status_ipm = IPX_STATUS_imprecise;
     }
+    if (info_.centring_tried) {
+      // Assess the success of analytic centre calculation
+      info_.status_ipm = info_.centring_success ? IPX_STATUS_optimal : IPX_STATUS_imprecise;
+      assert(info_.status_ipm == IPX_STATUS_optimal);
+    }
 }
 
 void LpSolver::RunIPM() {
     IPM ipm(control_);
+    info_.centring_tried = false;
+    info_.centring_success = false;
 
     if (x_start_.size() != 0) {
         control_.Log() << " Using starting point provided by user."
@@ -393,7 +400,8 @@ void LpSolver::RunIPM() {
             return;
     }
     BuildStartingBasis();
-    if (info_.status_ipm != IPX_STATUS_not_run)
+    if (info_.status_ipm != IPX_STATUS_not_run || 
+        info_.centring_tried)
         return;
     RunMainIPM(ipm);
 }

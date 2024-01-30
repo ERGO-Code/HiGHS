@@ -23,8 +23,13 @@ namespace parallel {
 using mutex = HighsMutex;
 
 inline void initialize_scheduler(int numThreads = 0) {
-  if (numThreads == 0)
+  if (numThreads == 0) {
+#ifdef HIGHS_NO_DEFAULT_THREADS
+    numThreads = 1;
+#else
     numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+#endif
+  }
   HighsTaskExecutor::initialize(numThreads);
 }
 
