@@ -1,5 +1,7 @@
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
 # if (PYTHON)
 #   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/.libs")
 # endif()
@@ -11,8 +13,6 @@ if(NOT BUILD_CXX)
 endif()
 
 # Main Target
-
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if (PYTHON)
   # set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
