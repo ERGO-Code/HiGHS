@@ -6,6 +6,7 @@
 Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
              std::vector<BasisStatus> status, std::vector<HighsInt> inactive)
     : Ztprod_res(rt.instance.num_var),
+      buffer_Zprod(rt.instance.num_var),
       runtime(rt),
       buffer_column_aq(rt.instance.num_var),
       buffer_row_ep(rt.instance.num_var) {
@@ -290,16 +291,17 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
 }
 
 Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
-  Vector temp(target.dim);
+  buffer_Zprod.reset();
+  buffer_Zprod.dim = target.dim;
   for (HighsInt i = 0; i < rhs.num_nz; i++) {
     HighsInt nz = rhs.index[i];
     HighsInt nonactive = nonactiveconstraintsidx[nz];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
-    temp.index[i] = idx;
-    temp.value[idx] = rhs.value[nz];
+    buffer_Zprod.index[i] = idx;
+    buffer_Zprod.value[idx] = rhs.value[nz];
   }
-  temp.num_nz = rhs.num_nz;
-  return btran(temp, target);
+  buffer_Zprod.num_nz = rhs.num_nz;
+  return btran(buffer_Zprod, target);
 }
 
 // void Basis::write(std::string filename) {
