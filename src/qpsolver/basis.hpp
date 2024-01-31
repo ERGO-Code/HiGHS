@@ -16,6 +16,7 @@
 
 class Basis {
   HVector buffer_vec2hvec;
+  Vector Ztprod_res;
 
   HVector& vec2hvec(const Vector& vec) {
     buffer_vec2hvec.clear();

@@ -79,7 +79,7 @@ static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 static Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
                                      CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
-  Vector g2 = -redgrad.get();
+  Vector g2 = -redgrad.get(); // TODO PERF: buffer Vector
   g2.sanitize();
   cf.solve(g2);
 
@@ -93,7 +93,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
                                      CholeskyFactor& factor, const Vector& yp,
                                      Gradient& gradient, Vector& gyp, Vector& l,
                                      Vector& m, Vector& p) {
-  Vector yyp = yp;
+  Vector yyp = yp; // TODO PERF: buffer Vector
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
@@ -102,7 +102,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
     basis.Ztprod(gyp, m);
     l = m;
     factor.solveL(l);
-    Vector v = l;
+    Vector v = l; // TODO PERF: buffer Vector
     factor.solveLT(v);
     basis.Zprod(v, p);
     if (gradient.getGradient().dot(yyp) < 0.0) {
@@ -146,7 +146,7 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
   }
 
   // TODO: this operation is inefficient.
-  Vector aq = rt.instance.A.t().extractcol(newactivecon);
+  Vector aq = rt.instance.A.t().extractcol(newactivecon); // TODO PERF: buffer Vector
   basis.Ztprod(aq, buffer_d, true, newactivecon);
 
   maxabsd = 0;
@@ -428,7 +428,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
 
-  Vector lambda = redcosts.getReducedCosts();
+  Vector& lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
     if (e >= runtime.instance.num_con) {

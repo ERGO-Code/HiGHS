@@ -5,7 +5,8 @@
 
 Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
              std::vector<BasisStatus> status, std::vector<HighsInt> inactive)
-    : runtime(rt),
+    : Ztprod_res(rt.instance.num_var),
+      runtime(rt),
       buffer_column_aq(rt.instance.num_var),
       buffer_row_ep(rt.instance.num_var) {
   buffer_vec2hvec.setup(rt.instance.num_var);
@@ -275,14 +276,14 @@ Vector Basis::recomputex(const Instance& inst) {
 
 Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
                       HighsInt q) {
-  Vector res_ = ftran(rhs, buffer, q);
+  ftran(rhs, Ztprod_res, buffer, q);
 
   target.reset();
   for (size_t i = 0; i < nonactiveconstraintsidx.size(); i++) {
     HighsInt nonactive = nonactiveconstraintsidx[i];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
     target.index[i] = static_cast<HighsInt>(i);
-    target.value[i] = res_.value[idx];
+    target.value[i] = Ztprod_res.value[idx];
   }
   target.resparsify();
   return target;
