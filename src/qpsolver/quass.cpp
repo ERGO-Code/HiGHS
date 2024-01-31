@@ -367,8 +367,8 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
+      runtime.instance.Q.mat_vec(p, buffer_Qp);
     }
-
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
         maxsteplength == 0.0 || (false && fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold)) {
       atfsep = true;
@@ -414,11 +414,11 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
         redgrad.update(stepres.alpha, false);
       }
 
-      gradient.update(buffer_Qp, stepres.alpha);
-      redcosts.update();
-
       runtime.primal.saxpy(stepres.alpha, p);
       runtime.rowactivity.saxpy(stepres.alpha, rowmove);
+
+      gradient.update(buffer_Qp, stepres.alpha);
+      redcosts.update();
     }
   }
 
