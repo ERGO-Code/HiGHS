@@ -98,7 +98,7 @@ add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
                  --build ${HIGHS_BINARY_DIR}
                  --target unit_tests
-                 --config ${CMAKE_BUILD_TYPE}
+                #  --config ${CMAKE_BUILD_TYPE}
          )
 
 
