@@ -915,7 +915,8 @@ class Highs {
    * @brief Adds a variable to the incumbent model, without the cost or matrix
    * coefficients
    */
-  HighsStatus addVar(const double lower = -kHighsInf, const double upper = kHighsInf) {
+  HighsStatus addVar(const double lower = -kHighsInf,
+                     const double upper = kHighsInf) {
     return this->addVars(1, &lower, &upper);
   }
 
