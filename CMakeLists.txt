@@ -42,9 +42,7 @@ if (PYTHON)
   set(BUILD_CXX OFF)
 endif()
 
-
 option(BUILD_TESTING "Build Tests" ON)
-
 
 if (NOT PYTHON)
 
@@ -232,8 +230,6 @@ if(NOT FAST_BUILD)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-
-  option(BUILD_TESTING "Build Tests" ON)
 
   # Function to set compiler flags on and off easily.
   function(enable_cxx_compiler_flag_if_supported flag)
