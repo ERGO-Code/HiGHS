@@ -59,7 +59,7 @@ The C interface cannot make use of the C++ structures and enums, and its methods
 ## Solution algorithms
 
 For LPs, HiGHS has implementations of both the revised simplex and interior
-point methods. MIPs are solved by branch-and-price, and QPs by active set.
+point methods. MIPs are solved by branch-and-cut, and QPs by active set.
 
 ## Citing HiGHS
 

@@ -112,6 +112,79 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             info->status_ipm = IPX_STATUS_failed;
         }
     }
+
+    if (control_.runCentring() &&
+	info->status_ipm == IPX_STATUS_optimal && !info->centring_tried) {
+      // Centrality of a point is evaluated by the quantities
+      //  min (xj * zj) / mu
+      //  max (xj * zj) / mu
+      // Ideally, they are in the interval [0.1,10.0].
+      // As soon as the ratio
+      //  max (xj * zj) / min (xj * zj)
+      // is below centringRatioTolerance, the point is considered centred.
+      // If the new point after centring has a ratio that is lower than the
+      // previous ratio times centringRatioReduction, then the step is
+      // accepted. Otherwise, the step is rejected and no more centring steps are
+      // performed.
+      //
+      // If IPM is optimal and centring has not yet run, run centring
+      // (to avoid running it twice during initial IPM and main IPM).
+      control_.Log() << "Performing centring steps...\n";
+
+      // freeze mu to its current value
+      const double mu_frozen = iterate_->mu();
+
+      // assess and print centrality of current point
+      AssessCentrality(iterate_->xl(), iterate_->xu(), iterate_->zl(),
+		       iterate_->zu(), iterate_->mu());
+      double prev_ratio = centring_ratio;
+      Int prev_bad_products = bad_products;
+
+      info->centring_success = false;
+      // if ratio is below tolerance, point is centred
+      if (prev_ratio < control_.centringRatioTolerance()) {
+	control_.Log() << "\tPoint is now centred\n";
+	info->centring_success = true;
+      } else {
+	// perform centring steps
+	bool centring_complete = false;
+	for (int ii = 0; ii < control_.maxCentringSteps(); ++ii) {
+	  // compute centring step
+	  Centring(step, mu_frozen);
+	  
+	  // assess whether to take the step
+	  bool accept = EvaluateCentringStep(step, prev_ratio, prev_bad_products);
+	  if (!accept) {
+	    control_.Log() << "\tPoint cannot be centred further\n";
+	    centring_complete = true;
+	    break;
+	  }
+
+	  // take the step and print output
+	  MakeStep(step, true);
+	  info->iter++;
+	  PrintOutput();
+	  AssessCentrality(iterate_->xl(), iterate_->xu(), iterate_->zl(),
+			   iterate_->zu(), iterate_->mu());
+	  prev_ratio = centring_ratio;
+	  prev_bad_products = bad_products;
+	    
+	  // if ratio is below tolerance, point is centred
+	  if (prev_ratio < control_.centringRatioTolerance()) {
+	    control_.Log() << "\tPoint is now centred\n";
+	    info->centring_success = true;
+	    centring_complete = true;
+	    break;
+	  }
+	}
+	if (!centring_complete) {
+	  control_.Log() << "\tPoint could not be centred within "
+			 << control_.maxCentringSteps() << " iterations\n";
+	}
+      }
+      info->centring_tried = true;
+    } // if (control_.runCentring() && info->status_ipm ==
+      // IPX_STATUS_optimal && !info->centring_tried)
 }
 
 void IPM::ComputeStartingPoint() {
@@ -370,7 +443,156 @@ void IPM::AddCorrector(Step& step) {
                       step);
 }
 
-void IPM::StepSizes(const Step& step) {
+void IPM::Centring(Step& step, double mu) {
+  const Model& model = iterate_->model();
+  const Int m = model.rows();
+  const Int n = model.cols();
+  const Vector& xl = iterate_->xl();
+  const Vector& xu = iterate_->xu();
+  const Vector& zl = iterate_->zl();
+  const Vector& zu = iterate_->zu();
+
+  Vector sl(n + m);
+  Vector su(n + m);
+
+  // Set sigma to 1 for pure centring
+  const double sigma = 1.0;
+
+  // sl = -xl.*zl + sigma*mu
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_lb(j)) {
+      sl[j] = -xl[j] * zl[j] + sigma * mu;
+    } else {
+      sl[j] = 0.0;
+    }
+  }
+  assert(AllFinite(sl));
+
+  // su = -xu.*zu + sigma*mu
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_ub(j)) {
+      su[j] = -xu[j] * zu[j] + sigma * mu;
+    } else {
+      su[j] = 0.0;
+    }
+  }
+  assert(AllFinite(su));
+
+  SolveNewtonSystem(&iterate_->rb()[0], &iterate_->rc()[0], &iterate_->rl()[0],
+                    &iterate_->ru()[0], &sl[0], &su[0], step);
+}
+
+void IPM::AssessCentrality(const Vector& xl, const Vector& xu,
+                             const Vector& zl, const Vector& zu, double mu,
+                             bool print) {
+  // The function computes the ratio
+  //  min(x_j * z_j) / max(x_j * z_j)
+  // and the number of products x_j * z_j that are not in the interval
+  //  [0.1 * mu, 10 * mu]
+  // and prints information to screen if print is on.
+
+  const Int m = iterate_->model().rows();
+  const Int n = iterate_->model().cols();
+
+  double minxz = kHighsInf;
+  double maxxz = 0.0;
+
+  const double gamma = 0.1;
+  bad_products = 0;
+
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_lb(j)) {
+      const double product = xl[j] * zl[j];
+      if (product < gamma * mu || product > mu / gamma){
+        ++bad_products;
+      }
+      minxz = std::min(minxz, product);
+      maxxz = std::max(maxxz, product);
+    }
+  }
+
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_ub(j)) {
+      const double product = xu[j] * zu[j];
+      if (product < gamma * mu || product > mu / gamma){
+        ++bad_products;
+      }
+      minxz = std::min(minxz, product);
+      maxxz = std::max(maxxz, product);
+    }
+  }
+
+  maxxz = std::max(maxxz, mu);
+  minxz = std::min(minxz, mu);
+
+  centring_ratio = maxxz / minxz;
+
+  if (print) {
+    control_.Log() << "\txj*zj in [ "
+		   << Scientific(minxz / mu, 8, 2) << ", "
+		   << Scientific(maxxz / mu, 8, 2) << "]; Ratio = "
+		   << Scientific(centring_ratio, 8, 2) << "; (xj*zj / mu) not_in [0.1, 10]: "
+		   << bad_products << "\n"; 
+  }
+}
+
+bool IPM::EvaluateCentringStep(const Step& step, double prev_ratio, Int prev_bad) {
+  // The function returns true is the step is to be accepted.
+  // The step is accepted if the ratio of the new point is not worse 
+  // than the previous one times centringRatioReduction or if the 
+  // number of outliers products is reduced.
+
+  StepSizes(step, true);
+
+  const Int n = iterate_->model().cols();
+  const Int m = iterate_->model().rows();
+
+  Vector xl_temp = iterate_->xl();
+  Vector xu_temp = iterate_->xu();
+  Vector zl_temp = iterate_->zl();
+  Vector zu_temp = iterate_->zu();
+
+  // perform temporary step
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_lb(j)) {
+      xl_temp[j] += step_primal_ * step.xl[j];
+    }
+    if (iterate_->has_barrier_ub(j)) {
+      xu_temp[j] += step_primal_ * step.xu[j];
+    }
+    if (iterate_->has_barrier_lb(j)) {
+      zl_temp[j] += step_dual_ * step.zl[j];
+    }
+    if (iterate_->has_barrier_ub(j)) {
+      zu_temp[j] += step_dual_ * step.zu[j];
+    }
+  }
+
+  // compute temporary mu
+  double mu_temp = 0.0;
+  Int num_finite = 0;
+  for (Int j = 0; j < n + m; j++) {
+    if (iterate_->has_barrier_lb(j)) {
+      mu_temp += xl_temp[j] * zl_temp[j];
+      ++num_finite;
+    }
+    if (iterate_->has_barrier_ub(j)) {
+      mu_temp += xu_temp[j] * zu_temp[j];
+      ++num_finite;
+    }
+  }
+  mu_temp /= num_finite;
+
+  // assess quality of temporary point
+  AssessCentrality(xl_temp, xu_temp, zl_temp, zu_temp, mu_temp, false);
+
+  // accept the step if the new ratio is not more than centringRatioReduction
+  // times the previous one, or if the new point has fewer outliers
+  return (centring_ratio < control_.centringRatioReduction() * prev_ratio || 
+          bad_products < prev_bad);
+}
+
+void IPM::StepSizes(const Step& step, bool isCentring) {
     const Model& model = iterate_->model();
     const Int m = model.rows();
     const Int n = model.cols();
@@ -450,18 +672,28 @@ void IPM::StepSizes(const Step& step) {
     }
     step_primal_ = std::min(alphap, 1.0-1e-6);
     step_dual_   = std::min(alphad, 1.0-1e-6);
+
+    if (isCentring){
+        // When computing stepsizes for a centring step, reduce them
+        // by centringAlphaScaling. This ensures that the point is 
+        // well centred and does not get too close to the boundary.
+        step_primal_ = alphap * control_.centringAlphaScaling();
+        step_dual_ = alphad * control_.centringAlphaScaling();
+    }
 }
 
-void IPM::MakeStep(const Step& step) {
-    StepSizes(step);
+void IPM::MakeStep(const Step& step, bool isCentring) {
+    StepSizes(step, isCentring);
     iterate_->Update(step_primal_, &step.x[0], &step.xl[0], &step.xu[0],
                      step_dual_,   &step.y[0], &step.zl[0], &step.zu[0]);
-    if (std::min(step_primal_, step_dual_) < 0.05)
-        num_bad_iter_++;
-    else
-        num_bad_iter_ = 0;
-    best_complementarity_ =
-        std::min(best_complementarity_, iterate_->complementarity());
+    if (!isCentring){
+        if (std::min(step_primal_, step_dual_) < 0.05)
+            num_bad_iter_++;
+        else
+            num_bad_iter_ = 0;
+        best_complementarity_ =
+            std::min(best_complementarity_, iterate_->complementarity());
+    }
 }
 
 void IPM::SolveNewtonSystem(const double* rb, const double* rc,
@@ -581,6 +813,7 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
 
 void IPM::PrintHeader() {
     control_.Log()
+        << (kTerminationLogging ? "\n" : "")
         << " "  << Format("Iter", 4)
         << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
         << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
@@ -598,6 +831,7 @@ void IPM::PrintHeader() {
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
 
+    if (kTerminationLogging) PrintHeader();
     control_.Log()
         << " "  << Format(info_->iter, 3)
         << (ipm_optimal ? "*" : " ")

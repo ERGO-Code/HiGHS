@@ -11,15 +11,20 @@
   - [Table of Contents](#table-of-contents)
   - [About HiGHS](#about-highs)
   - [Documentation](#documentation)
-  - [Precompiled binaries](#precompiled-binaries)
-  - [Compilation](#compilation)
-  - [Meson](#meson)
+  - [Installation](#installation)
+    - [Precompiled binaries](#precompiled-binaries)
+    - [Compilation](#compilation)
+    - [Meson](#meson)
+    - [Python](#python)
   - [Interfaces](#interfaces)
-  - [Python](#python)
-  - [Google Colab Example](#google-colab-example)
+    - [Python](#python-1)
+      - [From PyPi](#from-pypi)
+      - [Build directly from Git](#build-directly-from-git)
+      - [Testing](#testing)
+      - [Google Colab Example](#google-colab-example)
   - [Reference](#reference)
 
-About HiGHS
+## About HiGHS
 -----------
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
@@ -35,12 +40,15 @@ Find out more about HiGHS at https://www.highs.dev.
 
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
-Documentation
--------------
+## Documentation
 
 Documentation is available at https://ergo-code.github.io/HiGHS/.
 
-Precompiled binaries
+## Installation
+
+There are various ways to install the HiGHS library. These are detailed below.
+
+### Precompiled binaries
 --------------------
 
 Precompiled static executables are available for a variety of platforms at
@@ -50,8 +58,8 @@ _These binaries are provided by the Julia community and are not officially suppo
 
 See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
-Compilation
------------
+### Compilation
+---------------
 
 HiGHS uses CMake as build system, and requires at least version 3.15. First setup a build folder and call CMake as follows
 
@@ -65,7 +73,7 @@ Then compile the code using
 
 This installs the executable `bin/highs`.
 
-As an alternative it is also possible to let cmake create the build folder and thus build everything from the HiGHS directory, as follows
+As an alternative it is also possible to let `cmake` create the build folder and thus build everything from the HiGHS directory, as follows
 
     cmake -S . -B build
     cmake --build build
@@ -86,7 +94,7 @@ HiGHS is installed using the command
 
 with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
 
-Meson
+### Meson
 -----
 
 HiGHs can also use the `meson` build interface:
@@ -97,23 +105,57 @@ meson test -C bbdir
 ```
 
 
-Interfaces
-----------
+### Python
+-----
 
+Installing from PyPI through your Python package manager of choice (e.g., `pip`) will also 
+install the HiGHS library if not already present. HiGHS is available as `highspy` on [PyPi](https://pypi.org/project/highspy/).
+
+If `highspy` is not already installed, run:
+
+```bash
+$ pip install highspy
+```
+
+## Interfaces
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
-Python
-------
+### Python
 
-There are two ways to build the Python interface to HiGHS.
+There are two ways to install the Python interface. Building directly 
+from Git assumes that you have already installed the HiGHS library. 
+Installing from PyPI through your Python package manager of choice (e.g., `pip`) will also install the HiGHS library if not already present. 
 
-__From PyPi__
+#### From PyPi
 
-HiGHS has been added to PyPi, so should be installable using the command
+HiGHS is available as `highspy` on [PyPi](https://pypi.org/project/highspy/).
+This will not only install the Python interface, but also the HiGHS library 
+itself.
 
-    pip install highspy
+If `highspy` is not already installed, run:
+
+```bash
+$ pip install highspy
+```
+
+#### Build directly from Git
+
+In order to build the Python interface, build and install the HiGHS
+library as described above, ensure the shared library is in the
+`LD_LIBRARY_PATH` environment variable, and then run
+
+    pip install ./
+
+from the HiGHS directory.
+
+You may also require
+
+* `pip install pybind11`
+* `pip install pyomo`
+
+#### Testing
 
 The installation can be tested using the example [minimal.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/minimal.py), yielding the output
 
@@ -131,29 +173,13 @@ The installation can be tested using the example [minimal.py](https://github.com
 
 or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py).
 
-__Directly__
+#### Google Colab Example
 
-In order to build the Python interface, build and install the HiGHS
-library as described above, ensure the shared library is in the
-`LD_LIBRARY_PATH` environment variable, and then run
-
-    pip install ./
-
-from the HiGHS directory.
-
-You may also require
-
-* `pip install pybind11`
-* `pip install pyomo`
-
-The Python interface can then be tested as above.
-
-Google Colab Example
------------------------------
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) demonstrates how to call HiGHS via the Python interface `highspy`.
 
-Reference
----------
+
+## Reference
+
 
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
 

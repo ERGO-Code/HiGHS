@@ -40,7 +40,7 @@ HighsInt Highs_setCallback(
                          struct HighsCallbackDataIn*, void*),
     void* user_callback_data)
 ```
-There current callback scenarios are set out below, and the particular callback is activated in C++ by calling
+The current callback scenarios are set out below, and the particular callback is activated in C++ by calling
 
 ```cpp
 HighsStatus startCallback(const int callback_type);
@@ -124,9 +124,9 @@ For each of the MIP callbacks, the following `HighsCallbackDataOut` struct membe
 
 * `running_time`: execution time of HiGHS
 * `objective_function_value`: the objective function value of the best integer feasible solution found
-* `num_nodes`: the number of MIP nodes explored to date
-* `primal_bound`: the primal bound
-* `dual_bound`: the dual bound
+* `mip_node_count`: the number of MIP nodes explored to date
+* `mip_primal_bound`: the primal bound
+* `mip_dual_bound`: the dual bound
 * `mip_gap`: the (relative) difference between the primal and dual bounds
 
 

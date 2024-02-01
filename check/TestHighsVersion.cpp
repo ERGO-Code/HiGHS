@@ -30,3 +30,13 @@ TEST_CASE("HighsVersion", "[highs_version]") {
   REQUIRE(patch == HIGHS_VERSION_PATCH);
   REQUIRE(local_version == version);
 }
+
+TEST_CASE("sizeof-highs-int", "[highs_version]") {
+  Highs highs;
+  HighsInt sizeof_highs_int = highs.getSizeofHighsInt();
+#ifdef HIGHSINT64
+  REQUIRE(sizeof_highs_int == 8);
+#else
+  REQUIRE(sizeof_highs_int == 4);
+#endif
+}

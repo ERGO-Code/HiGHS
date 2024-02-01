@@ -4,7 +4,7 @@ Welcome! This document explains some of the ways you can contribute to HiGHS.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [HiGHS Code of Conduct](https://github.com/ERGO-Code/HiGHS/CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+This project and everyone participating in it is governed by the [HiGHS Code of Conduct](https://github.com/ERGO-Code/HiGHS/blob/master/CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ## Contact the HiGHS team
 

@@ -1007,6 +1007,10 @@ double Highs_getInfinity(const void* highs) {
   return ((Highs*)highs)->getInfinity();
 }
 
+HighsInt Highs_getSizeofHighsInt(const void* highs) {
+  return ((Highs*)highs)->getSizeofHighsInt();
+}
+
 HighsInt Highs_getNumCol(const void* highs) {
   return ((Highs*)highs)->getNumCol();
 }
