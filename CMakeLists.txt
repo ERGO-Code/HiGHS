@@ -43,8 +43,7 @@ if (PYTHON)
 endif()
 
 
-
-
+option(BUILD_TESTING "Build Tests" ON)
 
 
 if (NOT PYTHON)
@@ -168,7 +167,6 @@ if(EXISTS "${LOC_PATH}")
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
-option(BUILD_TESTING "Build Tests" ON)
 
 if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
   message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
