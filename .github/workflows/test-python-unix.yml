@@ -1,7 +1,6 @@
-# python release WIP
 name: test-python-linux
 
-on: []
+on: [push]
 #on: [push, pull_request]
 
 jobs:
@@ -12,16 +11,16 @@ jobs:
         os: [macos-latest, ubuntu-latest]
         python: [3.11]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install correct python version
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Install build dependencies
+        run: python3 -m pip install numpy setuptools wheel pytest 
+  
       - name: Test Python Interface
-        shell: bash
         run: |
-          # No need to separately install highs,
-          # shared library lookups are good enough
-          pip install -vvv .
-          pip install pytest numpy
+          python3 -m pip install -vvv .
           pytest -v ./highspy/tests/
