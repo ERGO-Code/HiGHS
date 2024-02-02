@@ -71,6 +71,10 @@ Fixed by introducing the following to glbopts.h, and using it to set nIterLim
 
 #define I_INFINITY 2147483647
 
+## Values of row duals
+
+Dual values returned from PDLP seem always to be non-negative, even if they correspond to a pure upper-bounded constraint that has been negated.
+
 
 
 

@@ -13,15 +13,13 @@
  * @author Julian Hall
  */
 #include "pdlp/CupdlpWrapper.h"
-//#include "mps_lp.h"
-//#include "pdlp/cupdlp/cupdlp_linalg.h"
 
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
 void reportParams(CUPDLPwork *w,
-	     cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
-	     cupdlp_bool *ifChangeFloatParam,
-	     cupdlp_float *floatParam);
+		  cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
+		  cupdlp_bool *ifChangeFloatParam,
+		  cupdlp_float *floatParam);
 
 HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object) {
   return solveLpCupdlp(solver_object.options_, solver_object.timer_, solver_object.lp_, 
@@ -161,9 +159,12 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 	       floatParam, fout, x_origin, nCols_origin, y_origin,
 	       ifSaveSol, constraint_new_idx);
  
-  assert(111==000);
-  HighsStatus return_status = HighsStatus::kError;
-
+  HighsStatus return_status =
+    pdlpSolutionToHighsSolution(x_origin, nCols_origin,
+				y_origin, nRows,
+				lp, highs_solution);
+  // Set the status to optimal until other statuses can be identified
+  model_status = HighsModelStatus::kOptimal;
   return return_status;
 }
 
@@ -488,8 +489,8 @@ void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
 
 
 void reportParams(CUPDLPwork *w,
-	     cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
-	     cupdlp_bool *ifChangeFloatParam,
-	     cupdlp_float *floatParam) {
+		  cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
+		  cupdlp_bool *ifChangeFloatParam,
+		  cupdlp_float *floatParam) {
   PDHG_PrintPDHGParam(w);  
 }

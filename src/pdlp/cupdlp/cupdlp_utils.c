@@ -734,7 +734,7 @@ cupdlp_retcode settings_Alloc(CUPDLPsettings *settings) {
   settings->nIterLim = I_INFINITY;
   settings->nLogInterval = 100;
   // settings->dTimeLim = INFINITY;
-  settings->dTimeLim = 0.01;//3600;
+  settings->dTimeLim = 3600;
   settings->ifScaling = true;
   settings->iScalingMethod = 3;  // no use
   settings->dScalingLimit = 5;   // no use

@@ -127,14 +127,8 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
   // cupdlp_projPositive(resobj->dSlackPos, resobj->dSlackPos, lp->nCols);
   cupdlp_projPos(resobj->dSlackPos, lp->nCols);
 
-  debugPrintDoubleVector("problem->hasLower", problem->hasLower, lp->nCols);
-  debugPrintDoubleVector("problem->hasUpper", problem->hasUpper, lp->nCols);
-
   // cupdlp_cdot_fb(resobj->dSlackPos, problem->hasLower, lp->nCols);
   cupdlp_edot(resobj->dSlackPos, problem->hasLower, lp->nCols);
-
-  debugPrintDoubleVector("resobj->dSlackPos1", resobj->dSlackPos, lp->nCols);
-  //  debugPrintDoubleVector("resobj->dSlackNeg1", resobj->dSlackNeg, lp->nCols);
 
   cupdlp_float temp = 0.0;
   cupdlp_dot(work, lp->nCols, x, resobj->dSlackPos, &temp);
@@ -491,8 +485,6 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   // PDHG_Print_Header(pdhg);
 
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
-    //    debugPrintCupdlpVector("x", iterates->x);
-    debugPrintCupdlpVector("y", iterates->y);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);
@@ -648,8 +640,9 @@ cupdlp_retcode LP_SolvePDHG(CUPDLPwork *pdhg, cupdlp_bool *ifChangeIntParam,
 
   PDHG_PostSolve(pdhg, nCols_origin, constraint_new_idx, x_origin, y_origin);
 
-  writeJson(fp, pdhg, x_origin, nCols_origin, y_origin, pdhg->problem->nRows,
-            ifSaveSol);
+  if (fp)
+    writeJson(fp, pdhg, x_origin, nCols_origin, y_origin, pdhg->problem->nRows,
+	      ifSaveSol);
 
 exit_cleanup:
   PDHG_Destroy(&pdhg);

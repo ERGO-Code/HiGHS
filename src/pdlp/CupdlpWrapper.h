@@ -17,9 +17,6 @@
 #include <algorithm>
 #include <cassert>
 
-//#include "ipm/IpxSolution.h"
-//#include "ipm/ipx/ipx_status.h"
-//#include "ipm/ipx/lp_solver.h"
 #include "lp_data/HighsSolution.h"
 #include "pdlp/cupdlp/cupdlp.h"
 

@@ -1192,6 +1192,86 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   return HighsStatus::kOk;
 }
 
+HighsStatus pdlpSolutionToHighsSolution(const double* pdlp_x, const int pdlp_nCols,
+					const double* pdlp_y, const int pdlp_nRows,
+					const HighsLp& lp, 
+					HighsSolution& highs_solution) {
+  assert(pdlp_nCols == lp.num_col_);
+  assert(pdlp_nRows == lp.num_row_);
+  highs_solution.col_value.resize(lp.num_col_);
+  //  highs_solution.row_value.resize(lp.num_row_);
+  //  highs_solution.col_dual.resize(lp.num_col_);
+  highs_solution.row_dual.resize(lp.num_row_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    highs_solution.col_value[iCol] = pdlp_x[iCol];
+    printf("x[%2d] = %11.6g\n", int(iCol), highs_solution.col_value[iCol]);
+  }
+  // Determine the row activities
+  lp.a_matrix_.product(highs_solution.row_value, highs_solution.col_value);
+  // Now interpret the row duals
+  //
+  // Currently cuPDLP-C fails to negate the duals of upper bounded
+  // constraints that were converted internally to upper bounded by
+  // negating the constraint
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double dual = pdlp_y[iRow];
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
+    if (lower < upper && upper < kHighsInf) {
+      // Non-equality with finite upper bound
+      //
+      // If constraint has just an upper bound, negate the dual
+      if (lower <= -kHighsInf) {
+	dual = -dual;
+      } else {
+	// Boxed constraint has been converted to equation with boxed
+	// slack so dual should be correct
+	assert(111==333);
+      }
+    }
+    highs_solution.row_dual[iRow] = dual;
+    printf("y[%2d] = %11.6g: HiGHS dual = %11.6g\n", int(iRow), pdlp_y[iRow], highs_solution.row_dual[iRow]);
+  }
+  // Determine the column duals
+  lp.a_matrix_.productTranspose(highs_solution.col_dual, highs_solution.row_dual);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    highs_solution.col_dual[iCol] = lp.col_cost_[iCol] - highs_solution.col_dual[iCol];
+  //
+  // Determine the sum of complementary violations
+  double max_complementary_violations = 0;
+  for (HighsInt iVar = 0; iVar < lp.num_col_+lp.num_row_; iVar++) {
+    const bool is_col = iVar < lp.num_col_;
+    const HighsInt iRow = iVar-lp.num_col_;
+    const double primal = is_col ? highs_solution.col_value[iVar] : highs_solution.row_value[iRow];
+    const double dual = is_col ? highs_solution.col_dual[iVar] : highs_solution.row_dual[iRow];
+    const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
+    const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
+    const double mid = (lower+upper)*0.5;
+    const double primal_residual = primal < mid ? std::fabs(lower-primal) : std::fabs(upper-primal);
+    const double dual_residual = std::fabs(dual);
+    const double complementary_violation = primal_residual * dual_residual;
+    max_complementary_violations = std::max(complementary_violation, max_complementary_violations);
+    printf("%s %2d [%11.5g, %11.5g, %11.5g] has (primal_residual, dual) values (%11.6g, %11.6g) so complementary_violation = %11.6g\n",
+	   is_col ? "Column" : "Row   ",
+	   is_col ? int(iVar) : int(iRow),
+	   lower, primal, upper,
+	   primal_residual, dual_residual, complementary_violation);
+  }
+  printf("PDLP max complementary violation = %g\n", max_complementary_violations);
+
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
+  }
+
+  highs_solution.value_valid = true;
+  highs_solution.dual_valid = true;
+  return HighsStatus::kOk;
+}
+
 HighsStatus formSimplexLpBasisAndFactorReturn(
     const HighsStatus return_status, HighsLpSolverObject& solver_object) {
   HighsLp& lp = solver_object.lp_;
