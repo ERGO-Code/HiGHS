@@ -9,8 +9,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [self-hosted]
-        # os: [windows]
+        # os: [self-hosted]
+        os: [windows, linux, macos]
         python: [3.12]
     steps:
       - uses: actions/checkout@v4
