@@ -1,4 +1,4 @@
-name: test-python-linux
+name: test-python-macos
 
 on: [push]
 #on: [push, pull_request]
@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest]
         python: [3.11]
     steps:
       - uses: actions/checkout@v4
