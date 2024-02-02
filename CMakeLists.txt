@@ -443,6 +443,17 @@ if(NOT FAST_BUILD)
         COMMENT "Resetting code coverage counters to zero.")
     endif()
   endif()
+ 
+  # whether to use shared or static libraries
+  option(SHARED "Build shared libraries" ON)
+  set(BUILD_SHARED_LIBS ${SHARED})
+  message(STATUS "Build shared libraries: " ${SHARED})
+
+  if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
+    set(HiGHSRELEASE ON)
+    add_compile_definitions("NDEBUG")
+  endif()
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
   configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
   include_directories(
@@ -475,12 +486,12 @@ if(NOT FAST_BUILD)
   # endif()
 
   # use, i.e. don't skip the full RPATH for the build tree
-  # set(CMAKE_SKIP_BUILD_RPATH FALSE)
+  set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
   # when building, don't use the install RPATH already
   # (but later on when installing)
-  # set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-  # set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   # Targets
   enable_testing()
