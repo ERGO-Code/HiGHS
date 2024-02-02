@@ -76,6 +76,19 @@ if (UNIX)
 endif()
 target_link_libraries(unit_tests libhighs Catch)
 
+include(GNUInstallDirs)
+ if(APPLE)
+    set_target_properties(unit_tests PROPERTIES INSTALL_RPATH
+      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  elseif(UNIX)
+    cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
+        BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
+        OUTPUT_VARIABLE libdir_relative_path)
+    set_target_properties(unit_tests PROPERTIES 
+       INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
+  endif()
+
+
 if(FORTRAN_FOUND)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
    include_directories(${HIGHS_SOURCE_DIR}/src)
@@ -250,7 +263,7 @@ foreach(instance ${mipInstances})
 
     foreach(setting ${settings})
         add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} --options_file ${CMAKE_BINARY_DIR}/testoptions.txt
-              ${inst})
+        ${inst})
 
         set_tests_properties (${name}${setting} PROPERTIES
                 DEPENDS unit_tests_all)

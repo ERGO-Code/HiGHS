@@ -311,10 +311,6 @@ set(headers_fast_build_
 
   # set_target_properties(highs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
-  # set the install rpath to the installed destination
-  # set_target_properties(highs PROPERTIES INSTALL_RPATH
-  # "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
   # install the header files of highs
 #   foreach(file ${headers_fast_build_})
 #     get_filename_component(dir ${file} DIRECTORY)
