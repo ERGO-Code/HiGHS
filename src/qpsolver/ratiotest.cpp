@@ -94,15 +94,9 @@ static RatiotestResult ratiotest_twopass(Runtime& runtime, const Vector& p,
   return result;
 }
 
-RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
-                          const Vector& rowmove, double alphastart) {
-  switch (runtime.settings.ratiotest) {
-    case RatiotestStrategy::Textbook:
-      return ratiotest_textbook(runtime, p, rowmove, runtime.instance,
-                                alphastart);
-    case RatiotestStrategy::TwoPass:
-    default:  // to fix -Wreturn-type warning
-      Instance relaxed_instance = runtime.instance;
+
+Instance ratiotest_relax_instance(Runtime& runtime) {
+  Instance relaxed_instance = runtime.instance;
       for (double& bound : relaxed_instance.con_lo) {
         if (bound != -std::numeric_limits<double>::infinity()) {
           bound -= runtime.settings.ratiotest_d;
@@ -126,7 +120,18 @@ RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
           bound += runtime.settings.ratiotest_d;
         }
       }
-      return ratiotest_twopass(runtime, p, rowmove, relaxed_instance,
+  return relaxed_instance;
+}
+
+RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
+                          const Vector& rowmove, double alphastart) {
+  switch (runtime.settings.ratiotest) {
+    case RatiotestStrategy::Textbook:
+      return ratiotest_textbook(runtime, p, rowmove, runtime.instance,
+                                alphastart);
+    case RatiotestStrategy::TwoPass:
+    default:  // to fix -Wreturn-type warning
+      return ratiotest_twopass(runtime, p, rowmove, runtime.relaxed_for_ratiotest,
                                alphastart);
   }
 }
