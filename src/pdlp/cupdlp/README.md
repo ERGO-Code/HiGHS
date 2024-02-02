@@ -1,6 +1,6 @@
 # cuPDLP-C observations
 
-This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues expereinced when integrating them into HiGHS.
+This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues experienced when integrating them into HiGHS.
 
 ## Preprocessing issue
 
@@ -73,8 +73,18 @@ Fixed by introducing the following to glbopts.h, and using it to set nIterLim
 
 ## Values of row duals
 
-Dual values returned from PDLP seem always to be non-negative, even if they correspond to a pure upper-bounded constraint that has been negated.
+Dual values returned from cuPDLP-c seem always to be non-negative, even if they correspond to a pure upper-bounded constraint that has been negated. Since `PDHG_PostSolve` converts the solution to the problem solved by cuPDLP-c into a solution for the original problem, "un-permuting" `y` according to the reording of the constraints, it should negate the duals for pure upper-bounded constraints.
 
+## Problem with sys/time.h
+
+The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Since HiGHS won't be using the cuPDLP-c timing, this can be commented out using a compiler directive.
+
+## To be done
+
+- Remove cuPDLP-c timing using a compiler directive
+- Make cuPDLP-c less chatty
+- Create HiGHS options to feed cuPDLP-c
+- Return iteration count etc from cuPDLP-c
 
 
 
