@@ -150,20 +150,5 @@ function(add_cxx_test FILE_NAME)
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
 
-
-# Properties
-if(NOT APPLE)
-  set_target_properties(highs PROPERTIES VERSION ${PROJECT_VERSION})
-else()
-  # Clang don't support version x.y.z with z > 255
-  set_target_properties(highs PROPERTIES
-    INSTALL_RPATH "@loader_path"
-    VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
-endif()
-set_target_properties(highs PROPERTIES
-  SOVERSION ${PROJECT_VERSION_MAJOR}
-  POSITION_INDEPENDENT_CODE ON
-  INTERFACE_POSITION_INDEPENDENT_CODE ON
-)
 # set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 # set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
