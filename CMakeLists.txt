@@ -44,6 +44,11 @@ endif()
 
 option(BUILD_TESTING "Build Tests" ON)
 
+# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
+if(PYTHON OR FORTRAN OR CSHARP)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
+
 if (NOT PYTHON)
 
 # Default Build Type to be Release
@@ -127,10 +132,6 @@ message(STATUS "Build CSharp: ${CSHARP}")
 option(ZLIB "Fast build: " ON)
 
 
-# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-if(PYTHON OR FORTRAN OR CSHARP)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
 
 # # For Python interface
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
