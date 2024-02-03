@@ -809,7 +809,11 @@ else()
   message(STATUS "No CSharp support")
 endif()
 
-find_package(Threads REQUIRED)
+find_package(Threads)
+
+if(Threads_FOUND)
+  include(CheckAtomic)
+endif()
 
 if(FAST_BUILD)
   target_link_libraries(highs Threads::Threads)
