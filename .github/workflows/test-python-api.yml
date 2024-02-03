@@ -41,6 +41,9 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bbdir/src
           pip install pytest numpy
+          pip install ./
+          python examples/minimal.py
+          python examples/call_highs_from_python.py
           cd highspy
           cp ../bbdir/highspy/* .
           pytest -vvv
