@@ -9,7 +9,7 @@ import numpy as np
 import highspy._highs
 import highspy._highs.cb as hscb
 
-h = highspy._highs.Highs()
+h = highspy._highs.Highs_()
 inf = highspy._highs.kHighsInf
 alt_inf = h.getInfinity()
 print('highspy._highs.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
@@ -240,7 +240,7 @@ h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP
 print('\nCreate Highs instance to solve presolved LP')
-h1 = highspy._highs.Highs()
+h1 = highspy._highs.Highs_()
 h1.passModel(presolved_lp)
 options = h1.getOptions()
 options.presolve = "off"
