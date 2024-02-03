@@ -20,33 +20,38 @@ else
 endif
 # Commit hash
 commit_hash = 'unknown' # Default value
-git = find_program('git', required: false)
-if git.found()
-    commit_hash_cmd = run_command(git, 'rev-parse', '--short',
-                                  '-C', meson.project_source_root(), 'HEAD',
-                                  check: false, # Don't abort on failure
-                                 )
-    if commit_hash_cmd.returncode() == 0
-        commit_hash = commit_hash_cmd.stdout().strip()
+if (not meson.is_subproject())
+    git = find_program('git', required: false)
+    if git.found()
+        commit_hash_cmd = run_command(git, 'rev-parse', '--short',
+                                      '-C', meson.project_source_root(), 'HEAD',
+                                      check: false, # Don't abort on failure
+                                     )
+        if commit_hash_cmd.returncode() == 0
+            commit_hash = commit_hash_cmd.stdout().strip()
+        endif
     endif
 endif
 conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
-python_getdate = '''
-import datetime
-import os
-import time
+today_str = 'unknown'
+if (not meson.is_subproject())
+    python_getdate = '''
+    import datetime
+    import os
+    import time
 
-build_date = datetime.datetime.utcfromtimestamp(
-    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-)
-build_date_str = build_date.strftime('%Y-%m-%d')
-print(build_date_str)
-'''
-today_cmd = run_command('python3', '-c',
-                        python_getdate,
-                       check: true)
-today_str = today_cmd.stdout().strip()
+    build_date = datetime.datetime.utcfromtimestamp(
+        int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+    )
+    build_date_str = build_date.strftime('%Y-%m-%d')
+    print(build_date_str)
+    '''
+    today_cmd = run_command('python3', '-c',
+                            python_getdate,
+                           check: false)
+    today_str = today_cmd.stdout().strip()
+endif
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
                      today_str)
 
