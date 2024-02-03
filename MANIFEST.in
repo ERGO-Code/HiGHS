@@ -1,3 +1,6 @@
-include README.md LICENSE 
-graft src
+include README.md LICENSE Version.txt
+include src/HConfig.h.in
+graft src 
+graft highspy
+graft extern
 global-include CMakeLists.txt *.cmake
