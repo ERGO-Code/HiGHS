@@ -74,7 +74,7 @@ endif
 # --------------------- Dependencies
 # Required
 threads_dep = dependency('threads',
-                        required: true)
+                        required: false)
 _deps += threads_dep
 
 # Determine whether it is necessary to link libatomic. This could be the case
