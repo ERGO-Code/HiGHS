@@ -72,14 +72,6 @@ if is_mingw
 endif
 
 # --------------------- Dependencies
-if not is_windows
-  # libm for Unix systems
-  m_dep = cppc.find_library('m', required: false)
-  _deps += m_dep
-  # For building with clang
-  _deps += [declare_dependency(link_args: '-lstdc++')]
-endif
-
 # Required
 threads_dep = dependency('threads',
                         required: true)

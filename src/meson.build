@@ -275,7 +275,6 @@ _srcs = [
     'util/HSet.cpp',
     'util/HVectorBase.cpp',
     'util/stringutil.cpp',
-    'interfaces/highs_c_api.cpp',
 ]
 
 highslib_srcs = [
@@ -322,6 +321,26 @@ if get_option('with_csharp')
   ]
   cs_lib = library('HighsCsharp',
                         _cs_srcs,
+                        dependencies: _deps,
+                        cpp_args: _args,
+                        link_with: [ _linkto, highslib ],
+                        include_directories: _incdirs,
+                        pic: true,
+                        install: true)
+endif
+
+# C
+if get_option('with_c')
+  add_languages('c', required: true)
+  if not is_windows
+    m_dep = cppc.find_library('m', required: false)
+    _deps += m_dep
+  endif
+  _c_src = [
+    'interfaces/highs_c_api.cpp',
+  ]
+  c_lib = library('HighsC',
+                        _c_src,
                         dependencies: _deps,
                         cpp_args: _args,
                         link_with: [ _linkto, highslib ],
