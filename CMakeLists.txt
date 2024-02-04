@@ -272,10 +272,10 @@ endif()
 
 # If Visual Studio targets are being built.
 if(MSVC)
-  add_definitions(/W4)
-  add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
-  add_definitions(/MP)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/W4>")
+  # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
 
   if(STDCALL)
     # /Gz - stdcall calling convention
@@ -291,9 +291,7 @@ endif()
 
 if(NOT FAST_BUILD OR FORTRAN)
   include(CheckLanguage)
-  if(NOT MSVC)
-    check_language("Fortran")
-  endif()
+  check_language("Fortran")
   if(CMAKE_Fortran_COMPILER)
     enable_language(Fortran)
     set(FORTRAN_FOUND ON)
