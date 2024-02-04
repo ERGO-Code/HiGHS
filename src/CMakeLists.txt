@@ -791,7 +791,11 @@ if(FORTRAN_FOUND)
     RUNTIME
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
     MODULES DESTINATION modules)
-  install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  IF (NOT MSVC)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ELSE ()
+    install(FILES ${HIGHS_BINARY_DIR}/modules/${CMAKE_BUILD_TYPE}/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ENDIF()
   set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
