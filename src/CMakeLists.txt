@@ -817,6 +817,13 @@ find_package(Threads)
 
 if(Threads_FOUND)
   include(CheckAtomic)
+if(HAVE_CXX_ATOMICS64_WITH_LIB)
+  if(FAST_BUILD)
+    target_link_libraries(highs atomic)
+  else()
+    target_link_libraries(libhighs atomic)
+  endif()
+endif()
 endif()
 
 if(FAST_BUILD)
