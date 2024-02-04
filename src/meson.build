@@ -20,33 +20,38 @@ else
 endif
 # Commit hash
 commit_hash = 'unknown' # Default value
-git = find_program('git', required: false)
-if git.found()
-    commit_hash_cmd = run_command(git, 'rev-parse', '--short',
-                                  '-C', meson.project_source_root(), 'HEAD',
-                                  check: false, # Don't abort on failure
-                                 )
-    if commit_hash_cmd.returncode() == 0
-        commit_hash = commit_hash_cmd.stdout().strip()
+if (not meson.is_subproject())
+    git = find_program('git', required: false)
+    if git.found()
+        commit_hash_cmd = run_command(git, 'rev-parse', '--short',
+                                      '-C', meson.project_source_root(), 'HEAD',
+                                      check: false, # Don't abort on failure
+                                     )
+        if commit_hash_cmd.returncode() == 0
+            commit_hash = commit_hash_cmd.stdout().strip()
+        endif
     endif
 endif
 conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
-python_getdate = '''
-import datetime
-import os
-import time
+today_str = 'unknown'
+if (not meson.is_subproject())
+    python_getdate = '''
+    import datetime
+    import os
+    import time
 
-build_date = datetime.datetime.utcfromtimestamp(
-    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-)
-build_date_str = build_date.strftime('%Y-%m-%d')
-print(build_date_str)
-'''
-today_cmd = run_command('python3', '-c',
-                        python_getdate,
-                       check: true)
-today_str = today_cmd.stdout().strip()
+    build_date = datetime.datetime.utcfromtimestamp(
+        int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+    )
+    build_date_str = build_date.strftime('%Y-%m-%d')
+    print(build_date_str)
+    '''
+    today_cmd = run_command('python3', '-c',
+                            python_getdate,
+                           check: false)
+    today_str = today_cmd.stdout().strip()
+endif
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
                      today_str)
 
@@ -275,7 +280,6 @@ _srcs = [
     'util/HSet.cpp',
     'util/HVectorBase.cpp',
     'util/stringutil.cpp',
-    'interfaces/highs_c_api.cpp',
 ]
 
 highslib_srcs = [
@@ -322,6 +326,26 @@ if get_option('with_csharp')
   ]
   cs_lib = library('HighsCsharp',
                         _cs_srcs,
+                        dependencies: _deps,
+                        cpp_args: _args,
+                        link_with: [ _linkto, highslib ],
+                        include_directories: _incdirs,
+                        pic: true,
+                        install: true)
+endif
+
+# C
+if get_option('with_c')
+  add_languages('c', required: true)
+  if not is_windows
+    m_dep = cppc.find_library('m', required: false)
+    _deps += m_dep
+  endif
+  _c_src = [
+    'interfaces/highs_c_api.cpp',
+  ]
+  c_lib = library('HighsC',
+                        _c_src,
                         dependencies: _deps,
                         cpp_args: _args,
                         link_with: [ _linkto, highslib ],
