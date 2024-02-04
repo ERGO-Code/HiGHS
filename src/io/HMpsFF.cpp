@@ -171,7 +171,7 @@ HighsInt HMpsFF::fillMatrix(const HighsLogOptions& log_options) {
 }
 
 HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
-  size_t num_entries = q_entries.size();
+  HighsInt num_entries = q_entries.size();
   if (!num_entries) {
     q_dim = 0;
     return 0;

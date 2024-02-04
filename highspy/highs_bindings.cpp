@@ -125,17 +125,18 @@ HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                         q_value_ptr);
 }
 
-HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution,
-                            const HighsBasis& basis) {
+HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution, const HighsBasis& basis)
+{
   return h->postsolve(solution, basis);
 }
-
-HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution) {
+ 
+HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution)
+{
   return h->postsolve(solution);
 }
-
-HighsStatus highs_writeSolution(Highs* h, const std::string filename,
-                                const HighsInt style) {
+ 
+HighsStatus highs_writeSolution(Highs* h, const std::string filename, const HighsInt style)
+{
   return h->writeSolution(filename, style);
 }
 
@@ -276,12 +277,12 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
 }
 
 // Same as deleteVars
-HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
+HighsStatus highs_deleteCols(Highs* h, int num_set_entries,
                               std::vector<HighsInt>& indices) {
   return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<HighsInt>& indices) {
+HighsStatus highs_deleteRows(Highs* h, int num_set_entries, std::vector<HighsInt>& indices) {
     return h->deleteRows(num_set_entries, indices.data());
 }
 
@@ -804,7 +805,7 @@ PYBIND11_MODULE(_highs, m) {
                      &HighsOptions::mip_heuristic_effort)
       .def_readwrite("mip_min_logging_interval",
                      &HighsOptions::mip_min_logging_interval);
-  py::class_<Highs>(m, "Highs")
+  py::class_<Highs>(m, "Highs_")
       .def(py::init<>())
       .def("version", &Highs::version)
       .def("versionMajor", &Highs::versionMajor)
@@ -826,10 +827,10 @@ PYBIND11_MODULE(_highs, m) {
       .def("readModel", &Highs::readModel)
       .def("readBasis", &Highs::readBasis)
       .def("writeBasis", &Highs::writeBasis)
+      .def("presolve", &Highs::presolve)
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run)
-      .def("presolve", &Highs::presolve)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
       .def("setOptionValue",

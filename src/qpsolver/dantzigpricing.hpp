@@ -54,13 +54,13 @@ class DantzigPricing : public Pricing {
   DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
       : runtime(rt), basis(bas), redcosts(rc){};
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const Vector& /* x */, const Vector& /* gradient */) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
-                      HighsInt q) {
+  void update_weights(const Vector& /* aq */, const Vector& /* ep */, HighsInt /* p */,
+                      HighsInt /* q */) {
     // does nothing
   }
 };

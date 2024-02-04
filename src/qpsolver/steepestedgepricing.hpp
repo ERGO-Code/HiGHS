@@ -58,13 +58,13 @@ class SteepestEdgePricing : public Pricing {
         redcosts(rc),
         weights(std::vector<double>(rt.instance.num_var, 1.0)) {};
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const Vector& /* x */, const Vector& /* gradient */) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
-                      HighsInt q) {
+  void update_weights(const Vector& aq, const Vector& /* ep */, HighsInt p,
+                      HighsInt /* q */) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
 
     Vector v = basis.btran(aq);

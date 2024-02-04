@@ -146,14 +146,14 @@ In order to build the Python interface, build and install the HiGHS
 library as described above, ensure the shared library is in the
 `LD_LIBRARY_PATH` environment variable, and then run
 
+    meson setup bbdir -Dwith_pybind11=True
+    meson compile -C bbdir
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/bbdir
     pip install ./
 
 from the HiGHS directory.
 
-You may also require
-
-* `pip install pybind11`
-* `pip install pyomo`
+The Python interface can then be tested as below.
 
 #### Testing
 

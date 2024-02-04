@@ -24,3 +24,8 @@ py.extension_module(
   subdir: 'highspy',
   include_directories: _incdirs,
 )
+
+py.install_sources(
+  highspy_py,
+  subdir: 'highspy',
+)

@@ -482,6 +482,7 @@ void analyseVectorValues(const HighsLogOptions* log_options,
                          const std::string message, HighsInt vecDim,
                          const std::vector<HighsInt>& vec,
                          std::string model_name) {
+  const bool analyseValueList = true;
   if (vecDim == 0) return;
   const HighsInt VLsMxZ = 10;
   std::vector<std::pair<HighsInt, HighsInt>> VLs;

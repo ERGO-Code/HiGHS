@@ -153,7 +153,6 @@ endif
 
 subdir('src') # defines highslib
 _linkto += highslib
-
 highs_dep = declare_dependency(link_with: _linkto,
                                dependencies: _deps,
                                include_directories: _incdirs,
@@ -173,6 +172,11 @@ highspy_cpp = files([
 highsoptions_cpp = files([
   'highspy/highs_options.cpp'
 ])
+highspy_py = files([
+  'highspy/__init__.py',
+  'highspy/highs.py',
+])
+
 if get_option('with_pybind11')
   subdir('highspy')
 endif
