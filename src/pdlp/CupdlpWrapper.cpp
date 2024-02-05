@@ -169,23 +169,45 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   int value_valid = 0;
   int dual_valid = 0;
   int pdlp_model_status = 0;
-  LP_SolvePDHG(w, ifChangeIntParam, intParam,
-	       ifChangeFloatParam, floatParam, fp,
-	       nCols_origin, highs_solution.col_value.data(), highs_solution.col_dual.data(),
-	       highs_solution.row_value.data(), highs_solution.row_dual.data(),
-	       &value_valid, &dual_valid, ifSaveSol, fp_sol,
-	       constraint_new_idx, constraint_type_clp.data(),
-	       &pdlp_model_status);
+  cupdlp_retcode retcode =
+    LP_SolvePDHG(w, ifChangeIntParam, intParam,
+		 ifChangeFloatParam, floatParam, fp,
+		 nCols_origin, highs_solution.col_value.data(), highs_solution.col_dual.data(),
+		 highs_solution.row_value.data(), highs_solution.row_dual.data(),
+		 &value_valid, &dual_valid, ifSaveSol, fp_sol,
+		 constraint_new_idx, constraint_type_clp.data(),
+		 &pdlp_model_status);
+  printf("LP_SolvePDHG returns code %d and model status %d\n", int(retcode), int(pdlp_model_status));
+
+  model_status = HighsModelStatus::kUnknown;
+  if (retcode != RETCODE_OK) return HighsStatus::kError;
+    
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;
+
+  if (pdlp_model_status == OPTIMAL) {
+    model_status = HighsModelStatus::kOptimal;
+  } else if (pdlp_model_status == INFEASIBLE) {
+    model_status = HighsModelStatus::kInfeasible;
+  } else if (pdlp_model_status == UNBOUNDED) {
+    model_status = HighsModelStatus::kUnbounded;
+  } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
+    model_status = HighsModelStatus::kUnboundedOrInfeasible;
+  } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
+    assert(111==555);
+    model_status = HighsModelStatus::kUnknown;
+  } else if (pdlp_model_status == FEASIBLE) {
+    assert(111==666);
+    model_status = HighsModelStatus::kUnknown;
+  } else {
+    assert(111==777);
+  }
  
-  HighsStatus return_status = HighsStatus::kOk;
   //    pdlpSolutionToHighsSolution(x_origin, nCols_origin,
   //				y_origin, nRows,
   //				options, lp, highs_solution);
   // Set the status to optimal until other statuses can be identified
-  model_status = HighsModelStatus::kOptimal;
-  return return_status;
+  return HighsStatus::kOk;
 }
 
 int formulateLP_highs(const HighsLp& lp,

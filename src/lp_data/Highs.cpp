@@ -3895,11 +3895,12 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
       if (options_.allow_unbounded_or_infeasible ||
           (options_.solver == kIpmString &&
            options_.run_crossover == kHighsOnString) ||
+	  (options_.solver == kPdlpString) ||
           model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {
         // This model status is not permitted unless IPM is run without
-        // crossover
+        // crossover, or if PDLP is used
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
