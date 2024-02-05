@@ -21,6 +21,11 @@ void reportParams(CUPDLPwork *w,
 		  cupdlp_bool *ifChangeFloatParam,
 		  cupdlp_float *floatParam);
 
+void getUserParamsFromOptions(const HighsOptions& options,
+			      cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
+			      cupdlp_bool *ifChangeFloatParam,
+			      cupdlp_float *floatParam);
+
 HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object) {
   return solveLpCupdlp(solver_object.options_, solver_object.timer_, solver_object.lp_, 
 		       solver_object.basis_, solver_object.solution_, 
@@ -87,6 +92,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // load parameters
 
   // Transfer from options_
+  
 
   // set solver parameters
   cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
@@ -97,6 +103,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   char **argv = nullptr;
   getUserParam(argc, argv, ifChangeIntParam, intParam,
 	       ifChangeFloatParam, floatParam);
+  getUserParamsFromOptions(options,
+			   ifChangeIntParam, intParam,
+			   ifChangeFloatParam, floatParam);
 
   formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs,
 		    &csc_beg, &csc_idx, &csc_val, &rhs, &lower,
@@ -494,3 +503,36 @@ void reportParams(CUPDLPwork *w,
 		  cupdlp_float *floatParam) {
   PDHG_PrintPDHGParam(w);  
 }
+
+void getUserParamsFromOptions(const HighsOptions& options,
+			      cupdlp_bool *ifChangeIntParam,
+			      cupdlp_int *intParam,
+			      cupdlp_bool *ifChangeFloatParam,
+			      cupdlp_float *floatParam) {
+  for (cupdlp_int i = 0; i < N_INT_USER_PARAM; ++i) 
+    ifChangeIntParam[i] = false;
+  for (cupdlp_int i = 0; i < N_FLOAT_USER_PARAM; ++i) 
+    ifChangeFloatParam[i] = false;
+  // Assume all PDLP-related options in HiGHS cause changes
+  ifChangeIntParam[N_ITER_LIM] = true;
+  intParam[N_ITER_LIM] = options.pdlp_iteration_limit;
+  //
+  ifChangeIntParam[IF_SCALING] = true;
+  intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
+  //
+  ifChangeFloatParam[D_PRIMAL_TOL] = true;
+  floatParam[D_PRIMAL_TOL] = options.primal_feasibility_tolerance;
+  //
+  ifChangeFloatParam[D_DUAL_TOL] = true;
+  floatParam[D_DUAL_TOL] = options.dual_feasibility_tolerance;
+  //
+  ifChangeFloatParam[D_GAP_TOL] = true;
+  floatParam[D_GAP_TOL] = options.pdlp_d_gap_tol;
+  //
+  ifChangeFloatParam[D_TIME_LIM] = true;
+  floatParam[D_TIME_LIM] = options.time_limit;
+  //
+  ifChangeIntParam[E_RESTART_METHOD] = true;
+  intParam[E_RESTART_METHOD] = options.pdlp_e_restart_method;
+}
+

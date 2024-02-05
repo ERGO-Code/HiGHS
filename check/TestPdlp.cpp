@@ -21,6 +21,8 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
   REQUIRE(highs.run() == HighsStatus::kOk);
   highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
@@ -42,6 +44,8 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
   REQUIRE(highs.run() == HighsStatus::kOk);
   highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
