@@ -24,6 +24,10 @@ void getUserParamsFromOptions(const HighsOptions& options,
 			      cupdlp_bool *ifChangeFloatParam,
 			      cupdlp_float *floatParam);
 
+void analysePdlpSolution(const HighsOptions& options,
+			 const HighsLp& lp,
+			 const HighsSolution& highs_solution);
+
 HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object) {
   return solveLpCupdlp(solver_object.options_, solver_object.timer_, solver_object.lp_, 
 		       solver_object.basis_, solver_object.solution_, 
@@ -203,10 +207,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
     assert(111==777);
   }
  
-  //    pdlpSolutionToHighsSolution(x_origin, nCols_origin,
-  //				y_origin, nRows,
-  //				options, lp, highs_solution);
-  // Set the status to optimal until other statuses can be identified
+  analysePdlpSolution(options, lp, highs_solution);
   return HighsStatus::kOk;
 }
 
@@ -562,5 +563,126 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = options.pdlp_e_restart_method;
+}
+
+void analysePdlpSolution(const HighsOptions& options,
+			 const HighsLp& lp,
+			 const HighsSolution& highs_solution) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("x[%2d] = %11.5g\n", int(iCol), highs_solution.col_value[iCol]);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    printf("y[%2d] = %11.5g\n", int(iRow), highs_solution.row_dual[iRow]);
+  }
+
+  HighsInt num_primal_infeasibility = 0;
+  HighsInt num_dual_infeasibility = 0;
+  double max_primal_infeasibility = 0;
+  double max_dual_infeasibility = 0;
+  double sum_primal_infeasibility = 0;
+  double sum_dual_infeasibility = 0;
+  const double primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double lower;
+  double upper;
+  double value;
+  double dual;
+  // lambda for computing infeasibilities
+  auto updateInfeasibilities = [&]() {
+    double primal_infeasibility = 0;
+    double dual_infeasibility = 0;
+    // @primal_infeasibility calculation
+    if (value < lower - primal_feasibility_tolerance) {
+      // Below lower
+      primal_infeasibility = lower - value;
+    } else if (value > upper + primal_feasibility_tolerance) {
+      // Above upper
+      primal_infeasibility = value - upper;
+    }
+    double value_residual =
+        std::min(std::fabs(lower - value), std::fabs(value - upper));
+    bool at_a_bound = value_residual <= primal_feasibility_tolerance;
+    if (at_a_bound) {
+      // At a bound
+      double middle = (lower + upper) * 0.5;
+      if (lower < upper) {
+        // Non-fixed variable
+        if (value < middle) {
+          // At lower
+          dual_infeasibility = std::max(-dual, 0.);
+        } else {
+          // At upper
+          dual_infeasibility = std::max(dual, 0.);
+        }
+      } else {
+        // Fixed variable
+        dual_infeasibility = 0;
+      }
+    } else {
+      // Off bounds (or free)
+      dual_infeasibility = fabs(dual);
+    }
+    // Accumulate primal infeasibilities
+    if (primal_infeasibility > primal_feasibility_tolerance)
+      num_primal_infeasibility++;
+    max_primal_infeasibility =
+        std::max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
+    // Accumulate dual infeasibilities
+    if (dual_infeasibility > dual_feasibility_tolerance)
+      num_dual_infeasibility++;
+    max_dual_infeasibility =
+        std::max(dual_infeasibility, max_dual_infeasibility);
+    sum_dual_infeasibility += dual_infeasibility;
+  };
+
+  // Apply the model sense, as PDLP will have done this
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    lower = lp.col_lower_[iCol];
+    upper = lp.col_upper_[iCol];
+    value = highs_solution.col_value[iCol];
+    dual = int(lp.sense_) * highs_solution.col_dual[iCol];
+    updateInfeasibilities();
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    lower = lp.row_lower_[iRow];
+    upper = lp.row_upper_[iRow];
+    value = highs_solution.row_value[iRow];
+    dual = int(lp.sense_) * highs_solution.row_dual[iRow];
+    updateInfeasibilities();
+  }
+  //
+  // Determine the sum of complementary violations
+  double max_complementary_violations = 0;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    const bool is_col = iVar < lp.num_col_;
+    const HighsInt iRow = iVar - lp.num_col_;
+    const double primal = is_col ? highs_solution.col_value[iVar]
+                                 : highs_solution.row_value[iRow];
+    const double dual =
+        is_col ? highs_solution.col_dual[iVar] : highs_solution.row_dual[iRow];
+    const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
+    const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
+    const double mid = (lower + upper) * 0.5;
+    const double primal_residual =
+        primal < mid ? std::fabs(lower - primal) : std::fabs(upper - primal);
+    const double dual_residual = std::fabs(dual);
+    const double complementary_violation = primal_residual * dual_residual;
+    max_complementary_violations =
+        std::max(complementary_violation, max_complementary_violations);
+    printf(
+        "%s %2d [%11.5g, %11.5g, %11.5g] has (primal_residual, dual) values "
+        "(%11.6g, %11.6g) so complementary_violation = %11.6g\n",
+        is_col ? "Column" : "Row   ", is_col ? int(iVar) : int(iRow), lower,
+        primal, upper, primal_residual, dual_residual, complementary_violation);
+  }
+  printf("PDLP max complementary violation = %g\n",
+         max_complementary_violations);
+  printf("     primal infeasibilities (%d, %11.6g, %11.6g)\n",
+         int(num_primal_infeasibility), sum_primal_infeasibility,
+         max_primal_infeasibility);
+  printf("     dual   infeasibilities (%d, %11.6g, %11.6g)\n",
+         int(num_dual_infeasibility), sum_dual_infeasibility,
+         max_dual_infeasibility);
 }
 

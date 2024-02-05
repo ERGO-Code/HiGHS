@@ -128,6 +128,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
           }
         }  // options.run_crossover == kHighsOnString
       }    // unwelcome_ipx_status
+    } else {
+      if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
+        if (solver_object.highs_info_.num_primal_infeasibilities ||
+            solver_object.highs_info_.num_dual_infeasibilities)
+          solver_object.model_status_ = HighsModelStatus::kUnknown;
+      } else if (solver_object.model_status_ ==
+                 HighsModelStatus::kUnboundedOrInfeasible) {
+        if (solver_object.highs_info_.num_primal_infeasibilities == 0)
+          solver_object.model_status_ = HighsModelStatus::kUnbounded;
+      }
     }
   } else {
     // Use Simplex

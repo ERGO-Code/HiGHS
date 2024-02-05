@@ -115,13 +115,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
-HighsStatus pdlpSolutionToHighsSolution(const double* x_origin,
-                                        const int nCols_origin,
-                                        const double* y_origin, const int nRows,
-                                        const HighsOptions& options,
-                                        const HighsLp& lp,
-                                        HighsSolution& highs_solution);
-
 HighsStatus formSimplexLpBasisAndFactorReturn(
     const HighsStatus return_status, HighsLpSolverObject& solver_object);
 HighsStatus formSimplexLpBasisAndFactor(

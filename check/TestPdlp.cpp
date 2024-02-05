@@ -23,10 +23,18 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  HighsStatus run_status = highs.run();
   highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
+  const bool not_optimal = true;
+  if (not_optimal) {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  } else {
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 }
 
 TEST_CASE("pdlp-3d-lp", "[pdlp]") {
@@ -46,10 +54,18 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  HighsStatus run_status = highs.run();
   highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
+  const bool not_optimal = false;
+  if (not_optimal) {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  } else {
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 }
 
 TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
@@ -71,10 +87,18 @@ TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  HighsStatus run_status = highs.run();
   highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
+  const bool not_optimal = false;
+  if (not_optimal) {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+  } else {
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  }
 }
 
 TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
@@ -118,5 +142,10 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   highs.setOptionValue("presolve", kHighsOffString);
   REQUIRE(highs.run() == HighsStatus::kOk);
   highs.writeSolution("", 1);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
+  const bool not_unbounded = false;
+  if (not_unbounded) {
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
+  } else {
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+  }
 }
