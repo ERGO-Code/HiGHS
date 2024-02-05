@@ -210,8 +210,8 @@ int formulateLP_highs(const HighsLp& lp,
 
   const double *lhs_clp = lp.row_lower_.data();
   const double *rhs_clp = lp.row_upper_.data();
-  const int *A_csc_beg = lp.a_matrix_.start_.data();
-  const int *A_csc_idx = lp.a_matrix_.index_.data();
+  const HighsInt *A_csc_beg = lp.a_matrix_.start_.data();
+  const HighsInt *A_csc_idx = lp.a_matrix_.index_.data();
   const double *A_csc_val = lp.a_matrix_.value_.data();
   int has_lower, has_upper;
 
