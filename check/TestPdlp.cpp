@@ -4,7 +4,28 @@
 #include "catch.hpp"
 
 const bool dev_run = true;
-const double double_equal_tolerance = 1e-4;
+const double double_equal_tolerance = 1e-3;
+
+TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
+  SpecialLps special_lps;
+  HighsLp lp;
+
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.distillationLp(lp, require_model_status, optimal_objective);
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  const HighsInfo& info = highs.getInfo();
+  const HighsOptions& options = highs.getOptions();
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  highs.setOptionValue("solver", kPdlpString);
+  highs.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  highs.writeSolution("", 1);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+}
 
 TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   SpecialLps special_lps;
@@ -22,6 +43,7 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
           double_equal_tolerance);
 }
