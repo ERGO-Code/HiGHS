@@ -79,6 +79,10 @@ Dual values returned from cuPDLP-c seem always to be non-negative, even if they 
 
 The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Since HiGHS won't be using the cuPDLP-c timing, this can be commented out using a compiler directive.
 
+## Handling infeasible or unbounded problems
+
+cuPDLP-c fails to terminate with the infeasible and unbounded LPs in unit tests `pdlp-infeasible-lp` and `pdlp-unbounded-lp` in `highs/check/TestPdlp.cpp`. In both cases the primal and dual step sizes grow steadily - eventually heading to infinity. Presumably, once they have reached a tolerance, cuPDLP-c should terminate so that infeasibility and unboundedness can be deduced according to whether the current iterate is primal feasible (as it is for `pdlp-unbounded-lp`).
+
 ## To be done
 
 - Remove cuPDLP-c timing using a compiler directive
