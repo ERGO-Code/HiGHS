@@ -70,8 +70,10 @@ foreach test : test_array
       )
 endforeach
 
-test('test_capi',
-    executable('capi_unit_tests', 'TestCAPI.c',
-  include_directories: _incdirs,
-  link_with : _linkto ,
-))
+if get_option('with_c')
+  test('test_capi',
+      executable('capi_unit_tests', 'TestCAPI.c',
+    include_directories: _incdirs,
+    link_with : _linkto ,
+  ))
+endif

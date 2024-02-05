@@ -791,7 +791,11 @@ if(FORTRAN_FOUND)
     RUNTIME
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
     MODULES DESTINATION modules)
-  install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  IF (NOT MSVC)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ELSE ()
+    install(FILES ${HIGHS_BINARY_DIR}/modules/${CMAKE_BUILD_TYPE}/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ENDIF()
   set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
@@ -809,7 +813,18 @@ else()
   message(STATUS "No CSharp support")
 endif()
 
-find_package(Threads REQUIRED)
+find_package(Threads)
+
+if(Threads_FOUND)
+  include(CheckAtomic)
+if(HAVE_CXX_ATOMICS64_WITH_LIB)
+  if(FAST_BUILD)
+    target_link_libraries(highs atomic)
+  else()
+    target_link_libraries(libhighs atomic)
+  endif()
+endif()
+endif()
 
 if(FAST_BUILD)
   target_link_libraries(highs Threads::Threads)
