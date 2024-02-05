@@ -1009,9 +1009,13 @@ void PDHG_Destroy(CUPDLPwork **w) {
 void PDHG_Init_Data(CUPDLPwork *work) {}
 
 double my_clock(void) {
+#ifdef CUPDLP_TIMER
   struct timeval t;
   gettimeofday(&t, NULL);
   return (1e-06 * t.tv_usec + t.tv_sec);
+#else
+  return 0;
+#endif
 }
 
 double getTimeStamp(void) { return my_clock(); }

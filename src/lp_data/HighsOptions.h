@@ -902,8 +902,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        "pdlp_scaling",
-        "Scaling option for PDLP solver: Default = true",
+        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
         advanced, &pdlp_scaling, true);
     records.push_back(record_bool);
 
@@ -912,13 +911,15 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "pdlp_e_restart_method", "Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU ", advanced,
-        &pdlp_e_restart_method, 0, 1, 2);
+    record_int = new OptionRecordInt("pdlp_e_restart_method",
+                                     "Restart mode for PDLP solver: 0 => none; "
+                                     "1 => GPU (default); 2 => CPU ",
+                                     advanced, &pdlp_e_restart_method, 0, 1, 2);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_d_gap_tol", "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
+        "pdlp_d_gap_tol",
+        "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
         &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
     records.push_back(record_double);
 
