@@ -91,18 +91,13 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 
   // load parameters
 
-  // Transfer from options_
-  
-
   // set solver parameters
   cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
   cupdlp_int intParam[N_INT_USER_PARAM] = {0};
   cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
-  int argc = 0;
-  char **argv = nullptr;
-  getUserParam(argc, argv, ifChangeIntParam, intParam,
-	       ifChangeFloatParam, floatParam);
+
+  // Transfer from options
   getUserParamsFromOptions(options,
 			   ifChangeIntParam, intParam,
 			   ifChangeFloatParam, floatParam);
