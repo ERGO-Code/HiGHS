@@ -20,6 +20,8 @@
 #include "lp_data/HighsSolution.h"
 #include "pdlp/cupdlp/cupdlp.h"
 
+typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
+
 #define cupdlp_init_int(var, size)\
    {\
      (var) = (int*)malloc((size) * sizeof(int));\
@@ -102,6 +104,7 @@ int formulateLP_highs(const HighsLp& lp,
                       int *nnz, int *nEqs, int **csc_beg, int **csc_idx,
                       double **csc_val, double **rhs, double **lower,
                       double **upper, double *offset, double *sign_origin,
-                      int *nCols_origin, int **constraint_new_idx);
+                      int *nCols_origin, int **constraint_new_idx,
+		      int* constraint_type_clp);
 
 #endif

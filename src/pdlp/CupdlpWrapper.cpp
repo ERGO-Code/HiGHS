@@ -14,8 +14,6 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 
-typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
-
 void reportParams(CUPDLPwork *w,
 		  cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
 		  cupdlp_bool *ifChangeFloatParam,
@@ -49,7 +47,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  char *fout = nullptr;
+  char *fp = nullptr;
+  char *fp_sol = nullptr;
 
   int nCols;
   int nRows;
@@ -70,7 +69,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   double *csc_val = NULL;
   double offset =
       0.0;  // true objVal = sig * c'x - offset, sig = 1 (min) or -1 (max)
-  double sign_origin = 1;  // 1 (min) or -1 (max)
+  double sense_origin = 1;  // 1 (min) or -1 (max)
   int *constraint_new_idx = NULL;
   cupdlp_float *x_origin = cupdlp_NULL;
   cupdlp_float *y_origin = cupdlp_NULL;
@@ -102,10 +101,13 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 			   ifChangeIntParam, intParam,
 			   ifChangeFloatParam, floatParam);
 
+  std::vector<int> constraint_type_clp(lp.num_row_);
+
+ 
   formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs,
 		    &csc_beg, &csc_idx, &csc_val, &rhs, &lower,
-		    &upper, &offset, &sign_origin, &nCols_origin,
-		    &constraint_new_idx);
+		    &upper, &offset, &sense_origin, &nCols_origin,
+		    &constraint_new_idx, constraint_type_clp.data());
  
 
   Init_Scaling(scaling, nCols, nRows, cost, rhs);
@@ -137,7 +139,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   cupdlp_float alloc_matrix_time = 0.0;
   cupdlp_float copy_vec_time = 0.0;
 
-  problem_alloc(prob, nRows, nCols, nEqs, cost, offset, sign_origin,
+  problem_alloc(prob, nRows, nCols, nEqs, cost, offset, sense_origin,
 		csc_cpu, src_matrix_format, dst_matrix_format, rhs,
 		lower, upper, &alloc_matrix_time, &copy_vec_time);
 
@@ -155,18 +157,32 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // CUPDLP_CALL(LP_SolvePDHG(prob, cupdlp_NULL, cupdlp_NULL, cupdlp_NULL,
   // cupdlp_NULL));
   //   CUPDLP_CALL(LP_SolvePDHG(prob, ifChangeIntParam, intParam,
-  //                               ifChangeFloatParam, floatParam, fout));
+  //                               ifChangeFloatParam, floatParam, fp));
 
   cupdlp_init_double(x_origin, nCols_origin);
   cupdlp_init_double(y_origin, nRows);
-  LP_SolvePDHG(w, ifChangeIntParam, intParam, ifChangeFloatParam,
-	       floatParam, fout, x_origin, nCols_origin, y_origin,
-	       ifSaveSol, constraint_new_idx);
+  // Resize the highs_solution so cuPDLP-c can use it internally
+  highs_solution.col_value.resize(lp.num_col_);
+  highs_solution.row_value.resize(lp.num_row_);
+  highs_solution.col_dual.resize(lp.num_col_);
+  highs_solution.row_dual.resize(lp.num_row_);
+  int value_valid = 0;
+  int dual_valid = 0;
+  int pdlp_model_status = 0;
+  LP_SolvePDHG(w, ifChangeIntParam, intParam,
+	       ifChangeFloatParam, floatParam, fp,
+	       nCols_origin, highs_solution.col_value.data(), highs_solution.col_dual.data(),
+	       highs_solution.row_value.data(), highs_solution.row_dual.data(),
+	       &value_valid, &dual_valid, ifSaveSol, fp_sol,
+	       constraint_new_idx, constraint_type_clp.data(),
+	       &pdlp_model_status);
+  highs_solution.value_valid = value_valid;
+  highs_solution.dual_valid = dual_valid;
  
-  HighsStatus return_status =
-    pdlpSolutionToHighsSolution(x_origin, nCols_origin,
-				y_origin, nRows,
-				options, lp, highs_solution);
+  HighsStatus return_status = HighsStatus::kOk;
+  //    pdlpSolutionToHighsSolution(x_origin, nCols_origin,
+  //				y_origin, nRows,
+  //				options, lp, highs_solution);
   // Set the status to optimal until other statuses can be identified
   model_status = HighsModelStatus::kOptimal;
   return return_status;
@@ -177,8 +193,9 @@ int formulateLP_highs(const HighsLp& lp,
 		      int *nRows, int *nnz, int *nEqs, int **csc_beg,
 		      int **csc_idx, double **csc_val, double **rhs,
 		      double **lower, double **upper, double *offset,
-		      double *sign_origin, int *nCols_origin,
-		      int **constraint_new_idx) {
+		      double *sense_origin, int *nCols_origin,
+		      int **constraint_new_idx,
+		      int* constraint_type_clp) {
   int retcode = 0;
 
   // problem size for malloc
@@ -192,10 +209,10 @@ int formulateLP_highs(const HighsLp& lp,
   *nnz = nnz_clp;        // need recalculate
   *offset = lp.offset_;  // need not recalculate
   if (lp.sense_ == ObjSense::kMinimize) {
-    *sign_origin = 1.0;
+    *sense_origin = 1.0;
     printf("Minimize\n");
   } else if (lp.sense_ == ObjSense::kMaximize) {
-    *sign_origin = -1.0;
+    *sense_origin = -1.0;
     printf("Maximize\n");
   }
   if (*offset != 0.0) {
@@ -203,10 +220,6 @@ int formulateLP_highs(const HighsLp& lp,
   } else {
     printf("No obj offset\n");
   }
-  // allocate buffer memory
-  //  constraint_type *constraint_type_clp = NULL;  // the ONLY one need to free
-  // int *constraint_original_idx = NULL;  // pass by user is better, for
-  // postsolve recovering dual
 
   const double *lhs_clp = lp.row_lower_.data();
   const double *rhs_clp = lp.row_upper_.data();
@@ -214,8 +227,6 @@ int formulateLP_highs(const HighsLp& lp,
   const HighsInt *A_csc_idx = lp.a_matrix_.index_.data();
   const double *A_csc_val = lp.a_matrix_.value_.data();
   int has_lower, has_upper;
-
-  std::vector<constraint_type> constraint_type_clp(nRows_clp);
 
   cupdlp_init_int(*constraint_new_idx, *nRows);
 
@@ -262,7 +273,7 @@ int formulateLP_highs(const HighsLp& lp,
 
   // cost, lower, upper
   for (int i = 0; i < nCols_clp; i++) {
-    (*cost)[i] = lp.col_cost_[i] * (*sign_origin);
+    (*cost)[i] = lp.col_cost_[i] * (*sense_origin);
     (*lower)[i] = lp.col_lower_[i];
 
     (*upper)[i] = lp.col_upper_[i];
@@ -419,7 +430,7 @@ cupdlp_retcode data_alloc(CUPDLPdata *data, cupdlp_int nRows, cupdlp_int nCols,
 
 cupdlp_retcode problem_alloc(
     CUPDLPproblem *prob, cupdlp_int nRows, cupdlp_int nCols, cupdlp_int nEqs,
-    cupdlp_float *cost, cupdlp_float offset, cupdlp_float sign_origin,
+    cupdlp_float *cost, cupdlp_float offset, cupdlp_float sense_origin,
     void *matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
     CUPDLP_MATRIX_FORMAT dst_matrix_format, cupdlp_float *rhs,
     cupdlp_float *lower, cupdlp_float *upper, cupdlp_float *alloc_matrix_time,
@@ -431,7 +442,7 @@ cupdlp_retcode problem_alloc(
   prob->data = cupdlp_NULL;
   prob->cost = cupdlp_NULL;
   prob->offset = offset;
-  prob->sign_origin = sign_origin;
+  prob->sense_origin = sense_origin;
   prob->rhs = cupdlp_NULL;
   prob->lower = cupdlp_NULL;
   prob->upper = cupdlp_NULL;

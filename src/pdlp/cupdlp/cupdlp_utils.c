@@ -4,6 +4,7 @@
 
 #include "cupdlp_utils.h"
 
+#include <limits.h>
 #include <stdio.h>
 
 #include "cupdlp_cs.h"
@@ -239,12 +240,42 @@ void resobj_clear(CUPDLPresobj *resobj) {
     if (resobj->dSlackNeg) {
       CUPDLP_FREE_VEC(resobj->dSlackNeg);
     }
+    if (resobj->dSlackPosAverage) {
+      CUPDLP_FREE_VEC(resobj->dSlackPosAverage);
+    }
+    if (resobj->dSlackNegAverage) {
+      CUPDLP_FREE_VEC(resobj->dSlackNegAverage);
+    }
     if (resobj->dLowerFiltered) {
       CUPDLP_FREE_VEC(resobj->dLowerFiltered);
     }
     if (resobj->dUpperFiltered) {
       CUPDLP_FREE_VEC(resobj->dUpperFiltered);
     }
+    if (resobj->primalInfeasRay) {
+      CUPDLP_FREE_VEC(resobj->primalInfeasRay);
+    }
+    if (resobj->primalInfeasConstr) {
+      CUPDLP_FREE_VEC(resobj->primalInfeasConstr);
+    }
+    if (resobj->primalInfeasBound) {
+      CUPDLP_FREE_VEC(resobj->primalInfeasBound);
+    }
+    if (resobj->dualInfeasRay) {
+      CUPDLP_FREE_VEC(resobj->dualInfeasRay);
+    }
+    if (resobj->dualInfeasLbRay) {
+      CUPDLP_FREE_VEC(resobj->dualInfeasLbRay);
+    }
+    if (resobj->dualInfeasUbRay) {
+      CUPDLP_FREE_VEC(resobj->dualInfeasUbRay);
+    }
+    if (resobj->dualInfeasConstr) {
+      CUPDLP_FREE_VEC(resobj->dualInfeasConstr);
+    }
+    // if (resobj->dualInfeasBound) {
+    //   CUPDLP_FREE_VEC(resobj->dualInfeasBound);
+    // }
     CUPDLP_FREE_VEC(resobj);
   }
 }
@@ -405,7 +436,7 @@ void PDHG_PrintUserParamHelper() {
 
   cupdlp_printf("    -nIterLim:  maximum iteration number\n");
   cupdlp_printf("                type:    int\n");
-  cupdlp_printf("                default: 10000000\n");
+  cupdlp_printf("                default: INT_MAX\n");
   cupdlp_printf("                range:   >= 0\n");
   cupdlp_printf("\n");
 
@@ -417,7 +448,8 @@ void PDHG_PrintUserParamHelper() {
 
   cupdlp_printf("    -eLineSearchMethod: which line search method to use\n");
   cupdlp_printf(
-      "                        0-Fixed, 1-Malitsky-Pock, 2-Adaptive\n");
+      "                        0-Fixed, 1-Malitsky (not support), "
+      "2-Adaptive\n");
   cupdlp_printf("                type:    int\n");
   cupdlp_printf("                default: 2\n");
   cupdlp_printf("                range:   0 to 2\n");
@@ -450,11 +482,11 @@ void PDHG_PrintUserParamHelper() {
   cupdlp_printf("    -dTimeLim: time limit (in seconds)\n");
   cupdlp_printf("                type:    double\n");
   cupdlp_printf("                default: 3600\n");
-  cupdlp_printf("                range:   > 0\n");
+  cupdlp_printf("                range:   >= 0\n");
   cupdlp_printf("\n");
 
   cupdlp_printf("    -eRestartMethod: which restart method to use\n");
-  cupdlp_printf("                     0-None, 1-GPU\n");
+  cupdlp_printf("                     0-None, 1-KKTversion\n");
   cupdlp_printf("                type:    int\n");
   cupdlp_printf("                default: 1\n");
   cupdlp_printf("                range:   0 to 1\n");
@@ -478,11 +510,12 @@ void PDHG_PrintUserParamHelper() {
   cupdlp_printf("                range:   true or false\n");
   cupdlp_printf("\n");
 
-  cupdlp_printf("    -ifPresolve: whether to presolve problem\n");
-  cupdlp_printf("                type:    bool\n");
-  cupdlp_printf("                default: true\n");
-  cupdlp_printf("                range:   true or false\n");
-  cupdlp_printf("\n");
+  // cupdlp_printf(
+  //     "    -ifPre: whether to use HiGHS presolver (and thus postsolver)\n");
+  // cupdlp_printf("                type:    bool\n");
+  // cupdlp_printf("                default: true\n");
+  // cupdlp_printf("                range:   true or false\n");
+  // cupdlp_printf("\n");
 }
 
 cupdlp_retcode getUserParam(int argc, char **argv,
@@ -554,7 +587,7 @@ cupdlp_retcode getUserParam(int argc, char **argv,
     } else if (strcmp(argv[i], "-nLogInt") == 0) {
       ifChangeIntParam[N_LOG_INTERVAL] = true;
       intParam[N_LOG_INTERVAL] = atoi(argv[i + 1]);
-    } else if (strcmp(argv[i], "-ifPresolve") == 0) {
+    } else if (strcmp(argv[i], "-ifPre") == 0) {
       ifChangeIntParam[IF_PRESOLVE] = true;
       intParam[IF_PRESOLVE] = atoi(argv[i + 1]);
     }
@@ -731,7 +764,8 @@ exit_cleanup:
 
 cupdlp_retcode settings_Alloc(CUPDLPsettings *settings) {
   cupdlp_retcode retcode = RETCODE_OK;
-  settings->nIterLim = I_INFINITY;
+  // settings->nIterLim = INFINITY;
+  settings->nIterLim = INT_MAX;  // INFINITY cause bug on MacOS
   settings->nLogInterval = 100;
   // settings->dTimeLim = INFINITY;
   settings->dTimeLim = 3600;
@@ -758,8 +792,19 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
   CUPDLP_INIT_ZERO_VEC(resobj->dualResidualAverage, ncols);
   CUPDLP_INIT_ZERO_VEC(resobj->dSlackPos, ncols);
   CUPDLP_INIT_ZERO_VEC(resobj->dSlackNeg, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->dSlackPosAverage, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->dSlackNegAverage, ncols);
   CUPDLP_INIT_ZERO_VEC(resobj->dLowerFiltered, ncols);
   CUPDLP_INIT_ZERO_VEC(resobj->dUpperFiltered, ncols);
+
+  CUPDLP_INIT_ZERO_VEC(resobj->primalInfeasRay, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->primalInfeasConstr, nrows);
+  CUPDLP_INIT_ZERO_VEC(resobj->primalInfeasBound, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->dualInfeasRay, nrows);
+  CUPDLP_INIT_ZERO_VEC(resobj->dualInfeasLbRay, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->dualInfeasUbRay, ncols);
+  CUPDLP_INIT_ZERO_VEC(resobj->dualInfeasConstr, ncols);
+  // CUPDLP_INIT_ZERO_VEC(resobj->dualInfeasBound, nrows);
 
   // need to translate to cuda type
   // for (int i = 0; i < ncols; i++)
@@ -794,6 +839,18 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
   resobj->dPrimalFeasLastCandidate = 0.0;
   resobj->dDualFeasLastCandidate = 0.0;
   resobj->dDualityGapLastCandidate = 0.0;
+
+  resobj->primalCode = FEASIBLE;
+  resobj->dualCode = FEASIBLE;
+  resobj->termInfeasIterate = LAST_ITERATE;
+  resobj->dPrimalInfeasObj = 0.0;
+  resobj->dDualInfeasObj = 0.0;
+  resobj->dPrimalInfeasRes = 1.0;
+  resobj->dDualInfeasRes = 1.0;
+  resobj->dPrimalInfeasObjAverage = 0.0;
+  resobj->dDualInfeasObjAverage = 0.0;
+  resobj->dPrimalInfeasResAverage = 1.0;
+  resobj->dDualInfeasResAverage = 1.0;
 
   resobj->termCode = TIMELIMIT_OR_ITERLIMIT;
   resobj->termIterate = LAST_ITERATE;
@@ -1074,8 +1131,10 @@ void csr2csc(CUPDLPcsc *csc, CUPDLPcsr *csr) {
   cupdlp_copy(csc->colMatIdx, cs_csc->i, cupdlp_int, cs_csc->nzmax);
   cupdlp_copy(csc->colMatElem, cs_csc->x, cupdlp_float, cs_csc->nzmax);
 
-  cupdlp_dcs_free(cs_csc);
-  cupdlp_dcs_free(cs_csr);
+  // cupdlp_dcs_free(cs_csc);
+  // cupdlp_dcs_free(cs_csr);
+  cupdlp_dcs_spfree(cs_csc);
+  cupdlp_dcs_spfree(cs_csr);
 
   return;
 }
@@ -1098,8 +1157,10 @@ cupdlp_int csc2csr(CUPDLPcsr *csr, CUPDLPcsc *csc) {
   CUPDLP_COPY_VEC(csr->rowMatIdx, cs_csr->i, cupdlp_int, cs_csr->nzmax);
   CUPDLP_COPY_VEC(csr->rowMatElem, cs_csr->x, cupdlp_float, cs_csr->nzmax);
 
-  cupdlp_dcs_free(cs_csc);
-  cupdlp_dcs_free(cs_csr);
+  // cupdlp_dcs_free(cs_csc);
+  // cupdlp_dcs_free(cs_csr);
+  cupdlp_dcs_spfree(cs_csc);
+  cupdlp_dcs_spfree(cs_csr);
 
 #ifndef CUPDLP_CPU
   // Pointer to GPU csc matrix
@@ -1466,22 +1527,19 @@ void cscPrintDense(const char *s, CUPDLPcsc *csc) {
 }
 
 #ifndef CUPDLP_OUTPUT_NAMES
-const char *termCodeNames[] = {
-    "OPTIMAL",
-    "INFEASIBLE",
-    "UNBOUNDED",
-    "INFEASIBLE_OR_UNBOUNDED",
-    "TIMELIMIT_OR_ITERLIMIT",
-};
+const char *termCodeNames[] = {"OPTIMAL",
+                               "INFEASIBLE",
+                               "UNBOUNDED",
+                               "INFEASIBLE_OR_UNBOUNDED",
+                               "TIMELIMIT_OR_ITERLIMIT",
+                               "FEASIBLE"};
 const char *termIterateNames[] = {
     "LAST_ITERATE",
     "AVERAGE_ITERATE",
 };
 #endif
 
-void writeJson(const char *fout, CUPDLPwork *work, cupdlp_float *x,
-               cupdlp_int nx, cupdlp_float *y, cupdlp_int ny,
-               cupdlp_bool ifSaveSol) {
+void writeJson(const char *fout, CUPDLPwork *work) {
   FILE *fptr;
 
   cupdlp_printf("--------------------------------\n");
@@ -1491,6 +1549,9 @@ void writeJson(const char *fout, CUPDLPwork *work, cupdlp_float *x,
   fptr = fopen(fout, "w");
 
   fprintf(fptr, "{");
+
+  // solver
+  fprintf(fptr, "\"solver\":\"%s\",", "cuPDLP-C");
 
   // timers
   fprintf(fptr, "\"nIter\":%d,", work->timers->nIter);
@@ -1510,64 +1571,125 @@ void writeJson(const char *fout, CUPDLPwork *work, cupdlp_float *x,
           work->timers->DeviceMatVecProdTime);
 #endif
   // residuals
-  fprintf(fptr, "\"dPrimalObj\":%f,", work->resobj->dPrimalObj);
-  fprintf(fptr, "\"dDualObj\":%f,", work->resobj->dDualObj);
-  fprintf(fptr, "\"dPrimalFeas\":%f,", work->resobj->dPrimalFeas);
-  fprintf(fptr, "\"dDualFeas\":%f,", work->resobj->dDualFeas);
-  fprintf(fptr, "\"dPrimalObjAverage\":%f,", work->resobj->dPrimalObjAverage);
-  fprintf(fptr, "\"dDualObjAverage\":%f,", work->resobj->dDualObjAverage);
-  fprintf(fptr, "\"dPrimalFeasAverage\":%f,", work->resobj->dPrimalFeasAverage);
-  fprintf(fptr, "\"dDualFeasAverage\":%f,", work->resobj->dDualFeasAverage);
-  fprintf(fptr, "\"dDualityGap\":%f,", work->resobj->dDualityGap);
-  fprintf(fptr, "\"dDualityGapAverage\":%f,", work->resobj->dDualityGapAverage);
-  fprintf(fptr, "\"dComplementarity\":%f,", work->resobj->dComplementarity);
-  fprintf(fptr, "\"dComplementarityAverage\":%f,",
-          work->resobj->dComplementarityAverage);
+  fprintf(fptr, "\"dPrimalObj\":%.14f,", work->resobj->dPrimalObj);
+  fprintf(fptr, "\"dDualObj\":%.14f,", work->resobj->dDualObj);
+  fprintf(fptr, "\"dPrimalFeas\":%.14f,", work->resobj->dPrimalFeas);
+  fprintf(fptr, "\"dDualFeas\":%.14f,", work->resobj->dDualFeas);
+  fprintf(fptr, "\"dPrimalObjAverage\":%.14f,",
+          work->resobj->dPrimalObjAverage);
+  fprintf(fptr, "\"dDualObjAverage\":%.14f,", work->resobj->dDualObjAverage);
+  fprintf(fptr, "\"dPrimalFeasAverage\":%.14f,",
+          work->resobj->dPrimalFeasAverage);
+  fprintf(fptr, "\"dDualFeasAverage\":%.14f,", work->resobj->dDualFeasAverage);
+  fprintf(fptr, "\"dDualityGap\":%.14f,", work->resobj->dDualityGap);
+  fprintf(fptr, "\"dDualityGapAverage\":%.14f,",
+          work->resobj->dDualityGapAverage);
+  // fprintf(fptr, "\"dComplementarity\":%.14f,",
+  // work->resobj->dComplementarity); fprintf(fptr,
+  // "\"dComplementarityAverage\":%.14f,",
+  //         work->resobj->dComplementarityAverage);
 
   //  todo should this be added to postsolve?
   // todo, fix dNormCost and this
   if (work->resobj->termIterate == AVERAGE_ITERATE) {
-    fprintf(fptr, "\"dRelPrimalFeas\":%f,",
+    fprintf(fptr, "\"dRelPrimalFeas\":%.14f,",
             work->resobj->dPrimalFeasAverage / (1.0 + work->scaling->dNormRhs));
-    fprintf(fptr, "\"dRelDualFeas\":%f,",
+    fprintf(fptr, "\"dRelDualFeas\":%.14f,",
             work->resobj->dDualFeasAverage / (1.0 + work->scaling->dNormCost));
-    fprintf(fptr, "\"dRelDualityGap\":%f,", work->resobj->dRelObjGapAverage);
+    fprintf(fptr, "\"dRelDualityGap\":%.14f,", work->resobj->dRelObjGapAverage);
   } else {
-    fprintf(fptr, "\"dRelPrimalFeas\":%f,",
+    fprintf(fptr, "\"dRelPrimalFeas\":%.14f,",
             work->resobj->dPrimalFeas / (1.0 + work->scaling->dNormRhs));
-    fprintf(fptr, "\"dRelDualFeas\":%f,",
+    fprintf(fptr, "\"dRelDualFeas\":%.14f,",
             work->resobj->dDualFeas / (1.0 + work->scaling->dNormCost));
-    fprintf(fptr, "\"dRelDualityGap\":%f,", work->resobj->dRelObjGap);
+    fprintf(fptr, "\"dRelDualityGap\":%.14f,", work->resobj->dRelObjGap);
   }
   fprintf(fptr, "\"terminationCode\":\"%s\",",
           termCodeNames[work->resobj->termCode]);
-  fprintf(fptr, "\"terminationIterate\":\"%s\"",
+  fprintf(fptr, "\"terminationIterate\":\"%s\",",
           termIterateNames[work->resobj->termIterate]);
-
-  // print solutions
-  if (ifSaveSol) {
-    // primal solution
-    fprintf(fptr, ",\"x\":[");
-    if (x && nx > 0) {
-      for (int i = 0; i < nx - 1; ++i) {
-        fprintf(fptr, "%f,", x[i]);
-      }
-      fprintf(fptr, "%f", x[nx - 1]);
-    }
-    fprintf(fptr, "]");
-
-    // dual solution
-    fprintf(fptr, ",\"y\":[");
-    if (y && ny > 0) {
-      for (int i = 0; i < ny - 1; ++i) {
-        fprintf(fptr, "%f,", y[i]);
-      }
-      fprintf(fptr, "%f", y[ny - 1]);
-    }
-    fprintf(fptr, "]");
-  }
+  fprintf(fptr, "\"primalCode\":\"%s\",",
+          termCodeNames[work->resobj->primalCode]);
+  fprintf(fptr, "\"dualCode\":\"%s\",", termCodeNames[work->resobj->dualCode]);
+  fprintf(fptr, "\"terminationInfeasIterate\":\"%s\"",
+          termIterateNames[work->resobj->termInfeasIterate]);
 
   fprintf(fptr, "}");
+  // Close the file
+  fclose(fptr);
+}
+
+void writeSol(const char *fout, cupdlp_int nCols, cupdlp_int nRows,
+              cupdlp_float *col_value, cupdlp_float *col_dual,
+              cupdlp_float *row_value, cupdlp_float *row_dual) {
+  FILE *fptr;
+
+  cupdlp_printf("--------------------------------\n");
+  cupdlp_printf("--- saving sol to %s\n", fout);
+  cupdlp_printf("--------------------------------\n");
+  // Open a file in writing mode
+  fptr = fopen(fout, "w");
+  fprintf(fptr, "{");
+
+  // nCols
+  fprintf(fptr, "\n");
+
+  fprintf(fptr, "\"nCols\": %d", nCols);
+
+  // nRows
+  fprintf(fptr, ",\n");
+
+  fprintf(fptr, "\"nRows\": %d", nRows);
+
+  // col value
+  fprintf(fptr, ",\n");
+
+  fprintf(fptr, "\"col_value\": [");
+  if (col_value && nCols) {
+    for (int i = 0; i < nCols - 1; ++i) {
+      fprintf(fptr, "%.14f,", col_value[i]);
+    }
+    fprintf(fptr, "%.14f", col_value[nCols - 1]);
+  }
+  fprintf(fptr, "]");
+
+  // col dual
+  fprintf(fptr, ",\n");
+  fprintf(fptr, "\"col_dual\": [");
+  if (col_dual && nCols) {
+    for (int i = 0; i < nCols - 1; ++i) {
+      fprintf(fptr, "%.14f,", col_dual[i]);
+    }
+    fprintf(fptr, "%.14f", col_dual[nCols - 1]);
+  }
+  fprintf(fptr, "]");
+
+  // row value
+  fprintf(fptr, ",\n");
+  fprintf(fptr, "\"row_value\": [");
+  if (row_value && nRows) {
+    for (int i = 0; i < nRows - 1; ++i) {
+      fprintf(fptr, "%.14f,", row_value[i]);
+    }
+    fprintf(fptr, "%.14f", row_value[nRows - 1]);
+  }
+  fprintf(fptr, "]");
+
+  // row dual
+  fprintf(fptr, ",\n");
+  fprintf(fptr, "\"row_dual\": [");
+  if (row_dual && nRows) {
+    for (int i = 0; i < nRows - 1; ++i) {
+      fprintf(fptr, "%.14f,", row_dual[i]);
+    }
+    fprintf(fptr, "%.14f", row_dual[nRows - 1]);
+  }
+  fprintf(fptr, "]");
+
+  // end writing
+  fprintf(fptr, "\n");
+  fprintf(fptr, "}");
+
   // Close the file
   fclose(fptr);
 }

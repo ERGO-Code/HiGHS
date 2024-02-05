@@ -58,10 +58,11 @@ typedef enum {
   UNBOUNDED,
   INFEASIBLE_OR_UNBOUNDED,
   TIMELIMIT_OR_ITERLIMIT,
+  FEASIBLE,
 } termination_code;
 
 typedef enum {
-  LAST_ITERATE,
+  LAST_ITERATE = 0,
   AVERAGE_ITERATE,
 } termination_iterate;
 
@@ -212,7 +213,7 @@ struct CUPDLP_PROBLEM {
   cupdlp_float *hasUpper;
   cupdlp_float
       offset;  // true objVal = c'x * sig + offset, sig = 1 (min) or -1 (max)
-  cupdlp_float sign_origin;  // sig = 1 (min) or -1 (max)
+  cupdlp_float sense_origin;  // sig = 1 (min) or -1 (max)
 };
 
 struct CUPDLP_RES_OBJ {
@@ -229,8 +230,35 @@ struct CUPDLP_RES_OBJ {
   cupdlp_float *dualResidual;
   cupdlp_float *dSlackPos;
   cupdlp_float *dSlackNeg;
+  cupdlp_float *dSlackPosAverage;
+  cupdlp_float *dSlackNegAverage;
   cupdlp_float *dLowerFiltered;
   cupdlp_float *dUpperFiltered;
+
+  /* for infeasibility detection */
+  termination_code primalCode;
+  termination_code dualCode;
+  termination_iterate termInfeasIterate;
+
+  cupdlp_float dPrimalInfeasObj;
+  cupdlp_float dDualInfeasObj;
+  cupdlp_float dPrimalInfeasRes;
+  cupdlp_float dDualInfeasRes;
+
+  cupdlp_float dPrimalInfeasObjAverage;
+  cupdlp_float dDualInfeasObjAverage;
+  cupdlp_float dPrimalInfeasResAverage;
+  cupdlp_float dDualInfeasResAverage;
+
+  // buffers
+  cupdlp_float *primalInfeasRay;     // x / norm(x)
+  cupdlp_float *primalInfeasConstr;  // [Ax, min(Gx, 0)]
+  cupdlp_float *primalInfeasBound;   // primal bound violation
+  cupdlp_float *dualInfeasRay;       // y / norm(y, lbd)
+  cupdlp_float *dualInfeasLbRay;     // lbd^+ / norm(y, lbd)
+  cupdlp_float *dualInfeasUbRay;     // lbd^- / norm(y, lbd)
+  cupdlp_float *dualInfeasConstr;    // ATy1 + GTy2 + lambda
+  // cupdlp_float *dualInfeasBound;     // dual bound violation
 
   cupdlp_float dPrimalObjAverage;
   cupdlp_float dDualObjAverage;

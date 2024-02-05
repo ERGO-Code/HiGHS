@@ -506,7 +506,7 @@ void ATy(CUPDLPwork *w, CUPDLPvec *aty, const CUPDLPvec *y)
       break;
     case MULTI_GPU:
 #ifndef CUPDLP_CPU
-      ATy_multi_gpu(d, aty, y);
+      ATy_multi_gpu(d, aty->data, y->data);
 #else
       printf("GPU not supported in CPU build\n");
       exit(1);

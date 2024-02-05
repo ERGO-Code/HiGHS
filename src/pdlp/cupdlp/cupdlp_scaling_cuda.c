@@ -237,7 +237,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
 
 #if CUPDLP_DEBUG
   //------------------- for debug ------------------
-  cupdlp_float dMinElem = DBL_MAX;
+  cupdlp_float dMinElem = OUR_DBL_MAX;
   cupdlp_float dMaxElem = 0.0;
   cupdlp_float dAvgElem = 0.0;
   cupdlp_int nRows = csc->nRows;
@@ -261,7 +261,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
       dMaxElem, dMinElem, dAvgElem);
 
   // calculate the three statistics of objective vector
-  dMinElem = DBL_MAX;
+  dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
   dAvgElem = 0.0;
   for (cupdlp_int iCol = 0; iCol < nCols; iCol++) {
@@ -278,7 +278,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
       "avg=%f\n",
       dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
-  dMinElem = DBL_MAX;
+  dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
   dAvgElem = 0.0;
   for (cupdlp_int iRow = 0; iRow < nRows; iRow++) {
@@ -327,7 +327,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
   // csc2csr(data->csr_matrix, csc);
 #if CUPDLP_DEBUG
   //------------------- for debug ------------------
-  dMinElem = DBL_MAX;
+  dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
   dAvgElem = 0.0;
   for (cupdlp_int iMatElem = csc->colMatBeg[0];
@@ -348,7 +348,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
       dMaxElem, dMinElem, dAvgElem);
 
   // calculate the three statistics of objective vector
-  dMinElem = DBL_MAX;
+  dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
   dAvgElem = 0.0;
   for (cupdlp_int iCol = 0; iCol < nCols; iCol++) {
@@ -365,7 +365,7 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
       "avg=%f\n",
       dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
-  dMinElem = DBL_MAX;
+  dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
   dAvgElem = 0.0;
   for (cupdlp_int iRow = 0; iRow < nRows; iRow++) {
