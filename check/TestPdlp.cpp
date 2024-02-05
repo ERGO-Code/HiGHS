@@ -94,7 +94,6 @@ TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  // Set iteration limit since iterations don't terminate otherwise
   REQUIRE(highs.run() == HighsStatus::kOk);
   highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
@@ -117,7 +116,6 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   highs.setOptionValue("solver", kPdlpString);
   highs.setOptionValue("presolve", kHighsOffString);
-  // Set iteration limit since iterations don't terminate otherwise
   REQUIRE(highs.run() == HighsStatus::kOk);
   highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
