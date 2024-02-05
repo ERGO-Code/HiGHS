@@ -162,7 +162,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   HighsStatus return_status =
     pdlpSolutionToHighsSolution(x_origin, nCols_origin,
 				y_origin, nRows,
-				lp, highs_solution);
+				options, lp, highs_solution);
   // Set the status to optimal until other statuses can be identified
   model_status = HighsModelStatus::kOptimal;
   return return_status;
