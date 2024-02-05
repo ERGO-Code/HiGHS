@@ -199,7 +199,8 @@ class HighsMatrixSlice<HighsTripletListSlice> {
     iterator(HighsInt node) : currentNode(node) {}
     iterator(const HighsInt* nodeIndex, const double* nodeValue,
              const HighsInt* nodeNext, HighsInt node)
-        : pos_(nodeIndex + node, nodeValue + node),
+        : pos_(node == -1 ? nullptr : nodeIndex + node,
+               node == -1 ? nullptr : nodeValue + node),
           nodeNext(nodeNext),
           currentNode(node) {}
     iterator() = default;

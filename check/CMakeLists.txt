@@ -44,6 +44,8 @@ set(TEST_SOURCES
     TestHighsSparseMatrix.cpp
     TestHSet.cpp
     TestICrash.cpp
+    TestIpm.cpp
+    TestIpx.cpp
     TestLogging.cpp
     TestLPFileFormat.cpp
     TestLpValidation.cpp
@@ -67,8 +69,6 @@ if (NOT APPLE)
     # works OK on linux. The test was added to doctest for macOS but still hanging.
     set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
 endif()
-
-set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 if (UNIX)

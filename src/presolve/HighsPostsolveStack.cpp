@@ -72,6 +72,16 @@ void HighsPostsolveStack::LinearTransform::transformToPresolvedSpace(
   primalSol[col] /= scale;
 }
 
+HighsBasisStatus computeRowStatus(double dual,
+                                  HighsPostsolveStack::RowType rowType) {
+  if (rowType == HighsPostsolveStack::RowType::kEq)
+    return dual < 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+  else if (rowType == HighsPostsolveStack::RowType::kGeq)
+    return HighsBasisStatus::kLower;
+  else
+    return HighsBasisStatus::kUpper;
+}
+
 void HighsPostsolveStack::FreeColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
@@ -101,6 +111,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // compute the row dual value such that reduced cost of basic column is 0
   if (isModelRow) {
+    solution.row_dual[row] = 0;
     HighsCDouble dualval = colCost;
     for (const auto& colVal : colValues) {
       assert(static_cast<size_t>(colVal.index) < solution.row_dual.size());
@@ -115,16 +126,8 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   if (!basis.valid) return;
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  if (isModelRow) {
-    if (rowType == RowType::kEq)
-      basis.row_status[row] = solution.row_dual[row] < 0
-                                  ? HighsBasisStatus::kUpper
-                                  : HighsBasisStatus::kLower;
-    else if (rowType == RowType::kGeq)
-      basis.row_status[row] = HighsBasisStatus::kLower;
-    else
-      basis.row_status[row] = HighsBasisStatus::kUpper;
-  }
+  if (isModelRow)
+    basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
 HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
@@ -169,10 +172,10 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 
   // compute the current dual values of the row and the substituted column
   // before deciding on which column becomes basic
-  // for each entry in a row i of the substituted column we added the doubleton
-  // equation row with scale -a_i/substCoef. Therefore the dual multiplier of
-  // this row i implicitly increases the dual multiplier of this doubleton
-  // equation row with that scale.
+  // for each entry in a row i of the substituted column we added the
+  // doubleton equation row with scale -a_i/substCoef. Therefore the dual
+  // multiplier of this row i implicitly increases the dual multiplier of this
+  // doubleton equation row with that scale.
   HighsCDouble rowDual = 0.0;
   solution.row_dual[row] = 0;
   for (const auto& colVal : colValues) {
@@ -182,8 +185,8 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   rowDual /= coefSubst;
   solution.row_dual[row] = double(rowDual);
 
-  // the equation was also added to the objective, so the current values need to
-  // be changed
+  // the equation was also added to the objective, so the current values need
+  // to be changed
   solution.col_dual[colSubst] = substCost;
   solution.col_dual[col] += substCost * coef / coefSubst;
 
@@ -221,10 +224,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 
   if (!basis.valid) return;
 
-  if (solution.row_dual[row] < 0)
-    basis.row_status[row] = HighsBasisStatus::kLower;
-  else
-    basis.row_status[row] = HighsBasisStatus::kUpper;
+  basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
@@ -259,8 +259,8 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
   if (!solution.dual_valid) return;
 
   // the dual multiplier of the rows where the eq row was added implicitly
-  // increases the dual multiplier of the equation with the scale that was used
-  // for adding the equation
+  // increases the dual multiplier of the equation with the scale that was
+  // used for adding the equation
   HighsCDouble eqRowDual = solution.row_dual[addedEqRow];
   for (const auto& targetRow : targetRows) {
     assert(static_cast<size_t>(targetRow.index) < solution.row_dual.size());

@@ -25,6 +25,9 @@ struct ipx_info {
     ipxint dualized;            /* dualized model? */
     ipxint dense_cols;          /* # columns classified "dense" */
 
+    ipxint centring_tried;      /* centring steps tried? */
+    ipxint centring_success;    /* centring steps successful? */
+
     /* reductions in IPM */
     ipxint dependent_rows;      /* # dependent rows (to eq constr) removed */
     ipxint dependent_cols;      /* # dependent cols (to free vars) removed */

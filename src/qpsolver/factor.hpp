@@ -177,6 +177,11 @@ class CholeskyFactor {
       recompute();
     }
 
+    if (current_k != rhs.dim) {
+      printf("dimension mismatch\n");
+      return;
+    }
+
     for (HighsInt r = 0; r < rhs.dim; r++) {
       for (HighsInt j = 0; j < r; j++) {
         rhs.value[r] -= rhs.value[j] * L[j * current_k_max + r];

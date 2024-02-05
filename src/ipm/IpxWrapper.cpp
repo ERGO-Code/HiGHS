@@ -121,7 +121,12 @@ HighsStatus solveLpIpx(const HighsOptions& options,
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
-  if (options.run_crossover == kHighsOnString) {
+  //
+  // When doing analytic centring calculations, crossover must not be
+  // run
+  if (options.run_centring) {
+    parameters.run_crossover = 0;
+  } else if (options.run_crossover == kHighsOnString) {
     parameters.run_crossover = 1;
   } else if (options.run_crossover == kHighsOffString) {
     parameters.run_crossover = 0;
@@ -135,6 +140,10 @@ HighsStatus solveLpIpx(const HighsOptions& options,
     // optimality tolerances
     parameters.start_crossover_tol = -1;
   }
+
+  parameters.run_centring = options.run_centring ? 1 : 0;
+  parameters.max_centring_steps = options.max_centring_steps;
+  parameters.centring_ratio_tolerance = options.centring_ratio_tolerance;
 
   // Set the internal IPX parameters
   lps.SetParameters(parameters);

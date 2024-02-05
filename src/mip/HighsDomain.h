@@ -255,7 +255,14 @@ class HighsDomain {
 
     std::vector<PartitionCliqueData> partitionCliqueData;
 
-    ObjectivePropagation() = default;
+    ObjectivePropagation() {
+      objFunc = nullptr;
+      cost = nullptr;
+      objectiveLower = 0.0;
+      numInfObjLower = 0;
+      capacityThreshold = 0.0;
+      isPropagated = false;
+    }
     ObjectivePropagation(HighsDomain* domain);
 
     bool isActive() const { return domain != nullptr; }

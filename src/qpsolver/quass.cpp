@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <fenv.h>
 
 #include "Highs.h"
 #include "qpsolver/basis.hpp"
@@ -78,7 +79,7 @@ static void computerowmove(Runtime& runtime, Basis& basis, Vector& p,
 static Vector& computesearchdirection_minor(Runtime& rt, Basis& bas,
                                      CholeskyFactor& cf,
                                      ReducedGradient& redgrad, Vector& p) {
-  Vector g2 = -redgrad.get();
+  Vector g2 = -redgrad.get(); // TODO PERF: buffer Vector
   g2.sanitize();
   cf.solve(g2);
 
@@ -92,7 +93,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
                                      CholeskyFactor& factor, const Vector& yp,
                                      Gradient& gradient, Vector& gyp, Vector& l,
                                      Vector& m, Vector& p) {
-  Vector yyp = yp;
+  Vector yyp = yp; // TODO PERF: buffer Vector
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
@@ -101,7 +102,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
     basis.Ztprod(gyp, m);
     l = m;
     factor.solveL(l);
-    Vector v = l;
+    Vector v = l; // TODO PERF: buffer Vector
     factor.solveLT(v);
     basis.Zprod(v, p);
     if (gradient.getGradient().dot(yyp) < 0.0) {
@@ -119,7 +120,7 @@ static Vector& computesearchdirection_major(Runtime& runtime, Basis& basis,
 static double computemaxsteplength(Runtime& runtime, const Vector& p,
                             Gradient& gradient, Vector& buffer_Qp, bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
-  if (fabs(denominator) > 10E-5) {
+  if (fabs(denominator) > runtime.settings.pQp_zero_threshold) {
     double numerator = -(p * gradient.getGradient());
     if (numerator < 0.0) {
       return 0.0;
@@ -145,7 +146,7 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
   }
 
   // TODO: this operation is inefficient.
-  Vector aq = rt.instance.A.t().extractcol(newactivecon);
+  Vector aq = rt.instance.A.t().extractcol(newactivecon); // TODO PERF: buffer Vector
   basis.Ztprod(aq, buffer_d, true, newactivecon);
 
   maxabsd = 0;
@@ -263,6 +264,9 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
 #endif
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
+
+  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
   runtime.primal = x0;
@@ -292,6 +296,15 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   Vector buffer_d(runtime.instance.num_var);
 
   regularize(runtime);
+
+  runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
+
+  if (basis.getnuminactive() > 4000) {
+    printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
+    runtime.status = QpModelStatus::LARGE_NULLSPACE;
+    return;
+  }
+
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
@@ -354,10 +367,10 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
+      runtime.instance.Q.mat_vec(p, buffer_Qp);
     }
-
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0 || fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold) {
+        maxsteplength == 0.0 || (false && fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold)) {
       atfsep = true;
     } else {
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
@@ -401,11 +414,11 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
         redgrad.update(stepres.alpha, false);
       }
 
-      gradient.update(buffer_Qp, stepres.alpha);
-      redcosts.update();
-
       runtime.primal.saxpy(stepres.alpha, p);
       runtime.rowactivity.saxpy(stepres.alpha, rowmove);
+
+      gradient.update(buffer_Qp, stepres.alpha);
+      redcosts.update();
     }
   }
 
@@ -415,7 +428,7 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));
 
-  Vector lambda = redcosts.getReducedCosts();
+  Vector& lambda = redcosts.getReducedCosts();
   for (auto e : basis.getactive()) {
     HighsInt indexinbasis = basis.getindexinfactor()[e];
     if (e >= runtime.instance.num_con) {

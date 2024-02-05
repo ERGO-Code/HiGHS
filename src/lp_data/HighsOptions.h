@@ -377,6 +377,9 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
+  bool run_centring;
+  HighsInt max_centring_steps;
+  double centring_ratio_tolerance;
 
   // Options for iCrash
   bool icrash;
@@ -1169,6 +1172,25 @@ class HighsOptions : public HighsOptionsStruct {
                              "Use LiDSE if LP has right properties", advanced,
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("run_centring", "Perform centring steps or not",
+                             advanced, &run_centring, false);
+    records.push_back(record_bool);
+
+    record_int =
+        new OptionRecordInt("max_centring_steps",
+                            "Maximum number of steps to use (default = 5) "
+                            "when computing the analytic centre",
+                            advanced, &max_centring_steps, 0, 5, kHighsIInf);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "centring_ratio_tolerance",
+        "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
+        "this tolerance (default = 100)",
+        advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
+    records.push_back(record_double);
 
     // Set up the log_options aliases
     log_options.clear();

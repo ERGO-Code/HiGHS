@@ -13,6 +13,17 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, Q
 
   // perturb instance, store perturbance information
 
+  // regularize
+  for (HighsInt i=0; i<instance.num_var; i++) {
+    for (HighsInt index = instance.Q.mat.start[i];
+         index < instance.Q.mat.start[i + 1]; index++) {
+      if (instance.Q.mat.index[index] == i) {
+        instance.Q.mat.value[index] +=
+            settings.hessianregularizationfactor;
+      }
+    }
+  }
+
   // compute initial feasible point
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   computestartingpoint_highs(instance, settings, stats, modelstatus, startinfo, qp_timer);

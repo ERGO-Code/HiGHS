@@ -39,15 +39,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
-    // LP is unconstrained due to having no rowws or a zero constraint
+    // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly
     call_status = solveUnconstrainedLp(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString || options.solver == kPdlpString) {
+  } else if (options.solver == kIpmString || options.run_centring ||
+             options.solver == kPdlpString) {
     // Use IPM or PDLP
-    if (options.solver == kIpmString) {
+    if (options.solver == kIpmString || options.run_centring) {
       // Use IPX to solve the LP
       try {
         call_status = solveLpIpx(solver_object);
@@ -78,7 +79,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
-    if (options.solver == kIpmString) {
+    if (options.solver == kIpmString || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpIpx
       const bool unwelcome_ipx_status =
@@ -87,6 +88,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                HighsModelStatus::kUnboundedOrInfeasible &&
            !options.allow_unbounded_or_infeasible);
       if (unwelcome_ipx_status) {
+        // When performing an analytic centre calculation, the setting
+        // of options.run_crossover is ignored, so simplex clean-up is
+        // not possible - or desirable, anyway!
         highsLogUser(
             options.log_options, HighsLogType::kWarning,
             "Unwelcome IPX status of %s: basis is %svalid; solution is "
@@ -94,8 +98,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             utilModelStatusToString(solver_object.model_status_).c_str(),
             solver_object.basis_.valid ? "" : "not ",
             solver_object.solution_.value_valid ? "" : "not ",
-            options.run_crossover.c_str());
-        if (options.run_crossover != kHighsOffString) {
+            options.run_centring ? "off" : options.run_crossover.c_str());
+        const bool allow_simplex_cleanup =
+            options.run_crossover != kHighsOffString && !options.run_centring;
+        if (allow_simplex_cleanup) {
           // IPX has returned a model status that HiGHS would rather
           // avoid, so perform simplex clean-up if crossover was allowed.
           //

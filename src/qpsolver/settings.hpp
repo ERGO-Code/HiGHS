@@ -23,6 +23,7 @@ struct Settings {
   double improvement_zero_threshold = 10E-5; // if p^t gradient < this threshold, p is determined to not be an improving search direction
   double d_zero_threshold = 10E-13; // minimal value for pivot, will declare degeneracy if no larger pivot is found
   double lambda_zero_threshold = 10E-10; // used for pricing / optimality checking
+  double pQp_zero_threshold = 10E-8; // if p'Qp < this, p is determined to not have curvature, a simplex-like iteration is performed.
 
   bool hessianregularization = false; // if true, a small multiple of the identity matrix will be added to the Hessian
   double hessianregularizationfactor = 1E-7; // multiple of identity matrix added to hessian in case of regularization
@@ -36,7 +37,7 @@ struct Settings {
   Eventhandler<Statistics&> endofiterationevent;
 
   HighsInt reinvertfrequency = 100;
-  HighsInt gradientrecomputefrequency = 1;
+  HighsInt gradientrecomputefrequency = 100;
   HighsInt reducedgradientrecomputefrequency =
       std::numeric_limits<HighsInt>::infinity();
   HighsInt reducedhessianrecomputefrequency =

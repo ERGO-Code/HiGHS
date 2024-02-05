@@ -149,3 +149,315 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
   }
 }
+
+HighsStatus zeroCostColSing() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0.1);
+  lp.row_upper_.push_back(0.9);
+
+  lp.col_cost_.push_back(0);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by doubleton equality
+HighsStatus colSingDoubletonEquality() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
+
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+HighsStatus colSingDoubletonInequality() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
+
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by doubleton equality
+HighsStatus twoColSingDoubletonEquality() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by special case.
+HighsStatus twoColSingDoubletonInequality() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  highs.run();
+  status = highs.run();
+  return status;
+}
+
+// No commas in test case name.
+TEST_CASE("zero-cost [presolve-col-sing]") {
+  std::cout << "Presolve 1." << std::endl;
+  HighsStatus status = zeroCostColSing();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("col-sing-doubleton-eq [presolve-col-sing]") {
+  std::cout << "Presolve 2." << std::endl;
+  HighsStatus status = colSingDoubletonEquality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("col-sing-doubleton-ineq [presolve-col-sing]") {
+  std::cout << "Presolve 3." << std::endl;
+  HighsStatus status = colSingDoubletonInequality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("two-col-sing-doubleton-eq [presolve-col-sing]") {
+  std::cout << "Presolve 4." << std::endl;
+  HighsStatus status = twoColSingDoubletonEquality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
+  std::cout << "Presolve 5." << std::endl;
+  HighsStatus status = twoColSingDoubletonInequality();
+  std::string str = highsStatusToString(status);
+  REQUIRE(str == "OK");
+}
+
+// test case failing
+HighsStatus issue425() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(5);
+  lp.a_matrix_.start_.push_back(6);
+  lp.a_matrix_.start_.push_back(7);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.index_.push_back(2);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.value_.push_back(2);
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+
+  std::vector<double> b{1, 2, 2, 4};
+  lp.row_lower_ = b;
+  lp.row_upper_ = b;
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+TEST_CASE("presolve-issue-425") {
+  std::cout << std::endl;
+  std::cout << "Presolve issue 425." << std::endl;
+  HighsStatus status = issue425();
+  REQUIRE(status == HighsStatus::kOk);
+}

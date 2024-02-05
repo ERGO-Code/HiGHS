@@ -1325,6 +1325,7 @@ void test_ranging() {
   free(row_bound_dn_in_var);
   free(row_bound_dn_ou_var);
 
+  Highs_destroy(highs);
 }
 
 void test_callback() {
@@ -1377,7 +1378,7 @@ void test_callback() {
   Highs_startCallback(highs, kHighsCallbackMipImprovingSolution);
   Highs_run(highs);
   
-
+  Highs_destroy(highs);
 }
 
 /*
