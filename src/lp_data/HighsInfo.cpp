@@ -23,6 +23,7 @@ void HighsInfo::invalidate() {
   simplex_iteration_count = -1;
   ipm_iteration_count = -1;
   crossover_iteration_count = -1;
+  pdlp_iteration_count = -1;
   qp_iteration_count = -1;
   primal_solution_status = kSolutionStatusNone;
   dual_solution_status = kSolutionStatusNone;

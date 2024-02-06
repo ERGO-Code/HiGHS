@@ -173,6 +173,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   int value_valid = 0;
   int dual_valid = 0;
   int pdlp_model_status = 0;
+  cupdlp_int pdlp_num_iter = 0;
   cupdlp_retcode retcode =
     LP_SolvePDHG(w, ifChangeIntParam, intParam,
 		 ifChangeFloatParam, floatParam, fp,
@@ -180,9 +181,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
 		 highs_solution.row_value.data(), highs_solution.row_dual.data(),
 		 &value_valid, &dual_valid, ifSaveSol, fp_sol,
 		 constraint_new_idx, constraint_type_clp.data(),
-		 &pdlp_model_status);
-  printf("LP_SolvePDHG returns code %d and model status %d\n", int(retcode), int(pdlp_model_status));
-
+		 &pdlp_model_status, &pdlp_num_iter);
+  highs_info.pdlp_iteration_count = pdlp_num_iter;
+  
   model_status = HighsModelStatus::kUnknown;
   if (retcode != RETCODE_OK) return HighsStatus::kError;
     

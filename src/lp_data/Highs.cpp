@@ -4077,6 +4077,10 @@ void Highs::reportSolvedLpQpStats() {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Crossover iterations: %" HIGHSINT_FORMAT "\n",
                    info_.crossover_iteration_count);
+    if (info_.pdlp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "PDLP      iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.pdlp_iteration_count);
     if (info_.qp_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",

@@ -1125,7 +1125,7 @@ cupdlp_retcode LP_SolvePDHG(
     cupdlp_float *row_value, cupdlp_float *row_dual, cupdlp_int *value_valid,
     cupdlp_int *dual_valid, cupdlp_bool ifSaveSol, char *fp_sol,
     cupdlp_int *constraint_new_idx, cupdlp_int *constraint_type,
-    cupdlp_int *model_status) {
+    cupdlp_int *model_status, cupdlp_int* num_iter) {
   cupdlp_retcode retcode = RETCODE_OK;
 
   PDHG_PrintHugeCUPDHG();
@@ -1136,6 +1136,7 @@ cupdlp_retcode LP_SolvePDHG(
   CUPDLP_CALL(PDHG_Solve(pdhg));
 
   *model_status = (cupdlp_int)pdhg->resobj->termCode;
+  *num_iter = (cupdlp_int)pdhg->timers->nIter;
 
   CUPDLP_CALL(PDHG_PostSolve(pdhg, nCols_origin, constraint_new_idx,
                              constraint_type, col_value, col_dual, row_value,

@@ -63,10 +63,13 @@ The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, bu
 
 cuPDLP-c now terminates with status `INFEASIBLE_OR_UNBOUNDED` for the infeasible and unbounded LPs in unit tests `pdlp-infeasible-lp` and `pdlp-unbounded-lp` in `highs/check/TestPdlp.cpp`. In the case of the unbounded LP, PDLP identifies a primal feasible point, so unboundedness can be deduced. This is done in `HighsSolve.cpp:131.
 
+## Returning the iteration count
+
+The cuPDLP-c iteration count is held in `pdhg->timers->nIter`, but `pdhg` is destroyed in `LP_SolvePDHG`, so add `cupdlp_int* num_iter` to the parameter list of this method.
+
 ## To be done
 
 - Make cuPDLP-c less chatty
-- Return iteration count etc from cuPDLP-c
 
 
 

@@ -90,7 +90,7 @@ cupdlp_retcode LP_SolvePDHG(
     cupdlp_float *row_value, cupdlp_float *row_dual, cupdlp_int *value_valid,
     cupdlp_int *dual_valid, cupdlp_bool ifSaveSol, char *fp_sol,
     cupdlp_int *constraint_new_idx, cupdlp_int *constraint_type,
-    cupdlp_int *model_status);
+    cupdlp_int *model_status, cupdlp_int* num_iter);
 
 #ifdef __cplusplus
 }

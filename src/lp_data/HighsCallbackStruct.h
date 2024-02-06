@@ -25,6 +25,7 @@ typedef struct {
   double running_time;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
+  HighsInt pdlp_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   double mip_primal_bound;
