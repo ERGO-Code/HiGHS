@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -332,6 +332,7 @@ struct HighsOptionsStruct {
 
   // Advanced options
   HighsInt log_dev_level;
+  bool log_githash;
   bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
@@ -349,6 +350,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_reduction_limit;
+  HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
@@ -368,6 +370,9 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
+  bool run_centring;
+  HighsInt max_centring_steps;
+  double centring_ratio_tolerance;
 
   // Options for iCrash
   bool icrash;
@@ -381,6 +386,7 @@ struct HighsOptionsStruct {
 
   // Options for MIP solver
   bool mip_detect_symmetry;
+  bool mip_allow_restart;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -761,6 +767,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("mip_allow_restart",
+                                       "Whether MIP restart is permitted",
+                                       advanced, &mip_allow_restart, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -904,6 +915,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
         kHighsLogDevLevelMax);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("log_githash", "Log the githash",
+                                       advanced, &log_githash, true);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "solve_relaxation", "Solve the relaxation of discrete model components",
@@ -1078,6 +1093,13 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
+        "restart_presolve_reduction_limit",
+        "Limit on number of further presolve reductions on restart in MIP "
+        "solver -1 => no limit, otherwise, must be positive",
+        advanced, &restart_presolve_reduction_limit, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
         "presolve_rule_off", "Bit mask of presolve rules that are not allowed",
         advanced, &presolve_rule_off, 0, 0, kHighsIInf);
     records.push_back(record_int);
@@ -1127,6 +1149,25 @@ class HighsOptions : public HighsOptionsStruct {
                              "Use LiDSE if LP has right properties", advanced,
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("run_centring", "Perform centring steps or not",
+                             advanced, &run_centring, false);
+    records.push_back(record_bool);
+
+    record_int =
+        new OptionRecordInt("max_centring_steps",
+                            "Maximum number of steps to use (default = 5) "
+                            "when computing the analytic centre",
+                            advanced, &max_centring_steps, 0, 5, kHighsIInf);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "centring_ratio_tolerance",
+        "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
+        "this tolerance (default = 100)",
+        advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
+    records.push_back(record_double);
 
     // Set up the log_options aliases
     log_options.clear();

@@ -14,6 +14,52 @@ TEST_CASE("presolve-solve-postsolve-lp", "[highs_test_presolve]") {
   presolveSolvePostsolve(model_file);
 }
 
+TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  highs.readModel(model_file);
+  highs.run();
+  const double objective_function_value =
+      highs.getInfo().objective_function_value;
+  highs.clearSolver();
+  highs.presolve();
+  HighsLp presolved_lp = highs.getPresolvedLp();
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  if (dev_run)
+    printf("presolved_lp.integrality_.size() = %d\n",
+           int(presolved_lp.integrality_.size()));
+  presolved_lp.integrality_.clear();
+  highs1.setOptionValue("presolve", kHighsOffString);
+  highs1.passModel(presolved_lp);
+  highs1.run();
+  HighsSolution solution = highs1.getSolution();
+  HighsStatus status;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run)
+      printf(
+          "Calling highs.postsolve(solution) with solution.col_value.size() = "
+          "%d solution.col_dual.size() = %d\n",
+          int(solution.col_value.size()), int(solution.col_dual.size()));
+    status = highs.postsolve(solution);
+    if (k == 0) {
+      REQUIRE(status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    } else {
+      REQUIRE(status == HighsStatus::kWarning);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    }
+    REQUIRE(std::fabs(highs.getInfo().objective_function_value -
+                      objective_function_value) <=
+            1e-8 * std::max(1.0, std::fabs(objective_function_value)));
+    solution.dual_valid = false;
+    solution.col_dual.clear();
+    solution.row_dual.clear();
+  }
+}
+
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
@@ -148,4 +194,316 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
   }
+}
+
+HighsStatus zeroCostColSing() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(0.5);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0.1);
+  lp.row_upper_.push_back(0.9);
+
+  lp.col_cost_.push_back(0);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by doubleton equality
+HighsStatus colSingDoubletonEquality() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
+
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+HighsStatus colSingDoubletonInequality() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(2);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(4);
+  lp.a_matrix_.start_.push_back(5);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.index_.push_back(1);
+
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(0.5);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by doubleton equality
+HighsStatus twoColSingDoubletonEquality() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+// handled by special case.
+HighsStatus twoColSingDoubletonInequality() {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(1);
+  lp.a_matrix_.start_.push_back(2);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.index_.push_back(0);
+
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  highs.run();
+  status = highs.run();
+  return status;
+}
+
+// No commas in test case name.
+TEST_CASE("zero-cost [presolve-col-sing]") {
+  std::cout << "Presolve 1." << std::endl;
+  HighsStatus status = zeroCostColSing();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("col-sing-doubleton-eq [presolve-col-sing]") {
+  std::cout << "Presolve 2." << std::endl;
+  HighsStatus status = colSingDoubletonEquality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("col-sing-doubleton-ineq [presolve-col-sing]") {
+  std::cout << "Presolve 3." << std::endl;
+  HighsStatus status = colSingDoubletonInequality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("two-col-sing-doubleton-eq [presolve-col-sing]") {
+  std::cout << "Presolve 4." << std::endl;
+  HighsStatus status = twoColSingDoubletonEquality();
+  std::string str = highsStatusToString(status);
+  CHECK(str == "OK");
+}
+
+TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
+  std::cout << "Presolve 5." << std::endl;
+  HighsStatus status = twoColSingDoubletonInequality();
+  std::string str = highsStatusToString(status);
+  REQUIRE(str == "OK");
+}
+
+// test case failing
+HighsStatus issue425() {
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+
+  lp.a_matrix_.start_.push_back(0);
+  lp.a_matrix_.start_.push_back(3);
+  lp.a_matrix_.start_.push_back(5);
+  lp.a_matrix_.start_.push_back(6);
+  lp.a_matrix_.start_.push_back(7);
+
+  lp.a_matrix_.index_.push_back(0);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.index_.push_back(2);
+  lp.a_matrix_.value_.push_back(1);
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(1);
+  lp.a_matrix_.value_.push_back(2);
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.a_matrix_.index_.push_back(3);
+  lp.a_matrix_.value_.push_back(1);
+
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+
+  std::vector<double> b{1, 2, 2, 4};
+  lp.row_lower_ = b;
+  lp.row_upper_ = b;
+
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+
+  Highs highs;
+  HighsStatus status = highs.passModel(lp);
+  assert(status == HighsStatus::kOk);
+
+  status = highs.run();
+  return status;
+}
+
+TEST_CASE("presolve-issue-425") {
+  std::cout << std::endl;
+  std::cout << "Presolve issue 425." << std::endl;
+  HighsStatus status = issue425();
+  REQUIRE(status == HighsStatus::kOk);
 }

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -219,6 +219,7 @@ void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   char stringbuffer[LP_MAX_LINE_LENGTH + 1];
   HighsInt tokenlength =
       vsnprintf(stringbuffer, sizeof stringbuffer, format, argptr);
+  va_end(argptr);
   if (this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
     fprintf(file, "\n");
     fprintf(file, "%s", stringbuffer);

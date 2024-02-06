@@ -1,12 +1,14 @@
-name: build-meson
-on: [push, pull_request]
+name: Test with sanitizers
+on: [workflow_dispatch]
 
 jobs:
-  buildmeson:
+  sanitizer:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest] # windows-latest takes to long
+        os: [ubuntu-latest, macos-latest]
+        sanitizer: [address, undefined, thread]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -31,13 +33,11 @@ jobs:
       - name: Build and test
         shell: bash -l {0}
         run: |
-          meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
-          meson test -C bbdir
-      - name: Test compiled highspy
-        shell: bash -l {0}
-        run: |
-          meson configure bbdir -Dwith_pybind11=True
-          meson compile -C bbdir
-          LD_LIBRARY_PATH=$(pwd)/bbdir/src \
-          PYTHONPATH=$(pwd)/bbdir \
-          python examples/call_highs_from_python.py
+          meson setup bddir -Duse_zlib=enabled -Dwith_tests=True -Db_sanitize=${{ matrix.sanitizer }}
+          meson test -C bddir -t 10  # Time x10 for the tests
+      - name: Upload log
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: log_${{ matrix.sanitizer }}_${{ matrix.os }}.txt
+          path: bddir/meson-logs/testlog.txt

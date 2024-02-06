@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -383,7 +383,7 @@ void HighsMipSolverData::init() {
     dispfreq = 100;
 }
 
-void HighsMipSolverData::runPresolve() {
+void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 #ifdef HIGHS_DEBUGSOL
   bool debugSolActive = false;
   std::swap(debugSolution.debugSolActive, debugSolActive);
@@ -391,7 +391,7 @@ void HighsMipSolverData::runPresolve() {
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  presolve.setInput(mipsolver);
+  presolve.setInput(mipsolver, presolve_reduction_limit);
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
@@ -585,13 +585,16 @@ void HighsMipSolverData::runSetup() {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::kContinuous:
+        if (domain.isFixed(i)) continue;
         continuous_cols.push_back(i);
         break;
       case HighsVarType::kImplicitInteger:
+        if (domain.isFixed(i)) continue;
         implint_cols.push_back(i);
         integral_cols.push_back(i);
         break;
       case HighsVarType::kInteger:
+        if (domain.isFixed(i)) continue;
         integer_cols.push_back(i);
         integral_cols.push_back(i);
         maxTreeSizeLog2 += (HighsInt)std::ceil(
@@ -983,7 +986,30 @@ void HighsMipSolverData::performRestart() {
   nodequeue.clear();
   globalOrbits.reset();
 
-  runPresolve();
+  // Need to be able to set presolve reduction limit separately when
+  // restarting - so that bugs in presolve restart can be investigated
+  // independently (see #1553)
+  //
+  // However, when restarting, presolve is (naturally) applied to the
+  // presolved problem, so have to control the number of _further_
+  // presolve reductions
+  //
+  // The number of further presolve reductions must be positive,
+  // otherwise the MIP solver cycles, hence
+  // restart_presolve_reduction_limit cannot be zero
+  //
+  // Although postSolveStack.numReductions() is size_t, it makes no
+  // sense to use presolve_reduction_limit when the number of
+  // reductions is vast
+  HighsInt num_reductions = HighsInt(postSolveStack.numReductions());
+  HighsInt restart_presolve_reduction_limit =
+      mipsolver.options_mip_->restart_presolve_reduction_limit;
+  assert(restart_presolve_reduction_limit);
+  HighsInt further_presolve_reduction_limit =
+      restart_presolve_reduction_limit >= 0
+          ? num_reductions + restart_presolve_reduction_limit
+          : -1;
+  runPresolve(further_presolve_reduction_limit);
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     // transform the objective limit to the current model
@@ -1496,7 +1522,8 @@ restart:
 
   rootlpsolobj = firstlpsolobj;
   removeFixedIndices();
-  if (mipsolver.options_mip_->presolve != kHighsOffString) {
+  if (mipsolver.options_mip_->mip_allow_restart &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     double fixingRate = percentageInactiveIntegers();
     if (fixingRate >= 10.0) {
       tg.cancel();
@@ -1731,7 +1758,7 @@ restart:
   printDisplayLine();
 
   if (lower_bound <= upper_limit) {
-    if (!mipsolver.submip &&
+    if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
       if (!analyticCenterComputed) finishAnalyticCenterComputation(tg);
       double fixingRate = percentageInactiveIntegers();

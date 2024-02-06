@@ -219,9 +219,22 @@ double Iterate::mu_max() const { Evaluate(); return mu_max_; }
 
 bool Iterate::feasible() const {
     Evaluate();
-    return
-        presidual_ <= feasibility_tol_ * (1.0+model_.norm_bounds()) &&
-        dresidual_ <= feasibility_tol_ * (1.0+model_.norm_c());
+    const double bounds_measure = 1.0 + model_.norm_bounds();
+    const double costs_measure = 1.0 + model_.norm_c();
+    const double rel_presidual = presidual_ / bounds_measure;
+    const double rel_dresidual = dresidual_ / costs_measure;
+    const bool primal_feasible = presidual_ <= feasibility_tol_ * (bounds_measure);
+    const bool dual_feasible = dresidual_ <= feasibility_tol_ * (costs_measure);
+    const bool is_feasible = primal_feasible && dual_feasible;
+    if (kTerminationLogging) {
+      printf("\nIterate::feasible presidual_ = %11.4g; bounds_measure = %11.4g; "
+	     "rel_presidual = %11.4g; feasibility_tol = %11.4g: primal_feasible = %d\n",
+	     presidual_, bounds_measure, rel_presidual, feasibility_tol_, primal_feasible);
+      printf("Iterate::feasible dresidual_ = %11.4g;  costs_measure = %11.4g; "
+	     "rel_dresidual = %11.4g; feasibility_tol = %11.4g:   dual_feasible = %d\n",
+	     dresidual_, costs_measure, rel_dresidual, feasibility_tol_, dual_feasible);
+    }
+    return is_feasible;
 }
 
 bool Iterate::optimal() const {
@@ -230,7 +243,17 @@ bool Iterate::optimal() const {
     double dobj = dobjective_after_postproc();
     double obj = 0.5 * (pobj + dobj);
     double gap = pobj - dobj;
-    return std::abs(gap) <= optimality_tol_ * (1.0+std::abs(obj)); 
+    const double abs_gap = std::abs(gap);
+    const double obj_measure = 1.0+std::abs(obj);
+    const bool is_optimal = abs_gap <= optimality_tol_ * obj_measure;
+    if (kTerminationLogging) {
+      const double rel_gap = abs_gap / obj_measure; 
+      printf("Iterate::optimal     abs_gap = %11.4g;"
+	     " obj_measure    = %11.4g; rel_gap       = %11.4g;"
+	     "  optimality_tol = %11.4g:   optimal       = %d\n",
+	     abs_gap, obj_measure, rel_gap, optimality_tol_, is_optimal);
+    }
+    return is_optimal;
 }
 
 bool Iterate::term_crit_reached() const {

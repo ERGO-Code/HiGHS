@@ -14,4 +14,6 @@ struct RatiotestResult {
 RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
                           const Vector& rowmove, double alphastart);
 
+Instance ratiotest_relax_instance(Runtime& runtime);
+
 #endif

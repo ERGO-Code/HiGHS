@@ -48,8 +48,12 @@ private:
     void ComputeStartingPoint();
     void Predictor(Step& step);
     void AddCorrector(Step& step);
-    void StepSizes(const Step& step);
-    void MakeStep(const Step& step);
+    void Centring(Step& step, double mu_to_use);
+    void AssessCentrality(const Vector& xl, const Vector& xu, const Vector& zl, 
+                          const Vector& zu,double mu, bool print = true);
+    bool EvaluateCentringStep(const Step& step, double prev_ratio, Int prev_bad);
+    void StepSizes(const Step& step, bool isCentring = false);
+    void MakeStep(const Step& step, bool isCentring = false);
     // Reduces the following linear system to KKT form:
     //  [ AI                 ] [dx ]    [rb]
     //  [ I  -I              ] [dxl] =  [rl]
@@ -79,6 +83,10 @@ private:
     double best_complementarity_{0.0};
 
     Int maxiter_{-1};
+
+    // indicators of centrality for centring steps
+    double centring_ratio{0.0};
+    Int bad_products{0};
 };
 
 }  // namespace ipx

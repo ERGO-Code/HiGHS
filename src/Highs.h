@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -383,6 +383,13 @@ class Highs {
    * @brief Get the value of infinity used by HiGHS
    */
   double getInfinity() { return kHighsInf; }
+
+  /**
+   * @brief Get the size of HighsInt
+   */
+  HighsInt getSizeofHighsInt() {
+    return sizeof(options_.num_user_settable_options_);
+  }
 
   /**
    * @brief Get the run time of HiGHS
@@ -793,6 +800,14 @@ class Highs {
    */
   HighsStatus changeColsIntegrality(const HighsInt* mask,
                                     const HighsVarType* integrality);
+
+  /**
+   * @brief Clear the integrality of all columns
+   */
+  HighsStatus clearIntegrality() {
+    this->model_.lp_.integrality_.clear();
+    return HighsStatus::kOk;
+  }
 
   /**
    * @brief Change the cost of a column
@@ -1455,6 +1470,7 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
