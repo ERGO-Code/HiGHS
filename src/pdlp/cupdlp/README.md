@@ -59,6 +59,12 @@ are declared in [cupdlp_linalg.h](https://github.com/ERGO-Code/HiGHS/blob/add-pd
 
 The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Since HiGHS won't be using the cuPDLP-c timing, this can be commented out using a compiler directive.
 
+## Making cuPDLP-c less chatty
+
+As a research code, `cuPDLP-c` naturally produces a lot of output. Within HiGHS it should produce less output, and it should be possible to make it run silently. The simplest way to do this is introduce a logging level parameter into `cuPDLP-c` that, when zero, yields no output, when 1 yields just summary logging at the end, and when 2 or more produces the logging that you would wish to see. I guess that this would be added to `CUPDLP_INT_USER_PARAM_INDEX`.
+
+A related issue is the use of `fp` and `fp_sol`. HiGHS won't be using these, so I set them to null pointers. `cuPDLP-c` already doesnt print the solution if `fp_sol` is a null pointer, so (like me) I suggest that the call to `writeJson(fp, pdhg);` is conditional on `if (fp)`. 
+
 ## Handling infeasible or unbounded problems
 
 cuPDLP-c now terminates with status `INFEASIBLE_OR_UNBOUNDED` for the infeasible and unbounded LPs in unit tests `pdlp-infeasible-lp` and `pdlp-unbounded-lp` in `highs/check/TestPdlp.cpp`. In the case of the unbounded LP, PDLP identifies a primal feasible point, so unboundedness can be deduced. This is done in `HighsSolve.cpp:131.
