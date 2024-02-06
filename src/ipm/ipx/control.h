@@ -82,6 +82,12 @@ public:
     ipxint update_heuristic() const { return parameters_.update_heuristic; }
     ipxint maxpasses() const { return parameters_.maxpasses; }
     bool reportBasisData() const { return parameters_.analyse_basis_data; }
+    ipxint runCentring() const{return parameters_.run_centring; }
+    ipxint maxCentringSteps() const{return parameters_.max_centring_steps; }
+    double centringRatioTolerance() const{return parameters_.centring_ratio_tolerance; }
+    double centringRatioReduction() const {return parameters_.centring_ratio_reduction; }
+    double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
+    ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);

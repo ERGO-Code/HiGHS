@@ -485,7 +485,7 @@ namespace cxxopts
         {
           if (negative)
           {
-            if (u > static_cast<U>(-std::numeric_limits<T>::min()))
+            if (u > static_cast<U>(std::numeric_limits<T>::min()))
             {
               throw argument_incorrect_type(text);
             }

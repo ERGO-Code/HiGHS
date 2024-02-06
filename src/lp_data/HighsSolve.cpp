@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -38,13 +38,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   if (!solver_object.lp_.num_row_ || solver_object.lp_.a_matrix_.numNz() == 0) {
-    // LP is unconstrained due to having no rowws or a zero constraint
+    // LP is unconstrained due to having no rows or a zero constraint
     // matrix, so solve directly
     call_status = solveUnconstrainedLp(solver_object);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString) {
+  } else if (options.solver == kIpmString || options.run_centring) {
     // Use IPM
     // Use IPX to solve the LP
     try {
@@ -72,14 +72,20 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
              HighsModelStatus::kUnboundedOrInfeasible &&
          !options.allow_unbounded_or_infeasible);
     if (unwelcome_ipx_status) {
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "Unwelcome IPX status of %s: basis is %svalid; solution is "
-                   "%svalid; run_crossover is \"%s\"\n",
-                   utilModelStatusToString(solver_object.model_status_).c_str(),
-                   solver_object.basis_.valid ? "" : "not ",
-                   solver_object.solution_.value_valid ? "" : "not ",
-                   options.run_crossover.c_str());
-      if (options.run_crossover != kHighsOffString) {
+      // When performing an analytic centre calculation, the setting
+      // of options.run_crossover is ignored, so simplex clean-up is
+      // not possible - or desirable, anyway!
+      highsLogUser(
+          options.log_options, HighsLogType::kWarning,
+          "Unwelcome IPX status of %s: basis is %svalid; solution is "
+          "%svalid; run_crossover is \"%s\"\n",
+          utilModelStatusToString(solver_object.model_status_).c_str(),
+          solver_object.basis_.valid ? "" : "not ",
+          solver_object.solution_.value_valid ? "" : "not ",
+          options.run_centring ? "off" : options.run_crossover.c_str());
+      const bool allow_simplex_cleanup =
+          options.run_crossover != kHighsOffString && !options.run_centring;
+      if (allow_simplex_cleanup) {
         // IPX has returned a model status that HiGHS would rather
         // avoid, so perform simplex clean-up if crossover was allowed.
         //

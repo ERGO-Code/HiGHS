@@ -263,12 +263,19 @@ if(NOT(${HIGHSINT64} STREQUAL "OFF"))
   message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
+# At the moment there is a threading bug on Windows; this is the workaround
+option(HIGHS_NO_DEFAULT_THREADS "Disable multithreading" OFF)
+
+if(NOT(${HIGHS_NO_DEFAULT_THREADS} STREQUAL "OFF"))
+	message(STATUS "Default multithreading: disabled")
+endif()
+
 # If Visual Studio targets are being built.
 if(MSVC)
-  add_definitions(/W4)
-  add_definitions(/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820)
-  add_definitions(/MP)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/W4>")
+  # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
 
   if(STDCALL)
     # /Gz - stdcall calling convention
@@ -284,9 +291,7 @@ endif()
 
 if(NOT FAST_BUILD OR FORTRAN)
   include(CheckLanguage)
-  if(NOT MSVC)
-    check_language("Fortran")
-  endif()
+  check_language("Fortran")
   if(CMAKE_Fortran_COMPILER)
     enable_language(Fortran)
     set(FORTRAN_FOUND ON)
@@ -484,11 +489,7 @@ if(NOT FAST_BUILD)
 
 else(FAST_BUILD)
 
-  message(STATUS "FAST_BUILD set to on.
- Note: The HiGHS team is preparing for our first official release. If you
-       experience any issues please let us know via email or on GitHub.")
-
-  option(EXP "Experimental mode: run unit tests with doctest." OFF)
+  message(STATUS "FAST_BUILD set to on.")
 
   if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
     set(HiGHSRELEASE ON)
@@ -571,25 +572,4 @@ else(FAST_BUILD)
   add_subdirectory(examples)
 
   add_subdirectory(app)
-
-  if(EXP)
-    add_executable(doctest)
-
-    # target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
-    target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
-
-    if(NOT APPLE)
-      # triggers hanging on macOS
-      target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
-    endif()
-
-    target_include_directories(doctest PRIVATE extern)
-    target_link_libraries(doctest highs)
-  endif()
-
-# install(TARGETS highs EXPORT highs-targets
-# LIBRARY
-# ARCHIVE
-# RUNTIME
-# PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 endif()

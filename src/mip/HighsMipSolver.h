@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -96,7 +96,7 @@ class HighsMipSolver {
   mutable HighsTimer timer_;
   void cleanupSolve();
 
-  void runPresolve();
+  void runPresolve(const HighsInt presolve_reduction_limit);
   const HighsLp& getPresolvedModel() const;
   HighsPresolveStatus getPresolveStatus() const;
   presolve::HighsPostsolveStack getPostsolveStack() const;

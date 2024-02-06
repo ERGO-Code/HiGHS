@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -33,7 +33,8 @@ void PresolveComponent::negateReducedLpColDuals() {
 
 HighsPresolveStatus PresolveComponent::run() {
   presolve::HPresolve presolve;
-  presolve.setInput(data_.reduced_lp_, *options_, timer);
+  presolve.setInput(data_.reduced_lp_, *options_,
+                    options_->presolve_reduction_limit, timer);
 
   presolve.run(data_.postSolveStack);
   data_.presolve_log_ = presolve.getPresolveLog();

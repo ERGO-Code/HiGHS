@@ -65,7 +65,7 @@ struct Vector {
     return vec;
   }
 
-  void report(std::string name = "") {
+  void report(std::string name = "") const {
     if (name != "") {
       printf("%s: ", name.c_str());
     }

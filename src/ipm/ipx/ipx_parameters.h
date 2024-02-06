@@ -51,6 +51,14 @@ struct ipx_parameters {
     ipxint stop_at_switch;
     ipxint update_heuristic;
     ipxint maxpasses;
+
+    /* Centring */
+    ipxint run_centring;
+    ipxint max_centring_steps;
+    double centring_ratio_tolerance;
+    double centring_ratio_reduction;
+    double centring_alpha_scaling;
+    ipxint bad_products_tolerance;
 };
 
 #ifdef __cplusplus

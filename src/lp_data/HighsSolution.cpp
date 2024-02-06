@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -927,6 +927,14 @@ HighsStatus ipxSolutionToHighsSolution(
   }
   assert(ipx_row == ipx_num_row);
   assert(ipx_slack == ipx_num_col);
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
+  }
+
   // Indicate that the primal and dual solution are known
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
@@ -1163,12 +1171,12 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
 
-  // Flip dual according to lp.sense_
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    highs_solution.col_dual[iCol] *= (HighsInt)lp.sense_;
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
   }
 
   if (num_boxed_rows)
