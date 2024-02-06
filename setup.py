@@ -145,6 +145,9 @@ setup(
     zip_safe=False,
     # extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.9",
+    install_requires=[
+       'numpy',
+     ],
 )
 
 # class CMakeBuild(build_ext):
