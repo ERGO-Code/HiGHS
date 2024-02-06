@@ -802,6 +802,14 @@ class Highs {
                                     const HighsVarType* integrality);
 
   /**
+   * @brief Clear the integrality of all columns
+   */
+  HighsStatus clearIntegrality() {
+    this->model_.lp_.integrality_.clear();
+    return HighsStatus::kOk;
+  }
+
+  /**
    * @brief Change the cost of a column
    */
   HighsStatus changeColCost(const HighsInt col, const double cost);
@@ -1462,6 +1470,7 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
