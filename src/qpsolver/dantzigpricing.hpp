@@ -55,7 +55,6 @@ class DantzigPricing : public Pricing {
       : runtime(rt), basis(bas), redcosts(rc){};
 
   HighsInt price(const Vector& x, const Vector& gradient) {
-    // Vector lambda = basis.ftran(gradient);
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }

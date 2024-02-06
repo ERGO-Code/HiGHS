@@ -37,7 +37,7 @@ struct Settings {
   Eventhandler<Statistics&> endofiterationevent;
 
   HighsInt reinvertfrequency = 100;
-  HighsInt gradientrecomputefrequency = 1;
+  HighsInt gradientrecomputefrequency = 100;
   HighsInt reducedgradientrecomputefrequency =
       std::numeric_limits<HighsInt>::infinity();
   HighsInt reducedhessianrecomputefrequency =
