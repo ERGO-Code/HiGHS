@@ -1430,9 +1430,12 @@ cupdlp_retcode csc_alloc(CUPDLPcsc *csc, cupdlp_int nRows, cupdlp_int nCols,
   csc->colMatBeg = cupdlp_NULL;
   csc->colMatIdx = cupdlp_NULL;
   csc->colMatElem = cupdlp_NULL;
-  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
-  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
-  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
+  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
+  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
 
   CUPDLP_COPY_VEC(csc->colMatBeg, col_ptr, cupdlp_int, nCols + 1);
   CUPDLP_COPY_VEC(csc->colMatIdx, row_ind, cupdlp_int, nnz);

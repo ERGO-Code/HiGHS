@@ -121,6 +121,22 @@ extern "C" {
       goto exit_cleanup;                                     \
     }                                                        \
   }
+#define CUPDLP_INIT_ZERO_DOUBLE_VEC(var, size)                      \
+  {                                                          \
+    (var) = (double*)calloc(size, sizeof(double));	     \
+    if ((var) == cupdlp_NULL) {                              \
+      retcode = RETCODE_FAILED;                              \
+      goto exit_cleanup;                                     \
+    }                                                        \
+  }
+#define CUPDLP_INIT_ZERO_INT_VEC(var, size)                      \
+  {                                                          \
+    (var) = (int*)calloc(size, sizeof(int));	     \
+    if ((var) == cupdlp_NULL) {                              \
+      retcode = RETCODE_FAILED;                              \
+      goto exit_cleanup;                                     \
+    }                                                        \
+  }
 #define CUPDLP_FREE_VEC(x) \
   {                        \
     _cupdlp_free(x);       \
