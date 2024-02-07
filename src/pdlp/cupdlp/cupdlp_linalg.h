@@ -67,13 +67,13 @@ void cupdlp_projNegative(cupdlp_float *x, const cupdlp_int len);
 
 /*------------------------ new added --------------------*/
 
-extern double dot(cupdlp_int n, cupdlp_float *x, cupdlp_int incx,
-                  cupdlp_float *y, cupdlp_int incy);
+extern double dot(cupdlp_int n, const cupdlp_float *x, cupdlp_int incx,
+                  const cupdlp_float *y, cupdlp_int incy);
 
-extern double Dotprod(cupdlp_float *x, cupdlp_float *y, cupdlp_int n);
+extern double Dotprod(const cupdlp_float *x, const cupdlp_float *y, cupdlp_int n);
 
 // todo, add this
-extern double Dotprod_Neumaier(cupdlp_float *x, cupdlp_float *y, cupdlp_int n);
+extern double Dotprod_Neumaier(const cupdlp_float *x, const cupdlp_float *y, cupdlp_int n);
 
 /* x = x + weight * y */
 void AddToVector(cupdlp_float *x, const cupdlp_float weight,
