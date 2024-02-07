@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -155,6 +155,23 @@ HighsCallbackFunctionType userInterruptCallback =
                 data_out->mip_gap, data_out->objective_function_value);
           data_in->user_interrupt =
               data_out->objective_function_value < egout_objective_target;
+        }
+      }
+    };
+
+HighsCallbackFunctionType userMipCutPoolCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
+             int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
+             int(data_out->cutpool_num_nz));
+      for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
+        printf("Cut %d\n", int(iCut));
+        for (HighsInt iEl = data_out->cutpool_start[iCut];
+             iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
+          printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
+                 data_out->cutpool_value[iEl]);
         }
       }
     };
@@ -331,5 +348,16 @@ TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
 
   highs.setCallback(userMipSolutionCallback, p_user_callback_data);
   highs.startCallback(kCallbackMipSolution);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  //  MipData user_callback_data;
+  highs.setCallback(userMipCutPoolCallback);  //, p_user_callback_data);
+  highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
 }

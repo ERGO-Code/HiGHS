@@ -98,6 +98,8 @@ class HighsMipSolver {
   const HighsLp& getPresolvedModel() const;
   HighsPresolveStatus getPresolveStatus() const;
   presolve::HighsPostsolveStack getPostsolveStack() const;
+
+  void callbackGetCutPool() const;
 };
 
 #endif

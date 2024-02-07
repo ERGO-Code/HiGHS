@@ -96,6 +96,11 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
+  void getCutPool(HighsInt& num_col, HighsInt& num_cut,
+                  std::vector<double>& cut_lower,
+                  std::vector<double>& cut_upper,
+                  HighsSparseMatrix& cut_matrix) const;
+
   class Playground {
     friend class HighsLpRelaxation;
     HighsLpRelaxation* lp;
