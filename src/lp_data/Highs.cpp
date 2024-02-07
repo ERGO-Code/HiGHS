@@ -2901,6 +2901,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
                              const HighsBasis& basis, bool no_reoptimization) {
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
+      model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
       model_presolve_status_ == HighsPresolveStatus::kTimeout;
@@ -3142,6 +3143,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     default:
       break;
   }
+  // Presolve creates integrality vector for an LP, so clear it
+  if (!model_.isMip()) presolve_.data_.reduced_lp_.integrality_.clear();
+
   return presolve_return_status;
 }
 
@@ -3601,19 +3605,40 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
 
+  // Must at least have a primal column solution of the right size
+  if (HighsInt(solution.col_value.size()) != presolved_lp.num_col_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Primal solution provided to postsolve is incorrect size\n");
+    return HighsStatus::kError;
+  }
+  // Check any basis that is supplied
+  const bool basis_supplied =
+      basis.col_status.size() > 0 || basis.row_status.size() > 0;
+  if (basis_supplied) {
+    if (!isBasisConsistent(presolved_lp, basis)) {
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "Basis provided to postsolve is incorrect size or inconsistent\n");
+      return HighsStatus::kError;
+    }
+  }
+  // Copy in the solution provided
+  presolve_.data_.recovered_solution_ = solution;
+  // Ignore any row values
+  presolve_.data_.recovered_solution_.row_value.assign(presolved_lp.num_row_,
+                                                       0);
+  presolve_.data_.recovered_solution_.value_valid = true;
+
   if (this->model_.isMip() && !basis.valid) {
     // Postsolving a MIP without a valid basis - which, if valid,
     // would imply that the relaxation had been solved, a case handled
     // below
-    presolve_.data_.recovered_solution_ = solution;
-    if (presolve_.data_.recovered_solution_.col_value.size() <
-        static_cast<size_t>(presolved_lp.num_col_)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Solution provided to postsolve is incorrect size\n");
-      return HighsStatus::kError;
-    }
-    presolve_.data_.recovered_solution_.row_value.assign(presolved_lp.num_row_,
-                                                         0);
+    //
+    // Ignore any dual values
+    presolve_.data_.recovered_solution_.dual_valid = false;
+    presolve_.data_.recovered_solution_.col_dual.clear();
+    presolve_.data_.recovered_solution_.row_dual.clear();
+    // Ignore any basis
     presolve_.data_.recovered_basis_.valid = false;
 
     HighsPostsolveStatus postsolve_status = runPostsolve();
@@ -3649,41 +3674,54 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   } else {
     // Postsolving an LP, or a MIP after solving the relaxation
     // (identified by passing a valid basis).
-    const bool solution_ok = isSolutionRightSize(presolved_lp, solution);
-    if (!solution_ok) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Solution provided to postsolve is incorrect size\n");
-      return HighsStatus::kError;
-    }
-    if (basis.valid) {
-      // Check a valid basis
-      const bool basis_ok = isBasisConsistent(presolved_lp, basis);
-      if (!basis_ok) {
+    //
+    // If there are dual values, make sure that both vectors are the
+    // right size
+    if (presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.row_dual.size() > 0) {
+      if (!isDualSolutionRightSize(presolved_lp,
+                                   presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Basis provided to postsolve is incorrect size\n");
+                     "Dual solution provided to postsolve is incorrect size\n");
         return HighsStatus::kError;
       }
+      presolve_.data_.recovered_solution_.dual_valid = true;
+    } else {
+      presolve_.data_.recovered_solution_.dual_valid = false;
     }
-    presolve_.data_.recovered_solution_ = solution;
+    // Copy in the basis provided. It's already been checked for
+    // consistency, so the basis is valid iff it was supplied
     presolve_.data_.recovered_basis_ = basis;
+    presolve_.data_.recovered_basis_.valid = basis_supplied;
 
     HighsPostsolveStatus postsolve_status = runPostsolve();
+
     if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
       highsLogDev(options_.log_options, HighsLogType::kVerbose,
                   "Postsolve finished\n");
       // Set solution and its status
       solution_.clear();
       solution_ = presolve_.data_.recovered_solution_;
-      solution_.value_valid = true;
-      solution_.dual_valid = true;
+      assert(solution_.value_valid);
+      if (!solution_.dual_valid) {
+        solution_.col_dual.assign(model_.lp_.num_col_, 0);
+        solution_.row_dual.assign(model_.lp_.num_row_, 0);
+      }
+      basis_ = presolve_.data_.recovered_basis_;
+      // Validity of the solution and basis should be inherited
+      //
+      // solution_.value_valid = true;
+      // solution_.dual_valid = true;
+      //
       // Set basis and its status
-      basis_.valid = true;
-      basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-      basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+      //
+      // basis_.valid = true;
+      // basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+      // basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
-      if (!no_reoptimization) {
-        // Save the options to allow the best simplex strategy to
-        // be used
+      if (basis_.valid) {
+        // Save the options to allow the best simplex strategy to be
+        // used
         HighsOptions save_options = options_;
         options_.simplex_strategy = kSimplexStrategyChoose;
         // Ensure that the parallel solver isn't used
@@ -3717,6 +3755,23 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
           const bool undo_mods = false;
           return returnFromRun(return_status, undo_mods);
         }
+      } else {
+        basis_.clear();
+        info_.objective_function_value =
+            model_.lp_.objectiveValue(solution_.col_value);
+        getLpKktFailures(options_, model_.lp_, solution_, basis_, info_);
+        if (info_.num_primal_infeasibilities == 0 &&
+            info_.num_dual_infeasibilities == 0) {
+          model_status_ = HighsModelStatus::kOptimal;
+        } else {
+          model_status_ = HighsModelStatus::kUnknown;
+        }
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Pure postsolve yields primal %ssolution, but no basis: model "
+            "status is %s\n",
+            solution_.dual_valid ? "and dual " : "",
+            modelStatusToString(model_status_).c_str());
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
