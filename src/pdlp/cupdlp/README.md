@@ -25,7 +25,7 @@ CUPDLP_CPU and CUPDLP_DEBUG should both set when building. However, they are not
 #define CUPDLP_CPU
 #define CUPDLP_DEBUG (1)
 
-## Macro definitions
+## Use of macro definitions within C++
 
 When definitions in [glbopts.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/glbopts.h) such as the following are used in [CupdlpWrapper.cpp](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.cpp) there is a g++ compiler error, because `typeof` isn't recognised
 
@@ -54,6 +54,15 @@ Three methods
 
 are declared in [cupdlp_linalg.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.h) and defined in [cupdlp_linalg.c](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.c) but not picked up by g++. Hence duplicate methods are declared and defined in [CupdlpWrapper.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.h) and [CupdlpWrapper.cpp](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.cpp).
 
+## Use of macro definitions within C
+
+Although the macro definitions in [glbopts.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/glbopts.h) are fine when used in C under Linux, they cause the following compiler errors on Windows.
+
+> error C2146: syntax error: missing ';' before identifier 'calloc' (or 'malloc')
+
+In the case of `#define CUPDLP_INIT_ZERO_VEC(var, size)`, by using new macros, `#define CUPDLP_INIT_ZERO_INT_VEC(var, size)`, `#define CUPDLP_INIT_ZERO_DOUBLE_VEC(var, size)`, to replace the use of `CUPDLP_INIT_ZERO_VEC` in `csc_alloc` `csr_alloc`, `dense_alloc` and `dense_alloc_matrix`, it has been verified that the corresponding compiler errors disappear. However, the extensive use of `CUPDLP_INIT` for general `var` is such that many macros for explicit var types would have to be written. 
+
+By creating 
 
 ## Problem with sys/time.h
 
