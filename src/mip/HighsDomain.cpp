@@ -46,6 +46,20 @@ static double activityContributionMax(double coef, const double& lb,
   }
 }
 
+static HighsCDouble computeDelta(HighsInt row, double val, double oldbound,
+                                 double newbound, double inf,
+                                 std::vector<HighsInt>& numinfs) {
+  if (oldbound == inf) {
+    --numinfs[row];
+    return HighsCDouble(newbound) * val;
+  } else if (newbound == inf) {
+    ++numinfs[row];
+    return -HighsCDouble(oldbound) * val;
+  } else {
+    return (HighsCDouble(newbound) - HighsCDouble(oldbound)) * val;
+  }
+}
+
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   col_lower_ = mipsolver.model_->col_lower_;
   col_upper_ = mipsolver.model_->col_upper_;
@@ -441,20 +455,6 @@ void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
         capacityThreshold_[cut]))) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] |= 1;
-  }
-}
-
-HighsCDouble computeDelta(HighsInt row, double val, double oldbound,
-                          double newbound, double inf,
-                          std::vector<HighsInt>& numinfs) {
-  if (oldbound == inf) {
-    --numinfs[row];
-    return HighsCDouble(newbound) * val;
-  } else if (newbound == inf) {
-    ++numinfs[row];
-    return -HighsCDouble(oldbound) * val;
-  } else {
-    return (HighsCDouble(newbound) - HighsCDouble(oldbound)) * val;
   }
 }
 
