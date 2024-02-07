@@ -444,6 +444,20 @@ void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
   }
 }
 
+HighsCDouble computeDelta(HighsInt row, double val, double oldbound,
+                          double newbound, double inf,
+                          std::vector<HighsInt>& numinfs) {
+  if (oldbound == inf) {
+    --numinfs[row];
+    return HighsCDouble(newbound) * val;
+  } else if (newbound == inf) {
+    ++numinfs[row];
+    return -HighsCDouble(oldbound) * val;
+  } else {
+    return (HighsCDouble(newbound) - HighsCDouble(oldbound)) * val;
+  }
+}
+
 void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
                                                              double oldbound,
                                                              double newbound) {
@@ -461,17 +475,8 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
   cutpool->getMatrix().forEachPositiveColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val > 0);
-        double deltamin;
-
-        if (oldbound == -kHighsInf) {
-          --activitycutsinf_[row];
-          deltamin = newbound * val;
-        } else if (newbound == -kHighsInf) {
-          ++activitycutsinf_[row];
-          deltamin = -oldbound * val;
-        } else {
-          deltamin = (newbound - oldbound) * val;
-        }
+        HighsCDouble deltamin = computeDelta(row, val, oldbound, newbound,
+                                             -kHighsInf, activitycutsinf_);
         activitycuts_[row] += deltamin;
 
         if (deltamin <= 0) {
@@ -504,18 +509,8 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
     cutpool->getMatrix().forEachPositiveColumnEntry(
         col, [&](HighsInt row, double val) {
           assert(val > 0);
-          double deltamin;
-
-          if (oldbound == -kHighsInf) {
-            --activitycutsinf_[row];
-            deltamin = newbound * val;
-          } else if (newbound == -kHighsInf) {
-            ++activitycutsinf_[row];
-            deltamin = -oldbound * val;
-          } else {
-            deltamin = (newbound - oldbound) * val;
-          }
-          activitycuts_[row] += deltamin;
+          activitycuts_[row] += computeDelta(row, val, oldbound, newbound,
+                                             -kHighsInf, activitycutsinf_);
 
           if (domain->infeasible_reason.index == row) return false;
 
@@ -541,17 +536,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   cutpool->getMatrix().forEachNegativeColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val < 0);
-        double deltamin;
-
-        if (oldbound == kHighsInf) {
-          --activitycutsinf_[row];
-          deltamin = newbound * val;
-        } else if (newbound == kHighsInf) {
-          ++activitycutsinf_[row];
-          deltamin = -oldbound * val;
-        } else {
-          deltamin = (newbound - oldbound) * val;
-        }
+        HighsCDouble deltamin = computeDelta(row, val, oldbound, newbound,
+                                             kHighsInf, activitycutsinf_);
         activitycuts_[row] += deltamin;
 
         if (deltamin <= 0) {
@@ -582,18 +568,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
     cutpool->getMatrix().forEachNegativeColumnEntry(
         col, [&](HighsInt row, double val) {
           assert(val < 0);
-          double deltamin;
-
-          if (oldbound == kHighsInf) {
-            --activitycutsinf_[row];
-            deltamin = newbound * val;
-          } else if (newbound == kHighsInf) {
-            ++activitycutsinf_[row];
-            deltamin = -oldbound * val;
-          } else {
-            deltamin = (newbound - oldbound) * val;
-          }
-          activitycuts_[row] += deltamin;
+          activitycuts_[row] += computeDelta(row, val, oldbound, newbound,
+                                             kHighsInf, activitycutsinf_);
 
           if (domain->infeasible_reason.index == row) return false;
 
@@ -1567,16 +1543,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
-      double deltamin;
-      if (oldbound == -kHighsInf) {
-        --activitymininf_[mip->a_matrix_.index_[i]];
-        deltamin = newbound * mip->a_matrix_.value_[i];
-      } else if (newbound == -kHighsInf) {
-        ++activitymininf_[mip->a_matrix_.index_[i]];
-        deltamin = -oldbound * mip->a_matrix_.value_[i];
-      } else {
-        deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
-      }
+      HighsCDouble deltamin =
+          computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                       oldbound, newbound, -kHighsInf, activitymininf_);
       activitymin_[mip->a_matrix_.index_[i]] += deltamin;
 
 #ifndef NDEBUG
@@ -1618,16 +1587,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         markPropagate(mip->a_matrix_.index_[i]);
     } else {
-      double deltamax;
-      if (oldbound == -kHighsInf) {
-        --activitymaxinf_[mip->a_matrix_.index_[i]];
-        deltamax = newbound * mip->a_matrix_.value_[i];
-      } else if (newbound == -kHighsInf) {
-        ++activitymaxinf_[mip->a_matrix_.index_[i]];
-        deltamax = -oldbound * mip->a_matrix_.value_[i];
-      } else {
-        deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
-      }
+      HighsCDouble deltamax =
+          computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                       oldbound, newbound, -kHighsInf, activitymaxinf_);
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
@@ -1684,29 +1646,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     std::swap(oldbound, newbound);
     for (HighsInt i = start; i != end; ++i) {
       if (mip->a_matrix_.value_[i] > 0) {
-        double deltamin;
-        if (oldbound == -kHighsInf) {
-          --activitymininf_[mip->a_matrix_.index_[i]];
-          deltamin = newbound * mip->a_matrix_.value_[i];
-        } else if (newbound == -kHighsInf) {
-          ++activitymininf_[mip->a_matrix_.index_[i]];
-          deltamin = -oldbound * mip->a_matrix_.value_[i];
-        } else {
-          deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
-        }
-        activitymin_[mip->a_matrix_.index_[i]] += deltamin;
+        activitymin_[mip->a_matrix_.index_[i]] +=
+            computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                         oldbound, newbound, -kHighsInf, activitymininf_);
       } else {
-        double deltamax;
-        if (oldbound == -kHighsInf) {
-          --activitymaxinf_[mip->a_matrix_.index_[i]];
-          deltamax = newbound * mip->a_matrix_.value_[i];
-        } else if (newbound == -kHighsInf) {
-          ++activitymaxinf_[mip->a_matrix_.index_[i]];
-          deltamax = -oldbound * mip->a_matrix_.value_[i];
-        } else {
-          deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
-        }
-        activitymax_[mip->a_matrix_.index_[i]] += deltamax;
+        activitymax_[mip->a_matrix_.index_[i]] +=
+            computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                         oldbound, newbound, -kHighsInf, activitymaxinf_);
       }
     }
 
@@ -1736,16 +1682,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
-      double deltamax;
-      if (oldbound == kHighsInf) {
-        --activitymaxinf_[mip->a_matrix_.index_[i]];
-        deltamax = newbound * mip->a_matrix_.value_[i];
-      } else if (newbound == kHighsInf) {
-        ++activitymaxinf_[mip->a_matrix_.index_[i]];
-        deltamax = -oldbound * mip->a_matrix_.value_[i];
-      } else {
-        deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
-      }
+      HighsCDouble deltamax =
+          computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                       oldbound, newbound, kHighsInf, activitymaxinf_);
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
@@ -1790,17 +1729,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         // propagateinds_.push_back(mip->a_matrix_.index_[i]);
       }
     } else {
-      double deltamin;
-      if (oldbound == kHighsInf) {
-        --activitymininf_[mip->a_matrix_.index_[i]];
-        deltamin = newbound * mip->a_matrix_.value_[i];
-      } else if (newbound == kHighsInf) {
-        ++activitymininf_[mip->a_matrix_.index_[i]];
-        deltamin = -oldbound * mip->a_matrix_.value_[i];
-      } else {
-        deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
-      }
-
+      HighsCDouble deltamin =
+          computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                       oldbound, newbound, kHighsInf, activitymininf_);
       activitymin_[mip->a_matrix_.index_[i]] += deltamin;
 
 #ifndef NDEBUG
@@ -1860,30 +1791,13 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     std::swap(oldbound, newbound);
     for (HighsInt i = start; i != end; ++i) {
       if (mip->a_matrix_.value_[i] > 0) {
-        double deltamax;
-        if (oldbound == kHighsInf) {
-          --activitymaxinf_[mip->a_matrix_.index_[i]];
-          deltamax = newbound * mip->a_matrix_.value_[i];
-        } else if (newbound == kHighsInf) {
-          ++activitymaxinf_[mip->a_matrix_.index_[i]];
-          deltamax = -oldbound * mip->a_matrix_.value_[i];
-        } else {
-          deltamax = (newbound - oldbound) * mip->a_matrix_.value_[i];
-        }
-        activitymax_[mip->a_matrix_.index_[i]] += deltamax;
+        activitymax_[mip->a_matrix_.index_[i]] +=
+            computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                         oldbound, newbound, kHighsInf, activitymaxinf_);
       } else {
-        double deltamin;
-        if (oldbound == kHighsInf) {
-          --activitymininf_[mip->a_matrix_.index_[i]];
-          deltamin = newbound * mip->a_matrix_.value_[i];
-        } else if (newbound == kHighsInf) {
-          ++activitymininf_[mip->a_matrix_.index_[i]];
-          deltamin = -oldbound * mip->a_matrix_.value_[i];
-        } else {
-          deltamin = (newbound - oldbound) * mip->a_matrix_.value_[i];
-        }
-
-        activitymin_[mip->a_matrix_.index_[i]] += deltamin;
+        activitymin_[mip->a_matrix_.index_[i]] +=
+            computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
+                         oldbound, newbound, kHighsInf, activitymininf_);
       }
     }
 
