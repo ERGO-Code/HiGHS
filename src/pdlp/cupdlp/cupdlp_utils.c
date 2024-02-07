@@ -1288,7 +1288,8 @@ cupdlp_retcode dense_alloc_matrix(CUPDLPdense *dense, cupdlp_int nRows,
                                   cupdlp_int nCols, void *src,
                                   CUPDLP_MATRIX_FORMAT src_matrix_format) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
+  //  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
 
   switch (src_matrix_format) {
     case DENSE:
@@ -1326,9 +1327,12 @@ cupdlp_retcode csr_alloc_matrix(CUPDLPcsr *csr, cupdlp_int nRows,
       break;
   }
   // todo make sure this is right
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
+  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
+  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(csr->rowMatElem, nnz);
 
   switch (src_matrix_format) {
     case DENSE:
@@ -1365,9 +1369,12 @@ cupdlp_retcode csc_alloc_matrix(CUPDLPcsc *csc, cupdlp_int nRows,
     default:
       break;
   }
-  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
-  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
-  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
+  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
+  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
 
   switch (src_matrix_format) {
     case DENSE:
@@ -1392,7 +1399,8 @@ cupdlp_retcode dense_alloc(CUPDLPdense *dense, cupdlp_int nRows,
   dense->nRows = nRows;
   dense->nCols = nCols;
   dense->data = cupdlp_NULL;
-  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
+  //  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
 
   CUPDLP_COPY_VEC(dense->data, val, cupdlp_float, nRows * nCols);
 exit_cleanup:
@@ -1409,9 +1417,13 @@ cupdlp_retcode csr_alloc(CUPDLPcsr *csr, cupdlp_int nRows, cupdlp_int nCols,
   csr->rowMatBeg = cupdlp_NULL;
   csr->rowMatIdx = cupdlp_NULL;
   csr->rowMatElem = cupdlp_NULL;
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
-  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
+  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
+
+  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
+  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
+  CUPDLP_INIT_ZERO_DOUBLE_VEC(csr->rowMatElem, nnz);
 
   CUPDLP_COPY_VEC(csr->rowMatBeg, row_ptr, cupdlp_int, nRows + 1);
   CUPDLP_COPY_VEC(csr->rowMatIdx, col_ind, cupdlp_int, nnz);
