@@ -2891,14 +2891,13 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             bool no_reoptimization) {
+HighsStatus Highs::postsolve(const HighsSolution& solution) {
   HighsBasis basis;
-  return this->postsolve(solution, basis, no_reoptimization);
+  return this->postsolve(solution, basis);
 }
 
 HighsStatus Highs::postsolve(const HighsSolution& solution,
-                             const HighsBasis& basis, bool no_reoptimization) {
+                             const HighsBasis& basis) {
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
       model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
@@ -2911,8 +2910,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
                  presolveStatusToString(model_presolve_status_).c_str());
     return HighsStatus::kWarning;
   }
-  HighsStatus return_status =
-      callRunPostsolve(solution, basis, no_reoptimization);
+  HighsStatus return_status = callRunPostsolve(solution, basis);
   return returnFromHighs(return_status);
 }
 
@@ -3599,8 +3597,7 @@ HighsStatus Highs::callSolveMip() {
 
 // Only called from Highs::postsolve
 HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
-                                    const HighsBasis& basis,
-                                    bool no_reoptimization) {
+                                    const HighsBasis& basis) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
