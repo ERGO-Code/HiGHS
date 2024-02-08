@@ -31,6 +31,14 @@ typedef struct {
   double mip_dual_bound;
   double mip_gap;
   double* mip_solution;
+  HighsInt cutpool_num_col;
+  HighsInt cutpool_num_cut;
+  HighsInt cutpool_num_nz;
+  HighsInt* cutpool_start;
+  HighsInt* cutpool_index;
+  double* cutpool_value;
+  double* cutpool_lower;
+  double* cutpool_upper;
 } HighsCallbackDataOut;
 
 typedef struct {
