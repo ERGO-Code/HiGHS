@@ -1170,14 +1170,35 @@ HighsStatus Highs::run() {
     time += timer_.read(timer_.solve_clock);
   };
 
+  // Decide whether to use presolve.
+  //
+  // An unconstrained LP is one with empty constraint matrix. It may have rows
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
-  if (basis_.valid || options_.presolve == kHighsOffString ||
-      unconstrained_lp) {
-    // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix
-    ekk_instance_.lp_name_ =
-        "LP without presolve, or with basis, or unconstrained";
+  // Lazy constraints can be added if the user callback is defined,
+  // and the lazy constraints callback is active
+  const bool allow_lazy_constraints = callback_.user_callback &&
+    callback_.active[kCallbackMipDefineLazyConstraints];
+  const bool presolve_on = options_.presolve == kHighsOnString;
+  if (presolve_on && allow_lazy_constraints)
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Presolve cannot be performed when lazy constraints are permitted\n");
+  // Now determine whether presolve should not be run
+  //
+  // No presolve if presolve is off - obviously
+  bool no_presolve = options_.presolve == kHighsOffString;
+  // No presolve if there is a valid basis - until presolve can
+  // maintain a basis
+  no_presolve = basis_.valid || no_presolve;
+  // No presolve if the model is an unconstrained LP - since it's
+  // solved directly
+  no_presolve = unconstrained_lp || no_presolve;
+   // No presolve if lazy constraints can be added - until the rules
+   // that are OK in presolve can be identified
+  no_presolve = allow_lazy_constraints || no_presolve;
+ 
+  if (no_presolve) {
+    ekk_instance_.lp_name_ = "LP without presolve";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
@@ -1958,6 +1979,8 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
 HighsStatus Highs::startCallback(const int callback_type) {
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
+  printf("Highs::startCallback (%d, %d, %d)\n",
+	 int(kCallbackMin), int(callback_type), int(kCallbackMax));
   assert(callback_type_ok);
   if (!callback_type_ok) return HighsStatus::kError;
   if (!this->callback_.user_callback) {
