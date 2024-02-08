@@ -1175,14 +1175,6 @@ HighsStatus Highs::run() {
   // An unconstrained LP is one with empty constraint matrix. It may have rows
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
-  // Lazy constraints can be added if the user callback is defined,
-  // and the lazy constraints callback is active
-  const bool allow_lazy_constraints = callback_.user_callback &&
-    callback_.active[kCallbackMipDefineLazyConstraints];
-  const bool presolve_on = options_.presolve == kHighsOnString;
-  if (presolve_on && allow_lazy_constraints)
-    highsLogUser(log_options, HighsLogType::kInfo,
-		 "Presolve cannot be performed when lazy constraints are permitted\n");
   // Now determine whether presolve should not be run
   //
   // No presolve if presolve is off - obviously
@@ -1193,10 +1185,7 @@ HighsStatus Highs::run() {
   // No presolve if the model is an unconstrained LP - since it's
   // solved directly
   no_presolve = unconstrained_lp || no_presolve;
-   // No presolve if lazy constraints can be added - until the rules
-   // that are OK in presolve can be identified
-  no_presolve = allow_lazy_constraints || no_presolve;
- 
+
   if (no_presolve) {
     ekk_instance_.lp_name_ = "LP without presolve";
     // If there is a valid HiGHS basis, refine any status values that
@@ -1979,8 +1968,6 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
 HighsStatus Highs::startCallback(const int callback_type) {
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
-  printf("Highs::startCallback (%d, %d, %d)\n",
-	 int(kCallbackMin), int(callback_type), int(kCallbackMax));
   assert(callback_type_ok);
   if (!callback_type_ok) return HighsStatus::kError;
   if (!this->callback_.user_callback) {
@@ -1997,21 +1984,7 @@ HighsStatus Highs::startCallback(const int callback_type) {
 }
 
 HighsStatus Highs::startCallback(const HighsCallbackType callback_type) {
-  const bool callback_type_ok =
-      callback_type >= kCallbackMin && callback_type <= kCallbackMax;
-  assert(callback_type_ok);
-  if (!callback_type_ok) return HighsStatus::kError;
-  if (!this->callback_.user_callback) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Cannot start callback when user_callback not defined\n");
-    return HighsStatus::kError;
-  }
-  assert(int(this->callback_.active.size()) == kNumCallbackType);
-  this->callback_.active[callback_type] = true;
-  // Possibly modify the logging callback activity
-  if (callback_type == kCallbackLogging)
-    options_.log_options.user_callback_active = true;
-  return HighsStatus::kOk;
+  return startCallback(int(callback_type));
 }
 
 HighsStatus Highs::stopCallback(const int callback_type) {
@@ -3518,8 +3491,10 @@ HighsStatus Highs::callSolveMip() {
     solution_.value_valid = true;
   }
   // Run the MIP solver
-  HighsInt log_dev_level = options_.log_dev_level;
-  //  options_.log_dev_level = kHighsLogDevLevelInfo;
+  
+  // const HighsInt log_dev_level = options_.log_dev_level;
+  // options_.log_dev_level = kHighsLogDevLevelInfo;
+  
   // Check that the model isn't row-wise
   assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
@@ -3531,9 +3506,30 @@ HighsStatus Highs::callSolveMip() {
                                   options_.primal_feasibility_tolerance);
   }
   HighsLp& lp = has_semi_variables ? use_lp : model_.lp_;
+
+  // Determine whether to override presolve option
+  const std::string presolve = options_.presolve;
+  if (options_.presolve != kHighsOffString) {
+    // Remember that the default value of options_.presolve is
+    // kHighsChooseString, but presolve is always done unless
+    // explicitly set to kHighsOffString
+    //
+    // Lazy constraints can be added if the user callback is defined,
+    // and the lazy constraints callback is active
+    const bool allow_lazy_constraints = callback_.user_callback &&
+      callback_.active[kCallbackMipDefineLazyConstraints];
+    if (allow_lazy_constraints) {
+      options_.presolve = kHighsOffString;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+		   "Presolve cannot be performed when lazy constraints are permitted\n");
+    }
+  }
   HighsMipSolver solver(callback_, options_, lp, solution_);
   solver.run();
-  options_.log_dev_level = log_dev_level;
+  options_.presolve = presolve;
+
+  //  options_.log_dev_level = log_dev_level;
+
   // Set the return_status, model status and, for completeness, scaled
   // model status
   HighsStatus return_status =
