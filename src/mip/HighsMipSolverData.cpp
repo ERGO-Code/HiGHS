@@ -1502,11 +1502,6 @@ restart:
     status = evaluateRootLp();
     lp.removeObsoleteRows();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-
-    // Possible cut extraction callback
-    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-        mipsolver.callback_->callbackActive(kCallbackMipGetCutPool))
-      mipsolver.callbackGetCutPool();
   }
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
@@ -1662,6 +1657,10 @@ restart:
   }
 
   printDisplayLine();
+  // Possible cut extraction callback
+  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->callbackActive(kCallbackMipGetCutPool))
+    mipsolver.callbackGetCutPool();
   if (checkLimits()) return;
 
   do {

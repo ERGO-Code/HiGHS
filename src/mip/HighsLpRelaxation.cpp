@@ -31,7 +31,6 @@ void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
   num_cut = num_lp_row - num_model_row;
-  printf("HighsLpRelaxation::getCutPool: num_cut = %d\n", int(num_cut));
   cut_lower.resize(num_cut);
   cut_upper.resize(num_cut);
   // Get a map from row index to cut row index
@@ -76,18 +75,12 @@ void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iCut = cut_row_index[lp.a_matrix_.index_[iEl]];
       if (iCut >= 0) {
-        //      printf("iEl %2d has iCol = %2d; iRow = %2d and iCut = %2d;
-        //      cut_matrix_length[iCut] = %2d\n",
-        //	     int(iEl), int(iCol), int(lp.a_matrix_.index_[iEl]),
-        //int(iCut), int(cut_matrix_length[iCut]));
         cut_matrix.index_[cut_matrix_length[iCut]] = iCol;
         cut_matrix.value_[cut_matrix_length[iCut]] = lp.a_matrix_.value_[iEl];
         cut_matrix_length[iCut]++;
       }
     }
   }
-  //  printf("HighsLpRelaxation::getCutPool: num_cut_nz = %d\n",
-  //  int(num_cut_nz));
 }
 
 void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,

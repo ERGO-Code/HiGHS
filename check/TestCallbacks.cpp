@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -163,15 +163,17 @@ HighsCallbackFunctionType userMipCutPoolCallback =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
-      printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
-             int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
-             int(data_out->cutpool_num_nz));
-      for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
-        printf("Cut %d\n", int(iCut));
-        for (HighsInt iEl = data_out->cutpool_start[iCut];
-             iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
-          printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
-                 data_out->cutpool_value[iEl]);
+      if (dev_run) {
+        printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
+               int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
+               int(data_out->cutpool_num_nz));
+        for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
+          printf("Cut %d\n", int(iCut));
+          for (HighsInt iEl = data_out->cutpool_start[iCut];
+               iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
+            printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
+                   data_out->cutpool_value[iEl]);
+          }
         }
       }
     };

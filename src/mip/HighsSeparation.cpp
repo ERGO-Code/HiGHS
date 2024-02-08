@@ -138,11 +138,6 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       if (mipdata.upper_limit != kHighsInf)
         mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
     }
-    // Possible cut extraction callback
-    if (!mipdata.mipsolver.submip &&
-        mipdata.mipsolver.callback_->user_callback &&
-        mipdata.mipsolver.callback_->callbackActive(kCallbackMipGetCutPool))
-      mipdata.mipsolver.callbackGetCutPool();
   }
 
   return ncuts;
