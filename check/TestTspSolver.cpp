@@ -2,6 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
+#include "mip/HighsCutPool.h"
 
 #include <fstream>
 #include <sstream>
@@ -32,14 +33,23 @@ HighsCallbackFunctionType userDefineLazyConstraints =
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
       TspData tsp_data = *(static_cast<TspData*>(user_callback_data));
-      tsp_data.getTours(data_out->mip_solution);
-      if (dev_run) {
+      if (dev_run) 
 	printf("TSP: %s has dimension %d and solution has %d tours\n",
 	       tsp_data.name_.c_str(),
 	       int(tsp_data.dimension_),
 	       int(tsp_data.tours_.size()));
-      }
-	assert(343 == 545);
+      tsp_data.getTours(data_out->mip_solution);
+      HighsLp lp;
+      tsp_data.addCuts(lp);
+      
+      HighsCutSet cutset;
+      cutset.cutindices.resize(lp.num_row_);
+      cutset.ARstart_ = std::move(lp.a_matrix_.start_);
+      cutset.ARindex_ = std::move(lp.a_matrix_.index_);
+      cutset.ARvalue_ = std::move(lp.a_matrix_.value_);
+      cutset.lower_ = std::move(lp.row_lower_);
+      cutset.upper_ = std::move(lp.row_upper_);
+      assert(343 == 545);
     };
 
 TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
