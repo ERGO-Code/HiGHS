@@ -43,6 +43,12 @@ typedef struct {
 
 typedef struct {
   int user_interrupt;
+  HighsInt cutset_num_cut;
+  HighsInt* cutset_ARstart;
+  HighsInt* cutset_ARindex;
+  double* cutset_ARvalue;
+  double* cutset_lower;
+  double* cutset_upper;
 } HighsCallbackDataIn;
 
 // Additional callback handling

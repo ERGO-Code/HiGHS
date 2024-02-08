@@ -33,23 +33,33 @@ HighsCallbackFunctionType userDefineLazyConstraints =
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
       TspData tsp_data = *(static_cast<TspData*>(user_callback_data));
+      tsp_data.getTours(data_out->mip_solution);
       if (dev_run) 
 	printf("TSP: %s has dimension %d and solution has %d tours\n",
 	       tsp_data.name_.c_str(),
 	       int(tsp_data.dimension_),
 	       int(tsp_data.tours_.size()));
-      tsp_data.getTours(data_out->mip_solution);
       HighsLp lp;
       tsp_data.addCuts(lp);
-      
-      HighsCutSet cutset;
-      cutset.cutindices.resize(lp.num_row_);
-      cutset.ARstart_ = std::move(lp.a_matrix_.start_);
-      cutset.ARindex_ = std::move(lp.a_matrix_.index_);
-      cutset.ARvalue_ = std::move(lp.a_matrix_.value_);
-      cutset.lower_ = std::move(lp.row_lower_);
-      cutset.upper_ = std::move(lp.row_upper_);
-      assert(343 == 545);
+
+      const HighsInt num_cut = lp.num_row_;
+      const HighsInt num_nz = lp.a_matrix_.numNz();
+      data_in->cutset_num_cut = num_cut;
+      data_in->cutset_ARstart = (HighsInt*)malloc(sizeof(HighsInt) * (num_cut+1));
+      data_in->cutset_ARindex = (HighsInt*)malloc(sizeof(HighsInt) * num_nz);
+      data_in->cutset_ARvalue = (double*)malloc(sizeof(double) * num_nz);
+      data_in->cutset_lower = (double*)malloc(sizeof(double) * num_cut);
+      data_in->cutset_upper = (double*)malloc(sizeof(double) * num_cut);
+      data_in->cutset_ARstart[0] = lp.a_matrix_.start_[0];
+      for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
+	data_in->cutset_ARstart[iCut+1] = lp.a_matrix_.start_[iCut+1];
+	data_in->cutset_lower[iCut] = lp.row_lower_[iCut];
+	data_in->cutset_upper[iCut] = lp.row_upper_[iCut];
+      }
+      for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
+	data_in->cutset_ARindex[iEl] = lp.a_matrix_.index_[iEl];
+	data_in->cutset_ARvalue[iEl] = lp.a_matrix_.value_[iEl];
+      }
     };
 
 TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
@@ -76,7 +86,7 @@ TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
 void TspData::initialise(std::string& filename, HighsLp& lp) {
   std::string word;
   std::string format = "";
-  HighsInt expected_num_distances;
+  HighsInt expected_num_distances = 0;
   std::vector<HighsInt> distances;
   std::ifstream f;
   f.open(filename.c_str(), std::ios::in);
@@ -300,6 +310,7 @@ void TspData::addCuts(HighsLp& lp) {
   assert(num_tours>1);
   if (num_tours == 0) return;
 
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   for (HighsInt k = 0; k < num_tours; k++) {
     // Add constraint to eliminate this sub-tour
     std::vector<HighsInt>& tour = tours_[k];
@@ -317,4 +328,5 @@ void TspData::addCuts(HighsLp& lp) {
     lp.a_matrix_.start_.push_back(HighsInt(lp.a_matrix_.index_.size()));
     lp.num_row_++;
   }
+  lp.a_matrix_.num_row_ = lp.num_row_;
 }
