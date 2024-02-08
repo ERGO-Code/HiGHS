@@ -1931,6 +1931,7 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipDefineLazyConstraints]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
       defineLazyConstraints(mipsolver.solution_objective_);
       assert(121==323);
     }

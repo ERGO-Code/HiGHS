@@ -19,7 +19,7 @@ class TspData {
   std::vector<std::pair<HighsInt, HighsInt>> k_to_i_j_;
   std::vector<std::vector<HighsInt>> tours_;
   void initialise(std::string& filename, HighsLp& lp);
-  void getTours(const std::vector<double>& solution);
+  void getTours(const double* solution);
   void addCuts(HighsLp& lp);
 
 };
@@ -31,8 +31,13 @@ HighsCallbackFunctionType userDefineLazyConstraints =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
+      TspData tsp_data = *(static_cast<TspData*>(user_callback_data));
+      tsp_data.getTours(data_out->mip_solution);
       if (dev_run) {
-        printf("userDefineLazyConstraints:\n");
+	printf("TSP: %s has dimension %d and solution has %d tours\n",
+	       tsp_data.name_.c_str(),
+	       int(tsp_data.dimension_),
+	       int(tsp_data.tours_.size()));
       }
 	assert(343 == 545);
     };
@@ -50,7 +55,8 @@ TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
   //  highs.readModel(filename);
   highs.passModel(lp);
   //  MipData user_callback_data;
-  highs.setCallback(userDefineLazyConstraints);  //, p_user_callback_data);
+  TspData* p_user_callback_data = &tsp_data;
+  highs.setCallback(userDefineLazyConstraints, p_user_callback_data);
   printf("Calling highs.setCallback\n");
   highs.startCallback(kCallbackMipDefineLazyConstraints);
   highs.run();
@@ -222,10 +228,10 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
 }
 
-void TspData::getTours(const std::vector<double>& solution) {
+void TspData::getTours(const double* solution) {
   tours_.clear();
-  HighsInt num_col = solution.size();
-  HighsInt dimension = (1 + std::sqrt(1+4*num_col)) / 2;
+  const HighsInt dimension = dimension_;//(1 + std::sqrt(1+4*num_col)) / 2;
+  const HighsInt num_col =  dimension*(dimension-1);
   if (kDebugReport) printf("dimension = %d\n", dimension);
   std::vector<HighsInt> to_node;
   to_node.assign(dimension, -1);
