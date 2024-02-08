@@ -1928,6 +1928,13 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
       assert(!interrupt);
     }
   }
+  if (mipsolver.callback_->user_callback) {
+    if (mipsolver.callback_->active[kCallbackMipDefineLazyConstraints]) {
+      mipsolver.callback_->clearHighsCallbackDataOut();
+      defineLazyConstraints(mipsolver.solution_objective_);
+      assert(121==323);
+    }
+  }
 
   if (mipsolver.options_mip_->mip_improving_solution_save) {
     HighsObjectiveSolution record;
@@ -2003,3 +2010,14 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.mip_gap = 1e-2 * mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
+
+void HighsMipSolverData::defineLazyConstraints(const double mipsolver_objective_value) {
+  assert(mipsolver.callback_->user_callback);
+  assert(mipsolver.callback_->callbackActive(kCallbackMipDefineLazyConstraints));
+  mipsolver.callback_->user_callback(kCallbackMipDefineLazyConstraints,
+				     "Define lazy constraints",
+				     &mipsolver.callback_->data_out,
+				     &mipsolver.callback_->data_in,
+				     mipsolver.callback_->user_callback_data);
+}
+

@@ -12,6 +12,7 @@ HighsCallbackFunctionType userDefineLazyConstraints =
        void* user_callback_data) {
       if (dev_run) {
         printf("userDefineLazyConstraints:\n");
+	assert(343 == 545);
       }
     };
 

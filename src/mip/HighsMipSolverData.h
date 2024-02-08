@@ -191,6 +191,7 @@ struct HighsMipSolverData {
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
+  void defineLazyConstraints(const double mipsolver_objective_value);
 };
 
 #endif
