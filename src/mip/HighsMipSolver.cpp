@@ -661,9 +661,9 @@ void HighsMipSolver::callbackGetCutPool() const {
                           cut_lower, cut_upper, cut_matrix);
 
   data_out.cutpool_num_nz = cut_matrix.numNz();
-  data_out.cutpool_start = cut_matrix.start_.data();
-  data_out.cutpool_index = cut_matrix.index_.data();
-  data_out.cutpool_value = cut_matrix.value_.data();
+  data_out.cutpool_ARstart = cut_matrix.start_.data();
+  data_out.cutpool_ARindex = cut_matrix.index_.data();
+  data_out.cutpool_ARvalue = cut_matrix.value_.data();
   data_out.cutpool_lower = cut_lower.data();
   data_out.cutpool_upper = cut_upper.data();
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",

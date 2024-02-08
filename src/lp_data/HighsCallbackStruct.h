@@ -34,9 +34,9 @@ typedef struct {
   HighsInt cutpool_num_col;
   HighsInt cutpool_num_cut;
   HighsInt cutpool_num_nz;
-  HighsInt* cutpool_start;
-  HighsInt* cutpool_index;
-  double* cutpool_value;
+  HighsInt* cutpool_ARstart;
+  HighsInt* cutpool_ARindex;
+  double* cutpool_ARvalue;
   double* cutpool_lower;
   double* cutpool_upper;
 } HighsCallbackDataOut;

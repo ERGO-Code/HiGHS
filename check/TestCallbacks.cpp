@@ -169,10 +169,10 @@ HighsCallbackFunctionType userMipCutPoolCallback =
                int(data_out->cutpool_num_nz));
         for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
           printf("Cut %d\n", int(iCut));
-          for (HighsInt iEl = data_out->cutpool_start[iCut];
-               iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
-            printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
-                   data_out->cutpool_value[iEl]);
+          for (HighsInt iEl = data_out->cutpool_ARstart[iCut];
+               iEl < data_out->cutpool_ARstart[iCut + 1]; iEl++) {
+            printf("   %2d %11.5g\n", int(data_out->cutpool_ARindex[iEl]),
+                   data_out->cutpool_ARvalue[iEl]);
           }
         }
       }
