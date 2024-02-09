@@ -1,0 +1,19 @@
+name: test-csharp
+
+on: [push, pull_request]
+
+jobs:
+  fast_build_release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -S $GITHUB_WORKSPACE -B build -DCSHARP=ON 
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: .\build\RELEASE\bin\sharpexample.exe
