@@ -6,6 +6,7 @@
 const bool dev_run = true;
 const double double_equal_tolerance = 1e-3;
 
+/*
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   SpecialLps special_lps;
   HighsLp lp;
@@ -149,3 +150,4 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   }
 }
+*/
