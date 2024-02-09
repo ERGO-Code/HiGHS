@@ -1002,10 +1002,10 @@ cupdlp_retcode PDHG_PostSolve(CUPDLPwork *pdhg, cupdlp_int nCols_origin,
   cupdlp_float *col_buffer2 = NULL;
   // no need for row_buffer2
   // cupdlp_float *row_buffer2 = NULL;
-  CUPDLP_INIT(col_buffer, problem->nCols);
-  CUPDLP_INIT(row_buffer, problem->nRows);
-  CUPDLP_INIT(col_buffer2, problem->nCols);
-  // CUPDLP_INIT(row_buffer2, problem->nRows);
+  CUPDLP_INIT_DOUBLE(col_buffer, problem->nCols);
+  CUPDLP_INIT_DOUBLE(row_buffer, problem->nRows);
+  CUPDLP_INIT_DOUBLE(col_buffer2, problem->nCols);
+  // CUPDLP_INIT_DOUBLE(row_buffer2, problem->nRows);
 
   // unscale
   if (scaling->ifScaled) {

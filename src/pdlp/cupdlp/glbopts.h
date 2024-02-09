@@ -168,17 +168,33 @@ extern "C" {
       goto exit_cleanup;                                        \
     }                                                           \
   }
-#define CUPDLP_INIT_INT(var, size)                                  \
+#define CUPDLP_INIT_DOUBLE(var, size)                                  \
   {                                                             \
-    (var) = (int*)malloc((size) * sizeof(int)); \
+    (var) = (double*)malloc((size) * sizeof(double)); \
     if ((var) == cupdlp_NULL) {                                 \
       retcode = RETCODE_FAILED;                                 \
       goto exit_cleanup;                                        \
     }                                                           \
   }
-#define CUPDLP_INIT_ZERO(var, size)                          \
+  //#define CUPDLP_INIT_ZERO(var, size)			     \
+//  {                                                          \
+//    (var) = (typeof(var))calloc(size, sizeof(typeof(*var))); \
+//    if ((var) == cupdlp_NULL) {                              \
+//      retcode = RETCODE_FAILED;                              \
+//      goto exit_cleanup;                                     \
+//    }                                                        \
+//  }
+#define CUPDLP_INIT_ZERO_DOUBLE(var, size)                          \
   {                                                          \
-    (var) = (typeof(var))calloc(size, sizeof(typeof(*var))); \
+    (var) = (double*)calloc(size, sizeof(double)); \
+    if ((var) == cupdlp_NULL) {                              \
+      retcode = RETCODE_FAILED;                              \
+      goto exit_cleanup;                                     \
+    }                                                        \
+  }
+#define CUPDLP_INIT_ZERO_CUPDLP_WORK(var, size)                          \
+  {                                                          \
+    (var) = (CUPDLPwork*)calloc(size, sizeof(CUPDLPwork)); \
     if ((var) == cupdlp_NULL) {                              \
       retcode = RETCODE_FAILED;                              \
       goto exit_cleanup;                                     \

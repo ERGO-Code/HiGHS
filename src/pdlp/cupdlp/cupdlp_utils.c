@@ -1043,7 +1043,7 @@ exit_cleanup:
 cupdlp_retcode PDHG_Create(CUPDLPwork **ww, CUPDLPproblem *lp,
                            CUPDLPscaling *scaling) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT_ZERO(*ww, 1);
+  CUPDLP_INIT_ZERO_CUPDLP_WORK(*ww, 1);
 
   CUPDLPwork *w = *ww;
   w->problem = lp;

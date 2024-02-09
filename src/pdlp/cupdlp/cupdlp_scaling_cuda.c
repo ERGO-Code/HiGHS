@@ -56,8 +56,8 @@ cupdlp_retcode cupdlp_ruiz_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
 
   cupdlp_float *current_col_scaling;  // for variable
   cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
+  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
 
   for (cupdlp_int i = 0; i < scaling->RuizTimes; i++) {
     cupdlp_zero(current_col_scaling, cupdlp_float, nCols);
@@ -130,8 +130,8 @@ cupdlp_retcode cupdlp_l2norm_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
 
   cupdlp_float *current_col_scaling;  // for variable
   cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
+  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
 
   if (nRows > 0 && csc != NULL) {
     for (int j = 0; j < nCols; j++) {
@@ -181,8 +181,8 @@ cupdlp_retcode cupdlp_pc_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
 
   cupdlp_float *current_col_scaling;  // for variable
   cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
+  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
 
   if (alpha > 2.0 || alpha < 0.0) {
     cupdlp_printf("alpha should be in [0, 2]\n");
@@ -402,8 +402,8 @@ cupdlp_retcode Init_Scaling(CUPDLPscaling *scaling, cupdlp_int ncols,
   scaling->RuizTimes = 10;
   scaling->RuizNorm = INFINITY;
   scaling->PcAlpha = 1.0;
-  CUPDLP_INIT(scaling->colScale, ncols);
-  CUPDLP_INIT(scaling->rowScale, nrows);
+  CUPDLP_INIT_DOUBLE(scaling->colScale, ncols);
+  CUPDLP_INIT_DOUBLE(scaling->rowScale, nrows);
 
   for (cupdlp_int iCol = 0; iCol < ncols; iCol++) scaling->colScale[iCol] = 1.0;
   for (cupdlp_int iRow = 0; iRow < nrows; iRow++) scaling->rowScale[iRow] = 1.0;
