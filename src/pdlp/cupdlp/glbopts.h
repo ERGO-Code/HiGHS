@@ -105,22 +105,25 @@ extern "C" {
 #else
 #define CUPDLP_COPY_VEC(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
-#define CUPDLP_INIT_VEC(var, size)                              \
-  {                                                             \
-    (var) = (typeof(var))malloc((size) * sizeof(typeof(*var))); \
-    if ((var) == cupdlp_NULL) {                                 \
-      retcode = RETCODE_FAILED;                                 \
-      goto exit_cleanup;                                        \
-    }                                                           \
-  }
-#define CUPDLP_INIT_ZERO_VEC(var, size)                      \
-  {                                                          \
-    (var) = (typeof(var))calloc(size, sizeof(typeof(*var))); \
-    if ((var) == cupdlp_NULL) {                              \
-      retcode = RETCODE_FAILED;                              \
-      goto exit_cleanup;                                     \
-    }                                                        \
-  }
+
+  //CUPDLP_INIT_VEC is not used
+  //
+  //#define CUPDLP_INIT_VEC(var, size)				\
+//  {                                                             \
+//    (var) = (typeof(var))malloc((size) * sizeof(typeof(*var))); \
+//    if ((var) == cupdlp_NULL) {                                 \
+//      retcode = RETCODE_FAILED;                                 \
+//      goto exit_cleanup;                                        \
+//    }                                                           \
+//  }
+  //#define CUPDLP_INIT_ZERO_VEC(var, size)		     \
+//  {                                                          \
+//    (var) = (typeof(var))calloc(size, sizeof(typeof(*var))); \
+//    if ((var) == cupdlp_NULL) {                              \
+//      retcode = RETCODE_FAILED;                              \
+//      goto exit_cleanup;                                     \
+//    }                                                        \
+//  }
 #define CUPDLP_INIT_ZERO_DOUBLE_VEC(var, size)                      \
   {                                                          \
     (var) = (double*)calloc(size, sizeof(double));	     \
@@ -160,6 +163,14 @@ extern "C" {
 #define CUPDLP_INIT(var, size)                                  \
   {                                                             \
     (var) = (typeof(var))malloc((size) * sizeof(typeof(*var))); \
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_INT(var, size)                                  \
+  {                                                             \
+    (var) = (int*)malloc((size) * sizeof(int)); \
     if ((var) == cupdlp_NULL) {                                 \
       retcode = RETCODE_FAILED;                                 \
       goto exit_cleanup;                                        \
