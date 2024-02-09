@@ -25,4 +25,4 @@ jobs:
       - name: Test
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: .\RELEASE\bin\sharpexample.exe
+        run: ./RELEASE/bin/sharpexample.exe
