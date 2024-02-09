@@ -1657,6 +1657,10 @@ restart:
   }
 
   printDisplayLine();
+  // Possible cut extraction callback
+  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->callbackActive(kCallbackMipGetCutPool))
+    mipsolver.callbackGetCutPool();
   if (checkLimits()) return;
 
   do {

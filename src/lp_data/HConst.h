@@ -212,14 +212,16 @@ enum class HighsModelStatus {
 
 enum HighsCallbackType : int {
   kCallbackMin = 0,
-  kCallbackLogging = kCallbackMin,  // 0
-  kCallbackSimplexInterrupt,        // 1
-  kCallbackIpmInterrupt,            // 2
-  kCallbackMipSolution,             // 3
-  kCallbackMipImprovingSolution,    // 4
-  kCallbackMipLogging,              // 5
-  kCallbackMipInterrupt,            // 6
-  kCallbackMax = kCallbackMipInterrupt,
+  kCallbackLogging = kCallbackMin,    // 0
+  kCallbackSimplexInterrupt,          // 1
+  kCallbackIpmInterrupt,              // 2
+  kCallbackMipSolution,               // 3
+  kCallbackMipImprovingSolution,      // 4
+  kCallbackMipLogging,                // 5
+  kCallbackMipInterrupt,              // 6
+  kCallbackMipGetCutPool,             // 7
+  kCallbackMipDefineLazyConstraints,  // 8
+  kCallbackMax = kCallbackMipDefineLazyConstraints,
   kNumCallbackType
 };
 

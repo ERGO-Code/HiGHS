@@ -83,15 +83,9 @@ void printMinorIterationDetails(const double iteration, const double col,
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda) {
-  if (!isSolutionRightSize(lp, solution)) {
-    // clear and resize solution.
-    solution.col_value.clear();
-    solution.col_dual.clear();
-    solution.row_value.clear();
-    solution.row_dual.clear();
-
-    solution.col_value.resize(lp.num_col_);
-  }
+  // Clear and resize primal column solution.
+  solution.clear();
+  solution.col_value.resize(lp.num_col_);
 
   for (int col = 0; col < lp.num_col_; col++) {
     if (lp.col_lower_[col] <= 0 && lp.col_upper_[col] >= 0)

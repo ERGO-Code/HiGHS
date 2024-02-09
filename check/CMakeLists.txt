@@ -59,6 +59,7 @@ set(TEST_SOURCES
     TestRanging.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
+    TestTspSolver.cpp
     TestUserScale.cpp
     Avgas.cpp)
 
