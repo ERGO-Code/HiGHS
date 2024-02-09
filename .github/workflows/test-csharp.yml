@@ -9,11 +9,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
       - name: Configure CMake
-        run: cmake -S $GITHUB_WORKSPACE -B build -DCSHARP=ON 
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
 
       - name: Build
+        working-directory: ${{runner.workspace}}/build
         run: cmake --build build --config Release --parallel
 
       - name: Test
-        run: .\build\RELEASE\bin\sharpexample.exe
+        working-directory: ${{runner.workspace}}/build
+        run: .\RELEASE\bin\sharpexample.exe
