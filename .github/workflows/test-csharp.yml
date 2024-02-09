@@ -25,6 +25,6 @@ jobs:
       - name: Test
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: 
+        run: |
           ls 
-          ./RELEASE/bin/sharpexample.exe
+          ./RELEASE/bin/csharpexample.exe
