@@ -813,6 +813,15 @@ try_again:
   // the MIP being solved
   const double mipsolver_objective_value =
       double(mipsolver_quad_precision_objective_value);
+
+  if (possibly_store_as_new_incumbent) {
+    // The potential new incumbent is feasible in the original space,
+    // but check whether it generates new lazy constraints that make
+    // it infeasible
+    const bool feasible_with_new_lazy_constraints = 
+      feasibleWithNewLazyConstraints(solution.col_value);
+    feasible = feasible_with_new_lazy_constraints;    
+  }
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
@@ -1928,15 +1937,6 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
       assert(!interrupt);
     }
   }
-  if (mipsolver.callback_->user_callback) {
-    if (mipsolver.callback_->active[kCallbackMipDefineLazyConstraints]) {
-      mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
-      defineLazyConstraints(mipsolver.solution_objective_);
-      assert(121==323);
-    }
-  }
-
   if (mipsolver.options_mip_->mip_improving_solution_save) {
     HighsObjectiveSolution record;
     record.objective = mipsolver.solution_objective_;
@@ -2012,10 +2012,25 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-void HighsMipSolverData::defineLazyConstraints(const double mipsolver_objective_value) {
+bool HighsMipSolverData::feasibleWithNewLazyConstraints(const std::vector<double>& solution_in_original_space) {
+  // If the user callback isn't defined, or the lazy constraint
+  // callback isn't active, then no new lazy constraints can be
+  // generated, so solution (in the original space) is trivially
+  // feasible with respect to new lazy constraints
+  if (!mipsolver.callback_->user_callback) return true;
+  if (!mipsolver.callback_->active[kCallbackMipDefineNewLazyConstraints]) return true;
+
+  // Define new lazy constraints
+  mipsolver.callback_->clearHighsCallbackDataOut();
+  mipsolver.callback_->data_out.mip_solution = solution_in_original_space.data();
+  defineNewLazyConstraints();
+  return false;
+}
+
+void HighsMipSolverData::defineNewLazyConstraints() {
   assert(mipsolver.callback_->user_callback);
-  assert(mipsolver.callback_->callbackActive(kCallbackMipDefineLazyConstraints));
-  mipsolver.callback_->user_callback(kCallbackMipDefineLazyConstraints,
+  assert(mipsolver.callback_->callbackActive(kCallbackMipDefineNewLazyConstraints));
+  mipsolver.callback_->user_callback(kCallbackMipDefineNewLazyConstraints,
 				     "Define lazy constraints",
 				     &mipsolver.callback_->data_out,
 				     &mipsolver.callback_->data_in,
@@ -2032,6 +2047,7 @@ void HighsMipSolverData::defineLazyConstraints(const double mipsolver_objective_
   cutset.upper_.resize(num_cut);
   cutset.ARstart_[0] = data_in.cutset_ARstart[0];
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
+    cutset.cutindices[iCut] = iCut;
     cutset.ARstart_[iCut+1] = data_in.cutset_ARstart[iCut+1];
     cutset.lower_[iCut] = data_in.cutset_lower[iCut];
     cutset.upper_[iCut] = data_in.cutset_upper[iCut];
@@ -2040,6 +2056,6 @@ void HighsMipSolverData::defineLazyConstraints(const double mipsolver_objective_
     cutset.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
     cutset.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
   }
-  printf("HighsMipSolverData::defineLazyConstraints\n");
+  lp.addCuts(cutset);
 }
 

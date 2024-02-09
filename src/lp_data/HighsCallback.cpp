@@ -67,7 +67,7 @@ bool HighsCallback::callbackAction(const int callback_type,
       callback_type == kCallbackMipSolution ||
       callback_type == kCallbackMipLogging ||
       callback_type == kCallbackMipGetCutPool ||
-      callback_type == kCallbackMipDefineLazyConstraints)
+      callback_type == kCallbackMipDefineNewLazyConstraints)
     assert(!action);
   return action;
 }

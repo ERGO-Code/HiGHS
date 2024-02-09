@@ -3517,7 +3517,7 @@ HighsStatus Highs::callSolveMip() {
     // Lazy constraints can be added if the user callback is defined,
     // and the lazy constraints callback is active
     const bool allow_lazy_constraints = callback_.user_callback &&
-      callback_.active[kCallbackMipDefineLazyConstraints];
+      callback_.active[kCallbackMipDefineNewLazyConstraints];
     if (allow_lazy_constraints) {
       options_.presolve = kHighsOffString;
       highsLogUser(options_.log_options, HighsLogType::kInfo,

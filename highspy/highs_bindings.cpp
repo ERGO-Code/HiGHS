@@ -1128,8 +1128,8 @@ PYBIND11_MODULE(_highs, m) {
       .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
       .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
       .value("kCallbackMipGetCutPool", HighsCallbackType::kCallbackMipGetCutPool)
-      .value("kCallbackMipDefineLazyConstraints",
-	     HighsCallbackType::kCallbackMipDefineLazyConstraints)
+      .value("kCallbackMipDefineNewLazyConstraints",
+	     HighsCallbackType::kCallbackMipDefineNewLazyConstraints)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();

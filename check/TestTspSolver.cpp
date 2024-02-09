@@ -28,21 +28,25 @@ class TspData {
 const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
-HighsCallbackFunctionType userDefineLazyConstraints =
+HighsCallbackFunctionType userDefineNewLazyConstraints =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
       TspData tsp_data = *(static_cast<TspData*>(user_callback_data));
       tsp_data.getTours(data_out->mip_solution);
+      const HighsInt num_tour = tsp_data.tours_.size();
       if (dev_run) 
 	printf("TSP: %s has dimension %d and solution has %d tours\n",
 	       tsp_data.name_.c_str(),
 	       int(tsp_data.dimension_),
-	       int(tsp_data.tours_.size()));
+	       int(num_tour));
+      assert(num_tour >= 1);
+      data_in->cutset_num_cut = 0;
+      if (num_tour == 1) return;
       HighsLp lp;
       tsp_data.addCuts(lp);
-
       const HighsInt num_cut = lp.num_row_;
+      assert(num_cut == num_tour);
       const HighsInt num_nz = lp.a_matrix_.numNz();
       data_in->cutset_num_cut = num_cut;
       data_in->cutset_ARstart = (HighsInt*)malloc(sizeof(HighsInt) * (num_cut+1));
@@ -76,9 +80,9 @@ TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
   highs.passModel(lp);
   //  MipData user_callback_data;
   TspData* p_user_callback_data = &tsp_data;
-  highs.setCallback(userDefineLazyConstraints, p_user_callback_data);
+  highs.setCallback(userDefineNewLazyConstraints, p_user_callback_data);
   printf("Calling highs.setCallback\n");
-  highs.startCallback(kCallbackMipDefineLazyConstraints);
+  highs.startCallback(kCallbackMipDefineNewLazyConstraints);
   highs.run();
   REQUIRE(highs.getObjectiveValue() == optimal_obective_value);
 }
