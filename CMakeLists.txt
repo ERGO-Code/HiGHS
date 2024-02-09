@@ -301,6 +301,7 @@ if(NOT FAST_BUILD OR FORTRAN)
 endif()
 
 if(NOT FAST_BUILD OR CSHARP)
+  include(CheckLanguage)
   check_language("CSharp")
   if(CMAKE_CSharp_COMPILER)
     enable_language(CSharp)
