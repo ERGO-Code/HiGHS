@@ -49,18 +49,10 @@ performed regardless of the value of the
 
 ## Future plans
 
-A prototype parallel LP solver has been developed, in which the
-(serial) interior point solver and simplex variants are run
-concurrently. When one runs to completion, the others are
-stopped. However, to ensure that it runs deterministically requires
-considerable further work. The non-deterministic solver will be
-available by the end of 2023, but a deterministic solver is unlikely
-to be available before the end of 2024.
-
 The MIP solver has been written with parallel tree seach in mind, and
 it is hoped that this will be implemented before the end of 2024. The
 parallel LP solver will also enhance the MIP solver performance by
-spoeeding up the solution of the root node.
+speeding up the solution of the root node.
 
 Development of a parallel interior point solver will start in 2023,
 and is expected to be completed by the end of 2024.
