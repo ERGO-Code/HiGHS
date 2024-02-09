@@ -20,8 +20,9 @@ jobs:
       - name: Build
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build . --config Release --parallel
 
       - name: Test
+        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: .\RELEASE\bin\sharpexample.exe
