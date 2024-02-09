@@ -118,7 +118,6 @@ _cupdlp_srcs = [
     'pdlp/cupdlp/cupdlp_scaling_cuda.c',
     'pdlp/cupdlp/cupdlp_restart.c',
     'pdlp/cupdlp/cupdlp_proj.c',
-    'pdlp/cupdlp/cupdlp_mps.c',
     'pdlp/cupdlp/cupdlp_linalg.c',
     'pdlp/cupdlp/cupdlp_cs.c',
     'pdlp/cupdlp/cupdlp_utils.c',

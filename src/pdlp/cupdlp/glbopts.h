@@ -160,17 +160,89 @@ extern "C" {
 #define cupdlp_zero(var, type, size) memset(var, 0, sizeof(type) * (size))
 #define cupdlp_copy(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
-#define CUPDLP_INIT(var, size)                                  \
+//#define CUPDLP_INIT(var, size)				\
+//  {                                                             \
+//    (var) = (typeof(var))malloc((size) * sizeof(typeof(*var))); \
+//    if ((var) == cupdlp_NULL) {                                 \
+//      retcode = RETCODE_FAILED;                                 \
+//      goto exit_cleanup;                                        \
+//    }                                                           \
+//  }
+#define CUPDLP_INIT_DOUBLE(var, size)                                  \
   {                                                             \
-    (var) = (typeof(var))malloc((size) * sizeof(typeof(*var))); \
+    (var) = (double*)malloc((size) * sizeof(double)); \
     if ((var) == cupdlp_NULL) {                                 \
       retcode = RETCODE_FAILED;                                 \
       goto exit_cleanup;                                        \
     }                                                           \
   }
-#define CUPDLP_INIT_DOUBLE(var, size)                                  \
+#define CUPDLP_INIT_CUPDLP_VEC(var, size)                                  \
   {                                                             \
-    (var) = (double*)malloc((size) * sizeof(double)); \
+    (var) = (CUPDLPvec*)malloc((size) * sizeof(CUPDLPvec)); \
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_DENSE_MATRIX(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPdense*)malloc((size) * sizeof(CUPDLPdense)); \
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_CSR_MATRIX(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPcsr*)malloc((size) * sizeof(CUPDLPcsr)); \
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_CSC_MATRIX(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPcsc*)malloc((size) * sizeof(CUPDLPcsc));	\
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_SETTINGS(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPsettings*)malloc((size) * sizeof(CUPDLPsettings));	\
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_RESOBJ(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPresobj*)malloc((size) * sizeof(CUPDLPresobj));	\
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_ITERATES(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPiterates*)malloc((size) * sizeof(CUPDLPiterates));	\
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_STEPSIZE(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPstepsize*)malloc((size) * sizeof(CUPDLPstepsize));	\
+    if ((var) == cupdlp_NULL) {                                 \
+      retcode = RETCODE_FAILED;                                 \
+      goto exit_cleanup;                                        \
+    }                                                           \
+  }
+#define CUPDLP_INIT_TIMERS(var, size)                                  \
+  {                                                             \
+    (var) = (CUPDLPtimers*)malloc((size) * sizeof(CUPDLPtimers));	\
     if ((var) == cupdlp_NULL) {                                 \
       retcode = RETCODE_FAILED;                                 \
       goto exit_cleanup;                                        \

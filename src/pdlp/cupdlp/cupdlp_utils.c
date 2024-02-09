@@ -875,18 +875,18 @@ cupdlp_retcode iterates_Alloc(CUPDLPiterates *iterates, cupdlp_int ncols,
   CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->xLastRestart, ncols);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->yLastRestart, nrows);
 
-  CUPDLP_INIT(iterates->x, 1);
-  CUPDLP_INIT(iterates->xUpdate, 1);
-  CUPDLP_INIT(iterates->xAverage, 1);
-  CUPDLP_INIT(iterates->y, 1);
-  CUPDLP_INIT(iterates->yUpdate, 1);
-  CUPDLP_INIT(iterates->yAverage, 1);
-  CUPDLP_INIT(iterates->ax, 1);
-  CUPDLP_INIT(iterates->axUpdate, 1);
-  CUPDLP_INIT(iterates->axAverage, 1);
-  CUPDLP_INIT(iterates->aty, 1);
-  CUPDLP_INIT(iterates->atyUpdate, 1);
-  CUPDLP_INIT(iterates->atyAverage, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->x, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->xUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->xAverage, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->y, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->yUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->yAverage, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->ax, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->axUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->axAverage, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->aty, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->atyUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->atyAverage, 1);
 
   CUPDLP_CALL(vec_Alloc(iterates->x, ncols));
   CUPDLP_CALL(vec_Alloc(iterates->xUpdate, ncols));
@@ -933,8 +933,8 @@ cupdlp_retcode scaling_Alloc(CUPDLPscaling *scaling, CUPDLPproblem *problem,
   cupdlp_retcode retcode = RETCODE_OK;
   scaling->ifScaled = 0;
 
-  CUPDLP_INIT(scaling->colScale, ncols);
-  CUPDLP_INIT(scaling->rowScale, nrows);
+  CUPDLP_INIT_DOUBLE(scaling->colScale, ncols);
+  CUPDLP_INIT_DOUBLE(scaling->rowScale, nrows);
 
   scaling->ifRuizScaling = 1;
   scaling->ifL2Scaling = 0;
@@ -996,17 +996,17 @@ exit_cleanup:
 cupdlp_retcode PDHG_Alloc(CUPDLPwork *w) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-  CUPDLP_INIT(w->settings, 1);
-  CUPDLP_INIT(w->resobj, 1);
-  CUPDLP_INIT(w->iterates, 1);
-  CUPDLP_INIT(w->stepsize, 1);
+  CUPDLP_INIT_SETTINGS(w->settings, 1);
+  CUPDLP_INIT_RESOBJ(w->resobj, 1);
+  CUPDLP_INIT_ITERATES(w->iterates, 1);
+  CUPDLP_INIT_STEPSIZE(w->stepsize, 1);
 
-  CUPDLP_INIT(w->timers, 1);
+  CUPDLP_INIT_TIMERS(w->timers, 1);
   CUPDLP_CALL(timers_Alloc(w->timers));
 
   cupdlp_float begin = getTimeStamp();
   // buffer
-  CUPDLP_INIT(w->buffer, 1);
+  CUPDLP_INIT_CUPDLP_VEC(w->buffer, 1);
   CUPDLP_CALL(vec_Alloc(w->buffer, w->problem->data->nRows));
   CUPDLP_INIT_ZERO_DOUBLE_VEC(w->buffer2,
                        MAX(w->problem->data->nCols, w->problem->data->nRows));
@@ -1261,7 +1261,7 @@ void csc2dense(CUPDLPdense *dense, CUPDLPcsc *csc) {
 
 cupdlp_retcode dense_create(CUPDLPdense **dense) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT(*dense, 1);
+  CUPDLP_INIT_DENSE_MATRIX(*dense, 1);
 
 exit_cleanup:
   return retcode;
@@ -1269,7 +1269,7 @@ exit_cleanup:
 
 cupdlp_retcode csr_create(CUPDLPcsr **csr) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT(*csr, 1);
+  CUPDLP_INIT_CSR_MATRIX(*csr, 1);
 
 exit_cleanup:
   return retcode;
@@ -1277,7 +1277,7 @@ exit_cleanup:
 
 cupdlp_retcode csc_create(CUPDLPcsc **csc) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT(*csc, 1);
+  CUPDLP_INIT_CSC_MATRIX(*csc, 1);
 
 exit_cleanup:
   return retcode;
