@@ -242,6 +242,7 @@ pip-log.txt
 
 #Virtual Studio directory
 .vscode/
+.vs/
 
 #Unit test fallout
 
