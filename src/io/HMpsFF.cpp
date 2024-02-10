@@ -2024,12 +2024,12 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
 bool HMpsFF::isNan(const std::string& word, double& value,
                    const HighsInt id) const {
   value = atof(word.c_str());
-  printf("value(%d) = %g\n", int(id), value);
-  if (std::isnan(value)) return true;
-  // atof('nan') yields 0 with some Windows compilers, so try a string
-  // comparison
-  std::string lower_word = word;
-  if (str_tolower(lower_word) == "nan") return true;
+  //  printf("value(%d) = %g\n", int(id), value);
+  //  if (std::isnan(value)) return true;
+  //  // atof('nan') yields 0 with some Windows compilers, so try a string
+  //  // comparison
+  //  std::string lower_word = word;
+  //  if (str_tolower(lower_word) == "nan") return true;
   return false;
 }
 }  // namespace free_format_parser

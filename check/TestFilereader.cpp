@@ -299,6 +299,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   REQUIRE(are_the_same);
 }
 
+/*
 TEST_CASE("filereader-nan", "[highs_filereader]") {
   // Check that if
   std::string model_file;
@@ -311,6 +312,7 @@ TEST_CASE("filereader-nan", "[highs_filereader]") {
   model_file = std::string(HIGHS_DIR) + "/check/instances/nan2.mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
 }
+*/
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;

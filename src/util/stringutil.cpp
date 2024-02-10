@@ -63,12 +63,12 @@ void strTrim(char* str) {
 }
 */
 
-std::string& str_tolower(std::string str) {
-  std::transform(str.begin(), str.end(), str.begin(),
-                 [](unsigned char c) { return std::tolower(c); }  // correct
-  );
-  return str;
-}
+// std::string& str_tolower(std::string str) {
+//   std::transform(str.begin(), str.end(), str.begin(),
+//                  [](unsigned char c) { return std::tolower(c); }  // correct
+//   );
+//   return str;
+// }
 
 std::string& ltrim(std::string& str, const std::string& chars) {
   str.erase(0, str.find_first_not_of(chars));
