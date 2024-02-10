@@ -300,6 +300,7 @@ _srcs = [
 highslib_srcs = [
   _srcs,
   'ipm/IpxWrapper.cpp',
+  'pdlp/CupdlpWrapper.cpp',
   _cupdlp_srcs,
   _basiclu_srcs,
   _ipx_srcs
