@@ -1003,6 +1003,11 @@ public class SolutionInfo
     public int IpmIterationCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the PDLP iteration count.
+    /// </summary>
+    public int PdlpIterationCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the MIP gap.
     /// </summary>
     public double MipGap { get; set; }
