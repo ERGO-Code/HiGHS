@@ -77,7 +77,8 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
   CUPDLPdata *lp = problem->data;
   CUPDLPiterates *iterates = work->iterates;
 
-  cupdlp_printf("Power Method:\n");
+  if (work->settings->nLogLevel>0) 
+    cupdlp_printf("Power Method:\n");
 
   cupdlp_float *q = work->buffer->data;
 
@@ -104,7 +105,8 @@ cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, cupdlp_float *lambda) {
 
     cupdlp_twoNormSquared(work, lp->nCols, iterates->ax->data, &res);
 
-    cupdlp_printf("% d  %e  %.3f\n", iter, *lambda, res);
+    if (work->settings->nLogLevel>0) 
+      cupdlp_printf("% d  %e  %.3f\n", iter, *lambda, res);
   }
 
 exit_cleanup:

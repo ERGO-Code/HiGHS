@@ -381,6 +381,7 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
 }
 
 void PDHG_PrintPDHGParam(CUPDLPwork *w) {
+  if (w->settings->nLogLevel < 2) return;
   CUPDLPsettings *settings = w->settings;
   CUPDLPstepsize *stepsize = w->stepsize;
   CUPDLPresobj *resobj = w->resobj;
@@ -621,7 +622,7 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
   }
 
   if (ifChangeIntParam[N_LOG_LEVEL]) {
-    settings->nLogInterval = intParam[N_LOG_LEVEL];
+    settings->nLogLevel = intParam[N_LOG_LEVEL];
   }
 
   if (ifChangeIntParam[N_LOG_INTERVAL]) {
@@ -775,6 +776,7 @@ cupdlp_retcode settings_Alloc(CUPDLPsettings *settings) {
   cupdlp_retcode retcode = RETCODE_OK;
   // settings->nIterLim = INFINITY;
   settings->nIterLim = INT_MAX;  // INFINITY cause bug on MacOS
+  settings->nLogLevel = 2; // Ensures that, by default, cuPDLP-C printing is unchanged
   settings->nLogInterval = 100;
   // settings->dTimeLim = INFINITY;
   settings->dTimeLim = 3600;

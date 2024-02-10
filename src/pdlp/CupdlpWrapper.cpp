@@ -106,6 +106,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                     constraint_type_clp.data());
 
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
+  if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
+
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   cupdlp_int ifScaling = 1;
 
@@ -128,7 +130,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
+  PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost,
+                       lower, upper, rhs);
   scaling_time = getTimeStamp() - scaling_time;
 
   cupdlp_float alloc_matrix_time = 0.0;
@@ -146,9 +149,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
 
-  cupdlp_printf("--------------------------------------------------\n");
-  cupdlp_printf("enter main solve loop\n");
-  cupdlp_printf("--------------------------------------------------\n");
   // CUPDLP_CALL(LP_SolvePDHG(prob, cupdlp_NULL, cupdlp_NULL, cupdlp_NULL,
   // cupdlp_NULL));
   //   CUPDLP_CALL(LP_SolvePDHG(prob, ifChangeIntParam, intParam,
@@ -198,8 +198,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   } else {
     assert(111 == 777);
   }
-
+#if CUPDLP_DEBUG
   analysePdlpSolution(options, lp, highs_solution);
+#endif
   return HighsStatus::kOk;
 }
 
@@ -223,15 +224,8 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   *offset = lp.offset_;  // need not recalculate
   if (lp.sense_ == ObjSense::kMinimize) {
     *sense_origin = 1.0;
-    printf("Minimize\n");
   } else if (lp.sense_ == ObjSense::kMaximize) {
     *sense_origin = -1.0;
-    printf("Maximize\n");
-  }
-  if (*offset != 0.0) {
-    printf("Has obj offset %f\n", *offset);
-  } else {
-    printf("No obj offset\n");
   }
 
   const double* lhs_clp = lp.row_lower_.data();

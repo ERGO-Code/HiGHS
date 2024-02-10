@@ -1065,7 +1065,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-	bool is_nan = false;
+        bool is_nan = false;
         double value = getValue(word, is_nan);  // atof(word.c_str());
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
@@ -1111,7 +1111,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-	bool is_nan = false;
+        bool is_nan = false;
         double value = getValue(word, is_nan);  // atof(word.c_str());
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
@@ -1485,7 +1485,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                      "definition: ignored\n",
                      marker.c_str());
       } else {
-	bool is_nan = false;
+        bool is_nan = false;
         double value = getValue(word, is_nan);  // atof(word.c_str());
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
@@ -1531,7 +1531,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                        "definition: ignored\n",
                        marker.c_str());
         } else {
-	  bool is_nan = false;
+          bool is_nan = false;
           double value = getValue(word, is_nan);  // atof(word.c_str());
           if (is_nan) {
             highsLogUser(log_options, HighsLogType::kError,
@@ -2032,7 +2032,8 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
   return true;
 }
 
-  double HMpsFF::getValue(const std::string& word, bool& is_nan, const HighsInt id) const {
+double HMpsFF::getValue(const std::string& word, bool& is_nan,
+                        const HighsInt id) const {
   const double value = atof(word.c_str());
   is_nan = false;
   //  printf("value(%d) = %g\n", int(id), value);

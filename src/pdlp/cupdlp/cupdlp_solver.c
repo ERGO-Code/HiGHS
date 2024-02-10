@@ -470,7 +470,8 @@ void PDHG_Check_Data(CUPDLPwork *work) {
 
     if (!hasLower && !hasUpper) {
       ++nFreeCol;
-      cupdlp_printf("Warning: variable %d is free.", iSeq);
+      if (work->settings->nLogLevel>0) 
+	cupdlp_printf("Warning: variable %d is free.", iSeq);
     }
 
     if (hasLower && hasUpper) {
@@ -500,7 +501,8 @@ void PDHG_Check_Data(CUPDLPwork *work) {
 
     if (!hasLower && !hasUpper) {
       ++nFreeRow;
-      cupdlp_printf("Warning: row %d is free.", iSeq - lp->nCols);
+      if (work->settings->nLogLevel>0) 
+	cupdlp_printf("Warning: row %d is free.", iSeq - lp->nCols);
     }
 
     if (hasLower && hasUpper) {
@@ -530,21 +532,24 @@ void PDHG_Check_Data(CUPDLPwork *work) {
     if (problem->data->csr_matrix->rowMatBeg[iRow + 1] -
             problem->data->csr_matrix->rowMatBeg[iRow] ==
         1) {
-      cupdlp_printf("Warning: row %d is a singleton row.", iRow);
+      if (work->settings->nLogLevel>0) 
+	cupdlp_printf("Warning: row %d is a singleton row.", iRow);
     }
   }
 
   CUPDLP_ASSERT(nRangedRow == 0);
-  cupdlp_printf("nFreeCol  : %d\n", nFreeCol);
-  cupdlp_printf("nFixedCol : %d\n", nFixedCol);
-  cupdlp_printf("nRangedCol: %d\n", nRangedCol);
-  cupdlp_printf("nLowerCol : %d\n", nLowerCol);
-  cupdlp_printf("nUpperCol : %d\n", nUpperCol);
-  cupdlp_printf("nFreeRow  : %d\n", nFreeRow);
-  cupdlp_printf("nFixedRow : %d\n", nFixedRow);
-  cupdlp_printf("nRangedRow: %d\n", nRangedRow);
-  cupdlp_printf("nLowerRow : %d\n", nLowerRow);
-  cupdlp_printf("nUpperRow : %d\n", nUpperRow);
+  if (work->settings->nLogLevel>0) {
+    cupdlp_printf("nFreeCol  : %d\n", nFreeCol);
+    cupdlp_printf("nFixedCol : %d\n", nFixedCol);
+    cupdlp_printf("nRangedCol: %d\n", nRangedCol);
+    cupdlp_printf("nLowerCol : %d\n", nLowerCol);
+    cupdlp_printf("nUpperCol : %d\n", nUpperCol);
+    cupdlp_printf("nFreeRow  : %d\n", nFreeRow);
+    cupdlp_printf("nFixedRow : %d\n", nFixedRow);
+    cupdlp_printf("nRangedRow: %d\n", nRangedRow);
+    cupdlp_printf("nLowerRow : %d\n", nLowerRow);
+    cupdlp_printf("nUpperRow : %d\n", nUpperRow);
+  }
 
   // We need to test problems ranged row-bounds more carefully.
   CUPDLP_ASSERT(nRangedRow == 0);
@@ -786,6 +791,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
                                              settings->nLogInterval))) ||
         (timers->nIter == (settings->nIterLim - 1)) ||
         (timers->dSolvingTime > settings->dTimeLim);
+    bool_print = pdhg->settings->nLogLevel>0 && bool_print;
 #endif
     if (bool_checking) {
       PDHG_Compute_Average_Iterate(pdhg);
@@ -864,14 +870,17 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   }
 
   // print at last
-  PDHG_Print_Header(pdhg);
-  PDHG_Print_Iter(pdhg);
-  PDHG_Print_Iter_Average(pdhg);
+  if (pdhg->settings->nLogLevel>0) {
+    PDHG_Print_Header(pdhg);
+    PDHG_Print_Iter(pdhg);
+    PDHG_Print_Iter_Average(pdhg);
+  }
 
-  cupdlp_printf("\n");
-  cupdlp_printf("%-27s ", "Solving information:");
+  if (pdhg->settings->nLogLevel>0) {
+    cupdlp_printf("\n");
+    cupdlp_printf("%-27s ", "Solving information:");
 
-  switch (resobj->termCode) {
+    switch (resobj->termCode) {
     case OPTIMAL:
       if (resobj->termIterate == LAST_ITERATE) {
         cupdlp_printf("Optimal current solution.\n");
@@ -894,9 +903,9 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
         cupdlp_printf("Infeasible or unbounded: dual infeasible.");
       } else {
         cupdlp_printf(
-            "Infeasible or unbounded: both primal and dual infeasible.");
+		      "Infeasible or unbounded: both primal and dual infeasible.");
       }
-
+      
       if (resobj->termInfeasIterate == LAST_ITERATE) {
         cupdlp_printf(" [L]\n");
       } else if (resobj->termInfeasIterate == AVERAGE_ITERATE) {
@@ -906,70 +915,74 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
     default:
       cupdlp_printf("Unexpected.\n");
       break;
+    }
+    if (resobj->termCode == OPTIMAL && resobj->termIterate == AVERAGE_ITERATE) {
+      cupdlp_printf("%27s %+15.8e\n",
+		    "Primal objective:", resobj->dPrimalObjAverage);
+      cupdlp_printf("%27s %+15.8e\n", "Dual objective:", resobj->dDualObjAverage);
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Primal infeas (abs/rel):", resobj->dPrimalFeasAverage,
+		    resobj->dPrimalFeasAverage / (1.0 + scaling->dNormRhs));
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Dual infeas (abs/rel):", resobj->dDualFeasAverage,
+		    resobj->dDualFeasAverage / (1.0 + scaling->dNormCost));
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Duality gap (abs/rel):", fabs(resobj->dDualityGapAverage),
+		    resobj->dRelObjGapAverage);
+    } else {
+      cupdlp_printf("%27s %+15.8e\n", "Primal objective:", resobj->dPrimalObj);
+      cupdlp_printf("%27s %+15.8e\n", "Dual objective:", resobj->dDualObj);
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Primal infeas (abs/rel):", resobj->dPrimalFeas,
+		    resobj->dPrimalFeas / (1.0 + scaling->dNormRhs));
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Dual infeas (abs/rel):", resobj->dDualFeas,
+		    resobj->dDualFeas / (1.0 + scaling->dNormCost));
+      cupdlp_printf("%27s %8.2e / %8.2e\n",
+		    "Duality gap (abs/rel):", fabs(resobj->dDualityGap),
+		    resobj->dRelObjGap);
+    }
+    cupdlp_printf("%27s %d\n", "Number of iterations:", timers->nIter);
+    cupdlp_printf("\n");
   }
-
-  if (resobj->termCode == OPTIMAL && resobj->termIterate == AVERAGE_ITERATE) {
-    cupdlp_printf("%27s %+15.8e\n",
-                  "Primal objective:", resobj->dPrimalObjAverage);
-    cupdlp_printf("%27s %+15.8e\n", "Dual objective:", resobj->dDualObjAverage);
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Primal infeas (abs/rel):", resobj->dPrimalFeasAverage,
-                  resobj->dPrimalFeasAverage / (1.0 + scaling->dNormRhs));
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Dual infeas (abs/rel):", resobj->dDualFeasAverage,
-                  resobj->dDualFeasAverage / (1.0 + scaling->dNormCost));
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Duality gap (abs/rel):", fabs(resobj->dDualityGapAverage),
-                  resobj->dRelObjGapAverage);
-  } else {
-    cupdlp_printf("%27s %+15.8e\n", "Primal objective:", resobj->dPrimalObj);
-    cupdlp_printf("%27s %+15.8e\n", "Dual objective:", resobj->dDualObj);
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Primal infeas (abs/rel):", resobj->dPrimalFeas,
-                  resobj->dPrimalFeas / (1.0 + scaling->dNormRhs));
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Dual infeas (abs/rel):", resobj->dDualFeas,
-                  resobj->dDualFeas / (1.0 + scaling->dNormCost));
-    cupdlp_printf("%27s %8.2e / %8.2e\n",
-                  "Duality gap (abs/rel):", fabs(resobj->dDualityGap),
-                  resobj->dRelObjGap);
-  }
-  cupdlp_printf("%27s %d\n", "Number of iterations:", timers->nIter);
-  cupdlp_printf("\n");
 
 #if PDHG_USE_TIMERS
-  cupdlp_printf("Timing information:\n");
-  // cupdlp_printf("%21s %e in %d iterations\n", "Total solver time",
-  //               timers->dSolvingTime, timers->nIter);
-  cupdlp_printf(
-      "%21s %e in %d iterations\n", "Total solver time",
-      timers->dSolvingTime + timers->dScalingTime + timers->dPresolveTime,
-      timers->nIter);
-  cupdlp_printf("%21s %e in %d iterations\n", "Solve time",
-                timers->dSolvingTime, timers->nIter);
-  cupdlp_printf("%21s %e \n", "Iters per sec",
-                timers->nIter / timers->dSolvingTime);
-  cupdlp_printf("%21s %e\n", "Scaling time", timers->dScalingTime);
-  cupdlp_printf("%21s %e\n", "Presolve time", timers->dPresolveTime);
-  cupdlp_printf("%21s %e in %d calls\n", "Ax", timers->dAxTime,
-                timers->nAxCalls);
-  cupdlp_printf("%21s %e in %d calls\n", "Aty", timers->dAtyTime,
-                timers->nAtyCalls);
-  cupdlp_printf("%21s %e in %d calls\n", "ComputeResiduals",
-                timers->dComputeResidualsTime, timers->nComputeResidualsCalls);
-  cupdlp_printf("%21s %e in %d calls\n", "UpdateIterates",
-                timers->dUpdateIterateTime, timers->nUpdateIterateCalls);
+  if (pdhg->settings->nLogLevel>0) {
+    cupdlp_printf("Timing information:\n");
+    // cupdlp_printf("%21s %e in %d iterations\n", "Total solver time",
+    //               timers->dSolvingTime, timers->nIter);
+    cupdlp_printf(
+		  "%21s %e in %d iterations\n", "Total solver time",
+		  timers->dSolvingTime + timers->dScalingTime + timers->dPresolveTime,
+		  timers->nIter);
+    cupdlp_printf("%21s %e in %d iterations\n", "Solve time",
+		  timers->dSolvingTime, timers->nIter);
+    cupdlp_printf("%21s %e \n", "Iters per sec",
+		  timers->nIter / timers->dSolvingTime);
+    cupdlp_printf("%21s %e\n", "Scaling time", timers->dScalingTime);
+    cupdlp_printf("%21s %e\n", "Presolve time", timers->dPresolveTime);
+    cupdlp_printf("%21s %e in %d calls\n", "Ax", timers->dAxTime,
+		  timers->nAxCalls);
+    cupdlp_printf("%21s %e in %d calls\n", "Aty", timers->dAtyTime,
+		  timers->nAtyCalls);
+    cupdlp_printf("%21s %e in %d calls\n", "ComputeResiduals",
+		  timers->dComputeResidualsTime, timers->nComputeResidualsCalls);
+    cupdlp_printf("%21s %e in %d calls\n", "UpdateIterates",
+		  timers->dUpdateIterateTime, timers->nUpdateIterateCalls);
+  }
 #endif
 
 #ifndef CUPDLP_CPU
-  cupdlp_printf("\n");
-  cupdlp_printf("GPU Timing information:\n");
-  cupdlp_printf("%21s %e\n", "CudaPrepare", timers->CudaPrepareTime);
-  cupdlp_printf("%21s %e\n", "Alloc&CopyMatToDevice",
-                timers->AllocMem_CopyMatToDeviceTime);
-  cupdlp_printf("%21s %e\n", "CopyVecToDevice", timers->CopyVecToDeviceTime);
-  cupdlp_printf("%21s %e\n", "DeviceMatVecProd", timers->DeviceMatVecProdTime);
-  cupdlp_printf("%21s %e\n", "CopyVecToHost", timers->CopyVecToHostTime);
+  if (pdhg->settings->nLogLevel>0) {
+    cupdlp_printf("\n");
+    cupdlp_printf("GPU Timing information:\n");
+    cupdlp_printf("%21s %e\n", "CudaPrepare", timers->CudaPrepareTime);
+    cupdlp_printf("%21s %e\n", "Alloc&CopyMatToDevice",
+		  timers->AllocMem_CopyMatToDeviceTime);
+    cupdlp_printf("%21s %e\n", "CopyVecToDevice", timers->CopyVecToDeviceTime);
+    cupdlp_printf("%21s %e\n", "DeviceMatVecProd", timers->DeviceMatVecProdTime);
+    cupdlp_printf("%21s %e\n", "CopyVecToHost", timers->CopyVecToHostTime);
+  }
 #endif
 
 exit_cleanup:
@@ -1128,10 +1141,14 @@ cupdlp_retcode LP_SolvePDHG(
     cupdlp_int *model_status, cupdlp_int* num_iter) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-  PDHG_PrintHugeCUPDHG();
-
+ // Set the parameters first - which is silent
   CUPDLP_CALL(PDHG_SetUserParam(pdhg, ifChangeIntParam, intParam,
                                 ifChangeFloatParam, floatParam));
+
+ // Call PDHG_PrintHugeCUPDHG() if logging level (set in
+ // PDHG_SetUserParam) is verbose
+  if (pdhg->settings->nLogLevel > 1) 
+    PDHG_PrintHugeCUPDHG();
 
   CUPDLP_CALL(PDHG_Solve(pdhg));
 
@@ -1150,8 +1167,8 @@ cupdlp_retcode LP_SolvePDHG(
       writeSol(fp_sol, nCols_origin, pdhg->problem->nRows, col_value, col_dual,
                row_value, row_dual);
     } else {
-      cupdlp_printf(
-          "Warning: fp and fp_sol are the same, stop saving solution.\n");
+      if (pdhg->settings->nLogLevel>0) 
+	cupdlp_printf("Warning: fp and fp_sol are the same, stop saving solution.\n");
     }
   }
 
