@@ -545,7 +545,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
     ifChangeFloatParam[i] = false;
   // Assume all PDLP-related options in HiGHS cause changes
   ifChangeIntParam[N_ITER_LIM] = true;
-  intParam[N_ITER_LIM] = options.pdlp_iteration_limit;
+  intParam[N_ITER_LIM] = options.pdlp_iteration_limit > kHighsIInf32 ? kHighsIInf32 : options.pdlp_iteration_limit;
   //
   ifChangeIntParam[IF_SCALING] = true;
   intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
@@ -563,7 +563,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
   floatParam[D_TIME_LIM] = options.time_limit;
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
-  intParam[E_RESTART_METHOD] = options.pdlp_e_restart_method;
+  intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
 }
 
 void analysePdlpSolution(const HighsOptions& options,
