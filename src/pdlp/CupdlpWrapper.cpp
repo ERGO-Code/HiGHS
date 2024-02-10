@@ -536,6 +536,17 @@ void getUserParamsFromOptions(const HighsOptions& options,
                              ? kHighsIInf32
                              : options.pdlp_iteration_limit;
   //
+  ifChangeIntParam[N_LOG_LEVEL] = true;
+  if (options.output_flag) {
+    if (options.log_dev_level) {
+      intParam[N_LOG_LEVEL] = 2;
+    } else {
+      intParam[N_LOG_LEVEL] = 1;
+    }
+  } else {
+    intParam[N_LOG_LEVEL] = 0;
+  }
+  //
   ifChangeIntParam[IF_SCALING] = true;
   intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
   //

@@ -410,6 +410,8 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("    dGapTol:           %.4e\n", settings->dGapTol);
   cupdlp_printf("    dFeasTol:          %.4e\n", resobj->dFeasTol);
   cupdlp_printf("    eRestartMethod:    %d\n", settings->eRestartMethod);
+  cupdlp_printf("    nLogLevel:    %d\n", settings->nLogLevel);
+  cupdlp_printf("    nLogInterval:    %d\n", settings->nLogInterval);
   cupdlp_printf("\n");
   cupdlp_printf("--------------------------------------------------\n");
   cupdlp_printf("\n");
@@ -584,6 +586,9 @@ cupdlp_retcode getUserParam(int argc, char **argv,
     } else if (strcmp(argv[i], "-ifPcScaling") == 0) {
       ifChangeIntParam[IF_PC_SCALING] = true;
       intParam[IF_PC_SCALING] = atoi(argv[i + 1]);
+    } else if (strcmp(argv[i], "-nLogLevel") == 0) {
+      ifChangeIntParam[N_LOG_LEVEL] = true;
+      intParam[N_LOG_LEVEL] = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-nLogInt") == 0) {
       ifChangeIntParam[N_LOG_INTERVAL] = true;
       intParam[N_LOG_INTERVAL] = atoi(argv[i + 1]);
@@ -613,6 +618,10 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
 
   if (ifChangeIntParam[N_ITER_LIM]) {
     settings->nIterLim = intParam[N_ITER_LIM];
+  }
+
+  if (ifChangeIntParam[N_LOG_LEVEL]) {
+    settings->nLogInterval = intParam[N_LOG_LEVEL];
   }
 
   if (ifChangeIntParam[N_LOG_INTERVAL]) {

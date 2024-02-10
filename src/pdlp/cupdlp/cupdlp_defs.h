@@ -100,6 +100,7 @@ typedef enum {
   IF_RUIZ_SCALING,
   IF_L2_SCALING,
   IF_PC_SCALING,
+  N_LOG_LEVEL,
   N_LOG_INTERVAL,
   IF_PRESOLVE,
 } CUPDLP_INT_USER_PARAM_INDEX;
@@ -182,6 +183,9 @@ struct CUPDLP_SETTINGS {
   // max iter and time
   cupdlp_int nIterLim;
   cupdlp_float dTimeLim;
+
+  // Logging
+  cupdlp_int nLogLevel;
   cupdlp_int nLogInterval;
 
   // restart
