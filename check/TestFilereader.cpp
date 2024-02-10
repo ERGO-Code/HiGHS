@@ -10,7 +10,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";

@@ -531,7 +531,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
   ifChangeIntParam[N_ITER_LIM] = true;
   // If HiGHS is using 64-bit integers, then the default value of
   // options.pdlp_iteration_limit is kHighsIInf, so copying this to
-  // intParam[N_ITER_LIM] will overflow. 
+  // intParam[N_ITER_LIM] will overflow.
   intParam[N_ITER_LIM] = options.pdlp_iteration_limit > kHighsIInf32
                              ? kHighsIInf32
                              : options.pdlp_iteration_limit;
