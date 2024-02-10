@@ -832,11 +832,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
           marker.c_str());
     } else {
-      double value = atof(word.c_str());
-      printf("value(202) = %g\n", value);
-      printf("value() = %g\n", value);
-      if (std::isnan(value)) {
-        assert(101 == 202);
+      double value = 0;  // atof(word.c_str());
+      if (isNan(word, value, 202)) {
         highsLogUser(log_options, HighsLogType::kError,
                      "Coefficient for column \"%s\" is NaN\n", marker.c_str());
         return HMpsFF::Parsekey::kFail;
@@ -895,10 +892,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
             marker.c_str());
         continue;
       };
-      double value = atof(word.c_str());
-      printf("value(303) = %g\n", value);
-      if (std::isnan(value)) {
-        assert(101 == 303);
+      double value = 0;  // atof(word.c_str());
+      if (isNan(word, value, 303)) {
         highsLogUser(log_options, HighsLogType::kError,
                      "Coefficient for column \"%s\" is NaN\n", marker.c_str());
         return HMpsFF::Parsekey::kFail;
@@ -1068,10 +1063,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
-        printf("value(404) = %g\n", value);
-        if (std::isnan(value)) {
-          assert(101 == 404);
+        double value = 0;  // atof(word.c_str());
+        if (isNan(word, value, 404)) {
           highsLogUser(log_options, HighsLogType::kError,
                        "RHS for row \"%s\" is NaN\n", marker.c_str());
           return HMpsFF::Parsekey::kFail;
@@ -1115,10 +1108,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
-        printf("value(505) = %g\n", value);
-        if (std::isnan(value)) {
-          assert(101 == 505);
+        double value = 0;  // atof(word.c_str());
+        if (isNan(word, value, 505)) {
           highsLogUser(log_options, HighsLogType::kError,
                        "RHS for row \"%s\" is NaN\n", marker.c_str());
           return HMpsFF::Parsekey::kFail;
@@ -1356,10 +1347,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
                    marker.c_str());
       return HMpsFF::Parsekey::kFail;
     }
-    double value = atof(word.c_str());
-    printf("value(606) = %g\n", value);
-    if (std::isnan(value)) {
-      assert(101 == 606);
+    double value = 0;  // atof(word.c_str());
+    if (isNan(word, value, 606)) {
       highsLogUser(log_options, HighsLogType::kError,
                    "Bound for column \"%s\" is NaN\n", marker.c_str());
       return HMpsFF::Parsekey::kFail;
@@ -1491,10 +1480,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                      "definition: ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
-        printf("value(707) = %g\n", value);
-        if (std::isnan(value)) {
-          assert(101 == 707);
+        double value = 0;  // atof(word.c_str());
+        if (isNan(word, value, 707)) {
           highsLogUser(log_options, HighsLogType::kError,
                        "Range for row \"%s\" is NaN\n", marker.c_str());
           return HMpsFF::Parsekey::kFail;
@@ -1538,10 +1525,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                        "definition: ignored\n",
                        marker.c_str());
         } else {
-          double value = atof(word.c_str());
-          printf("value(808) = %g\n", value);
-          if (std::isnan(value)) {
-            assert(101 == 808);
+          double value = 0;  // atof(word.c_str());
+          if (isNan(word, value, 808)) {
             highsLogUser(log_options, HighsLogType::kError,
                          "Range for row \"%s\" is NaN\n", marker.c_str());
             return HMpsFF::Parsekey::kFail;
@@ -1640,10 +1625,8 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       rowidx = getColIdx(row_name);
       assert(rowidx >= 0 && rowidx < num_col);
 
-      double coeff = atof(coeff_name.c_str());
-      printf("coeff(909) = %g\n", coeff);
-      if (std::isnan(coeff)) {
-        assert(101 == 909);
+      double coeff = 0;  // atof(coeff_name.c_str());
+      if (isNan(coeff_name, coeff, 909)) {
         highsLogUser(
             log_options, HighsLogType::kError,
             "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
@@ -1791,10 +1774,8 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       qrowidx = getColIdx(row_name);
       assert(qrowidx >= 0 && qrowidx < num_col);
 
-      double coeff = atof(coeff_name.c_str());
-      printf("coeff(1010) = %g\n", coeff);
-      if (std::isnan(coeff)) {
-        assert(101 == 1010);
+      double coeff = 0;  // atof(coeff_name.c_str());
+      if (isNan(coeff_name, coeff, 1010)) {
         highsLogUser(
             log_options, HighsLogType::kError,
             "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
@@ -2021,10 +2002,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     double weight = 0.0;
     if (!is_end(strline, end)) {
       word = first_word(strline, end);
-      weight = atof(word.c_str());
-      printf("weight(1111) = %g\n", weight);
-      if (std::isnan(weight)) {
-        assert(101 == 1111);
+      if (isNan(word, weight, 1111)) {
         highsLogUser(log_options, HighsLogType::kError,
                      "Weight for column \"%s\" is NaN\n", colname.c_str());
         return HMpsFF::Parsekey::kFail;
@@ -2043,4 +2021,15 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
   return true;
 }
 
+bool HMpsFF::isNan(const std::string& word, double& value,
+                   const HighsInt id) const {
+  value = atof(word.c_str());
+  printf("value(%d) = %g\n", int(id), value);
+  if (std::isnan(value)) return true;
+  // atof('nan') yields 0 with some Windows compilers, so try a string
+  // comparison
+  std::string lower_word = word;
+  if (str_tolower(lower_word) == "nan") return true;
+  return false;
+}
 }  // namespace free_format_parser
