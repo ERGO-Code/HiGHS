@@ -1069,7 +1069,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-      printf("value(404) = %g\n", value);
+        printf("value(404) = %g\n", value);
         if (std::isnan(value)) {
           assert(101 == 404);
           highsLogUser(log_options, HighsLogType::kError,
@@ -1116,7 +1116,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-      printf("value(505) = %g\n", value);
+        printf("value(505) = %g\n", value);
         if (std::isnan(value)) {
           assert(101 == 505);
           highsLogUser(log_options, HighsLogType::kError,
@@ -1357,7 +1357,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       return HMpsFF::Parsekey::kFail;
     }
     double value = atof(word.c_str());
-      printf("value(606) = %g\n", value);
+    printf("value(606) = %g\n", value);
     if (std::isnan(value)) {
       assert(101 == 606);
       highsLogUser(log_options, HighsLogType::kError,
@@ -1492,7 +1492,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                      marker.c_str());
       } else {
         double value = atof(word.c_str());
-      printf("value(707) = %g\n", value);
+        printf("value(707) = %g\n", value);
         if (std::isnan(value)) {
           assert(101 == 707);
           highsLogUser(log_options, HighsLogType::kError,
@@ -1539,7 +1539,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                        marker.c_str());
         } else {
           double value = atof(word.c_str());
-      printf("value(808) = %g\n", value);
+          printf("value(808) = %g\n", value);
           if (std::isnan(value)) {
             assert(101 == 808);
             highsLogUser(log_options, HighsLogType::kError,
