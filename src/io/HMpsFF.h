@@ -227,8 +227,7 @@ class HMpsFF {
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
   bool allZeroed(const std::vector<double>& value);
-  bool isNan(const std::string& word, double& value,
-             const HighsInt id = -1) const;
+  double getValue(const std::string& word, bool& is_nan, const HighsInt id = -1) const;
 };
 
 }  // namespace free_format_parser
