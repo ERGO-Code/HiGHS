@@ -25,6 +25,7 @@ const std::string kHighsCopyrightStatement =
 
 const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
+const int kHighsIInf32 = std::numeric_limits<int>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
 const double kHighsMacheps = std::ldexp(1, -52);

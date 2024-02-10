@@ -909,8 +909,9 @@ public class HighsLpSolver : IDisposable
             DualBound = this.GetValueOrFallback(HighsLpSolver.Highs_getDoubleInfoValue, "mip_dual_bound", double.NaN),
             ObjectiveValue = this.GetValueOrFallback(HighsLpSolver.Highs_getDoubleInfoValue, "objective_function_value", double.NaN),
             NodeCount = this.GetValueOrFallback(HighsLpSolver.Highs_getInt64InfoValue, "mip_node_count", 0l),
-            IpmIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "simplex_iteration_count", 0),
-            SimplexIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "ipm_iteration_count", 0),
+            IpmIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "ipm_iteration_count", 0),
+            SimplexIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "simplex_iteration_count", 0),
+            PdlpIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "pdlp_iteration_count", 0),
         };
         return info;
     }
@@ -1000,6 +1001,11 @@ public class SolutionInfo
     /// Gets or sets the Interior Point Method (IPM) iteration count.
     /// </summary>
     public int IpmIterationCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PDLP iteration count.
+    /// </summary>
+    public int PdlpIterationCount { get; set; }
 
     /// <summary>
     /// Gets or sets the MIP gap.

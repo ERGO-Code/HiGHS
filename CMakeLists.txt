@@ -450,6 +450,7 @@ if(NOT FAST_BUILD)
     ${HIGHS_SOURCE_DIR}/extern/zstr
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
+    ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp
     ${HIGHS_SOURCE_DIR}/src/ipm/ipx
     ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
