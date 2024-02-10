@@ -10,8 +10,10 @@ conf_data.set('HIGHS_VERSION_PATCH',
               meson.project_version().split('.')[2])
 conf_data.set('ZLIB_FOUND',
               zlib_dep.found())
-conf_data.set('CUPDLP_CPU',
-              cupdlp_cpu.found())
+# Is the use of the following two lines the cause of the meson build
+# failure?
+#conf_data.set('CUPDLP_CPU',
+#              cupdlp_cpu.found())
 # 64 bit numbers
 if host_machine.cpu_family() == 'x86_64'
     # Get user's option, if it's not provided, enable highsint64 by default on x86_64
