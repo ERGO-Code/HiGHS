@@ -35,6 +35,13 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
     REQUIRE(run_status == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   }
+  HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  // Now run with
+  highs.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count / 2);
+  run_status = highs.run();
+
+  REQUIRE(run_status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
 }
 
 TEST_CASE("pdlp-3d-lp", "[pdlp]") {

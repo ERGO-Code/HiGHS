@@ -188,8 +188,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
     model_status = HighsModelStatus::kUnboundedOrInfeasible;
   } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
-    assert(111 == 555);
-    model_status = HighsModelStatus::kUnknown;
+    model_status = pdlp_num_iter >= intParam[N_ITER_LIM] - 1
+                       ? HighsModelStatus::kIterationLimit
+                       : HighsModelStatus::kTimeLimit;
   } else if (pdlp_model_status == FEASIBLE) {
     assert(111 == 666);
     model_status = HighsModelStatus::kUnknown;
