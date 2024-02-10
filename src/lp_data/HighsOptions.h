@@ -257,6 +257,7 @@ void reportOption(FILE* file, const OptionRecordString& option,
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";
+const string kPdlpString = "pdlp";
 
 const HighsInt kKeepNRowsDeleteRows = -1;
 const HighsInt kKeepNRowsDeleteEntries = 0;
@@ -329,6 +330,12 @@ struct HighsOptionsStruct {
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
+
+  // Options for PDLP solver
+  bool pdlp_scaling;
+  HighsInt pdlp_iteration_limit;
+  HighsInt pdlp_e_restart_method;
+  double pdlp_d_gap_tol;
 
   // Advanced options
   HighsInt log_dev_level;
@@ -479,8 +486,9 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string = new OptionRecordString(
         kSolverString,
-        "Solver option: \"simplex\", \"choose\" or \"ipm\". If "
-        "\"simplex\"/\"ipm\" is chosen then, for a MIP (QP) the integrality "
+        "Solver option: \"simplex\", \"choose\", \"ipm\" or \"pdlp\". If "
+        "\"simplex\"/\"ipm\"/\"pdlp\" is chosen then, for a MIP (QP) the "
+        "integrality "
         "constraint (quadratic term) will be ignored",
         advanced, &solver, kHighsChooseString);
     records.push_back(record_string);
@@ -895,6 +903,28 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
+        advanced, &pdlp_scaling, true);
+    records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
+        &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("pdlp_e_restart_method",
+                                     "Restart mode for PDLP solver: 0 => none; "
+                                     "1 => GPU (default); 2 => CPU ",
+                                     advanced, &pdlp_e_restart_method, 0, 1, 2);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "pdlp_d_gap_tol",
+        "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
+        &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
+    records.push_back(record_double);
 
     // Fix the number of user settable options
     num_user_settable_options_ = static_cast<HighsInt>(records.size());

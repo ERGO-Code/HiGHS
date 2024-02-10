@@ -3971,11 +3971,11 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
       if (options_.allow_unbounded_or_infeasible ||
           (options_.solver == kIpmString &&
            options_.run_crossover == kHighsOnString) ||
-          model_.isMip()) {
+          (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {
         // This model status is not permitted unless IPM is run without
-        // crossover
+        // crossover, or if PDLP is used
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
@@ -4153,6 +4153,10 @@ void Highs::reportSolvedLpQpStats() {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Crossover iterations: %" HIGHSINT_FORMAT "\n",
                    info_.crossover_iteration_count);
+    if (info_.pdlp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "PDLP      iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.pdlp_iteration_count);
     if (info_.qp_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",

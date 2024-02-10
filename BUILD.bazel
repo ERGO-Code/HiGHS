@@ -29,6 +29,8 @@ cc_library(
          "src/mip/*.cpp",
          "src/model/*.cpp",
          "src/parallel/*.cpp",
+         "src/pdlp/*.cpp",
+         "src/pdlp/cupdlp/*.c",
          "src/presolve/*.cpp",
          "src/qpsolver/*.cpp",
          "src/simplex/*.cpp",

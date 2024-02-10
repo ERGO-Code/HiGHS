@@ -3,6 +3,7 @@
 
 #define FAST_BUILD
 /* #undef ZLIB_FOUND */
+#define CUPDLP_CPU
 #define CMAKE_BUILD_TYPE "RELEASE"
 #define HiGHSRELEASE
 /* #undef HIGHSINT64 */
