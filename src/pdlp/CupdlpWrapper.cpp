@@ -14,36 +14,31 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 
-void reportParams(CUPDLPwork *w,
-		  cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
-		  cupdlp_bool *ifChangeFloatParam,
-		  cupdlp_float *floatParam);
+void reportParams(CUPDLPwork* w, cupdlp_bool* ifChangeIntParam,
+                  cupdlp_int* intParam, cupdlp_bool* ifChangeFloatParam,
+                  cupdlp_float* floatParam);
 
 void getUserParamsFromOptions(const HighsOptions& options,
-			      cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
-			      cupdlp_bool *ifChangeFloatParam,
-			      cupdlp_float *floatParam);
+                              cupdlp_bool* ifChangeIntParam,
+                              cupdlp_int* intParam,
+                              cupdlp_bool* ifChangeFloatParam,
+                              cupdlp_float* floatParam);
 
-void analysePdlpSolution(const HighsOptions& options,
-			 const HighsLp& lp,
-			 const HighsSolution& highs_solution);
+void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
+                         const HighsSolution& highs_solution);
 
 HighsStatus solveLpCupdlp(HighsLpSolverObject& solver_object) {
-  return solveLpCupdlp(solver_object.options_, solver_object.timer_, solver_object.lp_, 
-		       solver_object.basis_, solver_object.solution_, 
-		       solver_object.model_status_, solver_object.highs_info_,
-		       solver_object.callback_);
+  return solveLpCupdlp(solver_object.options_, solver_object.timer_,
+                       solver_object.lp_, solver_object.basis_,
+                       solver_object.solution_, solver_object.model_status_,
+                       solver_object.highs_info_, solver_object.callback_);
 }
 
-
-HighsStatus solveLpCupdlp(const HighsOptions& options,
-			  HighsTimer& timer,
-			  const HighsLp& lp, 
-			  HighsBasis& highs_basis,
-			  HighsSolution& highs_solution,
-			  HighsModelStatus& model_status,
-			  HighsInfo& highs_info,
-			  HighsCallback& callback) {
+HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
+                          const HighsLp& lp, HighsBasis& highs_basis,
+                          HighsSolution& highs_solution,
+                          HighsModelStatus& model_status, HighsInfo& highs_info,
+                          HighsCallback& callback) {
   // Indicate that there is no valid primal solution, dual solution or basis
   highs_basis.valid = false;
   highs_solution.value_valid = false;
@@ -51,8 +46,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  char *fp = nullptr;
-  char *fp_sol = nullptr;
+  char* fp = nullptr;
+  char* fp_sol = nullptr;
 
   int nCols;
   int nRows;
@@ -62,35 +57,34 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   cupdlp_bool ifPresolve = false;
 
   int nnz = 0;
-  double *rhs = NULL;
-  double *cost = NULL;
+  double* rhs = NULL;
+  double* cost = NULL;
 
-  cupdlp_float *lower = NULL;
-  cupdlp_float *upper = NULL;
+  cupdlp_float* lower = NULL;
+  cupdlp_float* upper = NULL;
 
   // -------------------------
   int *csc_beg = NULL, *csc_idx = NULL;
-  double *csc_val = NULL;
+  double* csc_val = NULL;
   double offset =
       0.0;  // true objVal = sig * c'x - offset, sig = 1 (min) or -1 (max)
   double sense_origin = 1;  // 1 (min) or -1 (max)
-  int *constraint_new_idx = NULL;
-  cupdlp_float *x_origin = cupdlp_NULL;
-  cupdlp_float *y_origin = cupdlp_NULL;
+  int* constraint_new_idx = NULL;
+  cupdlp_float* x_origin = cupdlp_NULL;
+  cupdlp_float* y_origin = cupdlp_NULL;
 
-  void *model = NULL;
-  void *presolvedmodel = NULL;
-  void *model2solve = NULL;
+  void* model = NULL;
+  void* presolvedmodel = NULL;
+  void* model2solve = NULL;
 
-  CUPDLPscaling *scaling =
-      (CUPDLPscaling *)cupdlp_malloc(sizeof(CUPDLPscaling));
+  CUPDLPscaling* scaling = (CUPDLPscaling*)cupdlp_malloc(sizeof(CUPDLPscaling));
 
   // claim solvers variables
   // prepare pointers
   CUPDLP_MATRIX_FORMAT src_matrix_format = CSC;
   CUPDLP_MATRIX_FORMAT dst_matrix_format = CSR_CSC;
-  CUPDLPcsc *csc_cpu = cupdlp_NULL;
-  CUPDLPproblem *prob = cupdlp_NULL;
+  CUPDLPcsc* csc_cpu = cupdlp_NULL;
+  CUPDLPproblem* prob = cupdlp_NULL;
 
   // load parameters
 
@@ -101,23 +95,20 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  getUserParamsFromOptions(options,
-			   ifChangeIntParam, intParam,
-			   ifChangeFloatParam, floatParam);
+  getUserParamsFromOptions(options, ifChangeIntParam, intParam,
+                           ifChangeFloatParam, floatParam);
 
   std::vector<int> constraint_type_clp(lp.num_row_);
 
- 
-  formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs,
-		    &csc_beg, &csc_idx, &csc_val, &rhs, &lower,
-		    &upper, &offset, &sense_origin, &nCols_origin,
-		    &constraint_new_idx, constraint_type_clp.data());
- 
+  formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
+                    &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
+                    &nCols_origin, &constraint_new_idx,
+                    constraint_type_clp.data());
 
   Init_Scaling(scaling, nCols, nRows, cost, rhs);
   cupdlp_int ifScaling = 1;
 
-  CUPDLPwork *w = cupdlp_NULL;
+  CUPDLPwork* w = cupdlp_NULL;
   cupdlp_init_work(w, 1);
 
   problem_create(&prob);
@@ -128,30 +119,29 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   csc_cpu->nRows = nRows;
   csc_cpu->nCols = nCols;
   csc_cpu->nMatElem = nnz;
-  csc_cpu->colMatBeg = (int *)malloc((1 + nCols) * sizeof(int));
-  csc_cpu->colMatIdx = (int *)malloc(nnz * sizeof(int));
-  csc_cpu->colMatElem = (double *)malloc(nnz * sizeof(double));
+  csc_cpu->colMatBeg = (int*)malloc((1 + nCols) * sizeof(int));
+  csc_cpu->colMatIdx = (int*)malloc(nnz * sizeof(int));
+  csc_cpu->colMatElem = (double*)malloc(nnz * sizeof(double));
   memcpy(csc_cpu->colMatBeg, csc_beg, (nCols + 1) * sizeof(int));
   memcpy(csc_cpu->colMatIdx, csc_idx, nnz * sizeof(int));
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  PDHG_Scale_Data_cuda(csc_cpu, ifScaling, scaling, cost, lower,
-                                   upper, rhs);
+  PDHG_Scale_Data_cuda(csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
   scaling_time = getTimeStamp() - scaling_time;
 
   cupdlp_float alloc_matrix_time = 0.0;
   cupdlp_float copy_vec_time = 0.0;
 
-  problem_alloc(prob, nRows, nCols, nEqs, cost, offset, sense_origin,
-		csc_cpu, src_matrix_format, dst_matrix_format, rhs,
-		lower, upper, &alloc_matrix_time, &copy_vec_time);
+  problem_alloc(prob, nRows, nCols, nEqs, cost, offset, sense_origin, csc_cpu,
+                src_matrix_format, dst_matrix_format, rhs, lower, upper,
+                &alloc_matrix_time, &copy_vec_time);
 
   w->problem = prob;
   w->scaling = scaling;
   PDHG_Alloc(w);
   w->timers->dScalingTime = scaling_time;
-  w->timers->dPresolveTime = 0;//presolve_time;
+  w->timers->dPresolveTime = 0;  // presolve_time;
   cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
 
@@ -174,19 +164,18 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   int dual_valid = 0;
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
-  cupdlp_retcode retcode =
-    LP_SolvePDHG(w, ifChangeIntParam, intParam,
-		 ifChangeFloatParam, floatParam, fp,
-		 nCols_origin, highs_solution.col_value.data(), highs_solution.col_dual.data(),
-		 highs_solution.row_value.data(), highs_solution.row_dual.data(),
-		 &value_valid, &dual_valid, ifSaveSol, fp_sol,
-		 constraint_new_idx, constraint_type_clp.data(),
-		 &pdlp_model_status, &pdlp_num_iter);
+  cupdlp_retcode retcode = LP_SolvePDHG(
+      w, ifChangeIntParam, intParam, ifChangeFloatParam, floatParam, fp,
+      nCols_origin, highs_solution.col_value.data(),
+      highs_solution.col_dual.data(), highs_solution.row_value.data(),
+      highs_solution.row_dual.data(), &value_valid, &dual_valid, ifSaveSol,
+      fp_sol, constraint_new_idx, constraint_type_clp.data(),
+      &pdlp_model_status, &pdlp_num_iter);
   highs_info.pdlp_iteration_count = pdlp_num_iter;
-  
+
   model_status = HighsModelStatus::kUnknown;
   if (retcode != RETCODE_OK) return HighsStatus::kError;
-    
+
   highs_solution.value_valid = value_valid;
   highs_solution.dual_valid = dual_valid;
 
@@ -199,27 +188,25 @@ HighsStatus solveLpCupdlp(const HighsOptions& options,
   } else if (pdlp_model_status == INFEASIBLE_OR_UNBOUNDED) {
     model_status = HighsModelStatus::kUnboundedOrInfeasible;
   } else if (pdlp_model_status == TIMELIMIT_OR_ITERLIMIT) {
-    assert(111==555);
+    assert(111 == 555);
     model_status = HighsModelStatus::kUnknown;
   } else if (pdlp_model_status == FEASIBLE) {
-    assert(111==666);
+    assert(111 == 666);
     model_status = HighsModelStatus::kUnknown;
   } else {
-    assert(111==777);
+    assert(111 == 777);
   }
- 
+
   analysePdlpSolution(options, lp, highs_solution);
   return HighsStatus::kOk;
 }
 
-int formulateLP_highs(const HighsLp& lp,
-		      double **cost, int *nCols,
-		      int *nRows, int *nnz, int *nEqs, int **csc_beg,
-		      int **csc_idx, double **csc_val, double **rhs,
-		      double **lower, double **upper, double *offset,
-		      double *sense_origin, int *nCols_origin,
-		      int **constraint_new_idx,
-		      int* constraint_type_clp) {
+int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
+                      int* nnz, int* nEqs, int** csc_beg, int** csc_idx,
+                      double** csc_val, double** rhs, double** lower,
+                      double** upper, double* offset, double* sense_origin,
+                      int* nCols_origin, int** constraint_new_idx,
+                      int* constraint_type_clp) {
   int retcode = 0;
 
   // problem size for malloc
@@ -245,11 +232,11 @@ int formulateLP_highs(const HighsLp& lp,
     printf("No obj offset\n");
   }
 
-  const double *lhs_clp = lp.row_lower_.data();
-  const double *rhs_clp = lp.row_upper_.data();
-  const HighsInt *A_csc_beg = lp.a_matrix_.start_.data();
-  const HighsInt *A_csc_idx = lp.a_matrix_.index_.data();
-  const double *A_csc_val = lp.a_matrix_.value_.data();
+  const double* lhs_clp = lp.row_lower_.data();
+  const double* rhs_clp = lp.row_upper_.data();
+  const HighsInt* A_csc_beg = lp.a_matrix_.start_.data();
+  const HighsInt* A_csc_idx = lp.a_matrix_.index_.data();
+  const double* A_csc_val = lp.a_matrix_.value_.data();
   int has_lower, has_upper;
 
   cupdlp_init_int(*constraint_new_idx, *nRows);
@@ -390,7 +377,7 @@ int formulateLP_highs(const HighsLp& lp,
   return retcode;
 }
 
-cupdlp_retcode problem_create(CUPDLPproblem **prob) {
+cupdlp_retcode problem_create(CUPDLPproblem** prob) {
   cupdlp_retcode retcode = RETCODE_OK;
 
   cupdlp_init_problem(*prob, 1);
@@ -398,16 +385,16 @@ cupdlp_retcode problem_create(CUPDLPproblem **prob) {
   return retcode;
 }
 
-//cupdlp_retcode csc_create(CUPDLPcsc **csc_cpu) {
-//  cupdlp_retcode retcode = RETCODE_OK;
+// cupdlp_retcode csc_create(CUPDLPcsc **csc_cpu) {
+//   cupdlp_retcode retcode = RETCODE_OK;
 //
-//  cupdlp_init_csc_cpu(*csc_cpu, 1);
+//   cupdlp_init_csc_cpu(*csc_cpu, 1);
 //
-//  return retcode;
-//}
+//   return retcode;
+// }
 
-cupdlp_retcode data_alloc(CUPDLPdata *data, cupdlp_int nRows, cupdlp_int nCols,
-                          void *matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
+cupdlp_retcode data_alloc(CUPDLPdata* data, cupdlp_int nRows, cupdlp_int nCols,
+                          void* matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
                           CUPDLP_MATRIX_FORMAT dst_matrix_format) {
   cupdlp_retcode retcode = RETCODE_OK;
 
@@ -423,25 +410,25 @@ cupdlp_retcode data_alloc(CUPDLPdata *data, cupdlp_int nRows, cupdlp_int nCols,
     case DENSE:
       dense_create(&data->dense_matrix);
       dense_alloc_matrix(data->dense_matrix, nRows, nCols, matrix,
-                                     src_matrix_format);
+                         src_matrix_format);
       break;
     case CSR:
       csr_create(&data->csr_matrix);
       csr_alloc_matrix(data->csr_matrix, nRows, nCols, matrix,
-                                   src_matrix_format);
+                       src_matrix_format);
       break;
     case CSC:
       csc_create(&data->csc_matrix);
       csc_alloc_matrix(data->csc_matrix, nRows, nCols, matrix,
-                                   src_matrix_format);
+                       src_matrix_format);
       break;
     case CSR_CSC:
       csc_create(&data->csc_matrix);
       csc_alloc_matrix(data->csc_matrix, nRows, nCols, matrix,
-                                   src_matrix_format);
+                       src_matrix_format);
       csr_create(&data->csr_matrix);
       csr_alloc_matrix(data->csr_matrix, nRows, nCols, matrix,
-                                   src_matrix_format);
+                       src_matrix_format);
       break;
     default:
       break;
@@ -453,12 +440,12 @@ cupdlp_retcode data_alloc(CUPDLPdata *data, cupdlp_int nRows, cupdlp_int nCols,
 }
 
 cupdlp_retcode problem_alloc(
-    CUPDLPproblem *prob, cupdlp_int nRows, cupdlp_int nCols, cupdlp_int nEqs,
-    cupdlp_float *cost, cupdlp_float offset, cupdlp_float sense_origin,
-    void *matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
-    CUPDLP_MATRIX_FORMAT dst_matrix_format, cupdlp_float *rhs,
-    cupdlp_float *lower, cupdlp_float *upper, cupdlp_float *alloc_matrix_time,
-    cupdlp_float *copy_vec_time) {
+    CUPDLPproblem* prob, cupdlp_int nRows, cupdlp_int nCols, cupdlp_int nEqs,
+    cupdlp_float* cost, cupdlp_float offset, cupdlp_float sense_origin,
+    void* matrix, CUPDLP_MATRIX_FORMAT src_matrix_format,
+    CUPDLP_MATRIX_FORMAT dst_matrix_format, cupdlp_float* rhs,
+    cupdlp_float* lower, cupdlp_float* upper, cupdlp_float* alloc_matrix_time,
+    cupdlp_float* copy_vec_time) {
   cupdlp_retcode retcode = RETCODE_OK;
   prob->nRows = nRows;
   prob->nCols = nCols;
@@ -482,11 +469,11 @@ cupdlp_retcode problem_alloc(
   cupdlp_init_zero_vec_double(prob->hasUpper, nCols);
 
   data_alloc(prob->data, nRows, nCols, matrix, src_matrix_format,
-                         dst_matrix_format);
+             dst_matrix_format);
   *alloc_matrix_time = getTimeStamp() - begin;
 
-  prob->data->csc_matrix->MatElemNormInf = infNorm(
-        ((CUPDLPcsc *)matrix)->colMatElem, ((CUPDLPcsc *)matrix)->nMatElem);
+  prob->data->csc_matrix->MatElemNormInf =
+      infNorm(((CUPDLPcsc*)matrix)->colMatElem, ((CUPDLPcsc*)matrix)->nMatElem);
 
   begin = getTimeStamp();
   cupdlp_copy_vec(prob->cost, cost, cupdlp_float, nCols);
@@ -506,46 +493,44 @@ cupdlp_retcode problem_alloc(
 
 // ToDo: Why can linker not pick up infNorm, cupdlp_haslb and
 // cupdlp_hasub from pdlp/cupdlp/cupdlp_linalg.c?
-double infNorm(double *x, cupdlp_int n) {
+double infNorm(double* x, cupdlp_int n) {
   double norm = 0;
-  for (HighsInt iX = 0; iX < n; iX++)
-    norm = std::max(std::fabs(x[iX]), norm);
+  for (HighsInt iX = 0; iX < n; iX++) norm = std::max(std::fabs(x[iX]), norm);
   return norm;
 }
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,
                   const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     haslb[i] = lb[i] > bound ? 1.0 : 0.0;
   }
 }
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
                   const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     hasub[i] = ub[i] < bound ? 1.0 : 0.0;
   }
 }
 
-
-void reportParams(CUPDLPwork *w,
-		  cupdlp_bool *ifChangeIntParam, cupdlp_int *intParam,
-		  cupdlp_bool *ifChangeFloatParam,
-		  cupdlp_float *floatParam) {
-  PDHG_PrintPDHGParam(w);  
+void reportParams(CUPDLPwork* w, cupdlp_bool* ifChangeIntParam,
+                  cupdlp_int* intParam, cupdlp_bool* ifChangeFloatParam,
+                  cupdlp_float* floatParam) {
+  PDHG_PrintPDHGParam(w);
 }
 
 void getUserParamsFromOptions(const HighsOptions& options,
-			      cupdlp_bool *ifChangeIntParam,
-			      cupdlp_int *intParam,
-			      cupdlp_bool *ifChangeFloatParam,
-			      cupdlp_float *floatParam) {
-  for (cupdlp_int i = 0; i < N_INT_USER_PARAM; ++i) 
-    ifChangeIntParam[i] = false;
-  for (cupdlp_int i = 0; i < N_FLOAT_USER_PARAM; ++i) 
+                              cupdlp_bool* ifChangeIntParam,
+                              cupdlp_int* intParam,
+                              cupdlp_bool* ifChangeFloatParam,
+                              cupdlp_float* floatParam) {
+  for (cupdlp_int i = 0; i < N_INT_USER_PARAM; ++i) ifChangeIntParam[i] = false;
+  for (cupdlp_int i = 0; i < N_FLOAT_USER_PARAM; ++i)
     ifChangeFloatParam[i] = false;
   // Assume all PDLP-related options in HiGHS cause changes
   ifChangeIntParam[N_ITER_LIM] = true;
-  intParam[N_ITER_LIM] = options.pdlp_iteration_limit > kHighsIInf32 ? kHighsIInf32 : options.pdlp_iteration_limit;
+  intParam[N_ITER_LIM] = options.pdlp_iteration_limit > kHighsIInf32
+                             ? kHighsIInf32
+                             : options.pdlp_iteration_limit;
   //
   ifChangeIntParam[IF_SCALING] = true;
   intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
@@ -566,10 +551,9 @@ void getUserParamsFromOptions(const HighsOptions& options,
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
 }
 
-void analysePdlpSolution(const HighsOptions& options,
-			 const HighsLp& lp,
-			 const HighsSolution& highs_solution) {
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
+                         const HighsSolution& highs_solution) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     printf("x[%2d] = %11.5g\n", int(iCol), highs_solution.col_value[iCol]);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     printf("y[%2d] = %11.5g\n", int(iRow), highs_solution.row_dual[iRow]);
@@ -686,4 +670,3 @@ void analysePdlpSolution(const HighsOptions& options,
          int(num_dual_infeasibility), sum_dual_infeasibility,
          max_dual_infeasibility);
 }
-
