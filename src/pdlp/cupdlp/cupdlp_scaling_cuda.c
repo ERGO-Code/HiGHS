@@ -228,7 +228,8 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
+cupdlp_retcode PDHG_Scale_Data_cuda(cupdlp_int log_level,
+				    CUPDLPcsc *csc, cupdlp_int ifScaling,
                                     CUPDLPscaling *scaling, cupdlp_float *cost,
                                     cupdlp_float *lower, cupdlp_float *upper,
                                     cupdlp_float *rhs) {
@@ -254,12 +255,12 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
   }
   dAvgElem /= csc->colMatBeg[nCols];
 
-  cupdlp_printf("Problem before rescaling:\n");
-  cupdlp_printf(
-      "Absolute value of nonzero constraint matrix elements: largest=%f, "
-      "smallest=%f, avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
-
+  if (log_level) {
+    cupdlp_printf("Problem before rescaling:\n");
+    cupdlp_printf("Absolute value of nonzero constraint matrix elements: largest=%f, "
+		  "smallest=%f, avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
+  }
   // calculate the three statistics of objective vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -273,10 +274,10 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nCols;
-  cupdlp_printf(
-      "Absolute value of objective vector elements: largest=%f, smallest=%f, "
-      "avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
+  if (log_level) 
+    cupdlp_printf("Absolute value of objective vector elements: largest=%f, smallest=%f, "
+		  "avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -290,37 +291,42 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nRows;
-  cupdlp_printf(
-      "Absolute value of rhs vector elements: largest=%f, smallest=%f, "
-      "avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
+  if (log_level) 
+    cupdlp_printf("Absolute value of rhs vector elements: largest=%f, smallest=%f, "
+		  "avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
 //------------------- for debug ------------------
 #endif
 
   if (ifScaling) {
-    cupdlp_printf("--------------------------------------------------\n");
-    cupdlp_printf("running scaling\n");
-
+    if (log_level) {
+      cupdlp_printf("--------------------------------------------------\n");
+      cupdlp_printf("running scaling\n");
+    }
     if (scaling->ifRuizScaling) {
-      cupdlp_printf("- use Ruiz scaling\n");
+      if (log_level) 
+	cupdlp_printf("- use Ruiz scaling\n");
       CUPDLP_CALL(
           cupdlp_ruiz_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
       scaling->ifScaled = 1;
     }
     if (scaling->ifL2Scaling) {
-      cupdlp_printf("- use L2 scaling\n");
+      if (log_level) 
+	cupdlp_printf("- use L2 scaling\n");
       CUPDLP_CALL(
           cupdlp_l2norm_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
       scaling->ifScaled = 1;
     }
     if (scaling->ifPcScaling) {
-      cupdlp_printf("- use PC scaling\n");
+      if (log_level) 
+	cupdlp_printf("- use PC scaling\n");
       CUPDLP_CALL(
           cupdlp_pc_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
       scaling->ifScaled = 1;
     }
 
-    cupdlp_printf("--------------------------------------------------\n");
+    if (log_level) 
+      cupdlp_printf("--------------------------------------------------\n");
   }
 
   /* make sure the csr matrix is also scaled*/
@@ -341,12 +347,12 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
   }
   dAvgElem /= csc->colMatBeg[nCols];
 
-  cupdlp_printf("Problem after rescaling:\n");
-  cupdlp_printf(
-      "Absolute value of nonzero constraint matrix elements: largest=%f, "
-      "smallest=%f, avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
-
+  if (log_level) {
+    cupdlp_printf("Problem after rescaling:\n");
+    cupdlp_printf("Absolute value of nonzero constraint matrix elements: largest=%f, "
+		  "smallest=%f, avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
+  }
   // calculate the three statistics of objective vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -360,10 +366,10 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nCols;
-  cupdlp_printf(
-      "Absolute value of objective vector elements: largest=%f, smallest=%f, "
-      "avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
+  if (log_level) 
+    cupdlp_printf("Absolute value of objective vector elements: largest=%f, smallest=%f, "
+		  "avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -377,10 +383,10 @@ cupdlp_retcode PDHG_Scale_Data_cuda(CUPDLPcsc *csc, cupdlp_int ifScaling,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nRows;
-  cupdlp_printf(
-      "Absolute value of rhs vector elements: largest=%f, smallest=%f, "
-      "avg=%f\n",
-      dMaxElem, dMinElem, dAvgElem);
+  if (log_level) 
+    cupdlp_printf("Absolute value of rhs vector elements: largest=%f, smallest=%f, "
+		  "avg=%f\n",
+		  dMaxElem, dMinElem, dAvgElem);
 //------------------- for debug ------------------
 #endif
 
@@ -389,7 +395,8 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode Init_Scaling(CUPDLPscaling *scaling, cupdlp_int ncols,
+cupdlp_retcode Init_Scaling(cupdlp_int log_level,
+			    CUPDLPscaling *scaling, cupdlp_int ncols,
                             cupdlp_int nrows, cupdlp_float *cost,
                             cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;

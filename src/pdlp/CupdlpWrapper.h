@@ -88,4 +88,6 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
                       int* nCols_origin, int** constraint_new_idx,
                       int* constraint_type_clp);
 
+cupdlp_int getCupdlpLogLevel(const HighsOptions& options);
+
 #endif

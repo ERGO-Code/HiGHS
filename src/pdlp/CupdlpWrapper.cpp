@@ -105,7 +105,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
                     &nCols_origin, &constraint_new_idx,
                     constraint_type_clp.data());
 
-  Init_Scaling(scaling, nCols, nRows, cost, rhs);
+  const cupdlp_int local_log_level = getCupdlpLogLevel(options);
+  Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   cupdlp_int ifScaling = 1;
 
   CUPDLPwork* w = cupdlp_NULL;
@@ -127,7 +128,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  PDHG_Scale_Data_cuda(csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
+  PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
   scaling_time = getTimeStamp() - scaling_time;
 
   cupdlp_float alloc_matrix_time = 0.0;
@@ -537,15 +538,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
                              : options.pdlp_iteration_limit;
   //
   ifChangeIntParam[N_LOG_LEVEL] = true;
-  if (options.output_flag) {
-    if (options.log_dev_level) {
-      intParam[N_LOG_LEVEL] = 2;
-    } else {
-      intParam[N_LOG_LEVEL] = 1;
-    }
-  } else {
-    intParam[N_LOG_LEVEL] = 0;
-  }
+  intParam[N_LOG_LEVEL] = getCupdlpLogLevel(options);
   //
   ifChangeIntParam[IF_SCALING] = true;
   intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
@@ -684,4 +677,15 @@ void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
   printf("     dual   infeasibilities (%d, %11.6g, %11.6g)\n",
          int(num_dual_infeasibility), sum_dual_infeasibility,
          max_dual_infeasibility);
+}
+
+cupdlp_int getCupdlpLogLevel(const HighsOptions& options) {
+  if (options.output_flag) {
+    if (options.log_dev_level) {
+      return 2;
+    } else {
+      return 1;
+    }
+  }
+  return 0;
 }
