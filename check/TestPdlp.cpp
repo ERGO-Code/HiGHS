@@ -37,7 +37,6 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   }
 }
 
-/*
 TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   SpecialLps special_lps;
   HighsLp lp;
@@ -150,4 +149,3 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   }
 }
-*/
