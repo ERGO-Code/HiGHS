@@ -171,7 +171,7 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
   printf("TYPE: %s\n", type_.c_str());
   printf("DIMENSION: %d\n", int(dimension_));
   HighsInt num_distances = distances.size();
-  if (kDebugReport) printf("num_distances = %d\n", num_distances);
+  if (kDebugReport) printf("num_distances = %d\n", int(num_distances));
   assert(num_distances == expected_num_distances);
   HighsInt num_col = dimension_ * (dimension_-1);
   std::vector<HighsInt> bi_distance(dimension_ * dimension_);
@@ -256,7 +256,7 @@ void TspData::getTours(const double* solution) {
   tours_.clear();
   const HighsInt dimension = dimension_;//(1 + std::sqrt(1+4*num_col)) / 2;
   const HighsInt num_col =  dimension*(dimension-1);
-  if (kDebugReport) printf("dimension = %d\n", dimension);
+  if (kDebugReport) printf("dimension = %d\n", int(dimension));
   std::vector<HighsInt> to_node;
   to_node.assign(dimension, -1);
   HighsInt num_nz = 0;
