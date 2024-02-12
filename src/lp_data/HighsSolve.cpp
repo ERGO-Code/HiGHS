@@ -136,19 +136,23 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             info.num_dual_infeasibilities) {
 	  if (info.num_primal_infeasibilities) {
 	    highsLogUser(options.log_options, HighsLogType::kWarning,
-			 "PDLP claims optimality, but with num/max/sum "
-			 "primal(%d/%g/%g) infeasibilities so set model status to \"unknown\"\n",
+			 "PDLP claims optimality, but with num/max/sum %d/%9.4g/%9.4g primal infeasibilities\n",
 			 int(info.num_primal_infeasibilities),
 			 info.max_primal_infeasibility,
 			 info.sum_primal_infeasibilities);
 	  } else if (info.num_dual_infeasibilities) {
 	    highsLogUser(options.log_options, HighsLogType::kWarning,
-			 "PDLP claims optimality, but with num/max/sum "
-			 "dual(%d/%g/%g) infeasibilities so set model status to \"unknown\"\n",
+			 "PDLP claims optimality, but with num/max/sum %d/%9.4g/%9.4g dual infeasibilities\n",
 			 int(info.num_dual_infeasibilities),
 			 info.max_dual_infeasibility,
 			 info.sum_dual_infeasibilities);
 	  }
+	  highsLogUser(options.log_options, HighsLogType::kWarning,
+		       "                        and          max/sum   %9.4g/%9.4g complementarity violations\n",
+		       info.max_complementarity_violation,
+		       info.sum_complementarity_violations);
+	 highsLogUser(options.log_options, HighsLogType::kWarning,
+		       "                        so set model status to \"unknown\"\n");
           solver_object.model_status_ = HighsModelStatus::kUnknown;
 	}
       } else if (solver_object.model_status_ ==

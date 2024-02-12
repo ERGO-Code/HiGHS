@@ -640,7 +640,7 @@ void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
   }
   //
   // Determine the sum of complementary violations
-  double max_complementary_violations = 0;
+  double max_complementary_violation = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     const bool is_col = iVar < lp.num_col_;
     const HighsInt iRow = iVar - lp.num_col_;
@@ -655,8 +655,8 @@ void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
         primal < mid ? std::fabs(lower - primal) : std::fabs(upper - primal);
     const double dual_residual = std::fabs(dual);
     const double complementary_violation = primal_residual * dual_residual;
-    max_complementary_violations =
-        std::max(complementary_violation, max_complementary_violations);
+    max_complementary_violation =
+        std::max(complementary_violation, max_complementary_violation);
     printf(
         "%s %2d [%11.5g, %11.5g, %11.5g] has (primal_residual, dual) values "
         "(%11.6g, %11.6g) so complementary_violation = %11.6g\n",
@@ -664,7 +664,7 @@ void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
         primal, upper, primal_residual, dual_residual, complementary_violation);
   }
   printf("PDLP max complementary violation = %g\n",
-         max_complementary_violations);
+         max_complementary_violation);
   printf("     primal infeasibilities (%d, %11.6g, %11.6g)\n",
          int(num_primal_infeasibility), sum_primal_infeasibility,
          max_primal_infeasibility);
