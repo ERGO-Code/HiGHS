@@ -69,6 +69,8 @@ void testSolver(Highs& highs, const std::string solver,
     REQUIRE(info.crossover_iteration_count ==
             default_iteration_count.crossover);
   }
+  // Following simplex or IPM+Crossover, nonbasic variables are on bounds
+  // complementarity_violation
   REQUIRE(info.max_complementarity_violation == 0);
   REQUIRE(info.sum_complementarity_violations == 0);
 
