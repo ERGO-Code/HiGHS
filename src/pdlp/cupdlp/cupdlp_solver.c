@@ -47,7 +47,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
   cupdlp_float alpha = -1.0;
   cupdlp_axpy(work, lp->nRows, &alpha, problem->rhs, primalResidual);
 
-  double dPrimalFeas = 0.0;
+  //  double dPrimalFeas = 0.0; // Redundant
 
   // todo, check
   //  cupdlp_projNegative(primalResidual + problem->nEqs, primalResidual +
@@ -66,6 +66,12 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
     cupdlp_edot(primalResidual, work->rowScale, lp->nRows);
   }
 
+  if (work->timers->nIter > 155) {
+    printf("Iteration %d\n", work->timers->nIter);
+    for (int iRow = 0; iRow < lp->nRows; iRow++) {
+      printf("Row %2d has residual %11.5g\n", iRow, primalResidual[iRow]);
+    }
+  }
   cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
 }
 

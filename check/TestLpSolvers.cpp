@@ -69,6 +69,8 @@ void testSolver(Highs& highs, const std::string solver,
     REQUIRE(info.crossover_iteration_count ==
             default_iteration_count.crossover);
   }
+  REQUIRE(info.max_complementarity_violation == 0);
+  REQUIRE(info.sum_complementarity_violations == 0);
 
   // Only perform the time limit test if the solve time is large enough
   const double min_run_time_for_test = 0.001;

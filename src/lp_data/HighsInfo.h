@@ -305,13 +305,13 @@ class HighsInfo : public HighsInfoStruct {
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(
-        "max_complementarity_violation", "Max complementarity violation", advanced,
-        &max_complementarity_violation, 0);
+        "max_complementarity_violation", "Max complementarity violation",
+        advanced, &max_complementarity_violation, 0);
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(
-        "sum_complementarity_violations", "Sum of complementarity violations", advanced,
-        &sum_complementarity_violations, 0);
+        "sum_complementarity_violations", "Sum of complementarity violations",
+        advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
   }
 

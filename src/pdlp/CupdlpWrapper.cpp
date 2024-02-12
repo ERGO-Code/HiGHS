@@ -201,6 +201,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #if CUPDLP_DEBUG
   analysePdlpSolution(options, lp, highs_solution);
 #endif
+  analysePdlpSolution(options, lp, highs_solution);
   return HighsStatus::kOk;
 }
 
