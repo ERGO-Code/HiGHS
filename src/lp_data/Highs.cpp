@@ -1595,7 +1595,7 @@ HighsStatus Highs::run() {
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(model_status_);
   return_status =
-      interpretCallStatus(options_.log_options, call_status, return_status);
+    interpretCallStatus(options_.log_options, call_status, return_status, "highsStatusFromHighsModelStatus");
   return returnFromRun(return_status, undo_mods);
 }
 

@@ -129,13 +129,31 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         }  // options.run_crossover == kHighsOnString
       }    // unwelcome_ipx_status
     } else {
+      // PDLP has been used, so check whether claim of optimality is justified 
+	const HighsInfo& info = solver_object.highs_info_;
       if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
-        if (solver_object.highs_info_.num_primal_infeasibilities ||
-            solver_object.highs_info_.num_dual_infeasibilities)
+        if (info.num_primal_infeasibilities ||
+            info.num_dual_infeasibilities) {
+	  if (info.num_primal_infeasibilities) {
+	    highsLogUser(options.log_options, HighsLogType::kWarning,
+			 "PDLP claims optimality, but with num/max/sum "
+			 "primal(%d/%g/%g) infeasibilities so set model status to \"unknown\"\n",
+			 int(info.num_primal_infeasibilities),
+			 info.max_primal_infeasibility,
+			 info.sum_primal_infeasibilities);
+	  } else if (info.num_dual_infeasibilities) {
+	    highsLogUser(options.log_options, HighsLogType::kWarning,
+			 "PDLP claims optimality, but with num/max/sum "
+			 "dual(%d/%g/%g) infeasibilities so set model status to \"unknown\"\n",
+			 int(info.num_dual_infeasibilities),
+			 info.max_dual_infeasibility,
+			 info.sum_dual_infeasibilities);
+	  }
           solver_object.model_status_ = HighsModelStatus::kUnknown;
+	}
       } else if (solver_object.model_status_ ==
                  HighsModelStatus::kUnboundedOrInfeasible) {
-        if (solver_object.highs_info_.num_primal_infeasibilities == 0)
+        if (info.num_primal_infeasibilities == 0)
           solver_object.model_status_ = HighsModelStatus::kUnbounded;
       }
     }
