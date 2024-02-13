@@ -197,7 +197,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #if CUPDLP_DEBUG
   analysePdlpSolution(options, lp, highs_solution);
 #endif
-  analysePdlpSolution(options, lp, highs_solution);
   return HighsStatus::kOk;
 }
 
@@ -544,7 +543,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
   //
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
-  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = 1;
+  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,

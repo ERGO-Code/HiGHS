@@ -3,7 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
 
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
@@ -23,20 +23,32 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
   highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
-  HighsStatus run_status = highs.run();
-  if (dev_run) highs.writeSolution("", 1);
-  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
-          double_equal_tolerance);
-  const bool not_optimal = true;
-  if (not_optimal) {
-    REQUIRE(run_status == HighsStatus::kWarning);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
-  } else {
-    REQUIRE(run_status == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  HighsStatus run_status = HighsStatus::kOk;
+  // First pass uses (HiGHS default) termination for PDLP solver to
+  // satisfy HiGHS primal/dual feasibility tolerances
+  bool optimal = true;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (k == 1) {
+      // In second pass use native termination for PDLP solver,
+      // failing HiGHS optimality test
+      highs.setOptionValue("pdlp_native_termination", true);
+      optimal = false;
+    }
+    run_status = highs.run();
+    if (dev_run) highs.writeSolution("", 1);
+    REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+            double_equal_tolerance);
+    if (optimal) {
+      REQUIRE(run_status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    } else {
+      REQUIRE(run_status == HighsStatus::kWarning);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    }
   }
   HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
-  // Now run with
+  // Now run with half the iteration count as the limit to test
+  // iteration limit termination
   highs.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count / 2);
   run_status = highs.run();
 
