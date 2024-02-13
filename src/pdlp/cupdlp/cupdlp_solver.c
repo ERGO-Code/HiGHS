@@ -162,7 +162,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
 
   if (work->settings->iInfNormAbsLocalTermination) {
     cupdlp_int index;
-    cupdlp_infNormIndex(work, lp->nRows, dualResidual, &index);
+    cupdlp_infNormIndex(work, lp->nCols, dualResidual, &index);
     *dDualFeasibility = fabs(dualResidual[index]);
   } else {
     cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
