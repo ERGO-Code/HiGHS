@@ -413,6 +413,7 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("    eRestartMethod:    %d\n", settings->eRestartMethod);
   cupdlp_printf("    nLogLevel:    %d\n", settings->nLogLevel);
   cupdlp_printf("    nLogInterval:    %d\n", settings->nLogInterval);
+  cupdlp_printf("    iInfNormAbsLocalTermination:    %d\n", settings->iInfNormAbsLocalTermination);
   cupdlp_printf("\n");
   cupdlp_printf("--------------------------------------------------\n");
   cupdlp_printf("\n");
@@ -661,6 +662,10 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
     settings->eRestartMethod = intParam[E_RESTART_METHOD];
   }
 
+  if (ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION]) {
+    settings->iInfNormAbsLocalTermination = intParam[I_INF_NORM_ABS_LOCAL_TERMINATION];
+  }
+
 exit_cleanup:
   return retcode;
 }
@@ -784,6 +789,7 @@ cupdlp_retcode settings_Alloc(CUPDLPsettings *settings) {
   settings->iScalingMethod = 3;  // no use
   settings->dScalingLimit = 5;   // no use
   settings->eRestartMethod = PDHG_GPU_RESTART;
+  settings->iInfNormAbsLocalTermination = 0;
 
   // termination criteria
   settings->dPrimalTol = 1e-4;

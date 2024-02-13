@@ -103,6 +103,7 @@ typedef enum {
   N_LOG_LEVEL,
   N_LOG_INTERVAL,
   IF_PRESOLVE,
+  I_INF_NORM_ABS_LOCAL_TERMINATION,
 } CUPDLP_INT_USER_PARAM_INDEX;
 #define N_INT_USER_PARAM 10
 typedef enum {
@@ -179,6 +180,7 @@ struct CUPDLP_SETTINGS {
   cupdlp_float dPrimalTol;
   cupdlp_float dDualTol;
   cupdlp_float dGapTol;
+  cupdlp_int iInfNormAbsLocalTermination;
 
   // max iter and time
   cupdlp_int nIterLim;

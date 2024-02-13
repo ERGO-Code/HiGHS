@@ -14,10 +14,6 @@
  */
 #include "pdlp/CupdlpWrapper.h"
 
-void reportParams(CUPDLPwork* w, cupdlp_bool* ifChangeIntParam,
-                  cupdlp_int* intParam, cupdlp_bool* ifChangeFloatParam,
-                  cupdlp_float* floatParam);
-
 void getUserParamsFromOptions(const HighsOptions& options,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
@@ -509,12 +505,6 @@ void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
   }
 }
 
-void reportParams(CUPDLPwork* w, cupdlp_bool* ifChangeIntParam,
-                  cupdlp_int* intParam, cupdlp_bool* ifChangeFloatParam,
-                  cupdlp_float* floatParam) {
-  PDHG_PrintPDHGParam(w);
-}
-
 void getUserParamsFromOptions(const HighsOptions& options,
                               cupdlp_bool* ifChangeIntParam,
                               cupdlp_int* intParam,
@@ -552,6 +542,9 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
+  //
+  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
+  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = 1;
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
