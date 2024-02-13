@@ -23,11 +23,11 @@ extern double nrminf(cupdlp_int n, const double *x, cupdlp_int incx);
 
 double twoNorm(double *x, cupdlp_int n);
 
+double twoNormSquared(double *x, cupdlp_int n);
+
 double infNorm(double *x, cupdlp_int n);
 
 cupdlp_int infNormIndex(double *x, cupdlp_int n);
-
-double twoNormSquared(double *x, cupdlp_int n);
 
 /*------------------------ new added --------------------*/
 

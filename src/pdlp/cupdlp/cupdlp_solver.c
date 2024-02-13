@@ -936,6 +936,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
       cupdlp_printf("Unexpected.\n");
       break;
     }
+
     if (resobj->termCode == OPTIMAL && resobj->termIterate == AVERAGE_ITERATE) {
       cupdlp_printf("%27s %+15.8e\n",
 		    "Primal objective:", resobj->dPrimalObjAverage);
