@@ -64,7 +64,7 @@ In HiGHS, all the macros using `typeof` have been replaced by multiple type-spec
 
 ## Problem with sys/time.h
 
-The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Since HiGHS won't be using the `cuPDLP-c` timing, this can be commented out using a compiler directive.
+The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Until this is fixed, or HiGHS passes its own timer for use within `cuPDLP-c`, timing within `cuPDLP-c` can be disabled using the compiler directive `CUPDLP_TIMER`. By default this is defined, so the `cuPDLP-c` is retained.
 
 ## Termination of cuPDLP-C
 
@@ -74,7 +74,7 @@ By default, `iInfNormAbsLocalTermination` is false, so that the original cuPDLP-
 
 When `iInfNormAbsLocalTermination` is true, cuPDLP-C terminates only when primal/dual feasibility is satisfied for the infinity-norm absolute measure of the current iterate, so that HiGHS primal/dual feasibility is satisfied. 
 
-## Contrilling the `cuPDLP-c` logging
+## Controlling the `cuPDLP-c` logging
 
 As a research code, `cuPDLP-c` naturally produces a lot of logging output. HiGHS must be able to run with less logging output, or completely silently. This is achieved using the `nLogLevel` parameter in `cuPDLP-c`. 
 
