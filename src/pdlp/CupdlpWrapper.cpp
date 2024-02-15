@@ -91,8 +91,14 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
+  printf("solveLpCupdlp 0: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
+  printf("solveLpCupdlp 0: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
+
   getUserParamsFromOptions(options, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
+
+  printf("solveLpCupdlp 1: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
+  printf("solveLpCupdlp 1: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
 
   std::vector<int> constraint_type_clp(lp.num_row_);
 
@@ -161,6 +167,10 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   int dual_valid = 0;
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
+  
+  printf("solveLpCupdlp 2: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
+  printf("solveLpCupdlp 2: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
+
   cupdlp_retcode retcode = LP_SolvePDHG(
       w, ifChangeIntParam, intParam, ifChangeFloatParam, floatParam, fp,
       nCols_origin, highs_solution.col_value.data(),
