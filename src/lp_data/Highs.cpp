@@ -3683,7 +3683,6 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     // Copy in the basis provided. It's already been checked for
     // consistency, so the basis is valid iff it was supplied
     presolve_.data_.recovered_basis_ = basis;
-    presolve_.data_.recovered_basis_.valid = basis.valid;
 
     HighsPostsolveStatus postsolve_status = runPostsolve();
 
