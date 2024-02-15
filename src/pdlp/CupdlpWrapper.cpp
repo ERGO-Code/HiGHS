@@ -517,9 +517,19 @@ void getUserParamsFromOptions(const HighsOptions& options,
   // If HiGHS is using 64-bit integers, then the default value of
   // options.pdlp_iteration_limit is kHighsIInf, so copying this to
   // intParam[N_ITER_LIM] will overflow.
-  intParam[N_ITER_LIM] = options.pdlp_iteration_limit > kHighsIInf32
-                             ? kHighsIInf32
-                             : options.pdlp_iteration_limit;
+  intParam[N_ITER_LIM] = cupdlp_int(options.pdlp_iteration_limit > kHighsIInf32
+				    ? kHighsIInf32
+				    : options.pdlp_iteration_limit);
+
+  printf("options.pdlp_iteration_limit = %" HIGHSINT_FORMAT
+	 "\n   kHighsIInf = %" HIGHSINT_FORMAT
+	 "\n   kHighsIInf32 = %" HIGHSINT_FORMAT
+	 "\n   options.pdlp_iteration_limit > kHighsIInf32 = %d;\n  intParam[N_ITER_LIM] = %d\n",
+	 options.pdlp_iteration_limit,
+	 kHighsIInf,
+	 kHighsIInf32,
+	 options.pdlp_iteration_limit > kHighsIInf32, intParam[N_ITER_LIM]);
+
   //
   ifChangeIntParam[N_LOG_LEVEL] = true;
   intParam[N_LOG_LEVEL] = getCupdlpLogLevel(options);
