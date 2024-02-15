@@ -622,9 +622,11 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
 
   printf("settings_SetUserParam: ifChangeIntParam[N_ITER_LIM] = %d\n", ifChangeIntParam[N_ITER_LIM]);
   printf("settings_SetUserParam: intParam[N_ITER_LIM]         = %d\n", intParam[N_ITER_LIM]);
+  printf("settings_SetUserParam: 0 settings->nIterLim = %d\n", settings->nIterLim);
   if (ifChangeIntParam[N_ITER_LIM]) {
     settings->nIterLim = intParam[N_ITER_LIM];
   }
+  printf("settings_SetUserParam: 1 settings->nIterLim = %d\n", settings->nIterLim);
 
   if (ifChangeIntParam[N_LOG_LEVEL]) {
     settings->nLogLevel = intParam[N_LOG_LEVEL];
