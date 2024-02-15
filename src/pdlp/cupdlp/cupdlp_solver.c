@@ -775,6 +775,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 
   // PDHG_Print_Header(pdhg);
 
+  printf("PDHG_Solve 0: settings->nIterLim = %d\n", settings->nIterLim);
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
@@ -878,6 +879,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
       PDHG_Restart_Iterate(pdhg);
     }
 
+    printf("PDHG_Solve Iter %d: settings->nIterLim = %d\n", timers->nIter, settings->nIterLim);
     // CUPDLP_CALL(PDHG_Update_Iterate(pdhg));
     if (PDHG_Update_Iterate(pdhg) == RETCODE_FAILED) {
       // cupdlp_printf("Time limit reached.\n");

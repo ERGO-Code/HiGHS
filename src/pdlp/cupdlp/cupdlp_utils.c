@@ -620,6 +620,8 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
                                      cupdlp_float *floatParam) {
   cupdlp_retcode retcode = RETCODE_OK;
 
+  printf("settings_SetUserParam: ifChangeIntParam[N_ITER_LIM] = %d\n", ifChangeIntParam[N_ITER_LIM]);
+  printf("settings_SetUserParam: intParam[N_ITER_LIM]         = %d\n", intParam[N_ITER_LIM]);
   if (ifChangeIntParam[N_ITER_LIM]) {
     settings->nIterLim = intParam[N_ITER_LIM];
   }
