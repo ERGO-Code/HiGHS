@@ -539,7 +539,6 @@ void getUserParamsFromOptions(const HighsOptions& options,
 	 kHighsIInf,
 	 kHighsIInf32,
 	 options.pdlp_iteration_limit > kHighsIInf32, intParam[N_ITER_LIM]);
-  printf("getUserParamsFromOptions 0: intParam[N_ITER_LIM] = %d\n", intParam[N_ITER_LIM]);
 
   //
   ifChangeIntParam[N_LOG_LEVEL] = true;
@@ -550,11 +549,9 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeFloatParam[D_PRIMAL_TOL] = true;
   floatParam[D_PRIMAL_TOL] = options.primal_feasibility_tolerance;
-  printf("getUserParamsFromOptions 1: intParam[N_ITER_LIM] = %d\n", intParam[N_ITER_LIM]);
   //
   ifChangeFloatParam[D_DUAL_TOL] = true;
   floatParam[D_DUAL_TOL] = options.dual_feasibility_tolerance;
-  printf("getUserParamsFromOptions 2: intParam[N_ITER_LIM] = %d\n", intParam[N_ITER_LIM]);
   //
   ifChangeFloatParam[D_GAP_TOL] = true;
   floatParam[D_GAP_TOL] = options.pdlp_d_gap_tol;
