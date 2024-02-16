@@ -153,6 +153,8 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
+  double max_complementarity_violation;
+  double sum_complementarity_violations;
 };
 
 class HighsInfo : public HighsInfoStruct {
@@ -300,6 +302,16 @@ class HighsInfo : public HighsInfoStruct {
     record_double = new InfoRecordDouble(
         "sum_dual_infeasibilities", "Sum of dual infeasibilities", advanced,
         &sum_dual_infeasibilities, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "max_complementarity_violation", "Max complementarity violation",
+        advanced, &max_complementarity_violation, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "sum_complementarity_violations", "Sum of complementarity violations",
+        advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
   }
 

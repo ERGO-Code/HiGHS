@@ -84,11 +84,11 @@ PDHG_restart_choice PDHG_Check_Restart_GPU(CUPDLPwork *work) {
 
   if (restart_choice != PDHG_NO_RESTART) {
     if (muCurrent < muAverage) {
-        if (work->settings->nLogLevel > 0)
+        if (work->settings->nLogLevel > 1)
 	  cupdlp_printf("Last restart was iter %d: %s", iterates->iLastRestartIter,
                     "current\n");
     } else {
-        if (work->settings->nLogLevel > 0)
+        if (work->settings->nLogLevel > 1)
 	  cupdlp_printf("Last restart was iter %d: %s", iterates->iLastRestartIter,
                     "average\n");
     }

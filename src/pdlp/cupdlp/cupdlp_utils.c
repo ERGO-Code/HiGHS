@@ -413,6 +413,7 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("    eRestartMethod:    %d\n", settings->eRestartMethod);
   cupdlp_printf("    nLogLevel:    %d\n", settings->nLogLevel);
   cupdlp_printf("    nLogInterval:    %d\n", settings->nLogInterval);
+  cupdlp_printf("    iInfNormAbsLocalTermination:    %d\n", settings->iInfNormAbsLocalTermination);
   cupdlp_printf("\n");
   cupdlp_printf("--------------------------------------------------\n");
   cupdlp_printf("\n");
@@ -599,12 +600,14 @@ cupdlp_retcode getUserParam(int argc, char **argv,
     }
   }
 
-  //  if (strcmp(argv[argc - 1], "-h") == 0) {
-  //    PDHG_PrintUserParamHelper();
-  //
-  //    retcode = RETCODE_FAILED;
-  //    goto exit_cleanup;
-  //  }
+  if (argc>0) {
+    if (strcmp(argv[argc - 1], "-h") == 0) {
+      PDHG_PrintUserParamHelper();
+      
+      retcode = RETCODE_FAILED;
+      goto exit_cleanup;
+    }
+  }
 
 exit_cleanup:
   return retcode;
@@ -659,6 +662,10 @@ cupdlp_retcode settings_SetUserParam(CUPDLPsettings *settings,
 
   if (ifChangeIntParam[E_RESTART_METHOD]) {
     settings->eRestartMethod = intParam[E_RESTART_METHOD];
+  }
+
+  if (ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION]) {
+    settings->iInfNormAbsLocalTermination = intParam[I_INF_NORM_ABS_LOCAL_TERMINATION];
   }
 
 exit_cleanup:
@@ -784,6 +791,7 @@ cupdlp_retcode settings_Alloc(CUPDLPsettings *settings) {
   settings->iScalingMethod = 3;  // no use
   settings->dScalingLimit = 5;   // no use
   settings->eRestartMethod = PDHG_GPU_RESTART;
+  settings->iInfNormAbsLocalTermination = 0;
 
   // termination criteria
   settings->dPrimalTol = 1e-4;
@@ -1298,7 +1306,6 @@ cupdlp_retcode dense_alloc_matrix(CUPDLPdense *dense, cupdlp_int nRows,
                                   cupdlp_int nCols, void *src,
                                   CUPDLP_MATRIX_FORMAT src_matrix_format) {
   cupdlp_retcode retcode = RETCODE_OK;
-  //  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
 
   switch (src_matrix_format) {
@@ -1337,9 +1344,6 @@ cupdlp_retcode csr_alloc_matrix(CUPDLPcsr *csr, cupdlp_int nRows,
       break;
   }
   // todo make sure this is right
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
   CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
   CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(csr->rowMatElem, nnz);
@@ -1379,9 +1383,6 @@ cupdlp_retcode csc_alloc_matrix(CUPDLPcsc *csc, cupdlp_int nRows,
     default:
       break;
   }
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
@@ -1409,7 +1410,6 @@ cupdlp_retcode dense_alloc(CUPDLPdense *dense, cupdlp_int nRows,
   dense->nRows = nRows;
   dense->nCols = nCols;
   dense->data = cupdlp_NULL;
-  //  CUPDLP_INIT_ZERO_VEC(dense->data, nRows * nCols);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
 
   CUPDLP_COPY_VEC(dense->data, val, cupdlp_float, nRows * nCols);
@@ -1427,9 +1427,6 @@ cupdlp_retcode csr_alloc(CUPDLPcsr *csr, cupdlp_int nRows, cupdlp_int nCols,
   csr->rowMatBeg = cupdlp_NULL;
   csr->rowMatIdx = cupdlp_NULL;
   csr->rowMatElem = cupdlp_NULL;
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatBeg, nRows + 1);
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatIdx, nnz);
-  //  CUPDLP_INIT_ZERO_VEC(csr->rowMatElem, nnz);
 
   CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
   CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
@@ -1452,9 +1449,6 @@ cupdlp_retcode csc_alloc(CUPDLPcsc *csc, cupdlp_int nRows, cupdlp_int nCols,
   csc->colMatBeg = cupdlp_NULL;
   csc->colMatIdx = cupdlp_NULL;
   csc->colMatElem = cupdlp_NULL;
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatBeg, nCols + 1);
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatIdx, nnz);
-  //  CUPDLP_INIT_ZERO_VEC(csc->colMatElem, nnz);
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);

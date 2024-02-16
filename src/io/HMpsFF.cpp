@@ -2034,7 +2034,20 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
 
 double HMpsFF::getValue(const std::string& word, bool& is_nan,
                         const HighsInt id) const {
-  const double value = atof(word.c_str());
+  // Lambda to replace any d or D by E
+  auto dD2e = [&](std::string& word) {
+    HighsInt ix = word.find("D");
+    if (ix >= 0) {
+      word.replace(ix, 1, "E");
+    } else {
+      ix = word.find("d");
+      if (ix >= 0) word.replace(ix, 1, "E");
+    }
+  };
+
+  std::string local_word = word;
+  dD2e(local_word);
+  const double value = atof(local_word.c_str());
   is_nan = false;
   //  printf("value(%d) = %g\n", int(id), value);
   //  if (std::isnan(value)) return true;
