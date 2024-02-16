@@ -3610,7 +3610,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   }
   // Check any basis that is supplied
   const bool basis_supplied =
-      basis.col_status.size() > 0 || basis.row_status.size() > 0;
+      basis.col_status.size() > 0 || basis.row_status.size() > 0 || basis.valid;
   if (basis_supplied) {
     if (!isBasisConsistent(presolved_lp, basis)) {
       highsLogUser(
@@ -3674,8 +3674,11 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     //
     // If there are dual values, make sure that both vectors are the
     // right size
-    if (presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
-        presolve_.data_.recovered_solution_.row_dual.size() > 0) {
+    const bool dual_supplied =
+        presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.row_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.dual_valid;
+    if (dual_supplied) {
       if (!isDualSolutionRightSize(presolved_lp,
                                    presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
