@@ -3609,7 +3609,9 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     return HighsStatus::kError;
   }
   // Check any basis that is supplied
-  if (basis.valid) {
+  const bool basis_supplied =
+      basis.col_status.size() > 0 || basis.row_status.size() > 0 || basis.valid;
+  if (basis_supplied) {
     if (!isBasisConsistent(presolved_lp, basis)) {
       highsLogUser(
           options_.log_options, HighsLogType::kError,
@@ -3672,17 +3674,25 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     //
     // If there are dual values, make sure that both vectors are the
     // right size
-    if (presolve_.data_.recovered_solution_.dual_valid) {
+    const bool dual_supplied =
+        presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.row_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.dual_valid;
+    if (dual_supplied) {
       if (!isDualSolutionRightSize(presolved_lp,
                                    presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
                      "Dual solution provided to postsolve is incorrect size\n");
         return HighsStatus::kError;
       }
+      presolve_.data_.recovered_solution_.dual_valid = true;
+    } else {
+      presolve_.data_.recovered_solution_.dual_valid = false;
     }
     // Copy in the basis provided. It's already been checked for
     // consistency, so the basis is valid iff it was supplied
     presolve_.data_.recovered_basis_ = basis;
+    presolve_.data_.recovered_basis_.valid = basis_supplied;
 
     HighsPostsolveStatus postsolve_status = runPostsolve();
 
