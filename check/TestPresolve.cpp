@@ -515,3 +515,40 @@ TEST_CASE("presolve-issue-425") {
   HighsStatus status = issue425();
   REQUIRE(status == HighsStatus::kOk);
 }
+
+TEST_CASE("postsolve-reduced-to-empty, [highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Read MIP model "egout"
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  highs.readModel(model_file);
+
+  // Turn into LP
+  std::vector<HighsInt> vars(highs.getNumCol(), 1);
+  std::vector<HighsVarType> integral(highs.getNumCol(),
+                                     HighsVarType::kContinuous);
+  highs.changeColsIntegrality(vars.data(), integral.data());
+
+  // Presolve
+  HighsStatus presolveStatus = highs.presolve();
+  REQUIRE(presolveStatus == HighsStatus::kOk);
+
+  // Presolve reduced the problem to empty
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  // Set up empty solution
+  HighsSolution hsol = HighsSolution();
+  hsol.value_valid = true;
+  hsol.dual_valid = true;
+
+  // Postsolve solution
+  HighsStatus postsolveStatus = highs.postsolve(hsol);
+  REQUIRE(postsolveStatus == HighsStatus::kOk);
+
+  // Postsolved solution should be feasible / optimal
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(highs.getInfo().num_dual_infeasibilities == 0);
+}
