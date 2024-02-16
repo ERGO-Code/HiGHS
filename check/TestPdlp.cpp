@@ -15,7 +15,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   special_lps.distillationLp(lp, require_model_status, optimal_objective);
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
   const HighsOptions& options = highs.getOptions();
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);

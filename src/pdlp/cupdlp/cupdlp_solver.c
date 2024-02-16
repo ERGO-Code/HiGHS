@@ -775,7 +775,6 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 
   // PDHG_Print_Header(pdhg);
 
-  printf("PDHG_Solve: settings->nIterLim = %d\n", settings->nIterLim);
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
@@ -1163,14 +1162,9 @@ cupdlp_retcode LP_SolvePDHG(
     cupdlp_int *model_status, cupdlp_int* num_iter) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-  printf("LP_SolvePDHG 0: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
-  printf("LP_SolvePDHG 0: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
-  printf("LP_SolvePDHG 0: settings->nIterLim = %d\n", pdhg->settings->nIterLim);
  // Set the parameters first - which is silent
   CUPDLP_CALL(PDHG_SetUserParam(pdhg, ifChangeIntParam, intParam,
                                 ifChangeFloatParam, floatParam));
-
-  printf("LP_SolvePDHG 1: settings->nIterLim = %d\n", pdhg->settings->nIterLim);
 
  // Call PDHG_PrintHugeCUPDHG() if logging level (set in
  // PDHG_SetUserParam) is verbose

@@ -86,38 +86,19 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   // set solver parameters
   cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
-  //  cupdlp_bool* ifChangeIntParam = (cupdlp_bool*)malloc((N_INT_USER_PARAM) *
-  //  sizeof(cupdlp_bool));
   cupdlp_int intParam[N_INT_USER_PARAM] = {0};
-  //  cupdlp_int* intParam = (cupdlp_int*)malloc((N_INT_USER_PARAM) *
-  //  sizeof(cupdlp_int)); for (int param = 0; param < N_INT_USER_PARAM;
-  //  param++) {
-  //    ifChangeIntParam[param] = false;
-  //    intParam[0] = 0;
-  //  }
   cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  printf("solveLpCupdlp 0: ifChangeIntParam[N_ITER_LIM] = %d\n",
-         *(ifChangeIntParam + N_ITER_LIM));
-  printf("solveLpCupdlp 0: intParam[N_ITER_LIM]         = %d\n",
-         *(intParam + N_ITER_LIM));
-
   getUserParamsFromOptions(options, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
-  printf("solveLpCupdlp 1: ifChangeIntParam[N_ITER_LIM] = %d\n",
-         *(ifChangeIntParam + N_ITER_LIM));
-  printf("solveLpCupdlp 1: intParam[N_ITER_LIM]         = %d\n",
-         *(intParam + N_ITER_LIM));
-
-  std::vector<int> constraint_type_clp(lp.num_row_);
+  std::vector<int> constraint_type(lp.num_row_);
 
   formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
                     &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
-                    &nCols_origin, &constraint_new_idx,
-                    constraint_type_clp.data());
+                    &nCols_origin, &constraint_new_idx, constraint_type.data());
 
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
@@ -180,18 +161,13 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
 
-  printf("solveLpCupdlp 2: ifChangeIntParam[N_ITER_LIM] = %d\n",
-         *(ifChangeIntParam + N_ITER_LIM));
-  printf("solveLpCupdlp 2: intParam[N_ITER_LIM]         = %d\n",
-         *(intParam + N_ITER_LIM));
-
   cupdlp_retcode retcode = LP_SolvePDHG(
       w, ifChangeIntParam, intParam, ifChangeFloatParam, floatParam, fp,
       nCols_origin, highs_solution.col_value.data(),
       highs_solution.col_dual.data(), highs_solution.row_value.data(),
       highs_solution.row_dual.data(), &value_valid, &dual_valid, ifSaveSol,
-      fp_sol, constraint_new_idx, constraint_type_clp.data(),
-      &pdlp_model_status, &pdlp_num_iter);
+      fp_sol, constraint_new_idx, constraint_type.data(), &pdlp_model_status,
+      &pdlp_num_iter);
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
   model_status = HighsModelStatus::kUnknown;
@@ -229,7 +205,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
                       double** csc_val, double** rhs, double** lower,
                       double** upper, double* offset, double* sense_origin,
                       int* nCols_origin, int** constraint_new_idx,
-                      int* constraint_type_clp) {
+                      int* constraint_type) {
   int retcode = 0;
 
   // problem size for malloc
@@ -264,14 +240,14 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
     // count number of equations and rows
     if (has_lower && has_upper && lhs_clp[i] == rhs_clp[i]) {
-      constraint_type_clp[i] = EQ;
+      constraint_type[i] = EQ;
       (*nEqs)++;
     } else if (has_lower && !has_upper) {
-      constraint_type_clp[i] = GEQ;
+      constraint_type[i] = GEQ;
     } else if (!has_lower && has_upper) {
-      constraint_type_clp[i] = LEQ;
+      constraint_type[i] = LEQ;
     } else if (has_lower && has_upper) {
-      constraint_type_clp[i] = BOUND;
+      constraint_type[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -282,7 +258,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
       // what if regard free as bounded
       printf("Warning: constraint %d has no lower and upper bound\n", i);
-      constraint_type_clp[i] = BOUND;
+      constraint_type[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -311,7 +287,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // slack bounds
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (constraint_type_clp[i] == BOUND) {
+    if (constraint_type[i] == BOUND) {
       (*lower)[j] = lhs_clp[i];
       (*upper)[j] = rhs_clp[i];
       j++;
@@ -326,11 +302,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   // permute LP rhs
   // EQ or BOUND first
   for (int i = 0, j = 0; i < *nRows; i++) {
-    if (constraint_type_clp[i] == EQ) {
+    if (constraint_type[i] == EQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (constraint_type_clp[i] == BOUND) {
+    } else if (constraint_type[i] == BOUND) {
       (*rhs)[j] = 0.0;
       (*constraint_new_idx)[i] = j;
       j++;
@@ -338,11 +314,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // then LEQ or GEQ
   for (int i = 0, j = *nEqs; i < *nRows; i++) {
-    if (constraint_type_clp[i] == LEQ) {
+    if (constraint_type[i] == LEQ) {
       (*rhs)[j] = -rhs_clp[i];  // multiply -1
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (constraint_type_clp[i] == GEQ) {
+    } else if (constraint_type[i] == GEQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
@@ -360,8 +336,8 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     // same order as in rhs
     // EQ or BOUND first
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (constraint_type_clp[A_csc_idx[j]] == EQ ||
-          constraint_type_clp[A_csc_idx[j]] == BOUND) {
+      if (constraint_type[A_csc_idx[j]] == EQ ||
+          constraint_type[A_csc_idx[j]] == BOUND) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -369,11 +345,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     }
     // then LEQ or GEQ
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (constraint_type_clp[A_csc_idx[j]] == LEQ) {
+      if (constraint_type[A_csc_idx[j]] == LEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = -A_csc_val[j];  // multiply -1
         k++;
-      } else if (constraint_type_clp[A_csc_idx[j]] == GEQ) {
+      } else if (constraint_type[A_csc_idx[j]] == GEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -383,7 +359,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
   // slacks for BOUND
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (constraint_type_clp[i] == BOUND) {
+    if (constraint_type[i] == BOUND) {
       (*csc_idx)[(*csc_beg)[j]] = (*constraint_new_idx)[i];
       (*csc_val)[(*csc_beg)[j]] = -1.0;
       j++;
@@ -544,15 +520,6 @@ void getUserParamsFromOptions(const HighsOptions& options,
   intParam[N_ITER_LIM] = cupdlp_int(options.pdlp_iteration_limit > kHighsIInf32
                                         ? kHighsIInf32
                                         : options.pdlp_iteration_limit);
-
-  printf("options.pdlp_iteration_limit = %" HIGHSINT_FORMAT
-         "\n   kHighsIInf = %" HIGHSINT_FORMAT
-         "\n   kHighsIInf32 = %" HIGHSINT_FORMAT
-         "\n   options.pdlp_iteration_limit > kHighsIInf32 = %d;\n  "
-         "intParam[N_ITER_LIM] = %d\n",
-         options.pdlp_iteration_limit, kHighsIInf, kHighsIInf32,
-         options.pdlp_iteration_limit > kHighsIInf32, intParam[N_ITER_LIM]);
-
   //
   ifChangeIntParam[N_LOG_LEVEL] = true;
   intParam[N_LOG_LEVEL] = getCupdlpLogLevel(options);
@@ -577,8 +544,6 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
   intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
-  printf("getUserParamsFromOptions 9: intParam[N_ITER_LIM] = %d\n",
-         intParam[N_ITER_LIM]);
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
