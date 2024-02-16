@@ -1392,33 +1392,29 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
-  bool consistent = true;
-  consistent = isBasisRightSize(lp, basis) && consistent;
-  if (consistent) {
-    HighsInt num_basic_variables = 0;
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
-        num_basic_variables++;
-    }
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
-        num_basic_variables++;
-    }
-    bool right_num_basic_variables = num_basic_variables == lp.num_row_;
-    consistent = right_num_basic_variables && consistent;
+  if (!isBasisRightSize(lp, basis)) return false;
+
+  HighsInt num_basic_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      num_basic_variables++;
   }
-  return consistent;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      num_basic_variables++;
+  }
+  return num_basic_variables == lp.num_row_;
 }
 
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution) {
-  return (HighsInt)solution.col_value.size() == lp.num_col_ &&
-         (HighsInt)solution.row_value.size() == lp.num_row_;
+  return solution.col_value.size() == static_cast<size_t>(lp.num_col_) &&
+         solution.row_value.size() == static_cast<size_t>(lp.num_row_);
 }
 
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return (HighsInt)solution.col_dual.size() == lp.num_col_ &&
-         (HighsInt)solution.row_dual.size() == lp.num_row_;
+  return solution.col_dual.size() == static_cast<size_t>(lp.num_col_) &&
+         solution.row_dual.size() == static_cast<size_t>(lp.num_row_);
 }
 
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
@@ -1427,8 +1423,8 @@ bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
 }
 
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
-  return (HighsInt)basis.col_status.size() == lp.num_col_ &&
-         (HighsInt)basis.row_status.size() == lp.num_row_;
+  return basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
+         basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
 void HighsSolution::invalidate() {
