@@ -819,9 +819,7 @@ try_again:
     // The potential new incumbent is feasible in the original space,
     // but check whether it generates new lazy constraints that make
     // it infeasible
-    const bool feasible_with_new_lazy_constraints = 
-      feasibleWithNewLazyConstraints(solution.col_value);
-    feasible = feasible_with_new_lazy_constraints;    
+    feasible = feasibleWithNewLazyConstraints(solution.col_value, row_violation_);
   }
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
@@ -2013,7 +2011,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-bool HighsMipSolverData::feasibleWithNewLazyConstraints(const std::vector<double>& solution_in_original_space) {
+bool HighsMipSolverData::feasibleWithNewLazyConstraints(const std::vector<double>& solution, double& row_violation) {
   // If the user callback isn't defined, or the lazy constraint
   // callback isn't active, then no new lazy constraints can be
   // generated, so solution (in the original space) is trivially
@@ -2023,12 +2021,11 @@ bool HighsMipSolverData::feasibleWithNewLazyConstraints(const std::vector<double
 
   // Define new lazy constraints
   mipsolver.callback_->clearHighsCallbackDataOut();
-  mipsolver.callback_->data_out.mip_solution = solution_in_original_space.data();
-  defineNewLazyConstraints();
-  return false;
+  mipsolver.callback_->data_out.mip_solution = solution.data();
+  return defineNewLazyConstraints(solution, row_violation);
 }
 
-void HighsMipSolverData::defineNewLazyConstraints() {
+bool HighsMipSolverData::defineNewLazyConstraints(const std::vector<double>& solution, double& row_violation) {
   assert(mipsolver.callback_->user_callback);
   assert(mipsolver.callback_->callbackActive(kCallbackMipDefineNewLazyConstraints));
   mipsolver.callback_->user_callback(kCallbackMipDefineNewLazyConstraints,
@@ -2038,6 +2035,7 @@ void HighsMipSolverData::defineNewLazyConstraints() {
 				     mipsolver.callback_->user_callback_data);
   HighsCallbackDataIn& data_in = mipsolver.callback_->data_in;
   const HighsInt num_cut = data_in.cutset_num_cut;
+  if (num_cut <= 0) return true;
   const HighsInt num_nz = data_in.cutset_ARstart[num_cut];
   HighsCutSet cutset;
   cutset.cutindices.resize(num_cut);
@@ -2060,7 +2058,14 @@ void HighsMipSolverData::defineNewLazyConstraints() {
   // Now analyse the cuts, adding them to the pool
   //
   // Cut pool members are of the form activity <= rhs
+  //
+  // Would be strange for the lazy constraints to be feasible, but
+  // check
+  bool lazy_constraints_feasible = true;
+  // Update the current row_violation
+  assert(row_violation == 0);
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
+    double row_value = 0;
     HighsInt Rlen = cutset.ARstart_[iCut+1] - cutset.ARstart_[iCut];
     assert(cutset.lower_[iCut] <= -kHighsInf);
     // Determine whether the cut is integral - has integer
@@ -2070,25 +2075,29 @@ void HighsMipSolverData::defineNewLazyConstraints() {
     for (HighsInt iEl = cutset.ARstart_[iCut]; iEl < cutset.ARstart_[iCut+1]; iEl++) {
       HighsInt iCol = cutset.ARindex_[iEl];
       double value = cutset.ARvalue_[iEl];
-      if (!HighsIntegers::isIntegral(value, feastol)) {
-	integralCoefficients = false;
-	break;
-      }
-      if (!lp.isColIntegral(iCol)) {
-	integralSupport = false;
-	break;
-      }	
+      row_value += value * solution[iCol];
+      if (!HighsIntegers::isIntegral(value, feastol)) integralCoefficients = false;
+      if (!lp.isColIntegral(iCol)) integralSupport = false;
     }
+    // Would be strange for the lazy constraint to be feasible, but check
+    const double upper = cutset.upper_[iCut];
+    const bool infeasible = row_value > upper + feastol;
+    assert(infeasible);
+    const double primal_infeasibility = infeasible ? row_value - upper : 0;
+    row_violation = std::max(row_violation, primal_infeasibility);
+    lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
-    HighsInt iEl = cutset.ARstart_[iCut];
+    const HighsInt iEl = cutset.ARstart_[iCut];
     cutpool.addCut(mipsolver,
 		   &cutset.ARindex_[iEl],
 		   &cutset.ARvalue_[iEl],
 		   Rlen,
-		   cutset.upper_[iCut],
+		   upper,
 		   cut_integral);
     numLazyConstraints++;
   }
   lp.addCuts(cutset);
+  assert(!lazy_constraints_feasible);
+  return lazy_constraints_feasible;
 }
 
