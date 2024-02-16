@@ -379,6 +379,7 @@ void HighsMipSolverData::init() {
   numCliqueEntriesAfterFirstPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
+  newLazyConstraints = false;
   numLazyConstraints = 0;
   lower_bound = -kHighsInf;
   upper_bound = kHighsInf;
@@ -819,6 +820,7 @@ try_again:
     // The potential new incumbent is feasible in the original space,
     // but check whether it generates new lazy constraints that make
     // it infeasible
+    newLazyConstraints = false;
     feasible = feasibleWithNewLazyConstraints(solution.col_value, row_violation_);
   }
   // Possible MIP solution callback
@@ -879,14 +881,19 @@ try_again:
               "[" + mipsolver.orig_model_->row_names_[check_row] + "]";
         check_row_data += ")";
       }
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   //    printf(
-                   "Solution with objective %g has untransformed violations: "
-                   "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
-                   mipsolver_objective_value, bound_violation_,
-                   check_col_data.c_str(), integrality_violation_,
-                   check_int_data.c_str(), row_violation_,
-                   check_row_data.c_str());
+      // Addition of new lazy constraints will yield infeasibility due
+      // to positive row_violation_, so avoid reporting an error in
+      // this scenario
+      if (newLazyConstraints) assert(!(bound_violation_ || integrality_violation_));
+      if (!newLazyConstraints)
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+		     //    printf(
+		     "Solution with objective %g has untransformed violations: "
+		     "bound = %.4g%s; integrality = %.4g%s; row = %.4g%s\n",
+		     mipsolver_objective_value, bound_violation_,
+		     check_col_data.c_str(), integrality_violation_,
+		     check_int_data.c_str(), row_violation_,
+		     check_row_data.c_str());
 
       const bool debug_repeat = false;  // true;//
       if (debug_repeat) {
@@ -2036,6 +2043,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(const std::vector<double>& sol
   HighsCallbackDataIn& data_in = mipsolver.callback_->data_in;
   const HighsInt num_cut = data_in.cutset_num_cut;
   if (num_cut <= 0) return true;
+  newLazyConstraints = true;
   const HighsInt num_nz = data_in.cutset_ARstart[num_cut];
   HighsCutSet cutset;
   cutset.cutindices.resize(num_cut);
