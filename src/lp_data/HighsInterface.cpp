@@ -1606,14 +1606,14 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   std::stringstream ss;
   ss.str(std::string());
   ss << highsFormatToString(
-      "%s solver claims optimality, but with num/sum/max "
-      "primal(%" HIGHSINT_FORMAT "/%g/%g)",
-      solver_type.c_str(), info_.num_primal_infeasibilities,
-      info_.sum_primal_infeasibilities, info_.max_primal_infeasibility);
+      "%s solver claims optimality, but with num/max/sum "
+      "primal(%d/%g/%g)",
+      solver_type.c_str(), int(info_.num_primal_infeasibilities),
+      info_.max_primal_infeasibility, info_.sum_primal_infeasibilities);
   if (info_.num_dual_infeasibilities > 0)
     ss << highsFormatToString(
-        "and dual(%" HIGHSINT_FORMAT "/%g/%g)", info_.num_dual_infeasibilities,
-        info_.sum_dual_infeasibilities, info_.max_dual_infeasibility);
+        "and dual(%d/%g/%g)", int(info_.num_dual_infeasibilities),
+        info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
   highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
