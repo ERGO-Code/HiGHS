@@ -379,6 +379,7 @@ void HighsMipSolverData::init() {
   numCliqueEntriesAfterFirstPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
+  numLazyConstraints = 0;
   lower_bound = -kHighsInf;
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
@@ -2055,6 +2056,38 @@ void HighsMipSolverData::defineNewLazyConstraints() {
   for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
     cutset.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
     cutset.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
+  }
+  // Now analyse the cuts, adding them to the pool
+  //
+  // Cut pool members are of the form activity <= rhs
+  for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
+    HighsInt Rlen = cutset.ARstart_[iCut+1] - cutset.ARstart_[iCut];
+    assert(cutset.lower_[iCut] <= -kHighsInf);
+    // Determine whether the cut is integral - has integer
+    // coeffcients, all corresponding to integer variables
+    bool integralSupport = true;
+    bool integralCoefficients = true;
+    for (HighsInt iEl = cutset.ARstart_[iCut]; iEl < cutset.ARstart_[iCut+1]; iEl++) {
+      HighsInt iCol = cutset.ARindex_[iEl];
+      double value = cutset.ARvalue_[iEl];
+      if (!HighsIntegers::isIntegral(value, feastol)) {
+	integralCoefficients = false;
+	break;
+      }
+      if (!lp.isColIntegral(iCol)) {
+	integralSupport = false;
+	break;
+      }	
+    }
+    const bool cut_integral = integralSupport && integralCoefficients;
+    HighsInt iEl = cutset.ARstart_[iCut];
+    cutpool.addCut(mipsolver,
+		   &cutset.ARindex_[iEl],
+		   &cutset.ARvalue_[iEl],
+		   Rlen,
+		   cutset.upper_[iCut],
+		   cut_integral);
+    numLazyConstraints++;
   }
   lp.addCuts(cutset);
 }

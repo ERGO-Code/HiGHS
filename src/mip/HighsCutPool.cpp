@@ -409,6 +409,16 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
                               bool extractCliques, bool isConflict) {
+  // Cut has rhs as upper bound 
+  const bool debug_report = false;
+  if (debug_report) {
+    printf("\nHighsCutPool::addCut len = %d; RHS = %g:", int(Rlen), rhs);
+    for (HighsInt i = 0; i != Rlen; ++i) 
+      printf(" (%d, %g)", int(Rindex[i]), Rvalue[i]);
+    printf("\n");
+    printf("HighsCutPool::addCut integral = %d; propagate = %d; extractCliques = %d; isConflict = %d\n",
+	   int(integral), int(propagate), int(extractCliques), int(isConflict));
+  }
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   sortBuffer.resize(Rlen);
