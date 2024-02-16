@@ -10,8 +10,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "util/stringutil.h"
 
+//#include <algorithm>
 #include <cassert>
 
+/*
 void strRemoveWhitespace(char* str) {
   char* dest = str;
   do
@@ -59,6 +61,14 @@ void strTrim(char* str) {
 
   str[i - begin] = '\0';  // Null terminate string.
 }
+*/
+
+// std::string& str_tolower(std::string str) {
+//   std::transform(str.begin(), str.end(), str.begin(),
+//                  [](unsigned char c) { return std::tolower(c); }  // correct
+//   );
+//   return str;
+// }
 
 std::string& ltrim(std::string& str, const std::string& chars) {
   str.erase(0, str.find_first_not_of(chars));

@@ -10,6 +10,10 @@ conf_data.set('HIGHS_VERSION_PATCH',
               meson.project_version().split('.')[2])
 conf_data.set('ZLIB_FOUND',
               zlib_dep.found())
+# Is the use of the following two lines the cause of the meson build
+# failure?
+#conf_data.set('CUPDLP_CPU',
+#              cupdlp_cpu.found())
 # 64 bit numbers
 if host_machine.cpu_family() == 'x86_64'
     # Get user's option, if it's not provided, enable highsint64 by default on x86_64
@@ -110,6 +114,17 @@ configure_file(
 _incdirs += include_directories('.')
 
 # --------------------- Libraries
+
+_cupdlp_srcs = [
+    'pdlp/cupdlp/cupdlp_solver.c',
+    'pdlp/cupdlp/cupdlp_scaling_cuda.c',
+    'pdlp/cupdlp/cupdlp_restart.c',
+    'pdlp/cupdlp/cupdlp_proj.c',
+    'pdlp/cupdlp/cupdlp_linalg.c',
+    'pdlp/cupdlp/cupdlp_cs.c',
+    'pdlp/cupdlp/cupdlp_utils.c',
+    'pdlp/cupdlp/cupdlp_step.c',
+]
 
 _basiclu_srcs = [
     'ipm/basiclu/basiclu_factorize.c',
@@ -285,6 +300,8 @@ _srcs = [
 highslib_srcs = [
   _srcs,
   'ipm/IpxWrapper.cpp',
+  'pdlp/CupdlpWrapper.cpp',
+  _cupdlp_srcs,
   _basiclu_srcs,
   _ipx_srcs
 ]

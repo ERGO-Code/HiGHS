@@ -14,6 +14,7 @@
 
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
 // The method below runs simplex or ipx solver on the lp.
@@ -44,18 +45,32 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-  } else if (options.solver == kIpmString || options.run_centring) {
-    // Use IPM
-    // Use IPX to solve the LP
-    try {
-      call_status = solveLpIpx(solver_object);
-    } catch (const std::exception& exception) {
-      highsLogDev(options.log_options, HighsLogType::kError,
-                  "Exception %s in solveLpIpx\n", exception.what());
-      call_status = HighsStatus::kError;
+  } else if (options.solver == kIpmString || options.run_centring ||
+             options.solver == kPdlpString) {
+    // Use IPM or PDLP
+    if (options.solver == kIpmString || options.run_centring) {
+      // Use IPX to solve the LP
+      try {
+        call_status = solveLpIpx(solver_object);
+      } catch (const std::exception& exception) {
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Exception %s in solveLpIpx\n", exception.what());
+        call_status = HighsStatus::kError;
+      }
+      return_status = interpretCallStatus(options.log_options, call_status,
+                                          return_status, "solveLpIpx");
+    } else {
+      // Use cuPDLP-C to solve the LP
+      try {
+        call_status = solveLpCupdlp(solver_object);
+      } catch (const std::exception& exception) {
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Exception %s in solveLpCupdlp\n", exception.what());
+        call_status = HighsStatus::kError;
+      }
+      return_status = interpretCallStatus(options.log_options, call_status,
+                                          return_status, "solveLpCupdlp");
     }
-    return_status = interpretCallStatus(options.log_options, call_status,
-                                        return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
@@ -64,53 +79,66 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
-    // Setting the IPM-specific values of (highs_)info_ has been done in
-    // solveLpIpx
-    const bool unwelcome_ipx_status =
-        solver_object.model_status_ == HighsModelStatus::kUnknown ||
-        (solver_object.model_status_ ==
-             HighsModelStatus::kUnboundedOrInfeasible &&
-         !options.allow_unbounded_or_infeasible);
-    if (unwelcome_ipx_status) {
-      // When performing an analytic centre calculation, the setting
-      // of options.run_crossover is ignored, so simplex clean-up is
-      // not possible - or desirable, anyway!
-      highsLogUser(
-          options.log_options, HighsLogType::kWarning,
-          "Unwelcome IPX status of %s: basis is %svalid; solution is "
-          "%svalid; run_crossover is \"%s\"\n",
-          utilModelStatusToString(solver_object.model_status_).c_str(),
-          solver_object.basis_.valid ? "" : "not ",
-          solver_object.solution_.value_valid ? "" : "not ",
-          options.run_centring ? "off" : options.run_crossover.c_str());
-      const bool allow_simplex_cleanup =
-          options.run_crossover != kHighsOffString && !options.run_centring;
-      if (allow_simplex_cleanup) {
-        // IPX has returned a model status that HiGHS would rather
-        // avoid, so perform simplex clean-up if crossover was allowed.
-        //
-        // This is an unusual situation, and the cost will usually be
-        // acceptable. Worst case is if crossover wasn't run, in which
-        // case there's no basis to start simplex
-        //
-        // ToDo: Check whether simplex can exploit the primal solution returned
-        // by IPX
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "IPX solution is imprecise, so clean up with simplex\n");
-        // Reset the return status since it will now be determined by
-        // the outcome of the simplex solve
-        return_status = HighsStatus::kOk;
-        call_status = solveLpSimplex(solver_object);
-        return_status = interpretCallStatus(options.log_options, call_status,
-                                            return_status, "solveLpSimplex");
-        if (return_status == HighsStatus::kError) return return_status;
-        if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
-          highsLogUser(options.log_options, HighsLogType::kError,
-                       "Inconsistent solution returned from solver\n");
-          return HighsStatus::kError;
-        }
-      }  // options.run_crossover == kHighsOnString
-    }    // unwelcome_ipx_status
+    if (options.solver == kIpmString || options.run_centring) {
+      // Setting the IPM-specific values of (highs_)info_ has been done in
+      // solveLpIpx
+      const bool unwelcome_ipx_status =
+          solver_object.model_status_ == HighsModelStatus::kUnknown ||
+          (solver_object.model_status_ ==
+               HighsModelStatus::kUnboundedOrInfeasible &&
+           !options.allow_unbounded_or_infeasible);
+      if (unwelcome_ipx_status) {
+        // When performing an analytic centre calculation, the setting
+        // of options.run_crossover is ignored, so simplex clean-up is
+        // not possible - or desirable, anyway!
+        highsLogUser(
+            options.log_options, HighsLogType::kWarning,
+            "Unwelcome IPX status of %s: basis is %svalid; solution is "
+            "%svalid; run_crossover is \"%s\"\n",
+            utilModelStatusToString(solver_object.model_status_).c_str(),
+            solver_object.basis_.valid ? "" : "not ",
+            solver_object.solution_.value_valid ? "" : "not ",
+            options.run_centring ? "off" : options.run_crossover.c_str());
+        const bool allow_simplex_cleanup =
+            options.run_crossover != kHighsOffString && !options.run_centring;
+        if (allow_simplex_cleanup) {
+          // IPX has returned a model status that HiGHS would rather
+          // avoid, so perform simplex clean-up if crossover was allowed.
+          //
+          // This is an unusual situation, and the cost will usually be
+          // acceptable. Worst case is if crossover wasn't run, in which
+          // case there's no basis to start simplex
+          //
+          // ToDo: Check whether simplex can exploit the primal solution
+          // returned by IPX
+          highsLogUser(options.log_options, HighsLogType::kWarning,
+                       "IPX solution is imprecise, so clean up with simplex\n");
+          // Reset the return status since it will now be determined by
+          // the outcome of the simplex solve
+          return_status = HighsStatus::kOk;
+          call_status = solveLpSimplex(solver_object);
+          return_status = interpretCallStatus(options.log_options, call_status,
+                                              return_status, "solveLpSimplex");
+          if (return_status == HighsStatus::kError) return return_status;
+          if (!isSolutionRightSize(solver_object.lp_,
+                                   solver_object.solution_)) {
+            highsLogUser(options.log_options, HighsLogType::kError,
+                         "Inconsistent solution returned from solver\n");
+            return HighsStatus::kError;
+          }
+        }  // options.run_crossover == kHighsOnString
+      }    // unwelcome_ipx_status
+    } else {
+      if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
+        if (solver_object.highs_info_.num_primal_infeasibilities ||
+            solver_object.highs_info_.num_dual_infeasibilities)
+          solver_object.model_status_ = HighsModelStatus::kUnknown;
+      } else if (solver_object.model_status_ ==
+                 HighsModelStatus::kUnboundedOrInfeasible) {
+        if (solver_object.highs_info_.num_primal_infeasibilities == 0)
+          solver_object.model_status_ = HighsModelStatus::kUnbounded;
+      }
+    }
   } else {
     // Use Simplex
     call_status = solveLpSimplex(solver_object);

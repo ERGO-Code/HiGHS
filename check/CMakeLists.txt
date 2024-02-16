@@ -52,12 +52,14 @@ set(TEST_SOURCES
     TestLpModification.cpp
     TestLpOrientation.cpp
     TestModelProperties.cpp
+    TestPdlp.cpp
     TestPresolve.cpp
     TestQpSolver.cpp
     TestRays.cpp
     TestRanging.cpp
     TestSemiVariables.cpp
     TestThrow.cpp
+    TestTspSolver.cpp
     TestUserScale.cpp
     Avgas.cpp)
 

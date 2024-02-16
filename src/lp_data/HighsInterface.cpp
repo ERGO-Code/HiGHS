@@ -1468,6 +1468,7 @@ void Highs::zeroIterationCounts() {
   info_.simplex_iteration_count = 0;
   info_.ipm_iteration_count = 0;
   info_.crossover_iteration_count = 0;
+  info_.pdlp_iteration_count = 0;
   info_.qp_iteration_count = 0;
 }
 

@@ -694,6 +694,7 @@ PYBIND11_MODULE(_highs, m) {
       .def_readwrite("qp_iteration_count", &HighsInfo::qp_iteration_count)
       .def_readwrite("crossover_iteration_count",
                      &HighsInfo::crossover_iteration_count)
+      .def_readwrite("pdlp_iteration_count", &HighsInfo::pdlp_iteration_count)
       .def_readwrite("primal_solution_status",
                      &HighsInfo::primal_solution_status)
       .def_readwrite("dual_solution_status", &HighsInfo::dual_solution_status)
@@ -1127,6 +1128,9 @@ PYBIND11_MODULE(_highs, m) {
              HighsCallbackType::kCallbackMipImprovingSolution)
       .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
       .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
+      .value("kCallbackMipGetCutPool", HighsCallbackType::kCallbackMipGetCutPool)
+      .value("kCallbackMipDefineLazyConstraints",
+	     HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
@@ -1139,6 +1143,8 @@ PYBIND11_MODULE(_highs, m) {
                      &HighsCallbackDataOut::simplex_iteration_count)
       .def_readwrite("ipm_iteration_count",
                      &HighsCallbackDataOut::ipm_iteration_count)
+      .def_readwrite("pdlp_iteration_count",
+                     &HighsCallbackDataOut::pdlp_iteration_count)
       .def_readwrite("objective_function_value",
                      &HighsCallbackDataOut::objective_function_value)
       .def_readwrite("mip_node_count", &HighsCallbackDataOut::mip_node_count)

@@ -3610,7 +3610,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   }
   // Check any basis that is supplied
   const bool basis_supplied =
-      basis.col_status.size() > 0 || basis.row_status.size() > 0;
+      basis.col_status.size() > 0 || basis.row_status.size() > 0 || basis.valid;
   if (basis_supplied) {
     if (!isBasisConsistent(presolved_lp, basis)) {
       highsLogUser(
@@ -3674,8 +3674,11 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
     //
     // If there are dual values, make sure that both vectors are the
     // right size
-    if (presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
-        presolve_.data_.recovered_solution_.row_dual.size() > 0) {
+    const bool dual_supplied =
+        presolve_.data_.recovered_solution_.col_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.row_dual.size() > 0 ||
+        presolve_.data_.recovered_solution_.dual_valid;
+    if (dual_supplied) {
       if (!isDualSolutionRightSize(presolved_lp,
                                    presolve_.data_.recovered_solution_)) {
         highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3952,11 +3955,11 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
       if (options_.allow_unbounded_or_infeasible ||
           (options_.solver == kIpmString &&
            options_.run_crossover == kHighsOnString) ||
-          model_.isMip()) {
+          (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {
         // This model status is not permitted unless IPM is run without
-        // crossover
+        // crossover, or if PDLP is used
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
@@ -4134,6 +4137,10 @@ void Highs::reportSolvedLpQpStats() {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Crossover iterations: %" HIGHSINT_FORMAT "\n",
                    info_.crossover_iteration_count);
+    if (info_.pdlp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "PDLP      iterations: %" HIGHSINT_FORMAT "\n",
+                   info_.pdlp_iteration_count);
     if (info_.qp_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",

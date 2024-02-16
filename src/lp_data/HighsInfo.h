@@ -138,6 +138,7 @@ struct HighsInfoStruct {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt crossover_iteration_count;
+  HighsInt pdlp_iteration_count;
   HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
@@ -214,6 +215,11 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt("crossover_iteration_count",
                                    "Iteration count for crossover", advanced,
                                    &crossover_iteration_count, 0);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt("pdlp_iteration_count",
+                                   "Iteration count for PDLP solver", advanced,
+                                   &pdlp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int =
