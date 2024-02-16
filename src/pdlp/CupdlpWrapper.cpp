@@ -86,19 +86,31 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   // set solver parameters
   cupdlp_bool ifChangeIntParam[N_INT_USER_PARAM] = {false};
+  //  cupdlp_bool* ifChangeIntParam = (cupdlp_bool*)malloc((N_INT_USER_PARAM) *
+  //  sizeof(cupdlp_bool));
   cupdlp_int intParam[N_INT_USER_PARAM] = {0};
+  //  cupdlp_int* intParam = (cupdlp_int*)malloc((N_INT_USER_PARAM) *
+  //  sizeof(cupdlp_int)); for (int param = 0; param < N_INT_USER_PARAM;
+  //  param++) {
+  //    ifChangeIntParam[param] = false;
+  //    intParam[0] = 0;
+  //  }
   cupdlp_bool ifChangeFloatParam[N_FLOAT_USER_PARAM] = {false};
   cupdlp_float floatParam[N_FLOAT_USER_PARAM] = {0.0};
 
   // Transfer from options
-  printf("solveLpCupdlp 0: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
-  printf("solveLpCupdlp 0: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
+  printf("solveLpCupdlp 0: ifChangeIntParam[N_ITER_LIM] = %d\n",
+         *(ifChangeIntParam + N_ITER_LIM));
+  printf("solveLpCupdlp 0: intParam[N_ITER_LIM]         = %d\n",
+         *(intParam + N_ITER_LIM));
 
   getUserParamsFromOptions(options, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
-  printf("solveLpCupdlp 1: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
-  printf("solveLpCupdlp 1: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
+  printf("solveLpCupdlp 1: ifChangeIntParam[N_ITER_LIM] = %d\n",
+         *(ifChangeIntParam + N_ITER_LIM));
+  printf("solveLpCupdlp 1: intParam[N_ITER_LIM]         = %d\n",
+         *(intParam + N_ITER_LIM));
 
   std::vector<int> constraint_type_clp(lp.num_row_);
 
@@ -167,9 +179,11 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   int dual_valid = 0;
   int pdlp_model_status = 0;
   cupdlp_int pdlp_num_iter = 0;
-  
-  printf("solveLpCupdlp 2: ifChangeIntParam[N_ITER_LIM] = %d\n", *(ifChangeIntParam+N_ITER_LIM));
-  printf("solveLpCupdlp 2: intParam[N_ITER_LIM]         = %d\n", *(intParam+N_ITER_LIM));
+
+  printf("solveLpCupdlp 2: ifChangeIntParam[N_ITER_LIM] = %d\n",
+         *(ifChangeIntParam + N_ITER_LIM));
+  printf("solveLpCupdlp 2: intParam[N_ITER_LIM]         = %d\n",
+         *(intParam + N_ITER_LIM));
 
   cupdlp_retcode retcode = LP_SolvePDHG(
       w, ifChangeIntParam, intParam, ifChangeFloatParam, floatParam, fp,
@@ -528,17 +542,16 @@ void getUserParamsFromOptions(const HighsOptions& options,
   // options.pdlp_iteration_limit is kHighsIInf, so copying this to
   // intParam[N_ITER_LIM] will overflow.
   intParam[N_ITER_LIM] = cupdlp_int(options.pdlp_iteration_limit > kHighsIInf32
-				    ? kHighsIInf32
-				    : options.pdlp_iteration_limit);
+                                        ? kHighsIInf32
+                                        : options.pdlp_iteration_limit);
 
   printf("options.pdlp_iteration_limit = %" HIGHSINT_FORMAT
-	 "\n   kHighsIInf = %" HIGHSINT_FORMAT
-	 "\n   kHighsIInf32 = %" HIGHSINT_FORMAT
-	 "\n   options.pdlp_iteration_limit > kHighsIInf32 = %d;\n  intParam[N_ITER_LIM] = %d\n",
-	 options.pdlp_iteration_limit,
-	 kHighsIInf,
-	 kHighsIInf32,
-	 options.pdlp_iteration_limit > kHighsIInf32, intParam[N_ITER_LIM]);
+         "\n   kHighsIInf = %" HIGHSINT_FORMAT
+         "\n   kHighsIInf32 = %" HIGHSINT_FORMAT
+         "\n   options.pdlp_iteration_limit > kHighsIInf32 = %d;\n  "
+         "intParam[N_ITER_LIM] = %d\n",
+         options.pdlp_iteration_limit, kHighsIInf, kHighsIInf32,
+         options.pdlp_iteration_limit > kHighsIInf32, intParam[N_ITER_LIM]);
 
   //
   ifChangeIntParam[N_LOG_LEVEL] = true;
@@ -564,7 +577,8 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
   intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
-  printf("getUserParamsFromOptions 9: intParam[N_ITER_LIM] = %d\n", intParam[N_ITER_LIM]);
+  printf("getUserParamsFromOptions 9: intParam[N_ITER_LIM] = %d\n",
+         intParam[N_ITER_LIM]);
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,

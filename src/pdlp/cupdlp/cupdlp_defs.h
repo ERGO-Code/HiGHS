@@ -104,8 +104,9 @@ typedef enum {
   N_LOG_INTERVAL,
   IF_PRESOLVE,
   I_INF_NORM_ABS_LOCAL_TERMINATION,
+  N_INT_USER_PARAM
 } CUPDLP_INT_USER_PARAM_INDEX;
-#define N_INT_USER_PARAM 10
+  //#define N_INT_USER_PARAM 12
 typedef enum {
   D_SCALING_LIMIT = 0,
   D_PRIMAL_TOL,
@@ -113,8 +114,9 @@ typedef enum {
   D_GAP_TOL,
   D_FEAS_TOL,
   D_TIME_LIM,
+  N_FLOAT_USER_PARAM
 } CUPDLP_FLOAT_USER_PARAM_INDEX;
-#define N_FLOAT_USER_PARAM 6
+  //#define N_FLOAT_USER_PARAM 6
 
 // used in sparse matrix-dense vector multiplication
 struct CUPDLP_CUDA_DENSE_VEC {
