@@ -3492,10 +3492,10 @@ HighsStatus Highs::callSolveMip() {
     solution_.value_valid = true;
   }
   // Run the MIP solver
-  
+
   // const HighsInt log_dev_level = options_.log_dev_level;
   // options_.log_dev_level = kHighsLogDevLevelInfo;
-  
+
   // Check that the model isn't row-wise
   assert(model_.lp_.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = model_.lp_.hasSemiVariables();
@@ -3517,12 +3517,14 @@ HighsStatus Highs::callSolveMip() {
     //
     // Lazy constraints can be added if the user callback is defined,
     // and the lazy constraints callback is active
-    const bool allow_lazy_constraints = callback_.user_callback &&
-      callback_.active[kCallbackMipDefineNewLazyConstraints];
+    const bool allow_lazy_constraints =
+        callback_.user_callback &&
+        callback_.active[kCallbackMipDefineNewLazyConstraints];
     if (allow_lazy_constraints) {
       options_.presolve = kHighsOffString;
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-		   "Presolve cannot be performed when lazy constraints are permitted\n");
+      highsLogUser(
+          options_.log_options, HighsLogType::kInfo,
+          "Presolve cannot be performed when lazy constraints are permitted\n");
     }
   }
   HighsMipSolver solver(callback_, options_, lp, solution_);

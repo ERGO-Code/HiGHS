@@ -193,8 +193,11 @@ struct HighsMipSolverData {
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
-  bool feasibleWithNewLazyConstraints(const std::vector<double>& solution, double& row_violation);
-  bool defineNewLazyConstraints(const std::vector<double>& solution, double& row_violation);
+  bool feasibleWithNewLazyConstraints(const double objective,
+                                      const std::vector<double>& solution,
+                                      double& row_violation);
+  bool defineNewLazyConstraints(const std::vector<double>& solution,
+                                double& row_violation);
 };
 
 #endif

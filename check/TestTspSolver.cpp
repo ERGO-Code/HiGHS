@@ -1,11 +1,11 @@
+#include <fstream>
+#include <sstream>
+
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 #include "mip/HighsCutPool.h"
-
-#include <fstream>
-#include <sstream>
 
 const bool kDebugReport = false;
 const HighsInt kmaxIter = 100;
@@ -22,7 +22,6 @@ class TspData {
   void initialise(std::string& filename, HighsLp& lp);
   void getTours(const double* solution);
   void addCuts(HighsLp& lp);
-
 };
 
 const bool dev_run = true;
@@ -35,11 +34,12 @@ HighsCallbackFunctionType userDefineNewLazyConstraints =
       TspData tsp_data = *(static_cast<TspData*>(user_callback_data));
       tsp_data.getTours(data_out->mip_solution);
       const HighsInt num_tour = tsp_data.tours_.size();
-      if (dev_run) 
-	printf("TSP: %s has dimension %d and solution has %d tours\n",
-	       tsp_data.name_.c_str(),
-	       int(tsp_data.dimension_),
-	       int(num_tour));
+      if (dev_run)
+        printf(
+            "TSP: %s has dimension %d and solution with objective %g has %d "
+            "tours\n",
+            tsp_data.name_.c_str(), int(tsp_data.dimension_),
+            data_out->objective_function_value, int(num_tour));
       assert(num_tour >= 1);
       data_in->cutset_num_cut = 0;
       if (num_tour == 1) return;
@@ -49,31 +49,35 @@ HighsCallbackFunctionType userDefineNewLazyConstraints =
       assert(num_cut == num_tour);
       const HighsInt num_nz = lp.a_matrix_.numNz();
       data_in->cutset_num_cut = num_cut;
-      data_in->cutset_ARstart = (HighsInt*)malloc(sizeof(HighsInt) * (num_cut+1));
+      data_in->cutset_ARstart =
+          (HighsInt*)malloc(sizeof(HighsInt) * (num_cut + 1));
       data_in->cutset_ARindex = (HighsInt*)malloc(sizeof(HighsInt) * num_nz);
       data_in->cutset_ARvalue = (double*)malloc(sizeof(double) * num_nz);
       data_in->cutset_lower = (double*)malloc(sizeof(double) * num_cut);
       data_in->cutset_upper = (double*)malloc(sizeof(double) * num_cut);
       data_in->cutset_ARstart[0] = lp.a_matrix_.start_[0];
       for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
-	data_in->cutset_ARstart[iCut+1] = lp.a_matrix_.start_[iCut+1];
-	data_in->cutset_lower[iCut] = lp.row_lower_[iCut];
-	data_in->cutset_upper[iCut] = lp.row_upper_[iCut];
+        data_in->cutset_ARstart[iCut + 1] = lp.a_matrix_.start_[iCut + 1];
+        data_in->cutset_lower[iCut] = lp.row_lower_[iCut];
+        data_in->cutset_upper[iCut] = lp.row_upper_[iCut];
       }
       for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
-	data_in->cutset_ARindex[iEl] = lp.a_matrix_.index_[iEl];
-	data_in->cutset_ARvalue[iEl] = lp.a_matrix_.value_[iEl];
+        data_in->cutset_ARindex[iEl] = lp.a_matrix_.index_[iEl];
+        data_in->cutset_ARvalue[iEl] = lp.a_matrix_.value_[iEl];
       }
     };
 
 TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
-  std::string filename;
-  filename = std::string(HIGHS_DIR) + "/check/instances/p01.tsp";
+  const bool solve_p01 = true;
+  std::string model = solve_p01 ? "p01" : "dantzig";
+  const double optimal_obective_value = solve_p01 ? 291 : 699;
+
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".tsp";
   TspData tsp_data;
   HighsLp lp;
-  tsp_data.initialise(filename, lp); 
-  
-  const double optimal_obective_value = 263;
+  tsp_data.initialise(filename, lp);
+
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   //  highs.readModel(filename);
@@ -101,67 +105,67 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
     bool eof = false;
     if (getline(f, strline)) {
       ss.str(std::string());
-      ss << strline; 
+      ss << strline;
       ss >> key;
     } else {
       exit(1);
     }
     if (key == "NAME:" || key == "NAME") {
       if (key == "NAME") {
-	ss >> word;
-	assert(word == ":");
+        ss >> word;
+        assert(word == ":");
       }
       ss >> name_;
     } else if (key == "TYPE:" || key == "TYPE") {
       if (key == "TYPE") {
-	ss >> word;
-	assert(word == ":");
+        ss >> word;
+        assert(word == ":");
       }
       ss >> type_;
     } else if (key == "DIMENSION:" || key == "DIMENSION") {
       if (key == "DIMENSION") {
-	ss >> word;
-	assert(word == ":");
+        ss >> word;
+        assert(word == ":");
       }
       ss >> dimension_;
     } else if (key == "EDGE_WEIGHT_FORMAT:" || key == "EDGE_WEIGHT_FORMAT") {
       if (key == "EDGE_WEIGHT_FORMAT") {
-	ss >> word;
-	assert(word == ":");
+        ss >> word;
+        assert(word == ":");
       }
       ss >> format;
     } else if (key == "EDGE_WEIGHT_SECTION") {
       if (format == "") {
-	printf("Distance format is not defined\n");
-	exit(1);
+        printf("Distance format is not defined\n");
+        exit(1);
       } else if (format == "LOWER_DIAG_ROW") {
-	expected_num_distances = (dimension_ * (dimension_+1)) / 2;
+        expected_num_distances = (dimension_ * (dimension_ + 1)) / 2;
       } else if (format == "FULL_MATRIX") {
-	expected_num_distances = dimension_ * dimension_;
+        expected_num_distances = dimension_ * dimension_;
       } else {
-	printf("Unknown distance format: %s\n", format.c_str());
-	exit(1);
+        printf("Unknown distance format: %s\n", format.c_str());
+        exit(1);
       }
       HighsInt line = 0;
       for (;;) {
-	std::stringstream wt_ss;
-	std::string wt_strline;
-	if (getline(f, wt_strline)) {
-	  wt_ss.str(std::string());
-	  wt_ss << wt_strline; 
-	  HighsInt v;
-	  for (;;) {
-	    wt_ss >> v;
-	    if (wt_ss.tellp() == -1) {
-	      line++;
-	      break;
-	    }
-	    distances.push_back(v);
-	  }
-	  if (HighsInt(distances.size()) == expected_num_distances) break;
-	} else {
-	  break;
-	}
+        std::stringstream wt_ss;
+        std::string wt_strline;
+        if (getline(f, wt_strline)) {
+          wt_ss.str(std::string());
+          wt_ss << wt_strline;
+          HighsInt v;
+          for (;;) {
+            wt_ss >> v;
+            if (wt_ss.tellp() == -1) {
+              line++;
+              break;
+            }
+            distances.push_back(v);
+          }
+          if (HighsInt(distances.size()) == expected_num_distances) break;
+        } else {
+          break;
+        }
       }
       eof = true;
     }
@@ -173,7 +177,7 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
   HighsInt num_distances = distances.size();
   if (kDebugReport) printf("num_distances = %d\n", int(num_distances));
   assert(num_distances == expected_num_distances);
-  HighsInt num_col = dimension_ * (dimension_-1);
+  HighsInt num_col = dimension_ * (dimension_ - 1);
   std::vector<HighsInt> bi_distance(dimension_ * dimension_);
   i_j_to_k_.clear();
   k_to_i_j_.clear();
@@ -182,17 +186,17 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
     std::vector<HighsInt> j_to_k(dimension_);
     for (HighsInt j = 0; j < dimension_; j++) {
       if (i == j) {
-	j_to_k[j] = -1;
+        j_to_k[j] = -1;
       } else {
-	j_to_k[j] = k++;
-	k_to_i_j_.push_back(std::make_pair(i, j));
+        j_to_k[j] = k++;
+        k_to_i_j_.push_back(std::make_pair(i, j));
       }
     }
     i_j_to_k_.push_back(j_to_k);
   }
   assert(HighsInt(k_to_i_j_.size()) == num_col);
   assert(HighsInt(i_j_to_k_.size()) == dimension_);
-  for (HighsInt i = 0; i < dimension_; i++) 
+  for (HighsInt i = 0; i < dimension_; i++)
     assert(HighsInt(i_j_to_k_[i].size()) == dimension_);
   for (HighsInt k = 0; k < num_col; k++) {
     HighsInt iCol = k_to_i_j_[k].first;
@@ -203,23 +207,23 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
   if (format == "LOWER_DIAG_ROW") {
     k = 0;
     for (HighsInt i = 0; i < dimension_; i++) {
-      for (HighsInt j = 0; j < i+1; j++) {
-	bi_distance[i+j*dimension_] = distances[k];
-	bi_distance[j+i*dimension_] = distances[k];
-	k++;
+      for (HighsInt j = 0; j < i + 1; j++) {
+        bi_distance[i + j * dimension_] = distances[k];
+        bi_distance[j + i * dimension_] = distances[k];
+        k++;
       }
     }
   } else if (format == "FULL_MATRIX") {
     k = 0;
     for (HighsInt i = 0; i < dimension_; i++) {
       for (HighsInt j = 0; j < dimension_; j++) {
-	bi_distance[i+j*dimension_] = distances[k];
-	k++;
+        bi_distance[i + j * dimension_] = distances[k];
+        k++;
       }
     }
-  } 
+  }
   lp.num_col_ = num_col;
-  lp.num_row_ = 2*dimension_;
+  lp.num_row_ = 2 * dimension_;
   lp.col_cost_.resize(lp.num_col_);
   lp.col_lower_.assign(lp.num_col_, 0);
   lp.col_upper_.assign(lp.num_col_, 1);
@@ -230,20 +234,20 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
     for (HighsInt j = 0; j < dimension_; j++) {
       if (i == j) continue;
       HighsInt k = i_j_to_k_[i][j];
-      lp.col_cost_[k] = bi_distance[i+j*dimension_];
+      lp.col_cost_[k] = bi_distance[i + j * dimension_];
       lp.a_matrix_.index_.push_back(k);
       lp.a_matrix_.value_.push_back(1);
     }
     lp.a_matrix_.start_.push_back(HighsInt(lp.a_matrix_.index_.size()));
   }
- 
+
   for (HighsInt j = 0; j < dimension_; j++) {
     lp.row_lower_.push_back(1);
     lp.row_upper_.push_back(1);
     for (HighsInt i = 0; i < dimension_; i++) {
       if (i == j) continue;
       HighsInt k = i_j_to_k_[i][j];
-      lp.col_cost_[k] = bi_distance[i+j*dimension_];
+      lp.col_cost_[k] = bi_distance[i + j * dimension_];
       lp.a_matrix_.index_.push_back(k);
       lp.a_matrix_.value_.push_back(1);
     }
@@ -254,8 +258,8 @@ void TspData::initialise(std::string& filename, HighsLp& lp) {
 
 void TspData::getTours(const double* solution) {
   tours_.clear();
-  const HighsInt dimension = dimension_;//(1 + std::sqrt(1+4*num_col)) / 2;
-  const HighsInt num_col =  dimension*(dimension-1);
+  const HighsInt dimension = dimension_;  //(1 + std::sqrt(1+4*num_col)) / 2;
+  const HighsInt num_col = dimension * (dimension - 1);
   if (kDebugReport) printf("dimension = %d\n", int(dimension));
   std::vector<HighsInt> to_node;
   to_node.assign(dimension, -1);
@@ -267,8 +271,9 @@ void TspData::getTours(const double* solution) {
     assert(i_j_to_k_[iCol][jCol] == k);
     assert(to_node[iCol] == -1);
     to_node[iCol] = jCol;
-    
-    if (kDebugReport) printf("%2d: Edge (%2d, %2d) used\n", int(num_nz), int(iCol), int(jCol));
+
+    if (kDebugReport)
+      printf("%2d: Edge (%2d, %2d) used\n", int(num_nz), int(iCol), int(jCol));
     num_nz++;
   }
   std::vector<bool> visited;
@@ -283,47 +288,45 @@ void TspData::getTours(const double* solution) {
       HighsInt node = to_node[from_node];
       tour.push_back(node);
       if (visited[node]) {
-	// Tour identified
-	tours_.push_back(tour);
-	break;
+        // Tour identified
+        tours_.push_back(tour);
+        break;
       } else {
-	visited[node] = true;
-	from_node = node;
+        visited[node] = true;
+        from_node = node;
       }
     }
   }
-  for (HighsInt k = 0; k < dimension; k++)
-    assert(visited[k]);
+  for (HighsInt k = 0; k < dimension; k++) assert(visited[k]);
   if (kDebugReport) {
     HighsInt num_tours = tours_.size();
     for (HighsInt k = 0; k < HighsInt(tours_.size()); k++) {
       printf("Tour %2d: ", int(k));
       std::vector<HighsInt>& tour = tours_[k];
       printf("%2d", int(tour[0]));
-      for (HighsInt i=1; i < int(tour.size()); i++)
-	printf(" -> %2d", int(tour[i]));
+      for (HighsInt i = 1; i < int(tour.size()); i++)
+        printf(" -> %2d", int(tour[i]));
       printf("\n");
     }
   }
-  
 }
 
 void TspData::addCuts(HighsLp& lp) {
   HighsInt num_tours = tours_.size();
-  
-  assert(num_tours>1);
+
+  assert(num_tours > 1);
   if (num_tours == 0) return;
 
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   for (HighsInt k = 0; k < num_tours; k++) {
     // Add constraint to eliminate this sub-tour
     std::vector<HighsInt>& tour = tours_[k];
-    HighsInt tour_num_nodes = tour.size()-1;
+    HighsInt tour_num_nodes = tour.size() - 1;
     HighsInt from_node = tour[0];
     lp.row_lower_.push_back(-kHighsInf);
-    lp.row_upper_.push_back(tour_num_nodes-1);
+    lp.row_upper_.push_back(tour_num_nodes - 1);
     for (HighsInt i = 0; i < tour_num_nodes; i++) {
-      HighsInt to_node = tour[i+1];
+      HighsInt to_node = tour[i + 1];
       HighsInt iCol = i_j_to_k_[from_node][to_node];
       lp.a_matrix_.index_.push_back(iCol);
       lp.a_matrix_.value_.push_back(1);
