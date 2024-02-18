@@ -1773,9 +1773,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 
     rhs = std::floor(rhs + 0.5);
 
-    cutpool.addCut(kCutOriginSeparateCliques,
-		   mipsolver, inds.data(), vals.data(), inds.size(), rhs,
-		   true, false, false);
+    cutpool.addCut(kCutOriginSeparateCliques, mipsolver, inds.data(),
+                   vals.data(), inds.size(), rhs, true, false, false);
   }
 
   numNeighbourhoodQueries += data.numNeighbourhoodQueries;

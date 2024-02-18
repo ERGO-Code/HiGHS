@@ -102,7 +102,6 @@ class HighsCutPool {
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
     minDensityLim = 0.1 * ncols;
-    
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
@@ -163,10 +162,9 @@ class HighsCutPool {
     return rownormalization_[cut];
   }
 
-  HighsInt addCut(const HighsInt origin,
-                  const HighsMipSolver& mipsolver, HighsInt* Rindex,
-                  double* Rvalue, HighsInt Rlen, double rhs,
-		  bool integral = false, bool propagate = true,
+  HighsInt addCut(const HighsInt origin, const HighsMipSolver& mipsolver,
+                  HighsInt* Rindex, double* Rvalue, HighsInt Rlen, double rhs,
+                  bool integral = false, bool propagate = true,
                   bool extractCliques = true, bool isConflict = false);
 
   HighsInt getRowLength(HighsInt row) const {
@@ -181,7 +179,8 @@ class HighsCutPool {
     cutvals = matrix_.getARvalue() + start;
   }
 
-  void debugReportCutPool();
+  void debugReport();
+  std::string debugOriginString(const HighsInt origin);
 };
 
 #endif

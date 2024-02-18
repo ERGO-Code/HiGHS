@@ -408,7 +408,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 HighsInt HighsCutPool::addCut(const HighsInt origin,
                               const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
-			      bool integral, bool propagate,
+                              bool integral, bool propagate,
                               bool extractCliques, bool isConflict) {
   // Cut has rhs as upper bound
   const bool debug_report = false;
@@ -543,6 +543,30 @@ HighsInt HighsCutPool::addCut(const HighsInt origin,
   return rowindex;
 }
 
-void debugReportCutPool() {
+void HighsCutPool::debugReport() {
+  const HighsInt num_rows = matrix_.getNumRows();
+  const HighsInt num_cutpool_cuts = getNumCuts();
+  const HighsInt num_lp_cuts = numLpCuts;
+  printf(
+      "\nCutPool has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = %d\n",
+      int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
+  for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
+    printf("CutPool Row %3d: age = %2d; %4s integral = %1d; origin = %s\n",
+           int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
+           int(rowintegral[iRow]), debugOriginString(origin_[iRow]).c_str());
+  }
 }
 
+std::string HighsCutPool::debugOriginString(const HighsInt origin) {
+  assert(origin >= 0 && origin < kCutOriginCount);
+
+  if (origin == kCutOriginSeparateCliques) return "Separate cliques";
+  if (origin == kCutOriginGenerateCut) return "Generate cut";
+  if (origin == kCutOriginGenerateConflict) return "Generate conflict";
+  if (origin == kCutOriginFinalizeAndAddCut) return "Finalize and add cut";
+  if (origin == kCutOriginSeparateImpliedBounds)
+    return "Separate implied bounds";
+  if (origin == kCutOriginPresolve) return "Presolve";
+  if (origin == kCutOriginLazyConstraint) return "Lazy constraint";
+  return "Unknown";
+}

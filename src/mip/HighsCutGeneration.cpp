@@ -1299,10 +1299,10 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(kCutOriginGenerateCut,
-                                     lpRelaxation.getMipSolver(), inds_.data(),
-                                     vals_.data(), inds_.size(), rhs_,
-				     integralSupport && integralCoefficients);
+  HighsInt cutindex =
+      cutpool.addCut(kCutOriginGenerateCut, lpRelaxation.getMipSolver(),
+                     inds_.data(), vals_.data(), inds_.size(), rhs_,
+                     integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
@@ -1461,10 +1461,9 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
       proofinds.data(), proofvals.data(), rowlen, proofrhs);
 
-  HighsInt cutindex = cutpool.addCut(kCutOriginGenerateConflict,
-				     lpRelaxation.getMipSolver(),
-                                     proofinds.data(), proofvals.data(), rowlen,
-                                     proofrhs, cutintegral, true, true, true);
+  HighsInt cutindex = cutpool.addCut(
+      kCutOriginGenerateConflict, lpRelaxation.getMipSolver(), proofinds.data(),
+      proofvals.data(), rowlen, proofrhs, cutintegral, true, true, true);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
@@ -1520,10 +1519,10 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(kCutOriginFinalizeAndAddCut,
-                                     lpRelaxation.getMipSolver(), inds_.data(),
-                                     vals_.data(), inds_.size(), rhs_,
-				     integralSupport && integralCoefficients);
+  HighsInt cutindex =
+      cutpool.addCut(kCutOriginFinalizeAndAddCut, lpRelaxation.getMipSolver(),
+                     inds_.data(), vals_.data(), inds_.size(), rhs_,
+                     integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
