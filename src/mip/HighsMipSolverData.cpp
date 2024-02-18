@@ -2137,8 +2137,10 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
     const HighsInt iEl = cutset.ARstart_[iCut];
-    cutpool.addCut(mipsolver, &cutset.ARindex_[iEl], &cutset.ARvalue_[iEl],
-                   Rlen, upper, cut_integral);
+    cutpool.addCut(kCutOriginLazyConstraint,
+		   mipsolver, &cutset.ARindex_[iEl], &cutset.ARvalue_[iEl],
+                   Rlen, upper,
+		   cut_integral);
     numLazyConstraints++;
   }
   lp.addCuts(cutset);

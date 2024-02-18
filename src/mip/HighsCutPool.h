@@ -21,6 +21,17 @@
 
 class HighsLpRelaxation;
 
+enum cutOrigin {
+  kCutOriginSeparateCliques = 0,
+  kCutOriginGenerateCut,
+  kCutOriginGenerateConflict,
+  kCutOriginFinalizeAndAddCut,
+  kCutOriginSeparateImpliedBounds,
+  kCutOriginPresolve,
+  kCutOriginLazyConstraint,
+  kCutOriginCount,
+};
+
 struct HighsCutSet {
   std::vector<HighsInt> cutindices;
   std::vector<HighsInt> ARstart_;
@@ -74,6 +85,7 @@ class HighsCutPool {
   HighsInt numPropRows;
   std::vector<HighsInt> ageDistribution;
   std::vector<std::pair<HighsInt, double>> sortBuffer;
+  std::vector<HighsInt> origin_;
 
   bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
                    const double* Rvalue, HighsInt Rlen, double rhs);
@@ -90,6 +102,7 @@ class HighsCutPool {
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
     minDensityLim = 0.1 * ncols;
+    
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
@@ -150,9 +163,10 @@ class HighsCutPool {
     return rownormalization_[cut];
   }
 
-  HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
+  HighsInt addCut(const HighsInt origin,
+                  const HighsMipSolver& mipsolver, HighsInt* Rindex,
                   double* Rvalue, HighsInt Rlen, double rhs,
-                  bool integral = false, bool propagate = true,
+		  bool integral = false, bool propagate = true,
                   bool extractCliques = true, bool isConflict = false);
 
   HighsInt getRowLength(HighsInt row) const {
@@ -166,6 +180,8 @@ class HighsCutPool {
     cutinds = matrix_.getARindex() + start;
     cutvals = matrix_.getARvalue() + start;
   }
+
+  void debugReportCutPool();
 };
 
 #endif

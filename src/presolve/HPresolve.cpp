@@ -4431,7 +4431,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
           cutvals.push_back(Avalue[j]);
         }
 
-        mipsolver->mipdata_->cutpool.addCut(
+        mipsolver->mipdata_->cutpool.addCut(kCutOriginPresolve,					    
             *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
             model->row_upper_[i],
             rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&

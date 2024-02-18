@@ -405,9 +405,10 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   assert((HighsInt)propRows.size() == numPropRows);
 }
 
-HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
+HighsInt HighsCutPool::addCut(const HighsInt origin,
+                              const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
-                              bool integral, bool propagate,
+			      bool integral, bool propagate,
                               bool extractCliques, bool isConflict) {
   // Cut has rhs as upper bound
   const bool debug_report = false;
@@ -513,6 +514,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     rownormalization_.resize(rowindex + 1);
     maxabscoef_.resize(rowindex + 1);
     rowintegral.resize(rowindex + 1);
+    origin_.resize(rowindex + 1);
   }
 
   // set the right hand side and reset the age
@@ -520,6 +522,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
+  origin_[rowindex] = origin;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
   assert((HighsInt)propRows.size() == numPropRows);
 
@@ -539,3 +542,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   return rowindex;
 }
+
+void debugReportCutPool() {
+}
+
