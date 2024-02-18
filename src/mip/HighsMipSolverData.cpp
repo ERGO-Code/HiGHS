@@ -379,7 +379,6 @@ void HighsMipSolverData::init() {
   numCliqueEntriesAfterFirstPresolve = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
-  newLazyConstraints = false;
   numLazyConstraints = 0;
   lower_bound = -kHighsInf;
   upper_bound = kHighsInf;
@@ -816,14 +815,15 @@ try_again:
   const double mipsolver_objective_value =
       double(mipsolver_quad_precision_objective_value);
 
+  HighsInt num_new_lazy_constraints = -numLazyConstraints;
   if (possibly_store_as_new_incumbent) {
     // The potential new incumbent is feasible in the original space,
     // but check whether it generates new lazy constraints that make
     // it infeasible
-    assert(!newLazyConstraints);
     feasible = feasibleWithNewLazyConstraints(
         mipsolver_objective_value, solution.col_value, row_violation_);
   }
+  num_new_lazy_constraints += numLazyConstraints;
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
@@ -885,9 +885,9 @@ try_again:
       // Addition of new lazy constraints will yield infeasibility due
       // to positive row_violation_, so avoid reporting an error in
       // this scenario
-      if (newLazyConstraints)
+      if (num_new_lazy_constraints)
         assert(!(bound_violation_ || integrality_violation_));
-      if (!newLazyConstraints)
+      if (num_new_lazy_constraints == 0)
         highsLogUser(
             mipsolver.options_mip_->log_options, HighsLogType::kWarning,
             //    printf(
@@ -1400,7 +1400,10 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       }
 
       for (;;) {
-        newLazyConstraints = false;
+	// In general, lazy constraints won't be added, in which case
+	// num_new_lazy_constraints is zero so the infinite loop
+	// breaks as if it wasn't there
+	HighsInt num_new_lazy_constraints = -numLazyConstraints;
         if (status == HighsLpRelaxation::Status::kOptimal &&
             lp.getFractionalIntegers().empty() &&
             addIncumbent(lp.getLpSolver().getSolution().col_value,
@@ -1412,10 +1415,11 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
           num_leaves += 1;
           return HighsLpRelaxation::Status::kInfeasible;
         }
-        if (!newLazyConstraints) break;
+	num_new_lazy_constraints += numLazyConstraints;
+        if (!num_new_lazy_constraints) break;
         printf(
-            "HighsMipSolverData::evaluateRootLp: Resolving after adding lazy "
-            "constraints\n");
+            "HighsMipSolverData::evaluateRootLp: Resolving after adding %d lazy "
+            "constraints\n", int(num_new_lazy_constraints));
         // Adding new lazy constraints in addIncumbent leads to the
         // status of the LP relaxation being unknown, so re-solve
         int64_t lpIters = -lp.getNumLpIterations();
@@ -1424,7 +1428,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
         total_lp_iterations += lpIters;
         avgrootlpiters = lp.getAvgSolveIters();
         lpWasSolved = true;
-      }
+      } // for (;;)
     } else
       status = lp.getStatus();
 
@@ -1490,8 +1494,16 @@ restart:
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
+
+  // If lazy constraints are added when solving the root LP, then
+  // status may not be kInfeasible or kUnbounded, so
+  // separateLpCutsAfterRestart gets called, but this is protected by
+  // assert(numRestarts != 0), which must be avoided by also
+  // considering num_new_lazy_constraints != 0
+  HighsInt num_new_lazy_constraints = -numLazyConstraints;
   HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
+  num_new_lazy_constraints += numLazyConstraints;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
   lp.getLpSolver().setOptionValue("presolve", "off");
@@ -1519,7 +1531,9 @@ restart:
   }
 
   if (cutpool.getNumCuts() != 0) {
-    assert(numRestarts != 0);
+    assert(numRestarts != 0 || num_new_lazy_constraints);
+    printf("HighsMipSolverData::evaluateRootLp: LP before cutpool.separateLpCutsAfterRestart(cutset) is (%d, %d) with %d in cutpool\n",
+	   int(lp.numCols()), int(lp.numRows()), int(cutpool.getNumCuts()));
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
 #ifdef HIGHS_DEBUGSOL
@@ -1532,7 +1546,11 @@ restart:
 #endif
     lp.addCuts(cutset);
     status = evaluateRootLp();
+    printf("HighsMipSolverData::evaluateRootLp: LP after evaluateRootLp() is (%d, %d) with %d in cutset\n",
+	   int(lp.numCols()), int(lp.numRows()), int(cutset.numCuts()));
     lp.removeObsoleteRows();
+    printf("HighsMipSolverData::evaluateRootLp: LP after removeObsoleteRows is (%d, %d) with %d in cutpool\n",
+	   int(lp.numCols()), int(lp.numRows()), int(cutpool.getNumCuts()));
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   }
 
@@ -2065,7 +2083,6 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   HighsCallbackDataIn& data_in = mipsolver.callback_->data_in;
   const HighsInt num_cut = data_in.cutset_num_cut;
   if (num_cut <= 0) return true;
-  newLazyConstraints = true;
   const HighsInt num_nz = data_in.cutset_ARstart[num_cut];
   HighsCutSet cutset;
   cutset.cutindices.resize(num_cut);
