@@ -3,7 +3,7 @@ load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 copy_file(
     name = "highs-config",
-    src = "HConfig.h.bazel",
+    src = "src/HConfig.h.bazel.in",
     out = "HConfig.h",
     visibility = ["//visibility:public"],
 )
