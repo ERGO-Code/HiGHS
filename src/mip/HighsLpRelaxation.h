@@ -355,6 +355,8 @@ class HighsLpRelaxation {
   void setIterationLimit(HighsInt limit = kHighsIInf) {
     lpsolver.setOptionValue("simplex_iteration_limit", limit);
   }
+
+  void debugReport(const std::string& message);
 };
 
 #endif

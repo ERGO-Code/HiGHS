@@ -24,9 +24,7 @@ void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
                                    std::vector<double>& cut_lower,
                                    std::vector<double>& cut_upper,
                                    HighsSparseMatrix& cut_matrix) const {
-  // NB RESTORE reference
-  //  const HighsLp& lp = lpsolver.getLp();
-  HighsLp lp = lpsolver.getLp();
+  const HighsLp& lp = lpsolver.getLp();
   num_col = lp.num_col_;
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
@@ -1380,4 +1378,22 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   } while (solveagain);
 
   return status;
+}
+
+void HighsLpRelaxation::debugReport(const std::string& message) {
+  const HighsLp& lp = lpsolver.getLp();
+  HighsInt num_lp_row = lp.num_row_;
+  HighsInt num_model_row = mipsolver.numRow();
+  HighsInt num_cut = num_lp_row - num_model_row;
+  printf("\nLP relaxation %s has %d rows (%d from cuts)\n",
+	 message.c_str(), int(num_lp_row), int(num_cut));
+  if (!num_cut) return;
+  printf("LP relaxation Row Cut\n");
+  HighsInt cut_num = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
+    printf("LP relaxation %3d %3d\n",
+	   int(iRow), int(cut_num));
+    cut_num++;
+  }
 }

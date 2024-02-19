@@ -1557,6 +1557,7 @@ restart:
         "HighsMipSolverData::evaluateRootLp: LP after evaluateRootLp() is (%d, "
         "%d) with %d in cutset\n",
         int(lp.numCols()), int(lp.numRows()), int(cutset.numCuts()));
+    lp.debugReport("LP after evaluateRootLp()");
     cutpool.debugReport("After separateLpCutsAfterRestart and lp.addCuts(cutset)");
     status = evaluateRootLp();
     cutpool.debugReport("After evaluateRootLp()");
