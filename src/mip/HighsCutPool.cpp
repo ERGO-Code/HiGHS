@@ -543,17 +543,20 @@ HighsInt HighsCutPool::addCut(const HighsInt origin,
   return rowindex;
 }
 
-void HighsCutPool::debugReport() {
+void HighsCutPool::debugReport(const std::string& message) {
   const HighsInt num_rows = matrix_.getNumRows();
   const HighsInt num_cutpool_cuts = getNumCuts();
   const HighsInt num_lp_cuts = numLpCuts;
   printf(
-      "\nCutPool has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = %d\n",
+      "\nCutPool: %s has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = %d\n",
+      message.c_str(),
       int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
+  if (!num_rows) return;
+  printf("CutPool Row Age              RHS Integral Origin\n");
   for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
-    printf("CutPool Row %3d: age = %2d; %4s integral = %1d; origin = %s\n",
+    printf("CutPool %3d %3d %4s %11.5g        %1d %s\n",
            int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
-           int(rowintegral[iRow]), debugOriginString(origin_[iRow]).c_str());
+           rhs_[iRow], int(rowintegral[iRow]), debugOriginString(origin_[iRow]).c_str());
   }
 }
 

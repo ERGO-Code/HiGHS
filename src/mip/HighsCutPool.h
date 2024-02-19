@@ -179,7 +179,7 @@ class HighsCutPool {
     cutvals = matrix_.getARvalue() + start;
   }
 
-  void debugReport();
+  void debugReport(const std::string& message);
   std::string debugOriginString(const HighsInt origin);
 };
 
