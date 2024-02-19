@@ -392,7 +392,6 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
     HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
     cutset.debug_origin_[i] = debug_origin_[cut];
-    
 
     for (HighsInt j = start; j != end; ++j) {
       assert(offset < (HighsInt)matrix_.nonzeroCapacity());
@@ -550,14 +549,15 @@ void HighsCutPool::debugReport(const std::string& message) {
   const HighsInt num_cutpool_cuts = getNumCuts();
   const HighsInt num_lp_cuts = numLpCuts;
   printf(
-      "\nCutPool: %s has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = %d\n",
-      message.c_str(),
-      int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
+      "\nCutPool: %s has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = "
+      "%d\n",
+      message.c_str(), int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
   if (!num_rows) return;
   printf("CutPool Row Age              RHS Integral Origin\n");
   for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
-    printf("CutPool %3d %3d %4s %11.5g        %1d %s\n",
-           int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
-           rhs_[iRow], int(rowintegral[iRow]), debugCutOriginToString(debug_origin_[iRow]).c_str());
+    printf("CutPool %3d %3d %4s %11.5g        %1d %s\n", int(iRow),
+           int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ", rhs_[iRow],
+           int(rowintegral[iRow]),
+           debugCutOriginToString(debug_origin_[iRow]).c_str());
   }
 }

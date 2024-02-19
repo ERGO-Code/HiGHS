@@ -487,7 +487,8 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
 
     lprows.reserve(lprows.size() + numcuts);
     for (HighsInt i = 0; i != numcuts; ++i)
-      lprows.push_back(LpRow::cut(cutset.cutindices[i], cutset.debug_origin_[i]));
+      lprows.push_back(
+          LpRow::cut(cutset.cutindices[i], cutset.debug_origin_[i]));
 
     bool success =
         lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
@@ -1385,15 +1386,15 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
   HighsInt num_cut = num_lp_row - num_model_row;
-  printf("\nLP relaxation %s has %d rows (%d from cuts)\n",
-	 message.c_str(), int(num_lp_row), int(num_cut));
+  printf("\nLP relaxation %s has %d rows (%d from cuts)\n", message.c_str(),
+         int(num_lp_row), int(num_cut));
   if (!num_cut) return;
-  printf("LP relaxation Row Cut\n");
+  printf("LP relaxation Row Cut Origin\n");
   HighsInt cut_num = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
-    printf("LP relaxation %3d %3d\n",
-	   int(iRow), int(cut_num), debugOriginString(lprows[iRow].debug_origin).c_str());
+    printf("LP relaxation %3d %3d %s\n", int(iRow), int(cut_num),
+           debugCutOriginToString(lprows[iRow].debug_origin).c_str());
     cut_num++;
   }
 }

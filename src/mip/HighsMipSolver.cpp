@@ -677,7 +677,8 @@ std::string debugCutOriginToString(const HighsInt debug_origin) {
   if (debug_origin == kCutOriginSeparateCliques) return "Separate cliques";
   if (debug_origin == kCutOriginGenerateCut) return "Generate cut";
   if (debug_origin == kCutOriginGenerateConflict) return "Generate conflict";
-  if (debug_origin == kCutOriginFinalizeAndAddCut) return "Finalize and add cut";
+  if (debug_origin == kCutOriginFinalizeAndAddCut)
+    return "Finalize and add cut";
   if (debug_origin == kCutOriginSeparateImpliedBounds)
     return "Separate implied bounds";
   if (debug_origin == kCutOriginPresolve) return "Presolve";

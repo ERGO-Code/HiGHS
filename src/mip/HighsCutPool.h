@@ -48,7 +48,7 @@ struct HighsCutSet {
     ARstart_.clear();
     ARindex_.clear();
     ARvalue_.clear();
-    lower_.clear();// Surely 
+    lower_.clear();  // Surely
     upper_.clear();
   }
 
