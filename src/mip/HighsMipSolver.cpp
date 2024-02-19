@@ -671,17 +671,35 @@ void HighsMipSolver::callbackGetCutPool() const {
                            callback_->user_callback_data);
 }
 
-std::string debugCutOriginToString(const HighsInt debug_origin) {
-  assert(debug_origin >= 0 && debug_origin < kCutOriginCount);
+std::string debugCutOriginToString(const HighsInt origin) {
+  
+  assert(origin >= 0);
+  HighsInt local_origin = origin;
+  bool separation = false;
+  if (origin >= kCutOriginSeparationOffset) {
+    separation = true;
+    local_origin -= kCutOriginSeparationOffset;
+  }
+  assert(local_origin < kCutOriginCount);
 
-  if (debug_origin == kCutOriginSeparateCliques) return "Separate cliques";
-  if (debug_origin == kCutOriginGenerateCut) return "Generate cut";
-  if (debug_origin == kCutOriginGenerateConflict) return "Generate conflict";
-  if (debug_origin == kCutOriginFinalizeAndAddCut)
-    return "Finalize and add cut";
-  if (debug_origin == kCutOriginSeparateImpliedBounds)
-    return "Separate implied bounds";
-  if (debug_origin == kCutOriginPresolve) return "Presolve";
-  if (debug_origin == kCutOriginLazyConstraint) return "Lazy constraint";
-  return "Unknown";
+  std::string origin_string = "";
+  if (origin == kCutOriginSeparateCliques) {
+    origin_string = "Separate cliques";
+  } else if (origin == kCutOriginGenerateCut) {
+    origin_string =  "Generate cut";
+  } else if (origin == kCutOriginGenerateConflict) {
+    origin_string =  "Generate conflict";
+  } else if (origin == kCutOriginFinalizeAndAddCut) {
+    origin_string =  "Finalize and add cut";
+  } else if (origin == kCutOriginSeparateImpliedBounds) {
+    origin_string =  "Separate implied bounds";
+  } else if (origin == kCutOriginPresolve) {
+    origin_string =  "Presolve";
+  } else if (origin == kCutOriginLazyConstraint) {
+    origin_string =  "Lazy constraint";
+  } else {
+    origin_string =  "Unknown";
+  }
+  if (separation) origin_string += " + separation";
+  return origin_string;
 }

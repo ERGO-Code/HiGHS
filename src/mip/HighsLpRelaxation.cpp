@@ -1386,15 +1386,29 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
   HighsInt num_cut = num_lp_row - num_model_row;
-  printf("\nLP relaxation %s has %d rows (%d from cuts)\n", message.c_str(),
-         int(num_lp_row), int(num_cut));
+  printf("\nLP relaxation: %s has %d rows (%d from cuts)\n", 
+	 message.c_str(), int(num_lp_row), int(num_cut));
   if (!num_cut) return;
-  printf("LP relaxation Row Cut Origin\n");
-  HighsInt cut_num = 0;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
-    printf("LP relaxation %3d %3d %s\n", int(iRow), int(cut_num),
-           debugCutOriginToString(lprows[iRow].debug_origin).c_str());
-    cut_num++;
+
+  if (num_cut < 10) {
+    HighsInt cut_num = 0;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+      if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
+      printf("LP relaxation: Row %3d; cut %3d: %s\n", int(iRow), int(cut_num),
+	     debugCutOriginToString(lprows[iRow].debug_origin).c_str());
+      cut_num++;
+    }
+  } else {
+    const HighsInt num_cut_type = kCutOriginSeparationOffset + kCutOriginCount;
+    std::vector<HighsInt>cutCount;
+    cutCount.assign(num_cut_type, 0);
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+      if (lprows[iRow].origin == LpRow::Origin::kCutPool) cutCount[lprows[iRow].debug_origin]++;
+    for (HighsInt type=0; type < num_cut_type; type++) {
+      if (cutCount[type])
+	printf("LP relaxation: %5d %s\n", int(cutCount[type]), debugCutOriginToString(type).c_str());
+    }
+    
   }
+  printf("\n");
 }

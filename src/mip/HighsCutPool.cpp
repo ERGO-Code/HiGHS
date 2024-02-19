@@ -353,7 +353,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     HighsInt start = matrix_.getRowStart(cut);
     HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
-    cutset.debug_origin_[i] = debug_origin_[cut];
+    cutset.debug_origin_[i] = debug_origin_[cut] + kCutOriginSeparationOffset;
     for (HighsInt j = start; j != end; ++j) {
       assert(offset < selectednnz);
       cutset.ARvalue_[offset] = ARvalue[j];
@@ -553,11 +553,24 @@ void HighsCutPool::debugReport(const std::string& message) {
       "%d\n",
       message.c_str(), int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
   if (!num_rows) return;
-  printf("CutPool Row Age              RHS Integral Origin\n");
-  for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
-    printf("CutPool %3d %3d %4s %11.5g        %1d %s\n", int(iRow),
-           int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ", rhs_[iRow],
-           int(rowintegral[iRow]),
-           debugCutOriginToString(debug_origin_[iRow]).c_str());
+  if (num_rows < 10) {
+    printf("CutPool Row Age              RHS Integral Origin\n");
+    for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
+      printf("CutPool: Row %3d; age %3d %4s RHS %11.5g; integral = %1d: %s\n", int(iRow),
+	     int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ", rhs_[iRow],
+	     int(rowintegral[iRow]),
+	     debugCutOriginToString(debug_origin_[iRow]).c_str());
+    }
+  } else {
+    const HighsInt num_cut_type = kCutOriginSeparationOffset + kCutOriginCount;
+    std::vector<HighsInt>cutCount;
+    cutCount.assign(num_cut_type, 0);
+    for (HighsInt iRow = 0; iRow < num_rows; iRow++) 
+      cutCount[debug_origin_[iRow]]++;
+    for (HighsInt type=0; type < num_cut_type; type++) {
+      if (cutCount[type])
+	printf("CutPool: %5d %s\n", int(cutCount[type]), debugCutOriginToString(type).c_str());
+    }
   }
+ printf("\n"); 
 }
