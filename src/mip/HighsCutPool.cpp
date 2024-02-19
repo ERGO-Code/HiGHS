@@ -558,20 +558,6 @@ void HighsCutPool::debugReport(const std::string& message) {
   for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
     printf("CutPool %3d %3d %4s %11.5g        %1d %s\n",
            int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
-           rhs_[iRow], int(rowintegral[iRow]), debugOriginString(debug_origin_[iRow]).c_str());
+           rhs_[iRow], int(rowintegral[iRow]), debugCutOriginToString(debug_origin_[iRow]).c_str());
   }
-}
-
-std::string HighsCutPool::debugOriginString(const HighsInt debug_origin) {
-  assert(debug_origin >= 0 && debug_origin < kCutOriginCount);
-
-  if (debug_origin == kCutOriginSeparateCliques) return "Separate cliques";
-  if (debug_origin == kCutOriginGenerateCut) return "Generate cut";
-  if (debug_origin == kCutOriginGenerateConflict) return "Generate conflict";
-  if (debug_origin == kCutOriginFinalizeAndAddCut) return "Finalize and add cut";
-  if (debug_origin == kCutOriginSeparateImpliedBounds)
-    return "Separate implied bounds";
-  if (debug_origin == kCutOriginPresolve) return "Presolve";
-  if (debug_origin == kCutOriginLazyConstraint) return "Lazy constraint";
-  return "Unknown";
 }

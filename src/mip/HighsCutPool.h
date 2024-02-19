@@ -21,17 +21,6 @@
 
 class HighsLpRelaxation;
 
-enum cutOrigin {
-  kCutOriginSeparateCliques = 0,
-  kCutOriginGenerateCut,
-  kCutOriginGenerateConflict,
-  kCutOriginFinalizeAndAddCut,
-  kCutOriginSeparateImpliedBounds,
-  kCutOriginPresolve,
-  kCutOriginLazyConstraint,
-  kCutOriginCount,
-};
-
 struct HighsCutSet {
   std::vector<HighsInt> cutindices;
   std::vector<HighsInt> debug_origin_;
@@ -184,7 +173,6 @@ class HighsCutPool {
   }
 
   void debugReport(const std::string& message);
-  std::string debugOriginString(const HighsInt debug_origin);
 };
 
 #endif

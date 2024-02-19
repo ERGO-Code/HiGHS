@@ -670,3 +670,17 @@ void HighsMipSolver::callbackGetCutPool() const {
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);
 }
+
+std::string debugCutOriginToString(const HighsInt debug_origin) {
+  assert(debug_origin >= 0 && debug_origin < kCutOriginCount);
+
+  if (debug_origin == kCutOriginSeparateCliques) return "Separate cliques";
+  if (debug_origin == kCutOriginGenerateCut) return "Generate cut";
+  if (debug_origin == kCutOriginGenerateConflict) return "Generate conflict";
+  if (debug_origin == kCutOriginFinalizeAndAddCut) return "Finalize and add cut";
+  if (debug_origin == kCutOriginSeparateImpliedBounds)
+    return "Separate implied bounds";
+  if (debug_origin == kCutOriginPresolve) return "Presolve";
+  if (debug_origin == kCutOriginLazyConstraint) return "Lazy constraint";
+  return "Unknown";
+}

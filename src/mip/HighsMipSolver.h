@@ -15,6 +15,17 @@
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 
+enum cutOrigin {
+  kCutOriginSeparateCliques = 0,
+  kCutOriginGenerateCut,
+  kCutOriginGenerateConflict,
+  kCutOriginFinalizeAndAddCut,
+  kCutOriginSeparateImpliedBounds,
+  kCutOriginPresolve,
+  kCutOriginLazyConstraint,
+  kCutOriginCount,
+};
+
 struct HighsMipSolverData;
 class HighsCutPool;
 struct HighsPseudocostInitialization;
@@ -101,5 +112,7 @@ class HighsMipSolver {
 
   void callbackGetCutPool() const;
 };
+
+std::string debugCutOriginToString(const HighsInt debug_origin);
 
 #endif
