@@ -755,9 +755,18 @@ else()
   endforeach()
   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
+  # Configure the config windows version file
+  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
+  if(MSVC)
+    set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
+  else()
+    set(win_version_file)
+  endif()
+
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp)
+  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
 
   if(UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
