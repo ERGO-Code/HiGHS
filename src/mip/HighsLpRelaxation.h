@@ -44,7 +44,8 @@ class HighsLpRelaxation {
     Origin origin;
     HighsInt index;
     HighsInt age;
-
+    HighsInt debug_origin;
+    
     void get(const HighsMipSolver& mipsolver, HighsInt& len,
              const HighsInt*& inds, const double*& vals) const;
 
@@ -54,8 +55,8 @@ class HighsLpRelaxation {
 
     double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
 
-    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index, 0}; }
-    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0}; }
+    static LpRow cut(HighsInt index, HighsInt debug_origin) { return LpRow{kCutPool, index, 0, debug_origin}; }
+    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0, -1}; }
   };
 
   const HighsMipSolver& mipsolver;

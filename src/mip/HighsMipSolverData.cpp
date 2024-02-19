@@ -2103,6 +2103,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   const HighsInt num_nz = data_in.cutset_ARstart[num_cut];
   HighsCutSet cutset;
   cutset.cutindices.resize(num_cut);
+  cutset.debug_origin_.resize(num_cut);
   cutset.ARstart_.resize(num_cut + 1);
   cutset.ARindex_.resize(num_nz);
   cutset.ARvalue_.resize(num_nz);
@@ -2111,6 +2112,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   cutset.ARstart_[0] = data_in.cutset_ARstart[0];
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
     cutset.cutindices[iCut] = iCut;
+    cutset.debug_origin_[iCut] = kCutOriginLazyConstraint;
     cutset.ARstart_[iCut + 1] = data_in.cutset_ARstart[iCut + 1];
     cutset.lower_[iCut] = data_in.cutset_lower[iCut];
     cutset.upper_[iCut] = data_in.cutset_upper[iCut];

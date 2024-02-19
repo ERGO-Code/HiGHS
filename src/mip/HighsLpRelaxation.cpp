@@ -487,7 +487,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
 
     lprows.reserve(lprows.size() + numcuts);
     for (HighsInt i = 0; i != numcuts; ++i)
-      lprows.push_back(LpRow::cut(cutset.cutindices[i]));
+      lprows.push_back(LpRow::cut(cutset.cutindices[i], cutset.debug_origin_[i]));
 
     bool success =
         lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
@@ -1393,7 +1393,7 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
     printf("LP relaxation %3d %3d\n",
-	   int(iRow), int(cut_num));
+	   int(iRow), int(cut_num), debugOriginString(lprows[iRow].debug_origin).c_str());
     cut_num++;
   }
 }

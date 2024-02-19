@@ -34,6 +34,7 @@ enum cutOrigin {
 
 struct HighsCutSet {
   std::vector<HighsInt> cutindices;
+  std::vector<HighsInt> debug_origin_;
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
@@ -44,6 +45,7 @@ struct HighsCutSet {
 
   void resize(HighsInt nnz) {
     HighsInt ncuts = numCuts();
+    debug_origin_.resize(ncuts);
     lower_.resize(ncuts, -kHighsInf);
     upper_.resize(ncuts);
     ARstart_.resize(ncuts + 1);
@@ -53,10 +55,12 @@ struct HighsCutSet {
 
   void clear() {
     cutindices.clear();
-    upper_.clear();
+    debug_origin_.clear();
     ARstart_.clear();
     ARindex_.clear();
     ARvalue_.clear();
+    lower_.clear();// Surely 
+    upper_.clear();
   }
 
   bool empty() const { return cutindices.empty(); }
@@ -85,7 +89,7 @@ class HighsCutPool {
   HighsInt numPropRows;
   std::vector<HighsInt> ageDistribution;
   std::vector<std::pair<HighsInt, double>> sortBuffer;
-  std::vector<HighsInt> origin_;
+  std::vector<HighsInt> debug_origin_;
 
   bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
                    const double* Rvalue, HighsInt Rlen, double rhs);
@@ -162,7 +166,7 @@ class HighsCutPool {
     return rownormalization_[cut];
   }
 
-  HighsInt addCut(const HighsInt origin, const HighsMipSolver& mipsolver,
+  HighsInt addCut(const HighsInt debug_origin, const HighsMipSolver& mipsolver,
                   HighsInt* Rindex, double* Rvalue, HighsInt Rlen, double rhs,
                   bool integral = false, bool propagate = true,
                   bool extractCliques = true, bool isConflict = false);
@@ -180,7 +184,7 @@ class HighsCutPool {
   }
 
   void debugReport(const std::string& message);
-  std::string debugOriginString(const HighsInt origin);
+  std::string debugOriginString(const HighsInt debug_origin);
 };
 
 #endif
