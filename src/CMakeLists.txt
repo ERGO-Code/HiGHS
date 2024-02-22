@@ -773,7 +773,11 @@ else()
   if(UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+  elseif(WIN32)
+    target_compile_options(highs PRIVATE "-w")
+  
   endif()
+
 
   if (BUILD_CXX)
 
