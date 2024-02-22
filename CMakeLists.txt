@@ -47,7 +47,7 @@ message(STATUS "Build CSharp: ${CSHARP}")
 
 option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
 message(STATUS "Build Python: ${PYTHON_BUILD_ONLY}")
-if (PYTHON_BUILD_ONLY) 
+if (PYTHON_BUILD_SETUP) 
   set(BUILD_CXX OFF)
 endif()
 
@@ -216,7 +216,7 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-if(BUILD_PYTHON_ONLY OR FORTRAN OR CSHARP)
+if(BUILD_PYTHON_SETUP OR FORTRAN OR CSHARP)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
@@ -493,7 +493,7 @@ else(FAST_BUILD)
 
   include(cpp-highs)
 
-  if(PYTHON)
+  if(PYTHON_BUILD_SETUP)
     include(python-highs)
   else()
     include(c-highs)

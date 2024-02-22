@@ -56,7 +56,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
             # f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            "-DPYTHON=ON"
+            "-DPYTHON_BUILD_SETUP=ON"
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
@@ -152,6 +152,7 @@ setup(
      extras_require={"test": ["pytest>=6.0"]},
      classifiers=[
         'License :: MIT License Copyright (c) 2024 HiGHS',  
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
