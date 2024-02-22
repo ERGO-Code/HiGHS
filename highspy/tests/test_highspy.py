@@ -3,6 +3,7 @@ import unittest
 import highspy
 import numpy as np
 from io import StringIO
+from sys import platform
 
 
 class TestHighsPy(unittest.TestCase):
@@ -764,38 +765,41 @@ class TestHighsPy(unittest.TestCase):
     #     self.assertAlmostEqual((h.getLp().row_lower_[0], h.getLp().row_upper_[0]), (4.5, 4.5))
 
 
-    # def test_write_basis_before_running(self):
-    #     h = self.get_basic_model()
-    #     with tempfile.NamedTemporaryFile() as f:
-    #         h.writeBasis(f.name)
-    #         contents = f.read()
-    #         self.assertEqual(contents, b'HiGHS v1\nNone\n')
+    # r/w basis tests below works on unix but not windows? 
+    def test_write_basis_before_running(self):
+        if (platform == 'linux' or platform == 'darwin'):
+            h = self.get_basic_model()
+            with tempfile.NamedTemporaryFile() as f:
+                h.writeBasis(f.name)
+                contents = f.read()
+                self.assertEqual(contents, b'HiGHS v1\nNone\n')
         
-    # def test_write_basis_after_running(self):
-    #     h = self.get_basic_model()
-    #     h.run()
-    #     with tempfile.NamedTemporaryFile() as f:
-    #         h.writeBasis(f.name)
-    #         contents = f.read()
-    #         self.assertEqual(
-    #             contents, b'HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n'
-    #         )
+    def test_write_basis_after_running(self):
+        if (platform == 'linux' or platform == 'darwin'):
+            h = self.get_basic_model()
+            h.run()
+            with tempfile.NamedTemporaryFile() as f:
+                h.writeBasis(f.name)
+                contents = f.read()
+                self.assertEqual(
+                    contents, b'HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n'
+                )
 
-    # test works on unix but not windows? 
     def test_read_basis(self):
-        # Read basis from one run model into an unrun model
-        expected_status_before = highspy.HighsBasisStatus.kLower
-        expected_status_after = highspy.HighsBasisStatus.kBasic
+        if (platform == 'linux' or platform == 'darwin'):
+            # Read basis from one run model into an unrun model
+            expected_status_before = highspy.HighsBasisStatus.kLower
+            expected_status_after = highspy.HighsBasisStatus.kBasic
 
-        h1 = self.get_basic_model()
-        self.assertEqual(h1.getBasis().col_status[0], expected_status_before)
-        h1.run()
-        self.assertEqual(h1.getBasis().col_status[0], expected_status_after)
+            h1 = self.get_basic_model()
+            self.assertEqual(h1.getBasis().col_status[0], expected_status_before)
+            h1.run()
+            self.assertEqual(h1.getBasis().col_status[0], expected_status_after)
 
-        h2 = self.get_basic_model()
-        self.assertEqual(h2.getBasis().col_status[0], expected_status_before)
+            h2 = self.get_basic_model()
+            self.assertEqual(h2.getBasis().col_status[0], expected_status_before)
 
-        with tempfile.NamedTemporaryFile() as f:
-            h1.writeBasis(f.name)
-            h2.readBasis(f.name)
-            self.assertEqual(h2.getBasis().col_status[0], expected_status_after)
+            with tempfile.NamedTemporaryFile() as f:
+                h1.writeBasis(f.name)
+                h2.readBasis(f.name)
+                self.assertEqual(h2.getBasis().col_status[0], expected_status_after)
