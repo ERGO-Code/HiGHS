@@ -1,7 +1,5 @@
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
-
 if(NOT BUILD_CXX)
   return()
 endif()

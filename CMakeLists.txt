@@ -370,11 +370,9 @@ message(STATUS "Git hash: " ${GITHASH})
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
-add_subdirectory(app)
-if(BUILD_TESTING)
-  enable_testing()
-  add_subdirectory(check)
-endif()
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
@@ -451,7 +449,6 @@ if(NOT FAST_BUILD)
     endif()
   endif()
  
-  configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
   include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
@@ -484,6 +481,11 @@ if(NOT FAST_BUILD)
 
   # Targets
   add_subdirectory(src)
+  add_subdirectory(app)
+  if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(check)
+  endif()
 
 else(FAST_BUILD)
   message(STATUS "FAST_BUILD set to on.")
@@ -501,6 +503,11 @@ else(FAST_BUILD)
   if(PYTHON_BUILD_SETUP)
     include(python-highs)
   else()
+    add_subdirectory(app)
+    if(BUILD_TESTING)
+      enable_testing()
+      add_subdirectory(check)
+    endif()
     include(c-highs)
     # Add tests in examples/tests
     add_subdirectory(examples)
