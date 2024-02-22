@@ -775,6 +775,11 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 
   // PDHG_Print_Header(pdhg);
 
+  // Repeat the iteration logging header periodically if logging style
+  // is minimal (pdhg->settings->nLogLevel=1), initialising
+  // iter_log_since_header so that an initial header is printed
+  const int iter_log_between_header = 50;
+  int iter_log_since_header = iter_log_between_header;
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
@@ -811,9 +816,14 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 	// With reduced printing, the header is only needed for the
 	// first iteration since only average iteration printing is
 	// carried out
-        if (full_print || timers->nIter == 0) PDHG_Print_Header(pdhg);
+        if (full_print ||
+	    iter_log_since_header == iter_log_between_header) {
+	  PDHG_Print_Header(pdhg);
+	  iter_log_since_header = 0;
+	}
         if (full_print) PDHG_Print_Iter(pdhg);
         PDHG_Print_Iter_Average(pdhg);
+	iter_log_since_header++;
       }
 
       // Termination check printing is only done when printing is full

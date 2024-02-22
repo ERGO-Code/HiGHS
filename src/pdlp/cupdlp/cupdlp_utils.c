@@ -1086,6 +1086,7 @@ void PDHG_Init_Data(CUPDLPwork *work) {}
 double my_clock(void) {
 #ifdef CUPDLP_TIMER
   struct timeval t;
+  //  clock_gettime(&t, NULL);
   gettimeofday(&t, NULL);
   return (1e-06 * t.tv_usec + t.tv_sec);
 #else
