@@ -79,6 +79,7 @@ target_compile_definitions(highspy
 target_include_directories(highspy PUBLIC ${include_dirs})
 
 target_sources(highspy PUBLIC
+    ${cupdlp_sources}
     ${ipx_sources}
     ${basiclu_sources}
     ${highs_sources}

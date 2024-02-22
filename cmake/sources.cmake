@@ -1,3 +1,12 @@
+set(cupdlp_sources
+  pdlp/cupdlp/cupdlp_solver.c
+  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_restart.c
+  pdlp/cupdlp/cupdlp_proj.c
+  pdlp/cupdlp/cupdlp_linalg.c
+  pdlp/cupdlp/cupdlp_cs.c
+  pdlp/cupdlp/cupdlp_utils.c
+  pdlp/cupdlp/cupdlp_step.c)
 
 set(basiclu_sources
   src/ipm/basiclu/basiclu_factorize.c
