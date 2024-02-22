@@ -91,6 +91,11 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
+  double& max_complementarity_violation =
+      highs_info.max_complementarity_violation;
+  double& sum_complementarity_violations =
+      highs_info.sum_complementarity_violations;
+
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_absolute_primal_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
@@ -100,8 +105,12 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+
   primal_dual_errors.max_dual_infeasibility.invalidate();
   highs_info.dual_solution_status = kSolutionStatusNone;
+
+  max_complementarity_violation = kHighsIllegalInfeasibilityMeasure;
+  sum_complementarity_violations = kHighsIllegalInfeasibilityMeasure;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
@@ -345,6 +354,37 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       }
     }
   }
+
+  if (have_dual_solution) {
+    // Determine the sum of complementarity violations
+    max_complementarity_violation = 0;
+    sum_complementarity_violations = 0;
+    double primal_residual = 0;
+    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+      const bool is_col = iVar < lp.num_col_;
+      const HighsInt iRow = iVar - lp.num_col_;
+      const double primal =
+          is_col ? solution.col_value[iVar] : solution.row_value[iRow];
+      const double dual =
+          is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
+      const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
+      const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
+      if (lower <= -kHighsInf && upper >= kHighsInf) {
+        // Free
+        primal_residual = 1;
+      } else {
+        const double mid = (lower + upper) * 0.5;
+        primal_residual = primal < mid ? std::fabs(lower - primal)
+                                       : std::fabs(upper - primal);
+      }
+      const double dual_residual = std::fabs(dual);
+      const double complementarity_violation = primal_residual * dual_residual;
+      sum_complementarity_violations += complementarity_violation;
+      max_complementarity_violation =
+          std::max(complementarity_violation, max_complementarity_violation);
+    }
+  }
+
   if (get_residuals) {
     const double large_residual_error = 1e-12;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
@@ -1352,33 +1392,29 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
-  bool consistent = true;
-  consistent = isBasisRightSize(lp, basis) && consistent;
-  if (consistent) {
-    HighsInt num_basic_variables = 0;
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
-        num_basic_variables++;
-    }
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
-        num_basic_variables++;
-    }
-    bool right_num_basic_variables = num_basic_variables == lp.num_row_;
-    consistent = right_num_basic_variables && consistent;
+  if (!isBasisRightSize(lp, basis)) return false;
+
+  HighsInt num_basic_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+      num_basic_variables++;
   }
-  return consistent;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+      num_basic_variables++;
+  }
+  return num_basic_variables == lp.num_row_;
 }
 
 bool isPrimalSolutionRightSize(const HighsLp& lp,
                                const HighsSolution& solution) {
-  return (HighsInt)solution.col_value.size() == lp.num_col_ &&
-         (HighsInt)solution.row_value.size() == lp.num_row_;
+  return solution.col_value.size() == static_cast<size_t>(lp.num_col_) &&
+         solution.row_value.size() == static_cast<size_t>(lp.num_row_);
 }
 
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return (HighsInt)solution.col_dual.size() == lp.num_col_ &&
-         (HighsInt)solution.row_dual.size() == lp.num_row_;
+  return solution.col_dual.size() == static_cast<size_t>(lp.num_col_) &&
+         solution.row_dual.size() == static_cast<size_t>(lp.num_row_);
 }
 
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
@@ -1387,8 +1423,8 @@ bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
 }
 
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
-  return (HighsInt)basis.col_status.size() == lp.num_col_ &&
-         (HighsInt)basis.row_status.size() == lp.num_row_;
+  return basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
+         basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
 void HighsSolution::invalidate() {

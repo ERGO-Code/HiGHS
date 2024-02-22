@@ -332,6 +332,26 @@ class SpecialLps {
     optimal_objective = -optimal_objective;
   }
 
+  void ThreeDLp(HighsLp& lp, HighsModelStatus& require_model_status,
+                double& optimal_objective) {
+    lp.model_name_ = "distillation";
+    lp.num_col_ = 3;
+    lp.num_row_ = 2;
+    lp.col_cost_ = {1, 2, 3};
+    lp.col_lower_ = {0, 0, 0};
+    lp.col_upper_ = {inf, inf, inf};
+    lp.row_lower_ = {-inf, -inf};
+    lp.row_upper_ = {3, 2};
+    lp.a_matrix_.start_ = {0, 1, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {1, 1, 2, 2};
+    lp.sense_ = ObjSense::kMaximize;
+    lp.offset_ = 0;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
+    optimal_objective = 7;
+  }
+
   void reportIssue(const HighsInt issue, const bool dev_run = false) {
     if (dev_run)
       printf("\n *************\n * Issue %3" HIGHSINT_FORMAT

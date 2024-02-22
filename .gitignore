@@ -275,3 +275,5 @@ bazel*
 
 # webdemo
 build_webdemo
+
+CMakeSettings.json

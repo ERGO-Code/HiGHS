@@ -3,7 +3,7 @@ load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 copy_file(
     name = "highs-config",
-    src = "HConfig.h.bazel",
+    src = "src/HConfig.h.bazel.in",
     out = "HConfig.h",
     visibility = ["//visibility:public"],
 )
@@ -29,6 +29,8 @@ cc_library(
          "src/mip/*.cpp",
          "src/model/*.cpp",
          "src/parallel/*.cpp",
+         "src/pdlp/*.cpp",
+         "src/pdlp/cupdlp/*.c",
          "src/presolve/*.cpp",
          "src/qpsolver/*.cpp",
          "src/simplex/*.cpp",

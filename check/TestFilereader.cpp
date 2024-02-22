@@ -299,11 +299,42 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   REQUIRE(are_the_same);
 }
 
+/*
+TEST_CASE("filereader-nan", "[highs_filereader]") {
+  // Check that if
+  std::string model_file;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  model_file = std::string(HIGHS_DIR) + "/check/instances/nan0.mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
+  model_file = std::string(HIGHS_DIR) + "/check/instances/nan1.mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
+  model_file = std::string(HIGHS_DIR) + "/check/instances/nan2.mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
+}
+*/
+
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;
   const double optimal_objective_value = 0;
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/fixed-binary.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+}
+
+TEST_CASE("filereader-dD2e", "[highs_filereader]") {
+  // dD2e.mps is min -x1 - 2x2 with upper bounds 1.0D3 and 1.0d3
+  //
+  // If read correctly, the optimal objective value is -3000
+  double objective_value;
+  const double optimal_objective_value = -3000;
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/dD2e.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
 

@@ -133,7 +133,7 @@ void minimal_api_lp() {
   const HighsInt num_col = 2;
   const HighsInt num_row = 3;
   const HighsInt num_nz = 5;
-  HighsInt a_format = 1;
+  HighsInt a_format = kHighsMatrixFormatColwise;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
 
@@ -208,7 +208,7 @@ void minimal_api_mip() {
   const HighsInt num_col = 3;
   const HighsInt num_row = 2;
   const HighsInt num_nz = 6;
-  HighsInt a_format = 1;
+  HighsInt a_format = kHighsMatrixFormatColwise;
   HighsInt sense = kHighsObjSenseMinimize;
   double offset = 0;
 
@@ -1117,6 +1117,124 @@ void full_api_qp() {
 
 }
 
+void pass_presolve_get_lp() {
+  // Form and solve the LP
+  // Min    f  = 2x_0 + 3x_1
+  // s.t.                x_1 <= 6
+  //       10 <=  x_0 + 2x_1 <= 14
+  //        8 <= 2x_0 +  x_1
+  // 0 <= x_0 <= 3; 1 <= x_1
+
+  void* highs;
+
+  highs = Highs_create();
+  const double kHighsInf = Highs_getInfinity(highs);
+  HighsInt model_status;
+  HighsInt return_status;
+  
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+  // Define the column costs, lower bounds and upper bounds
+
+  const HighsInt num_col = 2;
+  const HighsInt num_row = 3;
+  const HighsInt num_nz = 5;
+
+  double col_cost[2] = {2.0, 3.0};
+  double col_lower[2] = {0.0, 1.0};
+  double col_upper[2] = {3.0, kHighsInf};
+  // Define the row lower bounds and upper bounds
+  double row_lower[3] = {-kHighsInf, 10.0, 8.0};
+  double row_upper[3] = {6.0, 14.0, kHighsInf};
+  HighsInt a_start[2] = {0, 2};
+  HighsInt a_index[5] = {1, 2, 0, 1, 2};
+  double a_value[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
+
+  return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense, offset,
+			       col_cost, col_lower, col_upper,
+			       row_lower, row_upper,
+			       a_start, a_index, a_value);
+  assert( return_status == kHighsStatusOk );
+
+  return_status = Highs_presolve(highs);
+  assert( return_status == kHighsStatusOk );
+  for (HighsInt k = 0; k < 2; k++) {
+    // Loop twice: once for col-wise; once for row-wise
+    HighsInt presolved_num_col = Highs_getPresolvedNumCol(highs);
+    HighsInt presolved_num_row = Highs_getPresolvedNumRow(highs);
+    HighsInt presolved_num_nz = Highs_getPresolvedNumNz(highs);
+    HighsInt presolved_a_format = k == 0 ? kHighsMatrixFormatColwise : kHighsMatrixFormatRowwise;
+    HighsInt presolved_sense;
+    double presolved_offset;
+    double* presolved_col_cost = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_col_lower = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_col_upper = (double*)malloc(sizeof(double) * presolved_num_col);
+    double* presolved_row_lower = (double*)malloc(sizeof(double) * presolved_num_row);
+    double* presolved_row_upper = (double*)malloc(sizeof(double) * presolved_num_row);
+    HighsInt* presolved_a_start = (HighsInt*)malloc(sizeof(HighsInt) * (presolved_num_col+1));
+    HighsInt* presolved_a_index = (HighsInt*)malloc(sizeof(HighsInt) * presolved_num_nz);
+    double* presolved_a_value = (double*)malloc(sizeof(double) * presolved_num_nz);
+  
+    return_status = Highs_getPresolvedLp(highs, presolved_a_format,
+					 &presolved_num_col, &presolved_num_row, &presolved_num_nz,
+					 &presolved_sense, &presolved_offset,
+					 presolved_col_cost, presolved_col_lower, presolved_col_upper,
+					 presolved_row_lower, presolved_row_upper,
+					 presolved_a_start, presolved_a_index, presolved_a_value, NULL);
+    assert( return_status == kHighsStatusOk );
+    // Solve the presolved LP within a local version of HiGHS
+    void* local_highs;
+    local_highs = Highs_create();
+    Highs_setBoolOptionValue(local_highs, "output_flag", dev_run);
+    Highs_setStringOptionValue(local_highs, "presolve", "off");
+    return_status = Highs_passLp(local_highs,
+				 presolved_num_col, presolved_num_row, presolved_num_nz,
+				 presolved_a_format, presolved_sense, presolved_offset,
+				 presolved_col_cost, presolved_col_lower, presolved_col_upper,
+				 presolved_row_lower, presolved_row_upper,
+				 presolved_a_start, presolved_a_index, presolved_a_value);
+    assert( return_status == kHighsStatusOk );
+    return_status = Highs_run(local_highs);
+    
+    double* col_value = (double*)malloc(sizeof(double) * num_col);
+    double* col_dual = (double*)malloc(sizeof(double) * num_col);
+    double* row_dual = (double*)malloc(sizeof(double) * num_row);
+
+    return_status = Highs_getSolution(local_highs, col_value, col_dual, NULL, row_dual);
+    assert( return_status == kHighsStatusOk );
+
+    return_status = Highs_postsolve(highs, col_value, col_dual, row_dual);
+    assert( return_status == kHighsStatusOk );
+
+    model_status = Highs_getModelStatus(highs);
+    assert( model_status == kHighsModelStatusOptimal );
+    
+    // With just the primal solution, optimality cannot be determined
+
+    return_status = Highs_postsolve(highs, col_value, NULL, NULL);
+    assert( return_status == kHighsStatusWarning );
+
+    model_status = Highs_getModelStatus(highs);
+    assert( model_status == kHighsModelStatusUnknown );
+
+    free(presolved_col_cost);
+    free(presolved_col_lower);
+    free(presolved_col_upper);
+    free(presolved_row_lower);
+    free(presolved_row_upper);
+    free(presolved_a_start);
+    free(presolved_a_index);
+    free(presolved_a_value);
+    free(col_value);
+    free(col_dual);
+    free(row_dual);
+
+    
+  }
+}
+
 void options() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
@@ -1438,6 +1556,7 @@ int main() {
   full_api_lp();
   full_api_mip();
   full_api_qp();
+  pass_presolve_get_lp();
   options();
   test_getColsByRange();
   test_passHessian();

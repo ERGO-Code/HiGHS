@@ -25,6 +25,7 @@ const std::string kHighsCopyrightStatement =
 
 const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
+const HighsInt kHighsIInf32 = std::numeric_limits<int>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
 const double kHighsMacheps = std::ldexp(1, -52);
@@ -212,14 +213,16 @@ enum class HighsModelStatus {
 
 enum HighsCallbackType : int {
   kCallbackMin = 0,
-  kCallbackLogging = kCallbackMin,  // 0
-  kCallbackSimplexInterrupt,        // 1
-  kCallbackIpmInterrupt,            // 2
-  kCallbackMipSolution,             // 3
-  kCallbackMipImprovingSolution,    // 4
-  kCallbackMipLogging,              // 5
-  kCallbackMipInterrupt,            // 6
-  kCallbackMax = kCallbackMipInterrupt,
+  kCallbackLogging = kCallbackMin,    // 0
+  kCallbackSimplexInterrupt,          // 1
+  kCallbackIpmInterrupt,              // 2
+  kCallbackMipSolution,               // 3
+  kCallbackMipImprovingSolution,      // 4
+  kCallbackMipLogging,                // 5
+  kCallbackMipInterrupt,              // 6
+  kCallbackMipGetCutPool,             // 7
+  kCallbackMipDefineLazyConstraints,  // 8
+  kCallbackMax = kCallbackMipDefineLazyConstraints,
   kNumCallbackType
 };
 

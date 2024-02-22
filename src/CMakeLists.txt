@@ -1,6 +1,16 @@
 # Define library.
 # Outdated CMake approach: update in progress
 
+set(cupdlp_sources
+  pdlp/cupdlp/cupdlp_solver.c
+  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_restart.c
+  pdlp/cupdlp/cupdlp_proj.c
+  pdlp/cupdlp/cupdlp_linalg.c
+  pdlp/cupdlp/cupdlp_cs.c
+  pdlp/cupdlp/cupdlp_utils.c
+  pdlp/cupdlp/cupdlp_step.c)
+
 set(basiclu_sources
   ipm/basiclu/basiclu_factorize.c
   ipm/basiclu/basiclu_solve_dense.c
@@ -68,6 +78,7 @@ set(ipx_sources
 if(NOT FAST_BUILD)
   include_directories(ipm/ipx)
   include_directories(ipm/basiclu)
+  include_directories(pdlp/cupdlp)
 
   set(sources
     ../extern/filereaderlp/reader.cpp
@@ -308,9 +319,12 @@ if(NOT FAST_BUILD)
     interfaces/highs_c_api.h
   )
 
+# ToDo What's this for? None of $basiclu_headers, $ipx_headers - and hence $cupdlp_headers - appears to be set
+
   set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
-    ${ipx_headers})
-  set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources} ${ipx_sources})
+    ${ipx_headers} pdlp/CupdlpWrapper.h ${cupdlp_headers})
+  set(sources ${sources} ipm/IpxWrapper.cpp ${basiclu_sources}
+    ${ipx_sources} pdlp/CupdlpWrapper.cpp ${cupdlp_sources})
 
   add_library(libhighs ${sources})
 
@@ -549,6 +563,8 @@ else()
   target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/pdlp/cupdlp>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
@@ -720,7 +736,7 @@ else()
   )
 
   set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-    ${ipx_headers})
+    ${ipx_headers} pdlp/CupdlpWrapper.h ${cupdlp_headers})
 
   # set_target_properties(highs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
@@ -736,9 +752,18 @@ else()
   endforeach()
   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
+  # Configure the config windows version file
+  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
+  if(MSVC)
+    set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
+  else()
+    set(win_version_file)
+  endif()
+
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
+  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
 
   if(UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
@@ -793,7 +818,11 @@ if(FORTRAN_FOUND)
     RUNTIME
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
     MODULES DESTINATION modules)
-  install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  IF (NOT MSVC)
+    install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ELSE ()
+    install(FILES ${HIGHS_BINARY_DIR}/modules/${CMAKE_BUILD_TYPE}/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
+  ENDIF()
   set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
@@ -811,7 +840,18 @@ else()
   message(STATUS "No CSharp support")
 endif()
 
-find_package(Threads REQUIRED)
+find_package(Threads)
+
+if(Threads_FOUND)
+  include(CheckAtomic)
+if(HAVE_CXX_ATOMICS64_WITH_LIB)
+  if(FAST_BUILD)
+    target_link_libraries(highs atomic)
+  else()
+    target_link_libraries(libhighs atomic)
+  endif()
+endif()
+endif()
 
 if(FAST_BUILD)
   target_link_libraries(highs Threads::Threads)

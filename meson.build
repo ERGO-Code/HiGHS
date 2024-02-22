@@ -1,6 +1,6 @@
 project('highs', 'cpp',
   version : '1.6.0',
-  meson_version: '>= 1.2.0',
+  meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
                      'wrap_mode=forcefallback',
@@ -72,17 +72,9 @@ if is_mingw
 endif
 
 # --------------------- Dependencies
-if not is_windows
-  # libm for Unix systems
-  m_dep = cppc.find_library('m', required: false)
-  _deps += m_dep
-  # For building with clang
-  _deps += [declare_dependency(link_args: '-lstdc++')]
-endif
-
 # Required
 threads_dep = dependency('threads',
-                        required: true)
+                        required: false)
 _deps += threads_dep
 
 # Determine whether it is necessary to link libatomic. This could be the case
