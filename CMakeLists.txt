@@ -131,11 +131,6 @@ message(STATUS "Build CSharp: ${CSHARP}")
 # ZLIB can be switched off, for building interfaces
 option(ZLIB "Fast build: " ON)
 
-
-
-# # For Python interface
-# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
 # Basic type
 include(CMakePushCheckState)
 cmake_push_check_state(RESET)
