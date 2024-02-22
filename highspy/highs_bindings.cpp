@@ -9,9 +9,6 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 
-#define STRINGIFY(x) #x
-#define MACRO_STRINGIFY(x) STRINGIFY(x)
-
 namespace py = pybind11;
 using namespace pybind11::literals;
 
@@ -218,10 +215,6 @@ HighsStatus highs_addCols(Highs* h, HighsInt num_col, py::array_t<double> cost,
 
   return h->addCols(num_col, cost_ptr, lower_ptr, upper_ptr, num_new_nz,
                     starts_ptr, indices_ptr, values_ptr);
-}
-
-HighsStatus highs_addEmptyVar(Highs* h) {
-  return h->addVar();
 }
 
 HighsStatus highs_addVar(Highs* h, double lower, double upper) {
@@ -818,7 +811,6 @@ PYBIND11_MODULE(highspy, m) {
                      &HighsOptions::mip_heuristic_effort)
       .def_readwrite("mip_min_logging_interval",
                      &HighsOptions::mip_min_logging_interval);
-
   py::class_<Highs>(m, "Highs")
       .def(py::init<>())
       .def("version", &Highs::version)
@@ -927,7 +919,6 @@ PYBIND11_MODULE(highspy, m) {
       .def("addRow", &highs_addRow)
       .def("addCol", &highs_addCol)
       .def("addCols", &highs_addCols)
-      .def("addEmptyVar", &highs_addEmptyVar)
       .def("addVar", &highs_addVar)
       .def("addVars", &highs_addVars)
       .def("changeColsCost", &highs_changeColsCost)
@@ -1185,10 +1176,4 @@ PYBIND11_MODULE(highspy, m) {
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
       .def(py::init<>())
       .def_readwrite("user_interrupt", &HighsCallbackDataIn::user_interrupt);
-
-#ifdef VERSION_INFO
-    m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
-#else
-    m.attr("__version__") = "dev";
-#endif
 }
