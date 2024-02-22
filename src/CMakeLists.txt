@@ -817,7 +817,19 @@ if(FORTRAN_FOUND)
     target_link_libraries(FortranHighs PUBLIC highs)
   endif()
 
-  install(TARGETS FortranHighs
+  if (BUILD_TESTING)
+    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
+    include_directories(${HIGHS_SOURCE_DIR}/src)
+    add_executable(fortrantest TestFortranAPI.f90)
+    if (NOT FAST_BUILD)
+        target_link_libraries(fortrantest libhighs FortranHighs)
+    else()
+        target_link_libraries(fortrantest highs FortranHighs)
+    endif()
+    target_include_directories(fortrantest PUBLIC ${HIGHS_SOURCE_DIR}/src/interfaces)
+  endif()
+
+  install(TARGETS FortranHighs 
     LIBRARY
     ARCHIVE
     RUNTIME

@@ -91,7 +91,16 @@ include(GNUInstallDirs)
   endif()
 
 
-if(FORTRAN_FOUND)
+# check the C API
+add_executable(capi_unit_tests TestCAPI.c)
+target_link_libraries(capi_unit_tests libhighs)
+add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
+
+# Check whether test executable builds OK.
+add_test(NAME unit-test-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${HIGHS_BINARY_DIR}
+                 --taif(FORTRAN_FOUND)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
    include_directories(${HIGHS_SOURCE_DIR}/src)
    add_executable(fortrantest TestFortranAPI.f90)
@@ -102,17 +111,7 @@ if(FORTRAN_FOUND)
     endif()
    target_include_directories(fortrantest PUBLIC ${HIGHS_SOURCE_DIR}/src/interfaces)
  endif(FORTRAN_FOUND)
-
-# check the C API
-add_executable(capi_unit_tests TestCAPI.c)
-target_link_libraries(capi_unit_tests libhighs)
-add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
-
-# Check whether test executable builds OK.
-add_test(NAME unit-test-build
-         COMMAND ${CMAKE_COMMAND}
-                 --build ${HIGHS_BINARY_DIR}
-                 --target unit_tests
+rget unit_tests
                 #  --config ${CMAKE_BUILD_TYPE}
          )
 

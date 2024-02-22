@@ -1,4 +1,4 @@
-name: test-csharp
+name: test-fortran
 
 on: [push, pull_request]
 
