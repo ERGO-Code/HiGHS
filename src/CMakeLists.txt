@@ -388,8 +388,10 @@ if(NOT FAST_BUILD)
     # target_compile_options(libipx PRIVATE "-Wno-unused-variable")
     # target_compile_options(libipx PRIVATE "-Wno-sign-compare")
     # target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+  elseif(WIN32)
+    target_compile_options(highs PRIVATE "-w")
   endif()
-
+  
   install(TARGETS libhighs EXPORT highs-targets
     LIBRARY
     ARCHIVE

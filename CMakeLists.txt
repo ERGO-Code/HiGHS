@@ -52,7 +52,14 @@ if (PYTHON_BUILD_SETUP)
 endif()
 
 option(BUILD_TESTING "Build Tests" ON)
-option(ZLIB "ZLIB: " ON)
+
+include(CMakeDependentOption)
+
+CMAKE_DEPENDENT_OPTION(BUILD_ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
+message(STATUS "Build all tests: ${BUILD_ALL_TESTS}")
+
+option(ZLIB "ZLIB" ON)
+message(STATUS "ZLIB: ${ZLIB}")
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
@@ -363,6 +370,12 @@ message(STATUS "Git hash: " ${GITHASH})
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
+add_subdirectory(app)
+if(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(check)
+endif()
+
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)
@@ -470,19 +483,11 @@ if(NOT FAST_BUILD)
   # endif()
 
   # Targets
-  add_subdirectory(app)
-  if(BUILD_TESTING)
-    enable_testing()
-    add_subdirectory(check)
-  endif()
   add_subdirectory(src)
 
 else(FAST_BUILD)
-
   message(STATUS "FAST_BUILD set to on.")
   
-  include(CMakeDependentOption)
-
   option(BUILD_EXAMPLES "Build examples" ON)
   message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
