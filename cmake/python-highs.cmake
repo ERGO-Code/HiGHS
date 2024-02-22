@@ -76,7 +76,7 @@ target_compile_definitions(highspy
 # set_target_properties(highspy PROPERTIES
 #   LIBRARY_OUTPUT_NAME "highspy")
 
-target_include_directories(highspy PUBLIC ${include_dirs_p})
+target_include_directories(highspy PUBLIC ${include_dirs})
 
 target_sources(highspy PUBLIC
     ${cupdlp_sources}

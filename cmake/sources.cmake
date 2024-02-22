@@ -1,12 +1,12 @@
 set(cupdlp_sources
-  src/pdlp/cupdlp/cupdlp_solver.c
-  src/pdlp/cupdlp/cupdlp_scaling_cuda.c
-  src/pdlp/cupdlp/cupdlp_restart.c
-  src/pdlp/cupdlp/cupdlp_proj.c
-  src/pdlp/cupdlp/cupdlp_linalg.c
   src/pdlp/cupdlp/cupdlp_cs.c
-  src/pdlp/cupdlp/cupdlp_utils.c
-  src/pdlp/cupdlp/cupdlp_step.c)
+  src/pdlp/cupdlp/cupdlp_linalg.c
+  src/pdlp/cupdlp/cupdlp_proj.c
+  src/pdlp/cupdlp/cupdlp_restart.c
+  src/pdlp/cupdlp/cupdlp_scaling_cuda.c
+  src/pdlp/cupdlp/cupdlp_solver.c
+  src/pdlp/cupdlp/cupdlp_step.c
+  src/pdlp/cupdlp/cupdlp_utils.c)
 
 set(basiclu_sources
   src/ipm/basiclu/basiclu_factorize.c
@@ -98,6 +98,8 @@ set(highs_sources
     src/lp_data/HighsSolve.cpp
     src/lp_data/HighsStatus.cpp
     src/lp_data/HighsOptions.cpp
+    src/parallel/HighsTaskExecutor.cpp
+    src/pdlp/CupdlpWrapper.cpp
     src/presolve/ICrash.cpp
     src/presolve/ICrashUtil.cpp
     src/presolve/ICrashX.cpp
@@ -332,7 +334,7 @@ set(headers_fast_build_
 #   endforeach()
 #   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-  set(include_dirs_p
+  set(include_dirs
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/interfaces
     ${CMAKE_SOURCE_DIR}/src/io
