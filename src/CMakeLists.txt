@@ -385,11 +385,8 @@ if(NOT FAST_BUILD)
     # target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
     # target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    # target_compile_options(libipx PRIVATE "-Wno-unused-variable")
     # target_compile_options(libipx PRIVATE "-Wno-sign-compare")
     # target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
-  elseif(WIN32)
-    target_compile_options(highs PRIVATE "-w")
   endif()
   
   install(TARGETS libhighs EXPORT highs-targets
@@ -772,13 +769,8 @@ else()
   # target_compile_options(highs PRIVATE "-Wunused")
   target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
 
-  if(UNIX)
-    target_compile_options(highs PRIVATE "-Wno-unused-variable")
-    target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
-  elseif(WIN32)
-    target_compile_options(highs PRIVATE "-w")
-  
-  endif()
+  target_compile_options(highs PRIVATE "-Wno-unused-variable")
+  target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
 
 
   if (BUILD_CXX)

@@ -1,5 +1,18 @@
 include(CTest)
 
+if (FORTRAN)
+    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
+    add_executable(fortrantest TestFortranAPI.f90)
+    if (NOT FAST_BUILD)
+        target_link_libraries(fortrantest libhighs FortranHighs)
+    else()
+        target_link_libraries(fortrantest highs FortranHighs)
+    endif()
+    target_include_directories(fortrantest PUBLIC 
+        ${HIGHS_SOURCE_DIR}/src/interfaces
+        ${HIGHS_SOURCE_DIR}/check)
+endif()
+
 if (NOT FAST_BUILD OR ALL_TESTS)
   # prepare Catch library
   set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/extern/catch)
@@ -70,19 +83,6 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       # may be an interface related issue which will pop up soon. 
       # works OK on linux. The test was added to doctest for macOS but still hanging.
       set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
-  endif()
-
-  if (FORTRAN)
-    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
-    add_executable(fortrantest TestFortranAPI.f90)
-    if (NOT FAST_BUILD)
-        target_link_libraries(fortrantest libhighs FortranHighs)
-    else()
-        target_link_libraries(fortrantest highs FortranHighs)
-    endif()
-    target_include_directories(fortrantest PUBLIC 
-        ${HIGHS_SOURCE_DIR}/src/interfaces
-        ${HIGHS_SOURCE_DIR}/check)
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
