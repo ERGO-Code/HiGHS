@@ -1,5 +1,5 @@
 if(FAST_BUILD)
-  if (NOT PYTHON)
+  if (BUILD_CXX)
   # create highs binary using library without pic
   add_executable(highs-bin)
 

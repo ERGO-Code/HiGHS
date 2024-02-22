@@ -781,6 +781,7 @@ class TestHighsPy(unittest.TestCase):
     #             contents, b'HiGHS v1\nValid\n# Columns 2\n1 1 \n# Rows 2\n0 0 \n'
     #         )
 
+    # test works on unix but not windows? 
     def test_read_basis(self):
         # Read basis from one run model into an unrun model
         expected_status_before = highspy.HighsBasisStatus.kLower

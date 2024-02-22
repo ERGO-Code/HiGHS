@@ -97,7 +97,7 @@ install(TARGETS highs
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
   
-if (NOT PYTHON)
+if (BUILD_CXX)
 
 # Add library targets to the build-tree export set
 export(TARGETS highs

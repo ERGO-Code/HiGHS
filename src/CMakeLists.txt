@@ -434,10 +434,7 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
-  # add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
-
-  set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_compile_definitions(highs PUBLIC LIBHIGHS_STATIC_DEFINE)
+  add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -446,6 +443,13 @@ else()
       ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
       SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
   endif()
+
+  set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  if(APPLE)
+    set_target_properties(highs PROPERTIES
+      INSTALL_RPATH "@loader_path")
+  endif()
+
 
   target_sources(highs PRIVATE
     ../extern/filereaderlp/reader.cpp
@@ -771,7 +775,7 @@ else()
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
   endif()
 
-  if (NOT PYTHON)
+  if (BUILD_CXX)
 
   # Configure the config file for the build tree:
   # Either list all the src/* directories here, or put explicit paths in all the

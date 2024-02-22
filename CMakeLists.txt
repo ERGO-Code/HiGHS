@@ -15,7 +15,7 @@ set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-include(utils-highs)
+include(set-version)
 set_version(VERSION)
 
 project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
@@ -28,160 +28,149 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
-option(PYTHON "Build Python interface" OFF)
-message(STATUS "Build Python: ${PYTHON}")
-
-option(FAST_BUILD "Fast build: " ON)
-
-# By default only build the C++ library.
-option(BUILD_CXX "Build C++ library" ON)
-message(STATUS "Build C++ library: ${BUILD_CXX}")
-
-if (PYTHON) 
-  set(BUILD_CXX OFF)
-endif()
-
-option(BUILD_TESTING "Build Tests" ON)
-
-# If wrapper are built, we need to have the install rpath in BINARY_DIR to package
-if(PYTHON OR FORTRAN OR CSHARP)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-endif()
-
-if (NOT PYTHON)
-
-# Default Build Type to be Release
-get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if(isMultiConfig)
-  if(NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING
-    "Choose the type of builds, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release;Debug)"
-    FORCE)
-  endif()
-  message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
-else()
-  if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
-    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
-    FORCE)
-    set(HiGHSRELEASE ON)
-    add_compile_definitions("NDEBUG")
-  endif()
-  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-endif()
-
-# Layout build dir like install dir
-include(GNUInstallDirs)
-
-if(UNIX)
-  option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  # for multi-config build system (e.g. xcode)
-  foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-  endforeach()
-else()
-  # Currently Only support static build for windows
-  option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  # for multi-config builds (e.g. msvc)
-  foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-  endforeach()
-endif()
-
-# Best link static on Windows, if possible. Check : todo
-if(BUILD_SHARED_LIBS AND MSVC)
-  # message( SEND_ERROR "Best link static on Windows, if possible.")
-  # message( FATAL_ERROR "You can not do this at all, CMake will exit." )
-
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
-include(CTest)
-
-if(MSVC)
-  # This option is only available when building with MSVC. By default, highs
-  # is build using the cdecl calling convention, which is useful if you're
-  # writing C. However, the CLR and Win32 API both expect stdcall.
-  #
-  # If you are writing a CLR program and want to link to highs, you'll want
-  # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-  option(STDCALL "Build highs with the __stdcall convention" OFF)
-endif()
-
-
-option(FORTRAN "Build Fortran interface" OFF)
-message(STATUS "Build Fortran: ${FORTRAN}")
-option(CSHARP "Build CSharp interface" OFF)
-message(STATUS "Build CSharp: ${CSHARP}")
-
-# ZLIB can be switched off, for building interfaces
-option(ZLIB "Fast build: " ON)
-
-# Basic type
-include(CMakePushCheckState)
-cmake_push_check_state(RESET)
-set(CMAKE_EXTRA_INCLUDE_FILES "cstdint")
-include(CheckTypeSize)
-check_type_size("long" SIZEOF_LONG LANGUAGE CXX)
-message(STATUS "Found long size: ${SIZEOF_LONG}")
-check_type_size("long long" SIZEOF_LONG_LONG LANGUAGE CXX)
-message(STATUS "Found long long size: ${SIZEOF_LONG_LONG}")
-check_type_size("int64_t" SIZEOF_INT64_T LANGUAGE CXX)
-message(STATUS "Found int64_t size: ${SIZEOF_INT64_T}")
-
-check_type_size("unsigned long" SIZEOF_ULONG LANGUAGE CXX)
-message(STATUS "Found unsigned long size: ${SIZEOF_ULONG}")
-check_type_size("unsigned long long" SIZEOF_ULONG_LONG LANGUAGE CXX)
-message(STATUS "Found unsigned long long size: ${SIZEOF_ULONG_LONG}")
-check_type_size("uint64_t" SIZEOF_UINT64_T LANGUAGE CXX)
-message(STATUS "Found uint64_t size: ${SIZEOF_UINT64_T}")
-
-check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
-message(STATUS "Found int * size: ${SIZEOF_INT_P}")
-cmake_pop_check_state()
-
 # Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")
   message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file).
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
+option(FAST_BUILD "Fast build: " ON)
 
+# By default only build the C++ library.
+option(BUILD_CXX "Build C++ library" ON)
+message(STATUS "Build C++ library: ${BUILD_CXX}")
 
-if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-  message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
-elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT ipo_supported OUTPUT error)
+option(FORTRAN "Build Fortran interface" OFF)
+message(STATUS "Build Fortran: ${FORTRAN}")
+option(CSHARP "Build CSharp interface" OFF)
+message(STATUS "Build CSharp: ${CSHARP}")
 
-  if(ipo_supported)
-    message(STATUS "IPO / LTO enabled")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-  else()
-    message(STATUS "IPO / LTO not supported: <${error}>")
-  endif()
+option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
+message(STATUS "Build Python: ${PYTHON_BUILD_ONLY}")
+if (PYTHON_BUILD_ONLY) 
+  set(BUILD_CXX OFF)
 endif()
+
+option(BUILD_TESTING "Build Tests" ON)
+option(ZLIB "ZLIB: " ON)
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
-endif() 
+if (BUILD_CXX)
 
-set(CMAKE_MACOSX_RPATH ON)
+  # Default Build Type to be Release
+  get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+  if(isMultiConfig)
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      set(CMAKE_CONFIGURATION_TYPES "Release;Debug" CACHE STRING
+      "Choose the type of builds, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release;Debug)"
+      FORCE)
+    endif()
+    message(STATUS "Configuration types: ${CMAKE_CONFIGURATION_TYPES}")
+  else()
+    if (CMAKE_BUILD_TYPE STREQUAL Release)
+      set(HiGHSRELEASE ON)
+      add_compile_definitions("NDEBUG")# whether to use shared or static libraries
+    else()
+      if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+        "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel. (default: Release)"
+        FORCE)
+        set(HiGHSRELEASE ON)
+        add_compile_definitions("NDEBUG")
+      endif()
+    endif()
+    message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+  endif()
+
+  include(GNUInstallDirs)
+
+  if(UNIX)
+    option(BUILD_SHARED_LIBS "Build shared libraries (.so or .dyld)." ON)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    # for multi-config build system (e.g. xcode)
+    foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+      string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_LIBDIR})
+      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+    endforeach()
+  else()
+    option(BUILD_SHARED_LIBS "Build shared libraries (.dll)." OFF)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+    # for multi-config builds (e.g. msvc)
+    foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+      string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+    endforeach()
+  endif()
+
+  # Best link static on Windows, if possible.
+  if(BUILD_SHARED_LIBS AND MSVC)
+    # message( SEND_ERROR "Best link static on Windows, if possible.")
+    # message( FATAL_ERROR "You can not do this at all, CMake will exit." )
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  endif()
+
+  if (BUILD_TESTING)
+    include(CTest)
+  endif()
+
+  if(MSVC)
+    # This option is only available when building with MSVC. By default, highs
+    # is build using the cdecl calling convention, which is useful if you're
+    # writing C. However, the CLR and Win32 API both expect stdcall.
+    #
+    # If you are writing a CLR program and want to link to highs, you'll want
+    # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+    option(STDCALL "Build highs with the __stdcall convention" OFF)
+  endif()
+
+  # Basic type
+  include(CMakePushCheckState)
+  cmake_push_check_state(RESET)
+  set(CMAKE_EXTRA_INCLUDE_FILES "cstdint")
+  include(CheckTypeSize)
+  check_type_size("long" SIZEOF_LONG LANGUAGE CXX)
+  message(STATUS "Found long size: ${SIZEOF_LONG}")
+  check_type_size("long long" SIZEOF_LONG_LONG LANGUAGE CXX)
+  message(STATUS "Found long long size: ${SIZEOF_LONG_LONG}")
+  check_type_size("int64_t" SIZEOF_INT64_T LANGUAGE CXX)
+  message(STATUS "Found int64_t size: ${SIZEOF_INT64_T}")
+
+  check_type_size("unsigned long" SIZEOF_ULONG LANGUAGE CXX)
+  message(STATUS "Found unsigned long size: ${SIZEOF_ULONG}")
+  check_type_size("unsigned long long" SIZEOF_ULONG_LONG LANGUAGE CXX)
+  message(STATUS "Found unsigned long long size: ${SIZEOF_ULONG_LONG}")
+  check_type_size("uint64_t" SIZEOF_UINT64_T LANGUAGE CXX)
+  message(STATUS "Found uint64_t size: ${SIZEOF_UINT64_T}")
+
+  check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
+  message(STATUS "Found int * size: ${SIZEOF_INT_P}")
+  cmake_pop_check_state()
+
+  if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+  elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT error)
+
+    if(ipo_supported)
+      message(STATUS "IPO / LTO enabled")
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+      message(STATUS "IPO / LTO not supported: <${error}>")
+    endif()
+  endif()
+
+endif() 
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
@@ -217,11 +206,22 @@ else()
     HIGHS_HAVE_BUILTIN_CLZ)
 endif()
 
+set(CMAKE_MACOSX_RPATH ON)
+
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# if(FORTRAN OR CSHARP)
+#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+# endif()
+
 include(CheckCXXCompilerFlag)
-
 if(NOT FAST_BUILD)
-
-  option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
@@ -342,7 +342,6 @@ if(ZLIB)
 endif()
 
 include(CPack)
-set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
@@ -439,17 +438,6 @@ if(NOT FAST_BUILD)
     endif()
   endif()
  
-  # whether to use shared or static libraries
-  option(SHARED "Build shared libraries" ON)
-  set(BUILD_SHARED_LIBS ${SHARED})
-  message(STATUS "Build shared libraries: " ${SHARED})
-
-  if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
-    set(HiGHSRELEASE ON)
-    add_compile_definitions("NDEBUG")
-  endif()
-  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
   configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
   include_directories(
     ${HIGHS_BINARY_DIR}
@@ -481,18 +469,10 @@ if(NOT FAST_BUILD)
   #   enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
   # endif()
 
-  # use, i.e. don't skip the full RPATH for the build tree
-  set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-  # when building, don't use the install RPATH already
-  # (but later on when installing)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
   # Targets
-  enable_testing()
   add_subdirectory(app)
   if(BUILD_TESTING)
+    enable_testing()
     add_subdirectory(check)
   endif()
   add_subdirectory(src)
@@ -501,37 +481,19 @@ else(FAST_BUILD)
 
   message(STATUS "FAST_BUILD set to on.")
   
-  set(CMAKE_SKIP_BUILD_RPATH FALSE)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-
-  # if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
-  # endif()
-  # message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
   include(CMakeDependentOption)
 
   option(BUILD_EXAMPLES "Build examples" ON)
   message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
   CMAKE_DEPENDENT_OPTION(BUILD_CXX_EXAMPLE "Build cxx example" ON "BUILD_EXAMPLES;BUILD_CXX" OFF)
-  message(STATUS "Build C++: ${BUILD_CXX_EX}")
-  CMAKE_DEPENDENT_OPTION(BUILD_PYTHON_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
-  message(STATUS "Build Python: ${BUILD_PYTHON_EXAMPLE}")
+  message(STATUS "Build C++ example: ${BUILD_CXX_EX}")
   CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
-  message(STATUS "Build CSharp: ${BUILD_CSHARP_EXAMPLE}")
-
-  # IF BUILD_DEPS=ON THEN Force all BUILD_*=ON
-  CMAKE_DEPENDENT_OPTION(BUILD_ZLIB "Build the ZLIB dependency Library" OFF
-    "NOT BUILD_DEPS" ON)
-  message(STATUS "Build ZLIB: ${BUILD_ZLIB}")
-
-  option(JULIA "Build library and executable for Julia" OFF)
+  message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
 
   include(cpp-highs)
 
   if(PYTHON)
-    # set (BUILD_RPATH_USE_ORIGIN ON)
     include(python-highs)
   else()
     include(c-highs)
