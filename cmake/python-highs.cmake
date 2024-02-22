@@ -127,7 +127,6 @@ target_compile_definitions(highspy
 #   highspy/__init__.py
 #   highspy/highs.py
 #   highspy/highs_bindings.cpp
-#   highspy/highs_options.cpp
 #   DESTINATION ${PYTHON_PROJECT_DIR}/highspy)
 
 # add_custom_command(

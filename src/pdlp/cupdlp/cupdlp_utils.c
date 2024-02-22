@@ -6,6 +6,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "cupdlp_cs.h"
 #include "cupdlp_linalg.h"
@@ -1087,8 +1088,10 @@ double my_clock(void) {
 #ifdef CUPDLP_TIMER
   struct timeval t;
   //  clock_gettime(&t, NULL);
-  gettimeofday(&t, NULL);
-  return (1e-06 * t.tv_usec + t.tv_sec);
+  // gettimeofday(&t, NULL);
+  double timeee = time(NULL);
+  return timeee;
+  // return (1e-06 * t.tv_usec + t.tv_sec);
 #else
   return 0;
 #endif
