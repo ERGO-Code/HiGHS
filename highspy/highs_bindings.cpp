@@ -716,7 +716,11 @@ PYBIND11_MODULE(_highs, m) {
       .def_readwrite("max_dual_infeasibility",
                      &HighsInfo::max_dual_infeasibility)
       .def_readwrite("sum_dual_infeasibilities",
-                     &HighsInfo::sum_dual_infeasibilities);
+                     &HighsInfo::sum_dual_infeasibilities)
+      .def_readwrite("max_complementarity_violation",
+                     &HighsInfo::max_complementarity_violation)
+      .def_readwrite("sum_complementarity_violations",
+                     &HighsInfo::sum_complementarity_violations);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)

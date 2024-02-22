@@ -11,20 +11,6 @@
 #include "cupdlp_utils.h"
 #include "glbopts.h"
 
-void debugPrintCupdlpVector(const char* name, const CUPDLPvec* vector) {
-  printf("Variable %s: ", name);
-  for (int ix = 0; ix < vector->len; ix++)
-    printf("%11.6g ", vector->data[ix]);
-  printf("\n");
-}
-
-void debugPrintDoubleVector(const char* name, const double* vector, const int n) {
-  printf("Variable %s: ", name);
-  for (int ix = 0; ix < n; ix++)
-    printf("%11.6g ", vector[ix]);
-  printf("\n");
-}
-
 void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
                                      const double *ax, const double *x,
                                      double *dPrimalFeasibility,
@@ -47,7 +33,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
   cupdlp_float alpha = -1.0;
   cupdlp_axpy(work, lp->nRows, &alpha, problem->rhs, primalResidual);
 
-  double dPrimalFeas = 0.0;
+  //  double dPrimalFeas = 0.0; // Redundant
 
   // todo, check
   //  cupdlp_projNegative(primalResidual + problem->nEqs, primalResidual +
@@ -66,7 +52,13 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
     cupdlp_edot(primalResidual, work->rowScale, lp->nRows);
   }
 
-  cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
+  if (work->settings->iInfNormAbsLocalTermination) {
+    cupdlp_int index;
+    cupdlp_infNormIndex(work, lp->nRows, primalResidual, &index);
+    *dPrimalFeasibility = fabs(primalResidual[index]);
+  } else {
+    cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
+  }
 }
 
 void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
@@ -168,7 +160,13 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
     cupdlp_edot(dualResidual, work->colScale, lp->nCols);
   }
 
-  cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
+  if (work->settings->iInfNormAbsLocalTermination) {
+    cupdlp_int index;
+    cupdlp_infNormIndex(work, lp->nCols, dualResidual, &index);
+    *dDualFeasibility = fabs(dualResidual[index]);
+  } else {
+    cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
+  }
 }
 
 void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
@@ -658,11 +656,17 @@ cupdlp_bool PDHG_Check_Termination(CUPDLPwork *pdhg, int bool_print) {
   }
 
 #endif
-  int bool_pass =
-      ((resobj->dPrimalFeas <
-        settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
-       (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost)) &&
-       (resobj->dRelObjGap < settings->dGapTol));
+  int bool_pass = 0;
+  if (pdhg->settings->iInfNormAbsLocalTermination) {
+    bool_pass =
+      (resobj->dPrimalFeas < settings->dPrimalTol) &&
+      (resobj->dDualFeas < settings->dDualTol);
+  } else {
+    bool_pass =
+      (resobj->dPrimalFeas < settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
+      (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost));
+  }
+  bool_pass = bool_pass && (resobj->dRelObjGap < settings->dGapTol);
   return bool_pass;
 }
 
@@ -791,45 +795,58 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
                                              settings->nLogInterval))) ||
         (timers->nIter == (settings->nIterLim - 1)) ||
         (timers->dSolvingTime > settings->dTimeLim);
+    // Ensure that bool_print is false if the logging level has been
+    // set to 0 via the HiGHS option
     bool_print = pdhg->settings->nLogLevel>0 && bool_print;
 #endif
+    // Full printing is false only if the logging level has been set
+    // to 0 or 1 via the HiGHS option
+    int full_print = pdhg->settings->nLogLevel >= 2;
     if (bool_checking) {
       PDHG_Compute_Average_Iterate(pdhg);
       PDHG_Compute_Residuals(pdhg);
       PDHG_Compute_Infeas_Residuals(pdhg);
 
       if (bool_print) {
-        PDHG_Print_Header(pdhg);
-        PDHG_Print_Iter(pdhg);
+	// With reduced printing, the header is only needed for the
+	// first iteration since only average iteration printing is
+	// carried out
+        if (full_print || timers->nIter == 0) PDHG_Print_Header(pdhg);
+        if (full_print) PDHG_Print_Iter(pdhg);
         PDHG_Print_Iter_Average(pdhg);
       }
 
-      if (PDHG_Check_Termination(pdhg, bool_print)) {
+      // Termination check printing is only done when printing is full
+      int termination_print = bool_print && full_print;
+      if (PDHG_Check_Termination(pdhg, termination_print)) {
         // cupdlp_printf("Optimal current solution.\n");
         resobj->termIterate = LAST_ITERATE;
         resobj->termCode = OPTIMAL;
         break;
       }
 
-      if (PDHG_Check_Termination_Average(pdhg, bool_print)) {
-        // cupdlp_printf("Optimal average solution.\n");
-
-        CUPDLP_COPY_VEC(iterates->x->data, iterates->xAverage->data,
-                        cupdlp_float, problem->nCols);
-        CUPDLP_COPY_VEC(iterates->y->data, iterates->yAverage->data,
-                        cupdlp_float, problem->nRows);
-        CUPDLP_COPY_VEC(iterates->ax->data, iterates->axAverage->data,
-                        cupdlp_float, problem->nRows);
-        CUPDLP_COPY_VEC(iterates->aty->data, iterates->atyAverage->data,
-                        cupdlp_float, problem->nCols);
-        CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage,
-                        cupdlp_float, problem->nCols);
-        CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage,
-                        cupdlp_float, problem->nCols);
-
-        resobj->termIterate = AVERAGE_ITERATE;
-        resobj->termCode = OPTIMAL;
-        break;
+      // Don't allow "average" termination if
+      // iInfNormAbsLocalTermination is set
+      if (!pdhg->settings->iInfNormAbsLocalTermination &&
+	  PDHG_Check_Termination_Average(pdhg, termination_print)) {
+	// cupdlp_printf("Optimal average solution.\n");
+	
+	CUPDLP_COPY_VEC(iterates->x->data, iterates->xAverage->data,
+			cupdlp_float, problem->nCols);
+	CUPDLP_COPY_VEC(iterates->y->data, iterates->yAverage->data,
+			cupdlp_float, problem->nRows);
+	CUPDLP_COPY_VEC(iterates->ax->data, iterates->axAverage->data,
+			cupdlp_float, problem->nRows);
+	CUPDLP_COPY_VEC(iterates->aty->data, iterates->atyAverage->data,
+			cupdlp_float, problem->nCols);
+	CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage,
+			cupdlp_float, problem->nCols);
+	CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage,
+			cupdlp_float, problem->nCols);
+	
+	resobj->termIterate = AVERAGE_ITERATE;
+	resobj->termCode = OPTIMAL;
+	break;
       }
 
       if (PDHG_Check_Infeasibility(pdhg, 0) == INFEASIBLE_OR_UNBOUNDED) {
@@ -871,8 +888,11 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 
   // print at last
   if (pdhg->settings->nLogLevel>0) {
-    PDHG_Print_Header(pdhg);
-    PDHG_Print_Iter(pdhg);
+    int full_print = pdhg->settings->nLogLevel >= 2;
+    if (full_print) {
+      PDHG_Print_Header(pdhg);
+      PDHG_Print_Iter(pdhg);
+    }
     PDHG_Print_Iter_Average(pdhg);
   }
 
@@ -916,6 +936,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
       cupdlp_printf("Unexpected.\n");
       break;
     }
+
     if (resobj->termCode == OPTIMAL && resobj->termIterate == AVERAGE_ITERATE) {
       cupdlp_printf("%27s %+15.8e\n",
 		    "Primal objective:", resobj->dPrimalObjAverage);
@@ -947,7 +968,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   }
 
 #if PDHG_USE_TIMERS
-  if (pdhg->settings->nLogLevel>0) {
+  if (pdhg->settings->nLogLevel>1) {
     cupdlp_printf("Timing information:\n");
     // cupdlp_printf("%21s %e in %d iterations\n", "Total solver time",
     //               timers->dSolvingTime, timers->nIter);

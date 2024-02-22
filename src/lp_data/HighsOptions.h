@@ -332,6 +332,7 @@ struct HighsOptionsStruct {
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
+  bool pdlp_native_termination;
   bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;
@@ -903,6 +904,12 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "pdlp_native_termination",
+        "Use native termination for PDLP solver: Default = false", advanced,
+        &pdlp_native_termination, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
