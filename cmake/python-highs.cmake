@@ -68,8 +68,7 @@ message(STATUS "Python project: ${PYTHON_PROJECT}")
 set(PYTHON_PROJECT_DIR ${PROJECT_BINARY_DIR}/${PYTHON_PROJECT})
 message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
-pybind11_add_module(highspy highspy/highs_bindings.cpp 
-    highspy/highs_options.cpp)
+pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
 target_compile_definitions(highspy 
                 PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
