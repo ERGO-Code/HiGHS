@@ -1,12 +1,12 @@
 set(cupdlp_sources
-  pdlp/cupdlp/cupdlp_solver.c
-  pdlp/cupdlp/cupdlp_scaling_cuda.c
-  pdlp/cupdlp/cupdlp_restart.c
-  pdlp/cupdlp/cupdlp_proj.c
-  pdlp/cupdlp/cupdlp_linalg.c
-  pdlp/cupdlp/cupdlp_cs.c
-  pdlp/cupdlp/cupdlp_utils.c
-  pdlp/cupdlp/cupdlp_step.c)
+  src/pdlp/cupdlp/cupdlp_solver.c
+  src/pdlp/cupdlp/cupdlp_scaling_cuda.c
+  src/pdlp/cupdlp/cupdlp_restart.c
+  src/pdlp/cupdlp/cupdlp_proj.c
+  src/pdlp/cupdlp/cupdlp_linalg.c
+  src/pdlp/cupdlp/cupdlp_cs.c
+  src/pdlp/cupdlp/cupdlp_utils.c
+  src/pdlp/cupdlp/cupdlp_step.c)
 
 set(basiclu_sources
   src/ipm/basiclu/basiclu_factorize.c
@@ -332,7 +332,7 @@ set(headers_fast_build_
 #   endforeach()
 #   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-  set(include_dirs
+  set(include_dirs_p
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/interfaces
     ${CMAKE_SOURCE_DIR}/src/io
@@ -343,6 +343,8 @@ set(headers_fast_build_
     ${CMAKE_SOURCE_DIR}/src/mip
     ${CMAKE_SOURCE_DIR}/src/model
     ${CMAKE_SOURCE_DIR}/src/parallel
+    ${CMAKE_SOURCE_DIR}/src/pdlp
+    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
     ${CMAKE_SOURCE_DIR}/src/presolve
     ${CMAKE_SOURCE_DIR}/src/qpsolver
     ${CMAKE_SOURCE_DIR}/src/simplex
