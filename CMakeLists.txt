@@ -504,7 +504,6 @@ else(FAST_BUILD)
     include(c-highs)
     # Add tests in examples/tests
     add_subdirectory(examples)
-    add_subdirectory(app)
   endif()
 
   if(EXP)
