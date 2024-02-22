@@ -15,7 +15,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.mypy]
 files = "setup.py"
-python_version = "3.7"
+python_version = "3.9"
 strict = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
@@ -25,11 +25,10 @@ warn_unreachable = true
 module = ["ninja"]
 ignore_missing_imports = true
 
-
-# [tool.cibuildwheel]
-# build = "*"
-# skip = "cp36-*"
-# test-skip = ""
+[tool.cibuildwheel]
+build = "*cp312-*"
+skip = "cp3{6,7,8}-*"
+test-skip = ""
 
 # [tool.cibuildwheel.linux]
 # manylinux-x86_64-image = "manylinux2014"
