@@ -11,9 +11,9 @@ namespace py = pybind11;
 bool log_to_console = false;
 bool output_flag = true;
 
-HighsLogOptions highs_log_options = {nullptr, &output_flag, &log_to_console,
-                                     nullptr};
-// HighsLogOptions highs_log_options = {};
+// HighsLogOptions highs_log_options = {nullptr, &output_flag, &log_to_console,
+//                                      nullptr};
+HighsLogOptions highs_log_options = {};
 
 class HighsOptionsManager {
  public:
