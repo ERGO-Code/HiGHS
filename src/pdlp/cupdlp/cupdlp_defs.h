@@ -3,7 +3,7 @@
 
 #define CUPDLP_CPU
 #define CUPDLP_DEBUG (0)
-//#define CUPDLP_TIMER (0)
+#define CUPDLP_TIMER (1)
 
 #ifndef CUPDLP_CPU
 #include "cuda/cupdlp_cuda_kernels.cuh"
