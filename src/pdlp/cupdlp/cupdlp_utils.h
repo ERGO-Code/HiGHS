@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #ifdef CUPDLP_TIMER
-#include <sys/time.h>
+#include <time.h>
 #endif
 #include "cupdlp_defs.h"
 
