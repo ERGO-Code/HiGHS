@@ -74,6 +74,7 @@ TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
 
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".tsp";
+  printf("tsp-p01: file = %s\n", filename.c_str());
   TspData tsp_data;
   HighsLp lp;
   tsp_data.initialise(filename, lp);

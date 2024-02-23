@@ -410,7 +410,8 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
                               const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
-                              bool extractCliques, bool isConflict) {
+                              bool extractCliques, bool isConflict,
+			      bool inLp) {
   // Cut has rhs as upper bound
   const bool debug_report = false;
   if (debug_report) {
@@ -520,8 +521,15 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
-  ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
-  ++ageDistribution[ages_[rowindex]];
+  if (inLp) {
+    // Cut is already in the LP, so set age to -1, increment the count
+    // of LP cuts, and don't include in the age distribution
+    ages_[rowindex] = -1;
+    numLpCuts++;
+  } else {
+    ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
+    ++ageDistribution[ages_[rowindex]];
+  }
   rowintegral[rowindex] = integral;
   debug_origin_[rowindex] = debug_origin;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
@@ -545,6 +553,7 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
 }
 
 void HighsCutPool::debugReport(const std::string& message) {
+  const HighsInt kReportRowsLimit = 1000;
   const HighsInt num_rows = matrix_.getNumRows();
   const HighsInt num_cutpool_cuts = getNumCuts();
   const HighsInt num_lp_cuts = numLpCuts;
@@ -553,7 +562,7 @@ void HighsCutPool::debugReport(const std::string& message) {
       "%d\n",
       message.c_str(), int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
   if (!num_rows) return;
-  if (num_rows < 10) {
+  if (num_rows < kReportRowsLimit) {
     printf("CutPool Row Age              RHS Integral Origin\n");
     for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
       printf("CutPool: Row %3d; age %3d %4s RHS %11.5g; integral = %1d: %s\n", int(iRow),

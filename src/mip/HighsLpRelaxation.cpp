@@ -1382,6 +1382,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 }
 
 void HighsLpRelaxation::debugReport(const std::string& message) {
+  const HighsInt kReportRowsLimit = 1000;
   const HighsLp& lp = lpsolver.getLp();
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
@@ -1390,7 +1391,7 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
 	 message.c_str(), int(num_lp_row), int(num_cut));
   if (!num_cut) return;
 
-  if (num_cut < 10) {
+  if (num_cut < kReportRowsLimit) {
     HighsInt cut_num = 0;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
       if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
