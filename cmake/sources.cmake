@@ -88,9 +88,9 @@ set(ipx_sources
   src/ipm/ipx/ipm.cc
   src/ipm/ipx/ipx_c.cc
   src/ipm/ipx/iterate.cc
-  src/ipm/ipx/kkt_solver.cc
   src/ipm/ipx/kkt_solver_basis.cc
   src/ipm/ipx/kkt_solver_diag.cc
+  src/ipm/ipx/kkt_solver.cc
   src/ipm/ipx/linear_operator.cc
   src/ipm/ipx/lp_solver.cc
   src/ipm/ipx/lu_factorization.cc
@@ -106,6 +106,49 @@ set(ipx_sources
   src/ipm/ipx/timer.cc
   src/ipm/ipx/utils.cc
   src/ipm/IpxWrapper.cpp)
+  
+  set(ipx_headers
+  src/ipm/ipx/basiclu_kernel.h
+  src/ipm/ipx/basiclu_wrapper.h
+  src/ipm/ipx/basis.h
+  src/ipm/ipx/conjugate_residuals.h
+  src/ipm/ipx/control.h
+  src/ipm/ipx/crossover.h
+  src/ipm/ipx/diagonal_precond.h
+  src/ipm/ipx/forrest_tomlin.h
+  src/ipm/ipx/guess_basis.h
+  src/ipm/ipx/indexed_vector.h
+  src/ipm/ipx/info.h
+  src/ipm/ipx/ipm.h
+  src/ipm/ipx/ipx_c.h
+
+  src/ipm/ipx/ipx_config.h
+  src/ipm/ipx/ipx_info.h
+  src/ipm/ipx/ipx_internal.h
+  src/ipm/ipx/ipx_parameters.h
+  src/ipm/ipx/ipx_status.h
+
+  src/ipm/ipx/iterate.h
+  src/ipm/ipx/kkt_solver_basis.h
+  src/ipm/ipx/kkt_solver_diag.h
+  src/ipm/ipx/kkt_solver.h
+  src/ipm/ipx/linear_operator.h
+  src/ipm/ipx/lp_solver.h
+  src/ipm/ipx/lu_factorization.h
+  src/ipm/ipx/lu_update.h
+  src/ipm/ipx/maxvolume.h
+  src/ipm/ipx/model.h
+  src/ipm/ipx/multistream.h
+
+  src/ipm/ipx/normal_matrix.h
+  src/ipm/ipx/power_method.h
+  src/ipm/ipx/sparse_matrix.h
+  src/ipm/ipx/sparse_utils.h
+  src/ipm/ipx/splitted_normal_matrix.h
+  src/ipm/ipx/starting_basis.h
+  src/ipm/ipx/symbolic_invert.h
+  src/ipm/ipx/timer.h
+  src/ipm/ipx/utils.h)
 
 set(highs_sources
     extern/filereaderlp/reader.cpp
