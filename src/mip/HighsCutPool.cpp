@@ -415,8 +415,7 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
                               const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
-                              bool extractCliques, bool isConflict,
-			      bool inLp) {
+                              bool extractCliques, bool isConflict, bool inLp) {
   // Cut has rhs as upper bound
   const bool debug_report = false;
   if (debug_report) {
@@ -570,29 +569,30 @@ void HighsCutPool::debugReport(const std::string& message) {
   if (num_rows < kReportRowsLimit) {
     printf("CutPool Row Age              RHS Integral Origin\n");
     for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
-      printf("CutPool: Row %3d; age %3d %4s RHS %11.5g; integral = %1d: %s\n", int(iRow),
-	     int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ", rhs_[iRow],
-	     int(rowintegral[iRow]),
-	     debugCutOriginToString(debug_origin_[iRow]).c_str());
+      printf("CutPool: Row %3d; age %3d %4s RHS %11.5g; integral = %1d: %s\n",
+             int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
+             rhs_[iRow], int(rowintegral[iRow]),
+             debugCutOriginToString(debug_origin_[iRow]).c_str());
     }
   } else {
     const HighsInt num_cut_type = kCutOriginCount;
-    std::vector<HighsInt>cutCount;
+    std::vector<HighsInt> cutCount;
     cutCount.assign(num_cut_type, 0);
     if (num_lp_cuts < kReportRowsLimit)
       printf("CutPool Row Age              RHS Integral Origin\n");
     for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
       if (ages_[iRow] < 0)
-	printf("CutPool: Row %3d; age %3d (LP) RHS %11.5g; integral = %1d: %s\n", int(iRow),
-	       int(ages_[iRow]), rhs_[iRow],
-	       int(rowintegral[iRow]),
-	       debugCutOriginToString(debug_origin_[iRow]).c_str());
+        printf(
+            "CutPool: Row %3d; age %3d (LP) RHS %11.5g; integral = %1d: %s\n",
+            int(iRow), int(ages_[iRow]), rhs_[iRow], int(rowintegral[iRow]),
+            debugCutOriginToString(debug_origin_[iRow]).c_str());
       cutCount[debug_origin_[iRow]]++;
     }
-    for (HighsInt type=0; type < num_cut_type; type++) {
+    for (HighsInt type = 0; type < num_cut_type; type++) {
       if (cutCount[type])
-	printf("CutPool: %5d %s\n", int(cutCount[type]), debugCutOriginToString(type).c_str());
+        printf("CutPool: %5d %s\n", int(cutCount[type]),
+               debugCutOriginToString(type).c_str());
     }
   }
- printf("\n"); 
+  printf("\n");
 }

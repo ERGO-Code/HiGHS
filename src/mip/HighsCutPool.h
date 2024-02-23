@@ -159,7 +159,7 @@ class HighsCutPool {
                   HighsInt* Rindex, double* Rvalue, HighsInt Rlen, double rhs,
                   bool integral = false, bool propagate = true,
                   bool extractCliques = true, bool isConflict = false,
-		  bool inLp = false);
+                  bool inLp = false);
 
   HighsInt getRowLength(HighsInt row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);

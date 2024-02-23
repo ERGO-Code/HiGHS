@@ -672,7 +672,6 @@ void HighsMipSolver::callbackGetCutPool() const {
 }
 
 std::string debugCutOriginToString(const HighsInt origin) {
-  
   assert(origin >= 0);
   assert(origin < kCutOriginCount);
 
@@ -680,19 +679,19 @@ std::string debugCutOriginToString(const HighsInt origin) {
   if (origin == kCutOriginSeparateCliques) {
     origin_string = "Separate cliques";
   } else if (origin == kCutOriginGenerateCut) {
-    origin_string =  "Generate cut";
+    origin_string = "Generate cut";
   } else if (origin == kCutOriginGenerateConflict) {
-    origin_string =  "Generate conflict";
+    origin_string = "Generate conflict";
   } else if (origin == kCutOriginFinalizeAndAddCut) {
-    origin_string =  "Finalize and add cut";
+    origin_string = "Finalize and add cut";
   } else if (origin == kCutOriginSeparateImpliedBounds) {
-    origin_string =  "Separate implied bounds";
+    origin_string = "Separate implied bounds";
   } else if (origin == kCutOriginPresolve) {
-    origin_string =  "Presolve";
+    origin_string = "Presolve";
   } else if (origin == kCutOriginLazyConstraint) {
-    origin_string =  "Lazy constraint";
+    origin_string = "Lazy constraint";
   } else {
-    origin_string =  "Unknown";
+    origin_string = "Unknown";
   }
   return origin_string;
 }

@@ -2134,9 +2134,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     const bool inLp = true;
     const HighsInt iEl = cutset.ARstart_[iCut];
     cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &cutset.ARindex_[iEl],
-                   &cutset.ARvalue_[iEl], Rlen, upper, cut_integral,
-		   propagate, extractCliques, isConflict,
-		   inLp);
+                   &cutset.ARvalue_[iEl], Rlen, upper, cut_integral, propagate,
+                   extractCliques, isConflict, inLp);
     numLazyConstraints++;
   }
   lp.addCuts(cutset);
