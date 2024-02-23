@@ -8,35 +8,70 @@ set(cupdlp_sources
   src/pdlp/cupdlp/cupdlp_step.c
   src/pdlp/cupdlp/cupdlp_utils.c)
 
+set(cupdlp_headers
+  src/pdlp/cupdlp/cupdlp_cs.h
+  src/pdlp/cupdlp/cupdlp_defs.h
+  src/pdlp/cupdlp/cupdlp_linalg.h
+  src/pdlp/cupdlp/cupdlp_proj.h
+  src/pdlp/cupdlp/cupdlp_restart.h
+  src/pdlp/cupdlp/cupdlp_scaling_cuda.h
+  src/pdlp/cupdlp/cupdlp_solver.h
+  src/pdlp/cupdlp/cupdlp_step.h
+  src/pdlp/cupdlp/cupdlp_utils.c)
+
 set(basiclu_sources
   src/ipm/basiclu/basiclu_factorize.c
-  src/ipm/basiclu/basiclu_solve_dense.c
-  src/ipm/basiclu/lu_build_factors.c
-  src/ipm/basiclu/lu_factorize_bump.c
-  src/ipm/basiclu/lu_initialize.c
-  src/ipm/basiclu/lu_markowitz.c
-  src/ipm/basiclu/lu_setup_bump.c
-  src/ipm/basiclu/lu_solve_sparse.c
   src/ipm/basiclu/basiclu_get_factors.c
-  src/ipm/basiclu/basiclu_solve_for_update.c
-  src/ipm/basiclu/lu_condest.c
-  src/ipm/basiclu/lu_file.c
-  src/ipm/basiclu/lu_internal.c
-  src/ipm/basiclu/lu_matrix_norm.c
-  src/ipm/basiclu/lu_singletons.c
-  src/ipm/basiclu/lu_solve_symbolic.c
-  src/ipm/basiclu/lu_update.c
   src/ipm/basiclu/basiclu_initialize.c
-  src/ipm/basiclu/basiclu_solve_sparse.c
-  src/ipm/basiclu/lu_pivot.c
-  src/ipm/basiclu/lu_solve_dense.c
-  src/ipm/basiclu/lu_solve_triangular.c
   src/ipm/basiclu/basiclu_object.c
+  src/ipm/basiclu/basiclu_solve_dense.c
+  src/ipm/basiclu/basiclu_solve_for_update.c
+  src/ipm/basiclu/basiclu_solve_sparse.c
   src/ipm/basiclu/basiclu_update.c
+  src/ipm/basiclu/lu_build_factors.c
+  src/ipm/basiclu/lu_condest.c
   src/ipm/basiclu/lu_dfs.c
+  src/ipm/basiclu/lu_factorize_bump.c
+  src/ipm/basiclu/lu_file.c
   src/ipm/basiclu/lu_garbage_perm.c
+  src/ipm/basiclu/lu_initialize.c
+  src/ipm/basiclu/lu_internal.c
+  src/ipm/basiclu/lu_markowitz.c
+  src/ipm/basiclu/lu_matrix_norm.c
+  src/ipm/basiclu/lu_pivot.c
   src/ipm/basiclu/lu_residual_test.c
-  src/ipm/basiclu/lu_solve_for_update.c)
+  src/ipm/basiclu/lu_setup_bump.c
+  src/ipm/basiclu/lu_singletons.c
+  src/ipm/basiclu/lu_solve_dense.c
+  src/ipm/basiclu/lu_solve_for_update.c
+  src/ipm/basiclu/lu_solve_sparse.c
+  src/ipm/basiclu/lu_solve_symbolic.c
+  src/ipm/basiclu/lu_solve_triangular.c
+  src/ipm/basiclu/lu_update.c)
+
+set(basiclu_headers
+  src/ipm/basiclu/basiclu_factorize.h
+  src/ipm/basiclu/basiclu_get_factors.h
+  src/ipm/basiclu/basiclu_initialize.h
+  src/ipm/basiclu/basiclu_obj_factorize.h
+  src/ipm/basiclu/basiclu_obj_free.h
+  src/ipm/basiclu/basiclu_obj_get_factors.h
+  src/ipm/basiclu/basiclu_obj_initialize.h
+  src/ipm/basiclu/basiclu_obj_solve_dense.h
+  src/ipm/basiclu/basiclu_obj_solve_for_update.h
+  src/ipm/basiclu/basiclu_obj_solve_sparse.h
+  src/ipm/basiclu/basiclu_obj_update.h
+  src/ipm/basiclu/basiclu_object.h
+  src/ipm/basiclu/basiclu_solve_dense.h
+  src/ipm/basiclu/basiclu_solve_for_update.h
+  src/ipm/basiclu/basiclu_solve_sparse.h
+  src/ipm/basiclu/basiclu_update.h
+  src/ipm/basiclu/basiclu.h
+  src/ipm/basiclu/lu_dfs.h
+  src/ipm/basiclu/lu_file.h
+  src/ipm/basiclu/lu_initialize.h
+  src/ipm/basiclu/lu_internal.h
+  src/ipm/basiclu/lu_list.h)
 
 set(ipx_sources
   src/ipm/ipx/basiclu_kernel.cc

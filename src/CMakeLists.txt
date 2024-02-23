@@ -767,7 +767,8 @@ else()
 
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
+  target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} 
+      ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
   
   if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
@@ -775,7 +776,6 @@ else()
   endif()
 
   if (BUILD_CXX)
-
   # Configure the config file for the build tree:
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
@@ -822,13 +822,14 @@ if(FORTRAN_FOUND)
     RUNTIME
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
     MODULES DESTINATION modules)
-  IF (NOT MSVC)
+  if(NOT MSVC)
     install(FILES ${HIGHS_BINARY_DIR}/modules/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
-  ELSE ()
+  else()
     install(FILES ${HIGHS_BINARY_DIR}/modules/${CMAKE_BUILD_TYPE}/highs_fortran_api.mod DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/fortran)
-  ENDIF()
-  set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+  endif()
+  # use link rpath
+  # set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
+  #   "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif(FORTRAN_FOUND)
 
 if(CSHARP_FOUND)
@@ -845,16 +846,15 @@ else()
 endif()
 
 find_package(Threads)
-
 if(Threads_FOUND)
   include(CheckAtomic)
-if(HAVE_CXX_ATOMICS64_WITH_LIB)
-  if(FAST_BUILD)
-    target_link_libraries(highs atomic)
-  else()
-    target_link_libraries(libhighs atomic)
+  if(HAVE_CXX_ATOMICS64_WITH_LIB)
+    if(FAST_BUILD)
+      target_link_libraries(highs atomic)
+    else()
+      target_link_libraries(libhighs atomic)
+    endif()
   endif()
-endif()
 endif()
 
 if(FAST_BUILD)
