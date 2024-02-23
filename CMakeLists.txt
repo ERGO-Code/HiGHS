@@ -63,7 +63,9 @@ message(STATUS "Build all tests: ${BUILD_ALL_TESTS}")
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
-
+if (PYTHON_BUILD_SETUP) 
+  set(ZLIB OFF)
+endif()
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
