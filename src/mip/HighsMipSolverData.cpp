@@ -1282,8 +1282,6 @@ void HighsMipSolverData::printDisplayLine(char first) {
     std::array<char, 22> lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
-    cutpool.debugReport("From printDisplayLine");
-
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
@@ -1419,11 +1417,6 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
         }
         num_new_lazy_constraints += numLazyConstraints;
         if (!num_new_lazy_constraints) break;
-        printf(
-            "HighsMipSolverData::evaluateRootLp: Resolving after adding %d "
-            "lazy "
-            "constraints\n",
-            int(num_new_lazy_constraints));
         // Adding new lazy constraints in addIncumbent leads to the
         // status of the LP relaxation being unknown, so re-solve
         int64_t lpIters = -lp.getNumLpIterations();
@@ -1500,10 +1493,7 @@ restart:
   //  mipsolver.options_mip_->log_file);
 
   // If lazy constraints are added when solving the root LP, then
-  // status may not be kInfeasible or kUnbounded, so
-  // separateLpCutsAfterRestart gets called, but this is protected by
-  // assert(numRestarts != 0), which must be avoided by also
-  // considering num_new_lazy_constraints != 0
+  // status may not be kInfeasible or kUnbounded
   HighsInt num_new_lazy_constraints = -numLazyConstraints;
   HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
@@ -1535,13 +1525,7 @@ restart:
   }
 
   if (cutpool.getNumCuts() != 0) {
-    assert(numRestarts != 0 || num_new_lazy_constraints);
-    printf(
-        "HighsMipSolverData::evaluateRootLp: LP before "
-        "cutpool.separateLpCutsAfterRestart(cutset) is (%d, %d) with %d in "
-        "cutpool\n",
-        int(lp.numCols()), int(lp.numRows()), int(cutpool.getNumCuts()));
-    cutpool.debugReport("Before separateLpCutsAfterRestart");
+    assert(numRestarts != 0);
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
 #ifdef HIGHS_DEBUGSOL
@@ -1553,20 +1537,8 @@ restart:
     }
 #endif
     lp.addCuts(cutset);
-    printf(
-        "HighsMipSolverData::evaluateRootLp: LP after evaluateRootLp() is (%d, "
-        "%d) with %d in cutset\n",
-        int(lp.numCols()), int(lp.numRows()), int(cutset.numCuts()));
-    lp.debugReport("LP after evaluateRootLp()");
-    cutpool.debugReport(
-        "After separateLpCutsAfterRestart and lp.addCuts(cutset)");
     status = evaluateRootLp();
-    cutpool.debugReport("After evaluateRootLp()");
     lp.removeObsoleteRows();
-    printf(
-        "HighsMipSolverData::evaluateRootLp: LP after removeObsoleteRows is "
-        "(%d, %d) with %d in cutpool\n",
-        int(lp.numCols()), int(lp.numRows()), int(cutpool.getNumCuts()));
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   }
 
@@ -2080,8 +2052,6 @@ bool HighsMipSolverData::feasibleWithNewLazyConstraints(
   if (!mipsolver.callback_->active[kCallbackMipDefineNewLazyConstraints])
     return true;
 
-  cutpool.debugReport("Before defineNewLazyConstraints");
-
   // Define new lazy constraints
   mipsolver.callback_->clearHighsCallbackDataOut();
   mipsolver.callback_->data_out.objective_function_value = objective;
@@ -2170,7 +2140,6 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     numLazyConstraints++;
   }
   lp.addCuts(cutset);
-  cutpool.debugReport("After adding lazy constraints");
   assert(!lazy_constraints_feasible);
   return lazy_constraints_feasible;
 }

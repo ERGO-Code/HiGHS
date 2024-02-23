@@ -26,8 +26,6 @@ enum cutOrigin {
   kCutOriginCount,
 };
 
-const HighsInt kCutOriginSeparationOffset = 100;
-
 struct HighsMipSolverData;
 class HighsCutPool;
 struct HighsPseudocostInitialization;

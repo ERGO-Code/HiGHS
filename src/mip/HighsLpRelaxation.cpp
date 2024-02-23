@@ -1400,7 +1400,7 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
       cut_num++;
     }
   } else {
-    const HighsInt num_cut_type = kCutOriginSeparationOffset + kCutOriginCount;
+    const HighsInt num_cut_type = kCutOriginCount;
     std::vector<HighsInt>cutCount;
     cutCount.assign(num_cut_type, 0);
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 

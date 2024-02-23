@@ -170,6 +170,7 @@ void HighsCutPool::performAging() {
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset, double feastol) {
+  debugReport("HighsCutPool::separate - on entry");
   HighsInt nrows = matrix_.getNumRows();
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
@@ -353,7 +354,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     HighsInt start = matrix_.getRowStart(cut);
     HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
-    cutset.debug_origin_[i] = debug_origin_[cut] + kCutOriginSeparationOffset;
+    cutset.debug_origin_[i] = debug_origin_[cut];
     for (HighsInt j = start; j != end; ++j) {
       assert(offset < selectednnz);
       cutset.ARvalue_[offset] = ARvalue[j];
@@ -369,6 +370,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   // should only be called after a restart with a fresh row matrix right now
   assert(matrix_.getNumDelRows() == 0);
+  // Considers all cuts in the pool, assuming that they are not in the
+  // LP, so numLpCuts must be zero
+  assert(numLpCuts == 0);
   HighsInt numcuts = matrix_.getNumRows();
 
   cutset.cutindices.resize(numcuts);
@@ -379,6 +383,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
   for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
+    assert(ages_[i] >= 0);
     --ageDistribution[ages_[i]];
     ++numLpCuts;
     if (matrix_.columnsLinked(i)) {
@@ -553,7 +558,7 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
 }
 
 void HighsCutPool::debugReport(const std::string& message) {
-  const HighsInt kReportRowsLimit = 1000;
+  const HighsInt kReportRowsLimit = 20;
   const HighsInt num_rows = matrix_.getNumRows();
   const HighsInt num_cutpool_cuts = getNumCuts();
   const HighsInt num_lp_cuts = numLpCuts;
@@ -571,11 +576,19 @@ void HighsCutPool::debugReport(const std::string& message) {
 	     debugCutOriginToString(debug_origin_[iRow]).c_str());
     }
   } else {
-    const HighsInt num_cut_type = kCutOriginSeparationOffset + kCutOriginCount;
+    const HighsInt num_cut_type = kCutOriginCount;
     std::vector<HighsInt>cutCount;
     cutCount.assign(num_cut_type, 0);
-    for (HighsInt iRow = 0; iRow < num_rows; iRow++) 
+    if (num_lp_cuts < kReportRowsLimit)
+      printf("CutPool Row Age              RHS Integral Origin\n");
+    for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
+      if (ages_[iRow] < 0)
+	printf("CutPool: Row %3d; age %3d (LP) RHS %11.5g; integral = %1d: %s\n", int(iRow),
+	       int(ages_[iRow]), rhs_[iRow],
+	       int(rowintegral[iRow]),
+	       debugCutOriginToString(debug_origin_[iRow]).c_str());
       cutCount[debug_origin_[iRow]]++;
+    }
     for (HighsInt type=0; type < num_cut_type; type++) {
       if (cutCount[type])
 	printf("CutPool: %5d %s\n", int(cutCount[type]), debugCutOriginToString(type).c_str());

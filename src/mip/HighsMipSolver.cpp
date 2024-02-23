@@ -674,13 +674,7 @@ void HighsMipSolver::callbackGetCutPool() const {
 std::string debugCutOriginToString(const HighsInt origin) {
   
   assert(origin >= 0);
-  HighsInt local_origin = origin;
-  bool separation = false;
-  if (origin >= kCutOriginSeparationOffset) {
-    separation = true;
-    local_origin -= kCutOriginSeparationOffset;
-  }
-  assert(local_origin < kCutOriginCount);
+  assert(origin < kCutOriginCount);
 
   std::string origin_string = "";
   if (origin == kCutOriginSeparateCliques) {
@@ -700,6 +694,5 @@ std::string debugCutOriginToString(const HighsInt origin) {
   } else {
     origin_string =  "Unknown";
   }
-  if (separation) origin_string += " + separation";
   return origin_string;
 }
