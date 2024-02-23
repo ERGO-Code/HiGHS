@@ -44,6 +44,9 @@ option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
 message(STATUS "Build CSharp: ${CSHARP}")
+if (CSHARP)
+  set(BUILD_SHARED_LIBS ON)
+endif()
 
 option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
 message(STATUS "Build Python: ${PYTHON_BUILD_ONLY}")
@@ -119,10 +122,7 @@ if (BUILD_CXX)
     endforeach()
   endif()
 
-  # Best link static on Windows, if possible.
   if(BUILD_SHARED_LIBS AND MSVC)
-    # message( SEND_ERROR "Best link static on Windows, if possible.")
-    # message( FATAL_ERROR "You can not do this at all, CMake will exit." )
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
 
