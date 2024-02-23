@@ -267,7 +267,7 @@ set(highs_sources
     src/util/HighsUtils.cpp
     src/util/HSet.cpp
     src/util/HVectorBase.cpp
-    src/util/stringutil.cpp
+    src/util/stringutil.cpp)
 
 
 set(headers_fast_build_
