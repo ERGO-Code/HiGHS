@@ -768,10 +768,11 @@ else()
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
   target_sources(highs PRIVATE ${basiclu_sources} ${ipx_sources} ${cupdlp_sources} ipm/IpxWrapper.cpp pdlp/CupdlpWrapper.cpp ${win_version_file})
-
-  target_compile_options(highs PRIVATE "-Wno-unused-variable")
-  target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
-
+  
+  if (UNIX)
+    target_compile_options(highs PRIVATE "-Wno-unused-variable")
+    target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+  endif()
 
   if (BUILD_CXX)
 
