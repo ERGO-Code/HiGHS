@@ -170,7 +170,6 @@ void HighsCutPool::performAging() {
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset, double feastol) {
-  debugReport("HighsCutPool::separate - on entry");
   HighsInt nrows = matrix_.getNumRows();
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
@@ -415,7 +414,7 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
                               const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
-                              bool extractCliques, bool isConflict, bool inLp) {
+                              bool extractCliques, bool isConflict) {
   // Cut has rhs as upper bound
   const bool debug_report = false;
   if (debug_report) {
@@ -525,15 +524,8 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
-  if (inLp) {
-    // Cut is already in the LP, so set age to -1, increment the count
-    // of LP cuts, and don't include in the age distribution
-    ages_[rowindex] = -1;
-    numLpCuts++;
-  } else {
-    ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
-    ++ageDistribution[ages_[rowindex]];
-  }
+  ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
+  ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
   debug_origin_[rowindex] = debug_origin;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
@@ -556,6 +548,7 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
   return rowindex;
 }
 
+/*
 void HighsCutPool::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 20;
   const HighsInt num_rows = matrix_.getNumRows();
@@ -596,3 +589,4 @@ void HighsCutPool::debugReport(const std::string& message) {
   }
   printf("\n");
 }
+*/

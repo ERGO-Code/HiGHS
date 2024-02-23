@@ -1381,6 +1381,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   return status;
 }
 
+/*
 void HighsLpRelaxation::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 1000;
   const HighsLp& lp = lpsolver.getLp();
@@ -1414,3 +1415,4 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   }
   printf("\n");
 }
+*/

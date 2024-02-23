@@ -2126,16 +2126,9 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     row_violation = std::max(row_violation, primal_infeasibility);
     lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
-    // Set propagate, extractCliques and isConflict to default values
-    const bool propagate = true;
-    const bool extractCliques = true;
-    const bool isConflict = false;
-    // Indicate that the constraint is already in the LP
-    const bool inLp = true;
     const HighsInt iEl = cutset.ARstart_[iCut];
     cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &cutset.ARindex_[iEl],
-                   &cutset.ARvalue_[iEl], Rlen, upper, cut_integral, propagate,
-                   extractCliques, isConflict, inLp);
+                   &cutset.ARvalue_[iEl], Rlen, upper, cut_integral);
     numLazyConstraints++;
   }
   lp.addCuts(cutset);
