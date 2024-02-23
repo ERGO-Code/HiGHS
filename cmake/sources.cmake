@@ -104,8 +104,7 @@ set(ipx_sources
   src/ipm/ipx/starting_basis.cc
   src/ipm/ipx/symbolic_invert.cc
   src/ipm/ipx/timer.cc
-  src/ipm/ipx/utils.cc
-  src/ipm/IpxWrapper.cpp)
+  src/ipm/ipx/utils.cc)
   
   set(ipx_headers
   src/ipm/ipx/basiclu_kernel.h
@@ -121,13 +120,11 @@ set(ipx_sources
   src/ipm/ipx/info.h
   src/ipm/ipx/ipm.h
   src/ipm/ipx/ipx_c.h
-
   src/ipm/ipx/ipx_config.h
   src/ipm/ipx/ipx_info.h
   src/ipm/ipx/ipx_internal.h
   src/ipm/ipx/ipx_parameters.h
   src/ipm/ipx/ipx_status.h
-
   src/ipm/ipx/iterate.h
   src/ipm/ipx/kkt_solver_basis.h
   src/ipm/ipx/kkt_solver_diag.h
@@ -139,7 +136,6 @@ set(ipx_sources
   src/ipm/ipx/maxvolume.h
   src/ipm/ipx/model.h
   src/ipm/ipx/multistream.h
-
   src/ipm/ipx/normal_matrix.h
   src/ipm/ipx/power_method.h
   src/ipm/ipx/sparse_matrix.h
@@ -152,14 +148,18 @@ set(ipx_sources
 
 set(highs_sources
     extern/filereaderlp/reader.cpp
+    src/interfaces/highs_c_api.cpp
     src/io/Filereader.cpp
-    src/io/FilereaderLp.cpp
     src/io/FilereaderEms.cpp
+    src/io/FilereaderLp.cpp
     src/io/FilereaderMps.cpp
     src/io/HighsIO.cpp
-    src/io/HMPSIO.cpp
     src/io/HMpsFF.cpp
+    src/io/HMPSIO.cpp
     src/io/LoadOptions.cpp
+
+    src/ipm/IpxWrapper.cpp
+
     src/lp_data/Highs.cpp
     src/lp_data/HighsCallback.cpp
     src/lp_data/HighsDebug.cpp
@@ -170,68 +170,77 @@ set(highs_sources
     src/lp_data/HighsLp.cpp
     src/lp_data/HighsLpUtils.cpp
     src/lp_data/HighsModelUtils.cpp
+    src/lp_data/HighsOptions.cpp
     src/lp_data/HighsRanging.cpp
     src/lp_data/HighsSolution.cpp
     src/lp_data/HighsSolutionDebug.cpp
     src/lp_data/HighsSolve.cpp
     src/lp_data/HighsStatus.cpp
-    src/lp_data/HighsOptions.cpp
-    src/parallel/HighsTaskExecutor.cpp
-    src/pdlp/CupdlpWrapper.cpp
-    src/presolve/ICrash.cpp
-    src/presolve/ICrashUtil.cpp
-    src/presolve/ICrashX.cpp
-    src/mip/HighsMipSolver.cpp
-    src/mip/HighsMipSolverData.cpp
+
+
+
+    src/mip/HighsCliqueTable.cpp
+    src/mip/HighsConflictPool.cpp
+    src/mip/HighsCutGeneration.cpp
+    src/mip/HighsCutPool.cpp
+    src/mip/HighsDebugSol.cpp
     src/mip/HighsDomain.cpp
     src/mip/HighsDynamicRowMatrix.cpp
-    src/mip/HighsLpRelaxation.cpp
-    src/mip/HighsSeparation.cpp
-    src/mip/HighsSeparator.cpp
-    src/mip/HighsTableauSeparator.cpp
-    src/mip/HighsModkSeparator.cpp
-    src/mip/HighsPathSeparator.cpp
-    src/mip/HighsCutGeneration.cpp
-    src/mip/HighsSearch.cpp
-    src/mip/HighsConflictPool.cpp
-    src/mip/HighsCutPool.cpp
-    src/mip/HighsCliqueTable.cpp
     src/mip/HighsGFkSolve.cpp
-    src/mip/HighsTransformedLp.cpp
-    src/mip/HighsLpAggregator.cpp
-    src/mip/HighsDebugSol.cpp
     src/mip/HighsImplications.cpp
-    src/mip/HighsPrimalHeuristics.cpp
-    src/mip/HighsPseudocost.cpp
+    src/mip/HighsLpAggregator.cpp
+    src/mip/HighsLpRelaxation.cpp
+
+    src/mip/HighsMipSolver.cpp
+    src/mip/HighsMipSolverData.cpp
+    src/mip/HighsModkSeparator.cpp
     src/mip/HighsNodeQueue.cpp
     src/mip/HighsObjectiveFunction.cpp
+    src/mip/HighsPathSeparator.cpp
+    src/mip/HighsPrimalHeuristics.cpp
+    src/mip/HighsPseudocost.cpp
     src/mip/HighsRedcostFixing.cpp
+    src/mip/HighsSearch.cpp
+    src/mip/HighsSeparation.cpp
+    src/mip/HighsSeparator.cpp
+
+    src/mip/HighsTableauSeparator.cpp
+    src/mip/HighsTransformedLp.cpp
+
     src/model/HighsHessian.cpp
     src/model/HighsHessianUtils.cpp
     src/model/HighsModel.cpp
+
     src/parallel/HighsTaskExecutor.cpp
-    src/presolve/ICrashX.cpp
+
+    src/pdlp/CupdlpWrapper.cpp
+
     src/presolve/HighsPostsolveStack.cpp
     src/presolve/HighsSymmetry.cpp
     src/presolve/HPresolve.cpp
     src/presolve/HPresolveAnalysis.cpp
+    src/presolve/ICrash.cpp
+    src/presolve/ICrashUtil.cpp
+    src/presolve/ICrashX.cpp
     src/presolve/PresolveComponent.cpp
+
     src/qpsolver/a_asm.cpp
     src/qpsolver/a_quass.cpp
     src/qpsolver/basis.cpp
+    src/qpsolver/perturbation.cpp
     src/qpsolver/quass.cpp
     src/qpsolver/ratiotest.cpp
     src/qpsolver/scaling.cpp
-    src/qpsolver/perturbation.cpp
+    
     src/simplex/HEkk.cpp
     src/simplex/HEkkControl.cpp
     src/simplex/HEkkDebug.cpp
-    src/simplex/HEkkPrimal.cpp
     src/simplex/HEkkDual.cpp
+    src/simplex/HEkkDualMulti.cpp
     src/simplex/HEkkDualRHS.cpp
     src/simplex/HEkkDualRow.cpp
-    src/simplex/HEkkDualMulti.cpp
     src/simplex/HEkkInterface.cpp
+    src/simplex/HEkkPrimal.cpp
     src/simplex/HighsSimplexAnalysis.cpp
     src/simplex/HSimplex.cpp
     src/simplex/HSimplexDebug.cpp
@@ -240,8 +249,10 @@ set(highs_sources
     src/simplex/HSimplexNlaFreeze.cpp
     src/simplex/HSimplexNlaProductForm.cpp
     src/simplex/HSimplexReport.cpp
+
     src/test/KktCh2.cpp
     src/test/DevKkt.cpp
+
     src/util/HFactor.cpp
     src/util/HFactorDebug.cpp
     src/util/HFactorExtend.cpp
@@ -257,7 +268,6 @@ set(highs_sources
     src/util/HSet.cpp
     src/util/HVectorBase.cpp
     src/util/stringutil.cpp
-    src/interfaces/highs_c_api.cpp)
 
 
 set(headers_fast_build_
