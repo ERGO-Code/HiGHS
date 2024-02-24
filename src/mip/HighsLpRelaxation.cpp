@@ -1381,7 +1381,29 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   return status;
 }
 
-/*
+std::string HighsLpRelaxation::statusToString(const Status status) {
+  switch (status) {
+    case Status::kNotSet:
+      return "Not set";
+    case Status::kOptimal:
+      return "Optimal";
+    case Status::kInfeasible:
+      return "Infeasible";
+    case Status::kUnscaledDualFeasible:
+      return "Unscaled dual feasible";
+    case Status::kUnscaledPrimalFeasible:
+      return "Unscaled primal feasible";
+    case Status::kUnscaledInfeasible:
+      return "Unscaled infeasible";
+    case Status::kUnbounded:
+      return "Unbounded";
+    case Status::kError:
+      return "Error";
+    default:
+      return "Unknown";
+  }
+}
+
 void HighsLpRelaxation::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 1000;
   const HighsLp& lp = lpsolver.getLp();
@@ -1415,4 +1437,3 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   }
   printf("\n");
 }
-*/

@@ -548,7 +548,6 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
   return rowindex;
 }
 
-/*
 void HighsCutPool::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 20;
   const HighsInt num_rows = matrix_.getNumRows();
@@ -589,4 +588,3 @@ void HighsCutPool::debugReport(const std::string& message) {
   }
   printf("\n");
 }
-*/

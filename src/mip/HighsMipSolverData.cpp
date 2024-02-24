@@ -938,6 +938,7 @@ double HighsMipSolverData::percentageInactiveIntegers() const {
 }
 
 void HighsMipSolverData::performRestart() {
+  printf("HighsMipSolverData::performRestart() %d\n", int(numRestarts));
   HighsBasis root_basis;
   HighsPseudocostInitialization pscostinit(
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
@@ -1084,6 +1085,9 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
+  //  if (!mipsolver.submip)
+  //  printf("HighsMipSolverData::addIncumbent: numCuts = %d; LP cuts = %d\n",
+  //	 int(cutpool.getNumCuts()), int(cutpool.getNumLpCuts()));
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1495,6 +1499,12 @@ restart:
   // If lazy constraints are added when solving the root LP, then
   // status may not be kInfeasible or kUnbounded
   HighsInt num_new_lazy_constraints = -numLazyConstraints;
+  if (!mipsolver.submip)
+    printf(
+        "HighsMipSolverData::evaluateRootNode(): numCuts = %d; LP cuts = %d; "
+        "numRestarts = %d: Before evaluateRootLp() \n",
+        int(cutpool.getNumCuts()), int(cutpool.getNumLpCuts()),
+        int(numRestarts));
   HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
   num_new_lazy_constraints += numLazyConstraints;
@@ -1506,6 +1516,13 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
     return;
+
+  if (!mipsolver.submip)
+    printf(
+        "HighsMipSolverData::evaluateRootNode(): numCuts = %d; LP cuts = %d; "
+        "numRestarts = %d; status = %s\n",
+        int(cutpool.getNumCuts()), int(cutpool.getNumLpCuts()),
+        int(numRestarts), lp.statusToString(status).c_str());
 
   firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();

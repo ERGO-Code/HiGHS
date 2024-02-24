@@ -359,7 +359,8 @@ class HighsLpRelaxation {
     lpsolver.setOptionValue("simplex_iteration_limit", limit);
   }
 
-  //  void debugReport(const std::string& message);
+  std::string statusToString(const Status status);
+  void debugReport(const std::string& message);
 };
 
 #endif

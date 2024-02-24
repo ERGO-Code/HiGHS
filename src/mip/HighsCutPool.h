@@ -149,6 +149,8 @@ class HighsCutPool {
 
   HighsInt getNumAvailableCuts() const { return getNumCuts() - numLpCuts; }
 
+  HighsInt getNumLpCuts() const { return numLpCuts; }
+
   double getMaxAbsCutCoef(HighsInt cut) const { return maxabscoef_[cut]; }
 
   double getRowNormalization(HighsInt cut) const {
@@ -172,7 +174,7 @@ class HighsCutPool {
     cutvals = matrix_.getARvalue() + start;
   }
 
-  //  void debugReport(const std::string& message);
+  void debugReport(const std::string& message);
 };
 
 #endif
