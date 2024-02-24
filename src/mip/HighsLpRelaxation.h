@@ -361,6 +361,7 @@ class HighsLpRelaxation {
 
   std::string statusToString(const Status status);
   void debugReport(const std::string& message);
+  bool addModelConstraints(const HighsCutSet& cutset);
 };
 
 #endif

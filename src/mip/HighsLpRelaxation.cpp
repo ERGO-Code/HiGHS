@@ -1437,3 +1437,12 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   }
   printf("\n");
 }
+
+bool HighsLpRelaxation::addModelConstraints(const HighsCutSet& cutset) {
+
+  HighsInt num_row = numRows();
+  HighsInt num_model_row = getNumModelRows();
+  HighsInt num_lp_cut = num_row - num_model_row;
+  assert(!num_lp_cut);
+  return false;
+}

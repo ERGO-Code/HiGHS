@@ -2118,6 +2118,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   bool lazy_constraints_feasible = true;
   // Update the current row_violation
   assert(row_violation == 0);
+  const bool add_to_cutpool = false;
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
     double row_value = 0;
     HighsInt Rlen = cutset.ARstart_[iCut + 1] - cutset.ARstart_[iCut];
@@ -2144,11 +2145,13 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
     const HighsInt iEl = cutset.ARstart_[iCut];
-    cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &cutset.ARindex_[iEl],
-                   &cutset.ARvalue_[iEl], Rlen, upper, cut_integral);
+    if (add_to_cutpool) 
+      cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &cutset.ARindex_[iEl],
+		     &cutset.ARvalue_[iEl], Rlen, upper, cut_integral);
     numLazyConstraints++;
   }
-  lp.addCuts(cutset);
   assert(!lazy_constraints_feasible);
-  return lazy_constraints_feasible;
+  const bool success = lp.addModelConstraints(cutset);
+  assert(success);
+  return lazy_constraints_feasible || !success;
 }
