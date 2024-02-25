@@ -1508,6 +1508,7 @@ restart:
   HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
   num_new_lazy_constraints += numLazyConstraints;
+  (void)num_new_lazy_constraints;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
   lp.getLpSolver().setOptionValue("presolve", "off");
@@ -2089,25 +2090,25 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   const HighsInt num_cut = data_in.cutset_num_cut;
   if (num_cut <= 0) return true;
   const HighsInt num_nz = data_in.cutset_ARstart[num_cut];
-  HighsCutSet cutset;
-  cutset.cutindices.resize(num_cut);
-  cutset.debug_origin_.resize(num_cut);
-  cutset.ARstart_.resize(num_cut + 1);
-  cutset.ARindex_.resize(num_nz);
-  cutset.ARvalue_.resize(num_nz);
-  cutset.lower_.resize(num_cut);
-  cutset.upper_.resize(num_cut);
-  cutset.ARstart_[0] = data_in.cutset_ARstart[0];
+  HighsCutSet lazy_constraints;
+  lazy_constraints.cutindices.resize(num_cut);
+  lazy_constraints.debug_origin_.resize(num_cut);
+  lazy_constraints.ARstart_.resize(num_cut + 1);
+  lazy_constraints.ARindex_.resize(num_nz);
+  lazy_constraints.ARvalue_.resize(num_nz);
+  lazy_constraints.lower_.resize(num_cut);
+  lazy_constraints.upper_.resize(num_cut);
+  lazy_constraints.ARstart_[0] = data_in.cutset_ARstart[0];
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
-    cutset.cutindices[iCut] = iCut;
-    cutset.debug_origin_[iCut] = kCutOriginLazyConstraint;
-    cutset.ARstart_[iCut + 1] = data_in.cutset_ARstart[iCut + 1];
-    cutset.lower_[iCut] = data_in.cutset_lower[iCut];
-    cutset.upper_[iCut] = data_in.cutset_upper[iCut];
+    lazy_constraints.cutindices[iCut] = iCut;
+    lazy_constraints.debug_origin_[iCut] = kCutOriginLazyConstraint;
+    lazy_constraints.ARstart_[iCut + 1] = data_in.cutset_ARstart[iCut + 1];
+    lazy_constraints.lower_[iCut] = data_in.cutset_lower[iCut];
+    lazy_constraints.upper_[iCut] = data_in.cutset_upper[iCut];
   }
   for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
-    cutset.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
-    cutset.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
+    lazy_constraints.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
+    lazy_constraints.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
   }
   // Now analyse the cuts, adding them to the pool
   //
@@ -2121,37 +2122,59 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   const bool add_to_cutpool = false;
   for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
     double row_value = 0;
-    HighsInt Rlen = cutset.ARstart_[iCut + 1] - cutset.ARstart_[iCut];
-    assert(cutset.lower_[iCut] <= -kHighsInf);
+    HighsInt Rlen = lazy_constraints.ARstart_[iCut + 1] - lazy_constraints.ARstart_[iCut];
+    assert(lazy_constraints.lower_[iCut] <= -kHighsInf);
     // Determine whether the cut is integral - has integer
     // coeffcients, all corresponding to integer variables
     bool integralSupport = true;
     bool integralCoefficients = true;
-    for (HighsInt iEl = cutset.ARstart_[iCut]; iEl < cutset.ARstart_[iCut + 1];
+    for (HighsInt iEl = lazy_constraints.ARstart_[iCut]; iEl < lazy_constraints.ARstart_[iCut + 1];
          iEl++) {
-      HighsInt iCol = cutset.ARindex_[iEl];
-      double value = cutset.ARvalue_[iEl];
+      HighsInt iCol = lazy_constraints.ARindex_[iEl];
+      double value = lazy_constraints.ARvalue_[iEl];
       row_value += value * solution[iCol];
       if (!HighsIntegers::isIntegral(value, feastol))
         integralCoefficients = false;
       if (!lp.isColIntegral(iCol)) integralSupport = false;
     }
     // Would be strange for the lazy constraint to be feasible, but check
-    const double upper = cutset.upper_[iCut];
+    const double upper = lazy_constraints.upper_[iCut];
     const bool infeasible = row_value > upper + feastol;
     assert(infeasible);
     const double primal_infeasibility = infeasible ? row_value - upper : 0;
     row_violation = std::max(row_violation, primal_infeasibility);
     lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
-    const HighsInt iEl = cutset.ARstart_[iCut];
+    const HighsInt iEl = lazy_constraints.ARstart_[iCut];
     if (add_to_cutpool) 
-      cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &cutset.ARindex_[iEl],
-		     &cutset.ARvalue_[iEl], Rlen, upper, cut_integral);
+      cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &lazy_constraints.ARindex_[iEl],
+		     &lazy_constraints.ARvalue_[iEl], Rlen, upper, cut_integral);
     numLazyConstraints++;
   }
   assert(!lazy_constraints_feasible);
-  const bool success = lp.addModelConstraints(cutset);
+  // Add the lazy constraints to the original model after presolve,
+  // updating the LP relaxation and the LP solver's representation of
+  // it accordingly
+  HighsInt num_cuts_in_relaxation = cutpool.getNumCuts();
+  HighsCutSet cuts_in_relaxation;
+  // Extract all the cuts from the LP relaxation
+  if (num_cuts_in_relaxation > 0) {
+    cutpool.separateLpCutsAfterRestart(cuts_in_relaxation);
+#ifdef HIGHS_DEBUGSOL
+    for (HighsInt i = 0; i < cuts_in_relaxation.numCuts(); ++i) {
+      debugSolution.checkCut(cuts_in_relaxation.ARindex_.data() + cuts_in_relaxation.ARstart_[i],
+                             cuts_in_relaxation.ARvalue_.data() + cuts_in_relaxation.ARstart_[i],
+                             cuts_in_relaxation.ARstart_[i + 1] - cuts_in_relaxation.ARstart_[i],
+                             cuts_in_relaxation.upper_[i]);
+    }
+#endif
+  }  
+  // Add the lazy constraints to the LP relaxation
+  const bool success = lp.addModelConstraints(lazy_constraints);
   assert(success);
+  // Restore the cuts to the LP relaxation
+  lp.addCuts(cuts_in_relaxation);
+
+
   return lazy_constraints_feasible || !success;
 }

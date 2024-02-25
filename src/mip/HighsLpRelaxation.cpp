@@ -475,7 +475,7 @@ double HighsLpRelaxation::computeLPDegneracy(
   return fac1 * fac2;
 }
 
-void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
+void HighsLpRelaxation::addCuts(HighsCutSet& cutset, bool clear_cutset) {
   HighsInt numcuts = cutset.numCuts();
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
@@ -499,7 +499,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
     (void)success;
     assert(lpsolver.getLp().num_row_ ==
            (HighsInt)lpsolver.getLp().row_lower_.size());
-    cutset.clear();
+    if (clear_cutset) cutset.clear();
   }
 }
 
@@ -1438,11 +1438,26 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
   printf("\n");
 }
 
-bool HighsLpRelaxation::addModelConstraints(const HighsCutSet& cutset) {
+bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
 
   HighsInt num_row = numRows();
   HighsInt num_model_row = getNumModelRows();
   HighsInt num_lp_cut = num_row - num_model_row;
   assert(!num_lp_cut);
+  // Add constraints to the LP relaxation
+  addCuts(new_constraints, false);
+  // Add constraints to the LP solver's representation of the LP relaxation
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
+  assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
+  HighsInt num_new_constraints = new_constraints.numCuts();
+  bool success =
+    lpsolver.addRows(num_new_constraints, new_constraints.lower_.data(), new_constraints.upper_.data(),
+		     new_constraints.ARvalue_.size(), new_constraints.ARstart_.data(),
+		     new_constraints.ARindex_.data(),
+		     new_constraints.ARvalue_.data()) == HighsStatus::kOk;
+  assert(success);
+  (void)success;
+ 
   return false;
 }

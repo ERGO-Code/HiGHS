@@ -307,7 +307,7 @@ class HighsLpRelaxation {
 
   HighsInt numNonzeros() const { return lpsolver.getNumNz(); }
 
-  void addCuts(HighsCutSet& cutset);
+  void addCuts(HighsCutSet& cutset, bool clear_cutset = true);
 
   void performAging(bool deleteRows = false);
 
@@ -361,7 +361,7 @@ class HighsLpRelaxation {
 
   std::string statusToString(const Status status);
   void debugReport(const std::string& message);
-  bool addModelConstraints(const HighsCutSet& cutset);
+  bool addModelConstraints(HighsCutSet& cutset);
 };
 
 #endif
