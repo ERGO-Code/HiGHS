@@ -2152,7 +2152,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     numLazyConstraints++;
   }
   assert(!lazy_constraints_feasible);
-  // Add the lazy constraints to the original model after presolve,
+  // Add the lazy constraints to the model after presolve,
   // updating the LP relaxation and the LP solver's representation of
   // it accordingly
   HighsInt num_cuts_in_relaxation = cutpool.getNumCuts();
@@ -2172,6 +2172,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   // Add the lazy constraints to the LP relaxation
   const bool success = lp.addModelConstraints(lazy_constraints);
   assert(success);
+  // Add the lazy constraints to the model
+  assert(!success);
   // Restore the cuts to the LP relaxation
   lp.addCuts(cuts_in_relaxation);
 

@@ -1444,7 +1444,7 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   HighsInt num_model_row = getNumModelRows();
   HighsInt num_lp_cut = num_row - num_model_row;
   assert(!num_lp_cut);
-  // Add constraints to the LP relaxation
+  // Add constraints to the LP relaxation, but don't clear the cutset
   addCuts(new_constraints, false);
   // Add constraints to the LP solver's representation of the LP relaxation
   assert(lpsolver.getLp().num_row_ ==
@@ -1457,7 +1457,5 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
 		     new_constraints.ARindex_.data(),
 		     new_constraints.ARvalue_.data()) == HighsStatus::kOk;
   assert(success);
-  (void)success;
- 
-  return false;
+  return success;
 }
