@@ -1900,10 +1900,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   // the old solution and any basis are cleared
   const bool new_primal_solution =
       model_.lp_.num_col_ > 0 &&
-      (HighsInt)solution.col_value.size() >= model_.lp_.num_col_;
+      solution.col_value.size() >= static_cast<size_t>(model_.lp_.num_col_);
   const bool new_dual_solution =
       model_.lp_.num_row_ > 0 &&
-      (HighsInt)solution.row_dual.size() >= model_.lp_.num_row_;
+      solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) invalidateUserSolverData();
@@ -2678,7 +2678,7 @@ HighsStatus Highs::getColIntegrality(const HighsInt col,
                  int(col), int(num_col));
     return HighsStatus::kError;
   }
-  if (col < int(this->model_.lp_.integrality_.size())) {
+  if (static_cast<size_t>(col) < this->model_.lp_.integrality_.size()) {
     integrality = this->model_.lp_.integrality_[col];
     return HighsStatus::kOk;
   } else {
@@ -3848,11 +3848,11 @@ void Highs::forceHighsSolutionBasisSize() {
   solution_.row_dual.resize(model_.lp_.num_row_);
   // Ensure that the HiGHS basis vectors are the right size,
   // invalidating the basis if they aren't
-  if ((HighsInt)basis_.col_status.size() != model_.lp_.num_col_) {
+  if (basis_.col_status.size() != static_cast<size_t>(model_.lp_.num_col_)) {
     basis_.col_status.resize(model_.lp_.num_col_);
     basis_.valid = false;
   }
-  if ((HighsInt)basis_.row_status.size() != model_.lp_.num_row_) {
+  if (basis_.row_status.size() != static_cast<size_t>(model_.lp_.num_row_)) {
     basis_.row_status.resize(model_.lp_.num_row_);
     basis_.valid = false;
   }

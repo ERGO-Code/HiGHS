@@ -157,17 +157,6 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
-  for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
-    solution.col_value[iCol] *= scale.col[iCol];
-    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
-  }
-  for (HighsInt iRow = 0; iRow < scale.num_row; iRow++) {
-    solution.row_value[iRow] /= scale.row[iRow];
-    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
-  }
-}
-
 void getUnscaledInfeasibilities(const HighsOptions& options,
                                 const HighsScale& scale,
                                 const SimplexBasis& basis,
