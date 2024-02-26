@@ -27,8 +27,6 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
 void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
                             HighsInt XnumNewRow);
 
-void unscaleSolution(HighsSolution& solution, const HighsScale& scale);
-
 void getUnscaledInfeasibilities(const HighsOptions& options,
                                 const HighsScale& scale,
                                 const SimplexBasis& basis,
