@@ -673,23 +673,25 @@ void HighsMipSolver::callbackGetCutPool() const {
 
 std::string debugCutOriginToString(const HighsInt origin) {
   assert(origin >= 0);
-  assert(origin < kCutOriginCount);
+  assert(origin < kLpRowOriginCount);
 
   std::string origin_string = "";
-  if (origin == kCutOriginSeparateCliques) {
-    origin_string = "Separate cliques";
-  } else if (origin == kCutOriginGenerateCut) {
-    origin_string = "Generate cut";
-  } else if (origin == kCutOriginGenerateConflict) {
-    origin_string = "Generate conflict";
-  } else if (origin == kCutOriginFinalizeAndAddCut) {
-    origin_string = "Finalize and add cut";
-  } else if (origin == kCutOriginSeparateImpliedBounds) {
-    origin_string = "Separate implied bounds";
-  } else if (origin == kCutOriginPresolve) {
+  if (origin == kLpRowOriginModel) {
+    origin_string = "Model";
+  } else if (origin == kLpRowOriginPresolve) {
     origin_string = "Presolve";
-  } else if (origin == kCutOriginLazyConstraint) {
+  } else if (origin == kLpRowOriginLazyConstraint) {
     origin_string = "Lazy constraint";
+  } else if (origin == kLpRowOriginSeparateCliques) {
+    origin_string = "Separate cliques";
+  } else if (origin == kLpRowOriginGenerateCut) {
+    origin_string = "Generate cut";
+  } else if (origin == kLpRowOriginGenerateConflict) {
+    origin_string = "Generate conflict";
+  } else if (origin == kLpRowOriginFinalizeAndAddCut) {
+    origin_string = "Finalize and add cut";
+  } else if (origin == kLpRowOriginSeparateImpliedBounds) {
+    origin_string = "Separate implied bounds";
   } else {
     origin_string = "Unknown";
   }

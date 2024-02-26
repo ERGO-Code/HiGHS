@@ -567,7 +567,7 @@ void HighsCutPool::debugReport(const std::string& message) {
              debugCutOriginToString(debug_origin_[iRow]).c_str());
     }
   } else {
-    const HighsInt num_cut_type = kCutOriginCount;
+    const HighsInt num_cut_type = kLpRowOriginCount;
     std::vector<HighsInt> cutCount;
     cutCount.assign(num_cut_type, 0);
     if (num_lp_cuts < kReportRowsLimit)

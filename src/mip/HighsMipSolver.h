@@ -15,15 +15,16 @@
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
 
-enum cutOrigin {
-  kCutOriginSeparateCliques = 0,
-  kCutOriginGenerateCut,
-  kCutOriginGenerateConflict,
-  kCutOriginFinalizeAndAddCut,
-  kCutOriginSeparateImpliedBounds,
-  kCutOriginPresolve,
-  kCutOriginLazyConstraint,
-  kCutOriginCount,
+enum lpRowOrigin {
+  kLpRowOriginModel = 0,
+  kLpRowOriginPresolve,
+  kLpRowOriginLazyConstraint,
+  kLpRowOriginSeparateCliques,
+  kLpRowOriginGenerateCut,
+  kLpRowOriginGenerateConflict,
+  kLpRowOriginFinalizeAndAddCut,
+  kLpRowOriginSeparateImpliedBounds,
+  kLpRowOriginCount,
 };
 
 struct HighsMipSolverData;

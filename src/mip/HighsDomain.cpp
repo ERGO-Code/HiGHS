@@ -1757,16 +1757,21 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
-	const bool jajh_tmpmaxact_ok = std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
-							tmpmaxact)) <= mipsolver->mipdata_->feastol;
-	if (!jajh_tmpmaxact_ok) printf("Col %d: activitymax_[%d] - tmpmaxact = %g - %g = %g\n",
-				       int(col), int(mip->a_matrix_.index_[i]), double(activitymax_[mip->a_matrix_.index_[i]]),
-				       double(tmpmaxact), double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact));
-	const bool jajh_tmpinf_ok = tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]];
-	if (!jajh_tmpinf_ok) printf("Col %d: activitymaxinf_[%d] = %d != %d = tmpinf\n",
-				    int(col), int(mip->a_matrix_.index_[i]),
-				    int(activitymaxinf_[mip->a_matrix_.index_[i]]), int(tmpinf));
-	
+        const bool jajh_tmpmaxact_ok =
+            std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                             tmpmaxact)) <= mipsolver->mipdata_->feastol;
+        if (!jajh_tmpmaxact_ok)
+          printf("Col %d: activitymax_[%d] - tmpmaxact = %g - %g = %g\n",
+                 int(col), int(mip->a_matrix_.index_[i]),
+                 double(activitymax_[mip->a_matrix_.index_[i]]),
+                 double(tmpmaxact),
+                 double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact));
+        const bool jajh_tmpinf_ok =
+            tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]];
+        if (!jajh_tmpinf_ok)
+          printf("Col %d: activitymaxinf_[%d] = %d != %d = tmpinf\n", int(col),
+                 int(mip->a_matrix_.index_[i]),
+                 int(activitymaxinf_[mip->a_matrix_.index_[i]]), int(tmpinf));
 
         assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
                                 tmpmaxact)) <= mipsolver->mipdata_->feastol);

@@ -2101,7 +2101,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   lazy_constraints.ARstart_[0] = data_in.cutset_ARstart[0];
   for (HighsInt iRow = 0; iRow < num_lazy_constraints; iRow++) {
     lazy_constraints.cutindices[iRow] = iRow;
-    lazy_constraints.debug_origin_[iRow] = kCutOriginLazyConstraint;
+    lazy_constraints.debug_origin_[iRow] = kLpRowOriginLazyConstraint;
     lazy_constraints.ARstart_[iRow + 1] = data_in.cutset_ARstart[iRow + 1];
     lazy_constraints.lower_[iRow] = data_in.cutset_lower[iRow];
     lazy_constraints.upper_[iRow] = data_in.cutset_upper[iRow];
@@ -2122,14 +2122,15 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   const bool add_to_cutpool = false;
   for (HighsInt iRow = 0; iRow < num_lazy_constraints; iRow++) {
     double row_value = 0;
-    HighsInt Rlen = lazy_constraints.ARstart_[iRow + 1] - lazy_constraints.ARstart_[iRow];
+    HighsInt Rlen =
+        lazy_constraints.ARstart_[iRow + 1] - lazy_constraints.ARstart_[iRow];
     assert(lazy_constraints.lower_[iRow] <= -kHighsInf);
     // Determine whether the cut is integral - has integer
     // coeffcients, all corresponding to integer variables
     bool integralSupport = true;
     bool integralCoefficients = true;
-    for (HighsInt iEl = lazy_constraints.ARstart_[iRow]; iEl < lazy_constraints.ARstart_[iRow + 1];
-         iEl++) {
+    for (HighsInt iEl = lazy_constraints.ARstart_[iRow];
+         iEl < lazy_constraints.ARstart_[iRow + 1]; iEl++) {
       HighsInt iCol = lazy_constraints.ARindex_[iEl];
       double value = lazy_constraints.ARvalue_[iEl];
       row_value += value * solution[iCol];
@@ -2146,9 +2147,11 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
     const bool cut_integral = integralSupport && integralCoefficients;
     const HighsInt iEl = lazy_constraints.ARstart_[iRow];
-    if (add_to_cutpool) 
-      cutpool.addCut(kCutOriginLazyConstraint, mipsolver, &lazy_constraints.ARindex_[iEl],
-		     &lazy_constraints.ARvalue_[iEl], Rlen, upper, cut_integral);
+    if (add_to_cutpool)
+      cutpool.addCut(kLpRowOriginLazyConstraint, mipsolver,
+                     &lazy_constraints.ARindex_[iEl],
+                     &lazy_constraints.ARvalue_[iEl], Rlen, upper,
+                     cut_integral);
     numLazyConstraints++;
   }
   assert(!lazy_constraints_feasible);
@@ -2159,12 +2162,14 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   // it accordingly
   //
   // Find out how many cuts are in the LP relaxation
-  //  HighsInt num_cuts_in_relaxation = lp.getLp().num_row_ - mipsolver.numRow();
+  //  HighsInt num_cuts_in_relaxation = lp.getLp().num_row_ -
+  //  mipsolver.numRow();
 
-  
-  printf("HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d, %d) format %d\n",
-	 int(presolvedModel.num_col_), int(presolvedModel.num_row_),
-	 int(presolvedModel.a_matrix_.format_));
+  printf(
+      "HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d, %d) "
+      "format %d\n",
+      int(presolvedModel.num_col_), int(presolvedModel.num_row_),
+      int(presolvedModel.a_matrix_.format_));
 
   // Add the lazy constraints to the LP relaxation
   const bool success = lp.addModelConstraints(lazy_constraints);

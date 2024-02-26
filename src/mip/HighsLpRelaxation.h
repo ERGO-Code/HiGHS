@@ -58,7 +58,9 @@ class HighsLpRelaxation {
     static LpRow cut(HighsInt index, HighsInt debug_origin) {
       return LpRow{kCutPool, index, 0, debug_origin};
     }
-    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0, -1}; }
+    static LpRow model(HighsInt index, HighsInt debug_origin) {
+      return LpRow{kModel, index, 0, debug_origin};
+    }
   };
 
   const HighsMipSolver& mipsolver;
