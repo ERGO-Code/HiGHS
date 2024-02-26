@@ -2174,7 +2174,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   HighsSparseMatrix new_rows;
   new_rows.format_ = MatrixFormat::kRowwise;
   new_rows.num_col_ = presolvedModel.num_col_;
-  new_rows.num_row_ = numLazyConstraints;
+  new_rows.num_row_ = num_lazy_constraints;
   new_rows.start_ = lazy_constraints.ARstart_;
   new_rows.index_ = lazy_constraints.ARindex_;
   new_rows.value_ = lazy_constraints.ARvalue_;
@@ -2187,8 +2187,9 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   }
   presolvedModel.num_row_ += numLazyConstraints;
 
-  // ToDo: Surely only needed for new rows
-  domain.computeRowActivities();
+  // Very cautious
+  runSetup();
+
   assert(!lazy_constraints_feasible && success);
   return false;
 }
