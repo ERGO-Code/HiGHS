@@ -68,7 +68,7 @@ HighsCallbackFunctionType userDefineNewLazyConstraints =
     };
 
 TEST_CASE("tsp-p01", "[highs_test_tsp_solver]") {
-  const bool solve_p01 = true;
+  const bool solve_p01 = false;
   std::string model = solve_p01 ? "p01" : "dantzig";
   const double optimal_obective_value = solve_p01 ? 291 : 699;
 
