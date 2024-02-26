@@ -2152,6 +2152,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     numLazyConstraints++;
   }
   assert(!lazy_constraints_feasible);
+  if (lazy_constraints_feasible) return true;
+
   // Add the lazy constraints to the model after presolve,
   // updating the LP relaxation and the LP solver's representation of
   // it accordingly
@@ -2167,6 +2169,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   // Add the lazy constraints to the LP relaxation
   const bool success = lp.addModelConstraints(lazy_constraints);
   assert(success);
+  if (!success) return true;
   // Add the lazy constraints to the model
   HighsSparseMatrix new_rows;
   new_rows.format_ = MatrixFormat::kRowwise;
@@ -2183,6 +2186,9 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     presolvedModel.row_upper_.push_back(lazy_constraints.upper_[iRow]);
   }
   presolvedModel.num_row_ += numLazyConstraints;
-  
-  return lazy_constraints_feasible || !success;
+
+  // ToDo: Surely only needed for new rows
+  domain.computeRowActivities();
+  assert(!lazy_constraints_feasible && success);
+  return false;
 }
