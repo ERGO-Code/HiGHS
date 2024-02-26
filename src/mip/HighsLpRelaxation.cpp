@@ -1493,7 +1493,7 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
           new_constraints.ARstart_.data(), new_constraints.ARindex_.data(),
           new_constraints.ARvalue_.data()) == HighsStatus::kOk;
   assert(success);
-  if (!success) return;
+  if (!success) return false;
   // Add the cuts back to the lpsolver
   success = lpsolver.addRows(get_num_row, get_lower.data(), get_upper.data(),
                              get_num_nz, get_start.data(), get_index.data(),
