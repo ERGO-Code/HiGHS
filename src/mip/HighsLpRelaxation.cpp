@@ -1439,23 +1439,67 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
 }
 
 bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
-
   HighsInt num_row = numRows();
   HighsInt num_model_row = getNumModelRows();
-  HighsInt num_lp_cut = num_row - num_model_row;
-  assert(!num_lp_cut);
-  // Add constraints to the LP relaxation, but don't clear the cutset
-  addCuts(new_constraints, false);
+  const HighsInt num_cut = num_row - num_model_row;
   // Add constraints to the LP solver's representation of the LP relaxation
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
   assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
   HighsInt num_new_constraints = new_constraints.numCuts();
+
+  printf("HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = %d; num_new_constraints = %d\n",
+	 int(num_row), int(num_model_row), int(num_new_constraints));
+  // Make space in lprows for the new model constraints and define new
+  // model row entries
+  lprows.resize(num_row + num_new_constraints);
+  for (HighsInt i = num_new_constraints; i > 0 ; i--) {
+    HighsInt Ix = num_row - num_new_constraints + i - 1;
+    lprows[num_row + i - 1] = lprows[Ix];
+    lprows[Ix] = LpRow::model(Ix);
+  }
+  // Extract the cuts from the lpsolver model
+  HighsInt get_num_row = 0;
+  HighsInt get_num_nz = 0;
+  lpsolver.getRows(num_model_row, num_row,
+		   get_num_row,
+		   nullptr, nullptr,
+		   get_num_nz,
+		   nullptr, nullptr, nullptr);
+  assert(get_num_row == num_cut);
+  std::vector<double> get_lower(num_cut);
+  std::vector<double> get_upper(num_cut);
+  std::vector<HighsInt> get_start(num_cut+1);
+  std::vector<HighsInt> get_index(get_num_nz);
+  std::vector<double> get_value(get_num_nz);
+  lpsolver.getRows(num_model_row, num_row,
+		   get_num_row,
+		   get_lower.data(), get_upper.data(),
+		   get_num_nz,
+		   get_start.data(), get_index.data(), get_value.data());
+  // Delete the lpsolver rows corresponding to cuts
+  lpsolver.deleteRows(num_model_row, num_row-1);
+
+  // Reset stuff: TODO Make this more effcient
+  status = Status::kNotSet;
+  currentbasisstored = false;
+  basischeckpoint.reset();
+
+  // Add the new constraints to the lpsolver
   bool success =
-    lpsolver.addRows(num_new_constraints, new_constraints.lower_.data(), new_constraints.upper_.data(),
-		     new_constraints.ARvalue_.size(), new_constraints.ARstart_.data(),
+    lpsolver.addRows(num_new_constraints,
+		     new_constraints.lower_.data(), new_constraints.upper_.data(),
+		     new_constraints.ARvalue_.size(),
+		     new_constraints.ARstart_.data(),
 		     new_constraints.ARindex_.data(),
 		     new_constraints.ARvalue_.data()) == HighsStatus::kOk;
   assert(success);
+  if (!success) return;
+  // Add the cuts back to the lpsolver
+  success = 
+    lpsolver.addRows(get_num_row,
+		     get_lower.data(), get_upper.data(),
+		     get_num_nz,
+		     get_start.data(), get_index.data(), get_value.data()) == HighsStatus::kOk;
   return success;
 }
