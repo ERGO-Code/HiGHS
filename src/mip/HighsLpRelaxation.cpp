@@ -595,6 +595,8 @@ void HighsLpRelaxation::performAging(bool deleteRows) {
   HighsInt nummodelrows = getNumModelRows();
   std::vector<HighsInt> deletemask;
 
+  printf("HighsLpRelaxation::performAging: LP rows = %d; model rows = %d\n", int(nlprows), int(nummodelrows));
+  debugReport("Before aging");
   HighsInt ndelcuts = 0;
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
