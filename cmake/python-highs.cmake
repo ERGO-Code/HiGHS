@@ -1,7 +1,15 @@
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-include(sources)
+include(sources-python)
 
+set(sources_python ${highs_sources_python} 
+                   ${cupdlp_sources_python} 
+                   ${ipx_sources_python} 
+                   ${basiclu_sources_python})
+set(headers_python ${highs_headers} 
+                   ${cupdlp_headers_python} 
+                   ${ipx_headers_python} 
+                   ${basiclu_headers_python})
 # Find Python 3
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
@@ -70,20 +78,16 @@ message(STATUS "Python project build path: ${PYTHON_PROJECT_DIR}")
 
 pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
+# todo version? 
 target_compile_definitions(highspy 
                 PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
 # set_target_properties(highspy PROPERTIES
 #   LIBRARY_OUTPUT_NAME "highspy")
 
-target_include_directories(highspy PUBLIC ${include_dirs})
+target_include_directories(highspy PUBLIC ${include_dirs_python})
 
-target_sources(highspy PUBLIC
-    ${cupdlp_sources}
-    ${ipx_sources}
-    ${basiclu_sources}
-    ${highs_sources}
-)
+target_sources(highspy PUBLIC ${sources_python})
 
 # target_include_directories(highs_bindings PUBLIC src)
 #  target_include_directories(highs_bindings PUBLIC ${CMAKE_SOURCE_DIR}/src)
@@ -106,10 +110,10 @@ target_sources(highspy PUBLIC
 #     )
 # endif()
 
-add_library(${PROJECT_NAMESPACE}::highspy ALIAS highspy)
+# add_library(${PROJECT_NAMESPACE}::highspy ALIAS highspy)
 
-target_compile_definitions(highspy
-                           PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
+# target_compile_definitions(highspy
+#                            PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
 # target_link_libraries(highs_bindings PRIVATE
 #   ${PROJECT_NAMESPACE}::highs
