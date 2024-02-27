@@ -420,13 +420,17 @@ class Highs {
    * @brief Return a const pointer to the original column indices for
    * the presolved model
    */
-  const  HighsInt* getPresolveOrigColsIndex() const { return presolve_.data_.postSolveStack.getOrigColsIndex(); }
+  const HighsInt* getPresolveOrigColsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigColsIndex();
+  }
 
   /**
    * @brief Return a const pointer to the original row indices for the
    * presolved model
    */
-  const  HighsInt* getPresolveOrigRowsIndex() const { return presolve_.data_.postSolveStack.getOrigRowsIndex(); }
+  const HighsInt* getPresolveOrigRowsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+  }
 
   /**
    * @brief Return a const reference to the incumbent LP

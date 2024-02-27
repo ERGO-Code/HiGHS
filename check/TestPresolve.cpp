@@ -5,6 +5,10 @@
 
 const bool dev_run = false;
 
+bool doubleEqual(const double v0, const double v1) {
+  return std::fabs(v0 - v1) < 1e-8;
+}
+
 void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation = false);
 
@@ -45,15 +49,34 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
           int(solution.col_value.size()), int(solution.col_dual.size()));
     status = highs.postsolve(solution);
     if (k == 0) {
+      // With dual values, optimality can be identified
       REQUIRE(status == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     } else {
+      // Without dual values, optimality can't be identified
       REQUIRE(status == HighsStatus::kWarning);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
     }
     REQUIRE(std::fabs(highs.getInfo().objective_function_value -
                       objective_function_value) <=
             1e-8 * std::max(1.0, std::fabs(objective_function_value)));
+    // Compare the primal solution for the reduced and original problem
+    HighsSolution postsolve_solution = highs.getSolution();
+    const HighsInt* original_col_indices = highs.getPresolveOrigColsIndex();
+    //    const HighsInt* original_row_indices =
+    //    highs.getPresolveOrigRowsIndex();
+    if (dev_run)
+      printf(
+          "Presolved model   Original model\n"
+          "Col      Primal  Col      Primal\n");
+    for (HighsInt iCol = 0; iCol < presolved_lp.num_col_; iCol++) {
+      HighsInt original_iCol = original_col_indices[iCol];
+      if (dev_run)
+        printf("%3d %11.5g  %3d %11.5g\n", int(iCol), solution.col_value[iCol],
+               int(original_iCol), postsolve_solution.col_value[original_iCol]);
+      REQUIRE(doubleEqual(solution.col_value[iCol],
+                          postsolve_solution.col_value[original_iCol]));
+    }
     solution.dual_valid = false;
     solution.col_dual.clear();
     solution.row_dual.clear();
