@@ -25,6 +25,8 @@ void strTrim(char* str);
 */
 // std::string& str_tolower(std::string s);
 
+void tolower(std::string& str);
+
 const std::string non_chars = "\t\n\v\f\r ";
 std::string& ltrim(std::string& str, const std::string& chars = non_chars);
 std::string& rtrim(std::string& str, const std::string& chars = non_chars);
