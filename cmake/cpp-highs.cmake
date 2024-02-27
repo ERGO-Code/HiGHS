@@ -50,7 +50,7 @@ string (TOLOWER ${PROJECT_NAME} lower)
 
 install(TARGETS highs
    EXPORT ${lower}-targets
-   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -58,12 +58,18 @@ install(TARGETS highs
   
 # Add library targets to the build-tree export set
 export(TARGETS highs
-  NAMESPACE ${PROJECT_NAMESPACE}::
+  NAMESPACE ${PROJECT_NAMESPACE}::highs
   FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 install(EXPORT ${lower}-targets
-  NAMESPACE ${PROJECT_NAMESPACE}::
+  NAMESPACE ${PROJECT_NAMESPACE}::highs
+  FILE highs-targets.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
+# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 
 include(CMakePackageConfigHelpers)
 string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX)
