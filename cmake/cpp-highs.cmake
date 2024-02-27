@@ -1,8 +1,7 @@
-# set(CMAKE_VERBOSE_MAKEFILE ON)
-
 if(NOT BUILD_CXX)
   return()
 endif()
+# set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Main Target
 add_subdirectory(src)

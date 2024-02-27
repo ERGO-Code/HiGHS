@@ -1,7 +1,8 @@
-set(CMAKE_VERBOSE_MAKEFILE ON)
-if (BUILD_CXX)
+if (NOT PYTHON_BUILD_SETUP)
   return()
 endif()
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 include(sources-python)
 

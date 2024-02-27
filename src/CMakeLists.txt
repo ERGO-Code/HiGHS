@@ -9,11 +9,9 @@ set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers}
 
 # Outdated CMake approach: update in progress
 if(NOT FAST_BUILD)
-  include_directories(ipm/ipx)
-  include_directories(ipm/basiclu)
-  include_directories(pdlp/cupdlp)
- 
+
   add_library(libhighs ${sources} ${headers})
+  target_include_directories(libhighs PRIVATE ${include_dirs})
 
   if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -136,11 +134,11 @@ else()
       INSTALL_RPATH "@loader_path")
   endif()
 
-  # target_include_directories(highs PUBLIC
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  #   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-  #   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-  # )
+  target_include_directories(highs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+  )
 
   # target_include_directories(highs PRIVATE
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
@@ -166,6 +164,7 @@ else()
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
   target_sources(highs PRIVATE ${sources} ${headers})
+  target_include_directories(highs PRIVATE ${include_dirs})
 
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
