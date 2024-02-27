@@ -197,6 +197,8 @@ struct HighsMipSolverData {
                                       double& row_violation);
   bool defineNewLazyConstraints(const std::vector<double>& solution,
                                 double& row_violation);
+  void runInsertRowsSetup();
+  void debugReportDimensions(const std::string message);
 };
 
 #endif

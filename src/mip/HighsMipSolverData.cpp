@@ -416,6 +416,7 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
+  debugReportDimensions("HighsMipSolverData::runSetup(): On entry");
 
   last_disptime = -kHighsInf;
 
@@ -547,6 +548,8 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
+  debugReportDimensions("HighsMipSolverData::runSetup(): Before compute row activities and propagate all rows once");
+
   objectiveFunction.setupCliquePartition(domain, cliquetable);
   domain.setupObjectivePropagation();
   domain.computeRowActivities();
@@ -668,6 +671,8 @@ void HighsMipSolverData::runSetup() {
   analyticCenter.clear();
 
   symmetries.clear();
+
+  debugReportDimensions("HighsMipSolverData::runSetup(): On return");
 
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -2175,26 +2180,26 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   const bool success = lp.addModelConstraints(lazy_constraints);
   assert(success);
   if (!success) return true;
-  // Add the lazy constraints to the model
-  HighsSparseMatrix new_rows;
-  new_rows.format_ = MatrixFormat::kRowwise;
-  new_rows.num_col_ = presolvedModel.num_col_;
-  new_rows.num_row_ = num_lazy_constraints;
-  new_rows.start_ = lazy_constraints.ARstart_;
-  new_rows.index_ = lazy_constraints.ARindex_;
-  new_rows.value_ = lazy_constraints.ARvalue_;
-  presolvedModel.a_matrix_.addRows(new_rows);
-  assert(HighsInt(presolvedModel.row_lower_.size()) == presolvedModel.num_row_);
-  assert(HighsInt(presolvedModel.row_upper_.size()) == presolvedModel.num_row_);
-  for (HighsInt iRow = 0; iRow < num_lazy_constraints; iRow++) {
-    presolvedModel.row_lower_.push_back(lazy_constraints.lower_[iRow]);
-    presolvedModel.row_upper_.push_back(lazy_constraints.upper_[iRow]);
-  }
-  presolvedModel.num_row_ += numLazyConstraints;
 
-  // Very cautious
+  //  runInsertRowsSetup();
   runSetup();
 
   assert(!lazy_constraints_feasible && success);
   return false;
 }
+
+void HighsMipSolverData::runInsertRowsSetup() {
+
+}
+
+void HighsMipSolverData::debugReportDimensions(const std::string message) {
+  if (mipsolver.submip) return;
+  assert(presolvedModel.num_col_ == mipsolver.numCol());
+  assert(presolvedModel.num_row_ == mipsolver.numRow());
+  printf("Model (%4d, %4d) Relaxation (%4d, %4d) %s\n",
+	 int(presolvedModel.num_col_), int(presolvedModel.num_row_),
+	 int(lp.numCols()), int(lp.numRows()),
+	 message.c_str());
+
+}
+
