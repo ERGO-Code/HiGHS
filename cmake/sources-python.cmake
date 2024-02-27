@@ -1,3 +1,26 @@
+set(include_dirs_python
+    ${CMAKE_SOURCE_DIR}/extern
+    ${CMAKE_SOURCE_DIR}/extern/filereader
+    ${CMAKE_SOURCE_DIR}/extern/pdqsort
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/interfaces
+    ${CMAKE_SOURCE_DIR}/src/io
+    ${CMAKE_SOURCE_DIR}/src/ipm
+    ${CMAKE_SOURCE_DIR}/src/ipm/ipx
+    ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
+    ${CMAKE_SOURCE_DIR}/src/lp_data
+    ${CMAKE_SOURCE_DIR}/src/mip
+    ${CMAKE_SOURCE_DIR}/src/model
+    ${CMAKE_SOURCE_DIR}/src/parallel
+    ${CMAKE_SOURCE_DIR}/src/pdlp
+    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
+    ${CMAKE_SOURCE_DIR}/src/presolve
+    ${CMAKE_SOURCE_DIR}/src/qpsolver
+    ${CMAKE_SOURCE_DIR}/src/simplex
+    ${CMAKE_SOURCE_DIR}/src/test
+    ${CMAKE_SOURCE_DIR}/src/util
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
+
 set(cupdlp_sources_python
   src/pdlp/cupdlp/cupdlp_cs.c
   src/pdlp/cupdlp/cupdlp_linalg.c
@@ -256,8 +279,12 @@ set(highs_sources_python
 
 set(headers_python
     extern/filereaderlp/builder.hpp
+    extern/filereaderlp/def.hpp
     extern/filereaderlp/model.hpp
-    /extern/filereaderlp/reader.hpp
+    extern/filereaderlp/reader.hpp
+    extern/filereaderlp/reader.hpp
+    extern/pdqsort/pdqsort.h
+    src/interfaces/highs_c_api.h
     src/io/Filereader.h
     src/io/FilereaderLp.h
     src/io/FilereaderEms.h
@@ -384,7 +411,6 @@ set(headers_python
     src/util/HVectorBase.h
     src/util/stringutil.h
     src/Highs.h
-    src/interfaces/highs_c_api.h
   )
 
 #   set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}

@@ -1,3 +1,27 @@
+set(include_dirs
+  ${CMAKE_SOURCE_DIR}/extern
+  ${CMAKE_SOURCE_DIR}/extern/filereader
+  ${CMAKE_SOURCE_DIR}/extern/pdqsort
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_SOURCE_DIR}/src/interfaces
+  ${CMAKE_SOURCE_DIR}/src/io
+  ${CMAKE_SOURCE_DIR}/src/ipm
+  ${CMAKE_SOURCE_DIR}/src/ipm/ipx
+  ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
+  ${CMAKE_SOURCE_DIR}/src/lp_data
+  ${CMAKE_SOURCE_DIR}/src/mip
+  ${CMAKE_SOURCE_DIR}/src/model
+  ${CMAKE_SOURCE_DIR}/src/parallel
+  ${CMAKE_SOURCE_DIR}/src/pdlp
+  ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
+  ${CMAKE_SOURCE_DIR}/src/presolve
+  ${CMAKE_SOURCE_DIR}/src/qpsolver
+  ${CMAKE_SOURCE_DIR}/src/simplex
+  ${CMAKE_SOURCE_DIR}/src/test
+  ${CMAKE_SOURCE_DIR}/src/util
+  $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs)
+
 set(cupdlp_sources
   pdlp/cupdlp/cupdlp_cs.c
   pdlp/cupdlp/cupdlp_linalg.c
@@ -386,69 +410,4 @@ set(headers_fast_build_
     Highs.h
     interfaces/highs_c_api.h
   )
-
-#   set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-#     ${ipx_headers})
-
-# todo: see which headers you need 
-
-  # set_target_properties(highs PROPERTIES PUBLIC_HEADER "Highs.h;lp_data/HighsLp.h;lp_data/HighsLpSolverObject.h")
-
-  # install the header files of highs
-#   foreach(file ${headers_fast_build_})
-#     get_filename_component(dir ${file} DIRECTORY)
-
-#     if(NOT dir STREQUAL "")
-#       string(REPLACE ../extern/ "" dir ${dir})
-#     endif()
-
-#     install(FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir})
-#   endforeach()
-#   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-
-  set(include_dirs
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/interfaces
-    ${CMAKE_SOURCE_DIR}/src/io
-    ${CMAKE_SOURCE_DIR}/src/ipm
-    ${CMAKE_SOURCE_DIR}/src/ipm/ipx
-    ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
-    ${CMAKE_SOURCE_DIR}/src/lp_data
-    ${CMAKE_SOURCE_DIR}/src/mip
-    ${CMAKE_SOURCE_DIR}/src/model
-    ${CMAKE_SOURCE_DIR}/src/parallel
-    ${CMAKE_SOURCE_DIR}/src/pdlp
-    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
-    ${CMAKE_SOURCE_DIR}/src/presolve
-    ${CMAKE_SOURCE_DIR}/src/qpsolver
-    ${CMAKE_SOURCE_DIR}/src/simplex
-    ${CMAKE_SOURCE_DIR}/src/util
-    ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/extern
-    ${CMAKE_SOURCE_DIR}/extern/filereader
-    ${CMAKE_SOURCE_DIR}/extern/pdqsort
-    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    
-  )
-    
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    # $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    # $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
-  
+ 

@@ -38,16 +38,6 @@ set_target_properties(highs PROPERTIES
   COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION
 )
 
-# if (PYTHON)
-
-# install(TARGETS highs
-#    EXPORT ${lower}-targets
-#    INCLUDES DESTINATION include
-#    ARCHIVE DESTINATION .libs
-#    LIBRARY DESTINATION .libs)
-
-# else()
-
 ###################
 ## Install rules ##
 ###################
@@ -67,13 +57,10 @@ install(TARGETS highs
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
   
-if (BUILD_CXX)
-
 # Add library targets to the build-tree export set
 export(TARGETS highs
-    NAMESPACE ${PROJECT_NAMESPACE}::
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-
+  NAMESPACE ${PROJECT_NAMESPACE}::
+  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 install(EXPORT ${lower}-targets
   NAMESPACE ${PROJECT_NAMESPACE}::
@@ -87,10 +74,7 @@ string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX)
 #   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 write_basic_package_version_file(
   "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config-version.cmake"
-  COMPATIBILITY SameMajorVersion
-  )
-
-endif()
+  COMPATIBILITY SameMajorVersion)
 
 # add_cxx_test()
 # CMake function to generate and build C++ test.
