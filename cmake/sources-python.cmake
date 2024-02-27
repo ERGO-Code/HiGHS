@@ -255,9 +255,9 @@ set(highs_sources_python
 
 
 set(headers_python
-    ../extern/filereaderlp/builder.hpp
-    ../extern/filereaderlp/model.hpp
-    ../extern/filereaderlp/reader.hpp
+    extern/filereaderlp/builder.hpp
+    extern/filereaderlp/model.hpp
+    /extern/filereaderlp/reader.hpp
     src/io/Filereader.h
     src/io/FilereaderLp.h
     src/io/FilereaderEms.h

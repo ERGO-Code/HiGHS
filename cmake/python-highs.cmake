@@ -1,4 +1,7 @@
 set(CMAKE_VERBOSE_MAKEFILE ON)
+if (BUILD_CXX)
+  return()
+endif()
 
 include(sources-python)
 
@@ -6,7 +9,8 @@ set(sources_python ${highs_sources_python}
                    ${cupdlp_sources_python} 
                    ${ipx_sources_python} 
                    ${basiclu_sources_python})
-set(headers_python ${highs_headers} 
+
+set(headers_python ${highs_headers_python} 
                    ${cupdlp_headers_python} 
                    ${ipx_headers_python} 
                    ${basiclu_headers_python})
@@ -85,18 +89,41 @@ target_compile_definitions(highspy
 # set_target_properties(highspy PROPERTIES
 #   LIBRARY_OUTPUT_NAME "highspy")
 
+target_sources(highspy PUBLIC ${sources_python} ${headers_python})
+
+set(include_dirs_python
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/interfaces
+    ${CMAKE_SOURCE_DIR}/src/io
+    ${CMAKE_SOURCE_DIR}/src/ipm
+    ${CMAKE_SOURCE_DIR}/src/ipm/ipx
+    ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
+    ${CMAKE_SOURCE_DIR}/src/lp_data
+    ${CMAKE_SOURCE_DIR}/src/mip
+    ${CMAKE_SOURCE_DIR}/src/model
+    ${CMAKE_SOURCE_DIR}/src/parallel
+    ${CMAKE_SOURCE_DIR}/src/pdlp
+    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
+    ${CMAKE_SOURCE_DIR}/src/presolve
+    ${CMAKE_SOURCE_DIR}/src/qpsolver
+    ${CMAKE_SOURCE_DIR}/src/simplex
+    ${CMAKE_SOURCE_DIR}/src/util
+    ${CMAKE_SOURCE_DIR}/src/test
+    ${CMAKE_SOURCE_DIR}/extern
+    ${CMAKE_SOURCE_DIR}/extern/filereader
+    ${CMAKE_SOURCE_DIR}/extern/pdqsort
+    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
+
 target_include_directories(highspy PUBLIC ${include_dirs_python})
 
-target_sources(highspy PUBLIC ${sources_python})
-
 # target_include_directories(highs_bindings PUBLIC src)
-#  target_include_directories(highs_bindings PUBLIC ${CMAKE_SOURCE_DIR}/src)
+# target_include_directories(highs_bindings PUBLIC ${CMAKE_SOURCE_DIR}/src)
 
-  # target_include_directories(highs_bindings PUBLIC
-  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  #   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-  #   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-  # )
+# target_include_directories(highs_bindings PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+#   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
+#   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
+# )
 
 
   # if(APPLE)
