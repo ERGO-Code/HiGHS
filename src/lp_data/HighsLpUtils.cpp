@@ -1431,6 +1431,22 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
   return HighsStatus::kOk;
 }
 
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
+  assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
+  assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
+  assert(solution.row_value.size() == static_cast<size_t>(scale.num_row));
+  assert(solution.row_dual.size() == static_cast<size_t>(scale.num_row));
+
+  for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
+    solution.col_value[iCol] *= scale.col[iCol];
+    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
+  }
+  for (HighsInt iRow = 0; iRow < scale.num_row; iRow++) {
+    solution.row_value[iRow] /= scale.row[iRow];
+    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
+  }
+}
+
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                            const vector<double>& colCost,
                            const vector<double>& colLower,

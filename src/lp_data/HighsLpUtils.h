@@ -85,6 +85,8 @@ HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
 HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
                                 const double rowScale);
 
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale);
+
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                            const vector<double>& colCost,
                            const vector<double>& colLower,
