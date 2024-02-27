@@ -278,7 +278,7 @@ set(highs_sources
     util/stringutil.cpp)
 
 
-set(headers_fast_build_
+set(highs_headers
     ../extern/filereaderlp/builder.hpp
     ../extern/filereaderlp/model.hpp
     ../extern/filereaderlp/reader.hpp

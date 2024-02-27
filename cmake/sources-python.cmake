@@ -277,7 +277,7 @@ set(highs_sources_python
     src/util/stringutil.cpp)
 
 
-set(headers_python
+set(highs_headers_python
     extern/filereaderlp/builder.hpp
     extern/filereaderlp/def.hpp
     extern/filereaderlp/model.hpp
