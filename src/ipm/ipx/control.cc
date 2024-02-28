@@ -30,10 +30,14 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     return 0;
 }
 
-std::stringstream Control::hLoggingStream() const {
-  std::stringstream logging;
-  logging.str(std::string());
-  return logging;
+void Control::hLog(std::string& str) const {
+  if (parameters_.highs_logging) {
+    highsLogUser(parameters_.log_options, HighsLogType::kInfo, "%s", str.c_str());
+    output_ << "output_ << " << str;
+  } else {
+    output_ << str;
+  }
+
 }
 
 void Control::hLog(std::stringstream& logging) const {

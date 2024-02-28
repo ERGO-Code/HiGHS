@@ -57,9 +57,10 @@ Int LpSolver::Solve() {
     h_logging_stream.str(std::string());
     h_logging_stream << "IPX version 1.0\n";
     //    control_.hLog("IPX version 1.0\n");
+    /*
     control_.hLog(h_logging_stream);
-
-    //    control_.Log() << "IPX version 1.0\n";
+    */
+    control_.Log() << "IPX version 1.0\n";
     try {
         InteriorPointSolve();
 	const bool run_crossover_on = control_.run_crossover() == 1;
