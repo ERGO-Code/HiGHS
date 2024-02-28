@@ -87,6 +87,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
     parameters.debug = 4;
   }
+  parameters.logfile = "IPX.log";
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
   //

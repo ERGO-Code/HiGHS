@@ -2,6 +2,7 @@
 #define IPX_PARAMETERS_H_
 
 #include "ipm/ipx/ipx_config.h"
+#include <iostream>
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +60,12 @@ struct ipx_parameters {
     double centring_ratio_reduction;
     double centring_alpha_scaling;
     ipxint bad_products_tolerance;
+
+    /* HiGHS logging parameters */
+    FILE* log_stream;
+    bool output_flag;
+    bool log_to_console;
+  
 };
 
 #ifdef __cplusplus

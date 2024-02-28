@@ -9,6 +9,7 @@
 #include "ipm/ipx/multistream.h"
 #include "ipm/ipx/timer.h"
 #include "lp_data/HighsCallback.h"
+#include "io/HighsIO.h"
 
 namespace ipx {
 
