@@ -183,7 +183,6 @@ set(highs_sources_python
     src/lp_data/Highs.cpp
     src/lp_data/HighsCallback.cpp
     src/lp_data/HighsDebug.cpp
-    src/lp_data/HighsDeprecated.cpp
     src/lp_data/HighsInfo.cpp
     src/lp_data/HighsInfoDebug.cpp
     src/lp_data/HighsInterface.cpp
@@ -276,25 +275,24 @@ set(highs_sources_python
     src/util/HVectorBase.cpp
     src/util/stringutil.cpp)
 
-
 set(highs_headers_python
     extern/filereaderlp/builder.hpp
     extern/filereaderlp/def.hpp
     extern/filereaderlp/model.hpp
     extern/filereaderlp/reader.hpp
-    extern/filereaderlp/reader.hpp
     extern/pdqsort/pdqsort.h
     src/interfaces/highs_c_api.h
     src/io/Filereader.h
-    src/io/FilereaderLp.h
     src/io/FilereaderEms.h
+    src/io/FilereaderLp.h
     src/io/FilereaderMps.h
+    src/io/HighsIO.h
     src/io/HMpsFF.h
     src/io/HMPSIO.h
-    src/io/HighsIO.h
     src/io/LoadOptions.h
+    src/ipm/IpxSolution.h
+    src/ipm/IpxWrapper.h
     src/lp_data/HConst.h
-    src/lp_data/HStruct.h
     src/lp_data/HighsAnalysis.h
     src/lp_data/HighsCallback.h
     src/lp_data/HighsCallbackStruct.h
@@ -312,20 +310,21 @@ set(highs_headers_python
     src/lp_data/HighsSolutionDebug.h
     src/lp_data/HighsSolve.h
     src/lp_data/HighsStatus.h
+    src/lp_data/HStruct.h
     src/mip/HighsCliqueTable.h
-    src/mip/HighsCutGeneration.h
     src/mip/HighsConflictPool.h
+    src/mip/HighsCutGeneration.h
     src/mip/HighsCutPool.h
     src/mip/HighsDebugSol.h
-    src/mip/HighsDomainChange.h
     src/mip/HighsDomain.h
+    src/mip/HighsDomainChange.h
     src/mip/HighsDynamicRowMatrix.h
     src/mip/HighsGFkSolve.h
     src/mip/HighsImplications.h
     src/mip/HighsLpAggregator.h
     src/mip/HighsLpRelaxation.h
-    src/mip/HighsMipSolverData.h
     src/mip/HighsMipSolver.h
+    src/mip/HighsMipSolverData.h
     src/mip/HighsModkSeparator.h
     src/mip/HighsNodeQueue.h
     src/mip/HighsObjectiveFunction.h
@@ -350,14 +349,43 @@ set(highs_headers_python
     src/parallel/HighsSchedulerConstants.h
     src/parallel/HighsSpinMutex.h
     src/parallel/HighsSplitDeque.h
-    src/parallel/HighsTaskExecutor.h
     src/parallel/HighsTask.h
+    src/parallel/HighsTaskExecutor.h
+    src/pdlp/CupdlpWrapper.h
+    src/presolve/HighsPostsolveStack.h
+    src/presolve/HighsSymmetry.h
+    src/presolve/HPresolve.h
+    src/presolve/HPresolveAnalysis.h
+    src/presolve/ICrash.h
+    src/presolve/ICrashUtil.h
+    src/presolve/ICrashX.h
+    src/presolve/PresolveComponent.h
     src/qpsolver/a_asm.hpp
     src/qpsolver/a_quass.hpp
-    src/qpsolver/quass.hpp
-    src/qpsolver/vector.hpp
-    src/qpsolver/scaling.hpp
+    src/qpsolver/basis.hpp
+    src/qpsolver/crashsolution.hpp
+    src/qpsolver/dantzigpricing.hpp
+    src/qpsolver/devexpricing.hpp
+    src/qpsolver/eventhandler.hpp
+    src/qpsolver/factor.hpp
+    src/qpsolver/feasibility_highs.hpp
+    src/qpsolver/feasibility_quass.hpp
+    src/qpsolver/feasibility.hpp
+    src/qpsolver/gradient.hpp
+    src/qpsolver/instance.hpp
+    src/qpsolver/matrix.hpp
     src/qpsolver/perturbation.hpp
+    src/qpsolver/pricing.hpp
+    src/qpsolver/qpconst.hpp
+    src/qpsolver/quass.hpp
+    src/qpsolver/ratiotest.hpp
+    src/qpsolver/runtime.hpp
+    src/qpsolver/scaling.hpp
+    src/qpsolver/settings.hpp
+    src/qpsolver/snippets.hpp
+    src/qpsolver/statistics.hpp
+    src/qpsolver/steepestedgepricing.hpp
+    src/qpsolver/vector.hpp
     src/simplex/HApp.h
     src/simplex/HEkk.h
     src/simplex/HEkkDual.h
@@ -366,20 +394,12 @@ set(highs_headers_python
     src/simplex/HEkkPrimal.h
     src/simplex/HighsSimplexAnalysis.h
     src/simplex/HSimplex.h
-    src/simplex/HSimplexReport.h
     src/simplex/HSimplexDebug.h
     src/simplex/HSimplexNla.h
+    src/simplex/HSimplexReport.h
     src/simplex/SimplexConst.h
     src/simplex/SimplexStruct.h
     src/simplex/SimplexTimer.h
-    src/presolve/ICrash.h
-    src/presolve/ICrashUtil.h
-    src/presolve/ICrashX.h
-    src/presolve/HighsPostsolveStack.h
-    src/presolve/HighsSymmetry.h
-    src/presolve/HPresolve.h
-    src/presolve/HPresolveAnalysis.h
-    src/presolve/PresolveComponent.h
     src/test/DevKkt.h
     src/test/KktCh2.h
     src/util/FactorTimer.h
@@ -412,69 +432,3 @@ set(highs_headers_python
     src/util/stringutil.h
     src/Highs.h
   )
-
-#   set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
-#     ${ipx_headers})
-
-# todo: see which headers you need 
-
-  # set_target_properties(highs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
-
-  # install the header files of highs
-#   foreach(file ${headers_fast_build_})
-#     get_filename_component(dir ${file} DIRECTORY)
-
-#     if(NOT dir STREQUAL "")
-#       string(REPLACE ../extern/ "" dir ${dir})
-#     endif()
-
-#     install(FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs/${dir})
-#   endforeach()
-#   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-
-  set(include_dirs
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/interfaces
-    ${CMAKE_SOURCE_DIR}/src/io
-    ${CMAKE_SOURCE_DIR}/src/ipm
-    ${CMAKE_SOURCE_DIR}/src/ipm/ipx
-    ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
-    ${CMAKE_SOURCE_DIR}/src/lp_data
-    ${CMAKE_SOURCE_DIR}/src/mip
-    ${CMAKE_SOURCE_DIR}/src/model
-    ${CMAKE_SOURCE_DIR}/src/parallel
-    ${CMAKE_SOURCE_DIR}/src/pdlp
-    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
-    ${CMAKE_SOURCE_DIR}/src/presolve
-    ${CMAKE_SOURCE_DIR}/src/qpsolver
-    ${CMAKE_SOURCE_DIR}/src/simplex
-    ${CMAKE_SOURCE_DIR}/src/util
-    ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/extern
-    ${CMAKE_SOURCE_DIR}/extern/filereader
-    ${CMAKE_SOURCE_DIR}/extern/pdqsort
-    $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    
-  )
-    
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    # $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-    # $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/ipx>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ipm/basiclu>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lp_data>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mip>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/parallel>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/presolve>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/qpsolver>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/simplex>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>
-    # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
-    # $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>
-  

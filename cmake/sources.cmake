@@ -184,7 +184,6 @@ set(highs_sources
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
     lp_data/HighsDebug.cpp
-    lp_data/HighsDeprecated.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
     lp_data/HighsInterface.cpp
@@ -277,21 +276,27 @@ set(highs_sources
     util/HVectorBase.cpp
     util/stringutil.cpp)
 
-
-set(highs_headers
+# add catch header?
+set(highs_headers_python
     ../extern/filereaderlp/builder.hpp
+    ../extern/filereaderlp/def.hpp
     ../extern/filereaderlp/model.hpp
     ../extern/filereaderlp/reader.hpp
+    ../extern/pdqsort/pdqsort.h
+    ../extern/zstr/strict_fstream.h
+    ../extern/zstr/zstr.h
+    ../src/interfaces/highs_c_api.h
     io/Filereader.h
-    io/FilereaderLp.h
     io/FilereaderEms.h
+    io/FilereaderLp.h
     io/FilereaderMps.h
+    io/HighsIO.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HighsIO.h
     io/LoadOptions.h
+    ipm/IpxSolution.h
+    ipm/IpxWrapper.h
     lp_data/HConst.h
-    lp_data/HStruct.h
     lp_data/HighsAnalysis.h
     lp_data/HighsCallback.h
     lp_data/HighsCallbackStruct.h
@@ -309,20 +314,21 @@ set(highs_headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    lp_data/HStruct.h
     mip/HighsCliqueTable.h
-    mip/HighsCutGeneration.h
     mip/HighsConflictPool.h
+    mip/HighsCutGeneration.h
     mip/HighsCutPool.h
     mip/HighsDebugSol.h
-    mip/HighsDomainChange.h
     mip/HighsDomain.h
+    mip/HighsDomainChange.h
     mip/HighsDynamicRowMatrix.h
     mip/HighsGFkSolve.h
     mip/HighsImplications.h
     mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
-    mip/HighsMipSolverData.h
     mip/HighsMipSolver.h
+    mip/HighsMipSolverData.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
     mip/HighsObjectiveFunction.h
@@ -347,14 +353,43 @@ set(highs_headers
     parallel/HighsSchedulerConstants.h
     parallel/HighsSpinMutex.h
     parallel/HighsSplitDeque.h
-    parallel/HighsTaskExecutor.h
     parallel/HighsTask.h
+    parallel/HighsTaskExecutor.h
+    pdlp/CupdlpWrapper.h
+    presolve/HighsPostsolveStack.h
+    presolve/HighsSymmetry.h
+    presolve/HPresolve.h
+    presolve/HPresolveAnalysis.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
+    presolve/ICrashX.h
+    presolve/PresolveComponent.h
     qpsolver/a_asm.hpp
     qpsolver/a_quass.hpp
-    qpsolver/quass.hpp
-    qpsolver/vector.hpp
-    qpsolver/scaling.hpp
+    qpsolver/basis.hpp
+    qpsolver/crashsolution.hpp
+    qpsolver/dantzigpricing.hpp
+    qpsolver/devexpricing.hpp
+    qpsolver/eventhandler.hpp
+    qpsolver/factor.hpp
+    qpsolver/feasibility_highs.hpp
+    qpsolver/feasibility_quass.hpp
+    qpsolver/feasibility.hpp
+    qpsolver/gradient.hpp
+    qpsolver/instance.hpp
+    qpsolver/matrix.hpp
     qpsolver/perturbation.hpp
+    qpsolver/pricing.hpp
+    qpsolver/qpconst.hpp
+    qpsolver/quass.hpp
+    qpsolver/ratiotest.hpp
+    qpsolver/runtime.hpp
+    qpsolver/scaling.hpp
+    qpsolver/settings.hpp
+    qpsolver/snippets.hpp
+    qpsolver/statistics.hpp
+    qpsolver/steepestedgepricing.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
@@ -363,20 +398,12 @@ set(highs_headers
     simplex/HEkkPrimal.h
     simplex/HighsSimplexAnalysis.h
     simplex/HSimplex.h
-    simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
+    simplex/HSimplexReport.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    presolve/ICrash.h
-    presolve/ICrashUtil.h
-    presolve/ICrashX.h
-    presolve/HighsPostsolveStack.h
-    presolve/HighsSymmetry.h
-    presolve/HPresolve.h
-    presolve/HPresolveAnalysis.h
-    presolve/PresolveComponent.h
     test/DevKkt.h
     test/KktCh2.h
     util/FactorTimer.h
@@ -408,6 +435,4 @@ set(highs_headers
     util/HVectorBase.h
     util/stringutil.h
     Highs.h
-    interfaces/highs_c_api.h
   )
- 
