@@ -19,7 +19,7 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     // that it's not been set
     assert(callback_);
     if (callback_) {
-      if (callback_->user_callback	       && callback_->active[kCallbackIpmInterrupt]	  ) {
+      if (callback_->user_callback && callback_->active[kCallbackIpmInterrupt]) {
 	callback_->clearHighsCallbackDataOut();
 	callback_->data_out.ipm_iteration_count = ipm_iteration_count;
 	if (callback_->callbackAction(kCallbackIpmInterrupt,
@@ -30,8 +30,29 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     return 0;
 }
 
+std::stringstream Control::hLoggingStream() const {
+  std::stringstream logging;
+  logging.str(std::string());
+  return logging;
+}
+
+void Control::hLog(std::stringstream& logging) const {
+  if (parameters_.highs_logging) {
+    highsLogUser(parameters_.log_options, HighsLogType::kInfo, "%s", logging.str().c_str());
+    output_ << "output_ << " << logging.str();
+  } else {
+    output_ << logging.str();
+  }
+  logging.str(std::string());
+}
+
 std::ostream& Control::Log() const {
+  if (parameters_.highs_logging) {
+    //     std::string myString = output_.str();
+     return dummy_;
+  } else {
     return output_;
+  }
 }
 
 std::ostream& Control::IntervalLog() const {

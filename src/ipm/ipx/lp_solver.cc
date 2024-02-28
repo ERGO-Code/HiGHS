@@ -53,6 +53,10 @@ Int LpSolver::Solve() {
     ClearSolution();
     control_.ResetTimer();
     control_.OpenLogfile();
+    std::stringstream h_logging_stream = control_.hLoggingStream();
+    h_logging_stream << "IPX version 1.0\n";
+    control_.hLog(h_logging_stream);
+
     control_.Log() << "IPX version 1.0\n";
     try {
         InteriorPointSolve();
