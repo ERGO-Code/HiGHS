@@ -5,11 +5,10 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include "io/HighsIO.h"
 #include "ipm/ipx/ipx_internal.h"
 #include "ipm/ipx/multistream.h"
 #include "ipm/ipx/timer.h"
-#include "lp_data/HighsCallback.h"
-#include "io/HighsIO.h"
 
 namespace ipx {
 

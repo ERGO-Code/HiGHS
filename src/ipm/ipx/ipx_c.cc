@@ -35,6 +35,14 @@ struct ipx_parameters ipx_default_parameters() {
     p.stop_at_switch = 0;
     p.update_heuristic = 1;
     p.maxpasses = -1;
+
+    p.run_centring = 0;
+    p.max_centring_steps = 0;
+    p.centring_ratio_tolerance = 0;
+    p.centring_ratio_reduction = 0;
+    p.centring_alpha_scaling = 0;
+    p.bad_products_tolerance = 0;
+    p.highs_logging = false;
     return p;
 }
 

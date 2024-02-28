@@ -1,6 +1,7 @@
 #ifndef IPX_PARAMETERS_H_
 #define IPX_PARAMETERS_H_
 
+#include "io/HighsIO.h"
 #include "ipm/ipx/ipx_config.h"
 #include <iostream>
 
@@ -62,9 +63,8 @@ struct ipx_parameters {
     ipxint bad_products_tolerance;
 
     /* HiGHS logging parameters */
-    FILE* log_stream;
-    bool output_flag;
-    bool log_to_console;
+    bool highs_logging;
+    HighsLogOptions log_options;
   
 };
 

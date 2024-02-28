@@ -88,6 +88,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     parameters.debug = 4;
   }
   parameters.logfile = "IPX.log";
+  parameters.highs_logging = true;
+  parameters.log_options = options.log_options;
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
   //
