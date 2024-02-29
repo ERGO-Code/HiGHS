@@ -64,7 +64,7 @@ struct ipx_parameters {
 
     /* HiGHS logging parameters */
     bool highs_logging;
-    HighsLogOptions log_options;
+    const HighsLogOptions* log_options;
   
 };
 
