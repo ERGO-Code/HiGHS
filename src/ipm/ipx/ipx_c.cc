@@ -4,6 +4,7 @@
 
 using namespace ipx;
 
+/*
 struct ipx_parameters ipx_default_parameters() {
     ipx_parameters p;
     p.display = 1;
@@ -46,6 +47,7 @@ struct ipx_parameters ipx_default_parameters() {
     p.log_options = nullptr;
     return p;
 }
+*/
 
 void ipx_new(void** p_self) {
     if (p_self) {
