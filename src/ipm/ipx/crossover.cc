@@ -199,10 +199,13 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
 
         primal_pushes_++;
         next++;
-        control_.IntervalLog()
-            << " " << Format(static_cast<Int>(variables.size()-next), 8)
-            << " primal pushes remaining"
-            << " (" << Format(primal_pivots_, 7) << " pivots)\n";
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream
+	  << " " << Format(static_cast<Int>(variables.size()-next), 8)
+	  << " primal pushes remaining"
+	  << " (" << Format(primal_pivots_, 7) << " pivots)\n";
+	control_.hIntervalLog(h_logging_stream);
     }
     for (Int p = 0; p < m; p++)
         x[(*basis)[p]] = xbasic[p];
@@ -324,10 +327,13 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
 
         dual_pushes_++;
         next++;
-        control_.IntervalLog()
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream
             << " " << Format(static_cast<Int>(variables.size()-next), 8)
             << " dual pushes remaining"
             << " (" << Format(dual_pivots_, 7) << " pivots)\n";
+	control_.hIntervalLog(h_logging_stream);
     }
 
     // Set status flag.

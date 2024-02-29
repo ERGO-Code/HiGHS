@@ -776,8 +776,10 @@ void Basis::PivotFreeVariablesIntoBasis(const double* colweights, Info* info) {
                 info->updates_start++;
             }
         }
-        control_.IntervalLog()
-            << " " << remaining.size() << " free variables remaining\n";
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream << " " << remaining.size() << " free variables remaining\n";
+	control_.hIntervalLog(h_logging_stream);
     }
     control_.Debug()
         << Textline("Number of free variables swapped for stability:")
@@ -911,8 +913,11 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
                 info->updates_start++;
             }
         }
-        control_.IntervalLog()
-            << " " << remaining.size() << " fixed variables remaining\n";
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream << " " << remaining.size() << " fixed variables remaining\n";
+	control_.hIntervalLog(h_logging_stream);
+
     }
     control_.Debug()
         << Textline("Number of fixed variables swapped for stability:")

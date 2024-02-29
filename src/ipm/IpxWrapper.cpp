@@ -87,7 +87,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
     parameters.debug = 4;
   }
-  parameters.highs_logging = true;
+  parameters.highs_logging = false;//true;
   parameters.log_options = &options.log_options;
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters

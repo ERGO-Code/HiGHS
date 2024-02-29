@@ -45,16 +45,12 @@ void Control::hLog(std::stringstream& logging) const {
   if (parameters_.highs_logging) {
     assert(parameters_.log_options);
     HighsLogOptions log_options_ = *(parameters_.log_options);
-    highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", logging.str().c_str());
+    highsLogUser(log_options_, HighsLogType::kInfo, "%s", logging.str().c_str());
   } else {
     output_ << logging.str();
   }
   logging.str(std::string());
 }
-
-  //std::ostream& Control::Log() const {
-  //  return output_;
-  //}
 
 void Control::hIntervalLog(std::stringstream& logging) const {
   if (parameters_.print_interval >= 0.0 &&
@@ -63,22 +59,12 @@ void Control::hIntervalLog(std::stringstream& logging) const {
     if (parameters_.highs_logging) {
       assert(parameters_.log_options);
       HighsLogOptions log_options_ = *(parameters_.log_options);
-      highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", logging.str().c_str());
+      highsLogUser(log_options_, HighsLogType::kInfo, "%s", logging.str().c_str());
     } else {
       output_ << logging.str();
     }
   }
   logging.str(std::string());
-}
-
-std::ostream& Control::IntervalLog() const {
-    if (parameters_.print_interval >= 0.0 &&
-        interval_.Elapsed() >= parameters_.print_interval) {
-        interval_.Reset();
-        return output_;
-    } else {
-        return dummy_;
-    }
 }
 
 std::ostream& Control::Debug(Int level) const {
