@@ -47,7 +47,7 @@ public:
     //
     // If the debug level is < 3, expensive_computation() is not performed.
     void hLog(std::stringstream& logging) const;
-    void hLog(std::string& str) const;
+    void hLog(std::string str) const;
     std::ostream& Log() const;
     void hDebug(std::stringstream& logging, Int level=1) const;
     std::ostream& Debug(Int level=1) const;

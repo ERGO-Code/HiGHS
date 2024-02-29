@@ -366,7 +366,7 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
             << '\n';
         Repair(info);
         if (info->basis_repairs < 0) {
-            control_.Log() << " discarding crash basis\n";
+	  control_.hLog(" discarding crash basis\n");
             SetToSlackBasis();
         }
         else if (info->basis_repairs > 0) {

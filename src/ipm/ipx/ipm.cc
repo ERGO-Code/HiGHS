@@ -129,7 +129,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
       //
       // If IPM is optimal and centring has not yet run, run centring
       // (to avoid running it twice during initial IPM and main IPM).
-      control_.Log() << "Performing centring steps...\n";
+      control_.hLog("Performing centring steps...\n");
 
       // freeze mu to its current value
       const double mu_frozen = iterate_->mu();
@@ -143,7 +143,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
       info->centring_success = false;
       // if ratio is below tolerance, point is centred
       if (prev_ratio < control_.centringRatioTolerance()) {
-	control_.Log() << "\tPoint is now centred\n";
+	control_.hLog("\tPoint is now centred\n");
 	info->centring_success = true;
       } else {
 	// perform centring steps
@@ -155,7 +155,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	  // assess whether to take the step
 	  bool accept = EvaluateCentringStep(step, prev_ratio, prev_bad_products);
 	  if (!accept) {
-	    control_.Log() << "\tPoint cannot be centred further\n";
+	    control_.hLog("\tPoint cannot be centred further\n");
 	    centring_complete = true;
 	    break;
 	  }
@@ -171,7 +171,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	    
 	  // if ratio is below tolerance, point is centred
 	  if (prev_ratio < control_.centringRatioTolerance()) {
-	    control_.Log() << "\tPoint is now centred\n";
+	    control_.hLog("\tPoint is now centred\n");
 	    info->centring_success = true;
 	    centring_complete = true;
 	    break;
@@ -863,7 +863,7 @@ void IPM::PrintOutput() {
         control_.Debug(4) << "  " << Format("-", 9);
         control_.Debug(4) << "  " << Format("-", 8);
     }
-    control_.Log() << '\n';
+    control_.hLog("\n");
 }
 
 }  // namespace ipx

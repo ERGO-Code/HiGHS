@@ -30,11 +30,15 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     return 0;
 }
 
-void Control::hLog(std::string& str) const {
+void Control::hLog(std::string str) const {
   HighsLogOptions log_options_ = *(parameters_.log_options);
   if (parameters_.highs_logging) {
-    highsLogUser(log_options_, HighsLogType::kInfo, "%s", str.c_str());
-    output_ << "output_ << " << str;
+    printf("\nControl::hLog output_flag          %d\n", int(*(log_options_.output_flag)));
+    printf("Control::hLog log_to_console       %d\n", int(*(log_options_.log_to_console)));
+    printf("Control::hLog log_dev_level        %d\n", int(*(log_options_.log_dev_level)));
+    printf("Control::hLog user_callback_active %d\n", int(log_options_.user_callback_active));
+    highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", str.c_str());
+    //    output_ << "HiGHS " << str;
   } else {
     output_ << str;
   }
@@ -53,8 +57,7 @@ void Control::hLog(std::stringstream& logging) const {
 
 std::ostream& Control::Log() const {
   if (parameters_.highs_logging) {
-    //     std::string myString = output_.str();
-     return dummy_;
+    return output_;
   } else {
     return output_;
   }
