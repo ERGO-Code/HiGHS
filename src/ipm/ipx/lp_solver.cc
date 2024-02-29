@@ -53,9 +53,6 @@ Int LpSolver::Solve() {
     ClearSolution();
     control_.ResetTimer();
     control_.OpenLogfile();
-    //    std::stringstream h_logging_stream;
-    //    h_logging_stream.str(std::string());
-    //    h_logging_stream << "IPX version 1.0\n";
     control_.hLog("IPX version 1.0\n");
     try {
         InteriorPointSolve();
@@ -642,12 +639,15 @@ void LpSolver::RunCrossover() {
 }
 
 void LpSolver::PrintSummary() {
-    control_.Log() << "Summary\n"
+  std::stringstream h_logging_stream;
+  h_logging_stream.str(std::string());
+  h_logging_stream << "Summary\n"
                    << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n"
                    << Textline("Status interior point solve:")
                    << StatusString(info_.status_ipm) << '\n'
                    << Textline("Status crossover:")
                    << StatusString(info_.status_crossover) << '\n';
+  control_.hLog(h_logging_stream);
     if (info_.status_ipm == IPX_STATUS_optimal ||
         info_.status_ipm == IPX_STATUS_imprecise) {
         control_.Log()

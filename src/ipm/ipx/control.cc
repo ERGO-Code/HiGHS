@@ -32,17 +32,9 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
 
 void Control::hLog(std::string str) const {
   if (parameters_.highs_logging) {
-    if (!parameters_.log_options) {
-      printf("Control::hLog parameters_.log_options is null\n");fflush(stdout);
-    }
     assert(parameters_.log_options);
     HighsLogOptions log_options_ = *(parameters_.log_options);
-    printf("\nControl::hLog output_flag          %d\n", int(*(log_options_.output_flag)));
-    printf("Control::hLog log_to_console       %d\n", int(*(log_options_.log_to_console)));
-    printf("Control::hLog log_dev_level        %d\n", int(*(log_options_.log_dev_level)));
-    printf("Control::hLog user_callback_active %d\n", int(log_options_.user_callback_active));
-    highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", str.c_str());
-    //    output_ << "HiGHS " << str;
+    highsLogUser(log_options_, HighsLogType::kInfo, "%s", str.c_str());
   } else {
     output_ << str;
   }
@@ -51,8 +43,9 @@ void Control::hLog(std::string str) const {
 
 void Control::hLog(std::stringstream& logging) const {
   if (parameters_.highs_logging) {
-    //    highsLogUser(parameters_.log_options, HighsLogType::kInfo, "%s", logging.str().c_str());
-    output_ << "output_ << " << logging.str();
+    assert(parameters_.log_options);
+    HighsLogOptions log_options_ = *(parameters_.log_options);
+    highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", logging.str().c_str());
   } else {
     output_ << logging.str();
   }
@@ -60,11 +53,22 @@ void Control::hLog(std::stringstream& logging) const {
 }
 
 std::ostream& Control::Log() const {
-  if (parameters_.highs_logging) {
-    return output_;
-  } else {
-    return output_;
+  return output_;
+}
+
+void Control::hIntervalLog(std::stringstream& logging) const {
+  if (parameters_.print_interval >= 0.0 &&
+      interval_.Elapsed() >= parameters_.print_interval) {
+    interval_.Reset();
+    if (parameters_.highs_logging) {
+      assert(parameters_.log_options);
+      HighsLogOptions log_options_ = *(parameters_.log_options);
+      highsLogUser(log_options_, HighsLogType::kInfo, "HiGHS: %s", logging.str().c_str());
+    } else {
+      output_ << logging.str();
+    }
   }
+  logging.str(std::string());
 }
 
 std::ostream& Control::IntervalLog() const {
