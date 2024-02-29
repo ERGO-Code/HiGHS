@@ -31,8 +31,9 @@ Int Control::InterruptCheck(const Int ipm_iteration_count) const {
 }
 
 void Control::hLog(std::string str) const {
-  HighsLogOptions log_options_ = *(parameters_.log_options);
   if (parameters_.highs_logging) {
+    assert(parameters_.log_options);
+    HighsLogOptions log_options_ = *(parameters_.log_options);
     printf("\nControl::hLog output_flag          %d\n", int(*(log_options_.output_flag)));
     printf("Control::hLog log_to_console       %d\n", int(*(log_options_.log_to_console)));
     printf("Control::hLog log_dev_level        %d\n", int(*(log_options_.log_dev_level)));

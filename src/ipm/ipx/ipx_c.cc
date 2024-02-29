@@ -43,6 +43,7 @@ struct ipx_parameters ipx_default_parameters() {
     p.centring_alpha_scaling = 0;
     p.bad_products_tolerance = 0;
     p.highs_logging = false;
+    p.log_options = nullptr;
     return p;
 }
 
