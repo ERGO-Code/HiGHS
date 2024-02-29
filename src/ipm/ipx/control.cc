@@ -52,9 +52,9 @@ void Control::hLog(std::stringstream& logging) const {
   logging.str(std::string());
 }
 
-std::ostream& Control::Log() const {
-  return output_;
-}
+  //std::ostream& Control::Log() const {
+  //  return output_;
+  //}
 
 void Control::hIntervalLog(std::stringstream& logging) const {
   if (parameters_.print_interval >= 0.0 &&

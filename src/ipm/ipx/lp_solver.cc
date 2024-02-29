@@ -110,8 +110,11 @@ Int LpSolver::Solve() {
         info_.status = IPX_STATUS_out_of_memory;
     }
     catch (const std::exception& e) {
-      control_.Log() << " internal error: " << e.what() << '\n';
-        info_.status = IPX_STATUS_internal_error;
+      std::stringstream h_logging_stream;
+      h_logging_stream.str(std::string());
+      h_logging_stream << " internal error: " << e.what() << '\n';
+      control_.hLog(h_logging_stream);
+      info_.status = IPX_STATUS_internal_error;
     }
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
@@ -648,28 +651,30 @@ void LpSolver::PrintSummary() {
                    << Textline("Status crossover:")
                    << StatusString(info_.status_crossover) << '\n';
   control_.hLog(h_logging_stream);
-    if (info_.status_ipm == IPX_STATUS_optimal ||
-        info_.status_ipm == IPX_STATUS_imprecise) {
-        control_.Log()
-            << Textline("objective value:") << sci8(info_.pobjval) << '\n'
-            << Textline("interior solution primal residual (abs/rel):")
-            << sci2(info_.abs_presidual) << " / " << sci2(info_.rel_presidual)
-            << '\n'
-            << Textline("interior solution dual residual (abs/rel):")
-            << sci2(info_.abs_dresidual) << " / " << sci2(info_.rel_dresidual)
-            << '\n'
-            << Textline("interior solution objective gap (abs/rel):")
-            << sci2(info_.pobjval-info_.dobjval) << " / "
-            << sci2(info_.rel_objgap)  << '\n';
-    }
-    if (info_.status_crossover == IPX_STATUS_optimal ||
-        info_.status_crossover == IPX_STATUS_imprecise) {
-        control_.Log()
-            << Textline("basic solution primal infeasibility:")
-            << sci2(info_.primal_infeas) << '\n'
-            << Textline("basic solution dual infeasibility:")
-            << sci2(info_.dual_infeas) << '\n';
-    }
+  if (info_.status_ipm == IPX_STATUS_optimal ||
+      info_.status_ipm == IPX_STATUS_imprecise) {
+    h_logging_stream
+      << Textline("objective value:") << sci8(info_.pobjval) << '\n'
+      << Textline("interior solution primal residual (abs/rel):")
+      << sci2(info_.abs_presidual) << " / " << sci2(info_.rel_presidual)
+      << '\n'
+      << Textline("interior solution dual residual (abs/rel):")
+      << sci2(info_.abs_dresidual) << " / " << sci2(info_.rel_dresidual)
+      << '\n'
+      << Textline("interior solution objective gap (abs/rel):")
+      << sci2(info_.pobjval-info_.dobjval) << " / "
+      << sci2(info_.rel_objgap)  << '\n';
+    control_.hLog(h_logging_stream);
+  }
+  if (info_.status_crossover == IPX_STATUS_optimal ||
+      info_.status_crossover == IPX_STATUS_imprecise) {
+    h_logging_stream
+      << Textline("basic solution primal infeasibility:")
+      << sci2(info_.primal_infeas) << '\n'
+      << Textline("basic solution dual infeasibility:")
+      << sci2(info_.dual_infeas) << '\n';
+    control_.hLog(h_logging_stream);
+  }
 }
 
 }  // namespace ipx

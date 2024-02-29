@@ -499,8 +499,10 @@ bool Basis::TightenLuPivotTol() {
         lu_->pivottol(0.9);
     else
         return false;
-    control_.Log()
-        << " LU pivot tolerance tightened to " << lu_->pivottol() << '\n';
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream << " LU pivot tolerance tightened to " << lu_->pivottol() << '\n';
+    control_.hLog(h_logging_stream);
     return true;
 }
 
