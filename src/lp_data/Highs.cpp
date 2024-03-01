@@ -2593,6 +2593,12 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
+  if (from_col > to_col) {
+    // Empty interval
+    num_col = 0;
+    num_nz = 0;
+    return HighsStatus::kOk;
+  }
   HighsIndexCollection index_collection;
   if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2608,7 +2614,12 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries <= 0) {
+    // Empty interval
+    num_col = 0;
+    num_nz = 0;
+    return HighsStatus::kOk;
+  }
   HighsIndexCollection index_collection;
   if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2696,6 +2707,12 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
+  if (from_row > to_row) {
+    // Empty interval
+    num_row = 0;
+    num_nz = 0;
+    return HighsStatus::kOk;
+  }
   HighsIndexCollection index_collection;
   if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2711,7 +2728,11 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries <= 0) {
+    num_row = 0;
+    num_nz = 0;
+    return HighsStatus::kOk;
+  }
   HighsIndexCollection index_collection;
   if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
