@@ -43,6 +43,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   ipx::LpSolver lps;
   ipx::Parameters parameters;
   if (!dev_run) parameters.display = 0;
+  parameters.highs_logging = false;
   lps.SetParameters(parameters);
 
   // Solve the LP.

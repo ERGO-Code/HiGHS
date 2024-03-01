@@ -4,6 +4,7 @@
 
 using namespace ipx;
 
+/*
 struct ipx_parameters ipx_default_parameters() {
     ipx_parameters p;
     p.display = 1;
@@ -35,8 +36,18 @@ struct ipx_parameters ipx_default_parameters() {
     p.stop_at_switch = 0;
     p.update_heuristic = 1;
     p.maxpasses = -1;
+
+    p.run_centring = 0;
+    p.max_centring_steps = 0;
+    p.centring_ratio_tolerance = 0;
+    p.centring_ratio_reduction = 0;
+    p.centring_alpha_scaling = 0;
+    p.bad_products_tolerance = 0;
+    p.highs_logging = false;
+    p.log_options = nullptr;
     return p;
 }
+*/
 
 void ipx_new(void** p_self) {
     if (p_self) {
