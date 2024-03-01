@@ -262,7 +262,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
 TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   std::string filename;
-  filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/small_mip0.mps";
 
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<HighsVarType> kIntegers{

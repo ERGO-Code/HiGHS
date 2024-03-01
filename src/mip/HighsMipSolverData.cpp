@@ -21,48 +21,87 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
-bool HighsMipSolverData::checkSolution(
-    const std::vector<double>& solution) const {
+double HighsMipSolverData::offsetObjective(const double objective) {
+  return objective + mipsolver.model_->offset_;
+}
+
+double HighsMipSolverData::transformObjective(const double objective) {
+  return objective * (int)mipsolver.orig_model_->sense_ +
+         mipsolver.model_->offset_;
+}
+
+std::string HighsMipSolverData::solutionSourceToString(
+    const int solution_source, const bool code) {
+  if (solution_source == kSolutionSourceNone) {
+    if (code) return " ";
+    return "None";
+  } else if (solution_source == kSolutionSourceBranching) {
+    if (code) return "B";
+    return "Branching";
+  } else if (solution_source == kSolutionSourceCentralRounding) {
+    if (code) return "C";
+    return "Central rounding";
+  } else if (solution_source == kSolutionSourceFeasibilityPump) {
+    if (code) return "F";
+    return "Feasibility pump";
+  } else if (solution_source == kSolutionSourceHeuristic) {
+    if (code) return "H";
+    return "Heuristic";
+  } else if (solution_source == kSolutionSourceInitial) {
+    if (code) return "I";
+    return "Initial";
+  } else if (solution_source == kSolutionSourceSubMip) {
+    if (code) return "L";
+    return "Sub-MIP";
+  } else if (solution_source == kSolutionSourceEmptyMip) {
+    if (code) return "P";
+    return "Empty MIP";
+  } else if (solution_source == kSolutionSourceRandomizedRounding) {
+    if (code) return "R";
+    return "Randomized rounding";
+  } else if (solution_source == kSolutionSourceSolveLp) {
+    if (code) return "S";
+    return "Solve LP";
+  } else if (solution_source == kSolutionSourceEvaluateNode) {
+    if (code) return "T";
+    return "Evaluate node";
+  } else if (solution_source == kSolutionSourceUnbounded) {
+    if (code) return "U";
+    return "Unbounded";
+  } else if (solution_source == kSolutionSourceOpt1) {
+    if (code) return "1";
+    return "1-opt";
+  } else if (solution_source == kSolutionSourceOpt2) {
+    if (code) return "2";
+    return "2-opt";
+  } else {
+    printf("HighsMipSolverData::solutionSourceToString: Unknown source = %d\n",
+           solution_source);
+    assert(0 == 111);
+    if (code) return "*";
+    return "None";
+  }
+}
+
+bool HighsMipSolverData::solutionColFeasible(
+    const std::vector<double>& solution, double& obj) const {
+  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
+
+  HighsCDouble cdouble_obj = 0;
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
+    cdouble_obj += mipsolver.colCost(i) * solution[i];
   }
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
-    double rowactivity = 0.0;
-
-    HighsInt start = ARstart_[i];
-    HighsInt end = ARstart_[i + 1];
-
-    for (HighsInt j = start; j != end; ++j)
-      rowactivity += solution[ARindex_[j]] * ARvalue_[j];
-
-    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
-    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
-  }
-
+  obj = double(cdouble_obj);
   return true;
 }
 
-bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
-                                     char source) {
-  if (int(solution.size()) != mipsolver.model_->num_col_) return false;
-
-  HighsCDouble obj = 0;
-
-  for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-    if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
-    if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
-    if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
-      return false;
-
-    obj += mipsolver.colCost(i) * solution[i];
-  }
-
+bool HighsMipSolverData::solutionRowFeasible(
+    const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
     double rowactivity = 0.0;
 
@@ -75,8 +114,22 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
+  return true;
+}
 
-  return addIncumbent(solution, double(obj), source);
+bool HighsMipSolverData::checkSolution(
+    const std::vector<double>& solution) const {
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  return solutionRowFeasible(solution);
+}
+
+bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
+                                     const int solution_source) {
+  double obj;
+  if (!solutionColFeasible(solution, obj)) return false;
+  if (!solutionRowFeasible(solution)) return false;
+  return assessIntegerFeasibleSolution(solution, obj, solution_source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -425,6 +478,8 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   if (mipsolver.solution_objective_ != kHighsInf) {
+    // There is already an incumbent solution, but it may not be
+    // feasible - Only if it corresponds to a user-supplied solution?
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
     // return the objective value in the transformed space
     double solobj =
@@ -453,7 +508,14 @@ void HighsMipSolverData::runSetup() {
                                  mipsolver.options_mip_->mip_rel_gap);
         nodequeue.setOptimalityLimit(optimality_limit);
       }
+    } else if (!feasible) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "HighsMipSolverData::runSetup: Incumbent has infeasiblities "
+                   "(%g, %g, %g)\n",
+                   mipsolver.bound_violation_, mipsolver.integrality_violation_,
+                   mipsolver.row_violation_);
     }
+    // MIP solution callback
     if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
         mipsolver.callback_->active[kCallbackMipSolution]) {
       assert(!mipsolver.submip);
@@ -464,9 +526,18 @@ void HighsMipSolverData::runSetup() {
           "Feasible solution");
       assert(!interrupt);
     }
+    if (feasible) {
+      // Assess this IFS, indicating that the recursion depth is 0,
+      // and that the solution is already an incumbent
+      const bool already_incumbent = true;
+      assessIntegerFeasibleSolution(incumbent, solobj, kSolutionSourceInitial,
+                                    already_incumbent);
+    }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
+  if (mipsolver.numCol() == 0)
+    assessIntegerFeasibleSolution(std::vector<double>(), 0,
+                                  kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -673,9 +744,20 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-double HighsMipSolverData::transformNewIntegerFeasibleSolution(
-    const std::vector<double>& sol,
-    const bool possibly_store_as_new_incumbent) {
+double HighsMipSolverData::transformAndPossiblyStoreSolution(
+    const std::vector<double>& sol, const bool ideally_store_as_solution) {
+  // Transforms a solution from the MIP solver into the space of the
+  // original problem and checks for feasibility
+  //
+  // If the transformed solution is feasible, then it is stored as the
+  // potential MIP solution and the re-computed objective in the space
+  // of the MIP solver is returned to be used for bounding
+  //
+  // If the transformed solution is not feasible, it may be stored if
+  // there is no potential MIP solution, or if the potential MIP
+  // solution is not feasible. A value of kHighsInf is returned so
+  // that the infeasible solution is not used for bounding
+  //
   HighsSolution solution;
   solution.col_value = sol;
   solution.value_valid = true;
@@ -808,35 +890,33 @@ try_again:
       goto try_again;
     }
   }
-
   // Get a double precision version of the objective function value of
   // the MIP being solved
   const double mipsolver_objective_value =
       double(mipsolver_quad_precision_objective_value);
-  // Possible MIP solution callback
-  if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
-      mipsolver.callback_->active[kCallbackMipSolution]) {
-    mipsolver.callback_->clearHighsCallbackDataOut();
-    mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
-    const bool interrupt = interruptFromCallbackWithData(
-        kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
-    assert(!interrupt);
+  if (feasible) {
+    // MIP solution callback
+    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+        mipsolver.callback_->active[kCallbackMipSolution]) {
+      mipsolver.callback_->clearHighsCallbackDataOut();
+      mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
+      const bool interrupt = interruptFromCallbackWithData(
+          kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
+      assert(!interrupt);
+    }
   }
 
-  if (possibly_store_as_new_incumbent) {
-    // Store the solution as incumbent in the original space if there
-    // is no solution or if it is feasible
+  if (ideally_store_as_solution) {
+    // Store the solution as incumbent in the original space if it is
+    // feasible, or if there is no current IFS
     if (feasible) {
-      // if (!allow_try_again)
-      //   printf("repaired solution with value %g\n",
-      //   mipsolver_objective_value);
-      // store
       mipsolver.row_violation_ = row_violation_;
       mipsolver.bound_violation_ = bound_violation_;
       mipsolver.integrality_violation_ = integrality_violation_;
       mipsolver.solution_ = std::move(solution.col_value);
       mipsolver.solution_objective_ = mipsolver_objective_value;
     } else {
+      // Identify whether there is a current IFS
       bool currentFeasible =
           mipsolver.solution_objective_ != kHighsInf &&
           mipsolver.bound_violation_ <=
@@ -892,20 +972,28 @@ try_again:
       }
 
       if (!currentFeasible) {
-        // if the current incumbent is non existent or also not feasible we
-        // still store the new one
+        // If the current incumbent is non existent or (also) not
+        // feasible, still store the new one
         mipsolver.row_violation_ = row_violation_;
         mipsolver.bound_violation_ = bound_violation_;
         mipsolver.integrality_violation_ = integrality_violation_;
         mipsolver.solution_ = std::move(solution.col_value);
         mipsolver.solution_objective_ = mipsolver_objective_value;
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "HighsMipSolverData::runSetup: Incumbent has "
+                     "infeasiblities (%g, %g, %g)\n",
+                     mipsolver.bound_violation_,
+                     mipsolver.integrality_violation_,
+                     mipsolver.row_violation_);
       }
 
-      // return infinity so that it is not used for bounding
+      // Return infinity so that it is not used for bounding
       return kHighsInf;
     }
-  }
-  // return the objective value in the transformed space
+  }  // ideally_store_as_solution = true
+  //
+  // Return the objective value in the transformed space used within
+  // the MIP solver: problem as minimization and no offset
   if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
     return -double(mipsolver_quad_precision_objective_value +
                    mipsolver.model_->offset_);
@@ -1013,7 +1101,7 @@ void HighsMipSolverData::performRestart() {
 
     if (mipsolver.modelstatus_ == HighsModelStatus::kOptimal) {
       mipsolver.mipdata_->upper_bound = 0;
-      mipsolver.mipdata_->transformNewIntegerFeasibleSolution(
+      mipsolver.mipdata_->transformAndPossiblyStoreSolution(
           std::vector<double>());
     } else
       upper_bound -= mipsolver.model_->offset_;
@@ -1065,33 +1153,565 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
   return incumbent;
 }
 
-bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
-                                      double solobj, char source) {
+bool HighsMipSolverData::assessIntegerFeasibleSolution(
+    const std::vector<double>& sol, double solobj, const int solution_source,
+    const bool already_incumbent) {
+  // Called when (previously) addIncumbent was called, but introduced
+  // so that the 1-opt and 2-opt heuristics can be applied. Hence it
+  // can be assumed that the solution is feasible in the presolved
+  // space.
+  //
+  // Return value is only used in HighsMipSolverData::trySolution and
+  // HighsMipSolverData::evaluateRootLp
+  //
+  // If sol is already the incumbent - in which case
+  // assessIntegerFeasibleSolution is just being used to apply the
+  // 1-opt and 2-opt heuristics - then it can be assumed to be
+  // feasible, otherwise (try to) add it as the incumbent
+  bool is_improving = false;
+  // Need to reproduce the return value of addIncumbent
+  const bool original_solution_feasible =
+      already_incumbent
+          ? true
+          : addIncumbent(is_improving, sol, solobj, solution_source);
+
+  const bool report_upper_bound = false;
+  if (report_upper_bound) {
+    printf(
+        "\nUpper_bound is now T(%g) = %19.12g; solution objective is T(%g) = "
+        "%19.12g\n",
+        upper_bound, offsetObjective(upper_bound), solobj,
+        offsetObjective(solobj));
+  }
+  //
+  // Solution is not improving, so return
+  if (!is_improving) return original_solution_feasible;
+
+  // If neither heuristic option is set, then return
+  if (!mipsolver.options_mip_->mip_opt_1_heuristic &&
+      !mipsolver.options_mip_->mip_opt_2_heuristic)
+    return original_solution_feasible;
+
+  // One or other of the heuristics will be used, so set up a
+  // reference to the LP, and compute the row activities
+  const HighsLp& lp = *mipsolver.model_;
+  const HighsInt num_integer_col = integer_cols.size();
+  std::vector<double> row_value;
+  lp.a_matrix_.product(row_value, sol);
+
+  std::vector<double> local_sol = sol;
+  double local_solobj = solobj;
+  if (mipsolver.options_mip_->mip_opt_1_heuristic) {
+    oneOptImprovement(local_sol, local_solobj);
+  }
+  if (mipsolver.options_mip_->mip_opt_2_heuristic) {
+    twoOptImprovement(local_sol, local_solobj);
+  }
+
+  return original_solution_feasible;
+}
+
+bool greater(const std::pair<int, int>& a, const std::pair<int, int>& b) {
+  return a.second > b.second;
+}
+
+bool HighsMipSolverData::oneOptImprovement(std::vector<double>& sol,
+                                           double& solobj) {
+  bool one_opt_finds_improvement = false;
+  assert(mipsolver.options_mip_->mip_opt_1_heuristic);
+  if (!mipsolver.options_mip_->mip_opt_1_heuristic)
+    return one_opt_finds_improvement;
+  bool is_improving = false;
+  double initial_solobj = solobj;
+  const HighsLp& lp = *mipsolver.model_;
+  const HighsInt num_integer_col = integer_cols.size();
+  std::vector<double> row_value;
+  lp.a_matrix_.productQuad(row_value, sol);
+
+  const double kAbsAttractiveDeltaValue = 0.5;
+  // Form a set of candidate columns from those that can move to reduce the
+  // objective
+  std::vector<std::pair<double, HighsInt>> candidate_col;
+  for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+    HighsInt iCol = integer_cols[integerCol];
+    const double lower = lp.col_lower_[iCol];
+    const double cost = lp.col_cost_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    const double value = sol[iCol];
+    double delta_value = 0;
+    // Use 0.5 as the tolerance for attractive |delta_value| since
+    // it's possible for |delta_value| to be just less than 1
+    if (cost > 0) {
+      // Positive cost, so only of interest if value can be reduced
+      delta_value = lower - value;
+      bool attractive_col = delta_value <= -kAbsAttractiveDeltaValue;
+      if (!attractive_col) continue;
+    } else if (cost < 0) {
+      // Negative cost, so only of interest if value can be increased
+      delta_value = upper - value;
+      bool attractive_col = delta_value >= kAbsAttractiveDeltaValue;
+      if (!attractive_col) continue;
+    } else {
+      continue;  // Zero cost, so no interest
+    }
+    // Column is attractive
+    candidate_col.push_back(std::make_pair(std::fabs(cost), iCol));
+  }
+  const HighsInt num_candidate_col = HighsInt(candidate_col.size());
+  if (num_candidate_col == 0) return one_opt_finds_improvement;
+  // There are immediately attractive columns, so sort them
+  std::sort(candidate_col.begin(), candidate_col.end(), greater);
+
+  // Keep track of integer variables that are attractive to modify due
+  // to the objective being reduced if they are moved from their
+  // current value (and are off the bound that they would be moving
+  // to)
+  std::vector<bool> attractive;
+  attractive.assign(num_candidate_col, true);
+  // Possibly loop until no improvement is possible
+  HighsInt pass_num = 0;
+  for (;;) {
+    bool improvement_in_pass = false;
+    for (HighsInt candidateCol = 0; candidateCol < num_candidate_col;
+         candidateCol++) {
+      if (!attractive[candidateCol]) continue;
+      HighsInt iCol = candidate_col[candidateCol].second;
+      const HighsInt check_candidateCol = -7;
+      const HighsInt check_iCol = 49;
+      if (iCol == check_iCol && candidateCol == check_candidateCol) {
+        printf("candidateCol = %d; iCol = %d\n", int(check_candidateCol),
+               int(check_iCol));
+      }
+      // If this variable is attractive to move, perform a line
+      // search to see how far it can be moved
+      const double lower = lp.col_lower_[iCol];
+      const double cost = lp.col_cost_[iCol];
+      const double upper = lp.col_upper_[iCol];
+      const double value = sol[iCol];
+      double delta_value = 0;
+      if (cost > 0) {
+        // Positive cost, so only of interest if value can be reduced
+        delta_value = lower - value;
+        bool attractive_col = delta_value <= -kAbsAttractiveDeltaValue;
+        assert(attractive_col);
+        if (!attractive_col) attractive[candidateCol] = false;
+      } else if (cost < 0) {
+        // Negative cost, so only of interest if value can be increased
+        delta_value = upper - value;
+        bool attractive_col = delta_value >= kAbsAttractiveDeltaValue;
+        assert(attractive_col);
+        if (!attractive_col) attractive[candidateCol] = false;
+      } else {
+        bool attractive_col = false;
+        assert(attractive_col);  // Zero cost, so no interest
+        attractive[candidateCol] = false;
+      }
+      if (!attractive[candidateCol]) continue;
+      //    printf("Consider change of %g in variable %d\n", delta_value,
+      //    int(iCol));
+      bool unattractive_delta_value = false;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt iRow = lp.a_matrix_.index_[iEl];
+        if (iRow == -48) {
+          printf("iRow == 48\n");
+        }
+        double matrix_value = lp.a_matrix_.value_[iEl];
+        assert(delta_value);
+        double row_delta = delta_value * matrix_value;
+        // Record whether the variable is inreasing or decreasing,
+        // so that attractiveness can be identified
+        const bool increasing_integer_variable = delta_value > 0;
+        // If delta_value leads to infeasiblility in this row, reduce
+        // its magnitude as little as possible so that feasibility is
+        // retained
+        const double row_lower = lp.row_lower_[iRow];
+        const double row_upper = lp.row_upper_[iRow];
+        const double activity = row_value[iRow];
+        if (row_delta > 0) {
+          // Row activity increasing, so see whether upper bound is exceeded
+          const double lhs = activity + row_delta;
+          const double rhs = row_upper;
+          if (activity + row_delta > row_upper) {
+            delta_value = (row_upper - activity) / matrix_value;
+            double new_activity = activity + matrix_value * delta_value;
+            double residual = new_activity - row_upper;
+            const bool residual_ok = residual <= feastol;
+            if (!residual_ok) {
+              printf(
+                  "Updated delta_value yields residual = %g > %g = feastol\n",
+                  residual, feastol);
+            }
+            assert(residual_ok);
+          }
+        } else {
+          // Row activity decreasing, so see whether lower bound is exceeded
+          const double lhs = activity + row_delta;
+          const double rhs = row_lower;
+          if (activity + row_delta < row_lower) {
+            delta_value = (row_lower - activity) / matrix_value;
+            double new_activity = activity + matrix_value * delta_value;
+            double residual = row_lower - new_activity;
+            const bool residual_ok = residual <= feastol;
+            if (!residual_ok) {
+              printf(
+                  "Updated delta_value yields residual = %g > %g = feastol\n",
+                  residual, feastol);
+            }
+            assert(residual_ok);
+          }
+        }
+        // Changing the integer variable is unattractive if
+        // |delta_value| is too small. However, the integer variable
+        // remains attractive, as changes in other variables may
+        // lead to a |delta_value| being larger later.
+        //
+        // It is possible for delta_value to change sign by
+        // feastol/matrix_value, so just do a sanity check against a
+        // unit sign change.
+        if (increasing_integer_variable) {
+          unattractive_delta_value = delta_value < 1 - feastol;
+          assert(delta_value > -1);
+        } else {
+          unattractive_delta_value = delta_value > -1 + feastol;
+          assert(delta_value < 1);
+        }
+        if (unattractive_delta_value) break;
+      }
+      if (unattractive_delta_value) continue;
+
+      // Could pick up on MIP being unbounded!
+      double abs_delta_value = std::fabs(delta_value);
+      if (abs_delta_value >= kHighsInf) {
+        //	  highsLogUser(mipsolver.options_mip_->log_options,
+        // HighsLogType::kError,
+        printf("1-opt heuristic detects unboundedness: ignoring this column\n");
+        continue;
+      }
+      assert(abs_delta_value > 1 - feastol);
+
+      // Assess whether an integer change has taken place
+      const double old_integer = std::floor(value + 0.5);
+      // Consider the new value resulting from a change delta_value
+      double new_col_value = value + delta_value;
+      // Compute the integer value corresponding to new_col_value to
+      // check that an integer change has taken place
+      double new_integer = kHighsInf;
+      if (std::abs(new_col_value - std::floor(new_col_value + 0.5)) <=
+          feastol) {
+        // new_col_value is close to being integer
+        new_integer = std::floor(new_col_value + 0.5);
+      } else {
+        // new_col_value is not close to close to being integer, so
+        // round inwards to the nearest integer, modifying delta_value
+        // accordingly
+        if (delta_value > 0) {
+          // When increasing, round down to get new_integer
+          new_col_value = std::floor(new_col_value);
+          delta_value = new_col_value - value;
+          assert(delta_value > 0);
+        } else {
+          // When decreasing, round up to get new_integer
+          new_col_value = std::ceil(new_col_value);
+          delta_value = new_col_value - value;
+          assert(delta_value < 0);
+        }
+        new_integer = new_col_value;
+      }
+      assert(new_integer != kHighsInf);
+      const bool integer_change = delta_value > 0 ? new_integer > old_integer
+                                                  : new_integer < old_integer;
+      if (!integer_change) {
+        printf("1-opt: line search fail for integer column %d; iCol = %d\n",
+               int(candidateCol), int(iCol));
+        assert(integer_change);
+        continue;
+      }
+
+      // Solution is feasible with this integer variable changed by
+      // delta_value
+      //
+      // Successful if new objective improves on the upper bound
+
+      solobj += cost * delta_value;
+      const bool report_success = false;  // true;
+      if (report_success) {
+        printf(
+            "1-opt: submip=%d; col %4d/%4d: "
+            "change %9.2g in %4d [%9.2g, %9.2g, %9.2g]: "
+            "%19.12g = T(%9.2g) = T(solobj) < T(upper_bound) = "
+            "%19.12g: diff = %9.2g\n",
+            mipsolver.submip, int(candidateCol), int(num_candidate_col),
+            delta_value, int(iCol), lower, value, upper,
+            offsetObjective(solobj), solobj, offsetObjective(upper_bound),
+            upper_bound - solobj);
+        fflush(stdout);
+      }
+      //	assert(111==456);
+      sol[iCol] += delta_value;
+      assert(solobj < upper_bound);
+      assert(solobj < initial_solobj);
+
+      const bool check_row_feasibility = false;  // true;
+      if (check_row_feasibility) {
+        const HighsInt check_row = -1;
+        for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+          const double row_lower = lp.row_lower_[iRow];
+          const double row_upper = lp.row_upper_[iRow];
+          const double activity = row_value[iRow];
+          double residual =
+              std::max(activity - row_upper, row_lower - activity);
+          bool local_error =
+              activity - row_upper > feastol || activity - row_lower < -feastol;
+          if (local_error || iRow == check_row)
+            printf("Row %d [%g, %g, %g] has residual %g\n", int(iRow),
+                   row_lower, activity, row_upper, residual);
+        }
+      }
+
+      // Update the row activities
+      HighsCDouble c_delta_value = delta_value;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsCDouble c_row_value = row_value[lp.a_matrix_.index_[iEl]];
+        HighsCDouble c_matrix_value = lp.a_matrix_.value_[iEl];
+        c_row_value += c_delta_value * c_matrix_value;
+        row_value[lp.a_matrix_.index_[iEl]] = double(c_row_value);
+      }
+
+      // Determine whether this column is now unattractive
+      if (delta_value < 0) {
+        assert(cost > 0);
+        delta_value = (lower - sol[iCol]) - feastol;
+        bool attractive_col = delta_value <= -1;
+        if (!attractive_col) attractive[candidateCol] = false;
+      } else {
+        assert(cost < 0);
+        delta_value = (upper - sol[iCol]) + feastol;
+        bool attractive_col = delta_value >= 1;
+        if (!attractive_col) attractive[candidateCol] = false;
+      }
+
+      const bool check_step = true;
+      if (check_step) {
+        bool error = false;
+        if (delta_value) {
+          error = sol[iCol] - upper > feastol;
+        } else {
+          error = sol[iCol] - lower < feastol;
+        }
+        if (error) {
+          double residual = std::max(sol[iCol] - upper, lower - sol[iCol]);
+          printf("Col %d [%g, %g, %g] has residual %g\n", int(iCol), lower,
+                 sol[iCol], upper, residual);
+        }
+        assert(!error);
+        for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+             iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+          HighsInt iRow = lp.a_matrix_.index_[iEl];
+          const double row_lower = lp.row_lower_[iRow];
+          const double row_upper = lp.row_upper_[iRow];
+          const double activity = row_value[iRow];
+          double residual =
+              std::max(activity - row_upper, row_lower - activity);
+          bool local_error =
+              activity - row_upper > feastol || activity - row_lower < -feastol;
+          if (local_error) {
+            printf("Row %d [%g, %g, %g] has residual %g\n", int(iRow),
+                   row_lower, activity, row_upper, residual);
+          }
+          error = local_error || error;
+          assert(!error);
+        }
+        if (error) {
+          printf("1-opt: line search fail for integer column %d\n",
+                 int(candidateCol));
+          attractive[candidateCol] = false;
+          continue;
+        }
+      }
+      // Use addIncumbent to make ultimate decision on whether the new
+      // solution is feasible in the original space and improves on
+      // the upper bound
+      is_improving = false;
+      const bool solution_feasible =
+          addIncumbent(is_improving, sol, solobj, kSolutionSourceOpt1, false);
+      if (!solution_feasible) {
+        printf("1-opt: transformed feasibility lost for integer column %d\n",
+               int(candidateCol));
+      } else if (!is_improving) {
+        printf(
+            "1-opt: improvement not recognised in addIncumbent for integer "
+            "column %d\n",
+            int(candidateCol));
+      } else {
+        improvement_in_pass = true;
+      }
+    }  // Loop over integer columns
+    pass_num++;
+    // Record whether 1-opt has found an improvement
+    if (improvement_in_pass) one_opt_finds_improvement = true;
+    // Aggressive setting repeats the heuristic until there is no
+    // improvement
+    if (mipsolver.options_mip_->mip_opt_1_heuristic == 1 ||
+        !improvement_in_pass)
+      break;
+  }  // Infinite loop over heuristic
+  if (one_opt_finds_improvement) printDisplayLine(kSolutionSourceOpt1);
+  return one_opt_finds_improvement;
+}
+
+bool HighsMipSolverData::twoOptImprovement(std::vector<double>& sol,
+                                           double& solobj) {
+  bool two_opt_finds_improvement = false;
+  assert(mipsolver.options_mip_->mip_opt_2_heuristic);
+  if (!mipsolver.options_mip_->mip_opt_2_heuristic)
+    return two_opt_finds_improvement;
+  bool is_improving = false;
+  double initial_solobj = solobj;
+  const HighsLp& lp = *mipsolver.model_;
+  const HighsInt num_integer_col = integer_cols.size();
+  std::vector<double> row_value;
+  lp.a_matrix_.product(row_value, sol);
+  // Consider 2-opt heuristic on solution
+  //
+  // Prepare sets of columns that are integer with
+  // negative/non-negative objective change if the value is pushed
+  // up or down
+  std::vector<HighsInt> up_negative_objective_change;
+  std::vector<HighsInt> up_non_negative_objective_change;
+  std::vector<HighsInt> down_non_negative_objective_change;
+  std::vector<HighsInt> down_negative_objective_change;
+  printf("  Ix        Cost       Lower       Value        Upper\n");
+  for (HighsInt integerCol = 0; integerCol < num_integer_col; integerCol++) {
+    HighsInt iCol = integer_cols[integerCol];
+    printf("%4d %11.6g %11.6g %11.6g  %11.6g\n", iCol, lp.col_cost_[iCol],
+           lp.col_lower_[iCol], sol[iCol], lp.col_upper_[iCol]);
+    if (lp.col_cost_[iCol] > 0) {
+      // Positive cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+        // Negative cost change since value can be reduced
+        down_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+        // Non-negative cost change since value can be increased
+        up_non_negative_objective_change.push_back(iCol);
+      }
+    } else if (lp.col_cost_[iCol] < 0) {
+      // Negative cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+        // Non-negative cost change since value can be reduced
+        down_non_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+        // Negative cost change since value can be increased
+        up_negative_objective_change.push_back(iCol);
+      }
+    } else {
+      // Zero cost, so...
+      if (std::floor(sol[iCol] - 0.5) >= lp.col_lower_[iCol]) {
+        // Non-negative cost change since value can be reduced
+        down_non_negative_objective_change.push_back(iCol);
+      } else if (std::ceil(sol[iCol] + 0.5) <= lp.col_upper_[iCol]) {
+        // Non-negative cost change since value can be increased
+        up_non_negative_objective_change.push_back(iCol);
+      }
+    }
+  }
+  printf("\nup_negative_objective_change\n");
+  for (HighsInt iX = 0; iX < HighsInt(up_negative_objective_change.size());
+       iX++)
+    printf(" %d", up_negative_objective_change[iX]);
+  printf("\n");
+  printf("\nup_non_negative_objective_change\n");
+  for (HighsInt iX = 0; iX < HighsInt(up_non_negative_objective_change.size());
+       iX++)
+    printf(" %d", up_non_negative_objective_change[iX]);
+  printf("\n");
+  printf("\ndown_non_negative_objective_change\n");
+  for (HighsInt iX = 0;
+       iX < HighsInt(down_non_negative_objective_change.size()); iX++)
+    printf(" %d", down_non_negative_objective_change[iX]);
+  printf("\n");
+  printf("\ndown_negative_objective_change\n");
+  for (HighsInt iX = 0; iX < HighsInt(down_negative_objective_change.size());
+       iX++)
+    printf(" %d", down_negative_objective_change[iX]);
+  printf("\n");
+
+  // For all the entries of upnegative_objective_change
+
+  assert(111 == 444);
+  return two_opt_finds_improvement;
+}
+
+bool HighsMipSolverData::addIncumbent(bool& is_improving,
+                                      const std::vector<double>& sol,
+                                      double solobj, const int solution_source,
+                                      const bool print_display_line) {
+  // addIncumbent returns true if (solobj < upper_bound) and
+  // incumbent.empty() are both false, so cannot be used to determine
+  // whether sol is an improving solution
+  //
+  // addIncumbent should only be called if the solution is feasible in
+  // the presolved space, and it returns true unless the solution is
+  // improving and found not to be feasible in the original space
+  //
+  // In places where feasibility cannot be assumed trySolution should
+  // be used
+  //
+  // The check for feasibility in the original space (performed in
+  // transformAndPossiblyStoreSolution) is done if the solution is
+  // improving the current upper bound, since it may be returned to
+  // the user. Hence, if this check fails, addIncumbent returns false
+  //
+  // addIncumbent also provides a convenient location for most
+  // ocurrences of the MIP integer solution callback, and this
+  // requires the transformed solution whether or not the integer
+  // solution is improving. Hence the value ideally_store_as_solution
+  // is set to indicate whether or not
+  // transformAndPossiblyStoreSolution should store the solution in
+  // the original space as a possible optimal solution, or just
+  // execute the callback.
+
+  is_improving = false;
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
            ? mipsolver.callback_->active[kCallbackMipSolution]
            : false);
+  //
   // Determine whether the potential new incumbent should be
   // transformed
   //
-  // Happens if solobj improves on the upper bound or the MIP solution
-  // callback is active
-  const bool possibly_store_as_new_incumbent = solobj < upper_bound;
+  // Happens if solobj improves on the upper bound - so should
+  // (ideally) be stored as the potential MIP solution - or if the MIP
+  // solution callback is active
+  //
+  // "Ideally" in the sense that if the solution corresponds to a
+  // feasible solution in the original space, then that solution is
+  // stored as the potential MIP solution
+  //
+  const bool ideally_store_as_solution = solobj < upper_bound;
   const bool get_transformed_solution =
-      possibly_store_as_new_incumbent || execute_mip_solution_callback;
-  // Get the transformed objective and solution if required
+      ideally_store_as_solution || execute_mip_solution_callback;
+  //
+  // Transform the solution, and check feasibility; possibly store as
+  // the potential MIP solution; return the re-computed objective
+  // value, or kHighsInf if the transformed solution is not feasible
   const double transformed_solobj =
-      get_transformed_solution ? transformNewIntegerFeasibleSolution(
-                                     sol, possibly_store_as_new_incumbent)
-                               : 0;
+      get_transformed_solution
+          ? transformAndPossiblyStoreSolution(sol, ideally_store_as_solution)
+          : 0;
 
-  if (possibly_store_as_new_incumbent) {
-    // #1463 use pre-computed transformed_solobj
+  if (ideally_store_as_solution) {
+    // Consider whether to use the solution as a new incumbent
+    //
+    // As of #1463, use pre-computed transformed_solobj
     solobj = transformed_solobj;
-    //    solobj = transformNewIntegerFeasibleSolution(sol);
-
     if (solobj >= upper_bound) return false;
+    // Solution corresponds to a feasible point for the original MIP,
+    // and provides a new primal bound, so store it as the new
+    // incumbent
+    is_improving = true;
     upper_bound = solobj;
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
@@ -1108,23 +1728,37 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       domain.propagate();
       if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
 
+      // Two calls to printDisplayLine added for completeness,
+      // ensuring that when the root node has an integer solution, a
+      // logging line is issued
+
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+        if (print_display_line)
+          printDisplayLine(solution_source);  // Added for completeness
         return true;
       }
       cliquetable.extractObjCliques(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+        if (print_display_line)
+          printDisplayLine(solution_source);  // Added for completeness
         return true;
       }
       pruned_treeweight += nodequeue.performBounding(upper_limit);
-      printDisplayLine(source);
+      if (print_display_line) printDisplayLine(solution_source);
     }
-  } else if (incumbent.empty())
+  } else if (incumbent.empty()) {
     incumbent = sol;
-
+    printf(
+        "addIncumbent: For source = %c, "
+        "incumbent.empty() "
+        "with solobj = T(%g) = %19.12g and upper_bound = T(%g) = %19.12g\n",
+        solution_source, solobj, offsetObjective(solobj), upper_bound,
+        offsetObjective(upper_bound));
+  }
   return true;
 }
 
@@ -1185,7 +1819,37 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printDisplayLine(char first) {
+void HighsMipSolverData::printSolutionSourceKey() {
+  std::stringstream ss;
+  int half_list = kSolutionSourceCount / 2;
+  ss.str(std::string());
+  for (int k = 0; k < half_list; k++) {
+    if (k == 0) {
+      ss << "\nSrc: ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+
+  ss.str(std::string());
+  for (int k = half_list; k < kSolutionSourceCount; k++) {
+    if (k == half_list) {
+      ss << "     ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+}
+
+void HighsMipSolverData::printDisplayLine(const int solution_source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1200,17 +1864,18 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (first == ' ' &&
+  if (solution_source == kSolutionSourceNone &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
 
   if (num_disp_lines % 20 == 0) {
+    if (num_disp_lines == 0) printSolutionSourceKey();
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
-          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
+	"\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
+          "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
         // clang-format on
     );
 
@@ -1268,12 +1933,13 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap_string.data(),
-        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
   } else {
     std::array<char, 22> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1289,10 +1955,11 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   }
@@ -1384,8 +2051,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
-          addIncumbent(lp.getLpSolver().getSolution().col_value,
-                       lp.getObjective(), 'T')) {
+          assessIntegerFeasibleSolution(
+              lp.getLpSolver().getSolution().col_value, lp.getObjective(),
+              kSolutionSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;
         pruned_treeweight = 1.0;
@@ -1705,6 +2373,11 @@ restart:
 
       printDisplayLine();
     }
+    if (checkLimits()) return;
+
+    // --->
+    // Try trivial heuristics
+    // <---
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
 

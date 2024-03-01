@@ -33,6 +33,25 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
+enum MipSolutionSource : int {
+  kSolutionSourceNone = -1,
+  kSolutionSourceMin = kSolutionSourceNone,
+  kSolutionSourceBranching,
+  kSolutionSourceCentralRounding,
+  kSolutionSourceFeasibilityPump,
+  kSolutionSourceHeuristic,
+  kSolutionSourceInitial,
+  kSolutionSourceSubMip,
+  kSolutionSourceEmptyMip,
+  kSolutionSourceRandomizedRounding,
+  kSolutionSourceSolveLp,
+  kSolutionSourceEvaluateNode,
+  kSolutionSourceUnbounded,
+  kSolutionSourceOpt1,
+  kSolutionSourceOpt2,
+  kSolutionSourceCount
+};
+
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;
@@ -160,22 +179,40 @@ struct HighsMipSolverData {
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit);
   void runSetup();
-  double transformNewIntegerFeasibleSolution(
+  double transformAndPossiblyStoreSolution(
       const std::vector<double>& sol,
-      const bool possibly_store_as_new_incumbent = true);
+      const bool ideally_store_as_solution = true);
   double percentageInactiveIntegers() const;
   void performRestart();
+
+  double offsetObjective(const double objective);
+  double transformObjective(const double objective);
+  std::string solutionSourceToString(const int solution_source,
+                                     const bool code = true);
+
+  bool solutionColFeasible(const std::vector<double>& solution,
+                           double& obj) const;
+  bool solutionRowFeasible(const std::vector<double>& solution) const;
   bool checkSolution(const std::vector<double>& solution) const;
-  bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool trySolution(const std::vector<double>& solution,
+                   const int solution_source);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
-  bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
+  bool assessIntegerFeasibleSolution(const std::vector<double>& sol,
+                                     double solobj, const int solution_source,
+                                     const bool already_incumbent = false);
+  bool addIncumbent(bool& is_improving, const std::vector<double>& sol,
+                    double solobj, const int solution_source,
+                    const bool print_display_line = true);
+  bool oneOptImprovement(std::vector<double>& sol, double& solobj);
+  bool twoOptImprovement(std::vector<double>& sol, double& solobj);
 
   const std::vector<double>& getSolution() const;
 
-  void printDisplayLine(char first = ' ');
+  void printSolutionSourceKey();
+  void printDisplayLine(const int solution_source = kSolutionSourceNone);
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
