@@ -1442,6 +1442,8 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
 }
 
 bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
+  mipsolver.mipdata_->debugReportDimensions(
+      "HighsLpRelaxation::addModelConstraints(): On entry");
   HighsInt num_row = numRows();
   HighsInt num_model_row = getNumModelRows();
   const HighsInt num_cut = num_row - num_model_row;
@@ -1455,6 +1457,7 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
       "HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = "
       "%d; num_new_constraints = %d\n",
       int(num_row), int(num_model_row), int(num_new_constraints));
+  debugReport("HighsLpRelaxation::addModelConstraints");
   // Make space in lprows for the new model constraints and define new
   // model row entries
   lprows.resize(num_row + num_new_constraints);
@@ -1466,28 +1469,38 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   // Extract the cuts from the lpsolver model
   HighsInt get_num_row = 0;
   HighsInt get_num_nz = 0;
-  lpsolver.getRows(num_model_row, num_row, get_num_row, nullptr, nullptr,
-                   get_num_nz, nullptr, nullptr, nullptr);
+  bool success = lpsolver.getRows(num_model_row, num_row - 1, get_num_row,
+                                  nullptr, nullptr, get_num_nz, nullptr,
+                                  nullptr, nullptr) == HighsStatus::kOk;
+  assert(success);
+  if (!success) return false;
   assert(get_num_row == num_cut);
   std::vector<double> get_lower(num_cut);
   std::vector<double> get_upper(num_cut);
   std::vector<HighsInt> get_start(num_cut + 1);
   std::vector<HighsInt> get_index(get_num_nz);
   std::vector<double> get_value(get_num_nz);
-  lpsolver.getRows(num_model_row, num_row, get_num_row, get_lower.data(),
-                   get_upper.data(), get_num_nz, get_start.data(),
-                   get_index.data(), get_value.data());
+  success = lpsolver.getRows(num_model_row, num_row - 1, get_num_row,
+                             get_lower.data(), get_upper.data(), get_num_nz,
+                             get_start.data(), get_index.data(),
+                             get_value.data()) == HighsStatus::kOk;
+  assert(success);
+  if (!success) return false;
   // Delete the lpsolver rows corresponding to cuts
-  lpsolver.deleteRows(num_model_row, num_row - 1);
+  success = lpsolver.deleteRows(num_model_row, num_row - 1) == HighsStatus::kOk;
+  assert(success);
+  if (!success) return false;
 
   // Reset stuff: TODO Make this more effcient
   status = Status::kNotSet;
   currentbasisstored = false;
   basischeckpoint.reset();
 
-  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): Before adding new model constraints");
+  mipsolver.mipdata_->debugReportDimensions(
+      "HighsLpRelaxation::addModelConstraints(): Before adding new model "
+      "constraints");
   // Add the new constraints to the lpsolver
-  bool success =
+  success =
       lpsolver.addRows(
           num_new_constraints, new_constraints.lower_.data(),
           new_constraints.upper_.data(), new_constraints.ARvalue_.size(),
@@ -1496,7 +1509,8 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   assert(success);
   if (!success) return false;
   // Add the new constraints to the model
-  appendRowsToLpVectors(mipsolver.mipdata_->presolvedModel, num_new_constraints, new_constraints.lower_, new_constraints.upper_);
+  appendRowsToLpVectors(mipsolver.mipdata_->presolvedModel, num_new_constraints,
+                        new_constraints.lower_, new_constraints.upper_);
   HighsSparseMatrix new_constraints_matrix;
   new_constraints_matrix.format_ = MatrixFormat::kRowwise;
   new_constraints_matrix.num_col_ = numCols();
@@ -1507,12 +1521,14 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   mipsolver.mipdata_->presolvedModel.a_matrix_.addRows(new_constraints_matrix);
   mipsolver.mipdata_->presolvedModel.num_row_ += num_new_constraints;
 
-  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): Before restoring cuts");
+  mipsolver.mipdata_->debugReportDimensions(
+      "HighsLpRelaxation::addModelConstraints(): Before restoring cuts");
   // Add the cuts back to the lpsolver
   success = lpsolver.addRows(get_num_row, get_lower.data(), get_upper.data(),
                              get_num_nz, get_start.data(), get_index.data(),
                              get_value.data()) == HighsStatus::kOk;
-  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): On exit");
+  mipsolver.mipdata_->debugReportDimensions(
+      "HighsLpRelaxation::addModelConstraints(): On exit");
   assert(mipsolver.mipdata_->presolvedModel.num_row_ == lpsolver.getNumRow());
   return success;
 }

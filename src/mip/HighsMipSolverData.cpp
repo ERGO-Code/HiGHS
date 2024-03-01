@@ -548,7 +548,9 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
-  debugReportDimensions("HighsMipSolverData::runSetup(): Before compute row activities and propagate all rows once");
+  debugReportDimensions(
+      "HighsMipSolverData::runSetup(): Before compute row activities and "
+      "propagate all rows once");
 
   objectiveFunction.setupCliquePartition(domain, cliquetable);
   domain.setupObjectivePropagation();
@@ -821,10 +823,10 @@ try_again:
       double(mipsolver_quad_precision_objective_value);
 
   HighsInt num_new_lazy_constraints = -numLazyConstraints;
-  if (possibly_store_as_new_incumbent) {
-    // The potential new incumbent is feasible in the original space,
-    // but check whether it generates new lazy constraints that make
-    // it infeasible
+  if (!mipsolver.submip && possibly_store_as_new_incumbent) {
+    // The potential new incumbent for the original problem is
+    // feasible in the original space, but check whether it generates
+    // new lazy constraints that make it infeasible
     feasible = feasibleWithNewLazyConstraints(
         mipsolver_objective_value, solution.col_value, row_violation_);
   }
@@ -2188,18 +2190,13 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   return false;
 }
 
-void HighsMipSolverData::runInsertRowsSetup() {
-
-}
+void HighsMipSolverData::runInsertRowsSetup() {}
 
 void HighsMipSolverData::debugReportDimensions(const std::string message) {
   if (mipsolver.submip) return;
   assert(presolvedModel.num_col_ == mipsolver.numCol());
   assert(presolvedModel.num_row_ == mipsolver.numRow());
   printf("Model (%4d, %4d) Relaxation (%4d, %4d) %s\n",
-	 int(presolvedModel.num_col_), int(presolvedModel.num_row_),
-	 int(lp.numCols()), int(lp.numRows()),
-	 message.c_str());
-
+         int(presolvedModel.num_col_), int(presolvedModel.num_row_),
+         int(lp.numCols()), int(lp.numRows()), message.c_str());
 }
-

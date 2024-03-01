@@ -471,8 +471,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   REQUIRE(avgas_highs.addCols(num_col, colCost.data(), colLower.data(),
-                              colUpper.data(), 0, NULL, NULL,
-                              NULL) == HighsStatus::kOk);
+                              colUpper.data(), 0, nullptr, nullptr,
+                              nullptr) == HighsStatus::kOk);
   REQUIRE(avgas_highs.addRows(num_row, rowLower.data(), rowUpper.data(),
                               num_row_nz, ARstart.data(), ARindex.data(),
                               ARvalue.data()) == HighsStatus::kOk);
@@ -504,8 +504,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
-                        colUpper.data(), 0, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        colUpper.data(), 0, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -599,8 +599,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
-                        colUpper.data(), 0, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        colUpper.data(), 0, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -684,8 +684,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
-                        colUpper.data(), 0, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        colUpper.data(), 0, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -765,7 +765,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Adding row vectors to model with no columns returns OK
   REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
-                        0, NULL, NULL, NULL) == HighsStatus::kOk);
+                        0, nullptr, nullptr, nullptr) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -871,8 +871,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, colCost.data(), colLower.data(),
-                        colUpper.data(), 0, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        colUpper.data(), 0, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -1077,35 +1077,60 @@ TEST_CASE("LP-modification", "[highs_data]") {
 TEST_CASE("LP-getcols", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
-  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
+  highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
   HighsInt num_cols;
   HighsInt num_nz;
   HighsInt matrix_start[2] = {-1, -1};
-  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, NULL,
-                NULL);
+  highs.getCols(0, 1, num_cols, nullptr, nullptr, nullptr, num_nz, matrix_start,
+                nullptr, nullptr);
   REQUIRE(num_cols == 2);
   REQUIRE(num_nz == 2);
   REQUIRE(matrix_start[0] == 0);
   REQUIRE(matrix_start[1] == 1);
   HighsInt matrix_indices[2] = {-1, -1};
   double matrix_values[2] = {0.0, 0.0};
-  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start,
+  highs.getCols(0, 1, num_cols, nullptr, nullptr, nullptr, num_nz, matrix_start,
                 matrix_indices, matrix_values);
   REQUIRE(matrix_indices[0] == 0);
   REQUIRE(matrix_indices[1] == 0);
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -1.0);
+  // Make sure this works for getting one column from an interval
+  if (dev_run) printf("Get one column from an interval\n");
+  highs.getCols(1, 1, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
+                nullptr, nullptr);
+  REQUIRE(num_cols == 1);
+  REQUIRE(num_nz == 1);
+  // Make sure this works for getting one column from a set
+  HighsInt set = 1;
+  if (dev_run) printf("Get one column from a set\n");
+  highs.getCols(1, &set, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
+                nullptr, nullptr);
+  REQUIRE(num_cols == 1);
+  REQUIRE(num_nz == 1);
+  // Make sure this works for getting no columns from an interval
+  if (dev_run) printf("Get no columns from an interval\n");
+  highs.getCols(1, 0, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
+                nullptr, nullptr);
+  REQUIRE(num_cols == 0);
+  REQUIRE(num_nz == 0);
+  // Make sure this works for getting no columns from a set
+  if (dev_run) printf("Get no columns from a set\n");
+  highs.getCols(0, nullptr, num_cols, nullptr, nullptr, nullptr, num_nz,
+                nullptr, nullptr, nullptr);
+  REQUIRE(num_cols == 0);
+  REQUIRE(num_nz == 0);
 }
 
 TEST_CASE("LP-getrows", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
-  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
+  highs.addCol(-1.0, 0.0, 1.0, 0, nullptr, nullptr);
   HighsInt aindex = 0;
   double avalue = 1.0;
   highs.addRow(0.0, 0.0, 1, &aindex, &avalue);
@@ -1115,19 +1140,45 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   HighsInt num_rows;
   HighsInt num_nz;
   HighsInt matrix_start[2] = {-1, -1};
-  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start, NULL, NULL);
+  highs.getRows(0, 1, num_rows, nullptr, nullptr, num_nz, matrix_start, nullptr,
+                nullptr);
   REQUIRE(num_rows == 2);
   REQUIRE(num_nz == 2);
   REQUIRE(matrix_start[0] == 0);
   REQUIRE(matrix_start[1] == 1);
   HighsInt matrix_indices[2] = {-1, -1};
   double matrix_values[2] = {0.0, 0.0};
-  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start,
+  highs.getRows(0, 1, num_rows, nullptr, nullptr, num_nz, matrix_start,
                 matrix_indices, matrix_values);
   REQUIRE(matrix_indices[0] == 0);
   REQUIRE(matrix_indices[1] == 1);
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -2.0);
+  // Make sure this works for getting one row from an interval
+  if (dev_run) printf("Get one row from an interval\n");
+  highs.getRows(1, 1, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
+                nullptr);
+  REQUIRE(num_rows == 1);
+  REQUIRE(num_nz == 1);
+  // Make sure this works for getting one row from a set
+  HighsInt set = 1;
+  if (dev_run) printf("Get one row from a set\n");
+  highs.getRows(1, &set, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
+                nullptr);
+  REQUIRE(num_rows == 1);
+  REQUIRE(num_nz == 1);
+  // Make sure this works for getting no rows from an interval
+  if (dev_run) printf("Get no rows from an interval\n");
+  highs.getRows(1, 0, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
+                nullptr);
+  REQUIRE(num_rows == 0);
+  REQUIRE(num_nz == 0);
+  // Make sure this works for getting no rows from a set
+  if (dev_run) printf("Get no rows from a set\n");
+  highs.getRows(0, nullptr, num_rows, nullptr, nullptr, num_nz, nullptr,
+                nullptr, nullptr);
+  REQUIRE(num_rows == 0);
+  REQUIRE(num_nz == 0);
 }
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
@@ -1170,13 +1221,13 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col2345_cost[2] = 4.0;
   set_col2345_cost[3] = 5.0;
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, og_col2345_cost.data(),
-                        NULL, NULL, get_num_nz, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        nullptr, nullptr, get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(highs.changeColsCost(from_col, to_col, set_col2345_cost.data()) ==
           HighsStatus::kOk);
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, get_col2345_cost.data(),
-                        NULL, NULL, get_num_nz, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        nullptr, nullptr, get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(get_num_col == set_num_col);
   for (HighsInt usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col2345_cost[usr_col] == set_col2345_cost[usr_col]);
@@ -1207,14 +1258,16 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col01234_lower[2] = 2.0;
   set_col01234_lower[3] = 3.0;
   set_col01234_lower[4] = 4.0;
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, nullptr,
                         og_col01234_lower.data(), og_col01234_upper.data(),
-                        get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
+                        get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(highs.changeColsBounds(from_col, to_col, set_col01234_lower.data(),
                                  og_col01234_upper.data()) == HighsStatus::kOk);
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, nullptr,
                         get_col01234_lower.data(), og_col01234_upper.data(),
-                        get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
+                        get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(get_num_col == set_num_col);
   for (HighsInt usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col01234_lower[usr_col] == set_col01234_lower[usr_col]);
@@ -1246,13 +1299,14 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_row56789_lower[3] = 8.0;
   set_row56789_lower[4] = 9.0;
   REQUIRE(highs.getRows(from_row, to_row, get_num_row, og_row56789_lower.data(),
-                        og_row56789_upper.data(), get_num_nz, NULL, NULL,
-                        NULL) == HighsStatus::kOk);
+                        og_row56789_upper.data(), get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(highs.changeRowsBounds(from_row, to_row, set_row56789_lower.data(),
                                  og_row56789_upper.data()) == HighsStatus::kOk);
   REQUIRE(highs.getRows(from_row, to_row, get_num_row,
                         get_row56789_lower.data(), og_row56789_upper.data(),
-                        get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
+                        get_num_nz, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
   REQUIRE(get_num_row == set_num_row);
   for (HighsInt usr_row = 0; usr_row < get_num_row; usr_row++)
     REQUIRE(get_row56789_lower[usr_row] == set_row56789_lower[usr_row]);
@@ -1686,8 +1740,9 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
     HighsInt lp1_num_nz = 0;
     return_bool = areLpRowEqual(
         lp0.num_row_, lp0.row_lower_.data(), lp0.row_upper_.data(), lp0_num_nz,
-        NULL, NULL, NULL, lp1.num_row_, lp1.row_lower_.data(),
-        lp1.row_upper_.data(), lp1_num_nz, NULL, NULL, NULL, infinite_bound);
+        nullptr, nullptr, nullptr, lp1.num_row_, lp1.row_lower_.data(),
+        lp1.row_upper_.data(), lp1_num_nz, nullptr, nullptr, nullptr,
+        infinite_bound);
   }
   return return_bool;
 }
@@ -1820,7 +1875,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   log_to_console = true;
   log_dev_level = kHighsLogDevLevelVerbose;
   log_options.output_flag = &output_flag;
-  log_options.log_stream = NULL;
+  log_options.log_stream = nullptr;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
   highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
