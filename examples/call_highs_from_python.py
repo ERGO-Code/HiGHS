@@ -14,6 +14,9 @@ inf = highspy._highs.kHighsInf
 alt_inf = h.getInfinity()
 print('highspy._highs.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
 
+# NB The callbacks are not available in
+# https://pypi.org/project/highspy/ (HiGHS v1.5.3). To use them,
+# highspy must be installed locally using (at least) HiGHS v1.6.0
 def user_interrupt_callback(
     callback_type, message, data_out, data_in, user_callback_data
 ):
