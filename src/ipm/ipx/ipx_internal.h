@@ -54,6 +54,8 @@ struct Parameters : public ipx_parameters {
     centring_ratio_reduction = 1.5;
     centring_alpha_scaling = 0.5;
     bad_products_tolerance = 3;
+    highs_logging = false;
+    log_options = nullptr;
   }
 
   Parameters(const ipx_parameters& p) : ipx_parameters(p) {}

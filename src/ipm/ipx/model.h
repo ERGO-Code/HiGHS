@@ -263,11 +263,12 @@ private:
     // more than 1000 dense columns, then no columns are classified as dense.
     void FindDenseColumns();
 
-    // Prints the coefficient ranges of input data to control.Log(). Must be
-    // called after CopyInput() and before ScaleModel().
+    // Prints the coefficient ranges of input data via
+    // control.hLog(). Must be called after CopyInput() and before
+    // ScaleModel().
     void PrintCoefficientRange(const Control& control) const;
 
-    // Prints preprocessing operations to control.Log().
+    // Prints preprocessing operations via control.hLog().
     void PrintPreprocessingLog(const Control& control) const;
 
     // Applies the operations from ScaleModel() to a primal-dual point.
