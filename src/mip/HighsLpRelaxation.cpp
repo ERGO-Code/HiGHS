@@ -1529,6 +1529,6 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
                              get_value.data()) == HighsStatus::kOk;
   mipsolver.mipdata_->debugReportDimensions(
       "HighsLpRelaxation::addModelConstraints(): On exit");
-  assert(mipsolver.mipdata_->presolvedModel.num_row_ == lpsolver.getNumRow());
+  assert(mipsolver.mipdata_->presolvedModel.num_row_ == getNumModelRows());
   return success;
 }
