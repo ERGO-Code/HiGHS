@@ -20,8 +20,7 @@ set(include_dirs
   ${CMAKE_SOURCE_DIR}/src/simplex
   ${CMAKE_SOURCE_DIR}/src/test
   ${CMAKE_SOURCE_DIR}/src/util
-  $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs)
+  $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
 set(cupdlp_sources
   pdlp/cupdlp/cupdlp_cs.c
