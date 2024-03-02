@@ -309,7 +309,7 @@ class HighsLpRelaxation {
 
   HighsInt numNonzeros() const { return lpsolver.getNumNz(); }
 
-  void addCuts(HighsCutSet& cutset, bool clear_cutset = true);
+  void addCuts(HighsCutSet& cutset);
 
   void performAging(bool deleteRows = false);
 

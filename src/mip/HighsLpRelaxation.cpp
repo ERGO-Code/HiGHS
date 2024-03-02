@@ -475,7 +475,7 @@ double HighsLpRelaxation::computeLPDegneracy(
   return fac1 * fac2;
 }
 
-void HighsLpRelaxation::addCuts(HighsCutSet& cutset, bool clear_cutset) {
+void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   HighsInt numcuts = cutset.numCuts();
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
@@ -499,7 +499,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset, bool clear_cutset) {
     (void)success;
     assert(lpsolver.getLp().num_row_ ==
            (HighsInt)lpsolver.getLp().row_lower_.size());
-    if (clear_cutset) cutset.clear();
+    cutset.clear();
   }
 }
 

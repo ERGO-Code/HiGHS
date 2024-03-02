@@ -967,6 +967,7 @@ double HighsMipSolverData::percentageInactiveIntegers() const {
 
 void HighsMipSolverData::performRestart() {
   //  printf("HighsMipSolverData::performRestart() %d\n", int(numRestarts));
+  assert(1111==7777);
   HighsBasis root_basis;
   HighsPseudocostInitialization pscostinit(
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
@@ -2111,7 +2112,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 
 bool HighsMipSolverData::feasibleWithNewLazyConstraints(
     const double objective, const std::vector<double>& solution,
-    double& row_violation) {
+    double& row_violation_) {
   // If the user callback isn't defined, or the lazy constraint
   // callback isn't active, then no new lazy constraints can be
   // generated, so solution (in the original space) is trivially
@@ -2124,11 +2125,11 @@ bool HighsMipSolverData::feasibleWithNewLazyConstraints(
   mipsolver.callback_->clearHighsCallbackDataOut();
   mipsolver.callback_->data_out.objective_function_value = objective;
   mipsolver.callback_->data_out.mip_solution = solution.data();
-  return defineNewLazyConstraints(solution, row_violation);
+  return defineNewLazyConstraints(solution, row_violation_);
 }
 
 bool HighsMipSolverData::defineNewLazyConstraints(
-    const std::vector<double>& solution, double& row_violation) {
+    const std::vector<double>& solution, double& row_violation_) {
   assert(mipsolver.callback_->user_callback);
   assert(mipsolver.callback_->callbackActive(
       kCallbackMipDefineNewLazyConstraints));
@@ -2160,50 +2161,33 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     lazy_constraints.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
     lazy_constraints.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
   }
-  // Now analyse the cuts, adding them to the pool
+  // Now analyse the feasiblilty of the lazy constraints, updating row_violation_
   //
-  // Cut pool members are of the form activity <= rhs
-  //
-  // Would be strange for the lazy constraints to be feasible, but
-  // check
-  bool lazy_constraints_feasible = true;
-  // Update the current row_violation
-  assert(row_violation == 0);
-  const bool add_to_cutpool = false;
+  // Assumes that row activities are feasible
+  assert(row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance);
   for (HighsInt iRow = 0; iRow < num_lazy_constraints; iRow++) {
-    double row_value = 0;
-    HighsInt Rlen =
-        lazy_constraints.ARstart_[iRow + 1] - lazy_constraints.ARstart_[iRow];
+    // Lazy constraints with finite lower bounds have yet to be
+    // generated
     assert(lazy_constraints.lower_[iRow] <= -kHighsInf);
-    // Determine whether the cut is integral - has integer
-    // coeffcients, all corresponding to integer variables
-    bool integralSupport = true;
-    bool integralCoefficients = true;
+    double row_value = 0;
+    // Update the value of row_violation_
     for (HighsInt iEl = lazy_constraints.ARstart_[iRow];
-         iEl < lazy_constraints.ARstart_[iRow + 1]; iEl++) {
-      HighsInt iCol = lazy_constraints.ARindex_[iEl];
-      double value = lazy_constraints.ARvalue_[iEl];
-      row_value += value * solution[iCol];
-      if (!HighsIntegers::isIntegral(value, feastol))
-        integralCoefficients = false;
-      if (!lp.isColIntegral(iCol)) integralSupport = false;
-    }
-    // Would be strange for the lazy constraint to be feasible, but check
+	 iEl < lazy_constraints.ARstart_[iRow + 1]; iEl++) 
+      row_value += lazy_constraints.ARvalue_[iEl] * solution[lazy_constraints.ARindex_[iEl]];
+    const double lower = lazy_constraints.lower_[iRow];
     const double upper = lazy_constraints.upper_[iRow];
-    const bool infeasible = row_value > upper + feastol;
-    assert(infeasible);
-    const double primal_infeasibility = infeasible ? row_value - upper : 0;
-    row_violation = std::max(row_violation, primal_infeasibility);
-    lazy_constraints_feasible = !infeasible && lazy_constraints_feasible;
-    const bool cut_integral = integralSupport && integralCoefficients;
-    const HighsInt iEl = lazy_constraints.ARstart_[iRow];
-    if (add_to_cutpool)
-      cutpool.addCut(kLpRowOriginLazyConstraint, mipsolver,
-                     &lazy_constraints.ARindex_[iEl],
-                     &lazy_constraints.ARvalue_[iEl], Rlen, upper,
-                     cut_integral);
+    double primal_infeasibility = 0;
+    if (row_value > upper + feastol) {
+      primal_infeasibility = row_value - upper;
+    } else if (row_value < lower - feastol) {
+      primal_infeasibility = lower - row_value;
+    }
+    assert(primal_infeasibility > 0);
+    row_violation_ = std::max(row_violation_, primal_infeasibility);
     numLazyConstraints++;
   }
+  const bool lazy_constraints_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  // Would be strange for the lazy constraint to be feasible, but check
   assert(!lazy_constraints_feasible);
   if (lazy_constraints_feasible) return true;
 
