@@ -548,7 +548,8 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
-  //  debugReportDimensions("HighsMipSolverData::runSetup(): Before compute row activities and propagate all rows once");
+  //  debugReportDimensions("HighsMipSolverData::runSetup(): Before compute row
+  //  activities and propagate all rows once");
 
   objectiveFunction.setupCliquePartition(domain, cliquetable);
   domain.setupObjectivePropagation();
@@ -779,9 +780,13 @@ try_again:
     row_violation_ = std::max(row_violation_, primal_infeasibility);
   }
 
-  const bool bound_feasible = bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
-  const bool integrality_feasible = integrality_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
-  bool row_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  const bool bound_feasible =
+      bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  const bool integrality_feasible =
+      integrality_violation_ <=
+      mipsolver.options_mip_->mip_feasibility_tolerance;
+  bool row_feasible =
+      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
   bool feasible =
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
@@ -835,7 +840,8 @@ try_again:
   num_new_lazy_constraints += numLazyConstraints;
   if (num_new_lazy_constraints) {
     // Must have generated row infeasibility
-    row_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+    row_feasible =
+        row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
     assert(!row_feasible);
   }
   // Possible MIP solution callback
@@ -870,7 +876,7 @@ try_again:
               mipsolver.options_mip_->mip_feasibility_tolerance &&
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
-      
+
       //    check_col = 37;//mipsolver.mipdata_->presolve.debugGetCheckCol();
       //    check_row = 37;//mipsolver.mipdata_->presolve.debugGetCheckRow();
       std::string check_col_data = "";
@@ -901,13 +907,15 @@ try_again:
       // to positive row_violation_, so avoid reporting an error in
       // this scenario
       if (num_new_lazy_constraints) {
-	const bool other_violations_ok = bound_feasible && integrality_feasible;
-	if (!other_violations_ok) {
-	  printf("HighsMipSolverData::transformNewIntegerFeasibleSolution: "
-		 "Added lazy constraints, but bound_violation_ = %g and integrality_violation_ = %g\n",
-		 bound_violation_, integrality_violation_);
-	}
-	assert(other_violations_ok);
+        const bool other_violations_ok = bound_feasible && integrality_feasible;
+        if (!other_violations_ok) {
+          printf(
+              "HighsMipSolverData::transformNewIntegerFeasibleSolution: "
+              "Added lazy constraints, but bound_violation_ = %g and "
+              "integrality_violation_ = %g\n",
+              bound_violation_, integrality_violation_);
+        }
+        assert(other_violations_ok);
       }
       if (num_new_lazy_constraints == 0)
         highsLogUser(
@@ -933,12 +941,16 @@ try_again:
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
-	printf("Storing the new incumbent regardless with %d new lazy constraints: objective = %g; violations(%g, %g, %g) logicals (%d, %d, %d)\n",
-	       int(num_new_lazy_constraints), mipsolver_objective_value, bound_violation_, integrality_violation_, row_violation_,
-	       int(bound_feasible), int(integrality_feasible), int(row_feasible));
-	if (num_new_lazy_constraints) {
-	  assert(!row_feasible);
-	}
+        printf(
+            "Storing the new incumbent regardless with %d new lazy "
+            "constraints: objective = %g; violations(%g, %g, %g) logicals (%d, "
+            "%d, %d)\n",
+            int(num_new_lazy_constraints), mipsolver_objective_value,
+            bound_violation_, integrality_violation_, row_violation_,
+            int(bound_feasible), int(integrality_feasible), int(row_feasible));
+        if (num_new_lazy_constraints) {
+          assert(!row_feasible);
+        }
         mipsolver.row_violation_ = row_violation_;
         mipsolver.bound_violation_ = bound_violation_;
         mipsolver.integrality_violation_ = integrality_violation_;
@@ -967,7 +979,7 @@ double HighsMipSolverData::percentageInactiveIntegers() const {
 
 void HighsMipSolverData::performRestart() {
   //  printf("HighsMipSolverData::performRestart() %d\n", int(numRestarts));
-  assert(1111==7777);
+  //  assert(1111 == 7777);
   HighsBasis root_basis;
   HighsPseudocostInitialization pscostinit(
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
@@ -1001,12 +1013,13 @@ void HighsMipSolverData::performRestart() {
     if (debug_root_basis_setup) {
       const HighsInt debug_root_basis_num_col = postSolveStack.getOrigNumCol();
       const HighsInt debug_root_basis_num_row = postSolveStack.getOrigNumRow();
-      printf("HighsMipSolverData::performRestart Root basis (%d, %d) MIP solver (%d, %d)\n",
-	     int(debug_root_basis_num_col), int(debug_root_basis_num_row),
-	     int(mipsolver.numCol()), int(numModelRows)
-	     );
-      assert(debug_root_basis_num_col >=  mipsolver.numCol());
-      assert(debug_root_basis_num_row >=  numModelRows);
+      printf(
+          "HighsMipSolverData::performRestart Root basis (%d, %d) MIP solver "
+          "(%d, %d)\n",
+          int(debug_root_basis_num_col), int(debug_root_basis_num_row),
+          int(mipsolver.numCol()), int(numModelRows));
+      assert(debug_root_basis_num_col >= mipsolver.numCol());
+      assert(debug_root_basis_num_row >= numModelRows);
     }
     root_basis.col_status.resize(postSolveStack.getOrigNumCol());
     root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
@@ -1108,14 +1121,17 @@ void HighsMipSolverData::basisTransfer() {
     const bool debug_basis_transfer = true;
     for (HighsInt i = 0; i < numRow; ++i) {
       if (debug_basis_transfer) {
-	HighsInt debug_iRow = postSolveStack.getOrigRowIndex(i);
-	HighsInt debug_rootbasis_row_status_size = mipsolver.rootbasis->row_status.size();
-	bool debug_iRow_error = debug_iRow >= debug_rootbasis_row_status_size;
-	if (debug_iRow_error) {
-	  printf("HighsMipSolverData::basisTransfer Array bound error %d, %d, %d\n",
-		 int(i), int(debug_iRow), int(debug_rootbasis_row_status_size));
-	}
-	assert(!debug_iRow_error);
+        HighsInt debug_iRow = postSolveStack.getOrigRowIndex(i);
+        HighsInt debug_rootbasis_row_status_size =
+            mipsolver.rootbasis->row_status.size();
+        bool debug_iRow_error = debug_iRow >= debug_rootbasis_row_status_size;
+        if (debug_iRow_error) {
+          printf(
+              "HighsMipSolverData::basisTransfer Array bound error %d, %d, "
+              "%d\n",
+              int(i), int(debug_iRow), int(debug_rootbasis_row_status_size));
+        }
+        assert(!debug_iRow_error);
       }
       HighsBasisStatus status =
           mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
@@ -2161,7 +2177,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     lazy_constraints.ARindex_[iEl] = data_in.cutset_ARindex[iEl];
     lazy_constraints.ARvalue_[iEl] = data_in.cutset_ARvalue[iEl];
   }
-  // Now analyse the feasiblilty of the lazy constraints, updating row_violation_
+  // Now analyse the feasiblilty of the lazy constraints, updating
+  // row_violation_
   //
   // Assumes that row activities are feasible
   assert(row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance);
@@ -2172,8 +2189,9 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     double row_value = 0;
     // Update the value of row_violation_
     for (HighsInt iEl = lazy_constraints.ARstart_[iRow];
-	 iEl < lazy_constraints.ARstart_[iRow + 1]; iEl++) 
-      row_value += lazy_constraints.ARvalue_[iEl] * solution[lazy_constraints.ARindex_[iEl]];
+         iEl < lazy_constraints.ARstart_[iRow + 1]; iEl++)
+      row_value += lazy_constraints.ARvalue_[iEl] *
+                   solution[lazy_constraints.ARindex_[iEl]];
     const double lower = lazy_constraints.lower_[iRow];
     const double upper = lazy_constraints.upper_[iRow];
     double primal_infeasibility = 0;
@@ -2186,7 +2204,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
     row_violation_ = std::max(row_violation_, primal_infeasibility);
     numLazyConstraints++;
   }
-  const bool lazy_constraints_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  const bool lazy_constraints_feasible =
+      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
   // Would be strange for the lazy constraint to be feasible, but check
   assert(!lazy_constraints_feasible);
   if (lazy_constraints_feasible) return true;
@@ -2199,7 +2218,9 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   //  HighsInt num_cuts_in_relaxation = lp.getLp().num_row_ -
   //  mipsolver.numRow();
 
-  //  printf("HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d, %d) format %d\n", int(presolvedModel.num_col_), int(presolvedModel.num_row_), int(presolvedModel.a_matrix_.format_));
+  //  printf("HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d,
+  //  %d) format %d\n", int(presolvedModel.num_col_),
+  //  int(presolvedModel.num_row_), int(presolvedModel.a_matrix_.format_));
 
   // Add the lazy constraints to the LP relaxation
   const bool success = lp.addModelConstraints(lazy_constraints);
@@ -2221,9 +2242,9 @@ void HighsMipSolverData::debugReportDimensions(const std::string message) {
   if (mipsolver.submip) return;
   assert(presolvedModel.num_col_ == mipsolver.numCol());
   assert(presolvedModel.num_row_ == mipsolver.numRow());
-  printf("Model (%4d, %4d) Relaxation (%4d, %4d) Matrix(Sa %d; Ix %d; Va %d) %s\n",
-         int(presolvedModel.num_col_), int(presolvedModel.num_row_),
-         int(lp.numCols()), int(lp.numRows()),
-	 int(ARstart_.size()), int(ARindex_.size()), int(ARvalue_.size()), 
-	 message.c_str());
+  printf(
+      "Model (%4d, %4d) Relaxation (%4d, %4d) Matrix(Sa %d; Ix %d; Va %d) %s\n",
+      int(presolvedModel.num_col_), int(presolvedModel.num_row_),
+      int(lp.numCols()), int(lp.numRows()), int(ARstart_.size()),
+      int(ARindex_.size()), int(ARvalue_.size()), message.c_str());
 }

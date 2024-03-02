@@ -511,7 +511,8 @@ HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
 
   // if no such cut exists we append the new cut
   HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen, propagate);
-  //  printf("HighsCutPool::addCut rowindex = %4d; |RHS| = %4d \n", int(rowindex), int(rhs_.size()));
+  //  printf("HighsCutPool::addCut rowindex = %4d; |RHS| = %4d \n",
+  //  int(rowindex), int(rhs_.size()));
   hashToCutMap.emplace(h, rowindex);
 
   if (rowindex == int(rhs_.size())) {
