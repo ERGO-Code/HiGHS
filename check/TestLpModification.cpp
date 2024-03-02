@@ -1117,7 +1117,7 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   // Link error on some architectures, since 1 seems indistinguishable
   // from the pointer to a set
   HighsInt to_col = 0;
-  const bool try_null_test = true;
+  const bool try_null_test = false;
   if (try_null_test) {
     // Make sure this works for getting no columns from an interval
     if (dev_run) printf("Get no columns from an interval\n");
@@ -1179,7 +1179,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   // Link error on some architectures, since 1 seems indistinguishable
   // from the pointer to a set
   HighsInt to_row = 0;
-  const bool try_null_test = true;
+  const bool try_null_test = false;
   if (try_null_test) {
     // Make sure this works for getting no rows from an interval
     if (dev_run) printf("Get no rows from an interval\n");
