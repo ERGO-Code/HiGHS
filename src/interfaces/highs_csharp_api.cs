@@ -744,7 +744,7 @@ public class HighsLpSolver : IDisposable
 
     public HighsModelStatus GetModelStatus()
     {
-        return (HighsModelStatus)HighsLpSolver.Highs_getModelStatus();
+        return (HighsModelStatus)HighsLpSolver.Highs_getModelStatus(this.highs);
     }
 
     public int getIterationCount()
