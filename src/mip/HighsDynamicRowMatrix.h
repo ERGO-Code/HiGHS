@@ -11,6 +11,7 @@
 #ifndef HIGHS_DYNAMIC_ROW_MATRIX_H_
 #define HIGHS_DYNAMIC_ROW_MATRIX_H_
 
+#include <cassert> // For debugging getRowStart/getRowEnd ToTo Remove
 #include <set>
 #include <utility>
 #include <vector>
@@ -95,9 +96,9 @@ class HighsDynamicRowMatrix {
 
   HighsInt getNumDelRows() const { return deletedrows_.size(); }
 
-  HighsInt getRowStart(HighsInt row) const { return ARrange_[row].first; }
+  HighsInt getRowStart(HighsInt row) const { assert(row < HighsInt(ARrange_.size())); return ARrange_[row].first; }
 
-  HighsInt getRowEnd(HighsInt row) const { return ARrange_[row].second; }
+  HighsInt getRowEnd(HighsInt row) const { assert(row < HighsInt(ARrange_.size())); return ARrange_[row].second; }
 
   const HighsInt* getARindex() const { return ARindex_.data(); }
 

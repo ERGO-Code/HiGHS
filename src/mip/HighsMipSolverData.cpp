@@ -416,7 +416,7 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
-  debugReportDimensions("HighsMipSolverData::runSetup(): On entry");
+  //  debugReportDimensions("HighsMipSolverData::runSetup(): On entry");
 
   last_disptime = -kHighsInf;
 
@@ -548,9 +548,7 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
-  debugReportDimensions(
-      "HighsMipSolverData::runSetup(): Before compute row activities and "
-      "propagate all rows once");
+  //  debugReportDimensions("HighsMipSolverData::runSetup(): Before compute row activities and propagate all rows once");
 
   objectiveFunction.setupCliquePartition(domain, cliquetable);
   domain.setupObjectivePropagation();
@@ -674,7 +672,7 @@ void HighsMipSolverData::runSetup() {
 
   symmetries.clear();
 
-  debugReportDimensions("HighsMipSolverData::runSetup(): On return");
+  //  debugReportDimensions("HighsMipSolverData::runSetup(): On return");
 
   if (numRestarts != 0)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -945,7 +943,7 @@ double HighsMipSolverData::percentageInactiveIntegers() const {
 }
 
 void HighsMipSolverData::performRestart() {
-  printf("HighsMipSolverData::performRestart() %d\n", int(numRestarts));
+  //  printf("HighsMipSolverData::performRestart() %d\n", int(numRestarts));
   HighsBasis root_basis;
   HighsPseudocostInitialization pscostinit(
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
@@ -2172,11 +2170,7 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   //  HighsInt num_cuts_in_relaxation = lp.getLp().num_row_ -
   //  mipsolver.numRow();
 
-  printf(
-      "HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d, %d) "
-      "format %d\n",
-      int(presolvedModel.num_col_), int(presolvedModel.num_row_),
-      int(presolvedModel.a_matrix_.format_));
+  //  printf("HighsMipSolverData::defineNewLazyConstraints Presolved Model (%d, %d) format %d\n", int(presolvedModel.num_col_), int(presolvedModel.num_row_), int(presolvedModel.a_matrix_.format_));
 
   // Add the lazy constraints to the LP relaxation
   const bool success = lp.addModelConstraints(lazy_constraints);
@@ -2187,6 +2181,8 @@ bool HighsMipSolverData::defineNewLazyConstraints(
   runSetup();
 
   assert(!lazy_constraints_feasible && success);
+  //  lp.debugReport("HighsMipSolverData::defineNewLazyConstraints: On exit");
+
   return false;
 }
 
@@ -2196,7 +2192,9 @@ void HighsMipSolverData::debugReportDimensions(const std::string message) {
   if (mipsolver.submip) return;
   assert(presolvedModel.num_col_ == mipsolver.numCol());
   assert(presolvedModel.num_row_ == mipsolver.numRow());
-  printf("Model (%4d, %4d) Relaxation (%4d, %4d) %s\n",
+  printf("Model (%4d, %4d) Relaxation (%4d, %4d) Matrix(Sa %d; Ix %d; Va %d) %s\n",
          int(presolvedModel.num_col_), int(presolvedModel.num_row_),
-         int(lp.numCols()), int(lp.numRows()), message.c_str());
+         int(lp.numCols()), int(lp.numRows()),
+	 int(ARstart_.size()), int(ARindex_.size()), int(ARvalue_.size()), 
+	 message.c_str());
 }

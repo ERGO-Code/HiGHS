@@ -1409,21 +1409,31 @@ std::string HighsLpRelaxation::statusToString(const Status status) {
 
 void HighsLpRelaxation::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 1000;
+  const bool report_all = true;
   const HighsLp& lp = lpsolver.getLp();
+  HighsInt num_lp_col = lp.num_col_;
   HighsInt num_lp_row = lp.num_row_;
   HighsInt num_model_row = mipsolver.numRow();
   HighsInt num_cut = num_lp_row - num_model_row;
   printf("\nLP relaxation: %s has %d rows (%d from cuts)\n", message.c_str(),
          int(num_lp_row), int(num_cut));
-  if (!num_cut) return;
+  if (!report_all && !num_cut) return;
 
   if (num_cut < kReportRowsLimit) {
     HighsInt cut_num = 0;
+    HighsInt len;
+    const HighsInt* inds;
+    const double* vals;
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
-      printf("LP relaxation: Row %3d; cut %3d: %s\n", int(iRow), int(cut_num),
-             debugCutOriginToString(lprows[iRow].debug_origin).c_str());
-      cut_num++;
+      bool is_cut = lprows[iRow].origin == LpRow::Origin::kCutPool;
+      if (!report_all && !is_cut) continue;
+      getRow(iRow, len, inds, vals);
+      printf("LP relaxation: Row %3d; cut %3d: len = %4d; (inds[0] = %4d, vals[0] = %11.5g): %s\n", int(iRow),
+	     is_cut ? int(cut_num) : -1,
+	     int(len), int(*(inds)), *vals, 
+	     debugCutOriginToString(lprows[iRow].debug_origin).c_str());
+      assert(len>=0 && len <num_lp_col);
+      if (is_cut) cut_num++;
     }
   } else {
     const HighsInt num_cut_type = kLpRowOriginCount;
@@ -1442,8 +1452,7 @@ void HighsLpRelaxation::debugReport(const std::string& message) {
 }
 
 bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
-  mipsolver.mipdata_->debugReportDimensions(
-      "HighsLpRelaxation::addModelConstraints(): On entry");
+  //  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): On entry");
   HighsInt num_row = numRows();
   HighsInt num_model_row = getNumModelRows();
   const HighsInt num_cut = num_row - num_model_row;
@@ -1453,19 +1462,28 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
   HighsInt num_new_constraints = new_constraints.numCuts();
 
-  printf(
-      "HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = "
-      "%d; num_new_constraints = %d\n",
-      int(num_row), int(num_model_row), int(num_new_constraints));
-  debugReport("HighsLpRelaxation::addModelConstraints");
-  // Make space in lprows for the new model constraints and define new
-  // model row entries
-  lprows.resize(num_row + num_new_constraints);
-  for (HighsInt i = num_new_constraints; i > 0; i--) {
-    HighsInt Ix = num_row - num_new_constraints + i - 1;
-    lprows[num_row + i - 1] = lprows[Ix];
-    lprows[Ix] = LpRow::model(Ix, kLpRowOriginLazyConstraint);
+  //  printf("HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = %d; num_new_constraints = %d\n", int(num_row), int(num_model_row), int(num_new_constraints));
+  //  debugReport("HighsLpRelaxation::addModelConstraints: On entry ");
+  // Make space in lprows between the model constraints and any cuts,
+  // and define new model row entries
+  const HighsInt new_num_model_row = num_model_row + num_new_constraints;
+  const HighsInt new_num_row = num_row + num_new_constraints;
+  //  printf("\nResizing lprows from %d to %d\n", int(lprows.size()),int(new_num_row));
+  lprows.resize(new_num_row);
+  
+  // Shift cuts forwards, by starting with the last
+  for (HighsInt i = 0; i < num_cut; i++) {
+    const HighsInt to_ix = new_num_row - i - 1;
+    const HighsInt from_ix = num_row - i - 1;
+    //    printf("%2d: setting lprows[%4d] to lprows[%4d] as cut\n", int(i), int(to_ix), int(from_ix));
+    lprows[to_ix] = lprows[from_ix];
   }
+  for (HighsInt i = 0; i < num_new_constraints; i++) {
+    const HighsInt ix = num_model_row + i;
+    //    printf("%2d: setting lprows[%4d] to be lazy constraint\n", int(i), int(ix));
+    lprows[ix] = LpRow::model(ix, kLpRowOriginLazyConstraint);
+  }    
+ 
   // Extract the cuts from the lpsolver model
   HighsInt get_num_row = 0;
   HighsInt get_num_nz = 0;
@@ -1496,9 +1514,7 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   currentbasisstored = false;
   basischeckpoint.reset();
 
-  mipsolver.mipdata_->debugReportDimensions(
-      "HighsLpRelaxation::addModelConstraints(): Before adding new model "
-      "constraints");
+  //  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): Before adding new model constraints");
   // Add the new constraints to the lpsolver
   success =
       lpsolver.addRows(
@@ -1508,6 +1524,8 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
           new_constraints.ARvalue_.data()) == HighsStatus::kOk;
   assert(success);
   if (!success) return false;
+  for (HighsInt iRow = num_model_row; iRow < new_num_model_row; iRow++) lprows[iRow].origin = LpRow::Origin::kModel;
+  
   // Add the new constraints to the model
   appendRowsToLpVectors(mipsolver.mipdata_->presolvedModel, num_new_constraints,
                         new_constraints.lower_, new_constraints.upper_);
@@ -1521,14 +1539,28 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   mipsolver.mipdata_->presolvedModel.a_matrix_.addRows(new_constraints_matrix);
   mipsolver.mipdata_->presolvedModel.num_row_ += num_new_constraints;
 
-  mipsolver.mipdata_->debugReportDimensions(
-      "HighsLpRelaxation::addModelConstraints(): Before restoring cuts");
+  //  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): Before restoring cuts");
   // Add the cuts back to the lpsolver
   success = lpsolver.addRows(get_num_row, get_lower.data(), get_upper.data(),
                              get_num_nz, get_start.data(), get_index.data(),
                              get_value.data()) == HighsStatus::kOk;
-  mipsolver.mipdata_->debugReportDimensions(
-      "HighsLpRelaxation::addModelConstraints(): On exit");
-  assert(mipsolver.mipdata_->presolvedModel.num_row_ == getNumModelRows());
+  for (HighsInt iRow = new_num_model_row; iRow < new_num_row; iRow++) lprows[iRow].origin = LpRow::Origin::kCutPool;
+
+  //  const HighsBasis& basis =   lpsolver.getBasis();  
+  //  for (HighsInt iRow = 0; iRow < new_num_row; iRow++)
+  //    printf("Basis[Row %4d] = %s\n", int(iRow), lpsolver.basisStatusToString(basis.row_status[iRow]).c_str());
+
+
+  //  mipsolver.mipdata_->debugReportDimensions("HighsLpRelaxation::addModelConstraints(): On exit");
+
+  assert(new_num_model_row == getNumModelRows());
+  assert(new_num_model_row == mipsolver.mipdata_->presolvedModel.num_row_);
+  assert(new_num_row == numRows());
+  assert(new_num_row == lpsolver.getNumRow());
+
+  for (HighsInt iRow = 0; iRow < new_num_model_row; iRow++)
+    assert(lprows[iRow].origin == LpRow::Origin::kModel);
+  for (HighsInt iRow = new_num_model_row; iRow < new_num_row; iRow++)
+    assert(lprows[iRow].origin == LpRow::Origin::kCutPool);
   return success;
 }
