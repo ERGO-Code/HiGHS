@@ -29,7 +29,7 @@ jobs:
       - name: Compile and test C example
         shell: bash
         run: |
-          g++ $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
+          gcc $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
             -o c_example \
             -I installs/highs/include/highs \
             -L installs/highs/lib -lhighs
@@ -58,7 +58,7 @@ jobs:
       - name: Compile and test C example
         shell: bash
         run: |
-          g++ $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
+          gcc $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
             -o c_example \
             -I installs/highs/include/highs \
             -L installs/highs/lib -lhighs

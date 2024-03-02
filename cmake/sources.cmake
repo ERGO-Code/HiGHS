@@ -129,7 +129,7 @@ set(ipx_sources
   ipm/ipx/timer.cc
   ipm/ipx/utils.cc)
   
-  set(ipx_headers
+set(ipx_headers
   ipm/ipx/basiclu_kernel.h
   ipm/ipx/basiclu_wrapper.h
   ipm/ipx/basis.h
@@ -277,7 +277,7 @@ set(highs_sources
     util/stringutil.cpp)
 
 # add catch header?
-set(highs_headers_python
+set(highs_headers
     ../extern/filereaderlp/builder.hpp
     ../extern/filereaderlp/def.hpp
     ../extern/filereaderlp/model.hpp
