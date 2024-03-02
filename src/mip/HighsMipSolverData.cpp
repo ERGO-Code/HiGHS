@@ -996,6 +996,17 @@ void HighsMipSolverData::performRestart() {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
+    const bool debug_root_basis_setup = true;
+    if (debug_root_basis_setup) {
+      const HighsInt debug_root_basis_num_col = postSolveStack.getOrigNumCol();
+      const HighsInt debug_root_basis_num_row = postSolveStack.getOrigNumRow();
+      printf("HighsMipSolverData::performRestart Root basis (%d, %d) MIP solver (%d, %d)\n",
+	     int(debug_root_basis_num_col), int(debug_root_basis_num_row),
+	     int(mipsolver.numCol()), int(numModelRows)
+	     );
+      assert(debug_root_basis_num_col >=  mipsolver.numCol());
+      assert(debug_root_basis_num_row >=  numModelRows);
+    }
     root_basis.col_status.resize(postSolveStack.getOrigNumCol());
     root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
                                  HighsBasisStatus::kBasic);
@@ -1093,7 +1104,18 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.valid = true;
     firstrootbasis.alien = true;
 
+    const bool debug_basis_transfer = true;
     for (HighsInt i = 0; i < numRow; ++i) {
+      if (debug_basis_transfer) {
+	HighsInt debug_iRow = postSolveStack.getOrigRowIndex(i);
+	HighsInt debug_rootbasis_row_status_size = mipsolver.rootbasis->row_status.size();
+	bool debug_iRow_error = debug_iRow >= debug_rootbasis_row_status_size;
+	if (debug_iRow_error) {
+	  printf("HighsMipSolverData::basisTransfer Array bound error %d, %d, %d\n",
+		 int(i), int(debug_iRow), int(debug_rootbasis_row_status_size));
+	}
+	assert(!debug_iRow_error);
+      }
       HighsBasisStatus status =
           mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
       firstrootbasis.row_status[i] = status;

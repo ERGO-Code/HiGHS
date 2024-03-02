@@ -96,9 +96,9 @@ class HighsDynamicRowMatrix {
 
   HighsInt getNumDelRows() const { return deletedrows_.size(); }
 
-  HighsInt getRowStart(HighsInt row) const { assert(row < HighsInt(ARrange_.size())); return ARrange_[row].first; }
+  HighsInt getRowStart(HighsInt row) const { assert(0 <= row && row < HighsInt(ARrange_.size())); return ARrange_[row].first; }
 
-  HighsInt getRowEnd(HighsInt row) const { assert(row < HighsInt(ARrange_.size())); return ARrange_[row].second; }
+  HighsInt getRowEnd(HighsInt row) const { assert(0 <= row && row < HighsInt(ARrange_.size())); return ARrange_[row].second; }
 
   const HighsInt* getARindex() const { return ARindex_.data(); }
 

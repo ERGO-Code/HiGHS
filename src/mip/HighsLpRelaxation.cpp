@@ -1409,7 +1409,7 @@ std::string HighsLpRelaxation::statusToString(const Status status) {
 
 void HighsLpRelaxation::debugReport(const std::string& message) {
   const HighsInt kReportRowsLimit = 1000;
-  const bool report_all = true;
+  const bool report_all = false;
   const HighsLp& lp = lpsolver.getLp();
   HighsInt num_lp_col = lp.num_col_;
   HighsInt num_lp_row = lp.num_row_;
@@ -1462,7 +1462,7 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
   HighsInt num_new_constraints = new_constraints.numCuts();
 
-  //  printf("HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = %d; num_new_constraints = %d\n", int(num_row), int(num_model_row), int(num_new_constraints));
+  printf("HighsLpRelaxation::addModelConstraints num_row = %d; num_model_row = %d; num_new_constraints = %d\n", int(num_row), int(num_model_row), int(num_new_constraints));
   //  debugReport("HighsLpRelaxation::addModelConstraints: On entry ");
   // Make space in lprows between the model constraints and any cuts,
   // and define new model row entries
@@ -1472,16 +1472,21 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   lprows.resize(new_num_row);
   
   // Shift cuts forwards, by starting with the last
+  const bool have_firstrootbasis = mipsolver.mipdata_->firstrootbasis.valid;
+  std::vector<HighsBasisStatus>&firstrootbasis_row_status = mipsolver.mipdata_->firstrootbasis.row_status;
+  if (have_firstrootbasis) firstrootbasis_row_status.resize(new_num_row);
   for (HighsInt i = 0; i < num_cut; i++) {
     const HighsInt to_ix = new_num_row - i - 1;
     const HighsInt from_ix = num_row - i - 1;
     //    printf("%2d: setting lprows[%4d] to lprows[%4d] as cut\n", int(i), int(to_ix), int(from_ix));
     lprows[to_ix] = lprows[from_ix];
+    if (have_firstrootbasis) firstrootbasis_row_status[to_ix] = firstrootbasis_row_status[from_ix];
   }
   for (HighsInt i = 0; i < num_new_constraints; i++) {
     const HighsInt ix = num_model_row + i;
     //    printf("%2d: setting lprows[%4d] to be lazy constraint\n", int(i), int(ix));
     lprows[ix] = LpRow::model(ix, kLpRowOriginLazyConstraint);
+    if (have_firstrootbasis) firstrootbasis_row_status[ix] = HighsBasisStatus::kBasic;
   }    
  
   // Extract the cuts from the lpsolver model
