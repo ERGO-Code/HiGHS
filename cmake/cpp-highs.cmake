@@ -7,7 +7,7 @@ endif()
 add_subdirectory(src)
 
 # ALIAS
-add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
+# add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,7 +62,7 @@ export(TARGETS highs
   FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 install(EXPORT ${lower}-targets
-  NAMESPACE ${PROJECT_NAMESPACE}::highs
+  NAMESPACE ${PROJECT_NAMESPACE}::
   FILE highs-targets.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
 # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
