@@ -779,11 +779,15 @@ try_again:
     row_violation_ = std::max(row_violation_, primal_infeasibility);
   }
 
+  const bool bound_feasible = bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  const bool integrality_feasible = integrality_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  bool row_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
   bool feasible =
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
       row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+  assert(feasible == bound_feasible && integrality_feasible && row_feasible);
 
   if (!feasible && allow_try_again) {
     // printf(
@@ -829,6 +833,11 @@ try_again:
         mipsolver_objective_value, solution.col_value, row_violation_);
   }
   num_new_lazy_constraints += numLazyConstraints;
+  if (num_new_lazy_constraints) {
+    // Must have generated row infeasibility
+    row_feasible = row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+    assert(!row_feasible);
+  }
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
@@ -861,6 +870,7 @@ try_again:
               mipsolver.options_mip_->mip_feasibility_tolerance &&
           mipsolver.row_violation_ <=
               mipsolver.options_mip_->mip_feasibility_tolerance;
+      
       //    check_col = 37;//mipsolver.mipdata_->presolve.debugGetCheckCol();
       //    check_row = 37;//mipsolver.mipdata_->presolve.debugGetCheckRow();
       std::string check_col_data = "";
@@ -890,8 +900,15 @@ try_again:
       // Addition of new lazy constraints will yield infeasibility due
       // to positive row_violation_, so avoid reporting an error in
       // this scenario
-      if (num_new_lazy_constraints)
-        assert(!(bound_violation_ || integrality_violation_));
+      if (num_new_lazy_constraints) {
+	const bool other_violations_ok = bound_feasible && integrality_feasible;
+	if (!other_violations_ok) {
+	  printf("HighsMipSolverData::transformNewIntegerFeasibleSolution: "
+		 "Added lazy constraints, but bound_violation_ = %g and integrality_violation_ = %g\n",
+		 bound_violation_, integrality_violation_);
+	}
+	assert(other_violations_ok);
+      }
       if (num_new_lazy_constraints == 0)
         highsLogUser(
             mipsolver.options_mip_->log_options, HighsLogType::kWarning,
@@ -916,6 +933,12 @@ try_again:
       if (!currentFeasible) {
         // if the current incumbent is non existent or also not feasible we
         // still store the new one
+	printf("Storing the new incumbent regardless with %d new lazy constraints: objective = %g; violations(%g, %g, %g) logicals (%d, %d, %d)\n",
+	       int(num_new_lazy_constraints), mipsolver_objective_value, bound_violation_, integrality_violation_, row_violation_,
+	       int(bound_feasible), int(integrality_feasible), int(row_feasible));
+	if (num_new_lazy_constraints) {
+	  assert(!row_feasible);
+	}
         mipsolver.row_violation_ = row_violation_;
         mipsolver.bound_violation_ = bound_violation_;
         mipsolver.integrality_violation_ = integrality_violation_;
