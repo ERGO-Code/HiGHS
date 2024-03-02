@@ -2,6 +2,7 @@ set(include_dirs
   ${CMAKE_SOURCE_DIR}/extern
   ${CMAKE_SOURCE_DIR}/extern/filereader
   ${CMAKE_SOURCE_DIR}/extern/pdqsort
+  ${CMAKE_SOURCE_DIR}/extern/zstr
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_SOURCE_DIR}/src/interfaces
   ${CMAKE_SOURCE_DIR}/src/io
@@ -283,8 +284,8 @@ set(highs_headers
     ../extern/filereaderlp/model.hpp
     ../extern/filereaderlp/reader.hpp
     ../extern/pdqsort/pdqsort.h
-    ../extern/zstr/strict_fstream.h
-    ../extern/zstr/zstr.h
+    ../extern/zstr/strict_fstream.hpp
+    ../extern/zstr/zstr.hpp
     interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderEms.h

@@ -2,6 +2,7 @@ set(include_dirs_python
     ${CMAKE_SOURCE_DIR}/extern
     ${CMAKE_SOURCE_DIR}/extern/filereader
     ${CMAKE_SOURCE_DIR}/extern/pdqsort
+    ${CMAKE_SOURCE_DIR}/extern/zstr
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/interfaces
     ${CMAKE_SOURCE_DIR}/src/io
