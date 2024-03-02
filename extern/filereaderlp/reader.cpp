@@ -17,7 +17,7 @@
 #include "builder.hpp"
 #include "def.hpp"
 #ifdef ZLIB_FOUND
-#include "zstr/zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 // Cygwin doesn't come with an implementation for strdup if compiled with
