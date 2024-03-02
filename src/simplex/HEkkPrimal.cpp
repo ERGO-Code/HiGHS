@@ -13,7 +13,7 @@
  */
 #include "simplex/HEkkPrimal.h"
 
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"

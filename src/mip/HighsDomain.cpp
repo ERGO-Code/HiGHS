@@ -18,7 +18,7 @@
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {

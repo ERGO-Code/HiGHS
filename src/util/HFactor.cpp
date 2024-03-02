@@ -17,7 +17,7 @@
 #include <iostream>
 
 #include "lp_data/HConst.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "util/FactorTimer.h"
 #include "util/HFactorDebug.h"
 #include "util/HVector.h"

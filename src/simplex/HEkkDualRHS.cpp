@@ -18,7 +18,7 @@
 #include <iostream>
 #include <set>
 
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "simplex/SimplexTimer.h"
 
 using std::fill_n;

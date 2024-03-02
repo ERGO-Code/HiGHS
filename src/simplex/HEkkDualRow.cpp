@@ -16,7 +16,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsCDouble.h"

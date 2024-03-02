@@ -21,7 +21,7 @@
 #include "mip/HighsMipSolverData.h"
 #include "parallel/HighsCombinable.h"
 #include "parallel/HighsParallel.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "util/HighsSplay.h"
 

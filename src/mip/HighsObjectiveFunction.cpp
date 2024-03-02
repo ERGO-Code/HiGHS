@@ -17,7 +17,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsIntegers.h"
 
 HighsObjectiveFunction::HighsObjectiveFunction(const HighsMipSolver& mipsolver)

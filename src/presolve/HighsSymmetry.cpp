@@ -21,7 +21,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
 #include "parallel/HighsParallel.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsDisjointSets.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
