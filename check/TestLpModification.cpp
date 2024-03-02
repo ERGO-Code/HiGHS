@@ -1106,14 +1106,16 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   REQUIRE(num_cols == 1);
   REQUIRE(num_nz == 1);
   // Make sure this works for getting one column from a set
-  HighsInt set = 1;
+  std::vector<HighsInt> set(1);
+  set[1] = 1;
   if (dev_run) printf("Get one column from a set\n");
-  highs.getCols(1, &set, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
-                nullptr, nullptr);
+  highs.getCols(1, set.data(), num_cols, nullptr, nullptr, nullptr, num_nz,
+                nullptr, nullptr, nullptr);
   REQUIRE(num_cols == 1);
   REQUIRE(num_nz == 1);
   // Make sure this works for getting no columns from an interval
   if (dev_run) printf("Get no columns from an interval\n");
+
   highs.getCols(1, 0, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
                 nullptr, nullptr);
   REQUIRE(num_cols == 0);
@@ -1161,10 +1163,11 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(num_rows == 1);
   REQUIRE(num_nz == 1);
   // Make sure this works for getting one row from a set
-  HighsInt set = 1;
+  std::vector<HighsInt> set(1);
+  set[1] = 1;
   if (dev_run) printf("Get one row from a set\n");
-  highs.getRows(1, &set, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
-                nullptr);
+  highs.getRows(1, set.data(), num_rows, nullptr, nullptr, num_nz, nullptr,
+                nullptr, nullptr);
   REQUIRE(num_rows == 1);
   REQUIRE(num_nz == 1);
   // Make sure this works for getting no rows from an interval
