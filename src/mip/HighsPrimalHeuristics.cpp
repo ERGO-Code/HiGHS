@@ -13,6 +13,7 @@
 #include <numeric>
 #include <unordered_set>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLpUtils.h"
@@ -20,7 +21,6 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
-#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 

@@ -15,12 +15,12 @@
 
 #include <algorithm>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
-#include "../extern/pdqsort/pdqsort.h"
 
 struct FractionalInteger {
   double fractionality;

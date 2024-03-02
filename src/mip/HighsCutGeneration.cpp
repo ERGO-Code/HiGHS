@@ -10,9 +10,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsCutGeneration.h"
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
-#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsIntegers.h"
 
 HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,

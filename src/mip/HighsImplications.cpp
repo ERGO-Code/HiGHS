@@ -10,9 +10,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsImplications.h"
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsMipSolverData.h"
-#include "../extern/pdqsort/pdqsort.h"
 
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;

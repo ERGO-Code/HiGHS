@@ -17,8 +17,8 @@
 
 #include <stdio.h>
 
-#include "parallel/HighsParallel.h"
 #include "../extern/pdqsort/pdqsort.h"
+#include "parallel/HighsParallel.h"
 #include "simplex/HSimplex.h"
 
 using std::vector;

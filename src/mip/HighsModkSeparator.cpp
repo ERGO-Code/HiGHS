@@ -15,13 +15,13 @@
 
 #include <unordered_set>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsGFkSolve.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
-#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 

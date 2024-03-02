@@ -14,10 +14,10 @@
 #include <cassert>
 #include <numeric>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
-#include "../extern/pdqsort/pdqsort.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 

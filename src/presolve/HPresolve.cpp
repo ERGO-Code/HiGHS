@@ -15,6 +15,7 @@
 #include <cmath>
 #include <limits>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "Highs.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
@@ -25,7 +26,6 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsObjectiveFunction.h"
-#include "../extern/pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
 #include "util/HFactor.h"
