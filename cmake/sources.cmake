@@ -285,7 +285,7 @@ set(highs_headers_python
     ../extern/pdqsort/pdqsort.h
     ../extern/zstr/strict_fstream.h
     ../extern/zstr/zstr.h
-    ../src/interfaces/highs_c_api.h
+    interfaces/highs_c_api.h
     io/Filereader.h
     io/FilereaderEms.h
     io/FilereaderLp.h
