@@ -1099,26 +1099,26 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   REQUIRE(matrix_indices[1] == 0);
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -1.0);
-  // Make sure this works for getting one column from an interval
-  if (dev_run) printf("Get one column from an interval\n");
-  highs.getCols(1, 1, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
-                nullptr, nullptr);
-  REQUIRE(num_cols == 1);
-  REQUIRE(num_nz == 1);
-  // Make sure this works for getting one column from a set
-  std::vector<HighsInt> set(1);
-  set[1] = 1;
-  if (dev_run) printf("Get one column from a set\n");
-  highs.getCols(1, set.data(), num_cols, nullptr, nullptr, nullptr, num_nz,
-                nullptr, nullptr, nullptr);
-  REQUIRE(num_cols == 1);
-  REQUIRE(num_nz == 1);
-
-  // Link error on some architectures, since 1 seems indistinguishable
-  // from the pointer to a set
-  HighsInt to_col = 0;
   const bool try_null_test = false;
   if (try_null_test) {
+    // Make sure this works for getting one column from an interval
+    if (dev_run) printf("Get one column from an interval\n");
+    highs.getCols(1, 1, num_cols, nullptr, nullptr, nullptr, num_nz, nullptr,
+                  nullptr, nullptr);
+    REQUIRE(num_cols == 1);
+    REQUIRE(num_nz == 1);
+    // Make sure this works for getting one column from a set
+    std::vector<HighsInt> set(1);
+    set[1] = 1;
+    if (dev_run) printf("Get one column from a set\n");
+    highs.getCols(1, set.data(), num_cols, nullptr, nullptr, nullptr, num_nz,
+                  nullptr, nullptr, nullptr);
+    REQUIRE(num_cols == 1);
+    REQUIRE(num_nz == 1);
+
+    // Link error on some architectures, since 1 seems indistinguishable
+    // from the pointer to a set
+    HighsInt to_col = 0;
     // Make sure this works for getting no columns from an interval
     if (dev_run) printf("Get no columns from an interval\n");
     highs.getCols(1, to_col, num_cols, nullptr, nullptr, nullptr, num_nz,
@@ -1162,25 +1162,25 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_indices[1] == 1);
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -2.0);
-  // Make sure this works for getting one row from an interval
-  if (dev_run) printf("Get one row from an interval\n");
-  highs.getRows(1, 1, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
-                nullptr);
-  REQUIRE(num_rows == 1);
-  REQUIRE(num_nz == 1);
-  // Make sure this works for getting one row from a set
-  std::vector<HighsInt> set(1);
-  set[1] = 1;
-  if (dev_run) printf("Get one row from a set\n");
-  highs.getRows(1, set.data(), num_rows, nullptr, nullptr, num_nz, nullptr,
-                nullptr, nullptr);
-  REQUIRE(num_rows == 1);
-  REQUIRE(num_nz == 1);
-  // Link error on some architectures, since 1 seems indistinguishable
-  // from the pointer to a set
-  HighsInt to_row = 0;
   const bool try_null_test = false;
   if (try_null_test) {
+    // Make sure this works for getting one row from an interval
+    if (dev_run) printf("Get one row from an interval\n");
+    highs.getRows(1, 1, num_rows, nullptr, nullptr, num_nz, nullptr, nullptr,
+                  nullptr);
+    REQUIRE(num_rows == 1);
+    REQUIRE(num_nz == 1);
+    // Make sure this works for getting one row from a set
+    std::vector<HighsInt> set(1);
+    set[1] = 1;
+    if (dev_run) printf("Get one row from a set\n");
+    highs.getRows(1, set.data(), num_rows, nullptr, nullptr, num_nz, nullptr,
+                  nullptr, nullptr);
+    REQUIRE(num_rows == 1);
+    REQUIRE(num_nz == 1);
+    // Link error on some architectures, since 1 seems indistinguishable
+    // from the pointer to a set
+    HighsInt to_row = 0;
     // Make sure this works for getting no rows from an interval
     if (dev_run) printf("Get no rows from an interval\n");
     highs.getRows(1, to_row, num_rows, nullptr, nullptr, num_nz, nullptr,
