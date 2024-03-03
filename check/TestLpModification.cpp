@@ -7,7 +7,7 @@
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 // const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
