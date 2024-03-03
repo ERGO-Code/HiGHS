@@ -1749,6 +1749,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
+      const bool debug_update_activity_ub_change =
+	mipsolver->numRow() == 142 && col == 1468;
+      if (debug_update_activity_ub_change) {
+	printf("HighsDomain::updateActivityUbChange 142 / 1468\n");
+      }
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;
@@ -1760,12 +1765,24 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         const bool jajh_tmpmaxact_ok =
             std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
                              tmpmaxact)) <= mipsolver->mipdata_->feastol;
-        if (!jajh_tmpmaxact_ok)
+	HighsInt iRow = mip->a_matrix_.index_[i];
+	if (debug_update_activity_ub_change) {
+	  printf("*************************************\n"
+		 "HighsDomain::updateActivityUbChange 142 / 1468\n");
+	  printf("HighsDomain::updateActivityUbChange activitymax_[%d] = %g; tmpmaxact = %g\n", int(iRow),
+		 double(activitymax_[iRow]),
+                 double(tmpmaxact));
+	}
+        if (!jajh_tmpmaxact_ok) {
+	  printf("mipsolver Model (%d, %d)\n",
+		 int(mipsolver->numCol()),
+		 int(mipsolver->numRow()));
           printf("Col %d: activitymax_[%d] - tmpmaxact = %g - %g = %g\n",
                  int(col), int(mip->a_matrix_.index_[i]),
                  double(activitymax_[mip->a_matrix_.index_[i]]),
                  double(tmpmaxact),
                  double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact));
+	}
         const bool jajh_tmpinf_ok =
             tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]];
         if (!jajh_tmpinf_ok)
