@@ -1,0 +1,81 @@
+name: Test win sdist
+on: [push, pull_request]
+
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
+
+jobs:
+
+  build_sdist_win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python -m pip install setuptools
+          python setup.py sdist
+
+      - name: Install sdist
+        run: |
+          ls dist
+          $item = Get-ChildItem dist
+          python -m pip install "$item"
+          python -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python -m pip install pytest
+          cd highspy/tests/
+          python -m pytest test_highspy.py
+             
+ 
+  # macos 12 is Intel
+  build_wheel_macos_12:
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp310-macosx_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+          python -c "import highspy; print(dir(highspy))"
+          pwd
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest 
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+            
+ 
+  build_wheel_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --only cp310-win_arm64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          $item = Get-ChildItem wheelhouse
+          python -m pip install "$item"
+          python -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python -m pip install pytest
+          cd highspy/tests
+          python -m pytest test_highspy.py
+          
