@@ -16,6 +16,8 @@ jobs:
         run: |
           cd ${{runner.workspace}}
           mkdir dev
+          cd dev
+          pwd
 
       - name: Build sdist
         working-directory: ${{runner.workspace}}/dev
