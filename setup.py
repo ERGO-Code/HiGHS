@@ -151,7 +151,6 @@ setup(
      ],
      extras_require={"test": ["pytest>=6.0"]},
      classifiers=[
-        'License :: MIT License Copyright (c) 2024 HiGHS',  
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
