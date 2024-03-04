@@ -6,23 +6,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_sdist:
-    name: Build source distribution
+  # build_sdist:
+  #   name: Build source distribution
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Build sdist
+  #       # shell: bash -l {0}
+  #       run: |
+  #         python3 -m pip install setuptools
+  #         python3 setup.py sdist
+
+
+  #     - name: Install sdist
+  #       run: |
+  #         ls dist
+  #         python3 -m pip install dist/*.tar.gz
+
+  #     - name: Test highspy
+  #       run: |
+  #         python3 -m pip install pytest
+  #         python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          
+  #            name: Build source distribution
+
+  build_wheels:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build sdist
+      - name: Build wheel
         # shell: bash -l {0}
         run: |
-          python3 -m pip install setuptools
-          python3 setup.py sdist
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
 
 
-      - name: Install sdist
+      - name: Install wheel
         run: |
-          ls dist
-          python3 -m pip install dist/*.tar.gz
+          ls wheelhouse
+          python3 -m pip install wheelhouse/*.whl
 
       - name: Test highspy
         run: |
