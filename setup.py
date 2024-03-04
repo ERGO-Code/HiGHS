@@ -141,7 +141,7 @@ setup(
     author_email="highsopt@gmail.com",
     url='https://github.com/ERGO-Code/HiGHS',
     long_description="",
-    license_files = ('LICENSE',),
+    license = 'MIT License',
     ext_modules=[CMakeExtension("highspy")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,

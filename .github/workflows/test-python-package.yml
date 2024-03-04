@@ -1,4 +1,4 @@
-name: Test python package
+name: test-python-package
 on: [push, pull_request]
 
 concurrency:
@@ -7,8 +7,7 @@ concurrency:
 
 jobs:
   build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest, macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +26,27 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
           
+  build_sdist_mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python3 -m pip install setuptools
+          python3 setup.py sdist
+
+      - name: Install sdist
+        run: |
+          ls dist
+          python3 -m pip install dist/*.tar.gz
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+
   build_sdist_win:
-    name: Build source distribution
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +99,7 @@ jobs:
       - name: Install wheel
         run: |
           ls wheelhouse
+          python3 --version
           python3 -m pip install wheelhouse/*.whl
 
       - name: Test highspy
@@ -96,7 +115,7 @@ jobs:
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          python -m cibuildwheel --only cp310-win_x86_64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp310-win_amd64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
