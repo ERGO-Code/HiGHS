@@ -1953,6 +1953,8 @@ HighsSearch::NodeResult HighsSearch::dive() {
     ++nnodes;
     NodeResult result = evaluateNode();
 
+    possiblyResetLocalDomain("HighsSearch::NodeResult HighsSearch::dive()");
+
     if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 
     if (result != NodeResult::kOpen) return result;
@@ -1973,4 +1975,14 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
     --maxbacktracks;
 
   } while (backtrack());
+}
+
+void HighsSearch::possiblyResetLocalDomain(const std::string message) {
+  if (this->mipsolver.submip) {
+    assert(this->numRow() == this->mipsolver.numRow());
+  } else if (this->numRow() != this->mipsolver.numRow()) {
+    printf("HighsSearch::possiblyResetLocalDomain(): Calling resetLocalDomain() since numRow() = %d != %d = mipsolver.numRow() %s\n",
+	   int(this->numRow()), int(this->mipsolver.numRow()), message.c_str());
+    this->resetLocalDomain();
+  }
 }

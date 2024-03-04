@@ -206,16 +206,20 @@ restart:
           else
             mipdata_->heuristics.RINS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-
           mipdata_->heuristics.flushStatistics();
         }
       }
 
       considerHeuristics = false;
 
+      search.possiblyResetLocalDomain("HighsMipSolver::run() after heuristics");
+
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
+	if (numRow() == 142) {
+	  printf("HighsMipSolver::run() numRow() = %d\n", int(numRow()));
+	}
         if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;

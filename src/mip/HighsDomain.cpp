@@ -1267,6 +1267,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
                                      HighsCDouble& activitymin) {
+  assert(static_cast<size_t>(mipsolver->numRow()) == activitymin_.size());
   if (infeasible_) {
     activitymin = 0.0;
     ninfmin = 0;
@@ -1314,6 +1315,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
                                      HighsCDouble& activitymax) {
+  assert(static_cast<size_t>(mipsolver->numRow()) == activitymax_.size());
   if (infeasible_) {
     activitymax = 0.0;
     ninfmax = 0;
@@ -1559,6 +1561,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
+  assert(static_cast<size_t>(mipsolver->numRow()) == activitymax_.size());
 
   if (objProp_.isActive()) {
     objProp_.updateActivityLbChange(col, oldbound, newbound);
@@ -1727,6 +1730,12 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   HighsInt start = mip->a_matrix_.start_[col];
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
+  const bool activitymax_size_ok = static_cast<size_t>(mipsolver->numRow()) == activitymax_.size();
+  if (!activitymax_size_ok) {
+    printf(" HighsDomain::updateActivityUbChange: activitymax_.size() = %d != %d = mipsolver->numRow()\n",
+	   int(activitymax_.size()), int(mipsolver->numRow()));
+  }
+  assert(activitymax_size_ok);
   assert(!infeasible_);
 
   if (objProp_.isActive()) {
@@ -1736,6 +1745,17 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
+      const bool debug_update_activity_ub_change = false;
+      //          mipsolver->numRow() == 142 && col == 1468;
+      if (debug_update_activity_ub_change) {
+        printf("HighsDomain::updateActivityUbChange 142 / 1468:");
+	printf(" activitymax_.size() = %d", int(activitymax_.size()));
+	printf("; mip->a_matrix_.index_.size() = %d", int(mip->a_matrix_.index_.size()));
+	printf("; mip->a_matrix_.index_[%d]", int(i));
+	printf(" = %d\n", int(mip->a_matrix_.index_[i]));
+      }
+
+
       double deltamax;
       if (oldbound == kHighsInf) {
         --activitymaxinf_[mip->a_matrix_.index_[i]];
@@ -1749,11 +1769,6 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
 
 #ifndef NDEBUG
-      const bool debug_update_activity_ub_change =
-          mipsolver->numRow() == 142 && col == 1468;
-      if (debug_update_activity_ub_change) {
-        printf("HighsDomain::updateActivityUbChange 142 / 1468\n");
-      }
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;

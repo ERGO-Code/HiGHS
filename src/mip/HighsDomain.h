@@ -635,6 +635,8 @@ class HighsDomain {
   HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 
   bool inSubmip() const { return mipsolver->submip; }
+
+  HighsInt numRow() const { return HighsInt(activitymin_.size()); }
 };
 
 #endif

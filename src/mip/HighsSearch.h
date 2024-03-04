@@ -238,6 +238,10 @@ class HighsSearch {
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(int64_t maxbacktracks = 1);
+
+  void possiblyResetLocalDomain(const std::string message);
+
+  HighsInt numRow() const { return getLocalDomain().numRow(); }
 };
 
 #endif
