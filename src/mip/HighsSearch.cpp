@@ -1985,11 +1985,10 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
 }
 
 void HighsSearch::possiblyResetLocalDomain(const std::string message) {
+  const bool equal_num_row = this->numRow() == this->mipsolver.numRow();
   if (this->mipsolver.submip) {
-    assert(this->numRow() == this->mipsolver.numRow());
-  } else if (this->numRow() != this->mipsolver.numRow()) {
-    printf("HighsSearch::possiblyResetLocalDomain(): Calling resetLocalDomain() since numRow() = %d != %d = mipsolver.numRow() %s\n",
-	   int(this->numRow()), int(this->mipsolver.numRow()), message.c_str());
+    assert(equal_num_row);
+  } else if (!equal_num_row) {
     this->resetLocalDomain();
   }
 }

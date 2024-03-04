@@ -1457,6 +1457,9 @@ bool HighsLpRelaxation::addModelConstraints(HighsCutSet& new_constraints) {
   //  On entry");
   HighsInt num_row = numRows();
   HighsInt num_model_row = getNumModelRows();
+  if (num_row == 154) {
+    printf("HighsLpRelaxation::addModelConstraints num_row = 154\n");
+  }
   const HighsInt num_cut = num_row - num_model_row;
   // Add constraints to the LP solver's representation of the LP relaxation
   assert(lpsolver.getLp().num_row_ ==

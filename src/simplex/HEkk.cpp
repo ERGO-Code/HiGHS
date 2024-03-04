@@ -3830,6 +3830,17 @@ void HEkk::putIterate() {
 HighsStatus HEkk::getIterate() {
   SimplexIterate& iterate = this->simplex_nla_.simplex_iterate_;
   if (!iterate.valid_) return HighsStatus::kError;
+  // Ensure that the iterate corresponds to an LP of the same dimension
+  const HighsInt debug_lp_num_col = this->lp_.num_col_;
+  const HighsInt debug_lp_num_row = this->lp_.num_row_;
+  const HighsInt debug_iterate_num_row = iterate.basis_.basicIndex_.size();
+  const HighsInt debug_iterate_num_col = iterate.basis_.nonbasicFlag_.size() - debug_iterate_num_row;
+  const bool dimensions_consistent =
+    debug_lp_num_col == debug_iterate_num_col &&
+    debug_lp_num_row == debug_iterate_num_row;
+  assert(dimensions_consistent);
+  if (!dimensions_consistent) return HighsStatus::kError;
+  
   this->simplex_nla_.getInvert();
   this->basis_ = iterate.basis_;
   if (iterate.dual_edge_weight_.size()) {
