@@ -15,6 +15,6 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
-build = "cp312-*"
+build = "*"
 skip = "cp3{6,7}-*"
 test-skip = ""
