@@ -7,6 +7,8 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include <time.h>
+
 #include "cupdlp_cs.h"
 #include "cupdlp_linalg.h"
 #include "glbopts.h"
@@ -1085,10 +1087,19 @@ void PDHG_Init_Data(CUPDLPwork *work) {}
 
 double my_clock(void) {
 #ifdef CUPDLP_TIMER
-  struct timeval t;
-  //  clock_gettime(&t, NULL);
-  gettimeofday(&t, NULL);
-  return (1e-06 * t.tv_usec + t.tv_sec);
+  // struct timeval t;
+  // clock_gettime(&t, NULL);
+  // gettimeofday(&t, NULL);
+  double timeee = 0;
+
+#ifndef WIN32
+  timeee = time(NULL);
+#else
+  timeee = clock();
+#endif
+
+  return timeee;
+  // return (1e-06 * t.tv_usec + t.tv_sec);
 #else
   return 0;
 #endif

@@ -8,7 +8,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest] # windows-latest takes to long
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -33,11 +33,15 @@ jobs:
         run: |
           meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
           meson test -C bbdir
-      - name: Test compiled highspy
-        shell: bash -l {0}
-        run: |
-          meson configure bbdir -Dwith_pybind11=True
-          meson compile -C bbdir
-          LD_LIBRARY_PATH=$(pwd)/bbdir/src \
-          PYTHONPATH=$(pwd)/bbdir \
-          python examples/call_highs_from_python.py
+      
+      # highspy no longer compiled with meson, back to 
+      # setuptools and CMakeBuild
+      # todo: use it optionally in some way
+      # - name: Test compiled highspy
+      #   shell: bash -l {0}
+      #   run: |
+      #     meson configure bbdir -Dwith_pybind11=True
+      #     meson compile -C bbdir
+      #     LD_LIBRARY_PATH=$(pwd)/bbdir/src \
+      #     PYTHONPATH=$(pwd)/bbdir \
+      #     python examples/call_highs_from_python.py

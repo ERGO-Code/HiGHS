@@ -550,7 +550,9 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
   return std::make_tuple(status, row);
 }
 
-PYBIND11_MODULE(_highs, m) {
+
+PYBIND11_MODULE(highspy, m) {
+     
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
@@ -985,6 +987,11 @@ PYBIND11_MODULE(_highs, m) {
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
+
+  m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
+  m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
+  m.attr("HIGHS_VERSION_PATCH") = HIGHS_VERSION_PATCH;
+
   // Submodules
   py::module_ simplex_constants =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
@@ -1104,8 +1111,8 @@ PYBIND11_MODULE(_highs, m) {
       .value("kSimplexNlaPriceFull", SimplexNlaOperation::kSimplexNlaPriceFull)
       .value("kSimplexNlaBtranBasicFeasibilityChange",
              SimplexNlaOperation::kSimplexNlaBtranBasicFeasibilityChange)
-      .value("kSimplexNlaPriceBasicFeasibilityChange",
-             SimplexNlaOperation::kSimplexNlaPriceBasicFeasibilityChange)
+      // .value("kSimplexNlaPriceBasicFeasibilityChange",
+      //        /khighsSimplexNlaOperation::kSimplexNlaPriceBasicFeasibilityChange)
       .value("kSimplexNlaBtranEp", SimplexNlaOperation::kSimplexNlaBtranEp)
       .value("kSimplexNlaPriceAp", SimplexNlaOperation::kSimplexNlaPriceAp)
       .value("kSimplexNlaFtran", SimplexNlaOperation::kSimplexNlaFtran)

@@ -16,8 +16,8 @@
 #include <cassert>
 #include <iostream>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HConst.h"
-#include "pdqsort/pdqsort.h"
 #include "util/FactorTimer.h"
 #include "util/HFactorDebug.h"
 #include "util/HVector.h"

@@ -1,15 +1,13 @@
 if(NOT BUILD_CXX)
   return()
 endif()
+# set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Main Target
-
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
-
 add_subdirectory(src)
 
 # ALIAS
-add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
+# add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,6 +20,23 @@ target_include_directories(highs INTERFACE
   $<INSTALL_INTERFACE:include>
   )
 
+# Properties
+if(NOT APPLE)
+  set_target_properties(highs PROPERTIES VERSION ${PROJECT_VERSION})
+else()
+  # Clang don't support version x.y.z with z > 255
+  set_target_properties(highs PROPERTIES
+    INSTALL_RPATH "@loader_path"
+    VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+endif()
+set_target_properties(highs PROPERTIES
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+  POSITION_INDEPENDENT_CODE ON
+  INTERFACE_POSITION_INDEPENDENT_CODE ON
+  INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR}
+  COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION
+)
+
 ###################
 ## Install rules ##
 ###################
@@ -32,9 +47,10 @@ install(FILES ${PROJECT_BINARY_DIR}/highs_export.h
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 string (TOLOWER ${PROJECT_NAME} lower)
- install(TARGETS highs
+
+install(TARGETS highs
    EXPORT ${lower}-targets
-   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -42,13 +58,18 @@ string (TOLOWER ${PROJECT_NAME} lower)
   
 # Add library targets to the build-tree export set
 export(TARGETS highs
-    NAMESPACE ${PROJECT_NAMESPACE}::
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-
+  NAMESPACE ${PROJECT_NAMESPACE}::highs
+  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 install(EXPORT ${lower}-targets
   NAMESPACE ${PROJECT_NAMESPACE}::
+  FILE highs-targets.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
+# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 
 include(CMakePackageConfigHelpers)
 string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX)
@@ -58,8 +79,7 @@ string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX)
 #   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 write_basic_package_version_file(
   "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config-version.cmake"
-  COMPATIBILITY SameMajorVersion
-  )
+  COMPATIBILITY SameMajorVersion)
 
 # add_cxx_test()
 # CMake function to generate and build C++ test.
@@ -90,3 +110,6 @@ function(add_cxx_test FILE_NAME)
   endif()
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
+
+# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
