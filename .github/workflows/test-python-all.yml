@@ -26,7 +26,6 @@ jobs:
 
       - name: Install sdist
         run: |
-          ls dist
           $item = Get-ChildItem ${{runner.workspace}}/dev/dist
           python -m pip install "$item"
           python -c "import highspy; print(dir(highspy))"
