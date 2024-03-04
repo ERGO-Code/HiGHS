@@ -145,7 +145,7 @@ setup(
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.9",
-    extras_require={"test": ["pytest>=6.0"]}
+    extras_require={"test": ["pytest>=6.0"]},
     classifiers=[
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
