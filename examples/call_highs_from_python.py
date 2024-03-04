@@ -6,13 +6,13 @@
 # directory of this file (ie highs/examples) or any other subdirectory
 # of HiGHS
 import numpy as np
-import highspy._highs
-import highspy._highs.cb as hscb
+import highspy
+import highspy.cb as hscb
 
-h = highspy._highs.Highs()
-inf = highspy._highs.kHighsInf
+h = highspy.Highs()
+inf = highspy.kHighsInf
 alt_inf = h.getInfinity()
-print('highspy._highs.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
+print('highspy.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
 
 # NB The callbacks are not available in
 # https://pypi.org/project/highspy/ (HiGHS v1.5.3). To use them,
@@ -124,10 +124,10 @@ h.clear()
 
 # Now define the blending model as a HighsLp instance
 #
-lp = highspy._highs.HighsLp()
+lp = highspy.HighsLp()
 lp.num_col_ = 2
 lp.num_row_ = 2
-lp.sense_ = highspy._highs.ObjSense.kMaximize
+lp.sense_ = highspy.ObjSense.kMaximize
 lp.col_cost_ = np.array([8, 10], dtype=np.double)
 lp.col_lower_ = np.array([0, 0], dtype=np.double)
 lp.col_upper_ = np.array([inf, inf], dtype=np.double)
@@ -163,7 +163,7 @@ for irow in range(num_row):
 h.clear()
 # Now define the test-semi-definite0 model (from TestQpSolver.cpp) as a HighsModel instance
 #
-model = highspy._highs.HighsModel()
+model = highspy.HighsModel()
 model.lp_.model_name_ = "semi-definite"
 model.lp_.num_col_ = 3
 model.lp_.num_row_ = 1
@@ -172,7 +172,7 @@ model.lp_.col_lower_ = np.array([0, 0, 0], dtype=np.double)
 model.lp_.col_upper_ = np.array([inf, inf, inf], dtype=np.double)
 model.lp_.row_lower_ = np.array([2], dtype=np.double)
 model.lp_.row_upper_ = np.array([inf], dtype=np.double)
-model.lp_.a_matrix_.format_ = highspy._highs.MatrixFormat.kColwise
+model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kColwise
 model.lp_.a_matrix_.start_ = np.array([0, 1, 2, 3])
 model.lp_.a_matrix_.index_ = np.array([0, 0, 0])
 model.lp_.a_matrix_.value_ = np.array([1.0, 1.0, 1.0], dtype=np.double)
@@ -189,19 +189,19 @@ h.run()
 h.clear()
 num_col = 3
 num_row = 1
-sense = highspy._highs.ObjSense.kMinimize
+sense = highspy.ObjSense.kMinimize
 offset = 0
 col_cost = np.array([1.0, 1.0, 2.0], dtype=np.double)
 col_lower = np.array([0, 0, 0], dtype=np.double)
 col_upper = np.array([inf, inf, inf], dtype=np.double)
 row_lower = np.array([2], dtype=np.double)
 row_upper = np.array([inf], dtype=np.double)
-a_matrix_format = highspy._highs.MatrixFormat.kColwise
+a_matrix_format = highspy.MatrixFormat.kColwise
 a_matrix_start = np.array([0, 1, 2, 3])
 a_matrix_index = np.array([0, 0, 0])
 a_matrix_value = np.array([1.0, 1.0, 1.0], dtype=np.double)
 a_matrix_num_nz = a_matrix_start[num_col]
-hessian_format = highspy._highs.HessianFormat.kTriangular
+hessian_format = highspy.HessianFormat.kTriangular
 hessian_start = np.array([0, 2, 2, 3])
 hessian_index = np.array([0, 2, 2])
 hessian_value = np.array([2.0, -1.0, 1.0], dtype=np.double)
@@ -243,7 +243,7 @@ h.presolve()
 presolved_lp = h.getPresolvedLp()
 # Create a HiGHS instance to solve the presolved LP
 print('\nCreate Highs instance to solve presolved LP')
-h1 = highspy._highs.Highs()
+h1 = highspy.Highs()
 h1.passModel(presolved_lp)
 options = h1.getOptions()
 options.presolve = "off"

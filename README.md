@@ -124,36 +124,21 @@ We are happy to give a reasonable level of support via email sent to highsopt@gm
 
 ### Python
 
-There are two ways to install the Python interface. Building directly 
-from Git assumes that you have already installed the HiGHS library. 
-Installing from PyPI through your Python package manager of choice (e.g., `pip`) will also install the HiGHS library if not already present. 
-
-#### From PyPi
-
-HiGHS is available as `highspy` on [PyPi](https://pypi.org/project/highspy/).
-This will not only install the Python interface, but also the HiGHS library 
-itself.
-
-If `highspy` is not already installed, run:
+The python package `highspy` is a thin wrapper around HiGHS and is available on [PyPi](https://pypi.org/project/highspy/). It can be easily installed via `pip` by running
 
 ```bash
 $ pip install highspy
 ```
 
-#### Build directly from Git
+Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run 
 
-In order to build the Python interface, build and install the HiGHS
-library as described above, ensure the shared library is in the
-`LD_LIBRARY_PATH` environment variable, and then run
+```bash
+pip install . 
+```
 
-    pip install ./
+from the root directory. 
 
-from the HiGHS directory.
-
-You may also require
-
-* `pip install pybind11`
-* `pip install pyomo`
+The HiGHS C++ library no longer needs to be separately installed. The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present. 
 
 #### Testing
 
