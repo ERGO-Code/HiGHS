@@ -59,7 +59,8 @@ jobs:
       - name: Install sdist
         run: |
           ls dist
-          python -m pip install dist/*.tar.gz
+          $items = Get-ChildItem dist
+          python -m pip install dist/"$item.name"
 
       - name: Test highspy
         run: |
