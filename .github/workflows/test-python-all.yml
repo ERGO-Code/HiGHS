@@ -20,22 +20,18 @@ jobs:
       - name: Working directory
         run: |
           pwd 
-          ls
           cd ${{runner.workspace}}
           pwd
-          ls
           mkdir dev
           cd dev
           pwd
-          cd $GITHUB_WORKSPACE
-          ls
+          python --version
 
       - name: Build sdist
         working-directory: ${{runner.workspace}}/dev
         run: |
           python -m pip install setuptools
-          python $GITHUB_WORKSPACE/HiGHS/setup.py sdist
-          python --version
+          python ${{runner.workspace}}/HiGHS/setup.py sdist
 
       - name: Install sdist
         run: |
@@ -55,7 +51,7 @@ jobs:
     runs-on: macos-12
     strategy:
       matrix:
-        python: [3.10]
+        python: [3.11]
     steps:
       - uses: actions/checkout@v4
 
@@ -73,9 +69,8 @@ jobs:
         working-directory: ${{runner.workspace}}/dev
         run: |
           python3 --version
-          export PATH=$PATH:/Library/Frameworks/Python.framework/Versions/3.10/bin
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp310-macosx_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         working-directory: ${{runner.workspace}}/dev
@@ -106,7 +101,7 @@ jobs:
         run: |
           python -m pip install cibuildwheel
           python --version
-          python -m cibuildwheel --only cp39-win_arm64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp39-win_amd64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
