@@ -60,7 +60,7 @@ jobs:
         run: |
           ls dist
           $item = Get-ChildItem dist
-          python -m pip install dist/"$item.name"
+          python -m pip install dist/"$item"
 
       - name: Test highspy
         run: |
