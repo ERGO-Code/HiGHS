@@ -27,6 +27,7 @@ jobs:
       - name: install sdist
         run: |
           python3 -m pip install setuptools
+          ls dist
           python3 -m pip install dist/*.tar.gz
 
       - name: test highspy
