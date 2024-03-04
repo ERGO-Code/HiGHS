@@ -417,6 +417,9 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
   //  debugReportDimensions("HighsMipSolverData::runSetup(): On entry");
+  if (mipsolver.numRow() == 146) {
+    printf(" HighsMipSolverData::runSetup(): numRow() = %d\n", int(mipsolver.numRow()));
+  }
 
   last_disptime = -kHighsInf;
 
