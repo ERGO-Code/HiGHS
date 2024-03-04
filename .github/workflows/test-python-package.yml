@@ -162,7 +162,7 @@ jobs:
       - name: Build wheel
         run: |
           python -m pip install cibuildwheel
-          python -m cibuildwheel --only cp310-win_amd64 $GITHUB_WORKSPACE
+          python -m cibuildwheel --only cp310-win_arm64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
