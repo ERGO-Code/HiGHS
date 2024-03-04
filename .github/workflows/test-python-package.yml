@@ -59,7 +59,7 @@ jobs:
       - name: Install sdist
         run: |
           ls dist
-          $items = Get-ChildItem dist
+          $item = Get-ChildItem dist
           python -m pip install dist/"$item.name"
 
       - name: Test highspy
