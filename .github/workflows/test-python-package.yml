@@ -167,10 +167,11 @@ jobs:
       - name: Install wheel
         run: |
           ls wheelhouse
-          python -m pip install wheelhouse/*.whl
+          $item = Get-ChildItem wheelhouse
+          python -m pip install "$item"
 
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python -m pytest .highspy/tests/test_highspy.py
           
