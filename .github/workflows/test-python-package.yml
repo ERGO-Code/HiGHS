@@ -1,9 +1,9 @@
 name: test-python-package
 on: [push, pull_request]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
 jobs:
   build_sdist:
@@ -87,8 +87,8 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
           
-  build_wheel_macos:
-    runs-on: macos-latest
+  build_wheel_macos_12:
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v4
 
@@ -107,7 +107,91 @@ jobs:
         run: |
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+            
+  build_wheel_macos_13:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp310-macosx_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+            
+  build_wheel_macos_14:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
           
+  build_wheel_macos_13_arm64:  
+    runs-on: macos-13-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp310-macosx_arm64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          
+  build_wheel_macos_14_arm64:  
+    runs-on: macos-14-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-macosx_arm64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+
   build_wheel_windows:
     runs-on: windows-latest
     steps:
