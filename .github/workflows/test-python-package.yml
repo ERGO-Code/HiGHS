@@ -60,7 +60,7 @@ jobs:
         run: |
           ls dist
           $item = Get-ChildItem dist
-          python -m pip install dist/"$item"
+          python -m pip install "$item"
 
       - name: Test highspy
         run: |
@@ -87,6 +87,7 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
           
+  # macos 12 is Intel
   build_wheel_macos_12:
     runs-on: macos-12
     steps:
@@ -108,8 +109,9 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
             
+  # macos 13 is Intel
   build_wheel_macos_13:
-    runs-on: macos-14
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
 
@@ -129,50 +131,9 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
             
+  # macos 14 is M1 (beta)
   build_wheel_macos_14:
     runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheel
-        run: |
-          python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
-
-      - name: Install wheel
-        run: |
-          ls wheelhouse
-          python3 --version
-          python3 -m pip install wheelhouse/*.whl
-
-      - name: Test highspy
-        run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
-          
-  build_wheel_macos_13_arm64:  
-    runs-on: macos-13-arm64
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheel
-        run: |
-          python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp310-macosx_arm64 $GITHUB_WORKSPACE
-
-      - name: Install wheel
-        run: |
-          ls wheelhouse
-          python3 --version
-          python3 -m pip install wheelhouse/*.whl
-
-      - name: Test highspy
-        run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
-          
-  build_wheel_macos_14_arm64:  
-    runs-on: macos-14-arm64
     steps:
       - uses: actions/checkout@v4
 
