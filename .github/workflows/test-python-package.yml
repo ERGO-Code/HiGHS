@@ -13,24 +13,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build sdist
-        shell: bash -l {0}
-        run: pipx run build --sdist
-
-      - uses: actions/upload-artifact@v3
-        with:
-          path: dist/*.tar.gz
-
-  test_sdist:
-    name: test install from source
-    runs-on: ubuntu-latest
-    steps:
-      - name: install sdist
+        # shell: bash -l {0}
         run: |
           python3 -m pip install setuptools
+          python3 setup.py sdist
+
+
+      - name: Install sdist
+        run: |
           ls dist
           python3 -m pip install dist/*.tar.gz
 
-      - name: test highspy
+      - name: Test highspy
         run: |
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
