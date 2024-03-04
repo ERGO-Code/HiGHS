@@ -135,18 +135,22 @@ class CMakeBuild(build_ext):
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="highspy",
-    version="1.6.6.dev1",
+    version="1.6.6.dev2",
     description = "A thin set of pybind11 wrappers to HiGHS",
     author="HiGHS developers",
     author_email="highsopt@gmail.com",
     url='https://github.com/ERGO-Code/HiGHS',
+    long_description="",
     license = 'MIT License',
     ext_modules=[CMakeExtension("highspy")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     python_requires=">=3.9",
-    extras_require={"test": ["pytest>=6.0"]},
-    classifiers=[
+    install_requires=[
+       'numpy',
+     ],
+     extras_require={"test": ["pytest>=6.0"]},
+     classifiers=[
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
