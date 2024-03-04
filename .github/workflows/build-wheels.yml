@@ -1,6 +1,8 @@
 # Python release WIP
 name: Build wheels
-on: []
+on: [push]
+
+# on: 
 #  release:
 #    types:
 #      - published
