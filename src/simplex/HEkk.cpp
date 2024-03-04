@@ -3838,9 +3838,12 @@ HighsStatus HEkk::getIterate() {
   const bool dimensions_consistent =
     debug_lp_num_col == debug_iterate_num_col &&
     debug_lp_num_row == debug_iterate_num_row;
-  assert(dimensions_consistent);
-  if (!dimensions_consistent) return HighsStatus::kError;
-  
+  //  assert(dimensions_consistent);
+  if (!dimensions_consistent) {
+    this->status_.has_dual_steepest_edge_weights = false;
+    this->status_.has_invert = false;
+    return HighsStatus::kError;
+  }
   this->simplex_nla_.getInvert();
   this->basis_ = iterate.basis_;
   if (iterate.dual_edge_weight_.size()) {
