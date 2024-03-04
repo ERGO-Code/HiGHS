@@ -27,7 +27,8 @@ jobs:
           mkdir dev
           cd dev
           pwd
-          cd $GITHUB_WORKSPACE/HiGHS/
+          cd $GITHUB_WORKSPACE
+          ls
 
       - name: Build sdist
         working-directory: ${{runner.workspace}}/dev
@@ -52,13 +53,16 @@ jobs:
   # macos 12 is Intel
   build_wheel_macos_12:
     runs-on: macos-12
+    strategy:
+      matrix:
+        python: [3.10]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install correct python version
         uses: actions/setup-python@v5
         with:
-          python-version: 3.10
+          python-version: ${{ matrix.python }}
 
       - name: Working directory
         run: |
