@@ -1,9 +1,11 @@
 # Python release WIP
 name: Build wheels
-on: []
-#  release:
-#    types:
-#      - published
+# on: [push]
+
+on: 
+ release:
+   types:
+     - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.3
+        uses: pypa/cibuildwheel@v2.16.5
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
       - uses: actions/upload-artifact@v3

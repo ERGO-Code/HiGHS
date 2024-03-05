@@ -24,3 +24,9 @@ jobs:
         run: |
           python3 -m pip install .
           pytest -v ./highspy/tests/
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
