@@ -65,8 +65,7 @@ def user_interrupt_callback(
 
         elif callback_type == hscb.HighsCallbackType.kCallbackIpmInterrupt:
             if dev_run:
-                print(f"userInterruptCallback(type {
-                      callback_type}): {message}")
+                print(f"userInterruptCallback(type {callback_type}): {message}")
                 print(f"with iteration count = {data_out.ipm_iteration_count}")
 
             data_in.user_interrupt = (
@@ -75,11 +74,10 @@ def user_interrupt_callback(
 
         elif callback_type == hscb.HighsCallbackType.kCallbackMipInterrupt:
             if dev_run:
-                print(f"userInterruptCallback(type {
-                      callback_type}): {message}")
-                print(f"Bounds ({data_out.mip_dual_bound:.4g}, {
-                      data_out.mip_primal_bound:.4g});")
-                print(f"Gap = {data_out.mip_gap:.4g};")
+                print(f"userInterruptCallback(type {callback_type}): {message}")
+                print(f"Dual bound = {data_out.mip_dual_bound:.4g}")
+                print(f"Primal bound = {data_out.mip_primal_bound:.4g}")
+                print(f"Gap = {data_out.mip_gap:.4g}")
                 print(f"Objective = {data_out.objective_function_value:.4g}")
 
             data_in.user_interrupt = (
@@ -193,7 +191,8 @@ for irow in range(num_row):
 # Clear so that incumbent model is empty
 h.clear()
 
-# Now define the test-semi-definite0 model (from TestQpSolver.cpp) as a HighsModel instance
+# Now define the test-semi-definite0 model (from TestQpSolver.cpp) 
+# as a HighsModel instance
 model = highspy.HighsModel()
 model.lp_.model_name_ = "semi-definite"
 model.lp_.num_col_ = 3

@@ -5,27 +5,17 @@
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
 
-## Table of Contents
-
 - [HiGHS - Linear optimization software](#highs---linear-optimization-software)
-  - [Table of Contents](#table-of-contents)
   - [About HiGHS](#about-highs)
   - [Documentation](#documentation)
   - [Installation](#installation)
+    - [Build from source using CMake](#build-from-source-using-cmake)
     - [Precompiled binaries](#precompiled-binaries)
-    - [Compilation](#compilation)
-    - [Meson](#meson)
-    - [Python](#python)
   - [Interfaces](#interfaces)
-    - [Python](#python-1)
-      - [From PyPi](#from-pypi)
-      - [Build directly from Git](#build-directly-from-git)
-      - [Testing](#testing)
-      - [Google Colab Example](#google-colab-example)
+      - [Python](#python)
   - [Reference](#reference)
 
 ## About HiGHS
------------
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear optimization problems of the form
@@ -46,10 +36,45 @@ Documentation is available at https://ergo-code.github.io/HiGHS/.
 
 ## Installation
 
-There are various ways to install the HiGHS library. These are detailed below.
+### Build from source using CMake
+
+HiGHS uses CMake as build system, and requires at least version 3.15. To generate build files in a new subdirectory called 'build', run:
+
+```sh
+    cmake -S . -B build
+    cmake --build build
+```
+This installs the executable `bin/highs` and the library `lib/highs`.
+
+To test whether the compilation was successful, change into the build directory and run
+
+```sh
+    ctest
+```
+
+HiGHS can read MPS files and (CPLEX) LP files, and the following command
+solves the model in `ml.mps`
+
+```sh
+    highs ml.mps
+```
+HiGHS is installed using the command
+
+```sh
+    cmake --install build
+```
+
+with the optional setting of `--prefix <prefix>`, or the cmake option `CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
+
+
+As an alternative, HiGHS can be installed using the `meson` build interface:
+``` sh
+meson setup bbdir -Dwith_tests=True
+meson test -C bbdir
+```
+_The meson build files are provided by the community and are not officially supported by the HiGHS development team._
 
 ### Precompiled binaries
---------------------
 
 Precompiled static executables are available for a variety of platforms at
 https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
@@ -58,113 +83,35 @@ _These binaries are provided by the Julia community and are not officially suppo
 
 See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
-### Compilation
----------------
-
-HiGHS uses CMake as build system, and requires at least version 3.15. First setup a build folder and call CMake as follows
-
-    mkdir build
-    cd build
-    cmake ..
-
-Then compile the code using
-
-    cmake --build .
-
-This installs the executable `bin/highs`.
-
-As an alternative it is also possible to let `cmake` create the build folder and thus build everything from the HiGHS directory, as follows
-
-    cmake -S . -B build
-    cmake --build build
-
-
-To test whether the compilation was successful, run
-
-    ctest
-
-HiGHS can read MPS files and (CPLEX) LP files, and the following command
-solves the model in `ml.mps`
-
-    highs ml.mps
-
-HiGHS is installed using the command
-
-    cmake --install .
-
-with the optional setting of `--prefix <prefix>  = The installation prefix CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
-
-### Meson
------
-
-HiGHs can also use the `meson` build interface:
-
-``` sh
-meson setup bbdir -Dwith_tests=True
-meson test -C bbdir
-```
-
-
-### Python
------
-
-Installing from PyPI through your Python package manager of choice (e.g., `pip`) will also 
-install the HiGHS library if not already present. HiGHS is available as `highspy` on [PyPi](https://pypi.org/project/highspy/).
-
-If `highspy` is not already installed, run:
-
-```bash
-$ pip install highspy
-```
 
 ## Interfaces
+
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfaces](https://github.com/ERGO-Code/HiGHS/blob/master/src/interfaces), with example driver files in [HiGHS/examples](https://github.com/ERGO-Code/HiGHS/blob/master/examples). More on language and modelling interfaces can be found at https://ergo-code.github.io/HiGHS/stable/interfaces/other/.
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
-### Python
+#### Python
 
 The python package `highspy` is a thin wrapper around HiGHS and is available on [PyPi](https://pypi.org/project/highspy/). It can be easily installed via `pip` by running
 
-```bash
+```sh
 $ pip install highspy
 ```
 
 Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run 
 
-```bash
+```sh
 pip install . 
 ```
-
 from the root directory. 
 
 The HiGHS C++ library no longer needs to be separately installed. The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present. 
 
-#### Testing
+The installation can be tested using the small example [call_highs_from_python_highspy.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python_highspy.py).
 
-The installation can be tested using the small example [call_highs_from_python_highspy.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python_highspy.py), yielding the output
-
-    Running HiGHS 1.7.0 (git hash: n/a): Copyright (c) 2024 HiGHS under MIT licence terms
-    LP has  2  columns 2  rows and  4  nonzeros
-    Solving...
-    Problem solved.
-
-    Model status =  Optimal
-    Optimal objective =  1.0
-    Iteration count =  0
-    Primal solution status =  Feasible
-    Dual solution status =  Feasible
-    Basis validity =  Valid
-
-or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py).
-
-#### Google Colab Example
-
-The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) demonstrates how to call HiGHS via the Python interface `highspy`.
-
+The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
 
 ## Reference
-
 
 If you use HiGHS in an academic context, please acknowledge this and cite the following article.
 
