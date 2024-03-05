@@ -5,7 +5,7 @@
 [build-system]
 # Minimum requirements for the build system to execute.
 requires = [
-  "setuptools>=45",
+  "setuptools>=42",
   "pybind11>=2.4",
   "wheel",
   "cmake>=3.12",

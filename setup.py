@@ -135,7 +135,7 @@ class CMakeBuild(build_ext):
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="highspy",
-    version="1.6.6.dev2",
+    version="1.6.8",
     description = "A thin set of pybind11 wrappers to HiGHS",
     author="HiGHS developers",
     author_email="highsopt@gmail.com",
