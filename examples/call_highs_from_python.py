@@ -51,15 +51,13 @@ def user_interrupt_callback(
         # Various other callback types
         if callback_type == hscb.HighsCallbackType.kCallbackLogging:
             if dev_run:
-                print(f"userInterruptCallback(type {
-                      callback_type}): {message}")
+                print(f"userInterruptCallback(type {callback_type}): {message}")
 
         elif callback_type == hscb.HighsCallbackType.kCallbackSimplexInterrupt:
             if dev_run:
-                print(f"userInterruptCallback(type {
-                      callback_type}): {message}")
-                print(f"with iteration count = {
-                    data_out.simplex_iteration_count}")
+                print(f"userInterruptCallback(type {callback_type}): {message}")
+                print("with iteration count = ", 
+                      data_out.simplex_iteration_count)
 
             data_in.user_interrupt = (
                 data_out.simplex_iteration_count > SIMPLEX_ITERATION_LIMIT
