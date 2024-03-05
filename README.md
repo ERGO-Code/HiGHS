@@ -142,19 +142,19 @@ The HiGHS C++ library no longer needs to be separately installed. The python pac
 
 #### Testing
 
-The installation can be tested using the example [minimal.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/minimal.py), yielding the output
+The installation can be tested using the small example [call_highs_from_python_highspy.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python_highspy.py), yielding the output
 
-    Running HiGHS 1.5.0 [date: 2023-02-22, git hash: d041b3da0]
-    Copyright (c) 2023 HiGHS under MIT licence terms
-    Presolving model
-    2 rows, 2 cols, 4 nonzeros
-    0 rows, 0 cols, 0 nonzeros
-    0 rows, 0 cols, 0 nonzeros
-    Presolve : Reductions: rows 0(-2); columns 0(-2); elements 0(-4) - Reduced to empty
-    Solving the original LP from the solution after postsolve
-    Model   status      : Optimal
-    Objective value     :  1.0000000000e+00
-    HiGHS run time      :          0.00
+    Running HiGHS 1.7.0 (git hash: n/a): Copyright (c) 2024 HiGHS under MIT licence terms
+    LP has  2  columns 2  rows and  4  nonzeros
+    Solving...
+    Problem solved.
+
+    Model status =  Optimal
+    Optimal objective =  1.0
+    Iteration count =  0
+    Primal solution status =  Feasible
+    Dual solution status =  Feasible
+    Basis validity =  Valid
 
 or the more didactic [call_highs_from_python.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python.py).
 

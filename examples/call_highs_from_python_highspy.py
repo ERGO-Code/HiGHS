@@ -8,7 +8,7 @@ h = highspy.Highs()
 # Set up problem
 inf = highspy.kHighsInf
 h.addVars(2, np.array([-inf, -inf]), np.array([inf, inf]))
-h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double))
+h.changeColsCost(2, np.array([0, 1]), np.array([0, 1], dtype=np.double));
 num_cons = 2
 lower = np.array([2, 0], dtype=np.double)
 upper = np.array([inf, inf], dtype=np.double)
@@ -24,16 +24,23 @@ num_nz = h.getNumNz()
 print('LP has ', lp.num_col_, ' columns',
       lp.num_row_, ' rows and ', num_nz, ' nonzeros')
 
+print('Solving...')
+# Disable output from HiGHS for very small LP
+h.setOptionValue("log_to_console", False)
+
 # Solve problem
 h.run()
 
+print('Problem solved.')
+print()
+
 # Print solution information
-solution = h.getSolution()
-basis = h.getBasis()
+# solution = h.getSolution()
+# basis = h.getBasis()
 info = h.getInfo()
 model_status = h.getModelStatus()
+
 print('Model status = ', h.modelStatusToString(model_status))
-print()
 print('Optimal objective = ', info.objective_function_value)
 print('Iteration count = ', info.simplex_iteration_count)
 print('Primal solution status = ',

@@ -12,30 +12,37 @@ import highspy.cb as hscb
 h = highspy.Highs()
 inf = highspy.kHighsInf
 alt_inf = h.getInfinity()
-print('highspy.kHighsInf = ', inf, '; h.getInfinity() = ', alt_inf)
+print('highspy.kHighsInf = ', inf)
+print('h.getInfinity() = ', alt_inf)
 
-# NB The callbacks are not available in
-# https://pypi.org/project/highspy/ (HiGHS v1.5.3). To use them,
-# highspy must be installed locally using (at least) HiGHS v1.6.0
+# Define a callback
+
+
 def user_interrupt_callback(
-    callback_type, message, data_out, data_in, user_callback_data
+    callback_type,
+    message,
+    data_out,
+    data_in,
+    user_callback_data
 ):
     dev_run = True  # or any other condition
 
-    # Constants for iteration limits or objective targets, adjust as per requirement
+    # Constants for iteration limits or objective targets, adjust as required
     ADLITTLE_SIMPLEX_ITERATION_LIMIT = 100
     ADLITTLE_IPM_ITERATION_LIMIT = 100
     EGOUT_OBJECTIVE_TARGET = 1.0
 
     # Callback for MIP Improving Solution
     if callback_type == hscb.HighsCallbackType.kCallbackMipImprovingSolution:
+        # Assuming it is a list or array
         assert user_callback_data is not None, "User callback data is None!"
-        local_callback_data = user_callback_data[0]  # Assuming it is a list or array
+        local_callback_data = user_callback_data[0]
 
         if dev_run:
-            print(
-                f"userCallback(type {callback_type}; data {local_callback_data:.4g}): {message} with objective {data_out.objective_function_value} and solution[0] = {data_out.mip_solution[0]}"
-            )
+            print(f"userCallback(type {callback_type};")
+            print(f"data {local_callback_data:.4g}): {message}")
+            print(f"with objective {data_out.objective_function_value}")
+            print(f"and solution[0] = {data_out.mip_solution[0]}")
 
         # Check and update the objective function value
         assert (
@@ -47,12 +54,15 @@ def user_interrupt_callback(
         # Various other callback types
         if callback_type == hscb.HighsCallbackType.kCallbackLogging:
             if dev_run:
-                print(f"userInterruptCallback(type {callback_type}): {message}")
+                print(f"userInterruptCallback(type {
+                      callback_type}): {message}")
 
         elif callback_type == hscb.HighsCallbackType.kCallbackSimplexInterrupt:
             if dev_run:
                 print(
-                    f"userInterruptCallback(type {callback_type}): {message} with iteration count = {data_out.simplex_iteration_count}"
+                    f"userInterruptCallback(type {callback_type}): {message}")
+                print(f"with iteration count = {
+                    data_out.simplex_iteration_count}"
                 )
             data_in.user_interrupt = (
                 data_out.simplex_iteration_count > ADLITTLE_SIMPLEX_ITERATION_LIMIT
@@ -61,7 +71,8 @@ def user_interrupt_callback(
         elif callback_type == hscb.HighsCallbackType.kCallbackIpmInterrupt:
             if dev_run:
                 print(
-                    f"userInterruptCallback(type {callback_type}): {message} with iteration count = {data_out.ipm_iteration_count}"
+                    f"userInterruptCallback(type {callback_type}): {message} with iteration count = {
+                        data_out.ipm_iteration_count}"
                 )
             data_in.user_interrupt = (
                 data_out.ipm_iteration_count > ADLITTLE_IPM_ITERATION_LIMIT
@@ -70,7 +81,8 @@ def user_interrupt_callback(
         elif callback_type == hscb.HighsCallbackType.kCallbackMipInterrupt:
             if dev_run:
                 print(
-                    f"userInterruptCallback(type {callback_type}): {message} with Bounds ({data_out.mip_dual_bound:.4g}, {data_out.mip_primal_bound:.4g}); Gap = {data_out.mip_gap:.4g}; Objective = {data_out.objective_function_value:.4g}"
+                    f"userInterruptCallback(type {callback_type}): {message} with Bounds ({data_out.mip_dual_bound:.4g}, {
+                        data_out.mip_primal_bound:.4g}); Gap = {data_out.mip_gap:.4g}; Objective = {data_out.objective_function_value:.4g}"
                 )
             data_in.user_interrupt = (
                 data_out.objective_function_value < EGOUT_OBJECTIVE_TARGET
@@ -102,12 +114,15 @@ print("Model status = ", h.modelStatusToString(model_status))
 print("Optimal objective = ", info.objective_function_value)
 print("Iteration count = ", info.simplex_iteration_count)
 print(
-    "Primal solution status = ", h.solutionStatusToString(info.primal_solution_status)
+    "Primal solution status = ", h.solutionStatusToString(
+        info.primal_solution_status)
 )
-print("Dual solution status = ", h.solutionStatusToString(info.dual_solution_status))
+print("Dual solution status = ",
+      h.solutionStatusToString(info.dual_solution_status))
 print("Basis validity = ", h.basisValidityToString(info.basis_validity))
 for icol in range(num_var):
-    print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
+    print(icol, solution.col_value[icol],
+          h.basisStatusToString(basis.col_status[icol]))
 
 # Read in and solve avgas
 h.readModel("check/instances/avgas.mps")
@@ -146,18 +161,22 @@ print("Model status = ", h.modelStatusToString(model_status))
 print("Optimal objective = ", info.objective_function_value)
 print("Iteration count = ", info.simplex_iteration_count)
 print(
-    "Primal solution status = ", h.solutionStatusToString(info.primal_solution_status)
+    "Primal solution status = ", h.solutionStatusToString(
+        info.primal_solution_status)
 )
-print("Dual solution status = ", h.solutionStatusToString(info.dual_solution_status))
+print("Dual solution status = ",
+      h.solutionStatusToString(info.dual_solution_status))
 print("Basis validity = ", h.basisValidityToString(info.basis_validity))
 num_var = h.getNumCol()
 num_row = h.getNumRow()
 print("Variables")
 for icol in range(num_var):
-    print(icol, solution.col_value[icol], h.basisStatusToString(basis.col_status[icol]))
+    print(icol, solution.col_value[icol],
+          h.basisStatusToString(basis.col_status[icol]))
 print("Constraints")
 for irow in range(num_row):
-    print(irow, solution.row_value[irow], h.basisStatusToString(basis.row_status[irow]))
+    print(irow, solution.row_value[irow],
+          h.basisStatusToString(basis.row_status[irow]))
 
 # Clear so that incumbent model is empty
 h.clear()
