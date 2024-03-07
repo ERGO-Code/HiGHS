@@ -217,9 +217,9 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-	if (numRow() == 142) {
-	  printf("HighsMipSolver::run() numRow() = %d\n", int(numRow()));
-	}
+        if (numRow() == 142) {
+          printf("HighsMipSolver::run() numRow() = %d\n", int(numRow()));
+        }
         if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;

@@ -1555,9 +1555,11 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                                          double newbound) {
   if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
-    printf("HighsDomain::updateActivityLbChange: activitymin_ has size %d but should be of size (at least) %d\n",
-	   int(this->activitymin_.size()), int(mipsolver->numRow()));
-    assert(111==345);
+    printf(
+        "HighsDomain::updateActivityLbChange: activitymin_ has size %d but "
+        "should be of size (at least) %d\n",
+        int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111 == 345);
   }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
@@ -1729,9 +1731,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                                          double newbound) {
   if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
-    printf("HighsDomain::updateActivityUbChange: activitymin_ has size %d but should be of size (at least) %d\n",
-	   int(this->activitymin_.size()), int(mipsolver->numRow()));
-    assert(111==345);
+    printf(
+        "HighsDomain::updateActivityUbChange: activitymin_ has size %d but "
+        "should be of size (at least) %d\n",
+        int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111 == 345);
   }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
@@ -1750,12 +1754,12 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       //          mipsolver->numRow() == 142 && col == 1468;
       if (debug_update_activity_ub_change) {
         printf("HighsDomain::updateActivityUbChange 142 / 1468:");
-	printf(" activitymax_.size() = %d", int(activitymax_.size()));
-	printf("; mip->a_matrix_.index_.size() = %d", int(mip->a_matrix_.index_.size()));
-	printf("; mip->a_matrix_.index_[%d]", int(i));
-	printf(" = %d\n", int(mip->a_matrix_.index_[i]));
+        printf(" activitymax_.size() = %d", int(activitymax_.size()));
+        printf("; mip->a_matrix_.index_.size() = %d",
+               int(mip->a_matrix_.index_.size()));
+        printf("; mip->a_matrix_.index_[%d]", int(i));
+        printf(" = %d\n", int(mip->a_matrix_.index_[i]));
       }
-
 
       double deltamax;
       if (oldbound == kHighsInf) {

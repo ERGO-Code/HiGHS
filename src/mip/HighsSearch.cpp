@@ -602,7 +602,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? 'H' : 'B');
 
-	  possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 0");
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 0");
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -737,7 +737,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? 'H' : 'B');
 
-	  possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 1");
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 1");
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -1069,7 +1069,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
               inheuristic ? 'H' : 'T');
 
-	  possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 2");
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 2");
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);

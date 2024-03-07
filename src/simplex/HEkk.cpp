@@ -3834,10 +3834,11 @@ HighsStatus HEkk::getIterate() {
   const HighsInt debug_lp_num_col = this->lp_.num_col_;
   const HighsInt debug_lp_num_row = this->lp_.num_row_;
   const HighsInt debug_iterate_num_row = iterate.basis_.basicIndex_.size();
-  const HighsInt debug_iterate_num_col = iterate.basis_.nonbasicFlag_.size() - debug_iterate_num_row;
+  const HighsInt debug_iterate_num_col =
+      iterate.basis_.nonbasicFlag_.size() - debug_iterate_num_row;
   const bool dimensions_consistent =
-    debug_lp_num_col == debug_iterate_num_col &&
-    debug_lp_num_row == debug_iterate_num_row;
+      debug_lp_num_col == debug_iterate_num_col &&
+      debug_lp_num_row == debug_iterate_num_row;
   //  assert(dimensions_consistent);
   if (!dimensions_consistent) {
     this->status_.has_dual_steepest_edge_weights = false;
