@@ -29,6 +29,33 @@ bool HighsModel::equalButForNames(const HighsModel& model) const {
   return equal;
 }
 
+bool HighsModel::userCostScaleOk(const HighsInt user_cost_scale,
+                                 const double small_matrix_value,
+                                 const double large_matrix_value,
+                                 const double infinite_cost) const {
+  const HighsInt dl_user_cost_scale =
+      user_cost_scale - this->lp_.user_cost_scale_;
+  if (!dl_user_cost_scale) return true;
+  if (this->hessian_.dim_ &&
+      !this->hessian_.scaleOk(dl_user_cost_scale, small_matrix_value,
+                              large_matrix_value))
+    return false;
+  return this->lp_.userCostScaleOk(user_cost_scale, infinite_cost);
+}
+
+void HighsModel::userCostScale(const HighsInt user_cost_scale) {
+  const HighsInt dl_user_cost_scale =
+      user_cost_scale - this->lp_.user_cost_scale_;
+  if (!dl_user_cost_scale) return;
+  double dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
+  if (this->hessian_.dim_) {
+    for (HighsInt iEl = 0; iEl < this->hessian_.start_[this->hessian_.dim_];
+         iEl++)
+      this->hessian_.value_[iEl] *= dl_user_cost_scale_value;
+  }
+  this->lp_.userCostScale(user_cost_scale);
+}
+
 void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();

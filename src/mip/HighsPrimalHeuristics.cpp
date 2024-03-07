@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -13,6 +13,7 @@
 #include <numeric>
 #include <unordered_set>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLpUtils.h"
@@ -20,7 +21,6 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 

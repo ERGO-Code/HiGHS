@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -15,12 +15,12 @@
 
 #include <algorithm>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
-#include "pdqsort/pdqsort.h"
 
 struct FractionalInteger {
   double fractionality;

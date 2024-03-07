@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -15,10 +15,10 @@
 #include <numeric>
 #include <queue>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
 
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {

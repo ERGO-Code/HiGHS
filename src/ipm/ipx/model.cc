@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include "ipm/ipx/utils.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 
 namespace ipx {
 
@@ -16,13 +16,16 @@ Int Model::Load(const Control& control, Int num_constr, Int num_var,
                             obj, lbuser, ubuser);
     if (errflag)
         return errflag;
-    control.Log()
-        << "Input\n"
-        << Textline("Number of variables:") << num_var_ << '\n'
-        << Textline("Number of free variables:") << num_free_var_ << '\n'
-        << Textline("Number of constraints:") << num_constr_ << '\n'
-        << Textline("Number of equality constraints:") << num_eqconstr_ << '\n'
-        << Textline("Number of matrix entries:") << num_entries_ << '\n';
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream
+      << "Input\n"
+      << Textline("Number of variables:") << num_var_ << '\n'
+      << Textline("Number of free variables:") << num_free_var_ << '\n'
+      << Textline("Number of constraints:") << num_constr_ << '\n'
+      << Textline("Number of equality constraints:") << num_eqconstr_ << '\n'
+      << Textline("Number of matrix entries:") << num_entries_ << '\n';
+    control.hLog(h_logging_stream);
     PrintCoefficientRange(control);
     ScaleModel(control);
 
@@ -862,10 +865,13 @@ void Model::PrintCoefficientRange(const Control& control) const {
     }
     if (amin == INFINITY)       // no nonzero entries in A_
         amin = 0.0;
-    control.Log()
-        << Textline("Matrix range:")
-        << "[" << Scientific(amin, 5, 0) << ", "
-        << Scientific(amax, 5, 0) << "]\n";
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream
+      << Textline("Matrix range:")
+      << "[" << Scientific(amin, 5, 0) << ", "
+      << Scientific(amax, 5, 0) << "]\n";
+    control.hLog(h_logging_stream);
 
     double rhsmin = INFINITY;
     double rhsmax = 0.0;
@@ -877,10 +883,11 @@ void Model::PrintCoefficientRange(const Control& control) const {
     }
     if (rhsmin == INFINITY)     // no nonzero entries in rhs
         rhsmin = 0.0;
-    control.Log()
-        << Textline("RHS range:")
-        << "[" << Scientific(rhsmin, 5, 0) << ", "
-        << Scientific(rhsmax, 5, 0) << "]\n";
+    h_logging_stream
+      << Textline("RHS range:")
+      << "[" << Scientific(rhsmin, 5, 0) << ", "
+      << Scientific(rhsmax, 5, 0) << "]\n";
+    control.hLog(h_logging_stream);
 
     double objmin = INFINITY;
     double objmax = 0.0;
@@ -892,10 +899,11 @@ void Model::PrintCoefficientRange(const Control& control) const {
     }
     if (objmin == INFINITY)     // no nonzero entries in obj
         objmin = 0.0;
-    control.Log()
-        << Textline("Objective range:")
-        << "[" << Scientific(objmin, 5, 0) << ", "
-        << Scientific(objmax, 5, 0) << "]\n";
+    h_logging_stream
+      << Textline("Objective range:")
+      << "[" << Scientific(objmin, 5, 0) << ", "
+      << Scientific(objmax, 5, 0) << "]\n";
+    control.hLog(h_logging_stream);
 
     double boundmin = INFINITY;
     double boundmax = 0.0;
@@ -913,10 +921,11 @@ void Model::PrintCoefficientRange(const Control& control) const {
     }
     if (boundmin == INFINITY)   // no finite nonzeros entries in bounds
         boundmin = 0.0;
-    control.Log()
-        << Textline("Bounds range:")
-        << "[" << Scientific(boundmin, 5, 0) << ", "
-        << Scientific(boundmax, 5, 0) << "]\n";
+    h_logging_stream
+      << Textline("Bounds range:")
+      << "[" << Scientific(boundmin, 5, 0) << ", "
+      << Scientific(boundmax, 5, 0) << "]\n";
+    control.hLog(h_logging_stream);
 }
 
 void Model::PrintPreprocessingLog(const Control& control) const {
@@ -940,15 +949,19 @@ void Model::PrintPreprocessingLog(const Control& control) const {
     if (maxscale == 0.0)
         maxscale = 1.0;
 
-    control.Log()
-        << "Preprocessing\n"
-        << Textline("Dualized model:") << (dualized() ? "yes" : "no") << '\n'
-        << Textline("Number of dense columns:") << num_dense_cols() << '\n';
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream
+      << "Preprocessing\n"
+      << Textline("Dualized model:") << (dualized() ? "yes" : "no") << '\n'
+      << Textline("Number of dense columns:") << num_dense_cols() << '\n';
+    control.hLog(h_logging_stream);
     if (control.scale() > 0) {
-        control.Log()
-            << Textline("Range of scaling factors:") << "["
-            << Scientific(minscale, 8, 2) << ", "
-            << Scientific(maxscale, 8, 2) << "]\n";
+      h_logging_stream
+	<< Textline("Range of scaling factors:") << "["
+	<< Scientific(minscale, 8, 2) << ", "
+	<< Scientific(maxscale, 8, 2) << "]\n";
+      control.hLog(h_logging_stream);
     }
 }
 

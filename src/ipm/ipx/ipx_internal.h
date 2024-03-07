@@ -48,6 +48,14 @@ struct Parameters : public ipx_parameters {
     stop_at_switch = 0;
     update_heuristic = 1;
     maxpasses = -1;
+    run_centring = 0;
+    max_centring_steps = 5;
+    centring_ratio_tolerance = 100.0;
+    centring_ratio_reduction = 1.5;
+    centring_alpha_scaling = 0.5;
+    bad_products_tolerance = 3;
+    highs_logging = false;
+    log_options = nullptr;
   }
 
   Parameters(const ipx_parameters& p) : ipx_parameters(p) {}

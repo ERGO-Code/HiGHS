@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -83,13 +83,14 @@ bool commandLineOffOnOk(const HighsLogOptions& report_log_options,
 bool commandLineSolverOk(const HighsLogOptions& report_log_options,
                          const string& value) {
   if (value == kSimplexString || value == kHighsChooseString ||
-      value == kIpmString)
+      value == kIpmString || value == kPdlpString)
     return true;
-  highsLogUser(
-      report_log_options, HighsLogType::kWarning,
-      "Value \"%s\" for solver option is not one of \"%s\", \"%s\" or \"%s\"\n",
-      value.c_str(), kSimplexString.c_str(), kHighsChooseString.c_str(),
-      kIpmString.c_str());
+  highsLogUser(report_log_options, HighsLogType::kWarning,
+               "Value \"%s\" for solver option is not one of \"%s\", \"%s\", "
+               "\"%s\" or \"%s\"\n",
+               value.c_str(), kSimplexString.c_str(),
+               kHighsChooseString.c_str(), kIpmString.c_str(),
+               kPdlpString.c_str());
   return false;
 }
 
@@ -146,9 +147,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       bool* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordBool& check_option =
-            ((OptionRecordBool*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kBool) {
+        if (option_records[check_index]->type == HighsOptionType::kBool) {
+          OptionRecordBool& check_option =
+              ((OptionRecordBool*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -170,9 +171,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       HighsInt* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordInt& check_option =
-            ((OptionRecordInt*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kInt) {
+        if (option_records[check_index]->type == HighsOptionType::kInt) {
+          OptionRecordInt& check_option =
+              ((OptionRecordInt*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -195,9 +196,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       double* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordDouble& check_option =
-            ((OptionRecordDouble*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kDouble) {
+        if (option_records[check_index]->type == HighsOptionType::kDouble) {
+          OptionRecordDouble& check_option =
+              ((OptionRecordDouble*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -218,9 +219,9 @@ OptionStatus checkOptions(const HighsLogOptions& report_log_options,
       std::string* value_pointer = option.value;
       for (HighsInt check_index = 0; check_index < num_options; check_index++) {
         if (check_index == index) continue;
-        OptionRecordString& check_option =
-            ((OptionRecordString*)option_records[check_index])[0];
-        if (check_option.type == HighsOptionType::kString) {
+        if (option_records[check_index]->type == HighsOptionType::kString) {
+          OptionRecordString& check_option =
+              ((OptionRecordString*)option_records[check_index])[0];
           if (check_option.value == value_pointer) {
             highsLogUser(report_log_options, HighsLogType::kError,
                          "checkOptions: Option %" HIGHSINT_FORMAT
@@ -494,20 +495,29 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                ((OptionRecordInt*)option_records[index])[0],
                                value_int);
   } else if (type == HighsOptionType::kDouble) {
-    // Check that the string only contains legitimate characters
-    if (value_trim.find_first_not_of("+-.0123456789eE") != std::string::npos)
-      return OptionStatus::kIllegalValue;
-    HighsInt value_int = atoi(value_trim.c_str());
-    double value_double = atof(value_trim.c_str());
-    double value_int_double = value_int;
-    if (value_double == value_int_double) {
-      highsLogDev(report_log_options, HighsLogType::kInfo,
-                  "setLocalOptionValue: Value = \"%s\" converts via atoi as "
-                  "%" HIGHSINT_FORMAT
-                  " "
-                  "so is %g as double, and %g via atof\n",
-                  value_trim.c_str(), value_int, value_int_double,
-                  value_double);
+    // Check that the string only contains legitimate characters -
+    // after handling +/- inf
+    double value_double = 0;
+    tolower(value_trim);
+    if (value_trim == "inf" || value_trim == "+inf") {
+      value_double = kHighsInf;
+    } else if (value_trim == "-inf") {
+      value_double = -kHighsInf;
+    } else {
+      if (value_trim.find_first_not_of("+-.0123456789eE") != std::string::npos)
+        return OptionStatus::kIllegalValue;
+      HighsInt value_int = atoi(value_trim.c_str());
+      value_double = atof(value_trim.c_str());
+      double value_int_double = value_int;
+      if (value_double == value_int_double) {
+        highsLogDev(report_log_options, HighsLogType::kInfo,
+                    "setLocalOptionValue: Value = \"%s\" converts via atoi as "
+                    "%" HIGHSINT_FORMAT
+                    " "
+                    "so is %g as double, and %g via atof\n",
+                    value_trim.c_str(), value_int, value_int_double,
+                    value_double);
+      }
     }
     return setLocalOptionValue(report_log_options,
                                ((OptionRecordDouble*)option_records[index])[0],

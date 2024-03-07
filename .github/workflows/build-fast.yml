@@ -10,8 +10,7 @@ jobs:
         os: [macOS-latest]
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -19,7 +18,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake -DFAST_BUILD=ON -DEXP=ON $GITHUB_WORKSPACE
+        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DCMAKE_BUILD_TYPE=RELEASE
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -29,21 +28,7 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest
-
-      # disable for now, py11 changes broke it. something trivial but 
-      # not necessary, that was proof of concept. leaving here for now.
-      # - name: Doctest
-      #   working-directory: ${{runner.workspace}}/build
-      #   shell: bash
-      #   run: ./bin/doctest
-
-      - name: Install
-        run: |
-          cmake -E make_directory ${{runner.workspace}}/install \
-          cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install $GITHUB_WORKSPACE \
-          cmake --build . --parallel \
-          cmake --install . \
+        run: ctest --parallel --timeout 300 --output-on-failure -C RELEASE
 
   fast-build-debug:
     runs-on: ${{ matrix.os }}
@@ -52,7 +37,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -66,7 +51,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         shell: bash
         # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --parallel --config DEBUG
+        run: cmake --build . --parallel
 
       - name: Test
         working-directory: ${{runner.workspace}}/build

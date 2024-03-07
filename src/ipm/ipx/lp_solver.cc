@@ -53,7 +53,7 @@ Int LpSolver::Solve() {
     ClearSolution();
     control_.ResetTimer();
     control_.OpenLogfile();
-    control_.Log() << "IPX version 1.0\n";
+    control_.hLog("IPX version 1.0\n");
     try {
         InteriorPointSolve();
 	const bool run_crossover_on = control_.run_crossover() == 1;
@@ -66,10 +66,10 @@ Int LpSolver::Solve() {
 	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
 	if (run_crossover) {
 	    if (run_crossover_on) {
-	      control_.Log() << "Running crossover as requested\n";
+	      control_.hLog("Running crossover as requested\n");
 	    } else if (run_crossover_choose) {
 	      assert(info_.status_ipm == IPX_STATUS_imprecise);
-	      control_.Log() << "Running crossover since IPX is imprecise\n";
+	      control_.hLog("Running crossover since IPX is imprecise\n");
 	    } else {
 	      assert(run_crossover_on || run_crossover_choose);
 	    }
@@ -106,12 +106,15 @@ Int LpSolver::Solve() {
         PrintSummary();
     }
     catch (const std::bad_alloc&) {
-        control_.Log() << " out of memory\n";
+      control_.hLog(" out of memory\n");
         info_.status = IPX_STATUS_out_of_memory;
     }
     catch (const std::exception& e) {
-        control_.Log() << " internal error: " << e.what() << '\n';
-        info_.status = IPX_STATUS_internal_error;
+      std::stringstream h_logging_stream;
+      h_logging_stream.str(std::string());
+      h_logging_stream << " internal error: " << e.what() << '\n';
+      control_.hLog(h_logging_stream);
+      info_.status = IPX_STATUS_internal_error;
     }
     info_.time_total = control_.Elapsed();
     control_.Debug(2) << info_;
@@ -185,7 +188,7 @@ Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
     const SparseMatrix& AI = model_.AI();
 
     ClearSolution();
-    control_.Log() << "Crossover from starting point\n";
+    control_.hLog("Crossover from starting point\n");
 
     x_crossover_.resize(n+m);
     y_crossover_.resize(m);
@@ -351,7 +354,7 @@ void LpSolver::ClearSolution() {
 }
 
 void LpSolver::InteriorPointSolve() {
-    control_.Log() << "Interior Point Solve\n";
+  control_.hLog("Interior Point Solve\n");
 
     // Allocate new iterate and set tolerances for IPM termination test.
     iterate_.reset(new Iterate(model_));
@@ -373,14 +376,20 @@ void LpSolver::InteriorPointSolve() {
             info_.rel_dresidual > control_.ipm_feasibility_tol())
             info_.status_ipm = IPX_STATUS_imprecise;
     }
+    if (info_.centring_tried) {
+      // Assess the success of analytic centre calculation
+      info_.status_ipm = info_.centring_success ? IPX_STATUS_optimal : IPX_STATUS_imprecise;
+      assert(info_.status_ipm == IPX_STATUS_optimal);
+    }
 }
 
 void LpSolver::RunIPM() {
     IPM ipm(control_);
+    info_.centring_tried = false;
+    info_.centring_success = false;
 
     if (x_start_.size() != 0) {
-        control_.Log() << " Using starting point provided by user."
-            " Skipping initial iterations.\n";
+      control_.hLog(" Using starting point provided by user. Skipping initial iterations.\n");
         iterate_->Initialize(x_start_, xl_start_, xu_start_,
                              y_start_, zl_start_, zu_start_);
     }
@@ -393,7 +402,8 @@ void LpSolver::RunIPM() {
             return;
     }
     BuildStartingBasis();
-    if (info_.status_ipm != IPX_STATUS_not_run)
+    if (info_.status_ipm != IPX_STATUS_not_run || 
+        info_.centring_tried)
         return;
     RunMainIPM(ipm);
 }
@@ -508,7 +518,7 @@ void LpSolver::BuildStartingBasis() {
         return;
     }
     basis_.reset(new Basis(control_, model_));
-    control_.Log() << " Constructing starting basis...\n";
+    control_.hLog(" Constructing starting basis...\n");
     StartingBasis(iterate_.get(), basis_.get(), &info_);
     if (info_.errflag == IPX_ERROR_user_interrupt) {
         info_.errflag = 0;
@@ -632,34 +642,39 @@ void LpSolver::RunCrossover() {
 }
 
 void LpSolver::PrintSummary() {
-    control_.Log() << "Summary\n"
+  std::stringstream h_logging_stream;
+  h_logging_stream.str(std::string());
+  h_logging_stream << "Summary\n"
                    << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n"
                    << Textline("Status interior point solve:")
                    << StatusString(info_.status_ipm) << '\n'
                    << Textline("Status crossover:")
                    << StatusString(info_.status_crossover) << '\n';
-    if (info_.status_ipm == IPX_STATUS_optimal ||
-        info_.status_ipm == IPX_STATUS_imprecise) {
-        control_.Log()
-            << Textline("objective value:") << sci8(info_.pobjval) << '\n'
-            << Textline("interior solution primal residual (abs/rel):")
-            << sci2(info_.abs_presidual) << " / " << sci2(info_.rel_presidual)
-            << '\n'
-            << Textline("interior solution dual residual (abs/rel):")
-            << sci2(info_.abs_dresidual) << " / " << sci2(info_.rel_dresidual)
-            << '\n'
-            << Textline("interior solution objective gap (abs/rel):")
-            << sci2(info_.pobjval-info_.dobjval) << " / "
-            << sci2(info_.rel_objgap)  << '\n';
-    }
-    if (info_.status_crossover == IPX_STATUS_optimal ||
-        info_.status_crossover == IPX_STATUS_imprecise) {
-        control_.Log()
-            << Textline("basic solution primal infeasibility:")
-            << sci2(info_.primal_infeas) << '\n'
-            << Textline("basic solution dual infeasibility:")
-            << sci2(info_.dual_infeas) << '\n';
-    }
+  control_.hLog(h_logging_stream);
+  if (info_.status_ipm == IPX_STATUS_optimal ||
+      info_.status_ipm == IPX_STATUS_imprecise) {
+    h_logging_stream
+      << Textline("objective value:") << sci8(info_.pobjval) << '\n'
+      << Textline("interior solution primal residual (abs/rel):")
+      << sci2(info_.abs_presidual) << " / " << sci2(info_.rel_presidual)
+      << '\n'
+      << Textline("interior solution dual residual (abs/rel):")
+      << sci2(info_.abs_dresidual) << " / " << sci2(info_.rel_dresidual)
+      << '\n'
+      << Textline("interior solution objective gap (abs/rel):")
+      << sci2(info_.pobjval-info_.dobjval) << " / "
+      << sci2(info_.rel_objgap)  << '\n';
+    control_.hLog(h_logging_stream);
+  }
+  if (info_.status_crossover == IPX_STATUS_optimal ||
+      info_.status_crossover == IPX_STATUS_imprecise) {
+    h_logging_stream
+      << Textline("basic solution primal infeasibility:")
+      << sci2(info_.primal_infeas) << '\n'
+      << Textline("basic solution dual infeasibility:")
+      << sci2(info_.dual_infeas) << '\n';
+    control_.hLog(h_logging_stream);
+  }
 }
 
 }  // namespace ipx

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -24,7 +24,7 @@
 #include "util/stringutil.h"
 
 #ifdef ZLIB_FOUND
-#include "zstr/zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 using std::map;
@@ -633,6 +633,7 @@ HighsStatus writeMps(
         "Cannot write fixed MPS with names of length (up to) %" HIGHSINT_FORMAT
         "\n",
         max_name_length);
+    fclose(file);
     return HighsStatus::kError;
   }
   assert(objective_name != "");

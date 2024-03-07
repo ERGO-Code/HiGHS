@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -21,10 +21,11 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
-    "Copyright (c) 2023 HiGHS under MIT licence terms";
+    "Copyright (c) 2024 HiGHS under MIT licence terms";
 
 const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
+const HighsInt kHighsIInf32 = std::numeric_limits<int>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsTiny = 1e-14;
 const double kHighsMacheps = std::ldexp(1, -52);
@@ -35,6 +36,10 @@ const std::string kHighsOnString = "on";
 const HighsInt kHighsMaxStringLength = 512;
 const HighsInt kSimplexConcurrencyLimit = 8;
 const double kRunningAverageMultiplier = 0.05;
+const double kExcessivelyLargeBoundValue = 1e10;
+const double kExcessivelyLargeCostValue = 1e10;
+const double kExcessivelySmallBoundValue = 1e-4;
+const double kExcessivelySmallCostValue = 1e-4;
 
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
@@ -208,13 +213,16 @@ enum class HighsModelStatus {
 
 enum HighsCallbackType : int {
   kCallbackMin = 0,
-  kCallbackLogging = kCallbackMin,
-  kCallbackSimplexInterrupt,
-  kCallbackIpmInterrupt,
-  kCallbackMipImprovingSolution,
-  kCallbackMipLogging,
-  kCallbackMipInterrupt,
-  kCallbackMax = kCallbackMipInterrupt,
+  kCallbackLogging = kCallbackMin,    // 0
+  kCallbackSimplexInterrupt,          // 1
+  kCallbackIpmInterrupt,              // 2
+  kCallbackMipSolution,               // 3
+  kCallbackMipImprovingSolution,      // 4
+  kCallbackMipLogging,                // 5
+  kCallbackMipInterrupt,              // 6
+  kCallbackMipGetCutPool,             // 7
+  kCallbackMipDefineLazyConstraints,  // 8
+  kCallbackMax = kCallbackMipDefineLazyConstraints,
   kNumCallbackType
 };
 

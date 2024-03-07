@@ -40,6 +40,19 @@ void HighsHessian::exactResize() {
   }
 }
 
+bool HighsHessian::scaleOk(const HighsInt hessian_scale,
+                           const double small_matrix_value,
+                           const double large_matrix_value) const {
+  if (!this->dim_) return true;
+  double hessian_scale_value = std::pow(2, hessian_scale);
+  for (HighsInt iEl = 0; iEl < this->start_[this->dim_]; iEl++) {
+    double abs_new_value = std::abs(this->value_[iEl] * hessian_scale_value);
+    if (abs_new_value >= large_matrix_value) return false;
+    if (abs_new_value <= small_matrix_value) return false;
+  }
+  return true;
+}
+
 HighsInt HighsHessian::numNz() const {
   assert(this->formatOk());
   assert((HighsInt)this->start_.size() >= this->dim_ + 1);

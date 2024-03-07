@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -41,12 +41,15 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   // Modify parameters.debug according to log_dev_level
   parameters.debug = 0;
   if (options.log_dev_level == kHighsLogDevLevelDetailed) {
-    parameters.debug = 0;
+    // Default options.log_dev_level setting is kHighsLogDevLevelNone, yielding
+    // default setting debug = 0
   } else if (options.log_dev_level == kHighsLogDevLevelInfo) {
     parameters.debug = 2;
   } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
     parameters.debug = 4;
   }
+  parameters.highs_logging = true;
+  parameters.log_options = &options.log_options;
 
   ipx::LpSolver lps;
   lps.SetParameters(parameters);

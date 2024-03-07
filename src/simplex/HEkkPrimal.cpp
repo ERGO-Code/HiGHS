@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -13,7 +13,7 @@
  */
 #include "simplex/HEkkPrimal.h"
 
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
@@ -1944,11 +1944,9 @@ void HEkkPrimal::considerInfeasibleValueIn() {
 }
 
 void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
-  static double max_max_local_primal_infeasibility;
-  static double max_max_ignored_violation;
   if (initialise) {
-    max_max_local_primal_infeasibility = 0;
-    max_max_ignored_violation = 0;
+    max_max_local_primal_infeasibility_ = 0;
+    max_max_ignored_violation_ = 0;
     return;
   }
   analysis->simplexTimerStart(UpdatePrimalClock);
@@ -2027,15 +2025,15 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   if (primal_infeasible) {
     rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;
     if (max_local_primal_infeasibility >
-        max_max_local_primal_infeasibility * 2) {
-      max_max_local_primal_infeasibility = max_local_primal_infeasibility;
+        max_max_local_primal_infeasibility_ * 2) {
+      max_max_local_primal_infeasibility_ = max_local_primal_infeasibility;
       printf("phase2UpdatePrimal: max_local_primal_infeasibility = %g\n",
              max_local_primal_infeasibility);
     }
     ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   }
-  if (max_ignored_violation > max_max_ignored_violation * 2) {
-    max_max_ignored_violation = max_ignored_violation;
+  if (max_ignored_violation > max_max_ignored_violation_ * 2) {
+    max_max_ignored_violation_ = max_ignored_violation;
     printf("phase2UpdatePrimal: max_ignored_violation = %g\n",
            max_ignored_violation);
   }
@@ -2048,9 +2046,8 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
 bool HEkkPrimal::correctPrimal(const bool initialise) {
   if (primal_correction_strategy == kSimplexPrimalCorrectionStrategyNone)
     return true;
-  static double max_max_primal_correction;
   if (initialise) {
-    max_max_primal_correction = 0;
+    max_max_primal_correction_ = 0;
     return true;
   }
   assert(solve_phase == kSolvePhase2);
@@ -2108,7 +2105,7 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
     }
     return false;
   }
-  if (max_primal_correction > 2 * max_max_primal_correction) {
+  if (max_primal_correction > 2 * max_max_primal_correction_) {
     highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
                 "phase2CorrectPrimal: num / max / sum primal corrections = "
                 "%" HIGHSINT_FORMAT
@@ -2116,7 +2113,7 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
                 "%g\n",
                 num_primal_correction, max_primal_correction,
                 sum_primal_correction);
-    max_max_primal_correction = max_primal_correction;
+    max_max_primal_correction_ = max_primal_correction;
   }
   return true;
 }
@@ -2616,16 +2613,15 @@ void HEkkPrimal::localReportIterHeader() {
 
 void HEkkPrimal::localReportIter(const bool header) {
   if (!report_hyper_chuzc) return;
-  static HighsInt last_header_iteration_count;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   HighsInt iteration_count = ekk_instance_.iteration_count_;
   if (header) {
     localReportIterHeader();
-    last_header_iteration_count = iteration_count;
+    last_header_iteration_count_ = iteration_count;
   } else {
-    if (ekk_instance_.iteration_count_ > last_header_iteration_count + 10) {
+    if (ekk_instance_.iteration_count_ > last_header_iteration_count_ + 10) {
       localReportIterHeader();
-      last_header_iteration_count = iteration_count;
+      last_header_iteration_count_ = iteration_count;
     }
     if (row_out >= 0) {
       printf("%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT "  %5" HIGHSINT_FORMAT

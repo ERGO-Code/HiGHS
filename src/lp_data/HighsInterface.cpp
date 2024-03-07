@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -11,6 +11,8 @@
 /**@file lp_data/HighsInterface.cpp
  * @brief
  */
+#include <sstream>
+
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
@@ -121,6 +123,32 @@ HighsStatus Highs::addColsInterface(
                    local_colLower, local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
+  if (lp.user_bound_scale_) {
+    // Assess and apply any user bound scaling
+    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
+                      options.infinite_bound)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User bound scaling yields infinite bound\n");
+      return HighsStatus::kError;
+    }
+    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
+    for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++) {
+      local_colLower[iCol] *= bound_scale_value;
+      local_colUpper[iCol] *= bound_scale_value;
+    }
+  }
+  if (lp.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
+                     options.infinite_cost)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User cost scaling yields infinite cost\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, lp.user_cost_scale_);
+    for (HighsInt iCol = 0; iCol < ext_num_new_col; iCol++)
+      local_colCost[iCol] *= cost_scale_value;
+  }
   // Append the columns to the LP vectors and matrix
   appendColsToLpVectors(lp, ext_num_new_col, local_colCost, local_colLower,
                         local_colUpper);
@@ -246,6 +274,20 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                    local_rowLower, local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
+  if (lp.user_bound_scale_) {
+    // Assess and apply any user bound scaling
+    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User bound scaling yields infinite bound\n");
+      return HighsStatus::kError;
+    }
+    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
+    for (HighsInt iRow = 0; iRow < ext_num_new_row; iRow++) {
+      local_rowLower[iRow] *= bound_scale_value;
+      local_rowUpper[iRow] *= bound_scale_value;
+    }
+  }
 
   // Append the rows to the LP vectors
   appendRowsToLpVectors(lp, ext_num_new_row, local_rowLower, local_rowUpper);
@@ -636,6 +678,18 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
       return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
+  if (lp.user_cost_scale_) {
+    // Assess and apply any user cost scaling
+    if (!costScaleOk(local_colCost, lp.user_cost_scale_,
+                     options_.infinite_cost)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User cost scaling yields infinite cost\n");
+      return HighsStatus::kError;
+    }
+    double cost_scale_value = std::pow(2, lp.user_cost_scale_);
+    for (HighsInt iCol = 0; iCol < num_cost; iCol++)
+      local_colCost[iCol] *= cost_scale_value;
+  }
   changeLpCosts(lp, index_collection, local_colCost, options_.infinite_cost);
 
   // Interpret possible introduction of infinite costs
@@ -680,9 +734,23 @@ HighsStatus Highs::changeColBoundsInterface(
                    local_colUpper, options_.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
+  HighsLp& lp = model_.lp_;
+  if (lp.user_bound_scale_) {
+    // Assess and apply any user bound scaling
+    if (!boundScaleOk(local_colLower, local_colUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User bound scaling yields infinite bound\n");
+      return HighsStatus::kError;
+    }
+    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
+    for (HighsInt iCol = 0; iCol < num_col_bounds; iCol++) {
+      local_colLower[iCol] *= bound_scale_value;
+      local_colUpper[iCol] *= bound_scale_value;
+    }
+  }
 
-  changeLpColBounds(model_.lp_, index_collection, local_colLower,
-                    local_colUpper);
+  changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
@@ -724,9 +792,23 @@ HighsStatus Highs::changeRowBoundsInterface(
                    local_rowUpper, options_.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
+  HighsLp& lp = model_.lp_;
+  if (lp.user_bound_scale_) {
+    // Assess and apply any user bound scaling
+    if (!boundScaleOk(local_rowLower, local_rowUpper, lp.user_bound_scale_,
+                      options_.infinite_bound)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "User bound scaling yields infinite bound\n");
+      return HighsStatus::kError;
+    }
+    double bound_scale_value = std::pow(2, lp.user_bound_scale_);
+    for (HighsInt iRow = 0; iRow < num_row_bounds; iRow++) {
+      local_rowLower[iRow] *= bound_scale_value;
+      local_rowUpper[iRow] *= bound_scale_value;
+    }
+  }
 
-  changeLpRowBounds(model_.lp_, index_collection, local_rowLower,
-                    local_rowUpper);
+  changeLpRowBounds(lp, index_collection, local_rowLower, local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
@@ -1386,6 +1468,7 @@ void Highs::zeroIterationCounts() {
   info_.simplex_iteration_count = 0;
   info_.ipm_iteration_count = 0;
   info_.crossover_iteration_count = 0;
+  info_.pdlp_iteration_count = 0;
   info_.qp_iteration_count = 0;
 }
 
@@ -1523,14 +1606,14 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   std::stringstream ss;
   ss.str(std::string());
   ss << highsFormatToString(
-      "%s solver claims optimality, but with num/sum/max "
-      "primal(%" HIGHSINT_FORMAT "/%g/%g)",
-      solver_type.c_str(), info_.num_primal_infeasibilities,
-      info_.sum_primal_infeasibilities, info_.max_primal_infeasibility);
+      "%s solver claims optimality, but with num/max/sum "
+      "primal(%d/%g/%g)",
+      solver_type.c_str(), int(info_.num_primal_infeasibilities),
+      info_.max_primal_infeasibility, info_.sum_primal_infeasibilities);
   if (info_.num_dual_infeasibilities > 0)
     ss << highsFormatToString(
-        "and dual(%" HIGHSINT_FORMAT "/%g/%g)", info_.num_dual_infeasibilities,
-        info_.sum_dual_infeasibilities, info_.max_dual_infeasibility);
+        "and dual(%d/%g/%g)", int(info_.num_dual_infeasibilities),
+        info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
   highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
@@ -1677,4 +1760,764 @@ void Highs::restoreInfCost(HighsStatus& return_status) {
     setHighsModelStatusAndClearSolutionAndBasis(this->model_status_);
     return_status = highsStatusFromHighsModelStatus(model_status_);
   }
+}
+
+// Modify status and info if user bound or cost scaling, or
+// primal/dual feasibility tolerances have changed
+HighsStatus Highs::optionChangeAction() {
+  HighsModel& model = this->model_;
+  HighsLp& lp = model.lp_;
+  HighsInfo& info = this->info_;
+  HighsOptions& options = this->options_;
+  const bool is_mip = lp.isMip();
+  HighsInt dl_user_bound_scale = 0;
+  double dl_user_bound_scale_value = 1;
+  // Ensure that user bound scaling does not yield infinite bounds
+  const bool changed_user_bound_scale =
+      options.user_bound_scale != lp.user_bound_scale_;
+  bool user_bound_scale_ok =
+      !changed_user_bound_scale ||
+      lp.userBoundScaleOk(options.user_bound_scale, options.infinite_bound);
+  if (!user_bound_scale_ok) {
+    options.user_bound_scale = lp.user_bound_scale_;
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "New user bound scaling yields infinite bound: reverting user "
+                 "bound scaling to %d\n",
+                 int(options.user_bound_scale));
+  } else if (changed_user_bound_scale) {
+    dl_user_bound_scale = options.user_bound_scale - lp.user_bound_scale_;
+    dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
+  }
+  // Now consider impact on primal feasibility of user bound scaling
+  // and/or primal_feasibility_tolerance change
+  double new_max_primal_infeasibility =
+      info.max_primal_infeasibility * dl_user_bound_scale_value;
+  if (new_max_primal_infeasibility > options.primal_feasibility_tolerance) {
+    // Not primal feasible
+    this->model_status_ = HighsModelStatus::kNotset;
+    if (info.primal_solution_status == kSolutionStatusFeasible)
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to loss of primal feasibility\n");
+    info.primal_solution_status = kSolutionStatusInfeasible;
+    info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  } else if (!is_mip &&
+             info.primal_solution_status == kSolutionStatusInfeasible) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Option change leads to gain of primal feasibility\n");
+    info.primal_solution_status = kSolutionStatusFeasible;
+    info.num_primal_infeasibilities = 0;
+  }
+  if (is_mip && dl_user_bound_scale) {
+    // MIP with non-trivial bound scaling loses optimality
+    this->model_status_ = HighsModelStatus::kNotset;
+    if (dl_user_bound_scale < 0) {
+      // MIP with negative bound scaling exponent loses feasibility
+      if (info.primal_solution_status == kSolutionStatusFeasible) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Option change leads to loss of primal feasibility for MIP\n");
+      }
+      info.primal_solution_status = kSolutionStatusInfeasible;
+    }
+  }
+  if (dl_user_bound_scale) {
+    // Update info and solution with respect to non-trivial user bound scaling
+    info.objective_function_value *= dl_user_bound_scale_value;
+    info.max_primal_infeasibility *= dl_user_bound_scale_value;
+    info.sum_primal_infeasibilities *= dl_user_bound_scale_value;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      this->solution_.col_value[iCol] *= dl_user_bound_scale_value;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      this->solution_.row_value[iRow] *= dl_user_bound_scale_value;
+    // Update LP with respect to non-trivial user bound scaling
+    lp.userBoundScale(options_.user_bound_scale);
+  }
+  // Now consider whether options.user_cost_scale has changed
+  HighsInt dl_user_cost_scale = 0;
+  double dl_user_cost_scale_value = 1;
+  const bool changed_user_cost_scale =
+      options.user_cost_scale != lp.user_cost_scale_;
+  bool user_cost_scale_ok =
+      !changed_user_cost_scale ||
+      model.userCostScaleOk(options.user_cost_scale, options.small_matrix_value,
+                            options.large_matrix_value, options.infinite_cost);
+  if (!user_cost_scale_ok) {
+    options.user_cost_scale = lp.user_cost_scale_;
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "New user cost scaling yields excessive cost coefficient: "
+                 "reverting user cost scaling to %d\n",
+                 int(options.user_cost_scale));
+  } else if (changed_user_cost_scale) {
+    dl_user_cost_scale = options.user_cost_scale - lp.user_cost_scale_;
+    dl_user_cost_scale_value = std::pow(2, dl_user_cost_scale);
+  }
+  if (!is_mip) {
+    // Now consider impact on dual feasibility of user cost scaling
+    // and/or dual_feasibility_tolerance change
+    double new_max_dual_infeasibility =
+        info.max_dual_infeasibility * dl_user_cost_scale_value;
+    if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
+      // Not dual feasible
+      this->model_status_ = HighsModelStatus::kNotset;
+      if (info.dual_solution_status == kSolutionStatusFeasible) {
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Option change leads to loss of dual feasibility\n");
+        info.dual_solution_status = kSolutionStatusInfeasible;
+      }
+      info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to gain of dual feasibility\n");
+      info.dual_solution_status = kSolutionStatusFeasible;
+      info.num_dual_infeasibilities = 0;
+    }
+  }
+  if (dl_user_cost_scale) {
+    if (is_mip) {
+      // MIP with non-trivial cost scaling loses optimality
+      this->model_status_ = HighsModelStatus::kNotset;
+    }
+    // Now update data and solution with respect to non-trivial user
+    // cost scaling
+    info.objective_function_value *= dl_user_cost_scale_value;
+    info.max_dual_infeasibility *= dl_user_cost_scale_value;
+    info.sum_dual_infeasibilities *= dl_user_cost_scale_value;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      this->solution_.col_dual[iCol] *= dl_user_cost_scale_value;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      this->solution_.row_dual[iRow] *= dl_user_cost_scale_value;
+    model.userCostScale(options.user_cost_scale);
+  }
+  if (this->model_status_ != HighsModelStatus::kOptimal) {
+    if (info.primal_solution_status == kSolutionStatusFeasible &&
+        info.dual_solution_status == kSolutionStatusFeasible) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Option change leads to gain of optimality\n");
+      this->model_status_ = HighsModelStatus::kOptimal;
+    }
+  }
+  if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+void HighsIllConditioning::clear() { this->record.clear(); }
+
+HighsStatus Highs::computeIllConditioning(
+    HighsIllConditioning& ill_conditioning, const bool constraint,
+    const HighsInt method, const double ill_conditioning_bound) {
+  const double kZeroMultiplier = 1e-6;
+  ill_conditioning.clear();
+  HighsLp& incumbent_lp = this->model_.lp_;
+  Highs conditioning;
+  const bool dev_conditioning = false;
+  conditioning.setOptionValue("output_flag", false);  // dev_conditioning);
+  std::vector<HighsInt> basic_var;
+  HighsLp& ill_conditioning_lp = conditioning.model_.lp_;
+  // Form the ill-conditioning LP according to method
+  if (method == 0) {
+    formIllConditioningLp0(ill_conditioning_lp, basic_var, constraint);
+  } else {
+    formIllConditioningLp1(ill_conditioning_lp, basic_var, constraint,
+                           ill_conditioning_bound);
+    //    conditioning.writeModel("");
+  }
+
+  //  if (dev_conditioning) conditioning.writeModel("");
+
+  assert(assessLp(ill_conditioning_lp, this->options_) == HighsStatus::kOk);
+  // Solve the ill-conditioning analysis LP
+  HighsStatus return_status = conditioning.run();
+  HighsModelStatus model_status = conditioning.getModelStatus();
+  const std::string type = constraint ? "Constraint" : "Column";
+  const bool failed =
+      return_status != HighsStatus::kOk ||
+      (method == 0 && model_status != HighsModelStatus::kOptimal) ||
+      (method == 1 && (model_status != HighsModelStatus::kOptimal &&
+                       model_status != HighsModelStatus::kInfeasible));
+  if (failed) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "\n%s view ill-conditioning analysis has failed\n",
+                 type.c_str());
+    return HighsStatus::kError;
+  }
+  if (method == 1 && model_status == HighsModelStatus::kInfeasible) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "\n%s view ill-conditioning bound of %g is insufficient for "
+                 "analysis: try %g\n",
+                 type.c_str(), ill_conditioning_bound,
+                 1e1 * ill_conditioning_bound);
+    return HighsStatus::kOk;
+  }
+  if (dev_conditioning) conditioning.writeSolution("", 1);
+  // Extract and normalise the multipliers
+  HighsSolution& solution = conditioning.solution_;
+  double multiplier_norm = 0;
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++)
+    multiplier_norm += std::fabs(solution.col_value[iRow]);
+  assert(multiplier_norm > 0);
+  const double ill_conditioning_measure =
+      (method == 0 ? conditioning.getInfo().objective_function_value
+                   : solution.row_value[conditioning.getNumRow() - 1]) /
+      multiplier_norm;
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo,
+      "\n%s view ill-conditioning analysis: 1-norm distance of basis matrix "
+      "from singularity is estimated to be %g\n",
+      type.c_str(), ill_conditioning_measure);
+  std::vector<std::pair<double, HighsInt>> abs_list;
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    double abs_multiplier =
+        std::fabs(solution.col_value[iRow]) / multiplier_norm;
+    if (abs_multiplier <= kZeroMultiplier) continue;
+    abs_list.push_back(std::make_pair(abs_multiplier, iRow));
+  }
+  std::sort(abs_list.begin(), abs_list.end());
+  // Report on ill-conditioning multipliers
+  std::stringstream ss;
+  const bool has_row_names =
+      HighsInt(incumbent_lp.row_names_.size()) == incumbent_lp.num_row_;
+  const bool has_col_names =
+      HighsInt(incumbent_lp.col_names_.size()) == incumbent_lp.num_col_;
+  const double coefficient_zero_tolerance = 1e-8;
+  auto printCoefficient = [&](const double multiplier, const bool first) {
+    if (std::fabs(multiplier) < coefficient_zero_tolerance) {
+      ss << "+ 0";
+    } else if (std::fabs(multiplier - 1) < coefficient_zero_tolerance) {
+      std::string str = first ? "" : "+ ";
+      ss << str;
+    } else if (std::fabs(multiplier + 1) < coefficient_zero_tolerance) {
+      std::string str = first ? "-" : "- ";
+      ss << str;
+    } else if (multiplier < 0) {
+      std::string str = first ? "-" : "- ";
+      ss << str << -multiplier << " ";
+    } else {
+      std::string str = first ? "" : "+ ";
+      ss << str << multiplier << " ";
+    }
+  };
+
+  for (HighsInt iX = int(abs_list.size()) - 1; iX >= 0; iX--) {
+    HighsInt iRow = abs_list[iX].second;
+    HighsIllConditioningRecord record;
+    record.index = iRow;
+    record.multiplier = solution.col_value[iRow] / multiplier_norm;
+    ill_conditioning.record.push_back(record);
+  }
+  HighsSparseMatrix& incumbent_matrix = incumbent_lp.a_matrix_;
+  if (constraint) {
+    HighsInt num_nz;
+    std::vector<HighsInt> index(incumbent_lp.num_col_);
+    std::vector<double> value(incumbent_lp.num_col_);
+    HighsInt* p_index = index.data();
+    double* p_value = value.data();
+    for (HighsInt iX = 0; iX < HighsInt(ill_conditioning.record.size()); iX++) {
+      ss.str(std::string());
+      bool newline = false;
+      HighsInt iRow = ill_conditioning.record[iX].index;
+      double multiplier = ill_conditioning.record[iX].multiplier;
+      // Extract the row corresponding to this constraint
+      num_nz = 0;
+      incumbent_matrix.getRow(iRow, num_nz, p_index, p_value);
+      std::string row_name = has_row_names ? incumbent_lp.row_names_[iRow]
+                                           : "R" + std::to_string(iRow);
+      ss << "(Mu=" << multiplier << ")" << row_name << ": ";
+      const double lower = incumbent_lp.row_lower_[iRow];
+      const double upper = incumbent_lp.row_upper_[iRow];
+      if (lower > -kHighsInf && lower != upper)
+        ss << incumbent_lp.row_lower_[iRow] << " <= ";
+      for (HighsInt iEl = 0; iEl < num_nz; iEl++) {
+        if (newline) {
+          ss << "  ";
+          newline = false;
+        }
+        HighsInt iCol = index[iEl];
+        printCoefficient(value[iEl], iEl == 0);
+        std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
+                                             : "C" + std::to_string(iCol);
+        ss << col_name << " ";
+        HighsInt length_ss = ss.str().length();
+        if (length_ss > 72 && iEl < num_nz - 1) {
+          highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                       ss.str().c_str());
+          ss.str(std::string());
+          newline = true;
+        }
+      }
+      if (upper < kHighsInf) {
+        if (lower == upper) {
+          ss << "= " << upper;
+        } else {
+          ss << "<= " << upper;
+        }
+      }
+      if (ss.str().length())
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                     ss.str().c_str());
+    }
+  } else {
+    for (HighsInt iX = 0; iX < HighsInt(ill_conditioning.record.size()); iX++) {
+      ss.str(std::string());
+      bool newline = false;
+      double multiplier = ill_conditioning.record[iX].multiplier;
+      HighsInt iCol = basic_var[ill_conditioning.record[iX].index];
+      if (iCol < incumbent_lp.num_col_) {
+        std::string col_name = has_col_names ? incumbent_lp.col_names_[iCol]
+                                             : "C" + std::to_string(iCol);
+        ss << "(Mu=" << multiplier << ")" << col_name << ": ";
+        for (HighsInt iEl = incumbent_matrix.start_[iCol];
+             iEl < incumbent_matrix.start_[iCol + 1]; iEl++) {
+          if (newline) {
+            ss << "  ";
+            newline = false;
+          } else {
+            if (iEl > incumbent_matrix.start_[iCol]) ss << " | ";
+          }
+          HighsInt iRow = incumbent_matrix.index_[iEl];
+          printCoefficient(incumbent_matrix.value_[iEl], true);
+          std::string row_name = has_row_names ? incumbent_lp.row_names_[iRow]
+                                               : "R" + std::to_string(iRow);
+          ss << row_name;
+          HighsInt length_ss = ss.str().length();
+          if (length_ss > 72 && iEl < incumbent_matrix.start_[iCol + 1] - 1) {
+            ss << " | ";
+            highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                         ss.str().c_str());
+            ss.str(std::string());
+            newline = true;
+          }
+        }
+      } else {
+        HighsInt iRow = iCol - incumbent_lp.num_col_;
+        std::string col_name = has_row_names
+                                   ? "Slack_" + incumbent_lp.row_names_[iRow]
+                                   : "Slack_R" + std::to_string(iRow);
+        ss << "(Mu=" << multiplier << ")" << col_name << ": ";
+      }
+      if (ss.str().length())
+        highsLogUser(options_.log_options, HighsLogType::kInfo, "%s\n",
+                     ss.str().c_str());
+    }
+  }
+  return HighsStatus::kOk;
+}
+
+void Highs::formIllConditioningLp0(HighsLp& ill_conditioning_lp,
+                                   std::vector<HighsInt>& basic_var,
+                                   const bool constraint) {
+  HighsLp& incumbent_lp = this->model_.lp_;
+  // Conditioning LP minimizes the infeasibilities of
+  //
+  // [B^T]y = [0]; y free - for constraint view
+  // [e^T]    [1]
+  //
+  // [ B ]y = [0]; y free - for column view
+  // [e^T]    [1]
+  //
+  ill_conditioning_lp.num_row_ = incumbent_lp.num_row_ + 1;
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    ill_conditioning_lp.row_lower_.push_back(0);
+    ill_conditioning_lp.row_upper_.push_back(0);
+  }
+  ill_conditioning_lp.row_lower_.push_back(1);
+  ill_conditioning_lp.row_upper_.push_back(1);
+  HighsSparseMatrix& incumbent_matrix = incumbent_lp.a_matrix_;
+  incumbent_matrix.ensureColwise();
+  HighsSparseMatrix& ill_conditioning_matrix = ill_conditioning_lp.a_matrix_;
+  ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
+  // Form the basis matrix and
+  //
+  // * For constraint view, add the column e, and transpose the
+  // * resulting matrix
+  //
+  // * For column view, add a unit entry to each column
+  //
+  const HighsInt ill_conditioning_lp_e_row = ill_conditioning_lp.num_row_ - 1;
+  for (HighsInt iCol = 0; iCol < incumbent_lp.num_col_; iCol++) {
+    if (this->basis_.col_status[iCol] != HighsBasisStatus::kBasic) continue;
+    // Basic column goes into conditioning LP, possibly with unit
+    // coefficient for constraint e^Ty=1
+    basic_var.push_back(iCol);
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    for (HighsInt iEl = incumbent_matrix.start_[iCol];
+         iEl < incumbent_matrix.start_[iCol + 1]; iEl++) {
+      ill_conditioning_matrix.index_.push_back(incumbent_matrix.index_[iEl]);
+      ill_conditioning_matrix.value_.push_back(incumbent_matrix.value_[iEl]);
+    }
+    if (!constraint) {
+      ill_conditioning_matrix.index_.push_back(ill_conditioning_lp_e_row);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+  }
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    if (this->basis_.row_status[iRow] != HighsBasisStatus::kBasic) continue;
+    // Basic slack goes into conditioning LP
+    basic_var.push_back(incumbent_lp.num_col_ + iRow);
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    if (!constraint) {
+      ill_conditioning_matrix.index_.push_back(ill_conditioning_lp_e_row);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+  }
+  if (constraint) {
+    // Add the column e, and transpose the resulting matrix
+    for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+      ill_conditioning_matrix.index_.push_back(iRow);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_matrix.num_row_ = incumbent_lp.num_row_;
+    ill_conditioning_matrix.num_col_ = incumbent_lp.num_row_ + 1;
+    ill_conditioning_matrix.ensureRowwise();
+    ill_conditioning_matrix.format_ = MatrixFormat::kColwise;
+  }
+  // Now add the variables to measure the infeasibilities
+  for (HighsInt iRow = 0; iRow < incumbent_lp.num_row_; iRow++) {
+    // Adding x_+ with cost 1
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    // Subracting x_- with cost 1
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+  }
+  ill_conditioning_lp.num_col_ = 3 * incumbent_lp.num_row_;
+  ill_conditioning_matrix.num_col_ = ill_conditioning_lp.num_col_;
+  ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
+}
+
+void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
+                                   std::vector<HighsInt>& basic_var,
+                                   const bool constraint,
+                                   const double ill_conditioning_bound) {
+  HighsLp& incumbent_lp = this->model_.lp_;
+  const HighsInt incumbent_num_row = incumbent_lp.num_row_;
+  //
+  // Using notation from Klotz14
+  //
+  // For constraint view, conditioning LP minimizes the
+  // infeasibilities of c7
+  //
+  // c4: B^Ty         -   s +   t   = 0
+  // c1:    y - u + w               = 0
+  // c7:        u + w               = 0
+  // c6: e^Ty                       = 1
+  // c5:               e^Ts + e^Tt <= eps
+  // y free; u, w, s, t >= 0
+  //
+  // Column view uses B rather than B^T
+  //
+  // Set up offsets
+  //
+  const HighsInt c4_offset = 0;
+  const HighsInt c1_offset = incumbent_num_row;
+  const HighsInt c7_offset = 2 * incumbent_num_row;
+  const HighsInt c6_offset = 3 * incumbent_num_row;
+  const HighsInt c5_offset = 3 * incumbent_num_row + 1;
+  for (HighsInt iRow = 0; iRow < c6_offset; iRow++) {
+    ill_conditioning_lp.row_lower_.push_back(0);
+    ill_conditioning_lp.row_upper_.push_back(0);
+  }
+  HighsSparseMatrix& incumbent_matrix = incumbent_lp.a_matrix_;
+  incumbent_matrix.ensureColwise();
+  HighsSparseMatrix& ill_conditioning_matrix = ill_conditioning_lp.a_matrix_;
+  // Form the basis matrix and
+  //
+  // * For constraint view, add the identity matrix and vector of
+  // * ones, and transpose the resulting matrix
+  //
+  // * For column view, add an identity matrix column and unit entry
+  // * below each column
+  //
+  ill_conditioning_lp.num_col_ = 0;
+  for (HighsInt iCol = 0; iCol < incumbent_lp.num_col_; iCol++) {
+    if (this->basis_.col_status[iCol] != HighsBasisStatus::kBasic) continue;
+    // Basic column goes into ill-conditioning LP, possibly with
+    // identity matrix column for constraint y - u + w = 0 and unit
+    // entry for e^Ty = 1
+    basic_var.push_back(iCol);
+    ill_conditioning_lp.col_names_.push_back(
+        "y_" + std::to_string(ill_conditioning_lp.num_col_));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    for (HighsInt iEl = incumbent_matrix.start_[iCol];
+         iEl < incumbent_matrix.start_[iCol + 1]; iEl++) {
+      ill_conditioning_matrix.index_.push_back(incumbent_matrix.index_[iEl]);
+      ill_conditioning_matrix.value_.push_back(incumbent_matrix.value_[iEl]);
+    }
+    if (!constraint) {
+      // Add identity matrix column for constraint y - u + w = 0
+      ill_conditioning_matrix.index_.push_back(c1_offset +
+                                               ill_conditioning_lp.num_col_);
+      ill_conditioning_matrix.value_.push_back(1.0);
+      // Add unit entry for e^Ty = 1
+      ill_conditioning_matrix.index_.push_back(c6_offset);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+
+  for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+    if (this->basis_.row_status[iRow] != HighsBasisStatus::kBasic) continue;
+    // Basic slack goes into conditioning LP
+    basic_var.push_back(incumbent_lp.num_col_ + iRow);
+    ill_conditioning_lp.col_names_.push_back(
+        "y_" + std::to_string(ill_conditioning_lp.num_col_));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(-kHighsInf);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    if (!constraint) {
+      // Add identity matrix column for constraint y - u + w = 0
+      ill_conditioning_matrix.index_.push_back(c1_offset +
+                                               ill_conditioning_lp.num_col_);
+      ill_conditioning_matrix.value_.push_back(1.0);
+      // Add unit entry for e^Ty = 1
+      ill_conditioning_matrix.index_.push_back(c6_offset);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  assert(ill_conditioning_lp.num_col_ == incumbent_num_row);
+  if (constraint) {
+    // Add the identiy matrix for constraint y - u + w = 0
+    for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+      ill_conditioning_matrix.index_.push_back(iRow);
+      ill_conditioning_matrix.value_.push_back(1.0);
+      ill_conditioning_matrix.start_.push_back(
+          HighsInt(ill_conditioning_matrix.index_.size()));
+    }
+    // Add the square zero matrix of c7
+    for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++)
+      ill_conditioning_matrix.start_.push_back(
+          HighsInt(ill_conditioning_matrix.index_.size()));
+    // Add the vector of ones for e^Ty = 1
+    for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+      ill_conditioning_matrix.index_.push_back(iRow);
+      ill_conditioning_matrix.value_.push_back(1.0);
+    }
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+
+    // Transpose the resulting matrix
+    ill_conditioning_matrix.num_col_ = c6_offset + 1;
+    ill_conditioning_matrix.num_row_ = incumbent_num_row;
+    ill_conditioning_matrix.ensureRowwise();
+    ill_conditioning_matrix.format_ = MatrixFormat::kColwise;
+    ill_conditioning_matrix.num_col_ = incumbent_num_row;
+    ill_conditioning_matrix.num_row_ = c6_offset + 1;
+  }
+
+  assert(ill_conditioning_lp.num_col_ == incumbent_num_row);
+  ill_conditioning_lp.num_row_ = 3 * incumbent_num_row + 2;
+
+  // Now add the variables u and w
+  for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+    // Adding u with cost 0
+    ill_conditioning_lp.col_names_.push_back("u_" + std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to c1: y - u + w = 0
+    ill_conditioning_matrix.index_.push_back(c1_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    // Contribution to c7: u + w = 0
+    ill_conditioning_matrix.index_.push_back(c7_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+    // Adding w with cost 0
+    ill_conditioning_lp.col_names_.push_back("w_" + std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to c1: y - u + w = 0
+    ill_conditioning_matrix.index_.push_back(c1_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    // Contribution to c7: u + w = 0
+    ill_conditioning_matrix.index_.push_back(c7_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  // Now add the variables s and t
+  for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+    // Adding s with cost 0
+    ill_conditioning_lp.col_names_.push_back("s_" + std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to c4: B^Ty - s + t = 0
+    ill_conditioning_matrix.index_.push_back(c4_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    // Contribution to c5: e^Ts + e^Tt <= eps
+    ill_conditioning_matrix.index_.push_back(c5_offset);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+    // Adding t with cost 0
+    ill_conditioning_lp.col_names_.push_back("t_" + std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(0);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    // Contribution to c4: B^Ty - s + t = 0
+    ill_conditioning_matrix.index_.push_back(c4_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    // Contribution to c5: e^Ts + e^Tt <= eps
+    ill_conditioning_matrix.index_.push_back(c5_offset);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  // Add the bounds for c6: e^Ty = 1
+  ill_conditioning_lp.row_lower_.push_back(1);
+  ill_conditioning_lp.row_upper_.push_back(1);
+  // Add the bounds for c5: e^Ts + e^Tt <= eps
+  assert(ill_conditioning_bound > 0);
+  ill_conditioning_lp.row_lower_.push_back(-kHighsInf);
+  ill_conditioning_lp.row_upper_.push_back(ill_conditioning_bound);
+  assert(HighsInt(ill_conditioning_lp.row_lower_.size()) ==
+         ill_conditioning_lp.num_row_);
+  assert(HighsInt(ill_conditioning_lp.row_upper_.size()) ==
+         ill_conditioning_lp.num_row_);
+
+  // Now add the variables to measure the infeasibilities in
+  //
+  // c7: u + w = r^+ - r^-
+  for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
+    // Adding r^+ with cost 1
+    ill_conditioning_lp.col_names_.push_back("IfsPlus_" + std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(c7_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(-1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+    // Adding r^- with cost 1
+    ill_conditioning_lp.col_names_.push_back("IfsMinus_" +
+                                             std::to_string(iRow));
+    ill_conditioning_lp.col_cost_.push_back(1);
+    ill_conditioning_lp.col_lower_.push_back(0);
+    ill_conditioning_lp.col_upper_.push_back(kHighsInf);
+    ill_conditioning_matrix.index_.push_back(c7_offset + iRow);
+    ill_conditioning_matrix.value_.push_back(1.0);
+    ill_conditioning_matrix.start_.push_back(
+        HighsInt(ill_conditioning_matrix.index_.size()));
+    ill_conditioning_lp.num_col_++;
+  }
+  assert(ill_conditioning_lp.num_col_ == 7 * incumbent_num_row);
+  assert(ill_conditioning_lp.num_row_ == 3 * incumbent_num_row + 2);
+  ill_conditioning_matrix.num_col_ = ill_conditioning_lp.num_col_;
+  ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
+}
+
+bool Highs::infeasibleBoundsOk() {
+  const HighsLogOptions& log_options = this->options_.log_options;
+  HighsLp& lp = this->model_.lp_;
+
+  HighsInt num_true_infeasible_bound = 0;
+  HighsInt num_ok_infeasible_bound = 0;
+  const bool has_integrality = lp.integrality_.size() > 0;
+  // Lambda for assessing infeasible bounds
+  auto assessInfeasibleBound = [&](const std::string type, const HighsInt iX,
+                                   double& lower, double& upper) {
+    double range = upper - lower;
+    if (range >= 0) return true;
+    if (range > -this->options_.primal_feasibility_tolerance) {
+      num_ok_infeasible_bound++;
+      bool report = num_ok_infeasible_bound <= 10;
+      bool integer_lower = lower == std::floor(lower + 0.5);
+      bool integer_upper = upper == std::floor(upper + 0.5);
+      assert(!integer_lower || !integer_upper);
+      if (integer_lower) {
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "upper bound to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, lower);
+        upper = lower;
+      } else if (integer_upper) {
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "lower bound to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, upper);
+        lower = upper;
+      } else {
+        double mid = 0.5 * (lower + upper);
+        if (report)
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "%s %d bounds [%g, %g] have infeasibility = %g so set "
+                       "both bounds to %g\n",
+                       type.c_str(), int(iX), lower, upper, range, mid);
+        lower = mid;
+        upper = mid;
+      }
+      return true;
+    }
+    num_true_infeasible_bound++;
+    if (num_true_infeasible_bound <= 10)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "%s %d bounds [%g, %g] have excessive infeasibility = %g\n",
+                   type.c_str(), int(iX), lower, upper, range);
+    return false;
+  };
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (has_integrality) {
+      // Semi-variables can have inconsistent bounds
+      if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
+          lp.integrality_[iCol] == HighsVarType::kSemiInteger)
+        continue;
+    }
+    if (lp.col_lower_[iCol] > lp.col_upper_[iCol])
+      assessInfeasibleBound("Column", iCol, lp.col_lower_[iCol],
+                            lp.col_upper_[iCol]);
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
+      assessInfeasibleBound("Row", iRow, lp.row_lower_[iRow],
+                            lp.row_upper_[iRow]);
+  }
+  if (num_ok_infeasible_bound > 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model has %d small inconsistent bound(s): rectified\n",
+                 int(num_ok_infeasible_bound));
+  if (num_true_infeasible_bound > 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model has %d significant inconsistent bound(s): infeasible\n",
+                 int(num_true_infeasible_bound));
+  return num_true_infeasible_bound == 0;
 }

@@ -1,55 +1,20 @@
-[project]
-name = "highspy"
-version = "1.6.0.dev0"
-description = "A thin set of pybind11 wrappers to HiGHS"
-authors = [
-    {name = "HiGHS developers", email = "highsopt@gmail.com"},
-]
-dependencies = [
-    # pybind11/numpy runtime dep
-    # https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
-    "numpy>=1.7.0",
-]
-requires-python = ">=3.8"
-readme = "README.md"
-license = {text = "MIT"}
-
-[project.urls]
-"Source Code" = "https://github.com/ERGO-Code/HiGHS"
-"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+# [project.urls]
+# "Source Code" = "https://github.com/ERGO-Code/HiGHS"
+# "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python<0.14.0", "meson>=1.2.0"]
-build-backend = "mesonpy"
+# Minimum requirements for the build system to execute.
+requires = [
+  "setuptools>=42",
+  "pybind11>=2.4",
+  "wheel",
+  "cmake>=3.12",
+  "numpy>=1.7"
+] 
 
-[tool.meson-python.args]
-setup = ['-Dwith_pybind11=True',
-        '-Dhighsint64=False',
-        '-Dwrap_mode=forcefallback',
-         # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
-        ]
-dist = ['--include-subprojects']
-install = ['--skip-subprojects']
+build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 build = "*"
-skip = "cp36-*"
+skip = "cp3{6,7}-*"
 test-skip = ""
-
-[tool.cibuildwheel.linux]
-manylinux-x86_64-image = "manylinux2014"
-manylinux-i686-image = "manylinux2014"
-repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64 arm64"]
-environment = { RUNNER_OS="macOS" }
-repair-wheel-command = [
-  "delocate-listdeps {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-]
-
-[tool.cibuildwheel.windows]
-# Use delvewheel on windows, and install the project so delvewheel can find it
-before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
-repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"

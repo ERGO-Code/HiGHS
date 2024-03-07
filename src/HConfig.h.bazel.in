@@ -3,6 +3,7 @@
 
 #define FAST_BUILD
 /* #undef ZLIB_FOUND */
+#define CUPDLP_CPU
 #define CMAKE_BUILD_TYPE "RELEASE"
 #define HiGHSRELEASE
 /* #undef HIGHSINT64 */
@@ -13,8 +14,8 @@
 #define HIGHS_GITHASH "b66d596c6"
 #define HIGHS_COMPILATION_DATE "2022-10-10"
 #define HIGHS_VERSION_MAJOR 1
-#define HIGHS_VERSION_MINOR 2
-#define HIGHS_VERSION_PATCH 2
+#define HIGHS_VERSION_MINOR 6
+#define HIGHS_VERSION_PATCH 0
 /* #undef HIGHS_DIR */
 
 #endif /* HCONFIG_H_ */

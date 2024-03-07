@@ -51,7 +51,7 @@ TEST_CASE("run-callback", "[highs_io]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  highs.setLogCallback(userLogCallback);
+  // highs.setLogCallback(userLogCallback);
   highs.readModel(filename);
   highs.run();
 }
@@ -67,7 +67,8 @@ TEST_CASE("run-callback-data", "[highs_io]") {
       reinterpret_cast<void*>(static_cast<intptr_t>(user_log_callback_data));
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  highs.setLogCallback(userLogCallback, p_user_log_callback_data);
+  // deprecated
+  // highs.setLogCallback(userLogCallback, p_user_log_callback_data);
   highs.readModel(filename);
   highs.run();
 }

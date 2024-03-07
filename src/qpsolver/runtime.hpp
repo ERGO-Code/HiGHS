@@ -9,6 +9,7 @@
 
 struct Runtime {
   Instance instance;
+  Instance relaxed_for_ratiotest;
   Instance scaled;
   Instance perturbed;
   Settings settings;

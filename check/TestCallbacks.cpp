@@ -26,11 +26,68 @@ using std::strlen;
 using std::strncmp;
 using std::strstr;
 
+struct MipData {
+  HighsInt num_col;
+  HighsVarType* integrality;
+};
+
 // Callback that saves message for comparison
 HighsCallbackFunctionType myLogCallback =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) { strcpy(printed_log, message.c_str()); };
+
+HighsCallbackFunctionType userMipSolutionCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      if (dev_run) {
+        printf(
+            "MipSolutionCallback with objective = %15.8g and bounds [%15.8g, "
+            "%15.8g]",
+            data_out->objective_function_value, data_out->mip_dual_bound,
+            data_out->mip_primal_bound);
+        MipData callback_data = *(static_cast<MipData*>(user_callback_data));
+        HighsInt num_col = callback_data.num_col;
+        HighsVarType* integrality = callback_data.integrality;
+        HighsInt num_integer = 0;
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          if (integrality[iCol] == HighsVarType::kInteger) num_integer++;
+        if (num_integer < 50) {
+          printf(" and solution [");
+          for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+            if (integrality[iCol] != HighsVarType::kInteger) continue;
+            double value = data_out->mip_solution[iCol];
+            if (std::abs(value) < 1e-5) {
+              printf("0");
+            } else if (std::abs(value - 1) < 1e-5) {
+              printf("1");
+            } else {
+              bool printed = false;
+              for (HighsInt k = 2; k < 10; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf("%1d", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              for (HighsInt k = 10; k < 999; k++) {
+                if (std::abs(value - k) < 1e-5) {
+                  printf(" %d ", int(k));
+                  printed = true;
+                }
+              }
+              if (printed) continue;
+              printf("*");
+            }
+          }
+          printf("]\n");
+        } else {
+          printf("\n");
+        }
+        fflush(stdout);
+      }
+    };
 
 HighsCallbackFunctionType userInterruptCallback =
     [](int callback_type, const std::string& message,
@@ -98,6 +155,25 @@ HighsCallbackFunctionType userInterruptCallback =
                 data_out->mip_gap, data_out->objective_function_value);
           data_in->user_interrupt =
               data_out->objective_function_value < egout_objective_target;
+        }
+      }
+    };
+
+HighsCallbackFunctionType userMipCutPoolCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      if (dev_run) {
+        printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
+               int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
+               int(data_out->cutpool_num_nz));
+        for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
+          printf("Cut %d\n", int(iCut));
+          for (HighsInt iEl = data_out->cutpool_start[iCut];
+               iEl < data_out->cutpool_start[iCut + 1]; iEl++) {
+            printf("   %2d %11.5g\n", int(data_out->cutpool_index[iEl]),
+                   data_out->cutpool_value[iEl]);
+          }
         }
       }
     };
@@ -254,5 +330,36 @@ TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.startCallback(kCallbackMipLogging);
   highs.readModel(filename);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-solution", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.readModel(filename);
+  // To print the values of the integer variables in the callback,
+  // need the number of columns and the integrality. Set this up in a
+  // struct to be passed via user_callback_data
+  HighsLp lp = highs.getLp();
+  MipData user_callback_data;
+  user_callback_data.num_col = int(lp.num_col_);
+  user_callback_data.integrality = lp.integrality_.data();
+  void* p_user_callback_data = &user_callback_data;
+
+  highs.setCallback(userMipSolutionCallback, p_user_callback_data);
+  highs.startCallback(kCallbackMipSolution);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  //  MipData user_callback_data;
+  highs.setCallback(userMipCutPoolCallback);  //, p_user_callback_data);
+  highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
 }

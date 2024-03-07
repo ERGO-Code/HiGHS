@@ -11,7 +11,7 @@ class DevexHarrisPricing : public Pricing {
  private:
   Runtime& runtime;
   Basis& basis;
-
+  ReducedCosts& redcosts;
   std::vector<double> weights;
 
   HighsInt chooseconstrainttodrop(const Vector& lambda) {
@@ -52,14 +52,14 @@ class DevexHarrisPricing : public Pricing {
   }
 
  public:
-  DevexHarrisPricing(Runtime& rt, Basis& bas)
+  DevexHarrisPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
       : runtime(rt),
-        basis(bas),
-        weights(std::vector<double>(rt.instance.num_var, 1.0)){};
+        basis(bas), 
+        redcosts(rc),
+        weights(std::vector<double>(rt.instance.num_var, 1.0)) {};
 
   HighsInt price(const Vector& x, const Vector& gradient) {
-    Vector lambda = basis.ftran(gradient);
-    HighsInt minidx = chooseconstrainttodrop(lambda);
+    HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 

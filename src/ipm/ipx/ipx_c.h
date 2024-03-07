@@ -10,7 +10,7 @@
 extern "C"{
 #endif
     /* Returns an ipx_parameters struct with default values. */
-    struct ipx_parameters ipx_default_parameters();
+  //    struct ipx_parameters ipx_default_parameters();
 
     /* Allocates a new LpSolver object. On success, *p_self holds a pointer to
        the new object. If the memory allocation fails, *p_self becomes NULL

@@ -1,0 +1,32 @@
+name: test-python-ubuntu
+
+on: [push]
+#on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install build dependencies
+        run: python3 -m pip install numpy setuptools wheel pytest 
+  
+      - name: Test Python Interface
+        run: |
+          python3 -m pip install .
+          pytest -v ./highspy/tests/
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py

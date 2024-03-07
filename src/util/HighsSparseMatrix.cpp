@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -526,6 +526,58 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
   }
   // Update the number of rows
   this->num_row_ += num_new_row;
+}
+
+void HighsSparseMatrix::getCol(const HighsInt iCol, HighsInt& num_nz,
+                               HighsInt* index, double* value) const {
+  assert(iCol >= 0 && iCol < this->num_row_);
+  num_nz = 0;
+  if (this->isColwise()) {
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+         iEl++) {
+      index[num_nz] = this->index_[iEl];
+      value[num_nz] = this->value_[iEl];
+      num_nz++;
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
+        if (this->index_[iEl] == iCol) {
+          index[num_nz] = iRow;
+          value[num_nz] = this->value_[iEl];
+          num_nz++;
+          break;
+        }
+      }
+    }
+  }
+}
+
+void HighsSparseMatrix::getRow(const HighsInt iRow, HighsInt& num_nz,
+                               HighsInt* index, double* value) const {
+  assert(iRow >= 0 && iRow < this->num_row_);
+  num_nz = 0;
+  if (this->isRowwise()) {
+    for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+         iEl++) {
+      index[num_nz] = this->index_[iEl];
+      value[num_nz] = this->value_[iEl];
+      num_nz++;
+    }
+  } else {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++) {
+        if (this->index_[iEl] == iRow) {
+          index[num_nz] = iCol;
+          value[num_nz] = this->value_[iEl];
+          num_nz++;
+          break;
+        }
+      }
+    }
+  }
 }
 
 void HighsSparseMatrix::deleteCols(

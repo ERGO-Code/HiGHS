@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -15,13 +15,13 @@
 #include <cstdio>
 #include <numeric>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 #include "parallel/HighsCombinable.h"
 #include "parallel/HighsParallel.h"
-#include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "util/HighsSplay.h"
 
@@ -1164,6 +1164,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               coef = globaldom.col_upper_[col] - implcolub;
               constant = implcolub;
             } else {
+              // make sure that upper bound is not infinite to avoid adding VUB
+              // with coefficient '-kHighsInf' and constant 'kHighsInf'
+              if (globaldom.col_upper_[col] == kHighsInf) continue;
               coef = implcolub - globaldom.col_upper_[col];
               constant = globaldom.col_upper_[col];
             }
@@ -1186,6 +1189,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               coef = globaldom.col_lower_[col] - implcollb;
               constant = implcollb;
             } else {
+              // make sure that lower bound is not infinite to avoid adding VLB
+              // with coefficient 'kHighsInf' and constant '-kHighsInf'
+              if (globaldom.col_lower_[col] == -kHighsInf) continue;
               coef = implcollb - globaldom.col_lower_[col];
               constant = globaldom.col_lower_[col];
             }

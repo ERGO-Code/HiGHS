@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -16,11 +16,16 @@
 #include <cstring>
 #include <string>
 
+/*
 void strRemoveWhitespace(char* str);
 char* strClone(const char* str);
 int strIsWhitespace(const char* str);
 void strToLower(char* str);
 void strTrim(char* str);
+*/
+// std::string& str_tolower(std::string s);
+
+void tolower(std::string& str);
 
 const std::string non_chars = "\t\n\v\f\r ";
 std::string& ltrim(std::string& str, const std::string& chars = non_chars);

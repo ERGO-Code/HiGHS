@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -385,6 +385,13 @@ class Highs {
   double getInfinity() { return kHighsInf; }
 
   /**
+   * @brief Get the size of HighsInt
+   */
+  HighsInt getSizeofHighsInt() {
+    return sizeof(options_.num_user_settable_options_);
+  }
+
+  /**
    * @brief Get the run time of HiGHS
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
@@ -408,6 +415,22 @@ class Highs {
    * @brief Return a const reference to the logging data for presolve
    */
   const HighsPresolveLog& getPresolveLog() const { return presolve_log_; }
+
+  /**
+   * @brief Return a const pointer to the original column indices for
+   * the presolved model
+   */
+  const HighsInt* getPresolveOrigColsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigColsIndex();
+  }
+
+  /**
+   * @brief Return a const pointer to the original row indices for the
+   * presolved model
+   */
+  const HighsInt* getPresolveOrigRowsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+  }
 
   /**
    * @brief Return a const reference to the incumbent LP
@@ -481,6 +504,14 @@ class Highs {
    * @brief Get the ranging information for the current LP
    */
   HighsStatus getRanging(HighsRanging& ranging);
+
+  /**
+   * @brief Get the ill-conditioning information for the current basis
+   */
+  HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
+                                 const bool constraint,
+                                 const HighsInt method = 0,
+                                 const double ill_conditioning_bound = 1e-4);
 
   /**
    * @brief Get the current model objective value
@@ -787,6 +818,14 @@ class Highs {
                                     const HighsVarType* integrality);
 
   /**
+   * @brief Clear the integrality of all columns
+   */
+  HighsStatus clearIntegrality() {
+    this->model_.lp_.integrality_.clear();
+    return HighsStatus::kOk;
+  }
+
+  /**
    * @brief Change the cost of a column
    */
   HighsStatus changeColCost(const HighsInt col, const double cost);
@@ -900,7 +939,8 @@ class Highs {
    * @brief Adds a variable to the incumbent model, without the cost or matrix
    * coefficients
    */
-  HighsStatus addVar(const double lower, const double upper) {
+  HighsStatus addVar(const double lower = -kHighsInf,
+                     const double upper = kHighsInf) {
     return this->addVars(1, &lower, &upper);
   }
 
@@ -1447,6 +1487,7 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
@@ -1457,5 +1498,18 @@ class Highs {
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
+  HighsStatus optionChangeAction();
+  HighsStatus computeIllConditioning(HighsIllConditioning& ill_conditioning,
+                                     const bool constraint,
+                                     const HighsInt method,
+                                     const double ill_conditioning_bound);
+  void formIllConditioningLp0(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint);
+  void formIllConditioningLp1(HighsLp& ill_conditioning_lp,
+                              std::vector<HighsInt>& basic_var,
+                              const bool constraint,
+                              const double ill_conditioning_bound);
+  bool infeasibleBoundsOk();
 };
 #endif

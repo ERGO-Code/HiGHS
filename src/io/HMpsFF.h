@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -227,6 +227,8 @@ class HMpsFF {
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
   bool allZeroed(const std::vector<double>& value);
+  double getValue(const std::string& word, bool& is_nan,
+                  const HighsInt id = -1) const;
 };
 
 }  // namespace free_format_parser

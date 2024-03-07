@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -21,4 +21,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
                                  HighsInfo& highs_info, HighsSolution& solution,
                                  HighsBasis& basis);
+void assessExcessiveBoundCost(const HighsLogOptions log_options,
+                              const HighsModel& model);
 #endif  // LP_DATA_HIGHSSOLVE_H_

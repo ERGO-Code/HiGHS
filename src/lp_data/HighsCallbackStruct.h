@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -25,12 +25,21 @@ typedef struct {
   double running_time;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
+  HighsInt pdlp_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
   double mip_primal_bound;
   double mip_dual_bound;
   double mip_gap;
   double* mip_solution;
+  HighsInt cutpool_num_col;
+  HighsInt cutpool_num_cut;
+  HighsInt cutpool_num_nz;
+  HighsInt* cutpool_start;
+  HighsInt* cutpool_index;
+  double* cutpool_value;
+  double* cutpool_lower;
+  double* cutpool_upper;
 } HighsCallbackDataOut;
 
 typedef struct {

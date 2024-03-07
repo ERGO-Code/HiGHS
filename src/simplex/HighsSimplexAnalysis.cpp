@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -1478,7 +1478,11 @@ void HighsSimplexAnalysis::reportIterationData(const bool header) {
 void HighsSimplexAnalysis::reportRunTime(const bool header,
                                          const double run_time) {
   if (header) return;
-  *analysis_log << highsFormatToString(" %ds", (int)run_time);
+#ifndef NDEBUG
+  *analysis_log << highsFormatToString(" %15.8gs", run_time);
+#else
+  *analysis_log << highsFormatToString(" %ds", int(run_time + 0.49));
+#endif
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) {

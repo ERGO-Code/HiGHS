@@ -550,7 +550,9 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
   return std::make_tuple(status, row);
 }
 
-PYBIND11_MODULE(_highs, m) {
+
+PYBIND11_MODULE(highspy, m) {
+     
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
@@ -694,6 +696,7 @@ PYBIND11_MODULE(_highs, m) {
       .def_readwrite("qp_iteration_count", &HighsInfo::qp_iteration_count)
       .def_readwrite("crossover_iteration_count",
                      &HighsInfo::crossover_iteration_count)
+      .def_readwrite("pdlp_iteration_count", &HighsInfo::pdlp_iteration_count)
       .def_readwrite("primal_solution_status",
                      &HighsInfo::primal_solution_status)
       .def_readwrite("dual_solution_status", &HighsInfo::dual_solution_status)
@@ -715,7 +718,11 @@ PYBIND11_MODULE(_highs, m) {
       .def_readwrite("max_dual_infeasibility",
                      &HighsInfo::max_dual_infeasibility)
       .def_readwrite("sum_dual_infeasibilities",
-                     &HighsInfo::sum_dual_infeasibilities);
+                     &HighsInfo::sum_dual_infeasibilities)
+      .def_readwrite("max_complementarity_violation",
+                     &HighsInfo::max_complementarity_violation)
+      .def_readwrite("sum_complementarity_violations",
+                     &HighsInfo::sum_complementarity_violations);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -980,6 +987,11 @@ PYBIND11_MODULE(_highs, m) {
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
+
+  m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
+  m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
+  m.attr("HIGHS_VERSION_PATCH") = HIGHS_VERSION_PATCH;
+
   // Submodules
   py::module_ simplex_constants =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
@@ -1099,8 +1111,8 @@ PYBIND11_MODULE(_highs, m) {
       .value("kSimplexNlaPriceFull", SimplexNlaOperation::kSimplexNlaPriceFull)
       .value("kSimplexNlaBtranBasicFeasibilityChange",
              SimplexNlaOperation::kSimplexNlaBtranBasicFeasibilityChange)
-      .value("kSimplexNlaPriceBasicFeasibilityChange",
-             SimplexNlaOperation::kSimplexNlaPriceBasicFeasibilityChange)
+      // .value("kSimplexNlaPriceBasicFeasibilityChange",
+      //        /khighsSimplexNlaOperation::kSimplexNlaPriceBasicFeasibilityChange)
       .value("kSimplexNlaBtranEp", SimplexNlaOperation::kSimplexNlaBtranEp)
       .value("kSimplexNlaPriceAp", SimplexNlaOperation::kSimplexNlaPriceAp)
       .value("kSimplexNlaFtran", SimplexNlaOperation::kSimplexNlaFtran)
@@ -1127,6 +1139,9 @@ PYBIND11_MODULE(_highs, m) {
              HighsCallbackType::kCallbackMipImprovingSolution)
       .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
       .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
+      .value("kCallbackMipGetCutPool", HighsCallbackType::kCallbackMipGetCutPool)
+      .value("kCallbackMipDefineLazyConstraints",
+	     HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
@@ -1139,6 +1154,8 @@ PYBIND11_MODULE(_highs, m) {
                      &HighsCallbackDataOut::simplex_iteration_count)
       .def_readwrite("ipm_iteration_count",
                      &HighsCallbackDataOut::ipm_iteration_count)
+      .def_readwrite("pdlp_iteration_count",
+                     &HighsCallbackDataOut::pdlp_iteration_count)
       .def_readwrite("objective_function_value",
                      &HighsCallbackDataOut::objective_function_value)
       .def_readwrite("mip_node_count", &HighsCallbackDataOut::mip_node_count)

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -10,9 +10,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsImplications.h"
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
 
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
@@ -373,6 +373,10 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
 
 void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
                                double vubconstant) {
+  // assume that VUBs do not have infinite coefficients and infinite constant
+  // terms since such VUBs effectively evaluate to NaN.
+  assert(std::abs(vubcoef) != kHighsInf || std::abs(vubconstant) != kHighsInf);
+
   VarBound vub{vubcoef, vubconstant};
 
   mipsolver.mipdata_->debugSolution.checkVub(col, vubcol, vubcoef, vubconstant);
@@ -396,6 +400,10 @@ void HighsImplications::addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsImplications::addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
                                double vlbconstant) {
+  // assume that VLBs do not have infinite coefficients and infinite constant
+  // terms since such VLBs effectively evaluate to NaN.
+  assert(std::abs(vlbcoef) != kHighsInf || std::abs(vlbconstant) != kHighsInf);
+
   VarBound vlb{vlbcoef, vlbconstant};
 
   mipsolver.mipdata_->debugSolution.checkVlb(col, vlbcol, vlbcoef, vlbconstant);

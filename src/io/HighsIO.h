@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -58,7 +58,7 @@ struct HighsLogOptions {
 /**
  * @brief Write the HiGHS version and copyright statement
  */
-void highsLogHeader(const HighsLogOptions& log_options);
+void highsLogHeader(const HighsLogOptions& log_options, const bool log_githash);
 
 /**
  * @brief Convert a double number to a string using given tolerance

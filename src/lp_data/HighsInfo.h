@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -138,6 +138,7 @@ struct HighsInfoStruct {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt crossover_iteration_count;
+  HighsInt pdlp_iteration_count;
   HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
@@ -152,6 +153,8 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
+  double max_complementarity_violation;
+  double sum_complementarity_violations;
 };
 
 class HighsInfo : public HighsInfoStruct {
@@ -214,6 +217,11 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt("crossover_iteration_count",
                                    "Iteration count for crossover", advanced,
                                    &crossover_iteration_count, 0);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt("pdlp_iteration_count",
+                                   "Iteration count for PDLP solver", advanced,
+                                   &pdlp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int =
@@ -294,6 +302,16 @@ class HighsInfo : public HighsInfoStruct {
     record_double = new InfoRecordDouble(
         "sum_dual_infeasibilities", "Sum of dual infeasibilities", advanced,
         &sum_dual_infeasibilities, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "max_complementarity_violation", "Max complementarity violation",
+        advanced, &max_complementarity_violation, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "sum_complementarity_violations", "Sum of complementarity violations",
+        advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
   }
 

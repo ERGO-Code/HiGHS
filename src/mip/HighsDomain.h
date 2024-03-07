@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -255,7 +255,14 @@ class HighsDomain {
 
     std::vector<PartitionCliqueData> partitionCliqueData;
 
-    ObjectivePropagation() = default;
+    ObjectivePropagation() {
+      objFunc = nullptr;
+      cost = nullptr;
+      objectiveLower = 0.0;
+      numInfObjLower = 0;
+      capacityThreshold = 0.0;
+      isPropagated = false;
+    }
     ObjectivePropagation(HighsDomain* domain);
 
     bool isActive() const { return domain != nullptr; }

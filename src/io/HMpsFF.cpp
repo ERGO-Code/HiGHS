@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
 /*    Leona Gottwald and Michael Feldmeier                               */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -14,7 +14,7 @@
 #include "lp_data/HighsModelUtils.h"
 
 #ifdef ZLIB_FOUND
-#include "zstr/zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 namespace free_format_parser {
@@ -832,7 +832,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
           marker.c_str());
     } else {
-      double value = atof(word.c_str());
+      bool is_nan = false;
+      double value = getValue(word, is_nan);  // atof(word.c_str());
+      if (is_nan) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "Coefficient for column \"%s\" is NaN\n", marker.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
       if (value) {
         parseName(marker);  // rowidx set and num_nz incremented
         if (rowidx >= 0) {
@@ -887,7 +893,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
             marker.c_str());
         continue;
       };
-      double value = atof(word.c_str());
+      bool is_nan = false;
+      double value = getValue(word, is_nan);  // atof(word.c_str());
+      if (is_nan) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "Coefficient for column \"%s\" is NaN\n", marker.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
       if (value) {
         parseName(marker);  // rowidx set and num_nz incremented
         if (rowidx >= 0) {
@@ -1053,7 +1065,13 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
+        bool is_nan = false;
+        double value = getValue(word, is_nan);  // atof(word.c_str());
+        if (is_nan) {
+          highsLogUser(log_options, HighsLogType::kError,
+                       "RHS for row \"%s\" is NaN\n", marker.c_str());
+          return HMpsFF::Parsekey::kFail;
+        }
         addRhs(value, rowidx);
       }
     }
@@ -1093,7 +1111,13 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
                      "ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
+        bool is_nan = false;
+        double value = getValue(word, is_nan);  // atof(word.c_str());
+        if (is_nan) {
+          highsLogUser(log_options, HighsLogType::kError,
+                       "RHS for row \"%s\" is NaN\n", marker.c_str());
+          return HMpsFF::Parsekey::kFail;
+        }
         addRhs(value, rowidx);
       }
     }
@@ -1327,7 +1351,13 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
                    marker.c_str());
       return HMpsFF::Parsekey::kFail;
     }
-    double value = atof(word.c_str());
+    bool is_nan = false;
+    double value = getValue(word, is_nan);  // atof(word.c_str());
+    if (is_nan) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Bound for column \"%s\" is NaN\n", marker.c_str());
+      return HMpsFF::Parsekey::kFail;
+    }
     if (is_integral) {
       assert(is_lb || is_ub || is_semi);
       // Must be LI, UI or SI, and value should be integer
@@ -1455,7 +1485,13 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                      "definition: ignored\n",
                      marker.c_str());
       } else {
-        double value = atof(word.c_str());
+        bool is_nan = false;
+        double value = getValue(word, is_nan);  // atof(word.c_str());
+        if (is_nan) {
+          highsLogUser(log_options, HighsLogType::kError,
+                       "Range for row \"%s\" is NaN\n", marker.c_str());
+          return HMpsFF::Parsekey::kFail;
+        }
         addRhs(value, rowidx);
       }
     }
@@ -1495,7 +1531,13 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
                        "definition: ignored\n",
                        marker.c_str());
         } else {
-          double value = atof(word.c_str());
+          bool is_nan = false;
+          double value = getValue(word, is_nan);  // atof(word.c_str());
+          if (is_nan) {
+            highsLogUser(log_options, HighsLogType::kError,
+                         "Range for row \"%s\" is NaN\n", marker.c_str());
+            return HMpsFF::Parsekey::kFail;
+          }
           addRhs(value, rowidx);
         }
       }
@@ -1590,7 +1632,15 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       rowidx = getColIdx(row_name);
       assert(rowidx >= 0 && rowidx < num_col);
 
-      double coeff = atof(coeff_name.c_str());
+      bool is_nan = false;
+      double coeff = getValue(coeff_name, is_nan);  // atof(word.c_str());
+      if (is_nan) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
+            row_name.c_str(), col_name.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
       if (coeff) {
         if (qmatrix) {
           // QMATRIX has the whole Hessian, so store the entry if the
@@ -1732,7 +1782,15 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
       qrowidx = getColIdx(row_name);
       assert(qrowidx >= 0 && qrowidx < num_col);
 
-      double coeff = atof(coeff_name.c_str());
+      bool is_nan = false;
+      double coeff = getValue(coeff_name, is_nan);  // atof(word.c_str());
+      if (is_nan) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
+            row_name.c_str(), col_name.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
       if (coeff) {
         if (qcmatrix) {
           // QCMATRIX has the whole Hessian, so store the entry if the
@@ -1953,7 +2011,13 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
     double weight = 0.0;
     if (!is_end(strline, end)) {
       word = first_word(strline, end);
-      weight = atof(word.c_str());
+      bool is_nan = false;
+      weight = getValue(word, is_nan);  // atof(word.c_str());
+      if (is_nan) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "Weight for column \"%s\" is NaN\n", colname.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
     }
 
     sos_entries.back().push_back(std::make_pair(colidx, weight));
@@ -1968,4 +2032,29 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
   return true;
 }
 
+double HMpsFF::getValue(const std::string& word, bool& is_nan,
+                        const HighsInt id) const {
+  // Lambda to replace any d or D by E
+  auto dD2e = [&](std::string& word) {
+    HighsInt ix = word.find("D");
+    if (ix >= 0) {
+      word.replace(ix, 1, "E");
+    } else {
+      ix = word.find("d");
+      if (ix >= 0) word.replace(ix, 1, "E");
+    }
+  };
+
+  std::string local_word = word;
+  dD2e(local_word);
+  const double value = atof(local_word.c_str());
+  is_nan = false;
+  //  printf("value(%d) = %g\n", int(id), value);
+  //  if (std::isnan(value)) return true;
+  //  // atof('nan') yields 0 with some Windows compilers, so try a string
+  //  // comparison
+  //  std::string lower_word = word;
+  //  if (str_tolower(lower_word) == "nan") return true;
+  return value;
+}
 }  // namespace free_format_parser
