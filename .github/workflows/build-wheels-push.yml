@@ -67,8 +67,8 @@ jobs:
     # if: github.event_name == 'release' && github.event.action == 'published'
 
     environment:
-      name: pypi
-      url: https://pypi.org/p/highspy
+      name: testpypi
+      url: https://testpypi.org/p/highspy
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
@@ -97,8 +97,8 @@ jobs:
   #   # if: github.event_name == 'release' && github.event.action == 'published'
 
   #   environment:
-  #     name: testpypi
-  #     url: https://testpypi.org/p/highspy
+  #     name: pypi
+  #     url: https://pypi.org/p/highspy
 
   #   permissions:
   #     id-token: write  # IMPORTANT: mandatory for trusted publishing
