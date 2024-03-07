@@ -1,6 +1,9 @@
-name: build-wheels
+name: build-wheels-push
 
-on: [pull_request]
+on: 
+ release:
+   types:
+     - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,7 +25,7 @@ jobs:
           - [ubuntu-20.04, manylinux_x86_64]
           - [ubuntu-20.04, musllinux_x86_64] # No OpenBlas, no test
           - [macos-12, macosx_x86_64]
-          - [macos-14, macosx_arm64]
+          - [macos-12, macosx_arm64]
           - [windows-2019, win_amd64]
         python: ["cp38", "cp39","cp310", "cp311","cp312"]
 
@@ -49,3 +52,23 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           path: dist/*.tar.gz
+
+  upload_pypi:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # upload to PyPI on every tag starting with 'v'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # alternatively, to publish when a GitHub Release is created, use the following rule:
+    # if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
