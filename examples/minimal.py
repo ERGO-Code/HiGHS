@@ -1,6 +1,6 @@
-# This example cannot be run with the version (1.5.3) of highspy
-# available from PyPI. It requires a local installation of highspy for
-# (at least) HiGHS version 1.6.0
+# This example does NOT work yet.
+# We are working on it! 
+
 import highspy
 
 h = highspy.Highs()

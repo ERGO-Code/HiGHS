@@ -14,7 +14,7 @@
 #include "lp_data/HighsModelUtils.h"
 
 #ifdef ZLIB_FOUND
-#include "zstr/zstr.hpp"
+#include "../extern/zstr/zstr.hpp"
 #endif
 
 namespace free_format_parser {

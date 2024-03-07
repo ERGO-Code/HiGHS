@@ -1,6 +1,6 @@
 name: build-mingw
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   mingw:
@@ -41,7 +41,7 @@ jobs:
             ${{ matrix.target-prefix }}-cc
             ${{ matrix.target-prefix }}-ninja
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Configure CMake
         run: |

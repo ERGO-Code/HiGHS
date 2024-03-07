@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include "ipm/ipx/utils.h"
-#include "pdqsort/pdqsort.h"
+#include "../extern/pdqsort/pdqsort.h"
 
 namespace ipx {
 

@@ -2,6 +2,18 @@
 
 This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues experienced when integrating them into HiGHS.
 
+## Termination of cuPDLP-C
+
+cuPDLP-C terminates when either the current or averaged iterates satisfy primal/dual feasibility, using a 2-norm measure relative to the size of the RHS/costs, and after scaling the LP. 
+
+HiGHS assesses primal/dual feasibility using a infinity-norm absolute measure for the unscaled LP. Thus the cuPDLP-C result frequently fails to satisfy HiGHS primal/dual feasibility. To get around this partially, `iInfNormAbsLocalTermination` has been introduced into cuPDLP-C. 
+
+By default, `iInfNormAbsLocalTermination` is false, so that the original cuPDLP-C termination criteria are used.
+
+When `iInfNormAbsLocalTermination` is true, cuPDLP-C terminates only when primal/dual feasibility is satisfied for the infinity-norm absolute measure of the current iterate, so that HiGHS primal/dual feasibility is satisfied. 
+
+However, the cuPDLP-C scaling may still result in the HiGHS tolerances not being satisfied. Users can inspect `HighsInfo` values for the maximum and sum of infeasibilities, and the new `HighsInfo` values measuring the maximum and sum of complementarity violations.
+
 ## Preprocessing issue
 
 The following line is not recognised by g++, 
@@ -65,14 +77,6 @@ In HiGHS, all the macros using `typeof` have been replaced by multiple type-spec
 ## Problem with sys/time.h
 
 The HiGHS branch add-pdlp compiles and runs fine on @jajhall's Linux machine, but CI tests on GitHub fail utterly due to `sys/time.h` not being found. Until this is fixed, or HiGHS passes its own timer for use within `cuPDLP-c`, timing within `cuPDLP-c` can be disabled using the compiler directive `CUPDLP_TIMER`. By default this is defined, so the `cuPDLP-c` is retained.
-
-## Termination of cuPDLP-C
-
-cuPDLP-C terminates when either the current or averaged iterates satisfy primal/dual feasibility, using a 2-norm measure relative to the size of the RHS/costs. HiGHS assesses primal/dual feasibility using a infinity-norm absolute measure. Thus the cuPDLP-C result frequently fails to satisfy HiGHS primal/dual feasibility. To get around this, `iInfNormAbsLocalTermination` has been introduced into cuPDLP-C. 
-
-By default, `iInfNormAbsLocalTermination` is false, so that the original cuPDLP-C termination criteria are used.
-
-When `iInfNormAbsLocalTermination` is true, cuPDLP-C terminates only when primal/dual feasibility is satisfied for the infinity-norm absolute measure of the current iterate, so that HiGHS primal/dual feasibility is satisfied. 
 
 ## Controlling the `cuPDLP-c` logging
 

@@ -13,11 +13,11 @@
 
 #include <numeric>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HighsLp.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolverData.h"
-#include "pdqsort/pdqsort.h"
 #include "util/HighsIntegers.h"
 
 HighsObjectiveFunction::HighsObjectiveFunction(const HighsMipSolver& mipsolver)
