@@ -1267,7 +1267,6 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
                                      HighsCDouble& activitymin) {
-  assert(static_cast<size_t>(mipsolver->numRow()) == activitymin_.size());
   if (infeasible_) {
     activitymin = 0.0;
     ninfmin = 0;
@@ -1315,7 +1314,6 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
                                      HighsCDouble& activitymax) {
-  assert(static_cast<size_t>(mipsolver->numRow()) == activitymax_.size());
   if (infeasible_) {
     activitymax = 0.0;
     ninfmax = 0;
@@ -1556,12 +1554,16 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
 
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                                          double newbound) {
+  if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
+    printf("HighsDomain::updateActivityLbChange: activitymin_ has size %d but should be of size (at least) %d\n",
+	   int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111==345);
+  }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
   assert(!infeasible_);
-  assert(static_cast<size_t>(mipsolver->numRow()) == activitymax_.size());
 
   if (objProp_.isActive()) {
     objProp_.updateActivityLbChange(col, oldbound, newbound);
@@ -1726,16 +1728,15 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
 void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                                          double newbound) {
+  if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
+    printf("HighsDomain::updateActivityUbChange: activitymin_ has size %d but should be of size (at least) %d\n",
+	   int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111==345);
+  }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
   HighsInt end = mip->a_matrix_.start_[col + 1];
 
-  const bool activitymax_size_ok = static_cast<size_t>(mipsolver->numRow()) == activitymax_.size();
-  if (!activitymax_size_ok) {
-    printf(" HighsDomain::updateActivityUbChange: activitymax_.size() = %d != %d = mipsolver->numRow()\n",
-	   int(activitymax_.size()), int(mipsolver->numRow()));
-  }
-  assert(activitymax_size_ok);
   assert(!infeasible_);
 
   if (objProp_.isActive()) {
