@@ -131,6 +131,11 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
         )
 
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
@@ -140,7 +145,8 @@ setup(
     author="HiGHS developers",
     author_email="highsopt@gmail.com",
     url='https://github.com/ERGO-Code/HiGHS',
-    long_description="",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     license = 'MIT License',
     ext_modules=[CMakeExtension("highspy")],
     cmdclass={"build_ext": CMakeBuild},
