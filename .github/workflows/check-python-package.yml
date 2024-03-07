@@ -43,7 +43,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          py -m pip install build twine
+          py -m pip install build setuptools twine
           py -m setup.py --sdist
           py -m setup.py --wheel
-          twine check dist/*
+          py -m twine check dist/*
