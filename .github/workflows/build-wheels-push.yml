@@ -1,6 +1,6 @@
 # Python release WIP
-name: Build wheels
-on: [push]
+name: Build and push wheels
+on: []
 
 # on: 
 #  release:
