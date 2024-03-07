@@ -1,9 +1,11 @@
 name: build-wheels-push
 
-on: 
- release:
-   types:
-     - published
+on: [push]
+
+# on:
+#  release:
+#    types:
+#      - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +27,7 @@ jobs:
           - [ubuntu-20.04, manylinux_x86_64]
           - [ubuntu-20.04, musllinux_x86_64] # No OpenBlas, no test
           - [macos-12, macosx_x86_64]
-          - [macos-12, macosx_arm64]
+          - [macos-14, macosx_arm64]
           - [windows-2019, win_amd64]
         python: ["cp38", "cp39","cp310", "cp311","cp312"]
 
