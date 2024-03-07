@@ -10,7 +10,6 @@ jobs:
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
     runs-on: ${{ matrix.buildplat[0] }}
-    environment: pypi
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -32,9 +31,6 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.5
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -45,7 +41,3 @@ jobs:
       - name: Build sdist
         shell: bash -l {0}
         run: pipx run build --sdist
-
-      - uses: actions/upload-artifact@v3
-        with:
-          path: dist/*.tar.gz
