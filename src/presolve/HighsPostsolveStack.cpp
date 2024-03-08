@@ -72,8 +72,8 @@ void HighsPostsolveStack::LinearTransform::transformToPresolvedSpace(
   primalSol[col] /= scale;
 }
 
-HighsBasisStatus computeRowStatus(double dual,
-                                  HighsPostsolveStack::RowType rowType) {
+static HighsBasisStatus computeRowStatus(double dual,
+                                         HighsPostsolveStack::RowType rowType) {
   if (rowType == HighsPostsolveStack::RowType::kEq)
     return dual < 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
   else if (rowType == HighsPostsolveStack::RowType::kGeq)
@@ -130,8 +130,8 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
     basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
 }
 
-HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
-                               double dual_feasibility_tolerance) {
+static HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
+                                      double dual_feasibility_tolerance) {
   if (dual > dual_feasibility_tolerance)
     status = HighsBasisStatus::kLower;
   else if (dual < -dual_feasibility_tolerance)
@@ -140,7 +140,8 @@ HighsBasisStatus computeStatus(double dual, HighsBasisStatus& status,
   return status;
 }
 
-HighsBasisStatus computeStatus(double dual, double dual_feasibility_tolerance) {
+static HighsBasisStatus computeStatus(double dual,
+                                      double dual_feasibility_tolerance) {
   if (dual > dual_feasibility_tolerance)
     return HighsBasisStatus::kLower;
   else if (dual < -dual_feasibility_tolerance)
