@@ -83,7 +83,7 @@ sdist.cmake = false
 # default to the first of ``src/<package>``, ``python/<package>``, or
 # ``<package>`` if they exist.  The prefix(s) will be stripped from the package
 # name inside the wheel.
-wheel.packages = ["src/<package>", "python/<package>", "<package>"]
+wheel.packages = ["highspy"]
 
 # The Python tags. The default (empty string) will use the default Python
 # version. You can also set this to "cp37" to enable the CPython 3.7+ Stable ABI
@@ -112,7 +112,7 @@ wheel.cmake = true
 
 # Target the platlib or the purelib. If not set, the default is to target the
 # platlib if wheel.cmake is true, and the purelib otherwise.
-wheel.platlib = ""
+# wheel.platlib = ""
 
 # A set of patterns to exclude from the wheel. This is additive to the SDist
 # exclude patterns. This applies to the final paths in the wheel, and can
