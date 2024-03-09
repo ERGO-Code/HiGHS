@@ -19,7 +19,7 @@ set(headers_python ${highs_headers_python}
 # Find Python 3
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
-python_add_library(_core MODULE src/highspy/highs_bindings.cpp WITH_SOABI)
+python_add_library(_core MODULE highspy/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 include(FetchContent)
