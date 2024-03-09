@@ -3,18 +3,67 @@
 # "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-# Minimum requirements for the build system to execute.
-requires = [
-  "setuptools>=42",
-  "pybind11>=2.4",
-  "wheel",
-  "cmake>=3.12",
-  "numpy>=1.7"
-] 
+# requires = ["scikit-build-core"]
+requires = ["scikit-build-core>=0.3.3", "pybind11"]
 
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
+
+# Minimum requirements for the build system to execute.
+[project]
+name = "highspy"
+version = "1.7.0.dev0"
+
+readme = "README.md"
+
+requires-python = ">=3.8"
+classifiers = [
+  # "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+
+[tool.scikit-build]
+wheel.expand-macos-universal-tags = true
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+log_cli_level = "INFO"
+filterwarnings = [
+  "error",
+]
+testpaths = ["highspy/tests"]
+
 
 [tool.cibuildwheel]
-build = "*"
-skip = "cp3{6,7}-*"
-test-skip = ""
+test-command = "pytest {project}/tests"
+test-extras = ["test"]
+test-skip = ["*universal2:arm64"]
+build-verbosity = 1
+
+
+# requires = [
+#   "setuptools>=42",
+#   "pybind11>=2.4",
+#   "wheel",
+#   "cmake>=3.12",
+#   "numpy>=1.7"
+# ] 
+
+# build-backend = "setuptools.build_meta"
+
+# [tool.cibuildwheel]
+# build = "*"
+# skip = "cp3{6,7}-*"
+# test-skip = ""

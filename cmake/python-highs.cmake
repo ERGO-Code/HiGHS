@@ -35,14 +35,19 @@ list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")
 
 # add module
-pybind11_add_module(highspy highspy/highs_bindings.cpp)
+# pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
-# todo is this version required?
-# target_compile_definitions(highspy 
-#                 PRIVATE VERSION_INFO=${VERSION_INFO})
+python_add_library(_core MODULE highspy/highs_bindings.cpp WITH_SOABI)
+target_link_libraries(_core PRIVATE pybind11::headers)
 
 # sources for python 
-target_sources(highspy PUBLIC ${sources_python} ${headers_python})
+target_sources(_core PUBLIC ${sources_python} ${headers_python})
 
 # include directories for python 
-target_include_directories(highspy PUBLIC ${include_dirs_python})
+target_include_directories(_core PUBLIC ${include_dirs_python})
+
+# This is passing in the version as a define just as an example
+target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
+
+# The install directory is the output (wheel) directory
+install(TARGETS _core DESTINATION highspy)
