@@ -63,7 +63,7 @@ wheel.packages = ["src/highspy"]
 
 # Files to include in the SDist even if they are skipped by default. Supports
 # gitignore syntax.
-sdist.include = ['src/highspy/highs.py']
+sdist.include = ['src/highspy/highs.py', 'tests/test_highspy.py']
 
 # # Files to exclude from the SDist even if they are included by default. Supports
 # # gitignore syntax.
@@ -163,8 +163,8 @@ testpaths = ["tests"]
 
 
 [tool.cibuildwheel]
-test-command = "pytest tests"
-test-extras = ["test"]
+test-command = "pytest {project}/tests"
+test-extras = ["test", "numpy"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
 
