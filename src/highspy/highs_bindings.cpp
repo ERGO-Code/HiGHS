@@ -551,8 +551,7 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 
-PYBIND11_MODULE(highspy, m) {
-     
+PYBIND11_MODULE(_core, m) {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
