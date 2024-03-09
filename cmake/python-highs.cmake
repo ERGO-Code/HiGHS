@@ -19,7 +19,7 @@ set(headers_python ${highs_headers_python}
 # Find Python 3
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
-python_add_library(_core MODULE highspy/highs_bindings.cpp WITH_SOABI)
+python_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 include(FetchContent)
@@ -50,7 +50,9 @@ target_include_directories(_core PUBLIC ${include_dirs_python})
 # This is passing in the version as a define just as an example
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
-target_compile_options(_core PRIVATE "/bigobj")
+if(MSVC)
+  target_compile_options(_core PRIVATE "/bigobj")
+endif()
 
 # if(MSVC)
 #   # Try to split large pdb files into objects. 

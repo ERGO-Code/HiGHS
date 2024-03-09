@@ -5,6 +5,7 @@ import numpy as np
 from io import StringIO
 from sys import platform
 
+from __future__ import annotations
 
 class TestHighsPy(unittest.TestCase):
     def get_basic_model(self):
