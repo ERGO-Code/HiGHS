@@ -4,7 +4,7 @@
 
 [build-system]
 # requires = ["scikit-build-core"]
-requires = ["scikit-build-core>=0.3.3", "pybind11"]
+requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
 
 build-backend = "scikit_build_core.build"
 
@@ -76,7 +76,6 @@ sdist.include = ['src/highspy/highs.py']
 
 # # If set to True, CMake will be run before building the SDist.
 # sdist.cmake = false
-
 
 
 # # The Python tags. The default (empty string) will use the default Python
@@ -159,14 +158,12 @@ minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 log_cli_level = "INFO"
-filterwarnings = [
-  "error",
-]
-testpaths = ["highspy/tests"]
+filterwarnings = ["error"]
+testpaths = ["tests"]
 
 
 [tool.cibuildwheel]
-test-command = "pytest {project}/tests"
+test-command = "pytest tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
