@@ -555,16 +555,16 @@ PYBIND11_MODULE(_core, m) {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
-      .value("kMaximize", ObjSense::kMaximize)
+      .value("kMaximize", ObjSense::kMaximize);
       // // .export_values();
   py::enum_<MatrixFormat>(m, "MatrixFormat")
       .value("kColwise", MatrixFormat::kColwise)
       .value("kRowwise", MatrixFormat::kRowwise)
-      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned)
+      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
       // // .export_values();
   py::enum_<HessianFormat>(m, "HessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
-      .value("kSquare", HessianFormat::kSquare)
+      .value("kSquare", HessianFormat::kSquare);
       // .export_values();
   py::enum_<SolutionStatus>(m, "SolutionStatus")
       .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
@@ -594,7 +594,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kIterationLimit", HighsModelStatus::kIterationLimit)
       .value("kUnknown", HighsModelStatus::kUnknown)
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
-      .value("kInterrupt", HighsModelStatus::kInterrupt)
+      .value("kInterrupt", HighsModelStatus::kInterrupt);
       // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
@@ -606,43 +606,43 @@ PYBIND11_MODULE(_core, m) {
       .value("kReducedToEmpty", HighsPresolveStatus::kReducedToEmpty)
       .value("kTimeout", HighsPresolveStatus::kTimeout)
       .value("kNullError", HighsPresolveStatus::kNullError)
-      .value("kOptionsError", HighsPresolveStatus::kOptionsError)
+      .value("kOptionsError", HighsPresolveStatus::kOptionsError);
       // .export_values();
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
       .value("kLower", HighsBasisStatus::kLower)
       .value("kBasic", HighsBasisStatus::kBasic)
       .value("kUpper", HighsBasisStatus::kUpper)
       .value("kZero", HighsBasisStatus::kZero)
-      .value("kNonbasic", HighsBasisStatus::kNonbasic)
+      .value("kNonbasic", HighsBasisStatus::kNonbasic);
       // .export_values();
   py::enum_<HighsVarType>(m, "HighsVarType")
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
-      .value("kSemiInteger", HighsVarType::kSemiInteger)
+      .value("kSemiInteger", HighsVarType::kSemiInteger);
       // .export_values();
   py::enum_<HighsOptionType>(m, "HighsOptionType")
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
       .value("kDouble", HighsOptionType::kDouble)
-      .value("kString", HighsOptionType::kString)
+      .value("kString", HighsOptionType::kString);
       // .export_values();
   py::enum_<HighsInfoType>(m, "HighsInfoType")
       .value("kInt64", HighsInfoType::kInt64)
       .value("kInt", HighsInfoType::kInt)
-      .value("kDouble", HighsInfoType::kDouble)
+      .value("kDouble", HighsInfoType::kDouble);
       // .export_values();
   py::enum_<HighsStatus>(m, "HighsStatus")
       .value("kError", HighsStatus::kError)
       .value("kOk", HighsStatus::kOk)
-      .value("kWarning", HighsStatus::kWarning)
+      .value("kWarning", HighsStatus::kWarning);
       // .export_values();
   py::enum_<HighsLogType>(m, "HighsLogType")
       .value("kInfo", HighsLogType::kInfo)
       .value("kDetailed", HighsLogType::kDetailed)
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
-      .value("kError", HighsLogType::kError)
+      .value("kError", HighsLogType::kError);
       // .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")

@@ -61,9 +61,9 @@ wheel.packages = ["src/highspy"]
 # # possible options.
 # logging.level = "WARNING"
 
-# # Files to include in the SDist even if they are skipped by default. Supports
-# # gitignore syntax.
-# sdist.include = []
+# Files to include in the SDist even if they are skipped by default. Supports
+# gitignore syntax.
+sdist.include = ['src/highspy/highs.py']
 
 # # Files to exclude from the SDist even if they are included by default. Supports
 # # gitignore syntax.

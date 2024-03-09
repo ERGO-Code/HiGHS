@@ -92,6 +92,8 @@ from ._core import \
 #    , \
 #    , \
 
+from .highs import Highs
+
 __all__ = ["__doc__",
            "__version__",
            "ObjSense",
@@ -114,6 +116,7 @@ __all__ = ["__doc__",
            "HighsInfo",
            "HighsOptions",
            "_Highs",
+           "Highs",
            "HighsSolution",
            "HighsObjectiveSolution",
            "HighsBasis",
