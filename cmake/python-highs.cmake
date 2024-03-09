@@ -17,7 +17,9 @@ set(headers_python ${highs_headers_python}
                    ${basiclu_headers_python})
 
 # Find Python 3
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+
+python_add_library(_core MODULE src/highspy/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 include(FetchContent)
@@ -37,7 +39,6 @@ message(CHECK_PASS "fetched")
 # add module
 # pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
-python_add_library(_core MODULE highspy/highs_bindings.cpp WITH_SOABI)
 target_link_libraries(_core PRIVATE pybind11::headers)
 
 # sources for python 
@@ -48,6 +49,19 @@ target_include_directories(_core PUBLIC ${include_dirs_python})
 
 # This is passing in the version as a define just as an example
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
+
+target_compile_options(_core PRIVATE "/bigobj")
+
+# if(MSVC)
+#   # Try to split large pdb files into objects. 
+#   # https://github.com/tensorflow/tensorflow/issues/31610
+#   add_compile_options("/Z7")
+#   add_link_options("/DEBUG:FASTLINK")
+#   if(STDCALL)
+#     # /Gz - stdcall calling convention
+#     add_definitions(/Gz)
+#   endif()
+# endif()
 
 # The install directory is the output (wheel) directory
 install(TARGETS _core DESTINATION highspy)
