@@ -90,7 +90,7 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp38-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
