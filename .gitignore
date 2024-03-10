@@ -272,6 +272,8 @@ qjh.mps
 
 *.whl
 bazel*
+MODULE.bazel
+MODULE.bazel.lock
 
 # webdemo
 build_webdemo
