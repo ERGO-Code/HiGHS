@@ -167,12 +167,11 @@ if get_option('with_tests')
 endif
 
 # --------------------- Bindings
-highspy_cpp = files([
-  'highspy/highs_bindings.cpp'
-])
-highsoptions_cpp = files([
-  'highspy/highs_options.cpp'
-])
 if get_option('with_pybind11')
-  subdir('highspy')
+  highspy_cpp = files([
+    'src/highspy/highs_bindings.cpp'
+  ])
+  highsoptions_cpp = files([
+    'src/highspy/highs_options.cpp'
+  ])
 endif

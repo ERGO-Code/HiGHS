@@ -379,6 +379,13 @@ if get_option('with_pybind11')
     dependency('pybind10')
   ]
 
+  highspy_cpp = files([
+    'highspy/highs_bindings.cpp'
+  ])
+  highsoptions_cpp = files([
+    'highspy/highs_options.cpp'
+  ])
+
   py.extension_module(
     '_highs',
     sources : highspy_cpp,
