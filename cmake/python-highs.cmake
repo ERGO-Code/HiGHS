@@ -17,15 +17,7 @@ set(headers_python ${highs_headers_python}
                    ${basiclu_headers_python})
 
 # Find Python 3
-if (UNIX)
-  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-else()
-  # WIN
-  find_package(Python COMPONENTS Interpreter Development)
-  if (NOT Python_FOUND)
-    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-  endif()
-endif()
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
 python_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
 

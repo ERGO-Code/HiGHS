@@ -371,6 +371,14 @@ if get_option('with_c')
                         install: true)
 endif
 
+
+_linkto += highslib
+
+highs_dep = declare_dependency(link_with: _linkto,
+                               dependencies: _deps,
+                               include_directories: _incdirs,
+                               )
+
 if get_option('with_pybind11')
   py_mod = import('python')
   py = py_mod.find_installation(pure: false)
