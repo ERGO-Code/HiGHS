@@ -77,12 +77,12 @@ jobs:
     # ubuntu 22 has a latest version of cmake, but setup-python 
     # does not seem to provide all necessary modules to find python
     # from cmake. works on my machine, test the wheels manually
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      strategy:
-        matrix:
-          python: [3.12]
+      # strategy:
+      #   matrix:
+      #     python: [3.12]
 
       - name: Install correct python version
         uses: actions/setup-python@v5
