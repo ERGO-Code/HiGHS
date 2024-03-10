@@ -78,6 +78,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+
       - name: Build wheel
         run: |
           python3 --version
