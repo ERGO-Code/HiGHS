@@ -17,24 +17,25 @@ set(headers_python ${highs_headers_python}
                    ${basiclu_headers_python})
 
 # Find Python 3
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(pybind11 CONFIG)
 
-python3_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
+python_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
-include(FetchContent)
-message(CHECK_START "Fetching pybind11")
-list(APPEND CMAKE_MESSAGE_INDENT "  ")
-set(PYBIND11_INSTALL ON)
-set(PYBIND11_TEST OFF)
-FetchContent_Declare(
-  pybind11
-  GIT_REPOSITORY "https://github.com/pybind/pybind11.git"
-  GIT_TAG "v2.11.1"
-)
-FetchContent_MakeAvailable(pybind11)
-list(POP_BACK CMAKE_MESSAGE_INDENT)
-message(CHECK_PASS "fetched")
+# include(FetchContent)
+# message(CHECK_START "Fetching pybind11")
+# list(APPEND CMAKE_MESSAGE_INDENT "  ")
+# set(PYBIND11_INSTALL ON)
+# set(PYBIND11_TEST OFF)
+# FetchContent_Declare(
+#   pybind11
+#   GIT_REPOSITORY "https://github.com/pybind/pybind11.git"
+#   GIT_TAG "v2.11.1"
+# )
+# FetchContent_MakeAvailable(pybind11)
+# list(POP_BACK CMAKE_MESSAGE_INDENT)
+# message(CHECK_PASS "fetched")
 
 # add module
 # pybind11_add_module(highspy highspy/highs_bindings.cpp)

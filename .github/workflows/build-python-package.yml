@@ -77,12 +77,12 @@ jobs:
     # ubuntu 22 has a latest version of cmake, but setup-python 
     # does not seem to provide all necessary modules to find python
     # from cmake. works on my machine, test the wheels manually
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      strategy:
-        matrix:
-          python: [3.12]
+      # strategy:
+      #   matrix:
+      #     python: [3.12]
 
       - name: Install correct python version
         uses: actions/setup-python@v5
@@ -93,7 +93,7 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp312-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
