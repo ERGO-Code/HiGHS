@@ -1,6 +1,7 @@
+# just for reference, OK for CPython, not PyPa 
 name: Wheels
 
-on: [push]
+on: []
   # workflow_dispatch:
   # pull_request:
   # push:
