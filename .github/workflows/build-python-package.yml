@@ -75,11 +75,17 @@ jobs:
              
   build_wheel_linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.10]
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Install correct python version
         uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
