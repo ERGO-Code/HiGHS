@@ -1,9 +1,8 @@
-# [project.urls]
-# "Source Code" = "https://github.com/ERGO-Code/HiGHS"
-# "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
+[project.urls]
+"Source Code" = "https://github.com/ERGO-Code/HiGHS"
+"Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-# requires = ["scikit-build-core"]
 requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
 
 build-backend = "scikit_build_core.build"
@@ -28,7 +27,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "numpy"]
 
 
 [tool.scikit-build]
