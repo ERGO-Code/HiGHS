@@ -11,11 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Build sdist
         run: |
-          python3 -m pip install setuptools
-          python3 setup.py sdist
+          python3 -m pip install build 
+          python3 -m build --sdist
 
       - name: Install sdist
         run: |
@@ -25,7 +27,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
           
   build_sdist_mac:
     runs-on: macos-latest
@@ -34,8 +36,8 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install setuptools
-          python3 setup.py sdist
+          python3 -m pip install build 
+          python3 -m build --sdist
 
       - name: Install sdist
         run: |
@@ -45,7 +47,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
 
   build_sdist_win:
     runs-on: windows-latest
@@ -59,8 +61,8 @@ jobs:
 
       - name: Build sdist
         run: |
-          python -m pip install setuptools
-          python setup.py sdist
+          python -m pip install build
+          python -m build --sdist
 
       - name: Install sdist
         run: |
@@ -92,7 +94,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
           
   # macos 12 is Intel
   build_wheel_macos_12:
@@ -123,7 +125,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest 
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
             
   # macos 13 is Intel
   build_wheel_macos_13:
@@ -154,7 +156,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
             
   # macos 14 is M1 (beta)
   build_wheel_macos_14:
@@ -185,7 +187,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
 
   build_wheel_windows:
     runs-on: windows-latest
@@ -212,5 +214,5 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest tests/test_highspy.py
+          python -m pytest 
           

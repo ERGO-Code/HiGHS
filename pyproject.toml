@@ -12,9 +12,7 @@ build-backend = "scikit_build_core.build"
 name = "highspy"
 version = "1.7.0.dev0"
 description = "A thin set of pybind11 wrappers to HiGHS"
-authors = [
-    {name = "HiGHS developers", email = "highsopt@gmail.com"},
-]
+authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
 requires-python = ">=3.8"
@@ -43,6 +41,41 @@ wheel.expand-macos-universal-tags = true
 # name inside the wheel.
 wheel.packages = ["src/highspy"]
 
+# Files to include in the SDist even if they are skipped by default. Supports
+# gitignore syntax.
+sdist.include = [
+  "src/highspy/highs.py",
+  "tests/test_highspy.py",
+  "Version.txt",
+  "LICENSE",
+  "README.md",
+  "src/HConfig.h.in",
+  "src",
+  "external",
+  "cmake",
+]
+
+sdist.exclude = [
+  ".github",
+  ".gitattributes",
+  ".gitignore",
+  ".github",
+  "app",
+  "build",
+  "check",
+  "docs",
+  "subprojects",
+  ".coin-or",
+  "build_webdemo.sh",
+  ".clang-format",
+  "__setup.py",
+  "BUILD.bazel",
+  "meson*",
+  "MODS.md",
+  "WORKSPACE",
+]
+
+
 # # Verbose printout when building.
 # cmake.verbose = false
 
@@ -63,9 +96,6 @@ wheel.packages = ["src/highspy"]
 # # possible options.
 # logging.level = "WARNING"
 
-# Files to include in the SDist even if they are skipped by default. Supports
-# gitignore syntax.
-sdist.include = ['src/highspy/highs.py', 'tests/test_highspy.py']
 
 # # Files to exclude from the SDist even if they are included by default. Supports
 # # gitignore syntax.
@@ -172,4 +202,3 @@ test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
-
