@@ -389,7 +389,7 @@ if get_option('with_pybind11')
   py.extension_module(
     '_highs',
     sources : highspy_cpp,
-    dependencies: [pyb10_dep, highs_dep],
+    dependencies: [pyb11_dep, highs_dep],
     cpp_args: _args,
     install: true,
     subdir: 'highspy',
@@ -399,7 +399,7 @@ if get_option('with_pybind11')
   py.extension_module(
     '_highs_options',
     sources : highsoptions_cpp,
-    dependencies: [pyb10_dep, highs_dep],
+    dependencies: [pyb11_dep, highs_dep],
     cpp_args: _args,
     install: true,
     subdir: 'highspy',
