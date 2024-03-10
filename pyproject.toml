@@ -4,10 +4,8 @@
 
 [build-system]
 requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
-
 build-backend = "scikit_build_core.build"
 
-# Minimum requirements for the build system to execute.
 [project]
 name = "highspy"
 version = "1.7.0.dev0"
@@ -16,6 +14,8 @@ authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 
 requires-python = ">=3.8"
+dependencies = ["numpy"]
+
 classifiers = [
   # "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
@@ -29,7 +29,6 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
-
 
 [tool.scikit-build]
 cmake.args = ["-DPYTHON_BUILD_SETUP=ON"]
@@ -97,10 +96,6 @@ sdist.exclude = [
 # logging.level = "WARNING"
 
 
-# # Files to exclude from the SDist even if they are included by default. Supports
-# # gitignore syntax.
-# sdist.exclude = []
-
 # # If set to True, try to build a reproducible distribution (Unix and Python 3.9+
 # # recommended).  ``SOURCE_DATE_EPOCH`` will be used for timestamps, or a fixed
 # # value if not set.
@@ -108,7 +103,6 @@ sdist.exclude = [
 
 # # If set to True, CMake will be run before building the SDist.
 # sdist.cmake = false
-
 
 # # The Python tags. The default (empty string) will use the default Python
 # # version. You can also set this to "cp37" to enable the CPython 3.7+ Stable ABI
