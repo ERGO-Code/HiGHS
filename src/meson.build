@@ -398,4 +398,5 @@ if get_option('with_pybind11')
     subdir: 'highspy',
     include_directories: _incdirs,
   )
-endif()
+
+endif
