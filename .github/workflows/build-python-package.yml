@@ -74,24 +74,24 @@ jobs:
           python -m pytest 
              
   build_wheel_linux_9:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: [3.9]
+    runs-on: ubuntu-20.04
+    # strategy:
+    #   matrix:
+    #     python: [3.9]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install correct python version
         uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
+        # with:
+        #   python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp39-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
@@ -104,10 +104,10 @@ jobs:
           python3 -m pytest $GITHUB_WORKSPACE
           
   build_wheel_linux_11:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python: [3.11]
+        python: [3.12]
 
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +121,7 @@ jobs:
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp311-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp312-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
