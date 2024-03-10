@@ -1,6 +1,20 @@
+# Modifications for v1.7.1
+
+* Python build update
+   * Setuptools from v1.7.0 only worked on Python 3.12
+   * Drop setuptools, use scikit-build with cmake
+
+# Modifications for v1.7.0 
+
+* Introduces exciting new first order LP solver (cuPDLP-c)
+   * Currently only serial CPU
+   * GPU WIP
+* The HiGHS interior point solver now allows analytic centre calculations to be performed
+* Python interface update
+   * Drop meson, go back to setuptools and cmake
+
 # Modifications for v1.3.0 since v1.2.2 
 
-* Added (partial) Python wrapper `highspy`
 * Highs::setSolution can now be used to give a solution to the simplex solver (#775)
 * Highs::addVar; Highs::addVars; Highs::deleteVars(Interval/set/mask) introduced for more natural modelling
 * logHeader now written as first output, even when using libraries (#784)
@@ -14,7 +28,6 @@
 * scaled_model_status_ removed from Highs (#814)
 * Major revisions of CMake build system
 
-# Planned modifications for v1.3.0
 
 # Planned modifications beyond v1.3.0
 

@@ -1,8 +1,0 @@
-include README.md LICENSE Version.txt
-include src/HConfig.h.in
-include tests/test_highspy.py
-graft src 
-graft extern/filereaderlp
-graft extern/pdqsort
-graft extern/zstr 
-global-include CMakeLists.txt *.cmake
