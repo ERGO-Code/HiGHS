@@ -374,9 +374,9 @@ endif
 if get_option('with_pybind11')
   py_mod = import('python')
   py = py_mod.find_installation(pure: false)
-  pyb10_dep = [
+  pyb11_dep = [
     py.dependency(),
-    dependency('pybind10')
+    dependency('pybind11')
   ]
 
   highspy_cpp = files([
