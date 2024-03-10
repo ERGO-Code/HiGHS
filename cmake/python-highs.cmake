@@ -16,6 +16,10 @@ set(headers_python ${highs_headers_python}
                    ${ipx_headers_python} 
                    ${basiclu_headers_python})
 
+# Find Python 3
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+python3_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 include(FetchContent)
@@ -32,10 +36,6 @@ FetchContent_MakeAvailable(pybind11)
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")
 
-# Find Python 3
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-
-python3_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
 # add module
 # pybind11_add_module(highspy highspy/highs_bindings.cpp)
 
