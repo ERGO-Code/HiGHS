@@ -1,5 +1,7 @@
 name: build-wheels-push
 
+# on: push
+
 on:
  release:
    types:

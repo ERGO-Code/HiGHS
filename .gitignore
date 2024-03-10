@@ -249,7 +249,7 @@ pip-log.txt
 #SCIP interface
 lpi_highs.cpp
 
-highspy/highs_bindings.*.so
+src/highspy/highs_bindings.*.so
 
 # Model written with HiGHSDEV=on
 HighsRunModel.mps
@@ -272,6 +272,8 @@ qjh.mps
 
 *.whl
 bazel*
+MODULE.bazel
+MODULE.bazel.lock
 
 # webdemo
 build_webdemo

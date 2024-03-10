@@ -18,8 +18,7 @@ cc_library(
     name = "highs",
     srcs = glob([
         "extern/filereaderlp/*.cpp",
-        "extern/filereaderlp/*.cpp",
-        "src/*.cpp",
+        "extern/zlib/*.cpp",
         "src/interfaces/highs_c_api.cpp",
          "src/io/*.cpp",
          "src/ipm/*.cpp",

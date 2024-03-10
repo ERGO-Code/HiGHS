@@ -35,9 +35,8 @@ jobs:
           meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
           meson test -C bbdir
       
-      # highspy no longer compiled with meson, back to 
-      # setuptools and CMakeBuild
-      # todo: use it optionally in some way
+      # highspy no longer compiled with meson
+      # see if it can be done separately if it is needed for meson projects
       # - name: Test compiled highspy
       #   shell: bash -l {0}
       #   run: |

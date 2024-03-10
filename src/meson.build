@@ -370,3 +370,48 @@ if get_option('with_c')
                         pic: true,
                         install: true)
 endif
+
+
+_linkto += highslib
+
+highs_dep = declare_dependency(link_with: _linkto,
+                               dependencies: _deps,
+                               include_directories: _incdirs,
+                               )
+
+if get_option('with_pybind11')
+  py_mod = import('python')
+  py = py_mod.find_installation(pure: false)
+  pyb11_dep = [
+    py.dependency(),
+    dependency('pybind11')
+  ]
+
+  highspy_cpp = files([
+    'highs_bindings.cpp'
+  ])
+  highsoptions_cpp = files([
+    'highs_options.cpp'
+  ])
+
+  py.extension_module(
+    '_highs',
+    sources : highspy_cpp,
+    dependencies: [pyb11_dep, highs_dep],
+    cpp_args: _args,
+    install: true,
+    subdir: 'highspy',
+    include_directories: _incdirs,
+  )
+
+  py.extension_module(
+    '_highs_options',
+    sources : highsoptions_cpp,
+    dependencies: [pyb11_dep, highs_dep],
+    cpp_args: _args,
+    install: true,
+    subdir: 'highspy',
+    include_directories: _incdirs,
+  )
+
+endif
