@@ -1,6 +1,6 @@
 name: Wheels
 
-on: []
+on: [push]
   # workflow_dispatch:
   # pull_request:
   # push:
@@ -32,9 +32,9 @@ jobs:
     - name: Check metadata
       run: pipx run twine check dist/*
 
-    - uses: actions/upload-artifact@v3
-      with:
-        path: dist/*.tar.gz
+    # - uses: actions/upload-artifact@v3
+    #   with:
+    #     path: dist/*.tar.gz
 
 
   build_wheels:
@@ -59,28 +59,28 @@ jobs:
       run: git diff --exit-code
       shell: bash
 
-    - uses: actions/upload-artifact@v3
-      with:
-        path: wheelhouse/*.whl
+    # - uses: actions/upload-artifact@v3
+    #   with:
+    #     path: wheelhouse/*.whl
 
 
-  upload_all:
-    name: Upload if release
-    needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
-    environment: pypi
-    permissions:
-      id-token: write
+  # upload_all:
+  #   name: Upload if release
+  #   needs: [build_wheels, build_sdist]
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'release' && github.event.action == 'published'
+  #   environment: pypi
+  #   permissions:
+  #     id-token: write
 
-    steps:
-    - uses: actions/setup-python@v4
-      with:
-        python-version: "3.x"
+  #   steps:
+  #   - uses: actions/setup-python@v4
+  #     with:
+  #       python-version: "3.x"
 
-    - uses: actions/download-artifact@v3
-      with:
-        name: artifact
-        path: dist
+  #   - uses: actions/download-artifact@v3
+  #     with:
+  #       name: artifact
+  #       path: dist
 
-    - uses: pypa/gh-action-pypi-publish@release/v1
+  #   - uses: pypa/gh-action-pypi-publish@release/v1

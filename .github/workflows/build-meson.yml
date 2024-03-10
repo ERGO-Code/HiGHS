@@ -35,11 +35,13 @@ jobs:
           meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
           meson test -C bbdir
       
-      - name: Test compiled highspy
-        shell: bash -l {0}
-        run: |
-          meson configure bbdir -Dwith_pybind11=True
-          meson compile -C bbdir
-          LD_LIBRARY_PATH=$(pwd)/bbdir/src \
-          PYTHONPATH=$(pwd)/bbdir \
-          python examples/call_highs_from_python.py
+      # highspy no longer compiled with meson
+      # see if it can be done separately if it is needed for meson projects
+      # - name: Test compiled highspy
+      #   shell: bash -l {0}
+      #   run: |
+      #     meson configure bbdir -Dwith_pybind11=True
+      #     meson compile -C bbdir
+      #     LD_LIBRARY_PATH=$(pwd)/bbdir/src \
+      #     PYTHONPATH=$(pwd)/bbdir \
+      #     python examples/call_highs_from_python.py
