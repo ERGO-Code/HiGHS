@@ -71,7 +71,7 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest ./highspy/tests/test_highspy.py
+          python -m pytest 
              
   build_wheel_linux:
     runs-on: ubuntu-latest
@@ -212,5 +212,5 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest highspy/tests/test_highspy.py
+          python -m pytest tests/test_highspy.py
           
