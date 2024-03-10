@@ -11,7 +11,10 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "highspy"
 version = "1.7.0.dev0"
-
+description = "A thin set of pybind11 wrappers to HiGHS"
+authors = [
+    {name = "HiGHS developers", email = "highsopt@gmail.com"},
+]
 readme = "README.md"
 
 requires-python = ">=3.8"
@@ -162,23 +165,11 @@ testpaths = ["tests"]
 
 
 [tool.cibuildwheel]
+build = "*"
+skip = "cp3{6,7}-*"
+
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
 
-
-# requires = [
-#   "setuptools>=42",
-#   "pybind11>=2.4",
-#   "wheel",
-#   "cmake>=3.12",
-#   "numpy>=1.7"
-# ] 
-
-# build-backend = "setuptools.build_meta"
-
-# [tool.cibuildwheel]
-# build = "*"
-# skip = "cp3{6,7}-*"
-# test-skip = ""
