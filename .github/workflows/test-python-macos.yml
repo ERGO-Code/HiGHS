@@ -29,3 +29,4 @@ jobs:
          python3 ./examples/call_highs_from_python_highspy.py
          python3 ./examples/call_highs_from_python_mps.py
          python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
