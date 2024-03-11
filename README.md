@@ -83,6 +83,23 @@ _These binaries are provided by the Julia community and are not officially suppo
 
 See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
+### Build with Nix
+
+There is a nix flake that provides the `highs` binary:
+
+```shell
+nix run .
+```
+
+You can even run [without installing
+anything](https://determinate.systems/posts/nix-run/), supposing you have
+installed [nix](https://nixos.org/download.html):
+
+```shell
+nix run github:ERGO-Code/HiGHS
+```
+
+_The nix build files are provided by the community and are not officially supported by the HiGHS development team._
 
 ## Interfaces
 
@@ -98,14 +115,14 @@ The python package `highspy` is a thin wrapper around HiGHS and is available on 
 $ pip install highspy
 ```
 
-Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run 
+Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run
 
 ```sh
-pip install . 
+pip install .
 ```
-from the root directory. 
+from the root directory.
 
-The HiGHS C++ library no longer needs to be separately installed. The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present. 
+The HiGHS C++ library no longer needs to be separately installed. The python package `highspy` depends on the `numpy` package and `numpy` will be installed as well, if it is not already present.
 
 The installation can be tested using the small example [call_highs_from_python_highspy.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python_highspy.py).
 
