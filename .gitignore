@@ -279,3 +279,7 @@ MODULE.bazel.lock
 build_webdemo
 
 CMakeSettings.json
+
+# Nix
+.direnv/
+result
