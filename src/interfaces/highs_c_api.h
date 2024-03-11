@@ -105,8 +105,8 @@ const HighsInt kHighsCallbackMipSolution = 3;
 const HighsInt kHighsCallbackMipImprovingSolution = 4;
 const HighsInt kHighsCallbackMipLogging = 5;
 const HighsInt kHighsCallbackMipInterrupt = 6;
-const HighsInt kCallbackMipGetCutPool = 7;
-const HighsInt kCallbackMipDefineLazyConstraints = 8;
+const HighsInt kHighsCallbackMipGetCutPool = 7;
+const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 
 #ifdef __cplusplus
 extern "C" {
