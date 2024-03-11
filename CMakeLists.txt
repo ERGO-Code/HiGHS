@@ -264,35 +264,11 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# if(BUILD_PYTHON_SETUP OR FORTRAN OR CSHARP)
-#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-# endif()
 
-include(CheckCXXCompilerFlag)
 if(NOT FAST_BUILD)
-
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-
-  # Function to set compiler flags on and off easily.
-  function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-      check_cxx_compiler_flag("${flag}" flag_supported)
-      if(flag_supported)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-      endif()
-      unset(flag_supported CACHE)
-    endif()
-  endfunction()
-
-  # usage: turn pedantic on for even more warnings.
-  enable_cxx_compiler_flag_if_supported("-Wall")
-  enable_cxx_compiler_flag_if_supported("-Wextra")
-  enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
-  enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
-  enable_cxx_compiler_flag_if_supported("-pedantic")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
@@ -371,17 +347,6 @@ if(NOT FAST_BUILD OR CSHARP)
     set(CSHARP_FOUND OFF)
   endif(CMAKE_CSharp_COMPILER)
 endif()
-
-# check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
-# if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
-#   set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
-#   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
-#   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
-#   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
-# else()
-#   set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-#   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
-# endif()
 
 # uncomment for memory debugging
 # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
