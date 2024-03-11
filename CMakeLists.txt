@@ -74,7 +74,6 @@ endif()
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
 if (BUILD_CXX)
-
   # Default Build Type to be Release
   get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if(isMultiConfig)
@@ -203,9 +202,9 @@ if (BUILD_CXX)
               "but it is not supported by the compiler. The check failed with this output:\n"
               "${check_ipo_support_output}")
     endif()
-elseif(NOT ipo_supported)
+  elseif(NOT ipo_supported)
     message(STATUS "IPO / LTO: disabled because it is not supported")
-elseif(NOT BUILD_SHARED_LIBS)
+  elseif(NOT BUILD_SHARED_LIBS)
     # For a static library, we can't be sure whether the final linking will
     # happen with IPO enabled, so we err on the side of caution. A better
     # approach would be to request "fat LTO" in this case (for gcc/clang), to
@@ -215,9 +214,10 @@ elseif(NOT BUILD_SHARED_LIBS)
     message(STATUS
             "IPO / LTO: disabled by default when building a static library; "
             "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
-else()
+  else()
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
     message(STATUS "IPO / LTO: enabled")
+  endif()
 endif()
 
 include(CheckCXXSourceCompiles)
