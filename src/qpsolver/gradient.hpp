@@ -11,16 +11,16 @@ class Gradient {
   bool uptodate;
   HighsInt numupdates = 0;
 
+ public:
+  Gradient(Runtime& rt)
+      : runtime(rt), gradient(Vector(rt.instance.num_var)), uptodate(false) {}
+
   void recompute() {
     runtime.instance.Q.vec_mat(runtime.primal, gradient);
     gradient += runtime.instance.c;
     uptodate = true;
     numupdates = 0;
   }
-
- public:
-  Gradient(Runtime& rt)
-      : runtime(rt), gradient(Vector(rt.instance.num_var)), uptodate(false) {}
 
   Vector& getGradient() {
     if (!uptodate ||

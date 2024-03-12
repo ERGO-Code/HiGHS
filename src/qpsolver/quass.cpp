@@ -266,6 +266,20 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
 }
 #endif
 
+bool check_reinvert_due(Basis& basis) {
+  // reinvert can be triggered by basis
+  return basis.getreinversionhint();
+}
+
+void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts& rc, ReducedGradient& rg, std::unique_ptr<Pricing>& pricing) {
+  basis.rebuild();
+  factor.recompute();
+  grad.recompute();
+  rc.recompute();
+  rg.recompute();
+  pricing->recompute();
+}
+
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
 
   //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
@@ -331,6 +345,12 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       runtime.settings.endofiterationevent.fire(runtime.statistics);
     }
     runtime.statistics.num_iterations++;
+
+    // REINVERSION
+    if (check_reinvert_due(basis)) {
+      printf("REINVERT\n");
+      reinvert(basis, factor, gradient, redcosts, redgrad, pricing);
+    }
 
     QpSolverStatus status;
 

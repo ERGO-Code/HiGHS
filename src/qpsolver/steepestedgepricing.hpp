@@ -116,6 +116,10 @@ class SteepestEdgePricing : public Pricing {
     return incorrect_weights.size() == 0;
     }
 
+  void recompute() {
+    compute_exact_weights();
+  }
+
   void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];

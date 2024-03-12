@@ -26,6 +26,33 @@ class CholeskyFactor {
   bool has_negative_eigenvalue = false;
   std::vector<double> a;
 
+  void resize(HighsInt new_k_max) {
+    std::vector<double> L_old = L;
+    L.clear();
+    L.resize((new_k_max) * (new_k_max));
+    const HighsInt l_size = L.size();
+    // Driven by #958, changes made in following lines to avoid array
+    // bound error when new_k_max < current_k_max
+    HighsInt min_k_max = min(new_k_max, current_k_max);
+    for (HighsInt i = 0; i < min_k_max; i++) {
+      for (HighsInt j = 0; j < min_k_max; j++) {
+	assert(i * (new_k_max) + j < l_size);
+        L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
+      }
+    }
+    current_k_max = new_k_max;
+  }
+
+ public:
+  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
+    uptodate = false;
+    current_k_max =
+        max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
+            basis.getnuminactive());
+    L.resize(current_k_max * current_k_max);
+  }
+
+
   void recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
@@ -68,32 +95,6 @@ class CholeskyFactor {
     }
     current_k = dim_ns;
     uptodate = true;
-  }
-
-  void resize(HighsInt new_k_max) {
-    std::vector<double> L_old = L;
-    L.clear();
-    L.resize((new_k_max) * (new_k_max));
-    const HighsInt l_size = L.size();
-    // Driven by #958, changes made in following lines to avoid array
-    // bound error when new_k_max < current_k_max
-    HighsInt min_k_max = min(new_k_max, current_k_max);
-    for (HighsInt i = 0; i < min_k_max; i++) {
-      for (HighsInt j = 0; j < min_k_max; j++) {
-	assert(i * (new_k_max) + j < l_size);
-        L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
-      }
-    }
-    current_k_max = new_k_max;
-  }
-
- public:
-  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
-    uptodate = false;
-    current_k_max =
-        max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
-            basis.getnuminactive());
-    L.resize(current_k_max * current_k_max);
   }
 
   QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
