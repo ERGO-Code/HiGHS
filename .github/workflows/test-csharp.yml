@@ -27,4 +27,4 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           ls 
-          ./RELEASE/bin/csharpexample.exe
+          ./bin/Release/csharpexample.exe

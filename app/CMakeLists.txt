@@ -3,6 +3,16 @@ if(FAST_BUILD)
     # create highs binary using library without pic
     add_executable(highs-bin)
 
+    # Configure the config windows version file
+    if(MSVC)
+      string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
+      configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+        "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
+      set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
+    else()
+      set(win_version_file)
+    endif()
+
     target_sources(highs-bin PRIVATE RunHighs.cpp ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
