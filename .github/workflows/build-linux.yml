@@ -37,7 +37,7 @@ jobs:
       - name: Configure CMake All
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DFAST_BUILD=ON -DALL_TESTS=ON
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=ON -DALL_TESTS=ON
 
       - name: Build All
         working-directory: ${{runner.workspace}}/build
