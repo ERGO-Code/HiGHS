@@ -282,8 +282,13 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
       foreach(setting ${settings})
-          add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} --options_file ${CMAKE_BINARY_DIR}/testoptions.txt
-          ${inst})
+          if (FAST_BUILD)
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting} 
+                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+          else()
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+          endif()
 
           set_tests_properties (${name}${setting} PROPERTIES
                   DEPENDS unit_tests_all)
