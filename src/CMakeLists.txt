@@ -7,10 +7,20 @@ include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
+# Configure the config windows version file
+if(MSVC)
+  string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
+  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
+  set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
+else()
+  set(win_version_file)
+endif()
+
 # Outdated CMake approach: update in progress
 if(NOT FAST_BUILD)
 
-  add_library(libhighs ${sources} ${headers})
+  add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
 
   if(${BUILD_SHARED_LIBS})
@@ -163,7 +173,7 @@ else()
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
-  target_sources(highs PRIVATE ${sources} ${headers})
+  target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
   target_include_directories(highs PRIVATE ${include_dirs})
 
   if(ZLIB AND ZLIB_FOUND)
@@ -198,18 +208,8 @@ else()
   endforeach()
   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-  # Configure the config windows version file
-  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
-    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
-  if(MSVC)
-    set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
-  else()
-    set(win_version_file)
-  endif()
-
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${win_version_file})
   
   if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
