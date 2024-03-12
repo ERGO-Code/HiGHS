@@ -233,15 +233,20 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
       # specify the instance and the settings load command
       if(ZLIB AND ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
       else()
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
       endif()
 
       # loop over all settings
       foreach(setting ${settings})
-          add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-              ${inst})
+          if (FAST_BUILD)
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+                ${inst})
+          else()
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting}
+                ${inst})
+          endif()
 
           set_tests_properties (${name}${setting} PROPERTIES
                   DEPENDS unit_tests_all)
