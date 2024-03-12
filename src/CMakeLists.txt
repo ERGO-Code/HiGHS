@@ -42,6 +42,7 @@ if(NOT FAST_BUILD)
   # on UNIX system the 'lib' prefix is automatically added
   set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
+    PDB_NAME "libhighs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   if(ZLIB AND ZLIB_FOUND)
