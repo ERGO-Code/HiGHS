@@ -171,6 +171,9 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
 static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
                                     ReducedCosts& redcosts) {
   switch (runtime.settings.pricing) {
+    case PricingStrategy::SteepestEdge:
+      return std::unique_ptr<Pricing>(
+          new SteepestEdgePricing(runtime, basis, redcosts));
     case PricingStrategy::Devex:
       return std::unique_ptr<Pricing>(
           new DevexPricing(runtime, basis, redcosts));

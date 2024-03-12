@@ -6,7 +6,7 @@
 
 enum class RatiotestStrategy { TwoPass, Textbook };
 
-enum class PricingStrategy { DantzigWolfe, Devex };
+enum class PricingStrategy { SteepestEdge, DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
