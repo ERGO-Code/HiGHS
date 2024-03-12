@@ -3406,6 +3406,20 @@ HighsStatus Highs::callSolveQp() {
   settings.iterationlimit = options_.simplex_iteration_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
 
+  switch(options_.simplex_primal_edge_weight_strategy) {
+    case 0:
+      settings.pricing = PricingStrategy::DantzigWolfe;
+      break;
+    case 1:
+      settings.pricing = PricingStrategy::Devex;
+      break;
+    case 2:
+      settings.pricing = PricingStrategy::SteepestEdge;
+      break;
+    default:
+      settings.pricing = PricingStrategy::Devex;
+  }
+
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "Iteration, Runtime, ObjVal, NullspaceDim\n");
