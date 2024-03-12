@@ -176,6 +176,51 @@ else()
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
   target_include_directories(highs PRIVATE ${include_dirs})
 
+  if(MSVC)
+    list(APPEND highs_compile_opts
+      "/bigobj" # Allow big object
+      "/DNOMINMAX"
+      "/DWIN32_LEAN_AND_MEAN=1"
+      "/D_CRT_SECURE_NO_WARNINGS"
+      "/D_CRT_SECURE_NO_DEPRECATE"
+      "/MP" # Build with multiple processes
+      "/Zc:preprocessor" # Enable preprocessor conformance mode
+      "/fp:precise"
+      )
+    if (CMAKE_BUILD_TYPE STREQUAL Release)
+      list(APPEND highs_compile_opts
+        "/DNDEBUG")
+    endif()
+    # MSVC warning suppressions
+    list(APPEND highs_compile_opts
+      "/wd4005" # 'macro-redefinition'
+      "/wd4018" # 'expression' : signed/unsigned mismatch
+      "/wd4065" # switch statement contains 'default' but no 'case' labels
+      "/wd4068" # 'unknown pragma'
+      "/wd4101" # 'identifier' : unreferenced local variable
+      "/wd4146" # unary minus operator applied to unsigned type, result still unsigned
+      "/wd4200" # nonstandard extension used : zero-sized array in struct/union
+      "/wd4244" # 'conversion' conversion from 'type1' to 'type2', possible loss of data
+      "/wd4251" # 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'
+      "/wd4267" # 'var' : conversion from 'size_t' to 'type', possible loss of data
+      "/wd4305" # 'identifier' : truncation from 'type1' to 'type2'
+      "/wd4307" # 'operator' : integral constant overflow
+      "/wd4309" # 'conversion' : truncation of constant value
+      "/wd4334" # 'operator' : result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+      "/wd4355" # 'this' : used in base member initializer list
+      "/wd4477" # 'fwprintf' : format string '%s' requires an argument of type 'wchar_t *'
+      "/wd4506" # no definition for inline function 'function'
+      "/wd4715" # function' : not all control paths return a value
+      "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
+      "/wd4996" # The compiler encountered a deprecated declaration.
+      )
+    target_compile_options(highs PRIVATE ${highs_compile_opts})
+  # else()
+  #   list(APPEND highs_compile_opts "-fwrapv")
+  endif()
+
+
+
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
