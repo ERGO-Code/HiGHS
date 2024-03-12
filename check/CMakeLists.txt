@@ -77,6 +77,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       TestUserScale.cpp
       Avgas.cpp)
 
+  # todo: IG
   if (NOT APPLE)
       # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
       # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
@@ -90,7 +91,11 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
   endif()
-  target_link_libraries(unit_tests libhighs Catch)
+  if (FAST_BUILD)
+    target_link_libraries(unit_tests highs Catch)
+  else()
+    target_link_libraries(unit_tests libhighs Catch)
+  endif()
 
   include(GNUInstallDirs)
   if(APPLE)
@@ -107,7 +112,13 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
   # check the C API
   add_executable(capi_unit_tests TestCAPI.c)
-  target_link_libraries(capi_unit_tests libhighs)
+
+  if (FAST_BUILD)
+    target_link_libraries(capi_unit_tests highs)
+  else()
+    target_link_libraries(capi_unit_tests libhighs)
+  endif()
+
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
