@@ -241,10 +241,10 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       # loop over all settings
       foreach(setting ${settings})
           if (FAST_BUILD)
-            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting}
                 ${inst})
           else()
-            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting}
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
                 ${inst})
           endif()
 
