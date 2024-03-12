@@ -15,10 +15,9 @@ endif()
 
 if (NOT FAST_BUILD OR ALL_TESTS)
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/extern/catch)
+  set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
-  target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 
   configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
 
@@ -91,6 +90,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
   endif()
+
   if (FAST_BUILD)
     target_link_libraries(unit_tests highs Catch)
   else()

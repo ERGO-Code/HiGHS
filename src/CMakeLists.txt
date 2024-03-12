@@ -177,7 +177,7 @@ else()
   target_include_directories(highs PRIVATE ${include_dirs})
 
   if(MSVC)
-    list(APPEND HIGHS_COMPILE_OPTIONS
+    list(APPEND highs_compile_opts
       "/bigobj" # Allow big object
       "/DNOMINMAX"
       "/DWIN32_LEAN_AND_MEAN=1"
@@ -185,11 +185,14 @@ else()
       "/D_CRT_SECURE_NO_DEPRECATE"
       "/MP" # Build with multiple processes
       "/Zc:preprocessor" # Enable preprocessor conformance mode
-      "/DNDEBUG"
       "/fp:precise"
       )
+    if (CMAKE_BUILD_TYPE STREQUAL Release)
+      list(APPEND highs_compile_opts
+        "/DNDEBUG")
+    endif()
     # MSVC warning suppressions
-    list(APPEND HIGHS_COMPILE_OPTIONS
+    list(APPEND highs_compile_opts
       "/wd4005" # 'macro-redefinition'
       "/wd4018" # 'expression' : signed/unsigned mismatch
       "/wd4065" # switch statement contains 'default' but no 'case' labels
@@ -211,8 +214,9 @@ else()
       "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
       "/wd4996" # The compiler encountered a deprecated declaration.
       )
-  else()
-    list(APPEND OR_TOOLS_COMPILE_OPTIONS "-fwrapv")
+    target_compile_options(highs PRIVATE ${highs_compile_opts})
+  # else()
+  #   list(APPEND highs_compile_opts "-fwrapv")
   endif()
 
 

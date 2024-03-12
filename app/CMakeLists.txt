@@ -3,7 +3,7 @@ if(FAST_BUILD)
     # create highs binary using library without pic
     add_executable(highs-bin)
 
-    target_sources(highs-bin PRIVATE RunHighs.cpp)
+    target_sources(highs-bin PRIVATE RunHighs.cpp ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
