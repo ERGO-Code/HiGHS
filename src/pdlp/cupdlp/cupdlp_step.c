@@ -17,7 +17,7 @@ void PDHG_primalGradientStep(CUPDLPwork *work, cupdlp_float dPrimalStepSize) {
   CUPDLPiterates *iterates = work->iterates;
   CUPDLPproblem *problem = work->problem;
 
-#ifndef CUPDLP_CPU & USE_KERNELS
+#if !defined(CUPDLP_CPU) & USE_KERNELS
   cupdlp_pgrad_cuda(iterates->xUpdate->data, iterates->x->data, problem->cost,
                     iterates->aty->data, dPrimalStepSize, problem->nCols);
 #else
@@ -44,7 +44,7 @@ void PDHG_dualGradientStep(CUPDLPwork *work, cupdlp_float dDualStepSize) {
   CUPDLPiterates *iterates = work->iterates;
   CUPDLPproblem *problem = work->problem;
 
-#ifndef CUPDLP_CPU & USE_KERNELS
+#if !defined(CUPDLP_CPU) & USE_KERNELS
   cupdlp_dgrad_cuda(iterates->yUpdate->data, iterates->y->data, problem->rhs,
                     iterates->ax->data, iterates->axUpdate->data, dDualStepSize,
                     problem->nRows);
@@ -210,7 +210,7 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
     cupdlp_float dMovement = 0.0;
     cupdlp_float dInteraction = 0.0;
 
-#ifndef CUPDLP_CPU & USE_KERNELS
+#if !defined(CUPDLP_CPU) & USE_KERNELS
     cupdlp_compute_interaction_and_movement(pdhg, &dMovement, &dInteraction);
 #else
     cupdlp_float dX = 0.0;

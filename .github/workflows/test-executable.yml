@@ -60,4 +60,33 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ./RELEASE/bin/highs.exe $GITHUB_WORKSPACE/check/instances/25fv47.mps
+        run: ./bin/Release/highs.exe $GITHUB_WORKSPACE/check/instances/25fv47.mps
+
+
+  test_win_debug:
+    runs-on: [windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ./bin/Debug/highs.exe $GITHUB_WORKSPACE/check/instances/25fv47.mps

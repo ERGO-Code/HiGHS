@@ -124,7 +124,7 @@ HighsStatus Highs::readOptions(const std::string& filename) {
     default:
       break;
   }
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
