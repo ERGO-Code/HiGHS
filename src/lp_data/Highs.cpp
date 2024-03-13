@@ -3406,7 +3406,7 @@ HighsStatus Highs::callSolveQp() {
   settings.iterationlimit = options_.simplex_iteration_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
 
-  switch(options_.simplex_primal_edge_weight_strategy) {
+  switch (options_.simplex_primal_edge_weight_strategy) {
     case 0:
       settings.pricing = PricingStrategy::DantzigWolfe;
       break;

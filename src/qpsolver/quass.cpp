@@ -348,7 +348,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
 
     // REINVERSION
     if (check_reinvert_due(basis)) {
-      printf("REINVERT\n");
       reinvert(basis, factor, gradient, redcosts, redgrad, pricing);
     }
 
