@@ -14,7 +14,17 @@
       };
       highs = (with pkgs; stdenv.mkDerivation {
           pname = "highs";
-          version = "1.6.0";
+          version = with pkgs.lib;
+            # Read the version. Note: We assume the version numbers are in
+            # order in the file; i.e. Major, Minor, Patch.
+            let f = builtins.readFile ./Version.txt;
+            l = strings.splitString "\n" f;
+            # Drop the last term; it just says if it's alpha or not.
+            t = lists.take 3 l;
+            # Get the numbers on the other side of the equals
+            vs = lists.forEach t (v: lists.drop 1 (strings.splitString "=" v));
+            # That's it!
+            in concatStrings (lib.intersperse "." (lists.flatten vs));
           src = pkgs.lib.cleanSource ./.;
           nativeBuildInputs = [
             clang
