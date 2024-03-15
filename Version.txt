@@ -2,6 +2,3 @@ HIGHS_MAJOR=1
 HIGHS_MINOR=7
 HIGHS_PATCH=0
 #PRE_RELEASE=YES
-
-#Note: flake.nix assumes that the version numbers are
-#in the following order in this file; i.e. Major, Minor, Patch.
