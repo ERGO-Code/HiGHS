@@ -22,21 +22,6 @@ if host_machine.cpu_family() == 'x86_64'
 else
     conf_data.set('HIGHSINT64', false)
 endif
-# Commit hash
-commit_hash = 'unknown' # Default value
-if (not meson.is_subproject())
-    git = find_program('git', required: false)
-    if git.found()
-        commit_hash_cmd = run_command(git, 'rev-parse', '--short',
-                                      '-C', meson.project_source_root(), 'HEAD',
-                                      check: false, # Don't abort on failure
-                                     )
-        if commit_hash_cmd.returncode() == 0
-            commit_hash = commit_hash_cmd.stdout().strip()
-        endif
-    endif
-endif
-conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
 today_str = 'unknown'
 if (not meson.is_subproject())
@@ -105,10 +90,17 @@ else
                 _have_builtin_clz)
 endif
 
-configure_file(
+interim_conf = configure_file(
   input: 'HConfig.h.meson.in',
-  output: 'HConfig.h',
+  output: 'HConfig.h.meson.interim',
   configuration: conf_data
+)
+
+highs_conf_file = vcs_tag(
+  input: interim_conf,
+  output: 'HConfig.h',
+  fallback: 'unknown',
+  replace_string: '_HIGHS_GITHASH_', # Remember to quote manually
 )
 
 _incdirs += include_directories('.')
@@ -298,6 +290,7 @@ _srcs = [
 ]
 
 highslib_srcs = [
+  highs_conf_file,
   _srcs,
   'ipm/IpxWrapper.cpp',
   'pdlp/CupdlpWrapper.cpp',
