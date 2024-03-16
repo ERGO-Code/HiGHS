@@ -41,15 +41,15 @@ conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 today_str = 'unknown'
 if (not meson.is_subproject())
     python_getdate = '''
-    import datetime
-    import os
-    import time
+import datetime
+import os
+import time
 
-    build_date = datetime.datetime.utcfromtimestamp(
-        int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-    )
-    build_date_str = build_date.strftime('%Y-%m-%d')
-    print(build_date_str)
+build_date = datetime.datetime.utcfromtimestamp(
+    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+)
+build_date_str = build_date.strftime('%Y-%m-%d')
+print(build_date_str)
     '''
     today_cmd = run_command('python3', '-c',
                             python_getdate,
