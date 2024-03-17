@@ -48,6 +48,14 @@ class Highs(_Highs):
         self._vars = []
         self._cons = []
 
+    # Silence logging
+    def silent(self):
+        super().setOptionValue("output_flag", False)
+    
+    # solve
+    def solve(self):
+        return super().run()
+
     # reset the objective and sense, then solve
     def minimize(self, obj=None):
         if obj != None:
@@ -119,6 +127,87 @@ class Highs(_Highs):
         sol = super().getSolution()
         return [sol.col_value[v.index] for v in vars]
 
+    def varName(self, var):
+        [status, name] = super().getColName(var.index)
+        failed = status != HighsStatus.kOk
+        if failed:
+            raise Exception('Variable name not found') 
+        return name
+
+    def varNames(self, vars):
+        names = list()
+        for v in vars:
+            [status, name] = super().getColName(v.index)
+            failed = status != HighsStatus.kOk
+            if failed:
+                raise Exception('Variable name not found')
+            names.append(name)
+        return names
+
+    def allVarNames(self):
+        return super().getLp().col_names_
+
+    def varValue(self, var):
+        return super().getSolution().col_value[var.index]
+
+    def varValues(self, vars):
+        col_value = super().getSolution().col_value
+        return [col_value[v.index] for v in vars]
+
+    def allVarValues(self):
+        return super().getSolution().col_value
+
+    def varDual(self, var):
+        return super().getSolution().col_dual[var.index]
+
+    def varDuals(self, vars):
+        col_dual = super().getSolution()
+        return [col_dual[v.index] for v in vars]
+
+    def allVarDuals(self):
+        return super().getSolution().col_dual
+
+    def constrValue(self, constr_name):
+        status_index = super().getRowByName(constr_name)
+        failed = status_index[0] != HighsStatus.kOk
+        if failed:
+            raise Exception('Constraint name not found') 
+        return super().getSolution().row_value[status_index[1]]
+
+    def constrValues(self, constr_names):
+        row_value = super().getSolution().row_value
+        index = list()
+        for name in constr_names:
+            status_index = super().getRowByName(name)
+            failed = status_index[0] != HighsStatus.kOk
+            if failed:
+                raise Exception('Constraint name not found')
+            index.append(status_index[1])
+        return [row_value[index[v]] for v in range(len(index))]
+
+    def allConstrValues(self):
+        return super().getSolution().row_value
+
+    def constrDual(self, constr_name):
+        status_index = super().getRowByName(constr_name)
+        failed = status_index[0] != HighsStatus.kOk
+        if failed:
+            raise Exception('Constraint name not found') 
+        return super().getSolution().row_dual[status_index[1]]
+
+    def constrDuals(self, constr_names):
+        row_dual = super().getSolution().row_dual
+        index = list()
+        for name in constr_names:
+            status_index = super().getRowByName(name)
+            failed = status_index[0] != HighsStatus.kOk
+            if failed:
+                raise Exception('Constraint name not found')
+            index.append(status_index[1])
+        return [row_dual[index[v]] for v in range(len(index))]
+
+    def allConstrDuals(self):
+        return super().getSolution().row_dual
 
     #
     # add variable & useful constants
@@ -186,7 +275,17 @@ class Highs(_Highs):
         del self._cons[cons.index]
         super().deleteRows(1, [cons.index])
 
+    # set to minimization
+    def setMinimize(self):
+        super().changeObjectiveSense(ObjSense.kMinimize)
 
+    # set to maximization
+    def setMaximize(self):
+        super().changeObjectiveSense(ObjSense.kMaximize)
+
+    # Set to integer
+    def setInteger(self, var):
+        super().changeColIntegrality(var.index, HighsVarType.kInteger)
 
 ## The following classes keep track of variables
 ## It is currently quite basic and may fail in complex scenarios
