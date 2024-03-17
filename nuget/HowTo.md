@@ -12,7 +12,7 @@ For all desired targets, build a **shared library** of the c++ highs solver, e.g
   - linux-x64
   - linux-arm64
 
-### Move the fils to the nuget folder
+### Move the files to the runtimes subfolder of the nuget folder
 Copy the resulting libraries into the **runtimes** sub folder
   - nuget/runtimes/win-x64/highs.dll
   - nuget/runtimes/linux-x64/libhighs.so
