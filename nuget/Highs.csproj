@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>HiGHS</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ERGO-Code</Authors>
+    <Description>Wrapper for the HiGHS solver, see https://github.com/ERGO-Code/HiGHS.git</Description>
+    <LangVersion>latest</LangVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/interfaces/highs_csharp_api.cs" Link="highs_csharp_api.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../LICENSE.txt" Pack="true" PackagePath=""/>
+  </ItemGroup>
+  <!-- Ensure the README.md file is included in the package -->
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="runtimes/**" Pack="true" PackagePath="runtimes/"/>
+  </ItemGroup>
+</Project>
