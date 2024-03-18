@@ -71,6 +71,7 @@ Documenter.makedocs(
             "Python" => Any[
                 "interfaces/python/index.md",
                 "interfaces/python/example-py.md",
+                "interfaces/python/model-py.md",
             ],
             "C++" => Any[
                 "interfaces/cpp/index.md",
