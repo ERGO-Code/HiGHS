@@ -89,14 +89,14 @@ const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
 HighsInt create(HighsIndexCollection& index_collection, const HighsInt from_col,
-		const HighsInt to_col, const HighsInt dimension);
+                const HighsInt to_col, const HighsInt dimension);
 
 HighsInt create(HighsIndexCollection& index_collection,
-		const HighsInt num_set_entries, const HighsInt* set,
-		const HighsInt dimension);
+                const HighsInt num_set_entries, const HighsInt* set,
+                const HighsInt dimension);
 
 HighsInt create(HighsIndexCollection& index_collection, const HighsInt* mask,
-		const HighsInt dimension);
+                const HighsInt dimension);
 
 bool ok(const HighsIndexCollection& index_collection);
 
