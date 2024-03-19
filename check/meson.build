@@ -54,6 +54,7 @@ test_array = [
   ['test_lpvalidation', 'TestLpValidation.cpp'],
   ['test_lpmodification', 'TestLpModification.cpp'],
   ['test_lporientation', 'TestLpOrientation.cpp'],
+  ['test_oomkill', 'TestOOMKill.cpp'],
 ]
 foreach test : test_array
   test(test.get(0),

@@ -3756,10 +3756,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //	      assert(non_fractional);
               if (!non_fractional) return Result::kPrimalInfeasible;
             }
-            postsolve_stack.fixedColAtLower(nonzero.index(),
-                                            model->col_lower_[nonzero.index()],
-                                            model->col_cost_[nonzero.index()],
-                                            getColumnVector(nonzero.index()));
+            try {
+              postsolve_stack.fixedColAtLower(
+                  nonzero.index(), model->col_lower_[nonzero.index()],
+                  model->col_cost_[nonzero.index()],
+                  getColumnVector(nonzero.index()));
+            } catch (const DataStackOverflow& e) {
+              highsLogUser(options->log_options, HighsLogType::kError,
+                           "Problem too large for Presolve, try without\n");
+              highsLogUser(options->log_options, HighsLogType::kInfo,
+                           "Specific error raised:\n%s\n", e.what());
+              return Result::kError;
+            }
             if (model->col_upper_[nonzero.index()] >
                 model->col_lower_[nonzero.index()])
               changeColUpper(nonzero.index(),
@@ -4389,9 +4397,14 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
       return HighsModelStatus::kInfeasible;
-    case Result::kDualInfeasible:
+    case Result::kDualInfeasible: {
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
       return HighsModelStatus::kUnboundedOrInfeasible;
+    }
+    case Result::kError: {
+      presolve_status_ = HighsPresolveStatus::kError;
+      return HighsModelStatus::kPresolveError;
+    }
   }
 
   if (options->presolve != kHighsOffString &&
