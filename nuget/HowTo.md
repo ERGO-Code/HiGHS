@@ -44,4 +44,34 @@ package/
 |   |       |-- [win-x64 native libraries]
 ```
 
+## Examples for the builds
+These are examples, how one might run the builds on an ubuntu system, e.g. as a wsl
+Compiler flags should be adjusted to provide the best performance
+### linux-x64
+This should run on a linux system
+```shell
+mkdir build_linux
+cd build_linux
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_CXX_FLAGS="-O3 -march=native" -DCMAKE_C_FLAGS="-O3 -march=native"
+make
+```
 
+### linux-arm64
+This might run on a linux-x64 system (or use a linux-arm64 system and skipp the toolchain part)
+```shell
+mkdir build_arm
+cd build_arm
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_TOOLCHAIN_FILE=../arm-toolchain.cmake
+make
+
+```
+
+## win-x64
+This should run on a windows system
+```shell
+mkdir build_windows
+cd build_windows
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_SYSTEM_NAME=Windows -A x64
+make
+
+```
