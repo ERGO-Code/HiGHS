@@ -5,6 +5,7 @@ using System.Text;
 
 // mcs -out:highscslib.dll -t:library highs_csharp_api.cs -unsafe
 
+namespace Highs {
 public enum HighsStatus
 {
     kError = -1,
@@ -1026,4 +1027,5 @@ public class SolutionInfo
     /// Gets or sets the objective value.
     /// </summary>
     public double ObjectiveValue { get; set; }
+}
 }
