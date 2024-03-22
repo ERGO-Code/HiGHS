@@ -99,6 +99,23 @@ installed [nix](https://nixos.org/download.html):
 nix run github:ERGO-Code/HiGHS
 ```
 
+The nix flake also provides the python package:
+
+```shell
+nix build .#highspy
+tree result/
+```
+
+And a devShell for testing it:
+
+```shell
+nix develop .#highspy
+python
+>>> import highspy
+>>> highspy.Highs()
+```
+
+
 _The nix build files are provided by the community and are not officially supported by the HiGHS development team._
 
 ## Interfaces
