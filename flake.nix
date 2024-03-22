@@ -12,37 +12,62 @@
       pkgs = import nixpkgs {
         inherit system;
       };
-      highs = (with pkgs; stdenv.mkDerivation {
-          pname = "highs";
-          version = with pkgs.lib;
-            # Read the version. Note: We assume the version numbers are in
-            # order in the file; i.e. Major, Minor, Patch.
-            let f = builtins.readFile ./Version.txt;
-            l = strings.splitString "\n" f;
-            # Drop the last term; it just says if it's alpha or not.
-            t = lists.take 3 l;
-            # Get the numbers on the other side of the equals
-            vs = lists.forEach t (v: lists.drop 1 (strings.splitString "=" v));
-            # That's it!
-            in concatStrings (lib.intersperse "." (lists.flatten vs));
-          src = pkgs.lib.cleanSource ./.;
-          nativeBuildInputs = [
-            clang
-            cmake
-          ];
-        }
-      );
+
+      version = with pkgs.lib;
+        # Read the version. Note: We assume the version numbers are in
+        # order in the file; i.e. Major, Minor, Patch.
+        let f = builtins.readFile ./Version.txt;
+        l = strings.splitString "\n" f;
+        # Drop the last term; it just says if it's alpha or not.
+        t = lists.take 3 l;
+        # Get the numbers on the other side of the equals
+        vs = lists.forEach t (v: lists.drop 1 (strings.splitString "=" v));
+        # That's it!
+        in concatStrings (intersperse "." (lists.flatten vs));
+
+      # Build the binary
+      highs-binary = with pkgs; stdenv.mkDerivation {
+        pname = "highs";
+        inherit version;
+        src = pkgs.lib.cleanSource ./.;
+        nativeBuildInputs = [
+          clang
+          cmake
+        ];
+      };
+
+      # Build the python package
+      highspy = pkgs.python3Packages.buildPythonPackage {
+        inherit version;
+        pname = "highspy";
+        src = pkgs.lib.cleanSource ./.;
+        format = "pyproject";
+        dontUseCmakeConfigure = true;
+        nativeBuildInputs = with pkgs.python3Packages; [
+          numpy
+          pathspec
+          pybind11
+          pyproject-metadata
+          scikit-build-core
+          pkgs.cmake
+          pkgs.ninja
+        ];
+        buildInputs = [
+          pkgs.zlib
+        ];
+      };
+
     in rec {
       defaultApp = flake-utils.lib.mkApp {
-        drv = defaultPackage;
+        drv = highs-binary;
       };
-      defaultPackage = highs;
-      devShell = pkgs.mkShell {
+      defaultPackage = highs-binary;
+      packages.highspy = highspy;
+      devShells.highspy = pkgs.mkShell {
         buildInputs = [
-          highs
+          (pkgs.python3.withPackages (ps: [ highspy ]) )
         ];
       };
     }
   );
 }
-
