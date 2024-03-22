@@ -47,7 +47,7 @@ option(BUILD_TESTING "Build Tests" ON)
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
-message(STATUS "Build CSharp: ${CSHARP}")
+
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
@@ -509,9 +509,13 @@ else(FAST_BUILD)
   message(STATUS "Build C++ example: ${BUILD_CXX_EXAMPLE}")
   CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
   message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
+  CMAKE_DEPENDENT_OPTION(BUILD_DOTNET "Build dotnet package" OFF "BUILD_EXAMPLES;CSHARP" OFF)
+  message(STATUS "Build dotnet package: ${BUILD_DOTNET}")
+
+  # CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
+  # message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
 
   include(cpp-highs)
-  include(python-highs)
 
   if(BUILD_CXX)
     add_subdirectory(app)
@@ -523,6 +527,13 @@ else(FAST_BUILD)
     # Add tests in examples/tests
     add_subdirectory(examples)
   endif()
+
+  include(python-highs)
+
+  option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
+  message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")
+
+  include(dotnet)
 
   if(EXP)
     add_executable(doctest)
