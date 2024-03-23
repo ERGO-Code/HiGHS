@@ -287,6 +287,18 @@ else()
   install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
+
+  if (BUILD_DOTNET)
+      set(DOTNET_PROJECT Highs.Native)
+      set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
+      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes)
+      add_custom_command(TARGET highs POST_BUILD 
+        COMMAND "${CMAKE_COMMAND}" -E copy 
+          "$<TARGET_FILE:highs>"
+        ${DOTNET_PROJECT_DIR}/runtimes
+        COMMENT "Copying to output directory")
+  endif()
+
 endif()
 
 if(FORTRAN_FOUND)

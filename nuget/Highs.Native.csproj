@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    @DOTNET_TFM@
+    <RuntimeIdentifier>@DOTNET_RID@</RuntimeIdentifier>
+    <AssemblyName>highs-native</AssemblyName>
+    <Version>@PROJECT_VERSION@</Version>
+
+    <!-- Nuget Properties -->
+    <Description>.NET native wrapper for the HiGHS solver</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+
+    <!-- Pack Option -->
+    <Title>Highs @DOTNET_RID@ v@PROJECT_VERSION@</Title>
+    <PackageId>@DOTNET_NATIVE_PROJECT@</PackageId>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="runtimes/**" Pack="true" PackagePath="runtimes/"/>
+  </ItemGroup>
+
+</Project>
