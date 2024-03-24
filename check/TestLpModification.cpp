@@ -1928,3 +1928,12 @@ TEST_CASE("resize-integrality", "[highs_data]") {
     }
   }
 }
+TEST_CASE("modify-empty-model", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.changeColIntegrality(0, HighsVarType::kInteger) ==
+          HighsStatus::kError);
+  REQUIRE(highs.changeColCost(0, 1) == HighsStatus::kError);
+  REQUIRE(highs.changeColBounds(0, 1, 1) == HighsStatus::kError);
+  REQUIRE(highs.changeRowBounds(0, 1, 1) == HighsStatus::kError);
+}

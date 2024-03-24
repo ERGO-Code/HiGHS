@@ -21,36 +21,43 @@
 
 #include "util/HighsSort.h"
 
-bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
-            const HighsInt to_col, const HighsInt dimension) {
-  if (from_col < 0) return false;
-  if (to_col >= dimension) return false;
+HighsInt create(HighsIndexCollection& index_collection, const HighsInt from_col,
+                const HighsInt to_col, const HighsInt dimension) {
+  if (from_col < 0) return kIndexCollectionCreateIllegalInterval;
+  if (to_col >= dimension) return kIndexCollectionCreateIllegalInterval;
   index_collection.dimension_ = dimension;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
-  return true;
+  return kIndexCollectionCreateOk;
 }
 
-bool create(HighsIndexCollection& index_collection,
-            const HighsInt num_set_entries, const HighsInt* set,
-            const HighsInt dimension) {
+HighsInt create(HighsIndexCollection& index_collection,
+                const HighsInt num_set_entries, const HighsInt* set,
+                const HighsInt dimension) {
   // Create an index collection for the given set - so long as it is strictly
   // ordered
+  if (num_set_entries < 0) return kIndexCollectionCreateIllegalSetSize;
+  if (dimension < 0) return kIndexCollectionCreateIllegalSetDimension;
   index_collection.dimension_ = dimension;
   index_collection.is_set_ = true;
   index_collection.set_ = {set, set + num_set_entries};
   index_collection.set_num_entries_ = num_set_entries;
-  if (!increasingSetOk(index_collection.set_, 1, 0, true)) return false;
-  return true;
+  if (!increasingSetOk(index_collection.set_, 1, 0, true))
+    return kIndexCollectionCreateIllegalSetOrder;
+  for (HighsInt ix = 0; ix < num_set_entries; ix++)
+    if (set[ix] < 0 || set[ix] >= dimension) return -(ix + 1);
+  return kIndexCollectionCreateOk;
 }
 
-void create(HighsIndexCollection& index_collection, const HighsInt* mask,
-            const HighsInt dimension) {
+HighsInt create(HighsIndexCollection& index_collection, const HighsInt* mask,
+                const HighsInt dimension) {
   // Create an index collection for the given mask
+  if (dimension < 0) return kIndexCollectionCreateIllegalMaskSize;
   index_collection.dimension_ = dimension;
   index_collection.is_mask_ = true;
   index_collection.mask_ = {mask, mask + dimension};
+  return kIndexCollectionCreateOk;
 }
 
 void highsSparseTranspose(HighsInt numRow, HighsInt numCol,

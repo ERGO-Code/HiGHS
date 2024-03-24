@@ -1,7 +1,6 @@
 name: test-python-macos
 
-on: [push]
-#on: [push, pull_request]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -23,10 +22,11 @@ jobs:
       - name: Test Python Interface
         run: |
           python3 -m pip install .
-          pytest -v ./highspy/tests/
+          pytest -v 
 
       - name: Test Python Examples
         run: |
          python3 ./examples/call_highs_from_python_highspy.py
          python3 ./examples/call_highs_from_python_mps.py
          python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py

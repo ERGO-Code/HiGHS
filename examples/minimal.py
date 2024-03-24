@@ -1,6 +1,3 @@
-# This example does NOT work yet.
-# We are working on it! 
-
 import highspy
 
 h = highspy.Highs()

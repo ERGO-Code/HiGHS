@@ -15,10 +15,9 @@ endif()
 
 if (NOT FAST_BUILD OR ALL_TESTS)
   # prepare Catch library
-  set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/extern/catch)
+  set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
   add_library(Catch INTERFACE)
   target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
-  target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 
   configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
 
@@ -77,6 +76,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       TestUserScale.cpp
       Avgas.cpp)
 
+  # todo: IG
   if (NOT APPLE)
       # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
       # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
@@ -90,7 +90,12 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
   endif()
-  target_link_libraries(unit_tests libhighs Catch)
+
+  if (FAST_BUILD)
+    target_link_libraries(unit_tests highs Catch)
+  else()
+    target_link_libraries(unit_tests libhighs Catch)
+  endif()
 
   include(GNUInstallDirs)
   if(APPLE)
@@ -107,7 +112,13 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
   # check the C API
   add_executable(capi_unit_tests TestCAPI.c)
-  target_link_libraries(capi_unit_tests libhighs)
+
+  if (FAST_BUILD)
+    target_link_libraries(capi_unit_tests highs)
+  else()
+    target_link_libraries(capi_unit_tests libhighs)
+  endif()
+
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
@@ -222,15 +233,20 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
       # specify the instance and the settings load command
       if(ZLIB AND ZLIB_FOUND AND EXISTS "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
+        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps.gz")
       else()
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+        set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
       endif()
 
       # loop over all settings
       foreach(setting ${settings})
-          add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-              ${inst})
+          if (FAST_BUILD)
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting}
+                ${inst})
+          else()
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+                ${inst})
+          endif()
 
           set_tests_properties (${name}${setting} PROPERTIES
                   DEPENDS unit_tests_all)
@@ -266,8 +282,13 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
       foreach(setting ${settings})
-          add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} --options_file ${CMAKE_BINARY_DIR}/testoptions.txt
-          ${inst})
+          if (FAST_BUILD)
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting} 
+                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+          else()
+            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+          endif()
 
           set_tests_properties (${name}${setting} PROPERTIES
                   DEPENDS unit_tests_all)
