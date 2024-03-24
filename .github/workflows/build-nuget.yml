@@ -16,8 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         buildplat:
-          - [windows-2019, win-x64]
-          - [windows-2019, win-x32]
+          - [windows-latest, win-x64]
+          - [windows-latest, win-x32]
           - [ubuntu-20.04, linux-x64]
           - [ubuntu-20.04, linux-arm64]
           - [macos-12, osx-x64]
