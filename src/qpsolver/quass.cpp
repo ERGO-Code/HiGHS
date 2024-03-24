@@ -277,7 +277,7 @@ void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts
   grad.recompute();
   rc.recompute();
   rg.recompute();
-  pricing->recompute();
+  //pricing->recompute();
 }
 
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
@@ -316,11 +316,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
 
   runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
 
-  if (basis.getnuminactive() > 4000) {
-    printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
-    runtime.status = QpModelStatus::LARGE_NULLSPACE;
-    return;
-  }
 
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
@@ -336,6 +331,12 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       runtime.status = QpModelStatus::TIMELIMIT;
       break;
     }
+
+    if (basis.getnuminactive() > 4000) {
+      printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
+      runtime.status = QpModelStatus::LARGE_NULLSPACE;
+    return;
+  }
 
     // LOGGING
     if (runtime.statistics.num_iterations %
