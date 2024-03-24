@@ -31,7 +31,7 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
   }
 
   // solve for c
-  Vector res = instance.c;
+  Vector res = -instance.c;
   for (HighsInt r = 0; r <res.dim; r++) {
     for (HighsInt j = 0; j < r; j++) {
       res.value[r] -= res.value[j] * L[j * instance.num_var + r];
