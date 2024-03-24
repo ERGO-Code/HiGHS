@@ -3,7 +3,7 @@
     <OutputType>Library</OutputType>
     @DOTNET_TFM@
     <RuntimeIdentifier>@DOTNET_RID@</RuntimeIdentifier>
-    <AssemblyName>highs-native</AssemblyName>
+    <AssemblyName>highs</AssemblyName>
     <Version>@PROJECT_VERSION@</Version>
 
     <!-- Nuget Properties -->
@@ -16,6 +16,7 @@
 
   </PropertyGroup>
 
+  <!-- Runtimes -->
   <ItemGroup>
     <None Include="runtimes/**" Pack="true" PackagePath="runtimes/"/>
   </ItemGroup>

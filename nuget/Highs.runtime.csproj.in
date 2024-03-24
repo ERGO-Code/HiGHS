@@ -1,18 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Library</OutputType>
-    @DOTNET_TFM@
-    <RuntimeIdentifier>@DOTNET_RID@</RuntimeIdentifier>
-    <AssemblyName>highs-native</AssemblyName>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Highs.Native</PackageId>
     <Version>@PROJECT_VERSION@</Version>
 
+
     <!-- Nuget Properties -->
-    <Description>.NET native wrapper for the HiGHS solver</Description>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Description>.NET native wrapper for the HiGHS solver https://github.com/ERGO-Code/HiGHS.git</Description>
+    <Authors>ERGO-Code</Authors>
+    <LangVersion>latest</LangVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 
     <!-- Pack Option -->
-    <Title>Highs @DOTNET_RID@ v@PROJECT_VERSION@</Title>
-    <PackageId>@DOTNET_NATIVE_PROJECT@</PackageId>
+    <Title>Highs @PROJECT_VERSION@</Title>
 
   </PropertyGroup>
 

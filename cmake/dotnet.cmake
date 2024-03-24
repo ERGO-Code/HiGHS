@@ -36,7 +36,7 @@ else()
 endif()
 message(STATUS ".Net RID: ${DOTNET_RID}")
 
-# set(DOTNET_NATIVE_PROJECT ${DOTNET_PACKAGE}.runtime.${DOTNET_RID})
+set(DOTNET_NATIVE_PROJECT ${DOTNET_PACKAGE}.runtime.${DOTNET_RID})
 # message(STATUS ".Net runtime project: ${DOTNET_NATIVE_PROJECT}")
 # set(DOTNET_NATIVE_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_NATIVE_PROJECT})
 # message(STATUS ".Net runtime project build path: ${DOTNET_NATIVE_PROJECT_DIR}")
@@ -113,25 +113,38 @@ file(MAKE_DIRECTORY ${DOTNET_PACKAGES_DIR})
 # *.csproj.in contains:
 # CMake variable(s) (@PROJECT_NAME@) that configure_file() can manage and
 # generator expression ($<TARGET_FILE:...>) that file(GENERATE) can manage.
-# configure_file(
-#   ${PROJECT_SOURCE_DIR}/nuget/${DOTNET_PACKAGE}.runtime.csproj.in
-#   ${DOTNET_NATIVE_PROJECT_DIR}/${DOTNET_NATIVE_PROJECT}.csproj.in
-#   @ONLY)
+configure_file(
+  ${PROJECT_SOURCE_DIR}/nuget/Highs.runtime.csproj.in
+  ${DOTNET_PROJECT_DIR}/${DOTNET_PROJECT}.csproj
+  @ONLY)
 
 # file(GENERATE
-#   # OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/$<CONFIG>/${DOTNET_NATIVE_PROJECT}.csproj.in
-#   OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/config/${DOTNET_NATIVE_PROJECT}.csproj.in
-#   INPUT ${DOTNET_NATIVE_PROJECT_DIR}/${DOTNET_NATIVE_PROJECT}.csproj.in)
+#   OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/$<CONFIG>/${DOTNET_NATIVE_PROJECT}.csproj.in
+#   # OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/config/${DOTNET_NATIVE_PROJECT}.csproj.in
+#   INPUT ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.csproj
+#   ${DOTNET_NATIVE_PROJECT_DIR}/${DOTNET_NATIVE_PROJECT}.csproj.in)
 
 # add_custom_command(
-#   OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/${DOTNET_NATIVE_PROJECT}.csproj
-#   COMMAND ${CMAKE_COMMAND} -E copy ./$<CONFIG>/${DOTNET_NATIVE_PROJECT}.csproj.in ${DOTNET_NATIVE_PROJECT}.csproj
+#   OUTPUT ${DOTNET_PROJECT}.csproj
+#   COMMAND ${CMAKE_COMMAND} -E copy ${DOTNET_PROJECT}.csproj.in ${DOTNET_PROJECT}.csproj
 #   DEPENDS
-#     ${DOTNET_NATIVE_PROJECT_DIR}/$<CONFIG>/${DOTNET_NATIVE_PROJECT}.csproj.in
-#   WORKING_DIRECTORY ${DOTNET_NATIVE_PROJECT_DIR})
+#     ${DOTNET_PROJECT}.csproj.in
+#   WORKING_DIRECTORY ${DOTNET_PROJECT_DIR})
+
+# file(COPY
+#   ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.csproj
+#   DESTINATION ${DOTNET_PROJECT_DIR})
 
 file(COPY
-  ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.csproj
+  ${PROJECT_SOURCE_DIR}/src/interfaces/highs_csharp_api.cs
+  DESTINATION ${DOTNET_PROJECT_DIR})
+
+file(COPY
+  ${PROJECT_SOURCE_DIR}/README.md
+  DESTINATION ${DOTNET_PROJECT_DIR})
+
+file(COPY
+  ${PROJECT_SOURCE_DIR}/LICENCE.md
   DESTINATION ${DOTNET_PROJECT_DIR})
 
 file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes)
