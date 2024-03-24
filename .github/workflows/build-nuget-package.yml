@@ -45,7 +45,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-
+  # Build windows and cross-compile linux arm64
   build_windows:
     runs-on: windows-latest
     steps:
@@ -60,6 +60,22 @@ jobs:
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+  build_windows_32:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build32 
+
+      - name: Configure CMake win32
+        working-directory: ${{runner.workspace}}/build32
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32
+
+      - name: Build win32
+        working-directory: ${{runner.workspace}}/build32
         run: cmake --build . --config Release --parallel
 
   build_linux:
@@ -78,23 +94,18 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-
   build_linux_arm64:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS
         run: |
-         cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/build_linux_arm64
 
-      - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A arm64
+      - name: Configure CMake linux-arm-64
+        working-directory: ${{runner.workspace}}/build_linux_arm64
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/arm-toolchain.cmake
 
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
+      - name: Build linux-arm-64
+        working-directory: ${{runner.workspace}}/build_linux_arm64
         run: cmake --build . --config Release --parallel
-
-
-
-    
