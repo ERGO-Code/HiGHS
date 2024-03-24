@@ -76,7 +76,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: win-x32
-          path: ${{runner.workspace}}/build32/dotnet/Highs.Native/runtimes
+          path: ${{runner.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x64/
 
   build_linux:
     runs-on: ubuntu-latest
@@ -160,7 +160,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: win-x32
-          path: build/dotnet/Highs.Native/runtimes
+          path: build/dotnet/Highs.Native/runtimes/win-x32
 
       - name: Download runtimes
         uses: actions/download-artifact@v4
@@ -182,18 +182,31 @@ jobs:
           dotnet-version: '2.1.x'
 
       - name: Dotnet pack
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release
 
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: nuget
-      #     path: ${{runner.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
 
+  dotnet_push:
+    runs-on: windows-latest
+    needs: [build_windows]
+    environment:
+      name: nuget
 
-      # # upload to PyPI on every tag starting with 'v'
-      # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps: 
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
 
-      #    - name: Publish Nuget to GitHub registry
-      #      run: dotnet nuget push ./<project>/out/*.nupkg -k ${GITHUB_TOKEN} -s https://nuget.pkg.github.com/<organization>/index.json --skip-duplicate --no-symbols 
+      - name: Download nuget
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget
+
+      - name: Dotnet push
+        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json 
       #     env:
       #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
