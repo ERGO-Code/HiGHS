@@ -100,7 +100,7 @@ jobs:
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
   build_linux_arm64:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS

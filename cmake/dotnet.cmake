@@ -7,12 +7,12 @@ if(NOT TARGET ${PROJECT_NAMESPACE}::highs)
 endif()
 
 # Find dotnet cli
-find_program(DOTNET_EXECUTABLE NAMES dotnet)
-if(NOT DOTNET_EXECUTABLE)
-  message(FATAL_ERROR "Check for dotnet Program: not found")
-else()
-  message(STATUS "Found dotnet Program: ${DOTNET_EXECUTABLE}")
-endif()
+# find_program(DOTNET_EXECUTABLE NAMES dotnet)
+# if(NOT DOTNET_EXECUTABLE)
+#   message(FATAL_ERROR "Check for dotnet Program: not found")
+# else()
+#   message(STATUS "Found dotnet Program: ${DOTNET_EXECUTABLE}")
+# endif()
 
 set(DOTNET_PACKAGE Highs.Native)
 set(DOTNET_PACKAGES_DIR "${PROJECT_BINARY_DIR}/dotnet")
@@ -160,26 +160,26 @@ file(COPY
   #     ${DOTNET_PROJECT_DIR}/runtimes
   #   COMMENT "Copying to output directory")
 
-add_custom_command(
-  OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
-  COMMAND ${CMAKE_COMMAND} -E env --unset=TARGETNAME
-    ${DOTNET_EXECUTABLE} build --nologo -c Release /p:Platform=${DOTNET_PLATFORM} Highs.Native.csproj
-  COMMAND ${CMAKE_COMMAND} -E env --unset=TARGETNAME
-    ${DOTNET_EXECUTABLE} pack --nologo -c Release Highs.Native.csproj
-  COMMAND ${CMAKE_COMMAND} -E touch ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
-  DEPENDS
-    $<TARGET_FILE:highs>
-  BYPRODUCTS
-    ${DOTNET_NATIVE_PROJECT_DIR}/bin
-    ${DOTNET_NATIVE_PROJECT_DIR}/obj
-  VERBATIM
-  COMMENT "Generate .Net native package ${DOTNET_NATIVE_PROJECT} (${DOTNET_NATIVE_PROJECT_DIR}/timestamp)"
-  WORKING_DIRECTORY ${DOTNET_NATIVE_PROJECT_DIR})
+# add_custom_command(
+#   OUTPUT ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
+#   COMMAND ${CMAKE_COMMAND} -E env --unset=TARGETNAME
+#     ${DOTNET_EXECUTABLE} build --nologo -c Release /p:Platform=${DOTNET_PLATFORM} Highs.Native.csproj
+#   COMMAND ${CMAKE_COMMAND} -E env --unset=TARGETNAME
+#     ${DOTNET_EXECUTABLE} pack --nologo -c Release Highs.Native.csproj
+#   COMMAND ${CMAKE_COMMAND} -E touch ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
+#   DEPENDS
+#     $<TARGET_FILE:highs>
+#   BYPRODUCTS
+#     ${DOTNET_NATIVE_PROJECT_DIR}/bin
+#     ${DOTNET_NATIVE_PROJECT_DIR}/obj
+#   VERBATIM
+#   COMMENT "Generate .Net native package ${DOTNET_NATIVE_PROJECT} (${DOTNET_NATIVE_PROJECT_DIR}/timestamp)"
+#   WORKING_DIRECTORY ${DOTNET_NATIVE_PROJECT_DIR})
 
-add_custom_target(dotnet_native_package
-  DEPENDS
-    ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
-  WORKING_DIRECTORY ${DOTNET_NATIVE_PROJECT_DIR})
+# add_custom_target(dotnet_native_package
+#   DEPENDS
+#     ${DOTNET_NATIVE_PROJECT_DIR}/timestamp
+#   WORKING_DIRECTORY ${DOTNET_NATIVE_PROJECT_DIR})
 
 ####################
 ##  .Net Package  ##
