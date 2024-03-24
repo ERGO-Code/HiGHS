@@ -27,6 +27,10 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
             
   # macos 14 is M1 (beta)
   build_macos_14:
@@ -45,23 +49,12 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
-  # Build windows and cross-compile linux arm64
-  build_windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build HiGHS
-        run: |
-         cmake -E make_directory ${{runner.workspace}}/build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
-      - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --config Release --parallel
-
+  # Build windows 32 and linux 
   build_windows_32:
     runs-on: windows-latest
     steps:
@@ -71,12 +64,19 @@ jobs:
          cmake -E make_directory ${{runner.workspace}}/build32 
 
       - name: Configure CMake win32
+        shell: bash
         working-directory: ${{runner.workspace}}/build32
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32
 
       - name: Build win32
+        shell: bash
         working-directory: ${{runner.workspace}}/build32
         run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-x32
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
   build_linux:
     runs-on: ubuntu-latest
@@ -94,6 +94,11 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
   build_linux_arm64:
     runs-on: windows-latest
     steps:
@@ -104,8 +109,67 @@ jobs:
 
       - name: Configure CMake linux-arm-64
         working-directory: ${{runner.workspace}}/build_linux_arm64
+        shell: bash
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/arm-toolchain.cmake
 
       - name: Build linux-arm-64
         working-directory: ${{runner.workspace}}/build_linux_arm64
+        shell: bash
         run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+  build_windows:
+    runs-on: windows-latest
+    needs: [build_macos_12, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS Windows native
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Release --parallel
+      
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x64
+          path: build/dotnet/Highs.Native/runtimes/macos-x64/
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+          path: build/dotnet/Highs.Native/runtimes/macos-arm64/
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: win-x32
+          path: build/dotnet/Highs.Native/runtimes/win-x32/
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: build/dotnet/Highs.Native/runtimes/linux-x64/
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: build/dotnet/Highs.Native/runtimes/linux-arm64/
+
+      - name: Display structure of downloaded files
+        run: ls -R build/dotnet/Highs.Native/runtimes
