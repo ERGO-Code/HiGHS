@@ -1,7 +1,8 @@
 name: build-nuget
 
 # on: [pull_request]
-on: push
+# on: push
+on: []
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,10 +38,12 @@ jobs:
          cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake
+        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
 
       - name: Build
+        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
 
