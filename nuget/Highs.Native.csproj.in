@@ -6,7 +6,7 @@
 
 
     <!-- Nuget Properties -->
-    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- <IncludeBuildOutput>false</IncludeBuildOutput> -->
     <Description>.NET native wrapper for the HiGHS solver https://github.com/ERGO-Code/HiGHS.git</Description>
     <Authors>ERGO-Code</Authors>
     <LangVersion>latest</LangVersion>
@@ -14,10 +14,9 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 
     <!-- Pack Option -->
-    <Title>Highs @PROJECT_VERSION@</Title>
+    <!-- <Title>Highs @PROJECT_VERSION@</Title> -->
 
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="LICENSE.txt" Pack="true" PackagePath=""/>
   </ItemGroup>
