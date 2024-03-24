@@ -289,13 +289,31 @@ else()
 
 
   if (BUILD_DOTNET)
+      # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
+      if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+        set(DOTNET_PLATFORM arm64)
+      else()
+        set(DOTNET_PLATFORM x64)
+      endif()
+
+      if(APPLE)
+        set(DOTNET_RID osx-${DOTNET_PLATFORM})
+      elseif(UNIX)
+        set(DOTNET_RID linux-${DOTNET_PLATFORM})
+      elseif(WIN32)
+        set(DOTNET_RID win-${DOTNET_PLATFORM})
+      else()
+        message(FATAL_ERROR "Unsupported system !")
+      endif()
+      message(STATUS ".Net RID: ${DOTNET_RID}")
+
       set(DOTNET_PROJECT Highs.Native)
       set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
-      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes)
+      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID})
       add_custom_command(TARGET highs POST_BUILD 
         COMMAND "${CMAKE_COMMAND}" -E copy 
           "$<TARGET_FILE:highs>"
-        ${DOTNET_PROJECT_DIR}/runtimes
+        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}
         COMMENT "Copying to output directory")
   endif()
 

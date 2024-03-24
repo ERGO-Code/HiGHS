@@ -19,15 +19,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Native library must be in native directory... -->
-    <!-- If highs is built as a STATIC_LIBRARY (e.g. Windows) then we don't have to include it -->
-    <Content Include="
-      $<TARGET_FILE:highs>
-      $<$<STREQUAL:$<TARGET_PROPERTY:@PROJECT_NAME@,TYPE>,SHARED_LIBRARY>:;$<TARGET_SONAME_FILE:@PROJECT_NAME@>>
-    ">
-      <PackagePath>runtimes/@DOTNET_RID@/native/%(Filename)%(Extension)</PackagePath>
-      <Pack>true</Pack>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="LICENSE.txt" Pack="true" PackagePath=""/>
   </ItemGroup>
+  <!-- Ensure the README.md file is included in the package -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!-- Runtimes -->
+  <ItemGroup>
+    <None Include="runtimes/**" Pack="true" PackagePath="runtimes/"/>
+  </ItemGroup>
+
 </Project>

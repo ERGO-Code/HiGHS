@@ -36,10 +36,11 @@ else()
 endif()
 message(STATUS ".Net RID: ${DOTNET_RID}")
 
-set(DOTNET_NATIVE_PROJECT ${DOTNET_PACKAGE}.runtime.${DOTNET_RID})
+# set(DOTNET_NATIVE_PROJECT ${DOTNET_PACKAGE}.runtime.${DOTNET_RID})
+
 # message(STATUS ".Net runtime project: ${DOTNET_NATIVE_PROJECT}")
-# set(DOTNET_NATIVE_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_NATIVE_PROJECT})
-# message(STATUS ".Net runtime project build path: ${DOTNET_NATIVE_PROJECT_DIR}")
+# set(DOTNET_NATIVE_RUNTIME_DIR ${DOTNET_PACKAGES_DIR}/${DOTNET_PACKAGE}/runtimes/${DOTNET_RID})
+# message(STATUS ".Net runtime project build path: ${DOTNET_NATIVE_RUNTIME_DIR}")
 
 # Targeted Framework Moniker
 # see: https://docs.microsoft.com/en-us/dotnet/standard/frameworks
@@ -84,7 +85,7 @@ endif()
 
 set(DOTNET_PROJECT ${DOTNET_PACKAGE})
 message(STATUS ".Net project: ${DOTNET_PROJECT}")
-set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
+set(DOTNET_PROJECT_DIR ${DOTNET_PACKAGES_DIR}/${DOTNET_PROJECT})
 message(STATUS ".Net project build path: ${DOTNET_PROJECT_DIR}")
 
 # # Create the native library
@@ -107,6 +108,10 @@ message(STATUS ".Net project build path: ${DOTNET_PROJECT_DIR}")
 # endif()
 
 file(MAKE_DIRECTORY ${DOTNET_PACKAGES_DIR})
+# file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR})
+# file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes)
+# file(MAKE_DIRECTORY ${DOTNET_NATIVE_RUNTIME_DIR})
+
 ############################
 ##  .Net Runtime Package  ##
 ############################
@@ -114,7 +119,7 @@ file(MAKE_DIRECTORY ${DOTNET_PACKAGES_DIR})
 # CMake variable(s) (@PROJECT_NAME@) that configure_file() can manage and
 # generator expression ($<TARGET_FILE:...>) that file(GENERATE) can manage.
 configure_file(
-  ${PROJECT_SOURCE_DIR}/nuget/Highs.runtime.csproj.in
+  ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.csproj.in
   ${DOTNET_PROJECT_DIR}/${DOTNET_PROJECT}.csproj
   @ONLY)
 
@@ -144,13 +149,10 @@ file(COPY
   DESTINATION ${DOTNET_PROJECT_DIR})
 
 file(COPY
-  ${PROJECT_SOURCE_DIR}/LICENCE.md
+  ${PROJECT_SOURCE_DIR}/LICENSE.txt
   DESTINATION ${DOTNET_PROJECT_DIR})
 
-file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes)
-
-install(TARGETS highs
-        DESTINATION ${DOTNET_PROJECT_DIR}/runtimes)
+# install(TARGETS highs DESTINATION ${DOTNET_NATIVE_RUNTIME_DIR})
 
   # add_custom_command(TARGET highs POST_BUILD 
   #   COMMAND "${CMAKE_COMMAND}" -E copy 
