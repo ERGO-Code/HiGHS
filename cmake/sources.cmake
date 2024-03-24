@@ -372,6 +372,7 @@ set(highs_headers
     qpsolver/devexpricing.hpp
     qpsolver/eventhandler.hpp
     qpsolver/factor.hpp
+    qpsolver/feasibility_bounded.hpp
     qpsolver/feasibility_highs.hpp
     qpsolver/feasibility_quass.hpp
     qpsolver/feasibility.hpp

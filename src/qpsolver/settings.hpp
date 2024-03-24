@@ -10,7 +10,7 @@ enum class PricingStrategy { SteepestEdge, DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
-enum class Phase1Strategy { HIGHS, QUASS };
+enum class Phase1Strategy { HIGHS, QUASS, BOUNDED };
 
 struct Settings {
   RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
