@@ -177,13 +177,12 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R build/dotnet/Highs.Native/runtimes
 
-      - name: Pack nuget
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '2.1.x'
 
-      - run: dotnet pack -C Release
+      - name: Dotnet pack
+        run: dotnet pack -C Release
 
       # - uses: actions/upload-artifact@v4
       #   with:
