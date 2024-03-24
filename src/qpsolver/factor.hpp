@@ -204,7 +204,7 @@ class CholeskyFactor {
   }
 
   void solve(Vector& rhs) {
-    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 &&
+    if (!uptodate || (numberofreduces >= runtime.instance.num_var / 2 &&
                       !has_negative_eigenvalue)) {
       recompute();
     }
