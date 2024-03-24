@@ -33,6 +33,9 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, Q
       solution.primal = startinfo.primal;
       return QpAsmStatus::OK;
     }
+    if (modelstatus == QpModelStatus::UNBOUNDED) {
+      return QpAsmStatus::OK;
+    }
   } else  {
     computestartingpoint_highs(instance, settings, stats, modelstatus, startinfo, qp_timer);
     if (modelstatus == QpModelStatus::INFEASIBLE) {
