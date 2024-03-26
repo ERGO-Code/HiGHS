@@ -309,11 +309,11 @@ else()
 
       set(DOTNET_PROJECT Highs.Native)
       set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
-      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID})
+      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native)
       add_custom_command(TARGET highs POST_BUILD 
         COMMAND "${CMAKE_COMMAND}" -E copy 
           "$<TARGET_FILE:highs>"
-        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}
+        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native
         COMMENT "Copying to output directory")
   endif()
 
