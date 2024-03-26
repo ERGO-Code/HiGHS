@@ -175,7 +175,9 @@ jobs:
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        run: dotnet nuget push ${{runner.workspace}}/build/dotnet/Highs/bin/Release/netstandard2.0/*.nupkg -s ${{runner.workspace}}/nugets
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        shell: bash
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
