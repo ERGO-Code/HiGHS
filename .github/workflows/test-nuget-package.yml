@@ -186,5 +186,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs-s ${{runner.workspace}}/nugets 
+          dotnet add package Highs-s name
           dotnet run
