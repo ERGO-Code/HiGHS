@@ -172,12 +172,12 @@ jobs:
         run: dotnet pack -c Release
 
       - name: Add local feed 
-        run: dotnet nuget add source ${{runner.workspace}}/nugets
+        run: dotnet nuget add source -n name ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
         shell: bash
-        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+        run: dotnet nuget push ./bin/Release/*.nupkg -s name
 
       - name: Create new project and test
         shell: bash
