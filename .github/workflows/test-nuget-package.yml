@@ -52,6 +52,7 @@ jobs:
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
           dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet run
 
 
             
@@ -63,6 +64,8 @@ jobs:
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/nugets
+         cmake -E make_directory ${{runner.workspace}}/test_nuget
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
@@ -95,6 +98,7 @@ jobs:
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
           dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet run
 
   build_linux:
     runs-on: ubuntu-latest
@@ -103,6 +107,8 @@ jobs:
       - name: Build HiGHS
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/nugets
+         cmake -E make_directory ${{runner.workspace}}/test_nuget
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
@@ -135,14 +141,18 @@ jobs:
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
           dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet run
 
   build_windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS Windows native
+        shell: bash
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/nugets
+         cmake -E make_directory ${{runner.workspace}}/test_nuget
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/build
@@ -166,8 +176,7 @@ jobs:
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+        run: dotnet nuget push ${{runner.workspace}}/build/dotnet/Highs/bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
         shell: bash
@@ -177,3 +186,4 @@ jobs:
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
           dotnet add package Highs-s ${{runner.workspace}}/nugets 
+          dotnet run
