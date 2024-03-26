@@ -14,7 +14,7 @@ endif()
 #   message(STATUS "Found dotnet Program: ${DOTNET_EXECUTABLE}")
 # endif()
 
-set(DOTNET_PACKAGE Highs.Native)
+set(DOTNET_PACKAGE Highs)
 set(DOTNET_PACKAGES_DIR "${PROJECT_BINARY_DIR}/dotnet")
 
 # Runtime IDentifier
@@ -119,7 +119,7 @@ file(MAKE_DIRECTORY ${DOTNET_PACKAGES_DIR})
 # CMake variable(s) (@PROJECT_NAME@) that configure_file() can manage and
 # generator expression ($<TARGET_FILE:...>) that file(GENERATE) can manage.
 configure_file(
-  ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.csproj.in
+  ${PROJECT_SOURCE_DIR}/nuget/Highs.csproj.in
   ${DOTNET_PROJECT_DIR}/${DOTNET_PROJECT}.csproj
   @ONLY)
 

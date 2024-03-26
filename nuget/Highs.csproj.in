@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>Highs.Native</PackageId>
+    <PackageId>Highs</PackageId>
     <Version>@PROJECT_VERSION@</Version>
 
 

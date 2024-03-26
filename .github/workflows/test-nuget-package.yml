@@ -34,14 +34,14 @@ jobs:
           dotnet-version: '2.1.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet pack -c Release
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -51,7 +51,7 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs -s ${{runner.workspace}}/nugets 
 
 
             
@@ -77,14 +77,14 @@ jobs:
           dotnet-version: '2.1.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet pack -c Release
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -94,7 +94,7 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs -s ${{runner.workspace}}/nugets 
 
   build_linux:
     runs-on: ubuntu-latest
@@ -117,14 +117,14 @@ jobs:
           dotnet-version: '2.1.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet pack -c Release
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -134,11 +134,10 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs -s ${{runner.workspace}}/nugets 
 
   build_windows:
     runs-on: windows-latest
-    needs: [build_macos_12, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS Windows native
@@ -160,14 +159,14 @@ jobs:
           dotnet-version: '2.1.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet pack -c Release
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -177,4 +176,4 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs-s ${{runner.workspace}}/nugets 
