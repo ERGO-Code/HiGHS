@@ -148,20 +148,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS Windows native
-        shell: bash
         run: |
          cmake -E make_directory ${{runner.workspace}}/build
          cmake -E make_directory ${{runner.workspace}}/nugets
          cmake -E make_directory ${{runner.workspace}}/test_nuget
 
       - name: Configure CMake
-        working-directory: ${{runner.workspace}}/build
         shell: bash
+        working-directory: ${{runner.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
         shell: bash
+        working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release --parallel
       
       - uses: actions/setup-dotnet@v4
