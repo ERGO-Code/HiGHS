@@ -144,40 +144,40 @@ jobs:
       - name: Display structure of downloaded files
         run: |
           pwd 
-          ls -R build/dotnet/Highs.Native/runtimes
+          ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-x64
         uses: actions/download-artifact@v4
         with:
           name: macos-x64
-          path: build/dotnet/Highs.Native/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-arm64
         uses: actions/download-artifact@v4
         with:
           name: macos-arm64
-          path: build/dotnet/Highs.Native/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes win-x32
         uses: actions/download-artifact@v4
         with:
           name: win-x32
-          path: build/dotnet/Highs.Native/runtimes/win-x32
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
 
       - name: Download runtimes
         uses: actions/download-artifact@v4
         with:
           name: linux-x64
-          path: build/dotnet/Highs.Native/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes
         uses: actions/download-artifact@v4
         with:
           name: linux-arm64
-          path: build/dotnet/Highs.Native/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Display structure of downloaded files
-        run: ls -R build/dotnet/Highs.Native/runtimes
+        run: ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - uses: actions/setup-dotnet@v4
         with:
