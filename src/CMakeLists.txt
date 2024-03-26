@@ -310,10 +310,19 @@ else()
       set(DOTNET_PROJECT Highs)
       set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
       file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native)
+
+      if (APPLE)
+        set(TARGET_FILE_NAME "libhighs.dylib")
+      elseif(UNIX)
+        set(TARGET_FILE_NAME "libhighs.so")
+      elseif(WIN32)
+        set(TARGET_FILE_NAME "highs.dll")
+      endif()
+
       add_custom_command(TARGET highs POST_BUILD 
         COMMAND "${CMAKE_COMMAND}" -E copy 
           "$<TARGET_FILE:highs>"
-        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native
+        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native/${TARGET_FILE_NAME}
         COMMENT "Copying to output directory")
   endif()
 
