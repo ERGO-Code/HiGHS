@@ -184,6 +184,6 @@ jobs:
         run: |
           dotnet new console
           rm Program.cs 
-          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
+          cp ${{runner.workspace}}\examples\call_highs_from_csharp.cs . 
           dotnet add package Highs --version=1.6.95 -s ${{runner.workspace}}\nugets 
           dotnet run
