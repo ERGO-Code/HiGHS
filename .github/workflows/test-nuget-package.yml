@@ -35,7 +35,8 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet pack -c Release
+        with: version: '1.6.95'
+        run: dotnet pack -c Release /p:Version=$version
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -81,7 +82,8 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet pack -c Release
+        with: version: '1.6.95'
+        run: dotnet pack -c Release /p:Version=$version
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -124,7 +126,8 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet pack -c Release
+        with: version: '1.6.95'
+        run: dotnet pack -c Release /p:Version=$version 
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -169,10 +172,11 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet pack -c Release
+        with: version: '1.6.95'
+        run: dotnet pack -c Release /p:Version=$version 
 
       - name: Add local feed 
-        run: dotnet nuget add source -n name ${{runner.workspace}}/nugets
+        run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
 
       - name: Dotnet push to local feed
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
@@ -186,5 +190,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs -s D:\a\HiGHS\nugets --version=1.6.96
+          dotnet add package Highs -s name
           dotnet run
