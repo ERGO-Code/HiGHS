@@ -35,8 +35,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        with: version: '1.6.95'
-        run: dotnet pack -c Release /p:Version=$version
+        run: dotnet pack -c Release /p:Version=1.6.95
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -82,8 +81,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        with: version: '1.6.95'
-        run: dotnet pack -c Release /p:Version=$version
+        run: dotnet pack -c Release /p:Version=1.6.95
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -126,8 +124,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        with: version: '1.6.95'
-        run: dotnet pack -c Release /p:Version=$version 
+        run: dotnet pack -c Release /p:Version=1.6.95
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -172,8 +169,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        with: version: '1.6.95'
-        run: dotnet pack -c Release /p:Version=$version 
+        run: dotnet pack -c Release /p:Version=1.6.95
 
       - name: Add local feed 
         run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
