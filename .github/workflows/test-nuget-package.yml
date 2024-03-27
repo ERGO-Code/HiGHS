@@ -180,10 +180,11 @@ jobs:
         run: dotnet nuget push ./bin/Release/*.nupkg -s name
 
       - name: Create new project and test
+        shell: bash
         working-directory: ${{runner.workspace}}/test_nuget
         run: |
           dotnet new console
           rm Program.cs 
-          cp ${{runner.workspace}}\examples\call_highs_from_csharp.cs . 
+          cp $GUTHUB_WORKSPACE\examples\call_highs_from_csharp.cs . 
           dotnet add package Highs --version=1.6.95 -s ${{runner.workspace}}\nugets 
           dotnet run
