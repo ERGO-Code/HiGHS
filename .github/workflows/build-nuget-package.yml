@@ -181,11 +181,11 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '2.1.x'
+          dotnet-version: '6.0.x'
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs
-        run: dotnet pack -c Release /p:Version=1.6.95
+        run: dotnet pack -c Release /p:Version=1.6.94
 
       - uses: actions/upload-artifact@v4
         with:
