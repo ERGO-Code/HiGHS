@@ -586,7 +586,8 @@ void HighsImplications::separateImpliedBounds(
       if (infeas) {
         vals[0] = 1.0;
         inds[0] = col;
-        cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
+        cutpool.addCut(kLpRowOriginSeparateImpliedBounds, mipsolver, inds, vals,
+                       1, 0.0, false, true, false);
         continue;
       }
 
@@ -621,7 +622,8 @@ void HighsImplications::separateImpliedBounds(
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+          cutpool.addCut(kLpRowOriginSeparateImpliedBounds, mipsolver, inds,
+                         vals, 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
                          false, false, false);
@@ -637,7 +639,8 @@ void HighsImplications::separateImpliedBounds(
       if (infeas) {
         vals[0] = -1.0;
         inds[0] = col;
-        cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
+        cutpool.addCut(kLpRowOriginSeparateImpliedBounds, mipsolver, inds, vals,
+                       1, -1.0, false, true, false);
         continue;
       }
 
@@ -671,7 +674,8 @@ void HighsImplications::separateImpliedBounds(
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+          cutpool.addCut(kLpRowOriginSeparateImpliedBounds, mipsolver, inds,
+                         vals, 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
                          false, false, false);

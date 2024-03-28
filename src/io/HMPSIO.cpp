@@ -564,7 +564,7 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   HighsStatus row_name_status =
       normaliseNames(options.log_options, "row", lp.num_row_, local_row_names,
                      max_row_name_length);
-  if (row_name_status == HighsStatus::kError) return col_name_status;
+  if (row_name_status == HighsStatus::kError) return row_name_status;
   warning_found = row_name_status == HighsStatus::kWarning || warning_found;
 
   HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);

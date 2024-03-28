@@ -31,19 +31,25 @@ typedef struct {
   double mip_primal_bound;
   double mip_dual_bound;
   double mip_gap;
-  double* mip_solution;
+  const double* mip_solution;
   HighsInt cutpool_num_col;
   HighsInt cutpool_num_cut;
   HighsInt cutpool_num_nz;
-  HighsInt* cutpool_start;
-  HighsInt* cutpool_index;
-  double* cutpool_value;
-  double* cutpool_lower;
-  double* cutpool_upper;
+  const HighsInt* cutpool_ARstart;
+  const HighsInt* cutpool_ARindex;
+  const double* cutpool_ARvalue;
+  const double* cutpool_lower;
+  const double* cutpool_upper;
 } HighsCallbackDataOut;
 
 typedef struct {
   int user_interrupt;
+  HighsInt cutset_num_cut;
+  HighsInt* cutset_ARstart;
+  HighsInt* cutset_ARindex;
+  double* cutset_ARvalue;
+  double* cutset_lower;
+  double* cutset_upper;
 } HighsCallbackDataIn;
 
 // Additional callback handling

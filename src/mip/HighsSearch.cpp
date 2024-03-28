@@ -602,6 +602,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? 'H' : 'B');
 
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 0");
+
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
         }
@@ -734,6 +736,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, solobj,
               inheuristic ? 'H' : 'B');
+
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 1");
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -1064,6 +1068,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
               inheuristic ? 'H' : 'T');
+
+          possiblyResetLocalDomain("HighsSearch::selectBranchingCandidate 2");
+
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
@@ -1953,6 +1960,8 @@ HighsSearch::NodeResult HighsSearch::dive() {
     ++nnodes;
     NodeResult result = evaluateNode();
 
+    possiblyResetLocalDomain("HighsSearch::NodeResult HighsSearch::dive()");
+
     if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 
     if (result != NodeResult::kOpen) return result;
@@ -1973,4 +1982,13 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
     --maxbacktracks;
 
   } while (backtrack());
+}
+
+void HighsSearch::possiblyResetLocalDomain(const std::string message) {
+  const bool equal_num_row = this->numRow() == this->mipsolver.numRow();
+  if (this->mipsolver.submip) {
+    assert(equal_num_row);
+  } else if (!equal_num_row) {
+    this->resetLocalDomain();
+  }
 }

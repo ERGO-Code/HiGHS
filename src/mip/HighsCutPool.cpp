@@ -353,7 +353,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     HighsInt start = matrix_.getRowStart(cut);
     HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
-
+    cutset.debug_origin_[i] = debug_origin_[cut];
     for (HighsInt j = start; j != end; ++j) {
       assert(offset < selectednnz);
       cutset.ARvalue_[offset] = ARvalue[j];
@@ -369,6 +369,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   // should only be called after a restart with a fresh row matrix right now
   assert(matrix_.getNumDelRows() == 0);
+  // Considers all cuts in the pool, assuming that they are not in the
+  // LP, so numLpCuts must be zero
+  assert(numLpCuts == 0);
   HighsInt numcuts = matrix_.getNumRows();
 
   cutset.cutindices.resize(numcuts);
@@ -379,6 +382,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
   for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
+    assert(ages_[i] >= 0);
     --ageDistribution[ages_[i]];
     ++numLpCuts;
     if (matrix_.columnsLinked(i)) {
@@ -391,6 +395,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
     HighsInt start = matrix_.getRowStart(cut);
     HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
+    cutset.debug_origin_[i] = debug_origin_[cut];
 
     for (HighsInt j = start; j != end; ++j) {
       assert(offset < (HighsInt)matrix_.nonzeroCapacity());
@@ -405,10 +410,23 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   assert((HighsInt)propRows.size() == numPropRows);
 }
 
-HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
+HighsInt HighsCutPool::addCut(const HighsInt debug_origin,
+                              const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
                               bool extractCliques, bool isConflict) {
+  // Cut has rhs as upper bound
+  const bool debug_report = false;
+  if (debug_report) {
+    printf("\nHighsCutPool::addCut len = %d; RHS = %g:", int(Rlen), rhs);
+    for (HighsInt i = 0; i != Rlen; ++i)
+      printf(" (%d, %g)", int(Rindex[i]), Rvalue[i]);
+    printf("\n");
+    printf(
+        "HighsCutPool::addCut integral = %d; propagate = %d; extractCliques = "
+        "%d; isConflict = %d\n",
+        int(integral), int(propagate), int(extractCliques), int(isConflict));
+  }
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   sortBuffer.resize(Rlen);
@@ -493,6 +511,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   // if no such cut exists we append the new cut
   HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen, propagate);
+  //  printf("HighsCutPool::addCut rowindex = %4d; |RHS| = %4d \n",
+  //  int(rowindex), int(rhs_.size()));
   hashToCutMap.emplace(h, rowindex);
 
   if (rowindex == int(rhs_.size())) {
@@ -501,6 +521,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     rownormalization_.resize(rowindex + 1);
     maxabscoef_.resize(rowindex + 1);
     rowintegral.resize(rowindex + 1);
+    debug_origin_.resize(rowindex + 1);
   }
 
   // set the right hand side and reset the age
@@ -508,6 +529,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
+  debug_origin_[rowindex] = debug_origin;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
   assert((HighsInt)propRows.size() == numPropRows);
 
@@ -526,4 +548,45 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   }
 
   return rowindex;
+}
+
+void HighsCutPool::debugReport(const std::string& message) {
+  const HighsInt kReportRowsLimit = 20;
+  const HighsInt num_rows = matrix_.getNumRows();
+  const HighsInt num_cutpool_cuts = getNumCuts();
+  const HighsInt num_lp_cuts = numLpCuts;
+  printf(
+      "\nCutPool: %s has num_rows = %d; num_cutpool_cuts = %d; num_lp_cuts = "
+      "%d\n",
+      message.c_str(), int(num_rows), int(num_cutpool_cuts), int(num_lp_cuts));
+  if (!num_rows) return;
+  if (num_rows < kReportRowsLimit) {
+    printf("CutPool Row Age              RHS Integral Origin\n");
+    for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
+      printf("CutPool: Row %3d; age %3d %4s RHS %11.5g; integral = %1d: %s\n",
+             int(iRow), int(ages_[iRow]), ages_[iRow] < 0 ? "(LP)" : "    ",
+             rhs_[iRow], int(rowintegral[iRow]),
+             debugCutOriginToString(debug_origin_[iRow]).c_str());
+    }
+  } else {
+    const HighsInt num_cut_type = kLpRowOriginCount;
+    std::vector<HighsInt> cutCount;
+    cutCount.assign(num_cut_type, 0);
+    if (num_lp_cuts < kReportRowsLimit)
+      printf("CutPool Row Age              RHS Integral Origin\n");
+    for (HighsInt iRow = 0; iRow < num_rows; iRow++) {
+      if (ages_[iRow] < 0)
+        printf(
+            "CutPool: Row %3d; age %3d (LP) RHS %11.5g; integral = %1d: %s\n",
+            int(iRow), int(ages_[iRow]), rhs_[iRow], int(rowintegral[iRow]),
+            debugCutOriginToString(debug_origin_[iRow]).c_str());
+      cutCount[debug_origin_[iRow]]++;
+    }
+    for (HighsInt type = 0; type < num_cut_type; type++) {
+      if (cutCount[type])
+        printf("CutPool: %5d %s\n", int(cutCount[type]),
+               debugCutOriginToString(type).c_str());
+    }
+  }
+  printf("\n");
 }

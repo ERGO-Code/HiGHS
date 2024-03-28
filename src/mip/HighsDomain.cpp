@@ -1554,6 +1554,13 @@ void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
 
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                                          double newbound) {
+  if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
+    printf(
+        "HighsDomain::updateActivityLbChange: activitymin_ has size %d but "
+        "should be of size (at least) %d\n",
+        int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111 == 345);
+  }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
   HighsInt end = mip->a_matrix_.start_[col + 1];
@@ -1723,6 +1730,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
 void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                                          double newbound) {
+  if (activitymin_.size() < static_cast<size_t>(mipsolver->numRow())) {
+    printf(
+        "HighsDomain::updateActivityUbChange: activitymin_ has size %d but "
+        "should be of size (at least) %d\n",
+        int(this->activitymin_.size()), int(mipsolver->numRow()));
+    assert(111 == 345);
+  }
   auto mip = mipsolver->model_;
   HighsInt start = mip->a_matrix_.start_[col];
   HighsInt end = mip->a_matrix_.start_[col + 1];
@@ -1736,6 +1750,17 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
+      const bool debug_update_activity_ub_change = false;
+      //          mipsolver->numRow() == 142 && col == 1468;
+      if (debug_update_activity_ub_change) {
+        printf("HighsDomain::updateActivityUbChange 142 / 1468:");
+        printf(" activitymax_.size() = %d", int(activitymax_.size()));
+        printf("; mip->a_matrix_.index_.size() = %d",
+               int(mip->a_matrix_.index_.size()));
+        printf("; mip->a_matrix_.index_[%d]", int(i));
+        printf(" = %d\n", int(mip->a_matrix_.index_[i]));
+      }
+
       double deltamax;
       if (oldbound == kHighsInf) {
         --activitymaxinf_[mip->a_matrix_.index_[i]];
@@ -1757,6 +1782,35 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
             mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
             mipsolver->mipdata_->ARindex_.data(),
             mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
+        const bool jajh_tmpmaxact_ok =
+            std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                             tmpmaxact)) <= mipsolver->mipdata_->feastol;
+        HighsInt iRow = mip->a_matrix_.index_[i];
+        if (debug_update_activity_ub_change) {
+          printf(
+              "*************************************\n"
+              "HighsDomain::updateActivityUbChange 142 / 1468\n");
+          printf(
+              "HighsDomain::updateActivityUbChange activitymax_[%d] = %g; "
+              "tmpmaxact = %g\n",
+              int(iRow), double(activitymax_[iRow]), double(tmpmaxact));
+        }
+        if (!jajh_tmpmaxact_ok) {
+          printf("mipsolver Model (%d, %d)\n", int(mipsolver->numCol()),
+                 int(mipsolver->numRow()));
+          printf("Col %d: activitymax_[%d] - tmpmaxact = %g - %g = %g\n",
+                 int(col), int(mip->a_matrix_.index_[i]),
+                 double(activitymax_[mip->a_matrix_.index_[i]]),
+                 double(tmpmaxact),
+                 double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact));
+        }
+        const bool jajh_tmpinf_ok =
+            tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]];
+        if (!jajh_tmpinf_ok)
+          printf("Col %d: activitymaxinf_[%d] = %d != %d = tmpinf\n", int(col),
+                 int(mip->a_matrix_.index_[i]),
+                 int(activitymaxinf_[mip->a_matrix_.index_[i]]), int(tmpinf));
+
         assert(std::fabs(double(activitymax_[mip->a_matrix_.index_[i]] -
                                 tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);

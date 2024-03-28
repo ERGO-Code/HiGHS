@@ -206,16 +206,20 @@ restart:
           else
             mipdata_->heuristics.RINS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-
           mipdata_->heuristics.flushStatistics();
         }
       }
 
       considerHeuristics = false;
 
+      search.possiblyResetLocalDomain("HighsMipSolver::run() after heuristics");
+
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
+        if (numRow() == 142) {
+          printf("HighsMipSolver::run() numRow() = %d\n", int(numRow()));
+        }
         if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;
@@ -661,12 +665,39 @@ void HighsMipSolver::callbackGetCutPool() const {
                           cut_lower, cut_upper, cut_matrix);
 
   data_out.cutpool_num_nz = cut_matrix.numNz();
-  data_out.cutpool_start = cut_matrix.start_.data();
-  data_out.cutpool_index = cut_matrix.index_.data();
-  data_out.cutpool_value = cut_matrix.value_.data();
+  data_out.cutpool_ARstart = cut_matrix.start_.data();
+  data_out.cutpool_ARindex = cut_matrix.index_.data();
+  data_out.cutpool_ARvalue = cut_matrix.value_.data();
   data_out.cutpool_lower = cut_lower.data();
   data_out.cutpool_upper = cut_upper.data();
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);
+}
+
+std::string debugCutOriginToString(const HighsInt origin) {
+  assert(origin >= 0);
+  assert(origin < kLpRowOriginCount);
+
+  std::string origin_string = "";
+  if (origin == kLpRowOriginModel) {
+    origin_string = "Model";
+  } else if (origin == kLpRowOriginPresolve) {
+    origin_string = "Presolve";
+  } else if (origin == kLpRowOriginLazyConstraint) {
+    origin_string = "Lazy constraint";
+  } else if (origin == kLpRowOriginSeparateCliques) {
+    origin_string = "Separate cliques";
+  } else if (origin == kLpRowOriginGenerateCut) {
+    origin_string = "Generate cut";
+  } else if (origin == kLpRowOriginGenerateConflict) {
+    origin_string = "Generate conflict";
+  } else if (origin == kLpRowOriginFinalizeAndAddCut) {
+    origin_string = "Finalize and add cut";
+  } else if (origin == kLpRowOriginSeparateImpliedBounds) {
+    origin_string = "Separate implied bounds";
+  } else {
+    origin_string = "Unknown";
+  }
+  return origin_string;
 }

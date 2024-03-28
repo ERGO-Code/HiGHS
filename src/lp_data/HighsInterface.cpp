@@ -455,6 +455,8 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
   limits(index_collection, from_k, to_k);
   // Surely this is checked elsewhere
   assert(0 <= from_k && to_k < lp.num_col_);
+  // Should avoid getting this far with an empty interval, which
+  // yields from_k = 0; to_k < 0
   assert(from_k <= to_k);
   HighsInt out_from_col;
   HighsInt out_to_col;
@@ -505,6 +507,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   limits(index_collection, from_k, to_k);
   // Surely this is checked elsewhere
   assert(0 <= from_k && to_k < lp.num_row_);
+  // Should avoid getting this far with an empty interval, which
+  // yields from_k = 0; to_k < 0
   assert(from_k <= to_k);
   // "Out" means not in the set to be extracted
   // "In" means in the set to be extracted

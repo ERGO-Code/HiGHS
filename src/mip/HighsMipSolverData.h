@@ -57,6 +57,7 @@ struct HighsMipSolverData {
   HighsInt numRestartsRoot;
   HighsInt numCliqueEntriesAfterPresolve;
   HighsInt numCliqueEntriesAfterFirstPresolve;
+  HighsInt numLazyConstraints;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
@@ -191,6 +192,13 @@ struct HighsMipSolverData {
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
+  bool feasibleWithNewLazyConstraints(const double objective,
+                                      const std::vector<double>& solution,
+                                      double& row_violation);
+  bool defineNewLazyConstraints(const std::vector<double>& solution,
+                                double& row_violation);
+  void runInsertRowsSetup();
+  void debugReportDimensions(const std::string message);
 };
 
 #endif
