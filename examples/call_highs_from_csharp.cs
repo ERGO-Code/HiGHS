@@ -2,6 +2,8 @@
 
 using System;
 
+using Highs;
+
 class Program {
    static void Main(string[] args) {
       double[] cc = {1, -2};
