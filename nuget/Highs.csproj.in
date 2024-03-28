@@ -15,7 +15,7 @@
     <PackageProjectUrl>https://https://highs.dev</PackageProjectUrl>
     <RepositoryUrl>https://https://https://github.com/ERGO-Code/HiGHS</RepositoryUrl>
 
-    <PackageIconFullPath>Highs_Logo.png</PackageIconFullPath>
+    <PackageIconFullPath>HiGHS_Logo.png</PackageIconFullPath>
 
     <!-- Pack Option -->
     <!-- <Title>Highs @PROJECT_VERSION@</Title> -->

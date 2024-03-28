@@ -13,6 +13,7 @@
     - [Precompiled binaries](#precompiled-binaries)
   - [Interfaces](#interfaces)
       - [Python](#python)
+      - [CSharp](#csharp)
   - [Reference](#reference)
 
 ## About HiGHS
@@ -124,7 +125,7 @@ There are HiGHS interfaces for C, C#, FORTRAN, and Python in [HiGHS/src/interfac
 
 We are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
-#### Python
+### Python
 
 The python package `highspy` is a thin wrapper around HiGHS and is available on [PyPi](https://pypi.org/project/highspy/). It can be easily installed via `pip` by running
 
@@ -144,6 +145,27 @@ The HiGHS C++ library no longer needs to be separately installed. The python pac
 The installation can be tested using the small example [call_highs_from_python_highspy.py](https://github.com/ERGO-Code/HiGHS/blob/master/examples/call_highs_from_python_highspy.py).
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
+
+### CSharp
+
+The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/HiGHS/. 
+
+It can be added to your C# project with `dotnet`
+
+```bash
+dotnet add package Highs.Native --version 1.7.0
+```
+
+The nuget package contains runtime libraries for 
+
+* `win-x64`
+* `win-x32`
+* `linux-x64`
+* `linux-arm64`
+* `macos-x64`
+* `macos-arm64`
+
+Details for building locally can be found in `nuget/README.md`.
 
 ## Reference
 

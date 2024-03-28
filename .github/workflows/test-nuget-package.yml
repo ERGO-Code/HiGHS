@@ -51,7 +51,7 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
           dotnet run
 
 
@@ -97,7 +97,7 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
           dotnet run
 
   build_linux:
@@ -140,7 +140,7 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
-          dotnet add package Highs -s ${{runner.workspace}}/nugets 
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
           dotnet run
 
   build_windows:
@@ -185,5 +185,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs --version=1.6.94 -s ${{runner.workspace}}\nugets 
+          dotnet add package Highs.Native --version=1.6.94 -s ${{runner.workspace}}\nugets 
           dotnet run
