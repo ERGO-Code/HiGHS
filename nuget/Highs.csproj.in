@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>Highs</PackageId>
+    <PackageId>Highs.Native</PackageId>
     <Version>@PROJECT_VERSION@</Version>
 
 
@@ -11,15 +11,17 @@
     <Authors>ERGO-Code</Authors>
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://https://highs.dev</PackageProjectUrl>
+    <RepositoryUrl>https://https://https://github.com/ERGO-Code/HiGHS</RepositoryUrl>
+
+    <PackageIconFullPath>Highs_Logo.png</PackageIconFullPath>
 
     <!-- Pack Option -->
     <!-- <Title>Highs @PROJECT_VERSION@</Title> -->
 
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="LICENSE.txt" Pack="true" PackagePath=""/>
-  </ItemGroup>
+
   <!-- Ensure the README.md file is included in the package -->
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="" />

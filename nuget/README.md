@@ -7,7 +7,7 @@ The package Highs is on https://www.nuget.org, at https://www.nuget.org/packages
 It can be added to your C# project with dotnet
 
 ```bash
-dotnet add package HiGHS --version 1.7.0.7
+dotnet add package HiGHS --version 1.7.0
 ```
 
 The nuget package contains runtime libraries for 

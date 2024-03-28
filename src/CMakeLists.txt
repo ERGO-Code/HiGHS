@@ -307,7 +307,7 @@ else()
       endif()
       message(STATUS ".Net RID: ${DOTNET_RID}")
 
-      set(DOTNET_PROJECT Highs)
+      set(DOTNET_PROJECT Highs.Native)
       set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
       file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native)
 
