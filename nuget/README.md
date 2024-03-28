@@ -21,13 +21,13 @@ The nuget package contains runtime libraries for
 
 #### Local build
 
-To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be configured to generate the files required for the dotnet package locally, wtih the `BUILD_DOTNET` cmake variable. Assuming the build directory is called `build`, the package is generated in `build/dotnet/Highs`, with a single runtime library, depending on the platform. From the HiGHS root directory, run 
+To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be configured to generate the files required for the dotnet package locally, wtih the `BUILD_DOTNET` cmake variable. Assuming the build directory is called `build`, the package is generated in `build/dotnet/Highs.Native`, with a single runtime library, depending on the platform. From the HiGHS root directory, run 
 
 ``` bash
 cmake -S. -Bbuild -DCSHARP=ON -DBUILD_DOTNET=ON
 ```
 
-Then, from `build/dotnet/Highs`, run 
+Then, from `build/dotnet/Highs.Native`, run 
 
 ```bash
 dotnet pack -c Release /p:Version=$version

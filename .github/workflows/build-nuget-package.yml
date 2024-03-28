@@ -30,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos-x64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
             
   # macos 14 is M1 (beta)
   build_macos_14:
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos-arm64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
   # Build windows 32 and linux 
   build_windows_32:
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: win-x32
-          path: ${{runner.workspace}}/build32/dotnet/Highs/runtimes/win-x64/
+          path: ${{runner.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x64/
 
   build_linux:
     runs-on: ubuntu-latest
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
   build_linux_arm64:
     runs-on: ubuntu-latest
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-arm64
-          path: ${{runner.workspace}}/build_linux_arm64/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build_linux_arm64/dotnet/Highs.Native/runtimes
 
   build_windows:
     runs-on: windows-latest
@@ -144,53 +144,53 @@ jobs:
       - name: Display structure of downloaded files
         run: |
           pwd 
-          ls -R ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-x64
         uses: actions/download-artifact@v4
         with:
           name: macos-x64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes macos-arm64
         uses: actions/download-artifact@v4
         with:
           name: macos-arm64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes win-x32
         uses: actions/download-artifact@v4
         with:
           name: win-x32
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes/win-x32
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
 
       - name: Download runtimes
         uses: actions/download-artifact@v4
         with:
           name: linux-x64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Download runtimes
         uses: actions/download-artifact@v4
         with:
           name: linux-arm64
-          path: ${{runner.workspace}}/build/dotnet/Highs/runtimes
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Display structure of downloaded files
-        run: ls -R ${{runner.workspace}}/build/dotnet/Highs/runtimes
+        run: ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.6.94
 
       - uses: actions/upload-artifact@v4
         with:
           name: nuget
-          path: ${{runner.workspace}}/build/dotnet/Highs/bin/Release/*.nupkg
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
 
   dotnet_push:
     runs-on: windows-latest

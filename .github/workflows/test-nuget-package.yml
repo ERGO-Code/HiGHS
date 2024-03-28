@@ -34,14 +34,14 @@ jobs:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.6.94
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -80,14 +80,14 @@ jobs:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.6.94
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -123,14 +123,14 @@ jobs:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.6.94
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
 
       - name: Create new project and test
@@ -168,14 +168,14 @@ jobs:
           dotnet-version: '6.0.x'
 
       - name: Dotnet pack
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         run: dotnet pack -c Release /p:Version=1.6.94
 
       - name: Add local feed 
         run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
 
       - name: Dotnet push to local feed
-        working-directory: ${{runner.workspace}}/build/dotnet/Highs
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
         shell: bash
         run: dotnet nuget push ./bin/Release/*.nupkg -s name
 
