@@ -2,6 +2,7 @@
 #include "qpsolver/a_asm.hpp"
 
 #include "qpsolver/feasibility_highs.hpp"
+#include "qpsolver/feasibility_bounded.hpp"
 
 
 
@@ -26,10 +27,21 @@ QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, Q
 
   // compute initial feasible point
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
-  computestartingpoint_highs(instance, settings, stats, modelstatus, startinfo, qp_timer);
-  if (modelstatus == QpModelStatus::INFEASIBLE) {
-    return QpAsmStatus::OK;
-  }
+  if (instance.num_con == 0 && instance.num_var <= 15000) {
+    computestartingpoint_bounded(instance, settings, stats, modelstatus, startinfo, qp_timer);
+    if (modelstatus == QpModelStatus::OPTIMAL) {
+      solution.primal = startinfo.primal;
+      return QpAsmStatus::OK;
+    }
+    if (modelstatus == QpModelStatus::UNBOUNDED) {
+      return QpAsmStatus::OK;
+    }
+  } else  {
+    computestartingpoint_highs(instance, settings, stats, modelstatus, startinfo, qp_timer);
+    if (modelstatus == QpModelStatus::INFEASIBLE) {
+      return QpAsmStatus::OK;
+    }
+  } 
 
   // solve
   QpAsmStatus status = solveqp_actual(instance, settings, startinfo, stats, modelstatus, solution, qp_timer);
