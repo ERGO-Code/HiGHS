@@ -140,9 +140,11 @@ else()
   endif()
 
   set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
   if(APPLE)
-    set_target_properties(highs PROPERTIES
-      INSTALL_RPATH "@loader_path")
+      set_target_properties(highs PROPERTIES INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+      set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
   target_include_directories(highs PUBLIC
@@ -289,9 +291,6 @@ else()
 
 
   if (BUILD_DOTNET)
-      if (UNIX)
-          set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
-      endif()    
   
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
