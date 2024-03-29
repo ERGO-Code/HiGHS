@@ -6,7 +6,7 @@ if(NOT TARGET ${PROJECT_NAMESPACE}::highs)
   message(FATAL_ERROR ".Net: missing highs TARGET")
 endif()
 
-set(DOTNET_PACKAGE Highs)
+set(DOTNET_PACKAGE Highs.Native)
 set(DOTNET_PACKAGES_DIR "${PROJECT_BINARY_DIR}/dotnet")
 
 # Runtime IDentifier
