@@ -289,6 +289,10 @@ else()
 
 
   if (BUILD_DOTNET)
+      if (UNIX)
+          set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
+      endif()    
+  
       # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
       if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
         set(DOTNET_PLATFORM arm64)
