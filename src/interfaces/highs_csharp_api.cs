@@ -578,6 +578,10 @@ public class HighsLpSolver : IDisposable
             return;
         }
 
+        if (this.highs == null)
+            return;
+        }
+
         HighsLpSolver.Highs_destroy(this.highs);
         this._disposed = true;
     }
