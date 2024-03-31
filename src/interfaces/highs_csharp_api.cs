@@ -578,7 +578,7 @@ public class HighsLpSolver : IDisposable
             return;
         }
 
-        if (this.highs == IntPtr.Zero)
+        if (this.highs == IntPtr.Zero) {
             return;
         }
 

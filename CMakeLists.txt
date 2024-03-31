@@ -526,7 +526,6 @@ else(FAST_BUILD)
       enable_testing()
       add_subdirectory(check)
     endif()
-    include(c-highs)
     # Add tests in examples/tests
     add_subdirectory(examples)
   endif()

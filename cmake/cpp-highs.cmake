@@ -113,3 +113,70 @@ endfunction()
 
 # set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 # set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
+
+# add_c_test()
+# CMake function to generate and build C++ test.
+# Parameters:
+#  the C filename
+# e.g.:
+# add_c_test(foo.c)
+function(add_c_test FILE_NAME)
+  message(STATUS "Configuring test ${FILE_NAME}: ...")
+  get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
+  get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
+  get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+
+  if(APPLE)
+    set(CMAKE_INSTALL_RPATH
+      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  elseif(UNIX)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
+  endif()
+
+  add_executable(${TEST_NAME} ${FILE_NAME})
+  target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+  # target_compile_features(${TEST_NAME} PRIVATE cxx_std_17)
+  target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+
+  if(BUILD_TESTING)
+    add_test(NAME c_${COMPONENT_NAME}_${TEST_NAME} COMMAND ${TEST_NAME})
+  endif()
+  message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
+endfunction()
+
+# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
+
+# add_csharp_test()
+# CMake function to generate and build C++ test.
+# Parameters:
+#  the CS filename
+# e.g.:
+# add_csharp_test(foo.cs)
+function(add_csharp_test FILE_NAME)
+  message(STATUS "Configuring test ${FILE_NAME}: ...")
+  get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
+  get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
+  get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+
+  if(APPLE)
+    set(CMAKE_INSTALL_RPATH
+      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  elseif(UNIX)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
+  endif()
+
+  add_executable(${TEST_NAME} ${FILE_NAME})
+  target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+  # target_compile_features(${TEST_NAME} PRIVATE cxx_std_17)
+  target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+  target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::HighsCsharp)
+
+  if(BUILD_TESTING)
+    add_test(NAME c_${COMPONENT_NAME}_${TEST_NAME} COMMAND ${TEST_NAME})
+  endif()
+  message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
+endfunction()
+
+# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)

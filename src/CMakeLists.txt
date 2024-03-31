@@ -363,6 +363,7 @@ if(CSHARP_FOUND)
   set(csharpsources
     interfaces/highs_csharp_api.cs)
   add_library(HighsCsharp SHARED interfaces/highs_csharp_api.cs)
+  add_library(${PROJECT_NAMESPACE}::HighsCsharp ALIAS HighsCsharp)
   target_compile_options(HighsCsharp PUBLIC "/unsafe")
   add_executable(csharpexample ../examples/call_highs_from_csharp.cs)
   target_compile_options(csharpexample PUBLIC "/unsafe")
