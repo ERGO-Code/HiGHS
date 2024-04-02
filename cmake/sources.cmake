@@ -186,6 +186,7 @@ set(highs_sources
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
+    lp_data/HighsDeprecated.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
