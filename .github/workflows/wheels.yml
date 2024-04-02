@@ -51,7 +51,7 @@ jobs:
       with:
         submodules: true
 
-    - uses: pypa/cibuildwheel@v2.16
+    - uses: pypa/cibuildwheel@v2.17
       env:
         CIBW_ARCHS_MACOS: universal2
         CIBW_ARCHS_WINDOWS: auto ARM64
