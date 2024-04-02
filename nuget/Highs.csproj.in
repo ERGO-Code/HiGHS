@@ -12,10 +12,10 @@
     <LangVersion>latest</LangVersion>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://https://highs.dev</PackageProjectUrl>
-    <RepositoryUrl>https://https://https://github.com/ERGO-Code/HiGHS</RepositoryUrl>
+    <PackageProjectUrl>https://www.highs.dev</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ERGO-Code/HiGHS</RepositoryUrl>
 
-    <PackageIconFullPath>HiGHS_Logo.png</PackageIconFullPath>
+    <PackageIcon>HiGHS_Logo.png</PackageIcon>
 
     <!-- Pack Option -->
     <!-- <Title>Highs @PROJECT_VERSION@</Title> -->
@@ -25,6 +25,7 @@
   <!-- Ensure the README.md file is included in the package -->
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="nuget\HiGHS_Logo.png" Pack="true" PackagePath=""/>
   </ItemGroup>
 
   <!-- Runtimes -->

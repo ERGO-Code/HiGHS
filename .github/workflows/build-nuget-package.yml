@@ -185,7 +185,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.6.92
+        run: dotnet pack -c Release /p:Version=1.6.91
 
       - uses: actions/upload-artifact@v4
         with:
