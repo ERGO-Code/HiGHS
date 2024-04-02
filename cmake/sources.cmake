@@ -128,7 +128,7 @@ set(ipx_sources
   ipm/ipx/symbolic_invert.cc
   ipm/ipx/timer.cc
   ipm/ipx/utils.cc)
-  
+
 set(ipx_headers
   ipm/ipx/basiclu_kernel.h
   ipm/ipx/basiclu_wrapper.h
