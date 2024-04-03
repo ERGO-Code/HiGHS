@@ -54,7 +54,7 @@ endif()
 
 option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
 message(STATUS "Build Python: ${PYTHON_BUILD_SETUP}")
-if (PYTHON_BUILD_SETUP) 
+if (PYTHON_BUILD_SETUP)
   set(BUILD_CXX OFF)
   set(BUILD_TESTING OFF)
 endif()
@@ -66,7 +66,7 @@ message(STATUS "Build all tests: ${ALL_TESTS}")
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
-if (PYTHON_BUILD_SETUP) 
+if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
@@ -358,7 +358,7 @@ endif()
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
 # if zlib is found, then we can enable reading zlib-compressed input
-if(ZLIB)
+if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
@@ -460,7 +460,7 @@ if(NOT FAST_BUILD)
         COMMENT "Resetting code coverage counters to zero.")
     endif()
   endif()
- 
+
   include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
@@ -501,7 +501,7 @@ if(NOT FAST_BUILD)
 
 else(FAST_BUILD)
   message(STATUS "FAST_BUILD set to on.")
-  
+
   option(BUILD_EXAMPLES "Build examples" ON)
   message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 

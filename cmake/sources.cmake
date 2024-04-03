@@ -128,7 +128,7 @@ set(ipx_sources
   ipm/ipx/symbolic_invert.cc
   ipm/ipx/timer.cc
   ipm/ipx/utils.cc)
-  
+
 set(ipx_headers
   ipm/ipx/basiclu_kernel.h
   ipm/ipx/basiclu_wrapper.h
@@ -186,6 +186,7 @@ set(highs_sources
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
+    lp_data/HighsDeprecated.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
