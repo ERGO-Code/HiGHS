@@ -47,7 +47,7 @@ option(BUILD_TESTING "Build Tests" ON)
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
-message(STATUS "Build CSharp: ${CSHARP}")
+
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
@@ -259,14 +259,17 @@ endif()
 
 set(CMAKE_MACOSX_RPATH ON)
 
-# use, i.e. don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
+if (BUILD_DOTNET)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+else()
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
 
 if(NOT FAST_BUILD)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
@@ -509,9 +512,13 @@ else(FAST_BUILD)
   message(STATUS "Build C++ example: ${BUILD_CXX_EXAMPLE}")
   CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
   message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
+  CMAKE_DEPENDENT_OPTION(BUILD_DOTNET "Build dotnet package" OFF "BUILD_EXAMPLES;CSHARP" OFF)
+  message(STATUS "Build dotnet package: ${BUILD_DOTNET}")
+
+  # CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
+  # message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
 
   include(cpp-highs)
-  include(python-highs)
 
   if(BUILD_CXX)
     add_subdirectory(app)
@@ -519,10 +526,16 @@ else(FAST_BUILD)
       enable_testing()
       add_subdirectory(check)
     endif()
-    include(c-highs)
     # Add tests in examples/tests
     add_subdirectory(examples)
   endif()
+
+  include(python-highs)
+
+  option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
+  message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")
+
+  include(dotnet)
 
   if(EXP)
     add_executable(doctest)

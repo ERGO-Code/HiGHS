@@ -5,6 +5,7 @@ using System.Text;
 
 // mcs -out:highscslib.dll -t:library highs_csharp_api.cs -unsafe
 
+namespace Highs {
 public enum HighsStatus
 {
     kError = -1,
@@ -908,7 +909,7 @@ public class HighsLpSolver : IDisposable
             MipGap = this.GetValueOrFallback(HighsLpSolver.Highs_getDoubleInfoValue, "mip_gap", double.NaN),
             DualBound = this.GetValueOrFallback(HighsLpSolver.Highs_getDoubleInfoValue, "mip_dual_bound", double.NaN),
             ObjectiveValue = this.GetValueOrFallback(HighsLpSolver.Highs_getDoubleInfoValue, "objective_function_value", double.NaN),
-            NodeCount = this.GetValueOrFallback(HighsLpSolver.Highs_getInt64InfoValue, "mip_node_count", 0l),
+            NodeCount = this.GetValueOrFallback(HighsLpSolver.Highs_getInt64InfoValue, "mip_node_count", 0L),
             IpmIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "ipm_iteration_count", 0),
             SimplexIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "simplex_iteration_count", 0),
             PdlpIterationCount = this.GetValueOrFallback(HighsLpSolver.Highs_getIntInfoValue, "pdlp_iteration_count", 0),
@@ -1026,4 +1027,5 @@ public class SolutionInfo
     /// Gets or sets the objective value.
     /// </summary>
     public double ObjectiveValue { get; set; }
+}
 }
