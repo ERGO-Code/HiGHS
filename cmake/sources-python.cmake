@@ -369,6 +369,7 @@ set(highs_headers_python
     src/qpsolver/devexpricing.hpp
     src/qpsolver/eventhandler.hpp
     src/qpsolver/factor.hpp
+    src/qpsolver/feasibility_bounded.hpp
     src/qpsolver/feasibility_highs.hpp
     src/qpsolver/feasibility_quass.hpp
     src/qpsolver/feasibility.hpp

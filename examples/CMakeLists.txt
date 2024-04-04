@@ -24,4 +24,3 @@ if(BUILD_CXX_EXAMPLE)
     add_c_test(${FILE_NAME})
   endforeach()
 endif()
-

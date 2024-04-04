@@ -6,11 +6,11 @@
 
 enum class RatiotestStrategy { TwoPass, Textbook };
 
-enum class PricingStrategy { DantzigWolfe, Devex };
+enum class PricingStrategy { SteepestEdge, DantzigWolfe, Devex };
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
-enum class Phase1Strategy { HIGHS, QUASS };
+enum class Phase1Strategy { HIGHS, QUASS, BOUNDED };
 
 struct Settings {
   RatiotestStrategy ratiotest = RatiotestStrategy::TwoPass;
@@ -36,7 +36,7 @@ struct Settings {
   HighsInt reportingfequency = 1;
   Eventhandler<Statistics&> endofiterationevent;
 
-  HighsInt reinvertfrequency = 100;
+  HighsInt reinvertfrequency = 1000;
   HighsInt gradientrecomputefrequency = 100;
   HighsInt reducedgradientrecomputefrequency =
       std::numeric_limits<HighsInt>::infinity();

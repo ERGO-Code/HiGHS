@@ -73,7 +73,6 @@ class Basis {
   std::vector<HighsInt> constraintindexinbasisfactor;
 
   void build();
-  void rebuild();
 
   // buffer to avoid recreating vectors
   Vector buffer_column_aq;
@@ -85,9 +84,16 @@ class Basis {
   HVector row_ep;
   HVector col_aq;
 
+  bool reinversion_hint = false;
  public:
+
+
   Basis(Runtime& rt, std::vector<HighsInt> active,
         std::vector<BasisStatus> atlower, std::vector<HighsInt> inactive);
+
+  bool getreinversionhint() { return reinversion_hint; }
+
+  void rebuild();
 
   HighsInt getnupdatessinceinvert() { return updatessinceinvert; }
 

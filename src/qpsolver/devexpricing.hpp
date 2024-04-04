@@ -73,6 +73,10 @@ class DevexPricing : public Pricing {
     return minidx;
   }
 
+  void recompute() {
+    // do nothing
+  }
+
   void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
