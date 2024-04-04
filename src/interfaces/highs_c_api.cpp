@@ -1097,14 +1097,20 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
   *offset = lp.offset_;
   *num_col = lp.num_col_;
   *num_row = lp.num_row_;
+  *num_nz = 0;  // In case one of the matrix dimensions is zero
   if (*num_col > 0) {
-    memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
-    memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
-    memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
+    if (col_cost)
+      memcpy(col_cost, lp.col_cost_.data(), *num_col * sizeof(double));
+    if (col_lower)
+      memcpy(col_lower, lp.col_lower_.data(), *num_col * sizeof(double));
+    if (col_upper)
+      memcpy(col_upper, lp.col_upper_.data(), *num_col * sizeof(double));
   }
   if (*num_row > 0) {
-    memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
-    memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
+    if (row_lower)
+      memcpy(row_lower, lp.row_lower_.data(), *num_row * sizeof(double));
+    if (row_upper)
+      memcpy(row_upper, lp.row_upper_.data(), *num_row * sizeof(double));
   }
 
   // Nothing to do if one of the matrix dimensions is zero
@@ -1119,10 +1125,13 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
          lp.a_matrix_.isRowwise())) {
       // Incumbent format is OK
       *num_nz = lp.a_matrix_.numNz();
-      memcpy(a_start, lp.a_matrix_.start_.data(),
-             num_start_entries * sizeof(HighsInt));
-      memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
-      memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
+      if (a_start)
+        memcpy(a_start, lp.a_matrix_.start_.data(),
+               num_start_entries * sizeof(HighsInt));
+      if (a_index)
+        memcpy(a_index, lp.a_matrix_.index_.data(), *num_nz * sizeof(HighsInt));
+      if (a_value)
+        memcpy(a_value, lp.a_matrix_.value_.data(), *num_nz * sizeof(double));
     } else {
       // Take a copy and transpose it
       HighsSparseMatrix local_matrix = lp.a_matrix_;
@@ -1134,13 +1143,16 @@ HighsInt Highs_getHighsLpData(const HighsLp& lp, const HighsInt a_format,
         local_matrix.ensureRowwise();
       }
       *num_nz = local_matrix.numNz();
-      memcpy(a_start, local_matrix.start_.data(),
-             num_start_entries * sizeof(HighsInt));
-      memcpy(a_index, local_matrix.index_.data(), *num_nz * sizeof(HighsInt));
-      memcpy(a_value, local_matrix.value_.data(), *num_nz * sizeof(double));
+      if (a_start)
+        memcpy(a_start, local_matrix.start_.data(),
+               num_start_entries * sizeof(HighsInt));
+      if (a_index)
+        memcpy(a_index, local_matrix.index_.data(), *num_nz * sizeof(HighsInt));
+      if (a_value)
+        memcpy(a_value, local_matrix.value_.data(), *num_nz * sizeof(double));
     }
   }
-  if (HighsInt(lp.integrality_.size())) {
+  if (HighsInt(lp.integrality_.size()) && integrality) {
     for (int iCol = 0; iCol < *num_col; iCol++)
       integrality[iCol] = HighsInt(lp.integrality_[iCol]);
   }
@@ -1163,9 +1175,12 @@ HighsInt Highs_getModel(const void* highs, const HighsInt a_format,
   const HighsHessian& hessian = ((Highs*)highs)->getModel().hessian_;
   if (hessian.dim_ > 0) {
     *q_num_nz = hessian.start_[*num_col];
-    memcpy(q_start, hessian.start_.data(), *num_col * sizeof(HighsInt));
-    memcpy(q_index, hessian.index_.data(), *q_num_nz * sizeof(HighsInt));
-    memcpy(q_value, hessian.value_.data(), *q_num_nz * sizeof(double));
+    if (q_start)
+      memcpy(q_start, hessian.start_.data(), *num_col * sizeof(HighsInt));
+    if (q_index)
+      memcpy(q_index, hessian.index_.data(), *q_num_nz * sizeof(HighsInt));
+    if (q_value)
+      memcpy(q_value, hessian.value_.data(), *q_num_nz * sizeof(double));
   }
   return kHighsStatusOk;
 }

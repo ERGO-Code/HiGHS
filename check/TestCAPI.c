@@ -32,7 +32,7 @@ static void userCallback(const int callback_type, const char* message,
   }
 }
 
-HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
+HighsInt highsIntArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
 }
@@ -415,8 +415,8 @@ void full_api() {
   assert( doubleArraysEqual(num_col, ck_cu, cu) );
   assert( doubleArraysEqual(num_row, ck_rl, rl) );
   assert( doubleArraysEqual(num_row, ck_ru, ru) );
-  assert( intArraysEqual(num_col, ck_a_start, a_start) );
-  assert( intArraysEqual(num_nz, ck_a_index, a_index) );
+  assert( highsIntArraysEqual(num_col, ck_a_start, a_start) );
+  assert( highsIntArraysEqual(num_nz, ck_a_index, a_index) );
   assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
 
   return_status = Highs_run(highs);
@@ -1499,6 +1499,79 @@ void test_callback() {
   Highs_destroy(highs);
 }
 
+void test_getModel() {
+  void* highs;
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  const double inf = Highs_getInfinity(highs);
+  
+  HighsInt num_col = 2;
+  HighsInt num_row = 2;
+  HighsInt num_nz = 4;
+  HighsInt sense = -1;
+  double offset;
+  double col_cost[2] = {8, 10};
+  double col_lower[2] = {0, 0};
+  double col_upper[2] = {inf, inf};
+  double row_lower[2] = {-inf, -inf};
+  double row_upper[2] = {120, 210};
+  HighsInt a_index[4] = {0, 1, 0, 1};
+  double a_value[4] = {0.3, 0.5, 0.7, 0.5};
+  HighsInt a_start[2] = {0, 2};
+  Highs_addVars(highs, num_col, col_lower, col_upper);
+  Highs_changeColsCostByRange(highs, 0, num_col-1, col_cost);
+  Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, a_start, a_index, a_value);
+  Highs_changeObjectiveSense(highs, sense);
+  Highs_run(highs);
+
+  HighsInt ck_num_col;
+  HighsInt ck_num_row;
+  HighsInt ck_num_nz;
+  HighsInt ck_sense;
+  double ck_offset;
+
+  // Get the model dimensions by passing array pointers as NULL
+  Highs_getLp(highs, kHighsMatrixFormatRowwise,
+	      &ck_num_col, &ck_num_row, &ck_num_nz,		  
+	      &ck_sense, &ck_offset, NULL,
+	      NULL, NULL, NULL,
+	      NULL, NULL, NULL,
+	      NULL, NULL);
+
+  assert( ck_num_col == num_col );
+  assert( ck_num_row == num_row );
+  assert( ck_num_nz == num_nz );
+  // Motivated by #1712, ensure that the correct sense is returned when maximizing
+  assert( ck_sense == sense );
+
+  double* ck_col_cost = (double*)malloc(sizeof(double) * ck_num_col);;
+  double* ck_col_lower = (double*)malloc(sizeof(double) * ck_num_col);
+  double* ck_col_upper = (double*)malloc(sizeof(double) * ck_num_col);
+  double* ck_row_lower = (double*)malloc(sizeof(double) * ck_num_row);
+  double* ck_row_upper = (double*)malloc(sizeof(double) * ck_num_row);
+  HighsInt* ck_a_start = (HighsInt*)malloc(sizeof(HighsInt) * ck_num_col);
+  HighsInt* ck_a_index = (HighsInt*)malloc(sizeof(HighsInt) * ck_num_nz);
+  double* ck_a_value = (double*)malloc(sizeof(double) * num_nz);
+  
+  // Get the arrays
+  Highs_getLp(highs, kHighsMatrixFormatRowwise,
+	      &ck_num_col, &ck_num_row, &ck_num_nz,
+	      &ck_sense, &ck_offset, ck_col_cost,
+	      ck_col_lower, ck_col_upper, ck_row_lower,
+	      ck_row_upper, ck_a_start, ck_a_index,
+	      ck_a_value, NULL);
+
+  assert( doubleArraysEqual(num_col, ck_col_cost, col_cost) );
+  assert( doubleArraysEqual(num_col, ck_col_lower, col_lower) );
+  assert( doubleArraysEqual(num_col, ck_col_upper, col_upper) );
+  assert( doubleArraysEqual(num_row, ck_row_lower, row_lower) );
+  assert( doubleArraysEqual(num_row, ck_row_upper, row_upper) );
+  assert( highsIntArraysEqual(num_col, ck_a_start, a_start) );
+  assert( highsIntArraysEqual(num_nz, ck_a_index, a_index) );
+  assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
+
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1515,7 +1588,7 @@ void test_setSolution() {
   strcat(model_file0, "\0");
   char* substr = model_file0 + 1;
   memmove(model_file0, substr, strlen(substr) + 1);
-  int length = strlen(model_file0) + 1;
+  HighsInt length = strlen(model_file0) + 1;
   char model_file[length];
   strcpy(model_file, model_file0);
   
@@ -1524,9 +1597,9 @@ void test_setSolution() {
 
   Highs_readModel(highs, model_file);
   Highs_run(highs);
-  int iteration_count0;
+ HighsInt iteration_count0;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count0);
-  int num_col = Highs_getNumCol(highs);
+ HighsInt num_col = Highs_getNumCol(highs);
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   Highs_clear(highs);
@@ -1535,9 +1608,9 @@ void test_setSolution() {
   Highs_readModel(highs, model_file);
   Highs_setSolution(highs, col_value, NULL, NULL, NULL);
   Highs_run(highs);
-  int iteration_count1;
+  HighsInt iteration_count1;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count1);
-  int logic = iteration_count0 > iteration_count1;
+  HighsInt logic = iteration_count0 > iteration_count1;
   printf("Iteration counts are %d and %d\n", iteration_count0, iteration_count1);
   assertLogical("Dual", logic);
   
@@ -1545,22 +1618,23 @@ void test_setSolution() {
 }
 */
 int main() {
-  minimal_api_illegal_lp();
-  test_callback();
-  version_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_options();
-  full_api_lp();
-  full_api_mip();
-  full_api_qp();
-  pass_presolve_get_lp();
-  options();
-  test_getColsByRange();
-  test_passHessian();
-  test_ranging();
+    minimal_api_illegal_lp();
+    test_callback();
+    version_api();
+    full_api();
+    minimal_api_lp();
+    minimal_api_mip();
+    minimal_api_qp();
+    full_api_options();
+    full_api_lp();
+    full_api_mip();
+    full_api_qp();
+    pass_presolve_get_lp();
+    options();
+    test_getColsByRange();
+    test_passHessian();
+    test_ranging();
+  test_getModel();
   //  test_setSolution();
   return 0;
 }
