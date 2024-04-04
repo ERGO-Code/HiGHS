@@ -3785,20 +3785,19 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       implRowDualUpper[row] < -options->dual_feasibility_tolerance;
   // #1711: This looks very dodgy: surely model->row_lower_[row] !=
   // -kHighsInf: dates from before 25/02/21
+  //
+  // bool hasRowLower =
+  //    model->row_lower_[row] != kHighsInf ||
+  //    implRowDualLower[row] > options->dual_feasibility_tolerance;
+  //
+  // Using this corrected line will reduce the number of calls to
+  // updateColImpliedBounds, as model->row_lower_[row] != kHighsInf is
+  // never false
   bool hasRowLower =
-      model->row_lower_[row] != kHighsInf ||
-      implRowDualLower[row] > options->dual_feasibility_tolerance;
-
-  bool true_hasRowLower =
       model->row_lower_[row] != -kHighsInf ||
       implRowDualLower[row] > options->dual_feasibility_tolerance;
   // #1711: Unsurprisingly, the assert is triggered very frequently
   //  assert(true_hasRowLower == hasRowLower);
-  printf(
-      "HPresolve::rowPresolve Overwriting hasRowLower = %d by true_hasRowLower "
-      "= %d\n",
-      hasRowLower, true_hasRowLower);
-  hasRowLower = true_hasRowLower;
 
   if ((hasRowUpper && impliedRowBounds.getNumInfSumLowerOrig(row) <= 1) ||
       (hasRowLower && impliedRowBounds.getNumInfSumUpperOrig(row) <= 1)) {
