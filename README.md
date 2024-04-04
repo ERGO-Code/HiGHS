@@ -148,7 +148,7 @@ The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmH
 
 ### CSharp
 
-The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/HiGHS/. 
+The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/. 
 
 It can be added to your C# project with `dotnet`
 
