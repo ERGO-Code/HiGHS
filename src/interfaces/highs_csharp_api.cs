@@ -578,10 +578,6 @@ public class HighsLpSolver : IDisposable
             return;
         }
 
-        if (this.highs == IntPtr.Zero) {
-            return;
-        }
-
         HighsLpSolver.Highs_destroy(this.highs);
         this._disposed = true;
     }
