@@ -2728,7 +2728,13 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   // check whether the bounds are equal in tolerances
   if (ub <= lb + primal_feastol) {
     // bounds could be infeasible or equal in tolerances, first check infeasible
-    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
+    //
+    // #1710
+    //    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
+    if (ub < lb - primal_feastol) {
+      printf("HPresolve::singletonRow: Identified infeasibility\n");
+      return Result::kPrimalInfeasible;
+    }
 
     // bounds are equal in tolerances, if they have a slight infeasibility below
     // those tolerances or they have a slight numerical distance which changes
