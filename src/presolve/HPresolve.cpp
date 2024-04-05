@@ -2728,13 +2728,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   // check whether the bounds are equal in tolerances
   if (ub <= lb + primal_feastol) {
     // bounds could be infeasible or equal in tolerances, first check infeasible
-    //
-    // #1710
-    //    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
-    if (ub < lb - primal_feastol) {
-      printf("HPresolve::singletonRow: Identified infeasibility\n");
-      return Result::kPrimalInfeasible;
-    }
+    if (ub < lb - primal_feastol) return Result::kPrimalInfeasible;
 
     // bounds are equal in tolerances, if they have a slight infeasibility below
     // those tolerances or they have a slight numerical distance which changes
@@ -4202,7 +4196,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
-          fastPresolveLoop(postsolve_stack);
+          // #1710 exposes that this should not be
+          //
+          // fastPresolveLoop(postsolve_stack);
+          //
+          // but
+          HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         }
         trySparsify = false;
       }
