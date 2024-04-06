@@ -4196,7 +4196,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
-          fastPresolveLoop(postsolve_stack);
+          // #1710 exposes that this should not be
+          //
+          // fastPresolveLoop(postsolve_stack);
+          //
+          // but
+          HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         }
         trySparsify = false;
       }
