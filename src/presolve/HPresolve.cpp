@@ -4386,25 +4386,30 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   // Presolve should only be called with a model that has a non-empty
   // constraint matrix unless it has no rows
   assert(model->a_matrix_.numNz() || model->num_row_ == 0);
-
+  auto reportReductions = [&]() {
+    if (options->presolve != kHighsOffString &&
+        reductionLimit < kHighsSize_tInf) {
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolve performed %" PRId64 " of %" PRId64
+                   " permitted reductions\n",
+                   postsolve_stack.numReductions(), reductionLimit);
+    }
+  };
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
       break;
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
+      reportReductions();
       return HighsModelStatus::kInfeasible;
     case Result::kDualInfeasible:
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      reportReductions();
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
+  reportReductions();
 
-  if (options->presolve != kHighsOffString &&
-      reductionLimit < kHighsSize_tInf) {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Presolve performed %d of %d permitted reductions\n",
-                 int(postsolve_stack.numReductions()), int(reductionLimit));
-  }
   shrinkProblem(postsolve_stack);
 
   if (mipsolver != nullptr) {
