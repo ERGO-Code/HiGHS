@@ -119,6 +119,14 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   changedColIndices.reserve(model->num_col_);
   numDeletedCols = 0;
   numDeletedRows = 0;
+  // initialize substitution opportunities
+  for (HighsInt row = 0; row != model->num_row_; ++row) {
+    if (!isDualImpliedFree(row)) continue;
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      if (isImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(row, nonzero.index());
+    }
+  }
   // Take value passed in as reduction limit, allowing different
   // values to be used for initial presolve, and after restart
   reductionLimit =
@@ -2205,6 +2213,17 @@ bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
   return true;
 }
 
+void HPresolve::reinsertEquation(HighsInt row) {
+  // check if this is an equation row and it now has a different size
+  if (model->row_lower_[row] == model->row_upper_[row] &&
+      eqiters[row] != equations.end() && eqiters[row]->first != rowsize[row]) {
+    // if that is the case reinsert it into the equation set that is ordered
+    // by sparsity
+    equations.erase(eqiters[row]);
+    eqiters[row] = equations.emplace(rowsize[row], row).first;
+  }
+}
+
 void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
                                 HighsInt col, double scale, double constant) {
   if (mipsolver != nullptr)
@@ -2370,14 +2389,7 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
     recomputeColImpliedBounds(colrow);
 
     // check if this is an equation row and it now has a different size
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
     // printf("after substitution: ");
     // debugPrintRow(colrow);
   }
@@ -4878,14 +4890,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
     // debugPrintRow(colrow);
 
     // check if this is an equation row and it now has a different size
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
   }
 
   // substitute column in the objective function
@@ -4932,14 +4937,7 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postsolve_stack,
 
     unlink(colpos);
 
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
   }
 
   model->offset_ += model->col_cost_[col] * fixval;
@@ -4979,14 +4977,7 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolve_stack,
 
     unlink(colpos);
 
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
   }
 
   model->offset_ += model->col_cost_[col] * fixval;
@@ -5015,14 +5006,7 @@ void HPresolve::fixColToZero(HighsPostsolveStack& postsolve_stack,
 
     unlink(colpos);
 
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
   }
 
   model->col_cost_[col] = 0;
@@ -5066,14 +5050,7 @@ void HPresolve::removeFixedCol(HighsInt col) {
 
     unlink(colpos);
 
-    if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-        eqiters[colrow] != equations.end() &&
-        eqiters[colrow]->first != rowsize[colrow]) {
-      // if that is the case reinsert it into the equation set that is ordered
-      // by sparsity
-      equations.erase(eqiters[colrow]);
-      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
-    }
+    reinsertEquation(colrow);
   }
 
   model->offset_ += model->col_cost_[col] * fixval;
@@ -5559,12 +5536,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         } else {
           // for MIP we do not need dual postsolve so the reduction is valid if
           // the bound is weakly redundant
-          return colScale > 0 ? model->col_upper_[col] == kHighsInf ||
-                                    implColUpper[col] <=
-                                        model->col_upper_[col] + primal_feastol
-                              : model->col_lower_[col] == -kHighsInf ||
-                                    implColLower[col] >=
-                                        model->col_lower_[col] - primal_feastol;
+          return colScale > 0 ? isUpperImplied(col) : isLowerImplied(col);
         }
       };
 
@@ -5578,12 +5550,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                     implColUpper[col] <
                                         model->col_upper_[col] - primal_feastol;
         } else {
-          return colScale > 0 ? model->col_lower_[col] == -kHighsInf ||
-                                    implColLower[col] >=
-                                        model->col_lower_[col] - primal_feastol
-                              : model->col_upper_[col] == kHighsInf ||
-                                    implColUpper[col] <=
-                                        model->col_upper_[col] + primal_feastol;
+          return colScale > 0 ? isLowerImplied(col) : isUpperImplied(col);
         }
       };
 
@@ -5594,9 +5561,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                  implColUpper[duplicateCol] <
                      model->col_upper_[duplicateCol] - primal_feastol;
         } else {
-          return model->col_upper_[duplicateCol] == kHighsInf ||
-                 implColUpper[duplicateCol] <=
-                     model->col_upper_[duplicateCol] + primal_feastol;
+          return isUpperImplied(duplicateCol);
         }
       };
 
@@ -5607,9 +5572,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                  implColLower[duplicateCol] >
                      model->col_lower_[duplicateCol] + primal_feastol;
         } else {
-          return model->col_lower_[duplicateCol] == -kHighsInf ||
-                 implColLower[duplicateCol] >=
-                     model->col_lower_[duplicateCol] - primal_feastol;
+          return isLowerImplied(duplicateCol);
         }
       };
 
@@ -5917,15 +5880,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
             unlink(colpos);
 
-            if (model->row_lower_[colrow] == model->row_upper_[colrow] &&
-                eqiters[colrow] != equations.end() &&
-                eqiters[colrow]->first != rowsize[colrow]) {
-              // if that is the case reinsert it into the equation set that is
-              // ordered by sparsity
-              equations.erase(eqiters[colrow]);
-              eqiters[colrow] =
-                  equations.emplace(rowsize[colrow], colrow).first;
-            }
+            reinsertEquation(colrow);
           }
           // set cost to zero
           model->col_cost_[duplicateCol] = 0;
@@ -6667,14 +6622,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
       for (HighsInt pos : rowpositions)
         addToMatrix(row, Acol[pos], scale * Avalue[pos]);
 
-      if (model->row_lower_[row] == model->row_upper_[row] &&
-          eqiters[row] != equations.end() &&
-          eqiters[row]->first != rowsize[row]) {
-        // if that is the case reinsert it into the equation set that is ordered
-        // by sparsity
-        equations.erase(eqiters[row]);
-        eqiters[row] = equations.emplace(rowsize[row], row).first;
-      }
+      reinsertEquation(row);
     }
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
