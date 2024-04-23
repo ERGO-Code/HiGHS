@@ -3007,7 +3007,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  auto checkRedundantBounds = [&](HighsInt col) {
+  auto checkRedundantBounds = [&](HighsInt col, HighsInt row) {
     // check if column singleton has redundant bounds
     assert(model->col_cost_[col] != 0.0);
     if (colsize[col] != 1) return;
@@ -3032,11 +3032,23 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
   if (model->row_lower_[row] != model->row_upper_[row]) {
     if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
+      // Convert to equality constraint (note that currently postsolve will not
+      // know about this conversion)
       model->row_upper_[row] = model->row_lower_[row];
-      if (mipsolver == nullptr) checkRedundantBounds(rowDualLowerSource[row]);
+      // Since row upper bound is now finite, lower bound on row dual is
+      // -kHighsInf
+      changeRowDualLower(row, -kHighsInf);
+      if (mipsolver == nullptr)
+        checkRedundantBounds(rowDualLowerSource[row], row);
     } else if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
+      // Convert to equality constraint (note that currently postsolve will not
+      // know about this conversion)
       model->row_lower_[row] = model->row_upper_[row];
-      if (mipsolver == nullptr) checkRedundantBounds(rowDualUpperSource[row]);
+      // Since row lower bound is now finite, upper bound on row dual is
+      // kHighsInf
+      changeRowDualUpper(row, kHighsInf);
+      if (mipsolver == nullptr)
+        checkRedundantBounds(rowDualUpperSource[row], row);
     }
   }
 
@@ -4410,25 +4422,30 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   // Presolve should only be called with a model that has a non-empty
   // constraint matrix unless it has no rows
   assert(model->a_matrix_.numNz() || model->num_row_ == 0);
-
+  auto reportReductions = [&]() {
+    if (options->presolve != kHighsOffString &&
+        reductionLimit < kHighsSize_tInf) {
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "Presolve performed %" PRId64 " of %" PRId64
+                   " permitted reductions\n",
+                   postsolve_stack.numReductions(), reductionLimit);
+    }
+  };
   switch (presolve(postsolve_stack)) {
     case Result::kStopped:
     case Result::kOk:
       break;
     case Result::kPrimalInfeasible:
       presolve_status_ = HighsPresolveStatus::kInfeasible;
+      reportReductions();
       return HighsModelStatus::kInfeasible;
     case Result::kDualInfeasible:
       presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      reportReductions();
       return HighsModelStatus::kUnboundedOrInfeasible;
   }
+  reportReductions();
 
-  if (options->presolve != kHighsOffString &&
-      reductionLimit < kHighsSize_tInf) {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Presolve performed %d of %d permitted reductions\n",
-                 int(postsolve_stack.numReductions()), int(reductionLimit));
-  }
   shrinkProblem(postsolve_stack);
 
   if (mipsolver != nullptr) {
