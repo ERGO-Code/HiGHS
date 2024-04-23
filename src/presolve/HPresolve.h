@@ -187,6 +187,8 @@ class HPresolve {
   bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
                    HighsInt row, HighsInt col);
 
+  void reinsertEquation(HighsInt row);
+
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 #endif
