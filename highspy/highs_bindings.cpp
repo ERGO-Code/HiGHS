@@ -551,6 +551,15 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 
+HighsStatus highs_run(Highs* h)
+{
+  py::gil_scoped_release release;
+  HighsStatus status = h->run();
+  py::gil_scoped_acquire();
+  return status;
+}
+
+
 PYBIND11_MODULE(highspy, m) {
      
   // enum classes
@@ -835,7 +844,7 @@ PYBIND11_MODULE(highspy, m) {
       .def("writeBasis", &Highs::writeBasis)
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
-      .def("run", &Highs::run)
+      .def("run", &highs_run)
       .def("presolve", &Highs::presolve)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
