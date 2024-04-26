@@ -303,12 +303,20 @@ highslib_srcs = [
 ]
 
 
+symbol_visibility = 'default'
+if get_option('default_library') == 'static'
+  # Ensure that if we link a static library into a shared library,
+  # private symbols don't get re-exported.
+  symbol_visibility = 'inlineshidden'
+endif
+
 highslib = library('highs',
                    highslib_srcs,
                    dependencies: _deps,
                    cpp_args: _args,
                    c_args: _args,
                    include_directories: _incdirs,
+                   gnu_symbol_visibility: symbol_visibility,
                    pic: true,
                    install: true)
 
