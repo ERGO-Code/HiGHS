@@ -1,4 +1,4 @@
-project('highs', 'cpp',
+project('highs', 'cpp', 'c',
   version : '1.6.0',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
@@ -13,7 +13,6 @@ _deps = [] # Dependencies
 _linkto = [] # All the sub-libraries
 _incdirs = [] # All the includes
 
-add_languages('c', required: true)
 cc = meson.get_compiler('c')
 cppc = meson.get_compiler('cpp')
 
@@ -72,9 +71,7 @@ if is_mingw
 endif
 
 # --------------------- Dependencies
-# Required
-threads_dep = dependency('threads',
-                        required: false)
+threads_dep = dependency('threads', required: false)
 _deps += threads_dep
 
 # Determine whether it is necessary to link libatomic. This could be the case
