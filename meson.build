@@ -10,7 +10,6 @@ project('highs', 'cpp', 'c',
 # Add C++ compiler options
 _args = [] # Extra arguments
 _deps = [] # Dependencies
-_linkto = [] # All the sub-libraries
 _incdirs = [] # All the includes
 
 cc = meson.get_compiler('c')

@@ -308,7 +308,6 @@ highslib = library('highs',
                    dependencies: _deps,
                    cpp_args: _args,
                    c_args: _args,
-                   link_with: _linkto,
                    include_directories: _incdirs,
                    pic: true,
                    install: true)
@@ -325,7 +324,7 @@ if get_option('with_fortran')
                         _fsrcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -341,7 +340,7 @@ if get_option('with_csharp')
                         _cs_srcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -361,16 +360,13 @@ if get_option('with_c')
                         _c_src,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
 endif
 
-
-_linkto += highslib
-
-highs_dep = declare_dependency(link_with: _linkto,
+highs_dep = declare_dependency(link_with: highslib,
                                dependencies: _deps,
                                include_directories: _incdirs,
                                )
