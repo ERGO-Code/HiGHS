@@ -36,9 +36,12 @@ build_date = datetime.datetime.utcfromtimestamp(
 build_date_str = build_date.strftime('%Y-%m-%d')
 print(build_date_str)
     '''
+    # Note: this is not guaranteed to work on Windows. This should be removed
+    #       (as proposed in gh-1735), and otherwise moved into a .py script with
+    #       a `#!/usr/bin/env python3` shebang, and `python3 -c` dropped.
     today_cmd = run_command('python3', '-c',
                             python_getdate,
-                           check: false)
+                            check: false)
     today_str = today_cmd.stdout().strip()
 endif
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
