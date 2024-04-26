@@ -380,9 +380,11 @@ highs_dep = declare_dependency(link_with: highslib,
                                )
 
 if get_option('with_pybind11')
-  py_mod = import('python')
-  py = py_mod.find_installation(pure: false)
+  py = import('python').find_installation(pure: false)
+
   pyb11_dep = [
+    # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
+    # that is the minimum supported Python version
     py.dependency(),
     dependency('pybind11')
   ]
