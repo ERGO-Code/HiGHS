@@ -36,9 +36,12 @@ build_date = datetime.datetime.utcfromtimestamp(
 build_date_str = build_date.strftime('%Y-%m-%d')
 print(build_date_str)
     '''
+    # Note: this is not guaranteed to work on Windows. This should be removed
+    #       (as proposed in gh-1735), and otherwise moved into a .py script with
+    #       a `#!/usr/bin/env python3` shebang, and `python3 -c` dropped.
     today_cmd = run_command('python3', '-c',
                             python_getdate,
-                           check: false)
+                            check: false)
     today_str = today_cmd.stdout().strip()
 endif
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
@@ -300,13 +303,20 @@ highslib_srcs = [
 ]
 
 
+symbol_visibility = 'default'
+if get_option('default_library') == 'static'
+  # Ensure that if we link a static library into a shared library,
+  # private symbols don't get re-exported.
+  symbol_visibility = 'inlineshidden'
+endif
+
 highslib = library('highs',
                    highslib_srcs,
                    dependencies: _deps,
                    cpp_args: _args,
                    c_args: _args,
-                   link_with: _linkto,
                    include_directories: _incdirs,
+                   gnu_symbol_visibility: symbol_visibility,
                    pic: true,
                    install: true)
 
@@ -322,7 +332,7 @@ if get_option('with_fortran')
                         _fsrcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -338,7 +348,7 @@ if get_option('with_csharp')
                         _cs_srcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -358,24 +368,23 @@ if get_option('with_c')
                         _c_src,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
 endif
 
-
-_linkto += highslib
-
-highs_dep = declare_dependency(link_with: _linkto,
+highs_dep = declare_dependency(link_with: highslib,
                                dependencies: _deps,
                                include_directories: _incdirs,
                                )
 
 if get_option('with_pybind11')
-  py_mod = import('python')
-  py = py_mod.find_installation(pure: false)
+  py = import('python').find_installation(pure: false)
+
   pyb11_dep = [
+    # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
+    # that is the minimum supported Python version
     py.dependency(),
     dependency('pybind11')
   ]
