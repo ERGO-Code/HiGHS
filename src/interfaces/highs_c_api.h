@@ -1152,6 +1152,18 @@ HighsInt Highs_startCallback(void* highs, const int callback_type);
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 
 /**
+ * Get a callback data item
+ *
+ * @param data_out      A pointer to the HighsCallbackDataOut instance.
+ * @param item_name     A pointer to the name of the item.
+ * @param item          A pointer to the item.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name,
+				      void* item);
+
+/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     A pointer to the Highs instance.

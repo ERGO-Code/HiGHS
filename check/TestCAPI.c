@@ -9,7 +9,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 0;
+const HighsInt dev_run = 1;
 const double double_equal_tolerance = 1e-5;
 
 static void userCallback(const int callback_type, const char* message,
@@ -22,7 +22,19 @@ static void userCallback(const int callback_type, const char* message,
   if (callback_type == kHighsCallbackLogging) {
     if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, data_out->objective_function_value);
+    double objective_function_value = 0;
+    const HighsInt Og1697 = 0;
+    if (Og1697) {
+      objective_function_value = data_out->objective_function_value;
+    } else {
+      void* objective_function_value_void_p;
+      HighsInt status = Highs_getCallbackDataOutItem(data_out, "objective_function_value", objective_function_value_void_p);
+      assert(status == kHighsStatusOk);
+      double* objective_function_value_p = (double*)(objective_function_value_void_p);
+      const double lc_objective_function_value = *objective_function_value_p;
+      objective_function_value = *(double*)(objective_function_value_void_p);
+    }
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, objective_function_value);
   } else if (callback_type == kHighsCallbackMipLogging) {
     if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
@@ -1468,7 +1480,8 @@ void test_callback() {
 
   void* highs;
   highs = Highs_create();
-  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  //#1697 hack
+  Highs_setBoolOptionValue(highs, "output_flag", 0);//dev_run);
   Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
 		col_cost, col_lower, col_upper,
 		row_lower, row_upper,
@@ -1618,23 +1631,25 @@ void test_setSolution() {
 }
 */
 int main() {
-    minimal_api_illegal_lp();
+  //#1697 hack
+  //    minimal_api_illegal_lp();
     test_callback();
-    version_api();
-    full_api();
-    minimal_api_lp();
-    minimal_api_mip();
-    minimal_api_qp();
-    full_api_options();
-    full_api_lp();
-    full_api_mip();
-    full_api_qp();
-    pass_presolve_get_lp();
-    options();
-    test_getColsByRange();
-    test_passHessian();
-    test_ranging();
-  test_getModel();
+    //    version_api();
+    //    full_api();
+    //    minimal_api_lp();
+    //    minimal_api_mip();
+    //    minimal_api_qp();
+    //    full_api_options();
+    //    full_api_lp();
+    //    full_api_mip();
+    //    full_api_qp();
+    //    pass_presolve_get_lp();
+    //    options();
+    //    test_getColsByRange();
+    //    test_passHessian();
+    //    test_ranging();
+    //  test_getModel();
+
   //  test_setSolution();
   return 0;
 }

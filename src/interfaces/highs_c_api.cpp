@@ -688,7 +688,17 @@ double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
-HighsInt Highs_zeroAllClocks(const void* highs) {
+HighsInt Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name, void* item) {
+  HighsInt comparison = strcmp(item_name, "objective_function_value");
+  printf("Highs_getCallbackDataOutItem: comparison = %d\n", int(comparison));
+  if (!strcmp(item_name, "objective_function_value")) {
+    item = (void*)(&data_out->objective_function_value);
+    return kHighsStatusOk;
+  }
+  return kHighsStatusError;
+}
+
+ HighsInt Highs_zeroAllClocks(const void* highs) {
   ((Highs*)highs)->zeroAllClocks();
   return (HighsInt)HighsStatus::kOk;
 }
