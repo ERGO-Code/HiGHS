@@ -125,6 +125,13 @@ module highs_fortran_api
       integer ( c_int ) :: s
     end function Highs_writeModel
 
+    function Highs_writePresolvedModel ( h, f ) result ( s ) bind ( c, name='Highs_writePresolvedModel' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writePresolvedModel
+
     function Highs_writeSolution ( h, f ) result ( s ) bind ( c, name='Highs_writeSolution' )
       use iso_c_binding
       type(c_ptr), VALUE :: h

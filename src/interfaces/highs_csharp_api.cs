@@ -190,6 +190,9 @@ public class HighsLpSolver : IDisposable
     private static extern int Highs_writeModel(IntPtr highs, string filename);
 
     [DllImport(highslibname)]
+    private static extern int Highs_writePresolvedModel(IntPtr highs, string filename);
+
+    [DllImport(highslibname)]
     private static extern int Highs_writeSolutionPretty(IntPtr highs, string filename);
 
     [DllImport(highslibname)]
@@ -595,6 +598,11 @@ public class HighsLpSolver : IDisposable
     public HighsStatus writeModel(string filename)
     {
         return (HighsStatus)HighsLpSolver.Highs_writeModel(this.highs, filename);
+    }
+
+    public HighsStatus writePresolvedModel(string filename)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_writePresolvedModel(this.highs, filename);
     }
 
     public HighsStatus writeSolutionPretty(string filename)

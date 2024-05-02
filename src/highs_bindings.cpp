@@ -906,6 +906,7 @@ PYBIND11_MODULE(_core, m) {
       .def("getRowByName", &highs_getRowByName)
 
       .def("writeModel", &Highs::writeModel)
+      .def("writePresolvedModel", &Highs::writePresolvedModel)
       .def("crossover", &Highs::crossover)
       .def("changeObjectiveSense", &Highs::changeObjectiveSense)
       .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
