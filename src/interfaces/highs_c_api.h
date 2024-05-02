@@ -304,6 +304,16 @@ HighsInt Highs_readModel(void* highs, const char* filename);
 HighsInt Highs_writeModel(void* highs, const char* filename);
 
 /**
+ * Write the presolved model in `highs` to `filename`.
+ *
+ * @param highs     A pointer to the Highs instance.
+ * @param filename  The filename to write.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_writePresolvedModel(void* highs, const char* filename);
+
+/**
  * Reset the options and then call `clearModel`.
  *
  * See `Highs_destroy` to free all associated memory.

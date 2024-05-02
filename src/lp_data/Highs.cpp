@@ -676,17 +676,26 @@ HighsStatus Highs::readBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::writeModel(const std::string& filename) {
+  return writeLocalModel(model_, filename);
+}
+
+HighsStatus Highs::writePresolvedModel(const std::string& filename) {
+  return writeLocalModel(presolved_model_, filename);
+}
+
+HighsStatus Highs::writeLocalModel(HighsModel& model,
+                                   const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  model_.lp_.ensureColwise();
+  model.lp_.ensureColwise();
   // Check for repeated column or row names that would corrupt the file
-  if (model_.lp_.col_hash_.hasDuplicate(model_.lp_.col_names_)) {
+  if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated column names\n");
     return returnFromHighs(HighsStatus::kError);
   }
-  if (model_.lp_.row_hash_.hasDuplicate(model_.lp_.row_names_)) {
+  if (model.lp_.row_hash_.hasDuplicate(model.lp_.row_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated row names\n");
     return returnFromHighs(HighsStatus::kError);
@@ -706,10 +715,10 @@ HighsStatus Highs::writeModel(const std::string& filename) {
     // Report to user that model is being written
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the model to %s\n", filename.c_str());
-    return_status = interpretCallStatus(
-        options_.log_options,
-        writer->writeModelToFile(options_, filename, model_), return_status,
-        "writeModelToFile");
+    return_status =
+        interpretCallStatus(options_.log_options,
+                            writer->writeModelToFile(options_, filename, model),
+                            return_status, "writeModelToFile");
     delete writer;
   }
   return returnFromHighs(return_status);

@@ -771,6 +771,17 @@ class Highs {
   HighsStatus writeModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the incumbent presolved model to a file
+   */
+  HighsStatus writePresolvedModel(const std::string& filename = "");
+
+  /**
+   * @brief Write out the given model to a file
+   */
+  HighsStatus writeLocalModel(HighsModel& model,
+                              const std::string& filename = "");
+
+  /**
    * @brief Write out the internal HighsBasis instance to a file
    */
   HighsStatus writeBasis(const std::string& filename = "");

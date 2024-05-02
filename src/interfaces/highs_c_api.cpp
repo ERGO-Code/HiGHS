@@ -224,6 +224,10 @@ HighsInt Highs_writeModel(void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->writeModel(std::string(filename));
 }
 
+HighsInt Highs_writePresolvedModel(void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->writePresolvedModel(std::string(filename));
+}
+
 HighsInt Highs_writeSolution(const void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)
       ->writeSolution(std::string(filename), kSolutionStyleRaw);
