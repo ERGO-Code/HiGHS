@@ -285,6 +285,14 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<Hig
     return h->deleteRows(num_set_entries, indices.data());
 }
 
+HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
+  return h->setBasis(basis);
+}
+
+HighsStatus highs_setLogicalBasis(Highs* h) {
+  return h->setBasis();
+}
+
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
     Highs* h, const std::string& option) {
   HighsOptionType option_type;
@@ -927,6 +935,8 @@ PYBIND11_MODULE(_core, m) {
       .def("deleteVars", &highs_deleteCols) // alias
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &Highs::setSolution)
+      .def("setBasis", &highs_setBasis)
+      .def("setBasis", &highs_setLogicalBasis)
       .def("modelStatusToString", &Highs::modelStatusToString)
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)
