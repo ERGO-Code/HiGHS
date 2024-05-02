@@ -158,7 +158,7 @@ struct HighsMipSolverData {
   void checkObjIntegrality();
   void runPresolve(const HighsInt presolve_reduction_limit);
   void setupDomainPropagation();
-  void saveReportMipSolution(const double new_upper_limit);
+  void saveReportMipSolution(const double new_upper_limit = -kHighsInf);
   void runSetup();
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,

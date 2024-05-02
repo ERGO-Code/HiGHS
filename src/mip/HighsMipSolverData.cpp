@@ -1908,16 +1908,6 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.submip) return;
   if (non_improving) return;
 
-  /*
-  printf(
-      "%7s dimension(%d, %d) "
-      "%4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
-      "%11.4g); Objective = %11.4g\n",
-      mipsolver.submip ? "Sub-MIP" : "MIP    ", mipsolver.model_->num_col_,
-      mipsolver.model_->num_row_, non_improving ? "non-" : "",
-      int(numImprovingSols), new_upper_limit, upper_limit,
-      mipsolver.solution_objective_);
-  */
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
