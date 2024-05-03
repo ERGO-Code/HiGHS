@@ -17,7 +17,7 @@ jobs:
       - name: Install correct python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Install Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -25,7 +25,7 @@ jobs:
           micromamba-version: '1.8.1-0'
           environment-name: highsdev
           create-args: >-
-            python==3.8
+            python==3.9
             meson
             pkgconfig
             ninja
