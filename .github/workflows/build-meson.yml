@@ -13,6 +13,12 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
       - name: Install Conda environment
         uses: mamba-org/setup-micromamba@v1
         with:
