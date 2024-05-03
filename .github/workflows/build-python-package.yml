@@ -40,7 +40,7 @@ jobs:
       - name: Install sdist
         run: |
           ls dist
-          python3 -m pip install dist/*.tar.gza --break-system-packages
+          python3 -m pip install dist/*.tar.gz --break-system-packages
 
       - name: Test highspy
         run: |
