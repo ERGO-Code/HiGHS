@@ -34,17 +34,17 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build --user
+          python3 -m pip install build --break-system-packages
           python3 -m build --sdist
 
       - name: Install sdist
         run: |
           ls dist
-          python3 -m pip install dist/*.tar.gza --user
+          python3 -m pip install dist/*.tar.gza
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest --user
+          python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE
 
   build_sdist_win:

@@ -283,17 +283,9 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   endforeach(instance)
   endmacro(add_instancetests)
 
-  message(STATUS APPLE)
-#   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
-  if (APPLE)
-   message(STATUS "yapplessss")
-   endif()
-
-
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
     add_instancetests(successMacArmInstances "Optimal")
-   message(STATUS "yyyyyy")
   else()
     add_instancetests(successInstances "Optimal")
   endif()
