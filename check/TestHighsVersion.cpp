@@ -22,7 +22,8 @@ TEST_CASE("HighsVersion", "[highs_version]") {
     printf("HiGHS minor version %d\n", int(minor));
     printf("HiGHS patch version %d\n", int(patch));
     printf("HiGHS githash: %s\n", highsGithash());
-    printf("HiGHS compilation date: %s\n", highsCompilationDate());
+    // Compilation date is deprecated.
+    // printf("HiGHS compilation date: %s\n", highsCompilationDate());
     printf("HiGHS local version: %s\n", local_version.c_str());
   }
   REQUIRE(major == HIGHS_VERSION_MAJOR);
