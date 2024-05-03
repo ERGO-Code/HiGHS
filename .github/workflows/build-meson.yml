@@ -21,7 +21,7 @@ jobs:
         with:
           environment-name: highsdev
           create-args: >-
-            python==3.9
+            python==3.8
             meson
             pkgconfig
             ninja
