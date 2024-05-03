@@ -29,6 +29,14 @@ if(FAST_BUILD)
 
     target_link_libraries(highs-bin highs)
 
+    if(APPLE)
+        set_target_properties(highs-bin PROPERTIES INSTALL_RPATH 
+        "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+    elseif (UNIX)
+        set_target_properties(highs-bin PROPERTIES INSTALL_RPATH 
+        "$ORIGIN:$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+    endif()
+
     # install the binary
     install(TARGETS highs-bin EXPORT highs-targets
       RUNTIME)
