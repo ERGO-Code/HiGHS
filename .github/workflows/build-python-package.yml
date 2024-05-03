@@ -44,7 +44,7 @@ jobs:
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest
+          python3 -m pip install pytest --break-system-packages
           python3 -m pytest $GITHUB_WORKSPACE
 
   build_sdist_win:
