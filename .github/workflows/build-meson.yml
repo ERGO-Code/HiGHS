@@ -16,6 +16,7 @@ jobs:
       - name: Install Conda environment
         uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-version: '1.8.1-0'
           environment-name: highsdev
           create-args: >-
             python==3.8
