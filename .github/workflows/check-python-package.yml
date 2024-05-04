@@ -26,7 +26,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build setuptools twine
+          python3 -m pip install build setuptools twine --break-system-packages
           python3 -m build --sdist
           python3 -m build --wheel
           twine check dist/*
