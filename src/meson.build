@@ -51,7 +51,7 @@ import time
 #                      today_str)
 
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
-                     "deprecated")
+                     'deprecated')
 
 # Conditional compiler options
 _mm_pause_code = '''
