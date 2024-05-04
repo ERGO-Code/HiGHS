@@ -22,13 +22,8 @@ is_mingw = is_windows and cc.get_id() == 'gcc'
 
 # Conditional arguments
 _args += cppc.get_supported_arguments([
-  '-Wno-return-type',
-  '-Wno-switch',
-  '-Wno-comment',
   '-Wno-unused-variable',
   '-Wno-unused-but-set-variable',
-  '-Wno-unused-const-variable',
-  '-Wno-unused-function',
   '-Wno-unused-label',
 ])
 
