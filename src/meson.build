@@ -23,12 +23,12 @@ else
     conf_data.set('HIGHSINT64', false)
 endif
 # Date
-today_str = 'unknown'
-if (not meson.is_subproject())
-    python_getdate = '''
-import datetime
-import os
-import time
+# today_str = 'unknown'
+# if (not meson.is_subproject())
+#     python_getdate = '''
+# import datetime
+# import os
+# import time
 
 # (ig)
 # Deprecate compilation date
