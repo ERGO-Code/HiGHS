@@ -384,8 +384,9 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-string(TIMESTAMP TODAY "%Y-%m-%d")
-message(STATUS "Compilation date: " ${TODAY})
+# Deprecate
+# string(TIMESTAMP TODAY "%Y-%m-%d")
+# message(STATUS "Compilation date: " ${TODAY})
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
