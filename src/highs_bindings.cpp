@@ -817,7 +817,6 @@ PYBIND11_MODULE(_core, m) {
       .def("versionMinor", &Highs::versionMinor)
       .def("versionPatch", &Highs::versionPatch)
       .def("githash", &Highs::githash)
-      .def("compilationDate", &Highs::compilationDate)
       .def("clear", &Highs::clear)
       .def("clearModel", &Highs::clearModel)
       .def("clearSolver", &Highs::clearSolver)

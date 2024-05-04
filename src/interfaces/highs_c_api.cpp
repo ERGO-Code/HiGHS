@@ -175,7 +175,6 @@ HighsInt Highs_versionMajor(void) { return highsVersionMajor(); }
 HighsInt Highs_versionMinor(void) { return highsVersionMinor(); }
 HighsInt Highs_versionPatch(void) { return highsVersionPatch(); }
 const char* Highs_githash(void) { return highsGithash(); }
-const char* Highs_compilationDate(void) { return highsCompilationDate(); }
 
 HighsInt Highs_presolve(void* highs) {
   return (HighsInt)((Highs*)highs)->presolve();
@@ -1347,6 +1346,8 @@ void Highs_resetGlobalScheduler(HighsInt blocking) {
 // *********************
 // * Deprecated methods*
 // *********************
+
+const char* Highs_compilationDate(void) { return "Deprecated"; }
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,

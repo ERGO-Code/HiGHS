@@ -48,7 +48,7 @@ HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
 HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
 HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
-const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+const char* highsCompilationDate() { return "deprecated"; }
 
 Highs::Highs() {}
 
