@@ -23,6 +23,7 @@
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
+#include "util/HighsExceptions.h"
 
 /**
  * @brief Return the version
