@@ -30,22 +30,28 @@ import datetime
 import os
 import time
 
-build_date = datetime.datetime.utcfromtimestamp(
-    int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-)
-build_date_str = build_date.strftime('%Y-%m-%d')
-print(build_date_str)
-    '''
-    # Note: this is not guaranteed to work on Windows. This should be removed
-    #       (as proposed in gh-1735), and otherwise moved into a .py script with
-    #       a `#!/usr/bin/env python3` shebang, and `python3 -c` dropped.
-    today_cmd = run_command('python3', '-c',
-                            python_getdate,
-                            check: false)
-    today_str = today_cmd.stdout().strip()
-endif
+# (ig)
+# Deprecate compilation date
+
+# build_date = datetime.datetime.utcfromtimestamp(
+#     int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+# )
+# build_date_str = build_date.strftime('%Y-%m-%d')
+# print(build_date_str)
+#     '''
+#     # Note: this is not guaranteed to work on Windows. This should be removed
+#     #       (as proposed in gh-1735), and otherwise moved into a .py script with
+#     #       a `#!/usr/bin/env python3` shebang, and `python3 -c` dropped.
+#     today_cmd = run_command('python3', '-c',
+#                             python_getdate,
+#                             check: false)
+#     today_str = today_cmd.stdout().strip()
+# endif
+# conf_data.set_quoted('HIGHS_COMPILATION_DATE',
+#                      today_str)
+
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
-                     today_str)
+                     "deprecated")
 
 # Conditional compiler options
 _mm_pause_code = '''
