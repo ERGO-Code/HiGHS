@@ -367,6 +367,7 @@ highs_dep = declare_dependency(link_with: highslib,
                                )
 
 if get_option('with_pybind11')
+  _deps += highs_dep
   py = import('python').find_installation(pure: false)
 
   pyb11_dep = [
@@ -375,6 +376,7 @@ if get_option('with_pybind11')
     py.dependency(),
     dependency('pybind11')
   ]
+  _deps += pyb11_dep
 
   highspy_cpp = files([
     'highs_bindings.cpp'
@@ -384,9 +386,9 @@ if get_option('with_pybind11')
   ])
 
   py.extension_module(
-    '_highs',
+    '_core',
     sources : highspy_cpp,
-    dependencies: [pyb11_dep, highs_dep],
+    dependencies: _deps,
     cpp_args: _args,
     install: true,
     subdir: 'highspy',
@@ -396,11 +398,19 @@ if get_option('with_pybind11')
   py.extension_module(
     '_highs_options',
     sources : highsoptions_cpp,
-    dependencies: [pyb11_dep, highs_dep],
+    dependencies: _deps,
     cpp_args: _args,
     install: true,
     subdir: 'highspy',
     include_directories: _incdirs,
+  )
+
+  py.install_sources([
+      'highspy/__init__.py',
+      'highspy/highs.py',
+    ],
+    pure: false,
+    subdir: 'highspy'
   )
 
 endif
