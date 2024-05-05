@@ -277,12 +277,13 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                              std::vector<HighsInt>& indices) {
+                             std::vector<HighsInt>& indices) {
   return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<HighsInt>& indices) {
-    return h->deleteRows(num_set_entries, indices.data());
+HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
+                             std::vector<HighsInt>& indices) {
+  return h->deleteRows(num_set_entries, indices.data());
 }
 
 
@@ -576,22 +577,9 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
   return std::make_tuple(status, row);
 }
 
-
 PYBIND11_MODULE(_core, m) {
-  // enum classes
-  py::enum_<ObjSense>(m, "ObjSense")
-      .value("kMinimize", ObjSense::kMinimize)
-      .value("kMaximize", ObjSense::kMaximize);
-      // // .export_values();
-  py::enum_<MatrixFormat>(m, "MatrixFormat")
-      .value("kColwise", MatrixFormat::kColwise)
-      .value("kRowwise", MatrixFormat::kRowwise)
-      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
-      // // .export_values();
-  py::enum_<HessianFormat>(m, "HessianFormat")
-      .value("kTriangular", HessianFormat::kTriangular)
-      .value("kSquare", HessianFormat::kSquare);
-      // .export_values();
+  // enumerations
+  // Older enums, need to have values exported
   py::enum_<SolutionStatus>(m, "SolutionStatus")
       .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
       .value("kSolutionStatusInfeasible",
@@ -602,6 +590,17 @@ PYBIND11_MODULE(_core, m) {
       .value("kBasisValidityInvalid", BasisValidity::kBasisValidityInvalid)
       .value("kBasisValidityValid", BasisValidity::kBasisValidityValid)
       .export_values();
+  // C++ enum classes do not need to have values exported
+  py::enum_<ObjSense>(m, "ObjSense")
+      .value("kMinimize", ObjSense::kMinimize)
+      .value("kMaximize", ObjSense::kMaximize);
+  py::enum_<MatrixFormat>(m, "MatrixFormat")
+      .value("kColwise", MatrixFormat::kColwise)
+      .value("kRowwise", MatrixFormat::kRowwise)
+      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
+  py::enum_<HessianFormat>(m, "HessianFormat")
+      .value("kTriangular", HessianFormat::kTriangular)
+      .value("kSquare", HessianFormat::kSquare);
   py::enum_<HighsModelStatus>(m, "HighsModelStatus")
       .value("kNotset", HighsModelStatus::kNotset)
       .value("kLoadError", HighsModelStatus::kLoadError)
@@ -622,7 +621,6 @@ PYBIND11_MODULE(_core, m) {
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
       .value("kInterrupt", HighsModelStatus::kInterrupt)
       .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
-      // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)
@@ -634,43 +632,36 @@ PYBIND11_MODULE(_core, m) {
       .value("kTimeout", HighsPresolveStatus::kTimeout)
       .value("kNullError", HighsPresolveStatus::kNullError)
       .value("kOptionsError", HighsPresolveStatus::kOptionsError);
-      // .export_values();
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
       .value("kLower", HighsBasisStatus::kLower)
       .value("kBasic", HighsBasisStatus::kBasic)
       .value("kUpper", HighsBasisStatus::kUpper)
       .value("kZero", HighsBasisStatus::kZero)
       .value("kNonbasic", HighsBasisStatus::kNonbasic);
-      // .export_values();
   py::enum_<HighsVarType>(m, "HighsVarType")
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
       .value("kSemiInteger", HighsVarType::kSemiInteger);
-      // .export_values();
   py::enum_<HighsOptionType>(m, "HighsOptionType")
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
       .value("kDouble", HighsOptionType::kDouble)
       .value("kString", HighsOptionType::kString);
-      // .export_values();
   py::enum_<HighsInfoType>(m, "HighsInfoType")
       .value("kInt64", HighsInfoType::kInt64)
       .value("kInt", HighsInfoType::kInt)
       .value("kDouble", HighsInfoType::kDouble);
-      // .export_values();
   py::enum_<HighsStatus>(m, "HighsStatus")
       .value("kError", HighsStatus::kError)
       .value("kOk", HighsStatus::kOk)
       .value("kWarning", HighsStatus::kWarning);
-      // .export_values();
   py::enum_<HighsLogType>(m, "HighsLogType")
       .value("kInfo", HighsLogType::kInfo)
       .value("kDetailed", HighsLogType::kDetailed)
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError);
-      // .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -951,7 +942,7 @@ PYBIND11_MODULE(_core, m) {
       .def("changeColsBounds", &highs_changeColsBounds)
       .def("changeColsIntegrality", &highs_changeColsIntegrality)
       .def("deleteCols", &highs_deleteCols)
-      .def("deleteVars", &highs_deleteCols) // alias
+      .def("deleteVars", &highs_deleteCols)  // alias
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &highs_setSolution)
       .def("setSolution", &highs_setSparseSolution)
@@ -1168,9 +1159,10 @@ PYBIND11_MODULE(_core, m) {
              HighsCallbackType::kCallbackMipImprovingSolution)
       .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
       .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
-      .value("kCallbackMipGetCutPool", HighsCallbackType::kCallbackMipGetCutPool)
+      .value("kCallbackMipGetCutPool",
+             HighsCallbackType::kCallbackMipGetCutPool)
       .value("kCallbackMipDefineLazyConstraints",
-	     HighsCallbackType::kCallbackMipDefineLazyConstraints)
+             HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
@@ -1200,7 +1192,7 @@ PYBIND11_MODULE(_core, m) {
             return py::array(3, self.mip_solution);
           },
           [](HighsCallbackDataOut& self, py::array_t<double> new_mip_solution) {
-                      self.mip_solution = new_mip_solution.mutable_data();
+            self.mip_solution = new_mip_solution.mutable_data();
           });
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
       .def(py::init<>())
