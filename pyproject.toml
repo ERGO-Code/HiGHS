@@ -3,7 +3,7 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python<0.14.0", "meson>=1.2.0"]
+requires = ["meson-python<0.14.0", "meson>=1.2.0", "pybind11", "ninja"]
 build-backend = "mesonpy"
 
 [project]

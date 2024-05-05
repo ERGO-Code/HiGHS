@@ -14,18 +14,19 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build 
+          python3 -m pip install build --user
           python3 -m build --sdist
 
       - name: Install sdist
         run: |
           ls dist
+          python3 -m pip install meson-python meson pybind11 ninja --user
           python3 -m pip install dist/*.tar.gz
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pip install pytest --user
+          python3 -m pytest $GITHUB_WORKSPACE/tests
           
   build_sdist_mac:
     runs-on: macos-latest
@@ -34,18 +35,19 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install build --break-system-packages
+          python3 -m pip install build --user --break-system-packages
           python3 -m build --sdist
 
       - name: Install sdist
         run: |
           ls dist
-          python3 -m pip install dist/*.tar.gz --break-system-packages
+          python3 -m pip install meson-python meson pybind11 ninja --user --break-system-packages
+          python3 -m pip install dist/*.tar.gz --user --break-system-packages
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest --break-system-packages
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pip install pytest --user --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE/tests
 
   build_sdist_win:
     runs-on: windows-2019
@@ -59,19 +61,20 @@ jobs:
 
       - name: Build sdist
         run: |
-          python -m pip install build
+          python -m pip install build --user
           python -m build --sdist
 
       - name: Install sdist
         run: |
+          python3 -m pip install meson-python meson pybind11 ninja --user
           $item = Get-ChildItem dist
-          python -m pip install "$item"
+          python -m pip install "$item" --user
           python -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
-          python -m pip install pytest
-          python -m pytest 
+          python -m pip install pytest --user
+          python -m pytest tests
              
   build_wheel_linux:
     # ubuntu 22 has a latest version of cmake, but setup-python 
@@ -103,7 +106,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pytest $GITHUB_WORKSPACE/tests
           
           
   # macos 12 is Intel
@@ -122,20 +125,20 @@ jobs:
 
       - name: Build wheel
         run: |
-          python3 -m pip install cibuildwheel
+          python3 -m pip install cibuildwheel --break-system-packages
           python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
           ls wheelhouse
           python3 --version
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install wheelhouse/*.whl --break-system-packages
           python3 -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest 
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pip install pytest --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE/tests
             
   # macos 13 is Intel
   build_wheel_macos_13:
@@ -153,20 +156,20 @@ jobs:
 
       - name: Build wheel
         run: |
-          python3 -m pip install cibuildwheel
+          python3 -m pip install cibuildwheel --break-system-packages
           python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
           ls wheelhouse
           python3 --version
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install wheelhouse/*.whl --break-system-packages
           python3 -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pip install pytest --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE/tests
             
   # macos 14 is M1 (beta)
   build_wheel_macos_14:
@@ -184,20 +187,20 @@ jobs:
 
       - name: Build wheel
         run: |
-          python3 -m pip install cibuildwheel
+          python3 -m pip install cibuildwheel --break-system-packages
           python3 -m cibuildwheel --only cp311-macosx_arm64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
           ls wheelhouse
           python3 --version
-          python3 -m pip install wheelhouse/*.whl
+          python3 -m pip install wheelhouse/*.whl --break-system-packages
           python3 -c "import highspy; print(dir(highspy))"
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE
+          python3 -m pip install pytest --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE/tests
 
   build_wheel_windows:
     runs-on: windows-2019
@@ -224,5 +227,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest 
-          
+          python -m pytest
