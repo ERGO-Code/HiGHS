@@ -227,4 +227,4 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest
+          python -m pytest tests
