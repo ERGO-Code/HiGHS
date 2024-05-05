@@ -297,13 +297,6 @@ HighsInt Highs_versionPatch(void);
 const char* Highs_githash(void);
 
 /**
- * Return the HiGHS compilation date.
- *
- * @returns Thse HiGHS compilation date.
- */
-const char* Highs_compilationDate(void);
-
-/**
  * Read a model from `filename` into `highs`.
  *
  * @param highs     A pointer to the Highs instance.
@@ -2191,6 +2184,13 @@ void Highs_resetGlobalScheduler(const HighsInt blocking);
 // *********************
 // * Deprecated methods*
 // *********************
+
+/**
+ * Return the HiGHS compilation date.
+ *
+ * @returns Thse HiGHS compilation date.
+ */
+const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.

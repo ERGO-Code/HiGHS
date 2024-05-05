@@ -7,12 +7,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] # windows-latest takes to long
+        # macos-latest issue with micromamba action 
+        # windows-latest takes to long
+        os: [ubuntu-latest] 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: "recursive"
           fetch-depth: 0
+
       - name: Install Conda environment
         uses: mamba-org/setup-micromamba@v1
         with:

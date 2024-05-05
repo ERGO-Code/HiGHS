@@ -170,6 +170,20 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       "standgub\;68\; 1.2576995000\;"
       "standmps\;218\; 1.4060175000\;"
       )
+  
+   set(successMacArmInstances
+      "25fv47\;3103\; 5.5018458883\;"
+      "80bau3b\;3705\; 9.8722419241\;"
+      "adlittle\;74\; 2.2549496316\;"
+      "afiro\;22\;-4.6475314286\;"
+      "etamacro\;531\;-7.5571523330\;"
+      "greenbea\;5156\;-7.2555248130\;"
+      "shell\;623\; 1.2088253460\;"
+      "stair\;531\;-2.5126695119\;"
+      "standata\;72\; 1.2576995000\;"
+      "standgub\;68\; 1.2576995000\;"
+      "standmps\;218\; 1.4060175000\;"
+   )
 
   set(infeasibleInstances
       "bgetam\;        infeasible"
@@ -270,7 +284,12 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   endmacro(add_instancetests)
 
   # add tests for success and fail instances
-  add_instancetests(successInstances "Optimal")
+  if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
+    add_instancetests(successMacArmInstances "Optimal")
+  else()
+    add_instancetests(successInstances "Optimal")
+  endif()
+
   add_instancetests(failInstances "Fail")
   add_instancetests(infeasibleInstances "Infeasible")
   #add_instancetests(unboundedInstances "Unbounded")
