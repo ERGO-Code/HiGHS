@@ -390,6 +390,7 @@ if get_option('with_pybind11')
     sources : highspy_cpp,
     dependencies: _deps,
     cpp_args: _args,
+    link_with: highslib,
     install: true,
     subdir: 'highspy',
     include_directories: _incdirs,
