@@ -12,6 +12,28 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
+#ifndef USE_CallbackDataOut_NAME
+const char* kHighsCallbackDataOutLogTypeName = "log_type";
+const char* kHighsCallbackDataOutRunningTimeName = "running_time";
+const char* kHighsCallbackDataOutSimplexIterationCountName = "simplex_iteration_count";
+const char* kHighsCallbackDataOutIpmIterationCountName = "ipm_iteration_count";
+const char* kHighsCallbackDataOutPdlpIterationCountName = "pdlp_iteration_count";
+const char* kHighsCallbackDataOutObjectiveFunctionValueName = "objective_function_value";
+const char* kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+const char* kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
+const char* kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
+const char* kHighsCallbackDataOutMipGapName = "mip_gap";
+const char* kHighsCallbackDataOutMipSolutionName = "mip_solution";
+const char* kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
+const char* kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
+const char* kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
+const char* kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
+const char* kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
+const char* kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
+const char* kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
+const char* kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+#endif
+
 void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out, const char* name, HighsInt valid) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (valid) {
@@ -91,23 +113,12 @@ static void userCallback(const int callback_type, const char* message,
     if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
     // Test the accessor function for data_out
-#ifdef USE_CallbackDataOut_NAME
-    if (dev_run) printf("Using constant definitions of CallbackDataOut item names\n");
-#else
-    if (dev_run) printf("Using explicit CallbackDataOut item names\n");
-#endif
     //
     // Check that passing an valid name returns a non-null pointer,
     // and that the corresponding value is the same as obtained using
     // the struct
     const void* objective_function_value_p =
-	Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutObjectiveFunctionValueName
-#else
-		     "objective_function_value"
-#endif
-		     );
+	Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutObjectiveFunctionValueName);
     assert(objective_function_value_p);
     double objective_function_value = *(double*)(objective_function_value_p);
     assert(objective_function_value == data_out->objective_function_value);
@@ -115,105 +126,40 @@ static void userCallback(const int callback_type, const char* message,
 			local_callback_data, objective_function_value);
     // Now test all more simply
     checkGetCallbackDataOutInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutLogTypeName
-#else
-		     "log_type"
-#endif
-		     , -1);
+			       kHighsCallbackDataOutLogTypeName, -1);
     checkGetCallbackDataOutDouble(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutRunningTimeName
-#else
-		     "running_time"
-#endif
-		     ,
+				  kHighsCallbackDataOutRunningTimeName,
 				  data_out->running_time);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutSimplexIterationCountName
-#else
-		     "simplex_iteration_count"
-#endif
-		     ,
+				    kHighsCallbackDataOutSimplexIterationCountName,
 				    data_out->simplex_iteration_count);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutIpmIterationCountName
-#else
-		     "ipm_iteration_count"
-#endif
-		     ,
+				    kHighsCallbackDataOutIpmIterationCountName,
 				    data_out->ipm_iteration_count);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutPdlpIterationCountName
-#else
-		     "pdlp_iteration_count"
-#endif
-		     ,
+				    kHighsCallbackDataOutPdlpIterationCountName,
 				    data_out->pdlp_iteration_count);
     checkGetCallbackDataOutDouble(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutObjectiveFunctionValueName
-#else
-		     "objective_function_value"
-#endif
-		     ,
+				  kHighsCallbackDataOutObjectiveFunctionValueName,
 				  data_out->objective_function_value);
     checkGetCallbackDataOutInt64(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutMipNodeCountName
-#else
-		     "mip_node_count"
-#endif
-		     ,
+				 kHighsCallbackDataOutMipNodeCountName,
 				 data_out->mip_node_count);
     checkGetCallbackDataOutDouble(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutMipPrimalBoundName
-#else
-		     "mip_primal_bound"
-#endif
-		     ,
+				  kHighsCallbackDataOutMipPrimalBoundName,
 				  data_out->mip_primal_bound);
     checkGetCallbackDataOutDouble(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutMipDualBoundName
-#else
-		     "mip_dual_bound"
-#endif
-		     ,
+				  kHighsCallbackDataOutMipDualBoundName,
 				  data_out->mip_dual_bound);
     checkGetCallbackDataOutDouble(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutMipGapName
-#else
-		     "mip_gap"
-#endif
-		     ,
+				  kHighsCallbackDataOutMipGapName,
 				  data_out->mip_gap);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolNumColName
-#else
-		     "cutpool_num_col"
-#endif
-		     , 0);
+				    kHighsCallbackDataOutCutpoolNumColName, 0);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolNumCutName
-#else
-		     "cutpool_num_cut"
-#endif
-		     , 0);
+				    kHighsCallbackDataOutCutpoolNumCutName, 0);
     checkGetCallbackDataOutHighsInt(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolNumNzName
-#else
-		     "cutpool_num_nz"
-#endif
-		     , 0);
+				    kHighsCallbackDataOutCutpoolNumNzName, 0);
 
     // Check that passing an unrecognised name returns NULL
     const void* foo_p = Highs_getCallbackDataOutItem(data_out, "foo");
@@ -223,53 +169,18 @@ static void userCallback(const int callback_type, const char* message,
     // obtained using the struct
     const void* mip_solution_void_p =
       Highs_getCallbackDataOutItem(data_out,
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutMipSolutionName
-#else
-		     "mip_solution"
-#endif
-		     );
+				   kHighsCallbackDataOutMipSolutionName);
     assert(mip_solution_void_p);
     double mip_solution0 = *(double*)(mip_solution_void_p);
     assert(mip_solution0 == *(data_out->mip_solution));
     if (dev_run) printf("userCallback(%11.4g): improving solution with value[0] = %g\n",
 			local_callback_data, mip_solution0);
     // Check that passing names of the unassigned vectors returns NULL
-    assert(!Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolStartName
-#else
-		     "cutpool_start"
-#endif
-		     ));
-    assert(!Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolIndexName
-#else
-		     "cutpool_index"
-#endif
-		     ));
-    assert(!Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolValueName
-#else
-		     "cutpool_value"
-#endif
-		     ));
-    assert(!Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolLowerName
-#else
-		     "cutpool_lower"
-#endif
-		     ));
-    assert(!Highs_getCallbackDataOutItem(data_out, 
-#ifdef USE_CallbackDataOut_NAME
-		     kHighsCallbackDataOutCutpoolUpperName
-#else
-		     "cutpool_upper"
-#endif
-		     ));
+    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolStartName));
+    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolIndexName));
+    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolValueName));
+    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolLowerName));
+    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolUpperName));
   } else if (callback_type == kHighsCallbackMipLogging) {
     if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
