@@ -108,12 +108,17 @@ const HighsInt kHighsCallbackMipInterrupt = 6;
 const HighsInt kHighsCallbackMipGetCutPool = 7;
 const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 
+//#define USE_CallbackDataOut_NAME
+#ifdef USE_CallbackDataOut_NAME
 const char* kHighsCallbackDataOutLogTypeName = "log_type";
 const char* kHighsCallbackDataOutRunningTimeName = "running_time";
-const char* kHighsCallbackDataOutSimplexIterationCountName = "simplex_iteration_count";
+const char* kHighsCallbackDataOutSimplexIterationCountName =
+    "simplex_iteration_count";
 const char* kHighsCallbackDataOutIpmIterationCountName = "ipm_iteration_count";
-const char* kHighsCallbackDataOutPdlpIterationCountName = "pdlp_iteration_count";
-const char* kHighsCallbackDataOutObjectiveFunctionValueName = "objective_function_value";
+const char* kHighsCallbackDataOutPdlpIterationCountName =
+    "pdlp_iteration_count";
+const char* kHighsCallbackDataOutObjectiveFunctionValueName =
+    "objective_function_value";
 const char* kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
 const char* kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
 const char* kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
@@ -127,6 +132,7 @@ const char* kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
 const char* kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
 const char* kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
 const char* kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -1170,9 +1176,11 @@ HighsInt Highs_stopCallback(void* highs, const int callback_type);
  * @param data_out      A pointer to the HighsCallbackDataOut instance.
  * @param item_name     The name of the item.
  *
- * @returns A void* pointer to the callback data item, or NULL if item_name not valid
+ * @returns A void* pointer to the callback data item, or NULL if item_name not
+ * valid
  */
-const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name);
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+                                         const char* item_name);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.

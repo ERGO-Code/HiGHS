@@ -687,53 +687,168 @@ double Highs_getRunTime(const void* highs) {
   return (double)((Highs*)highs)->getRunTime();
 }
 
-const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name) {
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+                                         const char* item_name) {
   // Accessor function for HighsCallbackDataOut
   //
   // Remember that pointers in HighsCallbackDataOut don't need to be referenced!
-  if (!strcmp(item_name, kHighsCallbackDataOutLogTypeName)) {
+  if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+              kHighsCallbackDataOutLogTypeName
+#else
+              "log_type"
+#endif
+              )) {
     return (void*)(&data_out->log_type);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutRunningTimeName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutRunningTimeName
+#else
+                     "running_time"
+#endif
+                     )) {
     return (void*)(&data_out->running_time);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutSimplexIterationCountName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutSimplexIterationCountName
+#else
+                     "simplex_iteration_count"
+#endif
+                     )) {
     return (void*)(&data_out->simplex_iteration_count);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutIpmIterationCountName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutIpmIterationCountName
+#else
+                     "ipm_iteration_count"
+#endif
+                     )) {
     return (void*)(&data_out->ipm_iteration_count);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutPdlpIterationCountName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutPdlpIterationCountName
+#else
+                     "pdlp_iteration_count"
+#endif
+                     )) {
     return (void*)(&data_out->pdlp_iteration_count);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutObjectiveFunctionValueName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutObjectiveFunctionValueName
+#else
+                     "objective_function_value"
+#endif
+                     )) {
     return (void*)(&data_out->objective_function_value);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutMipNodeCountName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutMipNodeCountName
+#else
+                     "mip_node_count"
+#endif
+                     )) {
     return (void*)(&data_out->mip_node_count);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutMipPrimalBoundName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutMipPrimalBoundName
+#else
+                     "mip_primal_bound"
+#endif
+                     )) {
     return (void*)(&data_out->mip_primal_bound);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutMipDualBoundName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutMipDualBoundName
+#else
+                     "mip_dual_bound"
+#endif
+                     )) {
     return (void*)(&data_out->mip_dual_bound);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutMipGapName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutMipGapName
+#else
+                     "mip_gap"
+#endif
+                     )) {
     return (void*)(&data_out->mip_gap);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutMipSolutionName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutMipSolutionName
+#else
+                     "mip_solution"
+#endif
+                     )) {
     return (void*)(data_out->mip_solution);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolNumColName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolNumColName
+#else
+                     "cutpool_num_col"
+#endif
+                     )) {
     return (void*)(&data_out->cutpool_num_col);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolNumCutName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolNumCutName
+#else
+                     "cutpool_num_cut"
+#endif
+                     )) {
     return (void*)(&data_out->cutpool_num_cut);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolNumNzName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolNumNzName
+#else
+                     "cutpool_num_nz"
+#endif
+                     )) {
     return (void*)(&data_out->cutpool_num_nz);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolStartName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolStartName
+#else
+                     "cutpool_start"
+#endif
+                     )) {
     return (void*)(data_out->cutpool_start);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolIndexName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolIndexName
+#else
+                     "cutpool_index"
+#endif
+                     )) {
     return (void*)(data_out->cutpool_index);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolValueName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolValueName
+#else
+                     "cutpool_value"
+#endif
+                     )) {
     return (void*)(data_out->cutpool_value);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolLowerName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolLowerName
+#else
+                     "cutpool_lower"
+#endif
+                     )) {
     return (void*)(data_out->cutpool_lower);
-  } else if (!strcmp(item_name, kHighsCallbackDataOutCutpoolUpperName)) {
+  } else if (!strcmp(item_name,
+#ifdef USE_CallbackDataOut_NAME
+                     kHighsCallbackDataOutCutpoolUpperName
+#else
+                     "cutpool_upper"
+#endif
+                     )) {
     return (void*)(data_out->cutpool_upper);
   }
   return nullptr;
 }
 
- HighsInt Highs_zeroAllClocks(const void* highs) {
+HighsInt Highs_zeroAllClocks(const void* highs) {
   ((Highs*)highs)->zeroAllClocks();
   return (HighsInt)HighsStatus::kOk;
 }
