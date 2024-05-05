@@ -27,9 +27,8 @@ static void userCallback(const int callback_type, const char* message,
     if (Og1697) {
       objective_function_value = data_out->objective_function_value;
     } else {
-      void* objective_function_value_void_p;
-      HighsInt status = Highs_getCallbackDataOutItem(data_out, "objective_function_value", objective_function_value_void_p);
-      assert(status == kHighsStatusOk);
+      const void* objective_function_value_void_p =
+	Highs_getCallbackDataOutItem(data_out, "objective_function_value");
       double* objective_function_value_p = (double*)(objective_function_value_void_p);
       const double lc_objective_function_value = *objective_function_value_p;
       objective_function_value = *(double*)(objective_function_value_void_p);

@@ -1160,8 +1160,7 @@ HighsInt Highs_stopCallback(void* highs, const int callback_type);
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
  */
-HighsInt Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name,
-				      void* item);
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out, const char* item_name);
 
 /**
  * Return the cumulative wall-clock time spent in `Highs_run`.
