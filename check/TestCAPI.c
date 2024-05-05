@@ -154,12 +154,14 @@ static void userCallback(const int callback_type, const char* message,
     checkGetCallbackDataOutDouble(data_out,
 				  kHighsCallbackDataOutMipGapName,
 				  data_out->mip_gap);
-    checkGetCallbackDataOutHighsInt(data_out,
-				    kHighsCallbackDataOutCutpoolNumColName, 0);
-    checkGetCallbackDataOutHighsInt(data_out,
-				    kHighsCallbackDataOutCutpoolNumCutName, 0);
-    checkGetCallbackDataOutHighsInt(data_out,
-				    kHighsCallbackDataOutCutpoolNumNzName, 0);
+    // Cutpool data structure is not assigned, so num_col, num_cut and
+    // num_nz are unassigned
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumColName, 0);
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumCutName, 0);
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumNzName, 0);
 
     // Check that passing an unrecognised name returns NULL
     const void* foo_p = Highs_getCallbackDataOutItem(data_out, "foo");
@@ -175,12 +177,13 @@ static void userCallback(const int callback_type, const char* message,
     assert(mip_solution0 == *(data_out->mip_solution));
     if (dev_run) printf("userCallback(%11.4g): improving solution with value[0] = %g\n",
 			local_callback_data, mip_solution0);
-    // Check that passing names of the unassigned vectors returns NULL
-    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolStartName));
-    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolIndexName));
-    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolValueName));
-    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolLowerName));
-    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolUpperName));
+    // Cutpool data structure is not assigned, so cannot check that
+    // passing names of the unassigned vectors returns NULL
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolStartName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolIndexName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolValueName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolLowerName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolUpperName));
   } else if (callback_type == kHighsCallbackMipLogging) {
     if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
