@@ -54,7 +54,6 @@ test_array = [
   ['test_lpvalidation', 'TestLpValidation.cpp'],
   ['test_lpmodification', 'TestLpModification.cpp'],
   ['test_lporientation', 'TestLpOrientation.cpp'],
-  ['test_capi', 'TestCAPI.c'],
 ]
 foreach test : test_array
   test(test.get(0),
@@ -71,3 +70,11 @@ foreach test : test_array
        timeout: 300,
       )
 endforeach
+
+test('test_capi',
+     executable('capi_unit_tests',
+                sources: ['TestCAPI.c', highs_conf_file],
+                include_directories: _incdirs,
+                link_with : highslib,
+               )
+    )
