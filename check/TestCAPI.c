@@ -22,18 +22,11 @@ static void userCallback(const int callback_type, const char* message,
   if (callback_type == kHighsCallbackLogging) {
     if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-    double objective_function_value = 0;
-    const HighsInt Og1697 = 0;
-    if (Og1697) {
-      objective_function_value = data_out->objective_function_value;
-    } else {
-      const void* objective_function_value_void_p =
+    const void* objective_function_value_p =
 	Highs_getCallbackDataOutItem(data_out, "objective_function_value");
-      double* objective_function_value_p = (double*)(objective_function_value_void_p);
-      const double lc_objective_function_value = *objective_function_value_p;
-      objective_function_value = *(double*)(objective_function_value_void_p);
-    }
-    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, objective_function_value);
+    assert(objective_function_value_p);
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n",
+			local_callback_data, *(double*)(objective_function_value_p));
   } else if (callback_type == kHighsCallbackMipLogging) {
     if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
