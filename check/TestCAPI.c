@@ -9,7 +9,7 @@
 #include <math.h>
 #include <string.h>
 
-const HighsInt dev_run = 1;
+const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
 void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out, const char* name, HighsInt valid) {
@@ -1605,8 +1605,7 @@ void test_callback() {
 
   void* highs;
   highs = Highs_create();
-  //#1697 hack
-  Highs_setBoolOptionValue(highs, "output_flag", 0);//dev_run);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
 		col_cost, col_lower, col_upper,
 		row_lower, row_upper,
@@ -1756,25 +1755,23 @@ void test_setSolution() {
 }
 */
 int main() {
-  //#1697 hack
-  //    minimal_api_illegal_lp();
-    test_callback();
-    //    version_api();
-    //    full_api();
-    //    minimal_api_lp();
-    //    minimal_api_mip();
-    //    minimal_api_qp();
-    //    full_api_options();
-    //    full_api_lp();
-    //    full_api_mip();
-    //    full_api_qp();
-    //    pass_presolve_get_lp();
-    //    options();
-    //    test_getColsByRange();
-    //    test_passHessian();
-    //    test_ranging();
-    //  test_getModel();
-
+  minimal_api_illegal_lp();
+  test_callback();
+  version_api();
+  full_api();
+  minimal_api_lp();
+  minimal_api_mip();
+  minimal_api_qp();
+  full_api_options();
+  full_api_lp();
+  full_api_mip();
+  full_api_qp();
+  pass_presolve_get_lp();
+  options();
+  test_getColsByRange();
+  test_passHessian();
+  test_ranging();
+  test_getModel();
   //  test_setSolution();
   return 0;
 }
