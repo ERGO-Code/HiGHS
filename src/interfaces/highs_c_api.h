@@ -108,6 +108,30 @@ const HighsInt kHighsCallbackMipInterrupt = 6;
 const HighsInt kHighsCallbackMipGetCutPool = 7;
 const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 
+const char* const kHighsCallbackDataOutLogTypeName = "log_type";
+const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
+const char* const kHighsCallbackDataOutSimplexIterationCountName =
+    "simplex_iteration_count";
+const char* const kHighsCallbackDataOutIpmIterationCountName =
+    "ipm_iteration_count";
+const char* const kHighsCallbackDataOutPdlpIterationCountName =
+    "pdlp_iteration_count";
+const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
+    "objective_function_value";
+const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
+const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
+const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
+const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
+const char* const kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
+const char* const kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
+const char* const kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
+const char* const kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
+const char* const kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
+const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
+const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
+const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2150,6 +2174,18 @@ HighsInt Highs_getRanging(
  * is fully in the callers responsibility.
  */
 void Highs_resetGlobalScheduler(const HighsInt blocking);
+
+/**
+ * Get a void* pointer to a callback data item
+ *
+ * @param data_out      A pointer to the HighsCallbackDataOut instance.
+ * @param item_name     The name of the item.
+ *
+ * @returns A void* pointer to the callback data item, or NULL if item_name not
+ * valid
+ */
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+                                         const char* item_name);
 
 // *********************
 // * Deprecated methods*
