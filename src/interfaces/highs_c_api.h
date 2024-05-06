@@ -108,31 +108,29 @@ const HighsInt kHighsCallbackMipInterrupt = 6;
 const HighsInt kHighsCallbackMipGetCutPool = 7;
 const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 
-//#define USE_CallbackDataOut_NAME
-#ifdef USE_CallbackDataOut_NAME
-const char* kHighsCallbackDataOutLogTypeName = "log_type";
-const char* kHighsCallbackDataOutRunningTimeName = "running_time";
-const char* kHighsCallbackDataOutSimplexIterationCountName =
+const char* const kHighsCallbackDataOutLogTypeName = "log_type";
+const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
+const char* const kHighsCallbackDataOutSimplexIterationCountName =
     "simplex_iteration_count";
-const char* kHighsCallbackDataOutIpmIterationCountName = "ipm_iteration_count";
-const char* kHighsCallbackDataOutPdlpIterationCountName =
+const char* const kHighsCallbackDataOutIpmIterationCountName =
+    "ipm_iteration_count";
+const char* const kHighsCallbackDataOutPdlpIterationCountName =
     "pdlp_iteration_count";
-const char* kHighsCallbackDataOutObjectiveFunctionValueName =
+const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
-const char* kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
-const char* kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
-const char* kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
-const char* kHighsCallbackDataOutMipGapName = "mip_gap";
-const char* kHighsCallbackDataOutMipSolutionName = "mip_solution";
-const char* kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
-const char* kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
-const char* kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
-const char* kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
-const char* kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
-const char* kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
-const char* kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
-const char* kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
-#endif
+const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
+const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
+const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
+const char* const kHighsCallbackDataOutMipSolutionName = "mip_solution";
+const char* const kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
+const char* const kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
+const char* const kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
+const char* const kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
+const char* const kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
+const char* const kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
+const char* const kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
+const char* const kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
 
 #ifdef __cplusplus
 extern "C" {

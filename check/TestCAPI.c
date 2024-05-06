@@ -12,28 +12,6 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
-#ifndef USE_CallbackDataOut_NAME
-const char* kHighsCallbackDataOutLogTypeName = "log_type";
-const char* kHighsCallbackDataOutRunningTimeName = "running_time";
-const char* kHighsCallbackDataOutSimplexIterationCountName = "simplex_iteration_count";
-const char* kHighsCallbackDataOutIpmIterationCountName = "ipm_iteration_count";
-const char* kHighsCallbackDataOutPdlpIterationCountName = "pdlp_iteration_count";
-const char* kHighsCallbackDataOutObjectiveFunctionValueName = "objective_function_value";
-const char* kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
-const char* kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
-const char* kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
-const char* kHighsCallbackDataOutMipGapName = "mip_gap";
-const char* kHighsCallbackDataOutMipSolutionName = "mip_solution";
-const char* kHighsCallbackDataOutCutpoolNumColName = "cutpool_num_col";
-const char* kHighsCallbackDataOutCutpoolNumCutName = "cutpool_num_cut";
-const char* kHighsCallbackDataOutCutpoolNumNzName = "cutpool_num_nz";
-const char* kHighsCallbackDataOutCutpoolStartName = "cutpool_start";
-const char* kHighsCallbackDataOutCutpoolIndexName = "cutpool_index";
-const char* kHighsCallbackDataOutCutpoolValueName = "cutpool_value";
-const char* kHighsCallbackDataOutCutpoolLowerName = "cutpool_lower";
-const char* kHighsCallbackDataOutCutpoolUpperName = "cutpool_upper";
-#endif
-
 void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out, const char* name, HighsInt valid) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (valid) {
