@@ -1,0 +1,65 @@
+# This tests the C example, and it uses a similar build script to the one used
+# by JuMP when building HiGHS:
+# https://github.com/JuliaPackaging/Yggdrasil/blob/master/H/HiGHS/build_tarballs.jl
+name: test-c-example
+
+on: [push, pull_request]
+
+jobs:
+  fast-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Build Environment
+        run: |
+          mkdir build
+          mkdir installs
+      - name: Build HiGHS library
+        shell: bash
+        working-directory: build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX=../installs/highs \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DFAST_BUILD=ON \
+            $GITHUB_WORKSPACE
+          cmake --build . --config Release --parallel
+          make install
+      - name: Compile and test C example
+        shell: bash
+        run: |
+          gcc $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
+            -o c_example \
+            -I installs/highs/include/highs \
+            -L installs/highs/lib -lhighs
+          LD_LIBRARY_PATH=installs/highs/lib ./c_example
+
+  fast-build-off:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Build Environment
+        run: |
+          mkdir build
+          mkdir installs
+      - name: Build HiGHS library
+        shell: bash
+        working-directory: build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX=../installs/highs \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DFAST_BUILD=OFF \
+            $GITHUB_WORKSPACE
+          cmake --build . --config Release --parallel
+          make install
+      - name: Compile and test C example
+        shell: bash
+        run: |
+          gcc $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
+            -o c_example \
+            -I installs/highs/include/highs \
+            -L installs/highs/lib -lhighs
+          LD_LIBRARY_PATH=installs/highs/lib ./c_example

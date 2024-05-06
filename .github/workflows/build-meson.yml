@@ -1,0 +1,50 @@
+name: build-meson
+
+on: [push, pull_request]
+
+jobs:
+  buildmeson:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # macos-latest issue with micromamba action 
+        # windows-latest takes to long
+        os: [ubuntu-latest] 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Install Conda environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: highsdev
+          create-args: >-
+            python==3.8
+            meson
+            pkgconfig
+            ninja
+            zlib
+            catch2
+            numpy
+          cache-environment: true
+          init-shell: >-
+            bash
+            zsh
+      - name: Build and test
+        shell: bash -l {0}
+        run: |
+          meson setup bbdir -Duse_zlib=enabled -Dwith_tests=True
+          meson test -C bbdir
+      
+      # highspy no longer compiled with meson
+      # see if it can be done separately if it is needed for meson projects
+      # - name: Test compiled highspy
+      #   shell: bash -l {0}
+      #   run: |
+      #     meson configure bbdir -Dwith_pybind11=True
+      #     meson compile -C bbdir
+      #     LD_LIBRARY_PATH=$(pwd)/bbdir/src \
+      #     PYTHONPATH=$(pwd)/bbdir \
+      #     python examples/call_highs_from_python.py

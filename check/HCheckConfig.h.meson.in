@@ -1,0 +1,6 @@
+#ifndef HCHECKCONFIG_H_
+#define HCHECKCONFIG_H_
+
+#mesondefine HIGHS_DIR
+
+#endif /* HCHECKCONFIG_H_ */
