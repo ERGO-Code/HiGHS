@@ -212,18 +212,25 @@ class Highs(_Highs):
     #
     # add variable & useful constants
     #
-    def addVar(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
+    # Change the name of addVar to addVariable to prevent shadowing of
+    # highspy binding to Highs::addVar
+    def addVariable(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
         var = self._batch.add(obj, lb, ub, type, name, self)
         self._vars.append(var)
+        # No longer acumulate a batch of variables so that addVariable
+        # behaves like Highs::addVar and highspy bindings modifying
+        # column data and adding rows can be used
+        self.update()
         return var
 
     def addIntegral(self, lb = 0, ub = kHighsInf, obj = 0, name = None):
-        return self.addVar(lb, ub, obj, HighsVarType.kInteger, name)
+        return self.addVariable(lb, ub, obj, HighsVarType.kInteger, name)
 
     def addBinary(self, obj = 0, name = None):
-        return self.addVar(0, 1, obj, HighsVarType.kInteger, name)
+        return self.addVariable(0, 1, obj, HighsVarType.kInteger, name)
 
-    def removeVar(self, var):
+    # Change the name of removeVar to deleteVariable
+    def deleteVariable(self, var):
         for i in self._vars[var.index+1:]:
             i.index -= 1
 
@@ -233,7 +240,8 @@ class Highs(_Highs):
         if var.index < self.numVars:
             super().deleteVars(1, [var.index])
 
-    def getVars(self):
+    # Change the name of getVars to getVariables
+    def getVariables(self):
         return self._vars
 
     @property
