@@ -1905,7 +1905,19 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
-  if (new_solution) invalidateUserSolverData();
+  if (new_solution) {
+    invalidateUserSolverData();
+  } else {
+    // Solution is rejected, so give a logging message and error
+    // return
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "User solution is rejected due to mismatch between "
+                 "size of col_value and row_dual vectors (%d, %d) and number "
+                 "of columns and rows in the model (%d, %d) \n",
+                 int(solution.col_value.size()), int(solution.row_dual.size()),
+                 int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+    return_status = HighsStatus::kError;
+  }
 
   if (new_primal_solution) {
     solution_.col_value = solution.col_value;
