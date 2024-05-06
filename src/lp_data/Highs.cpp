@@ -1910,12 +1910,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   } else {
     // Solution is rejected, so give a logging message and error
     // return
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "User solution is rejected due to mismatch between "
-                 "size of col_value and row_dual vectors (%d, %d) and number "
-                 "of columns and rows in the model (%d, %d) \n",
-                 int(solution.col_value.size()), int(solution.row_dual.size()),
-                 int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "setSolution: User solution is rejected due to mismatch between "
+        "size of col_value and row_dual vectors (%d, %d) and number "
+        "of columns and rows in the model (%d, %d)\n",
+        int(solution.col_value.size()), int(solution.row_dual.size()),
+        int(model_.lp_.num_col_), int(model_.lp_.num_row_));
     return_status = HighsStatus::kError;
   }
 
@@ -2064,6 +2065,17 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
                 : basis.col_status[iCol];
       basis_.alien = false;
     } else {
+      // Check whether a new basis can be defined
+      if (!isBasisRightSize(model_.lp_, basis)) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "setBasis: User basis is rejected due to mismatch between "
+            "size of column and row status vectors (%d, %d) and number "
+            "of columns and rows in the model (%d, %d)\n",
+            int(basis_.col_status.size()), int(basis_.row_status.size()),
+            int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+        return HighsStatus::kError;
+      }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,

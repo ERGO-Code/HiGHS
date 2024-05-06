@@ -335,6 +335,7 @@ TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   const HighsLp& lp = highs.getLp();
   HighsSolution solution;
