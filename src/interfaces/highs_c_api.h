@@ -1169,18 +1169,6 @@ HighsInt Highs_startCallback(void* highs, const int callback_type);
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 
 /**
- * Get a void* pointer to a callback data item
- *
- * @param data_out      A pointer to the HighsCallbackDataOut instance.
- * @param item_name     The name of the item.
- *
- * @returns A void* pointer to the callback data item, or NULL if item_name not
- * valid
- */
-const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
-                                         const char* item_name);
-
-/**
  * Return the cumulative wall-clock time spent in `Highs_run`.
  *
  * @param highs     A pointer to the Highs instance.
@@ -2186,6 +2174,18 @@ HighsInt Highs_getRanging(
  * is fully in the callers responsibility.
  */
 void Highs_resetGlobalScheduler(const HighsInt blocking);
+
+/**
+ * Get a void* pointer to a callback data item
+ *
+ * @param data_out      A pointer to the HighsCallbackDataOut instance.
+ * @param item_name     The name of the item.
+ *
+ * @returns A void* pointer to the callback data item, or NULL if item_name not
+ * valid
+ */
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+                                         const char* item_name);
 
 // *********************
 // * Deprecated methods*
