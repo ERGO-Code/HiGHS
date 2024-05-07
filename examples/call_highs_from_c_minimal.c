@@ -285,7 +285,9 @@ void full_api() {
   printf("      Minor version %" HIGHSINT_FORMAT "\n", Highs_versionMinor());
   printf("      Patch version %" HIGHSINT_FORMAT "\n", Highs_versionPatch());
   printf("      Githash %s\n", Highs_githash());
-  printf("      compilation date %s\n", Highs_compilationDate());
+  
+  // Compilation date is deprecated.
+  // printf("      compilation date %s\n", Highs_compilationDate());
   // This example does exactly the same as the minimal example above,
   // but illustrates the full C API.  It first forms and solves the LP
   //

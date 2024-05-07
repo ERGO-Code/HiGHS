@@ -330,6 +330,20 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
   std::remove(solution_file_name.c_str());
 }
 
+TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
+  HighsStatus return_status;
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  const HighsLp& lp = highs.getLp();
+  HighsSolution solution;
+  REQUIRE(highs.setSolution(solution) == HighsStatus::kError);
+  solution.col_value.assign(lp.num_col_, 0);
+  REQUIRE(highs.setSolution(solution) == HighsStatus::kOk);
+}
+
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status,
                                const HighsInt write_solution_style) {
