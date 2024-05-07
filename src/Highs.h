@@ -37,7 +37,6 @@ HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
 const char* highsGithash();
-const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -77,11 +76,6 @@ class Highs {
    * @brief Return githash
    */
   std::string githash() const { return highsGithash(); }
-
-  /**
-   * @brief Return compilation date
-   */
-  std::string compilationDate() const { return highsCompilationDate(); }
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -771,6 +765,17 @@ class Highs {
   HighsStatus writeModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the incumbent presolved model to a file
+   */
+  HighsStatus writePresolvedModel(const std::string& filename = "");
+
+  /**
+   * @brief Write out the given model to a file
+   */
+  HighsStatus writeLocalModel(HighsModel& model,
+                              const std::string& filename = "");
+
+  /**
    * @brief Write out the internal HighsBasis instance to a file
    */
   HighsStatus writeBasis(const std::string& filename = "");
@@ -1203,6 +1208,12 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   // Start of deprecated methods
+
+  /**
+   * @brief Return compilation date
+   */
+  std::string compilationDate() const { return "deprecated"; }
+  const char* highsCompilationDate();
 
   HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
                                                        const char*, void*),

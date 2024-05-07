@@ -18,4 +18,16 @@ Added version info to executable
 
 Inserting `pdlp_iteration_count` into various structs (for v1.7.0) breaks the C API, so it has been moved to the end of those structs
 
+setBasis has been added to highspy
+
+writePresolvedModel has been added
+
+Saved MIP solution pool is populated when presolve reduces MIP to empty
+
+Compilation date has been removed improve build reproducibility. Methods to print compilation dates are deprecated
+
+Logging and error return when user-supplied solution or basis is rejected on vector dimensions
+
+
+
 

@@ -48,7 +48,7 @@ HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
 HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
 HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
-const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+const char* highsCompilationDate() { return "deprecated"; }
 
 Highs::Highs() {}
 
@@ -676,17 +676,26 @@ HighsStatus Highs::readBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::writeModel(const std::string& filename) {
+  return writeLocalModel(model_, filename);
+}
+
+HighsStatus Highs::writePresolvedModel(const std::string& filename) {
+  return writeLocalModel(presolved_model_, filename);
+}
+
+HighsStatus Highs::writeLocalModel(HighsModel& model,
+                                   const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  model_.lp_.ensureColwise();
+  model.lp_.ensureColwise();
   // Check for repeated column or row names that would corrupt the file
-  if (model_.lp_.col_hash_.hasDuplicate(model_.lp_.col_names_)) {
+  if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated column names\n");
     return returnFromHighs(HighsStatus::kError);
   }
-  if (model_.lp_.row_hash_.hasDuplicate(model_.lp_.row_names_)) {
+  if (model.lp_.row_hash_.hasDuplicate(model.lp_.row_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated row names\n");
     return returnFromHighs(HighsStatus::kError);
@@ -706,10 +715,10 @@ HighsStatus Highs::writeModel(const std::string& filename) {
     // Report to user that model is being written
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the model to %s\n", filename.c_str());
-    return_status = interpretCallStatus(
-        options_.log_options,
-        writer->writeModelToFile(options_, filename, model_), return_status,
-        "writeModelToFile");
+    return_status =
+        interpretCallStatus(options_.log_options,
+                            writer->writeModelToFile(options_, filename, model),
+                            return_status, "writeModelToFile");
     delete writer;
   }
   return returnFromHighs(return_status);
@@ -1896,7 +1905,20 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
-  if (new_solution) invalidateUserSolverData();
+  if (new_solution) {
+    invalidateUserSolverData();
+  } else {
+    // Solution is rejected, so give a logging message and error
+    // return
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "setSolution: User solution is rejected due to mismatch between "
+        "size of col_value and row_dual vectors (%d, %d) and number "
+        "of columns and rows in the model (%d, %d)\n",
+        int(solution.col_value.size()), int(solution.row_dual.size()),
+        int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+    return_status = HighsStatus::kError;
+  }
 
   if (new_primal_solution) {
     solution_.col_value = solution.col_value;
@@ -2043,6 +2065,17 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
                 : basis.col_status[iCol];
       basis_.alien = false;
     } else {
+      // Check whether a new basis can be defined
+      if (!isBasisRightSize(model_.lp_, basis)) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "setBasis: User basis is rejected due to mismatch between "
+            "size of column and row status vectors (%d, %d) and number "
+            "of columns and rows in the model (%d, %d)\n",
+            int(basis_.col_status.size()), int(basis_.row_status.size()),
+            int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+        return HighsStatus::kError;
+      }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
