@@ -128,6 +128,7 @@ void HighsMipSolver::run() {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
       mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
+      mipdata_->saveReportMipSolution();
     }
     cleanupSolve();
     return;
