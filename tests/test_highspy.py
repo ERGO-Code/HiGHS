@@ -543,20 +543,20 @@ class TestHighsPy(unittest.TestCase):
     #     self.assertAlmostEqual(h.getObjectiveOffset()[1], 1)
     #     self.assertAlmostEqual(h.getObjectiveValue(), -4)
 
-    def test_addVar(self):  
+    def test_addVariable(self):  
         h = highspy.Highs()  
         h.addVariable()
         h.update()
         self.assertEqual(h.numVars, 1)  
   
-    def test_removeVar(self):  
+    def test_deleteVariable(self):  
         h = highspy.Highs()  
         x = [h.addVariable(), h.addVariable()]
 
         h.update()
         self.assertEqual(h.numVars, 2)
 
-        h.removeVar(x[0])
+        h.deleteVariable(x[0])
         self.assertEqual(h.numVars, 1)
 
     def test_addConstr(self):  
