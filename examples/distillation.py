@@ -15,12 +15,35 @@ varNames = list()
 varNames.append('TypeA')
 varNames.append('TypeB')
 
-useTypeA = h.addVar(obj =  8, name = varNames[0])
-useTypeB = h.addVar(obj = 10, name = varNames[1])
+print("DEBUG ", varNames)
+
+update_in_addVariable = True
+if update_in_addVariable:
+    print("DEBUG update_in_addVariable is True")
+else:
+    print("DEBUG update_in_addVariable is False")
+    
+useTypeA = h.addVariable(obj =  8, name = varNames[0], update = update_in_addVariable)
+useTypeB = h.addVariable(obj = 10, name = varNames[1], update = update_in_addVariable)
+
+# With update_in_addVariable = False (so runs as originally written,
+# with self.update() being called only in addConstr) useTypeB.name is
+# "TypeB"
+#
+# With update_in_addVariable = True (so self.update() is called in addVariable) useTypeB.name is
+# "TypeA"
+#
+# Looks as if the internal stack of names isn't being cleared, so
+# TypeA is still on top when useTypeB is being defined
+
+print('\nDEBUG Names: useTypeA', useTypeA.name, "; varNames[0]", varNames[0])
+print('DEBUG Names: useTypeB', useTypeB.name, "; varNames[0]", varNames[1])
 
 vars = list()
 vars.append(useTypeA)
 vars.append(useTypeB)
+
+print("\nDEBUG vars: ", vars)
 
 constrNames = list()
 constrNames.append('Product1')
@@ -44,12 +67,12 @@ print()
 print('Solved as LP')
 
 for var in vars:
-    print('Use', h.varValue(var), h.varName(var), ': Reduced cost', h.varDual(var))
+    print('Use {0:6f} of {1:6s}: reduced cost {2:6f}'.format(h.varValue(var), h.varName(var), h.varDual(var)))
 print('Use', h.varValues(vars), 'of', h.varNames(vars))
 print('Use', h.allVarValues(), 'of', h.allVarNames())
 
 for name in constrNames:
-    print('Constraint', name, 'has value', h.constrValue(name), 'and dual', h.constrDual(name))
+    print('Constraint {0:6s} has value {1:6f} and dual {2:6f}'.format(name, h.constrValue(name), h.constrDual(name)))
 
 print('Constraints have values', h.constrValues(constrNames), 'and duals', h.constrDuals(constrNames))
 
@@ -66,6 +89,6 @@ print()
 print('Solved as MIP')
 
 for var in vars:
-    print('Use', h.varValue(var), h.varName(var))
+    print('Use {0:6f} of {1:6s}'.format(h.varValue(var), h.varName(var)))
 
 print('Optimal objective value is', h.getObjectiveValue())

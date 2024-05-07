@@ -13,8 +13,8 @@ varNames = list()
 varNames.append('Tables')
 varNames.append('Sets of chairs')
 
-x1 = h.addVar(obj = 10, name = varNames[0])
-x2 = h.addVar(obj = 25, name = varNames[1])
+x1 = h.addVariable(obj = 10, name = varNames[0])
+x2 = h.addVariable(obj = 25, name = varNames[1])
 
 vars = list()
 vars.append(x1)
