@@ -197,6 +197,28 @@ print("Iteration count = ", info.simplex_iteration_count)
 run_time = h.getRunTime()
 print("Total HiGHS run time is ", run_time)
 
+# Get an optimal basis
+
+# Clear so that incumbent model is empty
+h.clear()
+print("25fv47 as HighsModel")
+
+h.readModel("check/instances/25fv47.mps")
+
+h.run()
+simplex_iteration_count = h.getInfo().simplex_iteration_count
+print("From initial basis, simplex iteration count =", simplex_iteration_count)
+basis = h.getBasis()
+h.clearSolver()
+
+h.setBasis(basis)
+h.run()
+simplex_iteration_count = h.getInfo().simplex_iteration_count
+print("From optimal basis, simplex iteration count =", simplex_iteration_count)
+status = h.setBasis()
+h.run()
+simplex_iteration_count = h.getInfo().simplex_iteration_count
+print("From logical basis, simplex iteration count =", simplex_iteration_count)
 
 
 # Define a callback
