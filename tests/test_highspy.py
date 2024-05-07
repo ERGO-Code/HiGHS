@@ -64,8 +64,8 @@ class TestHighsPy(unittest.TestCase):
     #     """
     #     h = highspy.Highs()
 
-    #     x0 = h.addVar(lb=0, ub=4, obj=1)
-    #     x1 = h.addVar(lb=1, ub=7, obj=1)
+    #     x0 = h.addVariable(lb=0, ub=4, obj=1)
+    #     x1 = h.addVariable(lb=1, ub=7, obj=1)
 
     #     h.addConstr(5 <= x0 + 2*x1 <= 15)
     #     h.addConstr(6 <= 3*x0 + 2*x1)
@@ -437,8 +437,8 @@ class TestHighsPy(unittest.TestCase):
         
     def test_constraint_removal(self):
         h = highspy.Highs()
-        x = h.addVar(lb=-highspy.kHighsInf)
-        y = h.addVar(lb=-highspy.kHighsInf)
+        x = h.addVariable(lb=-highspy.kHighsInf)
+        y = h.addVariable(lb=-highspy.kHighsInf)
         c1 = h.addConstr(-x + y >= 2)
         c2 = h.addConstr(x + y >= 0)
         self.assertEqual(h.numConstrs, 2)
@@ -450,8 +450,8 @@ class TestHighsPy(unittest.TestCase):
         h.setOptionValue('output_flag', False)
         h.setOptionValue('presolve', 'off')
 
-        x = h.addVar()
-        y = h.addVar()
+        x = h.addVariable()
+        y = h.addVariable()
 
         h.addConstr(x + y == 3)
         h.addConstr(x + y == 1)
@@ -468,8 +468,8 @@ class TestHighsPy(unittest.TestCase):
     #     h = highspy.Highs()
     #     h.setOptionValue('output_flag', False)
 
-    #     x = h.addVar(lb=highspy.kHighsInf)
-    #     y = h.addVar(lb=highspy.kHighsInf)
+    #     x = h.addVariable(lb=highspy.kHighsInf)
+    #     y = h.addVariable(lb=highspy.kHighsInf)
 
     #     c1 = h.addConstr(-x + y >= 2)
     #     c2 = h.addConstr(x + y >= 0)
@@ -545,13 +545,13 @@ class TestHighsPy(unittest.TestCase):
 
     def test_addVar(self):  
         h = highspy.Highs()  
-        h.addVar()
+        h.addVariable()
         h.update()
         self.assertEqual(h.numVars, 1)  
   
     def test_removeVar(self):  
         h = highspy.Highs()  
-        x = [h.addVar(), h.addVar()]
+        x = [h.addVariable(), h.addVariable()]
 
         h.update()
         self.assertEqual(h.numVars, 2)
@@ -561,8 +561,8 @@ class TestHighsPy(unittest.TestCase):
 
     def test_addConstr(self):  
         h = highspy.Highs()
-        x = h.addVar()
-        y = h.addVar()
+        x = h.addVariable()
+        y = h.addVariable()
 
         h.addConstr(2*x + 3*y <= 10)  
         self.assertEqual(h.numVars, 2)
@@ -581,8 +581,8 @@ class TestHighsPy(unittest.TestCase):
   
     def test_removeConstr(self):  
         h = highspy.Highs()
-        x = h.addVar()
-        y = h.addVar()
+        x = h.addVariable()
+        y = h.addVariable()
         c = h.addConstr(2*x + 3*y <= 10)
         self.assertEqual(h.numConstrs, 1)
 
@@ -594,7 +594,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
 
-        x = [h.addVar(), h.addVar()]
+        x = [h.addVariable(), h.addVariable()]
         h.addConstr(2*x[0] + 3*x[1] <= 10)
         h.maximize(x[0])
 
@@ -608,7 +608,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()  
         
         # name set, but not in the model
-        x = h.addVar(name='x')
+        x = h.addVariable(name='x')
         self.assertEqual(x.name, 'x')
 
         # change name before adding to the model
@@ -659,7 +659,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
 
-        x = [h.addIntegral(), h.addVar()]
+        x = [h.addIntegral(), h.addVariable()]
         h.addConstr(2*x[0] + 3*x[1] <= 10.6)
         h.maximize(x[0]+x[1])
 
@@ -677,7 +677,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()
         h.setOptionValue('output_flag', False)
 
-        x = [h.addVar(), h.addVar()]
+        x = [h.addVariable(), h.addVariable()]
         h.addConstr(2*x[0] + 3*x[1] <= 10)
 
         self.assertRaises(Exception, h.maximize, x[0]+x[1] <= 3)
@@ -685,7 +685,7 @@ class TestHighsPy(unittest.TestCase):
 
     def test_constraint_builder(self):  
         h = highspy.Highs()
-        (x,y) = [h.addVar(), h.addVar()]
+        (x,y) = [h.addVariable(), h.addVariable()]
 
         # -inf <= 2x + 3y <= inf
         c1 = 2*x + 3*y 
