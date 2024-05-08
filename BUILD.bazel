@@ -1,5 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
 
 copy_file(
     name = "highs-config",
@@ -20,21 +20,21 @@ cc_library(
         "extern/filereaderlp/*.cpp",
         "extern/zlib/*.cpp",
         "src/interfaces/highs_c_api.cpp",
-         "src/io/*.cpp",
-         "src/ipm/*.cpp",
-         "src/ipm/ipx/*.cc",
-         "src/ipm/basiclu/*.c",
-         "src/lp_data/*.cpp",
-         "src/mip/*.cpp",
-         "src/model/*.cpp",
-         "src/parallel/*.cpp",
-         "src/pdlp/*.cpp",
-         "src/pdlp/cupdlp/*.c",
-         "src/presolve/*.cpp",
-         "src/qpsolver/*.cpp",
-         "src/simplex/*.cpp",
-         "src/test/*.cpp",
-         "src/util/*.cpp",
+        "src/io/*.cpp",
+        "src/ipm/*.cpp",
+        "src/ipm/ipx/*.cc",
+        "src/ipm/basiclu/*.c",
+        "src/lp_data/*.cpp",
+        "src/mip/*.cpp",
+        "src/model/*.cpp",
+        "src/parallel/*.cpp",
+        "src/pdlp/*.cpp",
+        "src/pdlp/cupdlp/*.c",
+        "src/presolve/*.cpp",
+        "src/qpsolver/*.cpp",
+        "src/simplex/*.cpp",
+        "src/test/*.cpp",
+        "src/util/*.cpp",
     ]),
     hdrs = glob([
         "HConfig.h",
@@ -42,7 +42,8 @@ cc_library(
         "src/qpsolver/*.hpp",
         "src/Highs.h",
         "extern/filereaderlp/*.hpp",
-        "extern/zstr/*.hpp"]),
+        "extern/zstr/*.hpp",
+    ]),
     copts = [
         "-Wno-unused-variable",
         "-Wno-unused-but-set-variable",
@@ -64,9 +65,11 @@ cc_library(
         # "src/simplex",
         # "src/test",
         # "src/util",
-        "bazel-bin"],
+        "bazel-bin",
+    ],
+    linkopts = ["-lpthread"],
     visibility = ["//visibility:public"],
-        deps = [
+    deps = [
         "//:config",
         "@zlib",
     ],
@@ -74,11 +77,11 @@ cc_library(
 
 cc_binary(
     name = "call-highs-example",
-    srcs= ["examples/call_highs_from_cpp.cpp"],
+    srcs = ["examples/call_highs_from_cpp.cpp"],
+    visibility = ["//visibility:public"],
     deps = [
         "//:highs",
     ],
-    visibility = ["//visibility:public"]
 )
 
 ## Add tests
