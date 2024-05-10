@@ -188,7 +188,7 @@ if (BUILD_CXX)
     set(ipo_supported NO)
     message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
   else()
-    if(CMAKE_VERSION VERSION_MORE VERSION_GREATER "3.23.0") 
+    if(CMAKE_VERSION VERSION_GREATER "3.23.0") 
       cmake_policy(SET CMP0138 NEW)
     endif()
 
