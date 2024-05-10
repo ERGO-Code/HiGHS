@@ -223,14 +223,18 @@ else()
   endif()
 
 
-
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs ZLIB::ZLIB)
-    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
+    set(CONF_DEPS 
+      "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)\nfind_dependency(ZLIB)")
+    set(CONF_DEPENDENCIES ${CONF_DEPS})
+  else() 
+    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)")
   endif()
+    
 
   # # on UNIX system the 'lib' prefix is automatically added
   # set_target_properties(highs PROPERTIES
