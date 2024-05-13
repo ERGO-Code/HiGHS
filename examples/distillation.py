@@ -37,7 +37,7 @@ useTypeB = h.addVariable(obj = 10, name = varNames[1], update = update_in_addVar
 # TypeA is still on top when useTypeB is being defined
 
 print('\nDEBUG Names: useTypeA', useTypeA.name, "; varNames[0]", varNames[0])
-print('DEBUG Names: useTypeB', useTypeB.name, "; varNames[0]", varNames[1])
+print('DEBUG Names: useTypeB', useTypeB.name, "; varNames[1]", varNames[1])
 
 vars = list()
 vars.append(useTypeA)

@@ -106,7 +106,9 @@ class Highs(_Highs):
         current_batch_size = len(self._batch.obj)
         print("\nDEBUG update(self): On entry - current_batch_size = ", current_batch_size)
         if current_batch_size > 0:
-            names = [self._vars[i].name for i in range(current_batch_size)]
+            # names = [self._vars[i].name for i in range(current_batch_size)]
+            names = [self._batch.name[i] for i in range(current_batch_size)]
+
             print("DEBUG update(self): names = [", names, "] costs = ", self._batch.obj)
 
             super().addVars(int(current_batch_size), self._batch.lb, self._batch.ub)
@@ -121,8 +123,6 @@ class Highs(_Highs):
 
         self._batch = highs_batch(self)
         print("DEBUG update(self): On  exit - current_batch_size = ", len(self._batch.obj))
-        self._vars.clear()
-        self._cons.clear()
 
     def val(self, var):
         return super().getSolution().col_value[var.index]
@@ -555,12 +555,14 @@ class highs_batch(object):
         self.ub = []
         self.type = []
         self.idx = []
+        self.name = []
 
-    def add(self, obj, lb, ub, type,name,solver):
+    def add(self, obj, lb, ub, type, name, solver):
         self.obj.append(obj)
         self.lb.append(lb)
         self.ub.append(ub)
         self.type.append(type)
+        self.name.append(name)
 
         newIndex = self.highs.numVars + len(self.obj)-1
         print("\nDEBUG add: newIndex = ", newIndex)
