@@ -104,13 +104,8 @@ class Highs(_Highs):
     # update variables
     def update(self):
         current_batch_size = len(self._batch.obj)
-        print("\nDEBUG update(self): On entry - current_batch_size = ", current_batch_size)
         if current_batch_size > 0:
-            # names = [self._vars[i].name for i in range(current_batch_size)]
             names = [self._batch.name[i] for i in range(current_batch_size)]
-
-            print("DEBUG update(self): names = [", names, "] costs = ", self._batch.obj)
-
             super().addVars(int(current_batch_size), self._batch.lb, self._batch.ub)
             super().changeColsCost(current_batch_size, self._batch.idx, self._batch.obj)
 
@@ -120,9 +115,7 @@ class Highs(_Highs):
 
             for i in range(current_batch_size):
                 super().passColName(int(self._batch.idx[i]), str(names[i]))
-
         self._batch = highs_batch(self)
-        print("DEBUG update(self): On  exit - current_batch_size = ", len(self._batch.obj))
 
     def val(self, var):
         return super().getSolution().col_value[var.index]
@@ -219,16 +212,12 @@ class Highs(_Highs):
     # Change the name of addVar to addVariable to prevent shadowing of
     # highspy binding to Highs::addVar
     def addVariable(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
-        print("\nDEBUG addVariable: name = ", name, "; obj = ", obj, "; lb = ", lb, "; ub = ", ub)
-
         var = self._batch.add(obj, lb, ub, type, name, self)
         self._vars.append(var)
         # No longer acumulate a batch of variables so that addVariable
         # behaves like Highs::addVar and highspy bindings modifying
         # column data and adding rows can be used
         self.update()
-        print("\nDEBUG ")
-        print("DEBUG addVariable: On exit - current_batch_size = ", len(self._batch.obj))
         return var
 
     def addIntegral(self, lb = 0, ub = kHighsInf, obj = 0, name = None):
@@ -302,6 +291,10 @@ class Highs(_Highs):
     # Set to integer
     def setInteger(self, var):
         super().changeColIntegrality(var.index, HighsVarType.kInteger)
+
+    # Set to continuous
+    def setContinuous(self, var):
+        super().changeColIntegrality(var.index, HighsVarType.kContinuous)
 
 ## The following classes keep track of variables
 ## It is currently quite basic and may fail in complex scenarios
@@ -564,6 +557,5 @@ class highs_batch(object):
         self.name.append(name)
 
         newIndex = self.highs.numVars + len(self.obj)-1
-        print("\nDEBUG add: newIndex = ", newIndex)
         self.idx.append(newIndex)
         return highs_var(newIndex, solver, name)

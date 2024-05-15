@@ -8,6 +8,10 @@
 
 import highspy
 
+# For printing
+width = 4
+precision = 3
+
 h = highspy.Highs()
 h.silent()
 
@@ -15,29 +19,12 @@ varNames = list()
 varNames.append('TypeA')
 varNames.append('TypeB')
 
-print("DEBUG ", varNames)
-
 useTypeA = h.addVariable(obj =  8, name = varNames[0])
 useTypeB = h.addVariable(obj = 10, name = varNames[1])
-
-# With update_in_addVariable = False (so runs as originally written,
-# with self.update() being called only in addConstr) useTypeB.name is
-# "TypeB"
-#
-# With update_in_addVariable = True (so self.update() is called in addVariable) useTypeB.name is
-# "TypeA"
-#
-# Looks as if the internal stack of names isn't being cleared, so
-# TypeA is still on top when useTypeB is being defined
-
-print('\nDEBUG Names: useTypeA', useTypeA.name, "; varNames[0]", varNames[0])
-print('DEBUG Names: useTypeB', useTypeB.name, "; varNames[1]", varNames[1])
 
 vars = list()
 vars.append(useTypeA)
 vars.append(useTypeB)
-
-print("\nDEBUG vars: ", vars)
 
 constrNames = list()
 constrNames.append('Product1')
@@ -55,34 +42,51 @@ print('writeModel(\'Distillation.lp\') status =', status)
 status = h.writeModel('Distillation.mps')
 print('writeModel(\'Distillation.mps\') status =', status)
 
+print()
+print('Solve as LP')
+
 h.solve()
 
-print()
-print('Solved as LP')
-
 for var in vars:
-    print('Use {0:6f} of {1:6s}: reduced cost {2:6f}'.format(h.varValue(var), h.varName(var), h.varDual(var)))
+    print('Use {0:.1f} of {1:s}: reduced cost {2:.6f}'.format(h.varValue(var), h.varName(var), h.varDual(var)))
 print('Use', h.varValues(vars), 'of', h.varNames(vars))
 print('Use', h.allVarValues(), 'of', h.allVarNames())
 
 for name in constrNames:
-    print('Constraint {0:6s} has value {1:6f} and dual {2:6f}'.format(name, h.constrValue(name), h.constrDual(name)))
+    print(f"Constraint {name} has value {h.constrValue(name):{width}.{precision}} and dual  {h.constrDual(name):{width}.{precision}}")
 
 print('Constraints have values', h.constrValues(constrNames), 'and duals', h.constrDuals(constrNames))
 
 print('Constraints have values', h.allConstrValues(), 'and duals', h.allConstrDuals())
 
-print('Optimal objective value is', h.getObjectiveValue())
+for var in vars:
+    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")
+
+print()
+print('Solve as MIP')
 
 for var in vars:
     h.setInteger(var)
 
 h.solve()
 
+for var in vars:
+    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")
+
 print()
-print('Solved as MIP')
+print('Solve as LP with Gomory cut')
+
+# Make the variables continuous
+for var in vars:
+    h.setContinuous(var)
+
+# Add Gomory cut
+h.addConstr(useTypeA + useTypeB >= 4, name = "Gomory")
+
+h.solve()
 
 for var in vars:
-    print('Use {0:6f} of {1:6s}'.format(h.varValue(var), h.varName(var)))
-
-print('Optimal objective value is', h.getObjectiveValue())
+    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")
