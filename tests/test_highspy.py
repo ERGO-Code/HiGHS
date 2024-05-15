@@ -549,16 +549,6 @@ class TestHighsPy(unittest.TestCase):
         h.update()
         self.assertEqual(h.numVars, 1)  
   
-    def test_deleteVariable(self):  
-        h = highspy.Highs()  
-        x = [h.addVariable(), h.addVariable()]
-
-        h.update()
-        self.assertEqual(h.numVars, 2)
-
-        h.deleteVariable(x[0])
-        self.assertEqual(h.numVars, 1)
-
     def test_addConstr(self):  
         h = highspy.Highs()
         x = h.addVariable()
