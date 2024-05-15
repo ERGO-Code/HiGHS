@@ -68,7 +68,7 @@ class Highs(_Highs):
 
             # reset objective
             self.update()
-            super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
+            super().changeColsCost(self.numVariables, range(self.numVariables), [0]*self.numVariables)
 
             # if we have duplicate variables, add the vals
             vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
@@ -90,7 +90,7 @@ class Highs(_Highs):
 
             # reset objective
             self.update()
-            super().changeColsCost(self.numVars, range(self.numVars), [0]*self.numVars)
+            super().changeColsCost(self.numVariables, range(self.numVariables), [0]*self.numVariables)
 
             # if we have duplicate variables, add the vals
             vars,vals = zip(*[(var, sum(v[1] for v in Vals)) for var, Vals in groupby(sorted(zip(obj.vars, obj.vals)), key=itemgetter(0))])
@@ -104,10 +104,8 @@ class Highs(_Highs):
     # update variables
     def update(self):
         current_batch_size = len(self._batch.obj)
-
         if current_batch_size > 0:
-            names = [self._vars[i].name for i in range(current_batch_size)]
-
+            names = [self._batch.name[i] for i in range(current_batch_size)]
             super().addVars(int(current_batch_size), self._batch.lb, self._batch.ub)
             super().changeColsCost(current_batch_size, self._batch.idx, self._batch.obj)
 
@@ -117,7 +115,6 @@ class Highs(_Highs):
 
             for i in range(current_batch_size):
                 super().passColName(int(self._batch.idx[i]), str(names[i]))
-
         self._batch = highs_batch(self)
 
     def val(self, var):
@@ -127,14 +124,14 @@ class Highs(_Highs):
         sol = super().getSolution()
         return [sol.col_value[v.index] for v in vars]
 
-    def varName(self, var):
+    def variableName(self, var):
         [status, name] = super().getColName(var.index)
         failed = status != HighsStatus.kOk
         if failed:
             raise Exception('Variable name not found') 
         return name
 
-    def varNames(self, vars):
+    def variableNames(self, vars):
         names = list()
         for v in vars:
             [status, name] = super().getColName(v.index)
@@ -144,27 +141,27 @@ class Highs(_Highs):
             names.append(name)
         return names
 
-    def allVarNames(self):
+    def allVariableNames(self):
         return super().getLp().col_names_
 
-    def varValue(self, var):
+    def variableValue(self, var):
         return super().getSolution().col_value[var.index]
 
-    def varValues(self, vars):
+    def variableValues(self, vars):
         col_value = super().getSolution().col_value
         return [col_value[v.index] for v in vars]
 
-    def allVarValues(self):
+    def allVariableValues(self):
         return super().getSolution().col_value
 
-    def varDual(self, var):
+    def variableDual(self, var):
         return super().getSolution().col_dual[var.index]
 
-    def varDuals(self, vars):
+    def variableDuals(self, vars):
         col_dual = super().getSolution()
         return [col_dual[v.index] for v in vars]
 
-    def allVarDuals(self):
+    def allVariableDuals(self):
         return super().getSolution().col_dual
 
     def constrValue(self, constr_name):
@@ -212,28 +209,36 @@ class Highs(_Highs):
     #
     # add variable & useful constants
     #
-    def addVar(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
+    # Change the name of addVar to addVariable to prevent shadowing of
+    # highspy binding to Highs::addVar
+    def addVariable(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
         var = self._batch.add(obj, lb, ub, type, name, self)
         self._vars.append(var)
+        # No longer acumulate a batch of variables so that addVariable
+        # behaves like Highs::addVar and highspy bindings modifying
+        # column data and adding rows can be used
+        self.update()
         return var
 
     def addIntegral(self, lb = 0, ub = kHighsInf, obj = 0, name = None):
-        return self.addVar(lb, ub, obj, HighsVarType.kInteger, name)
+        return self.addVariable(lb, ub, obj, HighsVarType.kInteger, name)
 
     def addBinary(self, obj = 0, name = None):
-        return self.addVar(0, 1, obj, HighsVarType.kInteger, name)
+        return self.addVariable(0, 1, obj, HighsVarType.kInteger, name)
 
-    def removeVar(self, var):
+    # Change the name of removeVar to deleteVariable
+    def deleteVariable(self, var):
         for i in self._vars[var.index+1:]:
             i.index -= 1
 
         del self._vars[var.index]
     
         # only delete from model if it exists
-        if var.index < self.numVars:
+        if var.index < self.numVariables:
             super().deleteVars(1, [var.index])
 
-    def getVars(self):
+    # Change the name of getVars to getVariables
+    def getVariables(self):
         return self._vars
 
     @property
@@ -241,7 +246,7 @@ class Highs(_Highs):
         return kHighsInf
 
     @property
-    def numVars(self):
+    def numVariables(self):
         return super().getNumCol()
 
     @property
@@ -287,13 +292,17 @@ class Highs(_Highs):
     def setInteger(self, var):
         super().changeColIntegrality(var.index, HighsVarType.kInteger)
 
+    # Set to continuous
+    def setContinuous(self, var):
+        super().changeColIntegrality(var.index, HighsVarType.kContinuous)
+
 ## The following classes keep track of variables
 ## It is currently quite basic and may fail in complex scenarios
 
 # highs variable
 class highs_var(object):
     """Basic constraint builder for HiGHS"""
-    __slots__ = ['index', '_varName', 'highs']
+    __slots__ = ['index', '_variableName', 'highs']
 
     def __init__(self, i, highs, name=None):
         self.index = i
@@ -305,19 +314,19 @@ class highs_var(object):
 
     @property
     def name(self):
-        if self.index < self.highs.numVars and self.highs.numVars > 0:
+        if self.index < self.highs.numVariables and self.highs.numVariables > 0:
             return self.highs.getLp().col_names_[self.index]
         else:
-            return self._varName
+            return self._variableName
 
     @name.setter
     def name(self, value):
         if value == None or len(value) == 0:
             raise Exception('Name cannot be empty')
 
-        self._varName = value
-        if self.index < self.highs.numVars and self.highs.numVars > 0:
-            self.highs.passColName(self.index, self._varName)
+        self._variableName = value
+        if self.index < self.highs.numVariables and self.highs.numVariables > 0:
+            self.highs.passColName(self.index, self._variableName)
 
     def __hash__(self):
         return self.index
@@ -538,13 +547,15 @@ class highs_batch(object):
         self.ub = []
         self.type = []
         self.idx = []
+        self.name = []
 
-    def add(self, obj, lb, ub, type,name,solver):
+    def add(self, obj, lb, ub, type, name, solver):
         self.obj.append(obj)
         self.lb.append(lb)
         self.ub.append(ub)
         self.type.append(type)
+        self.name.append(name)
 
-        newIndex = self.highs.numVars + len(self.obj)-1
+        newIndex = self.highs.numVariables + len(self.obj)-1
         self.idx.append(newIndex)
         return highs_var(newIndex, solver, name)

@@ -13,8 +13,8 @@ varNames = list()
 varNames.append('Tables')
 varNames.append('Sets of chairs')
 
-x1 = h.addVar(obj = 10, name = varNames[0])
-x2 = h.addVar(obj = 25, name = varNames[1])
+x1 = h.addVariable(obj = 10, name = varNames[0])
+x2 = h.addVariable(obj = 25, name = varNames[1])
 
 vars = list()
 vars.append(x1)
@@ -37,9 +37,9 @@ print('writeModel(\'Chip.mps\') status =', status)
 h.solve()
 
 for var in vars:
-    print('Make', h.varValue(var), h.varName(var), ': Reduced cost', h.varDual(var))
-print('Make', h.varValues(vars), 'of', h.varNames(vars))
-print('Make', h.allVarValues(), 'of', h.allVarNames())
+    print('Make', h.variableValue(var), h.variableName(var), ': Reduced cost', h.variableDual(var))
+print('Make', h.variableValues(vars), 'of', h.variableNames(vars))
+print('Make', h.allVariableValues(), 'of', h.allVariableNames())
 
 for name in constrNames:
     print('Constraint', name, 'has value', h.constrValue(name), 'and dual', h.constrDual(name))

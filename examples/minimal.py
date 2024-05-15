@@ -2,8 +2,8 @@ import highspy
 
 h = highspy.Highs()
 
-x1 = h.addVar(lb=-h.inf)
-x2 = h.addVar(lb=-h.inf)
+x1 = h.addVariable(lb = -h.inf)
+x2 = h.addVariable(lb = -h.inf)
 
 h.addConstr(x2 - x1 >= 2)
 h.addConstr(x1 + x2 >= 0)
