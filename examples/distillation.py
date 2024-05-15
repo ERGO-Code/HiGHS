@@ -15,12 +15,12 @@ precision = 3
 h = highspy.Highs()
 h.silent()
 
-varNames = list()
-varNames.append('TypeA')
-varNames.append('TypeB')
+variableNames = list()
+variableNames.append('TypeA')
+variableNames.append('TypeB')
 
-useTypeA = h.addVariable(obj =  8, name = varNames[0])
-useTypeB = h.addVariable(obj = 10, name = varNames[1])
+useTypeA = h.addVariable(obj =  8, name = variableNames[0])
+useTypeB = h.addVariable(obj = 10, name = variableNames[1])
 
 vars = list()
 vars.append(useTypeA)
@@ -48,9 +48,9 @@ print('Solve as LP')
 h.solve()
 
 for var in vars:
-    print('Use {0:.1f} of {1:s}: reduced cost {2:.6f}'.format(h.varValue(var), h.varName(var), h.varDual(var)))
-print('Use', h.varValues(vars), 'of', h.varNames(vars))
-print('Use', h.allVarValues(), 'of', h.allVarNames())
+    print('Use {0:.1f} of {1:s}: reduced cost {2:.6f}'.format(h.variableValue(var), h.variableName(var), h.variableDual(var)))
+print('Use', h.variableValues(vars), 'of', h.variableNames(vars))
+print('Use', h.allVariableValues(), 'of', h.allVariableNames())
 
 for name in constrNames:
     print(f"Constraint {name} has value {h.constrValue(name):{width}.{precision}} and dual  {h.constrDual(name):{width}.{precision}}")
@@ -60,7 +60,7 @@ print('Constraints have values', h.constrValues(constrNames), 'and duals', h.con
 print('Constraints have values', h.allConstrValues(), 'and duals', h.allConstrDuals())
 
 for var in vars:
-    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+    print(f"Use {h.variableValue(var):{width}.{precision}} of {h.variableName(var)}")
 print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")
 
 print()
@@ -72,7 +72,7 @@ for var in vars:
 h.solve()
 
 for var in vars:
-    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+    print(f"Use {h.variableValue(var):{width}.{precision}} of {h.variableName(var)}")
 print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")
 
 print()
@@ -88,5 +88,5 @@ h.addConstr(useTypeA + useTypeB >= 4, name = "Gomory")
 h.solve()
 
 for var in vars:
-    print(f"Use {h.varValue(var):{width}.{precision}} of {h.varName(var)}")
+    print(f"Use {h.variableValue(var):{width}.{precision}} of {h.variableName(var)}")
 print(f"Optimal objective value is {h.getObjectiveValue():{width}.{precision}}")

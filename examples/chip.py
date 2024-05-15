@@ -37,9 +37,9 @@ print('writeModel(\'Chip.mps\') status =', status)
 h.solve()
 
 for var in vars:
-    print('Make', h.varValue(var), h.varName(var), ': Reduced cost', h.varDual(var))
-print('Make', h.varValues(vars), 'of', h.varNames(vars))
-print('Make', h.allVarValues(), 'of', h.allVarNames())
+    print('Make', h.variableValue(var), h.variableName(var), ': Reduced cost', h.variableDual(var))
+print('Make', h.variableValues(vars), 'of', h.variableNames(vars))
+print('Make', h.allVariableValues(), 'of', h.allVariableNames())
 
 for name in constrNames:
     print('Constraint', name, 'has value', h.constrValue(name), 'and dual', h.constrDual(name))

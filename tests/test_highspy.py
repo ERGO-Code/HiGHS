@@ -547,7 +547,7 @@ class TestHighsPy(unittest.TestCase):
         h = highspy.Highs()  
         h.addVariable()
         h.update()
-        self.assertEqual(h.numVars, 1)  
+        self.assertEqual(h.numVariables, 1)  
   
     def test_addConstr(self):  
         h = highspy.Highs()
@@ -555,7 +555,7 @@ class TestHighsPy(unittest.TestCase):
         y = h.addVariable()
 
         h.addConstr(2*x + 3*y <= 10)  
-        self.assertEqual(h.numVars, 2)
+        self.assertEqual(h.numVariables, 2)
         self.assertEqual(h.numConstrs, 1)  
         self.assertEqual(h.getNumNz(), 2)
 
@@ -577,7 +577,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.numConstrs, 1)
 
         h.removeConstr(c)  
-        self.assertEqual(h.numVars, 2)
+        self.assertEqual(h.numVariables, 2)
         self.assertEqual(h.numConstrs, 0)  
   
     def test_val(self):  
@@ -607,7 +607,7 @@ class TestHighsPy(unittest.TestCase):
 
         # add to the model
         h.update()
-        self.assertEqual(h.numVars, 1)  
+        self.assertEqual(h.numVariables, 1)  
         self.assertEqual(h.getLp().col_names_[0], 'y')
 
         # change name after adding to the model
