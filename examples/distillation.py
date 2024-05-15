@@ -17,14 +17,8 @@ varNames.append('TypeB')
 
 print("DEBUG ", varNames)
 
-update_in_addVariable = True
-if update_in_addVariable:
-    print("DEBUG update_in_addVariable is True")
-else:
-    print("DEBUG update_in_addVariable is False")
-    
-useTypeA = h.addVariable(obj =  8, name = varNames[0], update = update_in_addVariable)
-useTypeB = h.addVariable(obj = 10, name = varNames[1], update = update_in_addVariable)
+useTypeA = h.addVariable(obj =  8, name = varNames[0])
+useTypeB = h.addVariable(obj = 10, name = varNames[1])
 
 # With update_in_addVariable = False (so runs as originally written,
 # with self.update() being called only in addConstr) useTypeB.name is

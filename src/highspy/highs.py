@@ -218,17 +218,16 @@ class Highs(_Highs):
     #
     # Change the name of addVar to addVariable to prevent shadowing of
     # highspy binding to Highs::addVar
-    def addVariable(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None, update = False):
-        print("\nDEBUG addVariable: name = ", name, "; obj = ", obj, "; lb = ", lb, "; ub = ", ub, " with update = ", update)
+    def addVariable(self, lb = 0, ub = kHighsInf, obj = 0, type=HighsVarType.kContinuous, name = None):
+        print("\nDEBUG addVariable: name = ", name, "; obj = ", obj, "; lb = ", lb, "; ub = ", ub)
 
         var = self._batch.add(obj, lb, ub, type, name, self)
         self._vars.append(var)
         # No longer acumulate a batch of variables so that addVariable
         # behaves like Highs::addVar and highspy bindings modifying
         # column data and adding rows can be used
-        if update:
-            self.update()
-            print("\nDEBUG ")
+        self.update()
+        print("\nDEBUG ")
         print("DEBUG addVariable: On exit - current_batch_size = ", len(self._batch.obj))
         return var
 
