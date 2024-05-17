@@ -189,23 +189,20 @@ class HPresolve {
 
   void reinsertEquation(HighsInt row);
 
-  bool okUint8Resize(std::vector<uint8_t>& use_vector,
-		     const HighsInt dimension,
-		     const bool value);
+  bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
+                     const bool value);
 
   bool okHighsIntResize(std::vector<HighsInt>& use_vector,
-			const HighsInt dimension,
-			const HighsInt value);
+                        const HighsInt dimension, const HighsInt value);
 
   bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
-			 const HighsInt dimension);
+                         const HighsInt dimension);
 
   bool okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
-			   const HighsInt dimension);
+                           const HighsInt dimension);
 
-  bool okDoubleResize(std::vector<double>& use_vector,
-		      const HighsInt dimension,
-		      const double value);
+  bool okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension,
+                      const double value);
 
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
@@ -214,12 +211,12 @@ class HPresolve {
   HighsInt findNonzero(HighsInt row, HighsInt col);
 
   bool okFromCSC(const std::vector<double>& Aval,
-		 const std::vector<HighsInt>& Aindex,
-		 const std::vector<HighsInt>& Astart);
+                 const std::vector<HighsInt>& Aindex,
+                 const std::vector<HighsInt>& Astart);
 
   bool okFromCSR(const std::vector<double>& ARval,
-		 const std::vector<HighsInt>& ARindex,
-		 const std::vector<HighsInt>& ARstart);
+                 const std::vector<HighsInt>& ARindex,
+                 const std::vector<HighsInt>& ARstart);
 
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
@@ -291,12 +288,12 @@ class HPresolve {
  public:
   // for LP presolve
   bool okSetInput(HighsLp& model_, const HighsOptions& options_,
-		  const HighsInt presolve_reduction_limit,
-		  HighsTimer* timer = nullptr);
+                  const HighsInt presolve_reduction_limit,
+                  HighsTimer* timer = nullptr);
 
   // for MIP presolve
   bool okSetInput(HighsMipSolver& mipsolver,
-		  const HighsInt presolve_reduction_limit);
+                  const HighsInt presolve_reduction_limit);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;

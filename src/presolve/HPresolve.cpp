@@ -45,43 +45,59 @@
 
 namespace presolve {
 
-bool HPresolve::okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension, const bool value) {
-  try { use_vector.resize(dimension, value); }
-  catch (const std::bad_alloc& e) {
+bool HPresolve::okUint8Resize(std::vector<uint8_t>& use_vector,
+                              const HighsInt dimension, const bool value) {
+  try {
+    use_vector.resize(dimension, value);
+  } catch (const std::bad_alloc& e) {
     printf("HPresolve::okHighsUint8Resize fails with %s\n", e.what());
-    return false; }
+    return false;
+  }
   return true;
 }
 
-bool HPresolve::okHighsIntResize(std::vector<HighsInt>& use_vector, const HighsInt dimension, const HighsInt value) {
-  try { use_vector.resize(dimension, value); }
-  catch (const std::bad_alloc& e) {
+bool HPresolve::okHighsIntResize(std::vector<HighsInt>& use_vector,
+                                 const HighsInt dimension,
+                                 const HighsInt value) {
+  try {
+    use_vector.resize(dimension, value);
+  } catch (const std::bad_alloc& e) {
     printf("HPresolve::okHighsIntResize fails with %s\n", e.what());
-    return false; }
+    return false;
+  }
   return true;
 }
 
-bool HPresolve::okHighsIntReserve(std::vector<HighsInt>& use_vector, const HighsInt dimension) {
-  try { use_vector.reserve(dimension); }
-  catch (const std::bad_alloc& e) {
+bool HPresolve::okHighsIntReserve(std::vector<HighsInt>& use_vector,
+                                  const HighsInt dimension) {
+  try {
+    use_vector.reserve(dimension);
+  } catch (const std::bad_alloc& e) {
     printf("HPresolve::okHighsIntReserve fails with %s\n", e.what());
-    return false; }
+    return false;
+  }
   return true;
 }
 
-bool HPresolve::okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector, const HighsInt dimension) {
-  try { use_vector.resize(dimension, std::set<HighsInt>()); }
-  catch (const std::bad_alloc& e) {
+bool HPresolve::okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
+                                    const HighsInt dimension) {
+  try {
+    use_vector.resize(dimension, std::set<HighsInt>());
+  } catch (const std::bad_alloc& e) {
     printf("HPresolve::okHighsIntSetResize fails with %s\n", e.what());
-    return false; }
+    return false;
+  }
   return true;
 }
 
-bool HPresolve::okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension, const double value) {
-  try { use_vector.resize(dimension, value); }
-  catch (const std::bad_alloc& e) {
+bool HPresolve::okDoubleResize(std::vector<double>& use_vector,
+                               const HighsInt dimension, const double value) {
+  try {
+    use_vector.resize(dimension, value);
+  } catch (const std::bad_alloc& e) {
     printf("HPresolve::okDoubleResize fails with %s\n", e.what());
-    return false; }
+    return false;
+  }
   return true;
 }
 
@@ -109,8 +125,8 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 #endif
 
 bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
-			   const HighsInt presolve_reduction_limit,
-			   HighsTimer* timer) {
+                           const HighsInt presolve_reduction_limit,
+                           HighsTimer* timer) {
   model = &model_;
   options = &options_;
   this->timer = timer;
@@ -120,12 +136,15 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okDoubleResize(implColLower, model->num_col_, -kHighsInf)) return false;
   if (!okDoubleResize(implColUpper, model->num_col_, kHighsInf)) return false;
   if (!okHighsIntSetResize(colImplSourceByRow, model->num_row_)) return false;
-  if (!okHighsIntSetResize(implRowDualSourceByCol, model->num_col_)) return false;
+  if (!okHighsIntSetResize(implRowDualSourceByCol, model->num_col_))
+    return false;
 
   if (!okDoubleResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
   if (!okDoubleResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
-  if (!okDoubleResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
-  if (!okDoubleResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okDoubleResize(implRowDualLower, model->num_row_, -kHighsInf))
+    return false;
+  if (!okDoubleResize(implRowDualUpper, model->num_row_, kHighsInf))
+    return false;
   if (!okHighsIntResize(rowDualUpperSource, model->num_row_, -1)) return false;
   if (!okHighsIntResize(rowDualLowerSource, model->num_row_, -1)) return false;
 
@@ -142,10 +161,12 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
 
   if (model_.a_matrix_.isRowwise()) {
     if (!okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
-		   model->a_matrix_.start_)) return false;
+                   model->a_matrix_.start_))
+      return false;
   } else {
     if (!okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-		   model->a_matrix_.start_)) return false;
+                   model->a_matrix_.start_))
+      return false;
   }
 
   // initialize everything as changed, but do not add all indices
@@ -183,7 +204,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
 
 // for MIP presolve
 bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
-			   const HighsInt presolve_reduction_limit) {
+                           const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -202,7 +223,7 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
   }
 
   return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-		    presolve_reduction_limit, &mipsolver.timer_);
+                    presolve_reduction_limit, &mipsolver.timer_);
 }
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
@@ -1384,7 +1405,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
   okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-          model->a_matrix_.start_);
+            model->a_matrix_.start_);
 
   mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
 
@@ -2070,8 +2091,8 @@ HighsTripletPositionSlice HPresolve::getStoredRow() const {
 }
 
 bool HPresolve::okFromCSC(const std::vector<double>& Aval,
-			  const std::vector<HighsInt>& Aindex,
-			  const std::vector<HighsInt>& Astart) {
+                          const std::vector<HighsInt>& Aindex,
+                          const std::vector<HighsInt>& Astart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
@@ -2129,8 +2150,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
 }
 
 bool HPresolve::okFromCSR(const std::vector<double>& ARval,
-			  const std::vector<HighsInt>& ARindex,
-			  const std::vector<HighsInt>& ARstart) {
+                          const std::vector<HighsInt>& ARindex,
+                          const std::vector<HighsInt>& ARstart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
@@ -4295,7 +4316,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
           okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                  model->a_matrix_.start_);
+                    model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
@@ -4343,7 +4364,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
           okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                  model->a_matrix_.start_);
+                    model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
         if (analysis_.allow_rule_[kPresolveRuleDependentEquations]) {

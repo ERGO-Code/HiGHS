@@ -817,7 +817,7 @@ HighsStatus Highs::presolve() {
       // case HighsPresolveStatus::kOutOfMemory
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
       highsLogUser(options_.log_options, HighsLogType::kError,
-               "Presolve fails due to memory allocation error\n");
+                   "Presolve fails due to memory allocation error\n");
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
@@ -1381,8 +1381,8 @@ HighsStatus Highs::run() {
       }
       default: {
         assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
-	highsLogUser(options_.log_options, HighsLogType::kError,
-		     "Presolve fails due to memory allocation error\n");
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Presolve fails due to memory allocation error\n");
         return returnFromRun(HighsStatus::kError, undo_mods);
       }
     }
