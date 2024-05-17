@@ -45,15 +45,43 @@
 
 namespace presolve {
 
-bool HPresolve::okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension, const double value) {
+bool HPresolve::okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension, const bool value) {
   try { use_vector.resize(dimension, value); }
-  catch (const std::bad_alloc& e) { return false; }
+  catch (const std::bad_alloc& e) {
+    printf("HPresolve::okHighsUint8Resize fails with %s\n", e.what());
+    return false; }
   return true;
 }
 
 bool HPresolve::okHighsIntResize(std::vector<HighsInt>& use_vector, const HighsInt dimension, const HighsInt value) {
   try { use_vector.resize(dimension, value); }
-  catch (const std::bad_alloc& e) { return false; }
+  catch (const std::bad_alloc& e) {
+    printf("HPresolve::okHighsIntResize fails with %s\n", e.what());
+    return false; }
+  return true;
+}
+
+bool HPresolve::okHighsIntReserve(std::vector<HighsInt>& use_vector, const HighsInt dimension) {
+  try { use_vector.reserve(dimension); }
+  catch (const std::bad_alloc& e) {
+    printf("HPresolve::okHighsIntReserve fails with %s\n", e.what());
+    return false; }
+  return true;
+}
+
+bool HPresolve::okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector, const HighsInt dimension) {
+  try { use_vector.resize(dimension, std::set<HighsInt>()); }
+  catch (const std::bad_alloc& e) {
+    printf("HPresolve::okHighsIntSetResize fails with %s\n", e.what());
+    return false; }
+  return true;
+}
+
+bool HPresolve::okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension, const double value) {
+  try { use_vector.resize(dimension, value); }
+  catch (const std::bad_alloc& e) {
+    printf("HPresolve::okDoubleResize fails with %s\n", e.what());
+    return false; }
   return true;
 }
 
@@ -87,19 +115,19 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   options = &options_;
   this->timer = timer;
 
-  colLowerSource.resize(model->num_col_, -1);
-  colUpperSource.resize(model->num_col_, -1);
-  implColLower.resize(model->num_col_, -kHighsInf);
-  implColUpper.resize(model->num_col_, kHighsInf);
-  colImplSourceByRow.resize(model->num_row_, std::set<HighsInt>());
-  implRowDualSourceByCol.resize(model->num_col_, std::set<HighsInt>());
+  if (!okHighsIntResize(colLowerSource, model->num_col_, -1)) return false;
+  if (!okHighsIntResize(colUpperSource, model->num_col_, -1)) return false;
+  if (!okDoubleResize(implColLower, model->num_col_, -kHighsInf)) return false;
+  if (!okDoubleResize(implColUpper, model->num_col_, kHighsInf)) return false;
+  if (!okHighsIntSetResize(colImplSourceByRow, model->num_row_)) return false;
+  if (!okHighsIntSetResize(implRowDualSourceByCol, model->num_col_)) return false;
 
-  rowDualLower.resize(model->num_row_, -kHighsInf);
-  rowDualUpper.resize(model->num_row_, kHighsInf);
-  implRowDualLower.resize(model->num_row_, -kHighsInf);
-  implRowDualUpper.resize(model->num_row_, kHighsInf);
-  rowDualUpperSource.resize(model->num_row_, -1);
-  rowDualLowerSource.resize(model->num_row_, -1);
+  if (!okDoubleResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okDoubleResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okDoubleResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okDoubleResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okHighsIntResize(rowDualUpperSource, model->num_row_, -1)) return false;
+  if (!okHighsIntResize(rowDualLowerSource, model->num_row_, -1)) return false;
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
@@ -123,12 +151,12 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   // since the first thing presolve will do is a scan for easy reductions
   // of each row and column and set the flag of processed columns to false
   // from then on they are added to the vector whenever there are changes
-  changedRowFlag.resize(model->num_row_, true);
-  rowDeleted.resize(model->num_row_, false);
-  changedRowIndices.reserve(model->num_row_);
-  changedColFlag.resize(model->num_col_, true);
-  colDeleted.resize(model->num_col_, false);
-  changedColIndices.reserve(model->num_col_);
+  if (!okUint8Resize(changedRowFlag, model->num_row_, true)) return false;
+  if (!okUint8Resize(rowDeleted, model->num_row_, false)) return false;
+  if (!okHighsIntReserve(changedRowIndices, model->num_row_)) return false;
+  if (!okUint8Resize(changedColFlag, model->num_col_, true)) return false;
+  if (!okUint8Resize(colDeleted, model->num_col_, false)) return false;
+  if (!okHighsIntReserve(changedColIndices, model->num_col_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
