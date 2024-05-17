@@ -1321,10 +1321,23 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
             if (mipsolver.mipdata_->uplocks[col] == 0 &&
                 (mipsolver.colCost(col) < 0 ||
-                 mipsolver.mipdata_->downlocks[col] != 0))
-              roundsol[col] = std::ceil(fracint.second);
-            else
-              roundsol[col] = std::floor(fracint.second);
+                 mipsolver.mipdata_->downlocks[col] != 0)) {
+              roundsol[col] =
+                  std::ceil(fracint.second - mipsolver.mipdata_->feastol);
+              // if the upper bound is fractional, the rounded bound may be
+              // out-of-bounds.
+              if (roundsol[col] > lpsolver.getLp().col_upper_[col] +
+                                      mipsolver.mipdata_->feastol)
+                roundsol[col] -= 1.0;
+            } else {
+              roundsol[col] =
+                  std::floor(fracint.second + mipsolver.mipdata_->feastol);
+              // if the lower bound is fractional, the rounded bound may be
+              // out-of-bounds.
+              if (roundsol[col] < lpsolver.getLp().col_lower_[col] -
+                                      mipsolver.mipdata_->feastol)
+                roundsol[col] += 1.0;
+            }
           }
 
           const auto& cliquesubst =
