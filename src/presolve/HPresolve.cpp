@@ -45,6 +45,18 @@
 
 namespace presolve {
 
+bool HPresolve::okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension, const double value) {
+  try { use_vector.resize(dimension, value); }
+  catch (const std::bad_alloc& e) { return false; }
+  return true;
+}
+
+bool HPresolve::okHighsIntResize(std::vector<HighsInt>& use_vector, const HighsInt dimension, const HighsInt value) {
+  try { use_vector.resize(dimension, value); }
+  catch (const std::bad_alloc& e) { return false; }
+  return true;
+}
+
 #ifndef NDEBUG
 void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
                               HighsInt row) {

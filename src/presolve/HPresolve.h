@@ -189,6 +189,13 @@ class HPresolve {
 
   void reinsertEquation(HighsInt row);
 
+  bool okDoubleResize(std::vector<double>& use_vector,
+		      const HighsInt dimension,
+		      const double value);
+
+  bool okHighsIntResize(std::vector<HighsInt>& use_vector,
+		      const HighsInt dimension,
+		      const HighsInt value);
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 #endif
