@@ -140,12 +140,13 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   } else
     primal_feastol = options->mip_feasibility_tolerance;
 
-  if (model_.a_matrix_.isRowwise())
-    fromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
-            model->a_matrix_.start_);
-  else
-    fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-            model->a_matrix_.start_);
+  if (model_.a_matrix_.isRowwise()) {
+    if (!okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
+		   model->a_matrix_.start_)) return false;
+  } else {
+    if (!okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+		   model->a_matrix_.start_)) return false;
+  }
 
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
@@ -1382,7 +1383,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
-  fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+  okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
           model->a_matrix_.start_);
 
   mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
@@ -2068,9 +2069,9 @@ HighsTripletPositionSlice HPresolve::getStoredRow() const {
                                    rowpositions.data(), rowpositions.size());
 }
 
-void HPresolve::fromCSC(const std::vector<double>& Aval,
-                        const std::vector<HighsInt>& Aindex,
-                        const std::vector<HighsInt>& Astart) {
+bool HPresolve::okFromCSC(const std::vector<double>& Aval,
+			  const std::vector<HighsInt>& Aindex,
+			  const std::vector<HighsInt>& Astart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
@@ -2124,11 +2125,12 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
         eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
+  return true;
 }
 
-void HPresolve::fromCSR(const std::vector<double>& ARval,
-                        const std::vector<HighsInt>& ARindex,
-                        const std::vector<HighsInt>& ARstart) {
+bool HPresolve::okFromCSR(const std::vector<double>& ARval,
+			  const std::vector<HighsInt>& ARindex,
+			  const std::vector<HighsInt>& ARstart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
@@ -2183,6 +2185,7 @@ void HPresolve::fromCSR(const std::vector<double>& ARval,
         eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
+  return true;
 }
 
 HighsInt HPresolve::countFillin(HighsInt row) {
@@ -4291,7 +4294,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
-          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+          okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                   model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
@@ -4339,7 +4342,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
-          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+          okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                   model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
