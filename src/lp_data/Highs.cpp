@@ -814,7 +814,10 @@ HighsStatus Highs::presolve() {
       break;
     }
     default: {
-      // case HighsPresolveStatus::kError
+      // case HighsPresolveStatus::kOutOfMemory
+      assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
+      highsLogUser(options_.log_options, HighsLogType::kError,
+               "Presolve fails due to memory allocation error\n");
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
@@ -1376,24 +1379,17 @@ HighsStatus Highs::run() {
                     "Presolve reached timeout\n");
         return returnFromRun(HighsStatus::kWarning, undo_mods);
       }
-      case HighsPresolveStatus::kOptionsError: {
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kPresolveError);
-        highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve options error\n");
-        return returnFromRun(HighsStatus::kError, undo_mods);
-      }
       default: {
-        assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kPresolveError);
-        highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n",
-                    (int)model_presolve_status_);
+        assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
+	highsLogUser(options_.log_options, HighsLogType::kError,
+		     "Presolve fails due to memory allocation error\n");
         return returnFromRun(HighsStatus::kError, undo_mods);
       }
     }
     // End of presolve
+    //
+    // Cases of infeasibility/unboundedness timeout and memory errors
+    // all handled, so just the successes remain
     assert(model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
            model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
            model_presolve_status_ == HighsPresolveStatus::kReduced ||
@@ -3014,7 +3010,8 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
       model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
-      model_presolve_status_ == HighsPresolveStatus::kTimeout;
+      model_presolve_status_ == HighsPresolveStatus::kTimeout ||
+      model_presolve_status_ == HighsPresolveStatus::kOutOfMemory;
   if (!can_run_postsolve) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Cannot run postsolve with presolve status: %s\n",
@@ -3095,10 +3092,8 @@ std::string Highs::presolveStatusToString(
       return "Reduced to empty";
     case HighsPresolveStatus::kTimeout:
       return "Timeout";
-    case HighsPresolveStatus::kNullError:
-      return "Null error";
-    case HighsPresolveStatus::kOptionsError:
-      return "Options error";
+    case HighsPresolveStatus::kOutOfMemory:
+      return "Memory allocation error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
