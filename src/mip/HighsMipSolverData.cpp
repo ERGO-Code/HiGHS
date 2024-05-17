@@ -400,7 +400,7 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  presolve.setInput(mipsolver, presolve_reduction_limit);
+  presolve.okSetInput(mipsolver, presolve_reduction_limit);
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);

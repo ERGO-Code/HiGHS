@@ -279,13 +279,13 @@ class HPresolve {
 
  public:
   // for LP presolve
-  void setInput(HighsLp& model_, const HighsOptions& options_,
-                const HighsInt presolve_reduction_limit,
-                HighsTimer* timer = nullptr);
+  bool okSetInput(HighsLp& model_, const HighsOptions& options_,
+		  const HighsInt presolve_reduction_limit,
+		  HighsTimer* timer = nullptr);
 
   // for MIP presolve
-  void setInput(HighsMipSolver& mipsolver,
-                const HighsInt presolve_reduction_limit);
+  bool okSetInput(HighsMipSolver& mipsolver,
+		  const HighsInt presolve_reduction_limit);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;
