@@ -28,6 +28,8 @@ Compilation date has been removed improve build reproducibility. Methods to prin
 
 Logging and error return when user-supplied solution or basis is rejected on vector dimensions
 
+Memory allocation errors in presolve are caught and Highs::run() returns HighsStatus::kError with model_status_ = HighsModelStatus::kMemoryLimit
+
 
 
 
