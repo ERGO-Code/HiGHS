@@ -32,6 +32,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
 #include "util/HighsLinearSumBounds.h"
+#include "util/HighsMemoryAllocation.h"
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
 
@@ -44,62 +45,6 @@
   } while (0)
 
 namespace presolve {
-
-bool HPresolve::okUint8Resize(std::vector<uint8_t>& use_vector,
-                              const HighsInt dimension, const bool value) {
-  try {
-    use_vector.resize(dimension, value);
-  } catch (const std::bad_alloc& e) {
-    printf("HPresolve::okHighsUint8Resize fails with %s\n", e.what());
-    return false;
-  }
-  return true;
-}
-
-bool HPresolve::okHighsIntResize(std::vector<HighsInt>& use_vector,
-                                 const HighsInt dimension,
-                                 const HighsInt value) {
-  try {
-    use_vector.resize(dimension, value);
-  } catch (const std::bad_alloc& e) {
-    printf("HPresolve::okHighsIntResize fails with %s\n", e.what());
-    return false;
-  }
-  return true;
-}
-
-bool HPresolve::okHighsIntReserve(std::vector<HighsInt>& use_vector,
-                                  const HighsInt dimension) {
-  try {
-    use_vector.reserve(dimension);
-  } catch (const std::bad_alloc& e) {
-    printf("HPresolve::okHighsIntReserve fails with %s\n", e.what());
-    return false;
-  }
-  return true;
-}
-
-bool HPresolve::okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
-                                    const HighsInt dimension) {
-  try {
-    use_vector.resize(dimension, std::set<HighsInt>());
-  } catch (const std::bad_alloc& e) {
-    printf("HPresolve::okHighsIntSetResize fails with %s\n", e.what());
-    return false;
-  }
-  return true;
-}
-
-bool HPresolve::okDoubleResize(std::vector<double>& use_vector,
-                               const HighsInt dimension, const double value) {
-  try {
-    use_vector.resize(dimension, value);
-  } catch (const std::bad_alloc& e) {
-    printf("HPresolve::okDoubleResize fails with %s\n", e.what());
-    return false;
-  }
-  return true;
-}
 
 #ifndef NDEBUG
 void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
