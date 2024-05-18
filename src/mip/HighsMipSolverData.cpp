@@ -400,9 +400,13 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  presolve.setInput(mipsolver, presolve_reduction_limit);
-  mipsolver.modelstatus_ = presolve.run(postSolveStack);
-  presolve_status = presolve.getPresolveStatus();
+  if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
+    mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
+    presolve_status = HighsPresolveStatus::kOutOfMemory;
+  } else {
+    mipsolver.modelstatus_ = presolve.run(postSolveStack);
+    presolve_status = presolve.getPresolveStatus();
+  }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
 #ifdef HIGHS_DEBUGSOL

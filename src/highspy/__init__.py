@@ -63,6 +63,7 @@ from ._core import \
 #    kUnknown, \
 #    kSolutionLimit, \
 #    kInterrupt, \
+#    kMemoryLimit, \
 #    kNotPresolved, \
 #    kNotReduced, \
 #    kInfeasible, \
@@ -72,6 +73,7 @@ from ._core import \
 #    kTimeout, \
 #    kNullError, \
 #    kOptionsError, \
+#    kOutOfMemory, \
 #    kLower, \
 #    kBasic, \
 #    kUpper, \
@@ -158,6 +160,7 @@ __all__ = ["__doc__",
            #    "kUnknown",
            #    "kSolutionLimit",
            #    "kInterrupt",
+           #    "kMemoryLimit",
            #    "kNotPresolved",
            #    "kNotReduced",
            #    "kInfeasible",
@@ -167,6 +170,7 @@ __all__ = ["__doc__",
            #    "kTimeout",
            #    "kNullError",
            #    "kOptionsError",
+           #    "kOutOfMemory",
            #    "kLower",
            #    "kBasic",
            #    "kUpper",

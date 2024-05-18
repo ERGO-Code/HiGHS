@@ -1574,4 +1574,3 @@ double Highs_getHighsInfinity(const void* highs) {
 HighsInt Highs_getScaledModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
 }
-
