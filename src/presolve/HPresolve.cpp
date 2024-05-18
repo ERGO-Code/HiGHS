@@ -2043,7 +2043,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   Arow.clear();
 
   freeslots.clear();
-  colhead.assign(model->num_col_, -1);
+  if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
+  //  colhead.assign(model->num_col_, -1);
   rowroot.assign(model->num_row_, -1);
   colsize.assign(model->num_col_, 0);
   rowsize.assign(model->num_row_, 0);

@@ -15,6 +15,11 @@
 #ifndef UTIL_HIGHS_MEMORY_ALLOCATION_H_
 #define UTIL_HIGHS_MEMORY_ALLOCATION_H_
 
+#include <set>
+#include <vector>
+
+#include "util/HighsInt.h"
+
 bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
                    const bool value);
 
@@ -23,6 +28,9 @@ bool okHighsIntResize(std::vector<HighsInt>& use_vector,
 
 bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
                        const HighsInt dimension);
+
+bool okHighsIntAssign(std::vector<HighsInt>& use_vector,
+                      const HighsInt dimension, const HighsInt value);
 
 bool okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
                          const HighsInt dimension);

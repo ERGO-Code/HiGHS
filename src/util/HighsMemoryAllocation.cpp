@@ -12,10 +12,6 @@
 #include "util/HighsMemoryAllocation.h"
 
 #include <cstdio>
-#include <set>
-#include <vector>
-
-#include "util/HighsInt.h"
 
 bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
                    const bool value) {
@@ -45,6 +41,17 @@ bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
     use_vector.reserve(dimension);
   } catch (const std::bad_alloc& e) {
     printf("HighsMemoryAllocation::HighsIntReserve fails with %s\n", e.what());
+    return false;
+  }
+  return true;
+}
+
+bool okHighsIntAssign(std::vector<HighsInt>& use_vector,
+                      const HighsInt dimension, const HighsInt value) {
+  try {
+    use_vector.assign(dimension, value);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::HighsIntAssign fails with %s\n", e.what());
     return false;
   }
   return true;
