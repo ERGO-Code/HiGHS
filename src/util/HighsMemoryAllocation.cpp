@@ -26,14 +26,12 @@ bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
 
 bool okHighsIntResize(std::vector<HighsInt>& use_vector,
                       const HighsInt dimension, const HighsInt value) {
-  printf("HighsMemoryAllocation::HighsIntAssign %d values\n", int(dimension));
   try {
     use_vector.resize(dimension, value);
   } catch (const std::bad_alloc& e) {
     printf("HighsMemoryAllocation::HighsIntResize fails with %s\n", e.what());
     return false;
   }
-  //  if (dimension >= 46) return false;
   return true;
 }
 

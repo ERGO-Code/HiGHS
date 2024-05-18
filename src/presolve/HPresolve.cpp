@@ -2068,7 +2068,6 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   assert(ncol == int(colhead.size()));
   HighsInt nnz = Aval.size();
 
-  printf("HPresolve::okFromCSC Matrix has %d nonzeros\n", int(nnz));
   Avalue = Aval;
   if (!okHighsIntReserve(Acol, nnz)) return false;
   if (!okHighsIntReserve(Arow, nnz)) return false;

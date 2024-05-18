@@ -1375,14 +1375,24 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kTimeout: {
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kTimeLimit);
-        highsLogDev(log_options, HighsLogType::kError,
+        highsLogDev(log_options, HighsLogType::kWarning,
                     "Presolve reached timeout\n");
         return returnFromRun(HighsStatus::kWarning, undo_mods);
       }
-      default: {
-        assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
+      case HighsPresolveStatus::kOutOfMemory: {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kMemoryLimit);
         highsLogUser(options_.log_options, HighsLogType::kError,
                      "Presolve fails due to memory allocation error\n");
+        return returnFromRun(HighsStatus::kError, undo_mods);
+      }
+      default: {
+        assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kPresolveError);
+        highsLogDev(log_options, HighsLogType::kError,
+                    "Presolve returned status %d\n",
+                    (int)model_presolve_status_);
         return returnFromRun(HighsStatus::kError, undo_mods);
       }
     }
