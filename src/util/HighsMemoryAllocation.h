@@ -1,0 +1,33 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
+/*    Leona Gottwald and Michael Feldmeier                               */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file HighsMemoryAllocation.h
+ * @brief Utilities for memory allocation that return true if successful
+ */
+
+#ifndef UTIL_HIGHS_MEMORY_ALLOCATION_H_
+#define UTIL_HIGHS_MEMORY_ALLOCATION_H_
+
+bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
+                   const bool value);
+
+bool okHighsIntResize(std::vector<HighsInt>& use_vector,
+                      const HighsInt dimension, const HighsInt value);
+
+bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
+                       const HighsInt dimension);
+
+bool okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
+                         const HighsInt dimension);
+
+bool okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension,
+                    const double value);
+
+#endif
