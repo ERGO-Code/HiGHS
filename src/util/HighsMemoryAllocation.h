@@ -21,21 +21,21 @@
 #include "util/HighsInt.h"
 
 bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
-                   const bool value);
+                   const bool value = false);
 
 bool okHighsIntResize(std::vector<HighsInt>& use_vector,
-                      const HighsInt dimension, const HighsInt value);
+                      const HighsInt dimension, const HighsInt value = 0);
 
 bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
                        const HighsInt dimension);
 
 bool okHighsIntAssign(std::vector<HighsInt>& use_vector,
-                      const HighsInt dimension, const HighsInt value);
+                      const HighsInt dimension, const HighsInt value = 0);
 
 bool okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
                          const HighsInt dimension);
 
 bool okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension,
-                    const double value);
+                    const double value = 0);
 
 #endif

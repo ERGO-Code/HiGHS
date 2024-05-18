@@ -2044,12 +2044,11 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
 
   freeslots.clear();
   if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
-  //  colhead.assign(model->num_col_, -1);
-  rowroot.assign(model->num_row_, -1);
-  colsize.assign(model->num_col_, 0);
-  rowsize.assign(model->num_row_, 0);
-  rowsizeInteger.assign(model->num_row_, 0);
-  rowsizeImplInt.assign(model->num_row_, 0);
+  if (!okHighsIntAssign(rowroot, model->num_row_, -1)) return false;
+  if (!okHighsIntAssign(colsize, model->num_col_, 0)) return false;
+  if (!okHighsIntAssign(rowsize, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeInteger, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeImplInt, model->num_row_, 0)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2068,8 +2067,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   HighsInt nnz = Aval.size();
 
   Avalue = Aval;
-  Acol.reserve(nnz);
-  Arow.reserve(nnz);
+  if (!okHighsIntReserve(Acol, nnz)) return false;
+  if (!okHighsIntReserve(Arow, nnz)) return false;
 
   for (HighsInt i = 0; i != ncol; ++i) {
     HighsInt collen = Astart[i + 1] - Astart[i];
@@ -2078,14 +2077,20 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
                 Aindex.begin() + Astart[i + 1]);
   }
 
-  Anext.resize(nnz);
-  Aprev.resize(nnz);
-  ARleft.resize(nnz);
-  ARright.resize(nnz);
+  if (!okHighsIntResize(Anext, nnz)) return false;
+  if (!okHighsIntResize(Aprev, nnz)) return false;
+  if (!okHighsIntResize(ARleft, nnz)) return false;
+  if (!okHighsIntResize(ARright, nnz)) return false;
   for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
 
   if (equations.empty()) {
-    eqiters.assign(model->num_row_, equations.end());
+    try {
+      eqiters.assign(model->num_row_, equations.end());
+    } catch (const std::bad_alloc& e) {
+      printf("HPresolve::okFromCSC eqiters.assign fails with %s\n",
+	     e.what());
+      return false;
+    }
     for (HighsInt i = 0; i != model->num_row_; ++i) {
       // register equation
       if (model->row_lower_[i] == model->row_upper_[i])
