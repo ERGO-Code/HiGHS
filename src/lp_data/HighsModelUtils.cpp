@@ -1231,6 +1231,9 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kModelEmpty:
       return "Empty";
       break;
+    case HighsModelStatus::kMemoryLimit:
+      return "Memory limit reached";
+      break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
       break;
@@ -1318,6 +1321,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kSolveError:
       return HighsStatus::kError;
     case HighsModelStatus::kPostsolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kMemoryLimit:
       return HighsStatus::kError;
     case HighsModelStatus::kModelEmpty:
       return HighsStatus::kOk;

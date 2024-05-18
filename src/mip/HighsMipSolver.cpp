@@ -115,12 +115,15 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
-  // Identify whether time limit has been reached (in presolve)
+
   if (modelstatus_ == HighsModelStatus::kNotset) {
     if (timer_.read(timer_.solve_clock) >= options_mip_->time_limit) {
+      // The time limit has been reached
       modelstatus_ = HighsModelStatus::kTimeLimit;
-    } else if (true) {
-      modelstatus_ = HighsModelStatus::kPresolveError;
+      // #fix-1766
+      //    } else if (true) {
+      //      // The memory limit has been reached
+      //      modelstatus_ = HighsModelStatus::kPresolveError;
     }
   }
 

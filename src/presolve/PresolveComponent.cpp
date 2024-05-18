@@ -34,7 +34,7 @@ void PresolveComponent::negateReducedLpColDuals() {
 HighsPresolveStatus PresolveComponent::run() {
   presolve::HPresolve presolve;
   if (!presolve.okSetInput(data_.reduced_lp_, *options_,
-			   options_->presolve_reduction_limit, timer)) {
+                           options_->presolve_reduction_limit, timer)) {
     presolve_status_ = HighsPresolveStatus::kOutOfMemory;
     return presolve_status_;
   }

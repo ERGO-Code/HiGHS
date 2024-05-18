@@ -4035,6 +4035,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
     case HighsModelStatus::kPresolveError:
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
+    case HighsModelStatus::kMemoryLimit:
       // Don't clear the model status!
       //      invalidateUserSolverData();
       invalidateInfo();
@@ -4118,6 +4119,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
     case HighsModelStatus::kModelEmpty:
+    case HighsModelStatus::kMemoryLimit:
       // No info, primal solution or basis
       assert(have_info == false);
       assert(have_primal_solution == false);

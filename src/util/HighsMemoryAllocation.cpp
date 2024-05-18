@@ -33,7 +33,7 @@ bool okHighsIntResize(std::vector<HighsInt>& use_vector,
     printf("HighsMemoryAllocation::HighsIntResize fails with %s\n", e.what());
     return false;
   }
-  if (dimension >= 46) return false;
+  //  if (dimension >= 46) return false;
   return true;
 }
 
