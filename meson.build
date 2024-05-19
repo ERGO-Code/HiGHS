@@ -68,9 +68,6 @@ if is_mingw
 endif
 
 # --------------------- Dependencies
-threads_dep = dependency('threads', required: false)
-_deps += threads_dep
-
 # Determine whether it is necessary to link libatomic. This could be the case
 # e.g. on 32-bit platforms when atomic operations are used on 64-bit types.
 # The check is copied from SciPy which in turn came from
@@ -110,6 +107,11 @@ endif
 
 _deps += atomic_dep
 
+threads_dep = null_dep
+if not is_windows
+ threads_dep = dependency('threads', required: false)
+endif
+_deps += threads_dep
 # Optional
 zlib_dep = dependency('zlib',
                       required: get_option('use_zlib'))

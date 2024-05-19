@@ -3,7 +3,7 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python<0.14.0", "meson>=1.2.0", "pybind11", "ninja"]
+requires = ["meson-python>=0.16.0", "meson>=1.2.0", "pybind11", "ninja"]
 build-backend = "mesonpy"
 
 [project]
@@ -32,7 +32,7 @@ test = ["pytest", "numpy"]
 
 [tool.meson-python.args]
 setup = ['-Dwith_pybind11=True',
-        '-Dhighsint64=True',
+        '-Dhighsint64=False',
         '-Dwrap_mode=forcefallback',
          # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
         ]
@@ -70,6 +70,11 @@ repair-wheel-command = [
   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
 ]
 
+#[tool.cibuildwheel.windows]
+#before-build = "pip install delvewheel"
+#repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+
 [tool.cibuildwheel.windows]
-before-build = "pip install delvewheel"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+# Use delvewheel on windows, and install the project so delvewheel can find it
+before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
+repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"
