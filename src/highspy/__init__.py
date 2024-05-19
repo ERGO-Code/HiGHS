@@ -1,6 +1,6 @@
 # from __future__ import annotations
 
-from ._core import \
+from highspy._core import \
     ObjSense, \
     MatrixFormat, \
     HessianFormat, \
