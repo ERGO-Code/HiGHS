@@ -1,10 +1,10 @@
 # HiGHS CMake Build Instructions 
 
-| OS       | C++   | Python   | CSharp Example | .NET |
-|:-------- | :---: | :------: | :----: | :----: |
-| Linux    | [![Status][linux_cpp_svg]][linux_cpp_link] | [![Status][linux_python_svg]][linux_python_link] | *(1)* | [![Status][linux_dotnet_svg]][linux_dotnet_link] |
-| MacOS    | [![Status][macos_cpp_svg]][macos_cpp_link] | [![Status][macos_python_svg]][macos_python_link] | *(1)* |[![Status][macos_dotnet_svg]][macos_dotnet_link] |
-| Windows  | [![Status][windows_cpp_svg]][windows_cpp_link] | [![Status][windows_python_svg]][windows_python_link] | [![Status][windows_csharp_svg]][windows_csharp_link] | [![Status][windows_dotnet_svg]][windows_dotnet_link] |
+| OS       | C++   | Fortran | Python   | CSharp Example | .NET |
+|:-------- | :---: | :------: | :----: | :----: | :----: |
+| Linux    | [![Status][linux_cpp_svg]][linux_cpp_link] | [![Status][linux_fortran_svg]][linux_fortran_link] | [![Status][linux_python_svg]][linux_python_link] | *(1)* | [![Status][linux_dotnet_svg]][linux_dotnet_link] |
+| MacOS    | [![Status][macos_cpp_svg]][macos_cpp_link] |[![Status][macos_fortran_svg]][macos_fortran_link] |  [![Status][macos_python_svg]][macos_python_link] | *(1)* |[![Status][macos_dotnet_svg]][macos_dotnet_link] |
+| Windows  | [![Status][windows_cpp_svg]][windows_cpp_link] | [![Status][windows_fortran_svg]][windows_fortran_link] | [![Status][windows_python_svg]][windows_python_link] | [![Status][windows_csharp_svg]][windows_csharp_link] | [![Status][windows_dotnet_svg]][windows_dotnet_link] |
 
 [linux_cpp_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake-linux-cpp.yml/badge.svg
 [linux_cpp_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake-linux-cpp.yml
@@ -29,6 +29,13 @@
 [macos_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-macos.yml
 [windows_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-win.yml/badge.svg
 [windows_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-win.yml
+
+[linux_fortran_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-ubuntu.yml/badge.svg
+[linux_fortran_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-ubuntu.yml
+[macos_fortran_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-macos.yml/badge.svg
+[macos_fortran_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-macos.yml
+[windows_fortran_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-win.yml/badge.svg
+[windows_fortran_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-fortran-win.yml
 
 *(1)* CMake C# is currently only supported for Microsoft Visual Studio 11 2012 and
   later. You can still build and run the HiGHS C# nuget package on Linux and MacOS with `dotnet`, see the workflows in the .NET column. It is only the CSharp example build with CMake that is not supported for Unix generators.
