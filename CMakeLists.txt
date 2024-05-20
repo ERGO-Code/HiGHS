@@ -47,6 +47,7 @@ option(BUILD_TESTING "Build Tests" ON)
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
+message(STATUS "Build CSharp: ${CSHARP}")
 
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)

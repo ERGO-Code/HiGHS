@@ -3,7 +3,6 @@ name: cmake-linux-cpp
 on: [push, pull_request]
 
 jobs:
-
  release:
     runs-on: ${{ matrix.os }}
     strategy:

@@ -8,6 +8,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -29,6 +30,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build

@@ -22,10 +22,8 @@ the full sequence of commands required is as follows
 
 ``` bash
 cd HiGHS
-mkdir build
-cd build
-cmake -DFAST_BUILD=ON ..
-cmake --build .
+cmake -S. -B build 
+cmake --build build --parallel
 ```
 
 This creates the [executable](@ref Executable) `build/bin/highs`.
@@ -38,20 +36,28 @@ To perform a quick test to see whether the compilation was successful, run `ctes
 ctest
 ```
 
+On Windows, the configuration type must be specified:
+
+``` bash
+ctest -C Release
+```
+
 ### Install
 
 The default installation location may need administrative
 permissions. To install, after building and testing, run
 
 ``` bash
-cmake --install .
+cmake --install build 
 ```
+
+form the root directory. 
 
 To install in a specified installation directory run CMake with the
 `CMAKE_INSTALL_PREFIX` flag set:
 
 ``` bash
-cmake -DFAST_BUILD=ON -DCMAKE_INSTALL_PREFIX=/path/to/highs_install ..
-cmake --build .
-cmake --install .
+cmake -S. -B build -DCMAKE_INSTALL_PREFIX=/path/to/highs_install 
+cmake --build build --parallel
+cmake --install build
 ```

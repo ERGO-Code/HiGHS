@@ -11,9 +11,10 @@
   - [Installation](#installation)
     - [Build from source using CMake](#build-from-source-using-cmake)
     - [Precompiled binaries](#precompiled-binaries)
+    - [Build with Nix](#build-with-nix)
   - [Interfaces](#interfaces)
-      - [Python](#python)
-      - [CSharp](#csharp)
+    - [Python](#python)
+    - [CSharp](#csharp)
   - [Reference](#reference)
 
 ## About HiGHS
