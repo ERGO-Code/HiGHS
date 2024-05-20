@@ -1,10 +1,12 @@
 # HiGHS CMake Build Instructions 
 
 | OS       | C++   | Python   | .NET   |
-|:-------- | :---: | :------: | :----: | :----: |
+|:-------- | :---: | :------: | :----: |
 | Linux    | [![Status][linux_cpp_svg]][linux_cpp_link] | [![Status][linux_python_svg]][linux_python_link] | [![Status][linux_dotnet_svg]][linux_dotnet_link] |
 | MacOS    | [![Status][macos_cpp_svg]][macos_cpp_link] | [![Status][macos_python_svg]][macos_python_link] | [![Status][macos_dotnet_svg]][macos_dotnet_link] |
 | Windows  | [![Status][windows_cpp_svg]][windows_cpp_link] | [![Status][windows_python_svg]][windows_python_link] | [![Status][windows_dotnet_svg]][windows_dotnet_link] |
+
+lallala 
 
 [linux_cpp_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake_linux_cpp.yml/badge.svg
 [linux_cpp_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake_linux_cpp.yml
