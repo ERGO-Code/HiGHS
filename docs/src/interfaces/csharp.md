@@ -1,6 +1,6 @@
-## [CSharp](@id csharp)
+#### [CSharp](@id csharp)
 
-### Build from source
+#### Build from source
 
 There is a C# example code in `examples/call_highs_from_csharp.cs`. From the HiGHS root directory, run 
 
@@ -10,7 +10,7 @@ cmake -S. -Bbuild -DCSHARP=ON
 
 If a CSharp compiler is available, this builds the example using cmake and generates a binary in the build directory (`build/bin/csharpexample`).
 
-## [NuGet](@id nuget)
+#### [NuGet](@id nuget)
 
 The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/. 
 

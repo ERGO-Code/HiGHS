@@ -1,5 +1,5 @@
 
-## [Fortran](@id fortran-api)
+#### [Fortran](@id fortran-api)
 
 The interface is in
 [`HiGHS/src/interfaces/highs_fortran_api.f90`]. Its

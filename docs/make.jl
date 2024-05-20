@@ -73,7 +73,7 @@ Documenter.makedocs(
                 "The HiGHS library" => "interfaces/cpp/library.md",
                 "Examples" => "interfaces/cpp/examples.md",
             ],
-            "C" => "interfaces/c/index.md",
+            "C" => "interfaces/c_api.md",
             "Fortran" => "interfaces/fortran.md",
             "Python" => Any[
                 "interfaces/python/index.md",
