@@ -4,10 +4,27 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        toolchain:
+          - {compiler: gcc, version: 13}
+          - {compiler: intel, version: '2023.2'}
+          - {compiler: intel-classic, version: '2021.10'}
+          - {compiler: nvidia-hpc, version: '23.11'}
+        include:
+          - os: ubuntu-latest
+            toolchain: {compiler: gcc, version: 12}
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
