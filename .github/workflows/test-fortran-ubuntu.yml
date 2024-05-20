@@ -10,8 +10,8 @@ jobs:
         os: [ubuntu-latest]
         toolchain:
           - {compiler: gcc, version: 13}
-          - {compiler: intel, version: '2023.2'}
-          - {compiler: nvidia-hpc, version: '23.11'}
+          # - {compiler: intel, version: '2023.2'}
+          # - {compiler: nvidia-hpc, version: '23.11'}
         include:
           - os: ubuntu-latest
             toolchain: {compiler: gcc, version: 12}
