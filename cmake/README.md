@@ -29,13 +29,16 @@
 
 <!--# ?branch=main -->
 
-## Introduction
-<nav for="cmake"> |
-<a href="#requirement">Requirement</a> |
-<a href="#build">C++</a> |
-<a href="#cmake-options">Options</a> |
-<a href="#integrating-highs-in-your-cmake-project">Integration</a> |
-</nav>
+
+- [HiGHS CMake Build Instructions](#highs-cmake-build-instructions)
+  - [Requirement](#requirement)
+      - [Supported compilers](#supported-compilers)
+- [Build](#build)
+  - [Install](#install)
+  - [Windows](#windows)
+- [CMake Options](#cmake-options)
+- [Integrating HiGHS in your CMake Project](#integrating-highs-in-your-cmake-project)
+
 
 HiGHS can be built from source using CMake: <http://www.cmake.org/>. CMake works by generating native Makefiles or build projects that can be used in the compiler environment of your choice.
 
@@ -66,7 +69,7 @@ cmake -S. -B build
 cmake --build build --parallel
 ```
 
-This creates the [executable](@ref Executable) `build/bin/highs`. To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
+This generates HiGHS in the `build` directory and creates the [executable](@ref Executable) `build/bin/highs`, or `build/bin/Release/highs.exe` on Windows. To perform a quick test to see whether the compilation was successful, run `ctest` from within the build folder.
 
 ``` bash
 ctest 
@@ -96,6 +99,37 @@ cmake -S. -B build -DCMAKE_INSTALL_PREFIX=/path/to/highs_install
 cmake --build build --parallel
 cmake --install build
 ```
+
+## Windows 
+
+By default, CMake builds the debug version of the binaries. These are generated in a directory `Debug`. To build a release version, add the option `--config Release`
+
+```bash
+    cmake -S . -B build
+    cmake --build build --config Release
+```
+
+It is also possible to specify a specific Visual studio version to build with:
+```bash
+    cmake -G "Visual Studio 17 2022" -S . -B build
+    cmake --build build
+```
+
+When building under Windows, some extra options are available.  One is building a 32 bit version or a 64 bit version. The default build is 64 bit. To build 32 bit, the following commands can be used from the `HiGHS/` directory:
+
+```bash
+    cmake -A Win32 -S . -B buildWin32
+    cmake --build buildWin32
+```
+
+Another thing specific for windows is the calling convention, particularly important for the HiGHS dynamic library (dll). The default calling convention in windows is cdecl calling convention, however, dlls are most often compiled with stdcall. Most applications which expect stdcall, can't access dlls with cdecl and vice versa. To change the default calling convention from cdecl to stdcall the following option can be added
+```bash
+    cmake -DSTDCALL=ON -S . -B build
+    cmake --build build
+```
+
+<!-- An extra note. With the legacy `-DFAST_BUILD=OFF`, under windows the build dll is called `highs.dll` however the exe expects `libhighs.dll` so a manual copy of `highs.dll` to `libhighs.dll` is needed. Of course all above options can be combined with each other. -->
+
 
 # CMake Options
 
