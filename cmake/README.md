@@ -1,10 +1,10 @@
 # HiGHS CMake Build Instructions 
 
-| OS       | C++   | Python   | .NET   |
-|:-------- | :---: | :------: | :----: |
-| Linux    | [![Status][linux_cpp_svg]][linux_cpp_link] | [![Status][linux_python_svg]][linux_python_link] | [![Status][linux_dotnet_svg]][linux_dotnet_link] |
-| MacOS    | [![Status][macos_cpp_svg]][macos_cpp_link] | [![Status][macos_python_svg]][macos_python_link] | [![Status][macos_dotnet_svg]][macos_dotnet_link] |
-| Windows  | [![Status][windows_cpp_svg]][windows_cpp_link] | [![Status][windows_python_svg]][windows_python_link] | [![Status][windows_dotnet_svg]][windows_dotnet_link] |
+| OS       | C++   | Python   | CSharp Example | .NET |
+|:-------- | :---: | :------: | :----: | :----: |
+| Linux    | [![Status][linux_cpp_svg]][linux_cpp_link] | [![Status][linux_python_svg]][linux_python_link] | *(1)* | [![Status][linux_dotnet_svg]][linux_dotnet_link] |
+| MacOS    | [![Status][macos_cpp_svg]][macos_cpp_link] | [![Status][macos_python_svg]][macos_python_link] | *(1)* |[![Status][macos_dotnet_svg]][macos_dotnet_link] |
+| Windows  | [![Status][windows_cpp_svg]][windows_cpp_link] | [![Status][windows_python_svg]][windows_python_link] | [![Status][windows_csharp_svg]][windows_csharp_link] | [![Status][windows_dotnet_svg]][windows_dotnet_link] |
 
 [linux_cpp_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake-linux-cpp.yml/badge.svg
 [linux_cpp_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/cmake-linux-cpp.yml
@@ -20,25 +20,35 @@
 [windows_python_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-python-win.yml/badge.svg
 [windows_python_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-python-win.yml
 
-[linux_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-ubuntu.yml/badge.svg
-[linux_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-ubuntu.yml
-[macos_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-macos.yml/badge.svg
-[macos_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-macos.yml
-[windows_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-win.yml/badge.svg
-[windows_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-win.yml
+[windows_csharp_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-win.yml/badge.svg
+[windows_csharp_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-csharp-win.yml
+
+[linux_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-ubuntu.yml/badge.svg
+[linux_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-ubuntu.yml
+[macos_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-macos.yml/badge.svg
+[macos_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-macos.yml
+[windows_dotnet_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-win.yml/badge.svg
+[windows_dotnet_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/test-nuget-win.yml
+
+*(1)* CMake C# is currently only supported for Microsoft Visual Studio 11 2012 and
+  later. You can still build and run the HiGHS C# nuget package on Linux and MacOS with `dotnet`, see the workflows in the .NET column. It is only the CSharp example build with CMake that is not supported for Unix generators.
 
 <!--# ?branch=main -->
+<br>
 
+*Contents*
 
 - [HiGHS CMake Build Instructions](#highs-cmake-build-instructions)
+  - [Introduction](#introduction)
   - [Requirement](#requirement)
-      - [Supported compilers](#supported-compilers)
+  - [Supported compilers](#supported-compilers)
 - [Build](#build)
   - [Install](#install)
   - [Windows](#windows)
 - [CMake Options](#cmake-options)
 - [Integrating HiGHS in your CMake Project](#integrating-highs-in-your-cmake-project)
 
+## Introduction 
 
 HiGHS can be built from source using CMake: <http://www.cmake.org/>. CMake works by generating native Makefiles or build projects that can be used in the compiler environment of your choice.
 
@@ -50,7 +60,7 @@ You'll need:
 * `CMake >= 3.15`.
 * A C++11 compiler
 
-#### Supported compilers 
+## Supported compilers 
 
 Here is a list of the supported compilers:
 
