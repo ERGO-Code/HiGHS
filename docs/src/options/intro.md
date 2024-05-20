@@ -21,9 +21,9 @@ $ bin/highs --options_file=""
 
 ## Option methods
 
-To set the value of option `name`, call:
+The following code illustrates how to access the HiGHS options in Python. To set the value of option `name`, call:
 
-```
+``` python
 status = h.setOptionValue(name, value)
 ```
 
@@ -32,13 +32,13 @@ explicit value.
 
 To get the value of option `name`, call:
 
-```
+``` python
 [status, value] = h.getOptionValue(name)
 ```
 
 To get the type of option `name`, call:
 
-```
+``` python
 [status, type] = h.getOptionType(name)
 ```
 

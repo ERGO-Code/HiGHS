@@ -3,12 +3,12 @@
 ## Compile from source 
 
 HiGHS uses CMake as build system, and requires at least version
-3.15. Details about building from source using cmake can be found in [`HiGHS/cmake/README.md`](https://github.com/ERGO-Code/HiGHS/blob/master/cmake/README.md)
+3.15. Details about building from source using cmake can be found in `HiGHS/cmake/README.md`.
 
 ## Install via a package manager
 
 HiGHS can be installed using a package manager in the cases of
-[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref csharp-getting-started)and [`Rust`](@ref Rust).
+[`Julia`](@ref HiGHS.jl), [`Python`](@ref python-getting-started), [`CSharp`](@ref nuget) and [`Rust`](@ref Rust).
 
 ## Precompiled Binaries
 

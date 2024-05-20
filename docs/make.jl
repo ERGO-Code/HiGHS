@@ -74,11 +74,12 @@ Documenter.makedocs(
                 "Examples" => "interfaces/cpp/examples.md",
             ],
             "C" => "interfaces/c/index.md",
-            "CSharp" => "interfaces/csharp/index.md",
+            "Fortran" => "interfaces/fortran.md",
             "Python" => Any[
                 "interfaces/python/index.md",
                 "interfaces/python/example-py.md",
             ],
+            "CSharp" => "interfaces/csharp.md",
             "Julia" => "interfaces/julia/index.md",
             "Other" => "interfaces/other.md",
         ],
