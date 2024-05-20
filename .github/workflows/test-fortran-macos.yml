@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [macos-latest]
         toolchain:
-          - {compiler: g++, version: 13}
+          - {compiler: gcc, version: 13}
 
     steps:
       - uses: actions/checkout@v4
