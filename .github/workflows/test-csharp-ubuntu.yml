@@ -1,0 +1,49 @@
+name: test-csharp-ubuntu
+
+on: [push, pull_request]
+
+jobs:
+  fast_build_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --parallel
+
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
+        run: ./bin/csharpexample.exe
+
+  fast_build_debug:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --parallel
+
+      - name: Test
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          ls 
+          ./bin/csharpexample.exe

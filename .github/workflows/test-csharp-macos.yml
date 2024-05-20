@@ -1,10 +1,10 @@
-name: test-csharp
+name: test-csharp-macos
 
 on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -13,24 +13,19 @@ jobs:
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake
-        shell: bash
         working-directory: ${{runner.workspace}}/build
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
 
       - name: Build
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --parallel
 
       - name: Test
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: |
-          ls 
-          ./bin/Release/csharpexample.exe
+        run: ./bin/csharpexample.exe
 
   fast_build_debug:
-    runs-on: windows-latest
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -39,18 +34,13 @@ jobs:
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON 
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --config Debug --parallel
+        run: cmake --build . --parallel
 
       - name: Test
-        shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: |
-          ls 
-          ./bin/Debug/csharpexample.exe
+        run: ./bin/Debug/csharpexample.exe
