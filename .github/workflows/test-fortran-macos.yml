@@ -10,7 +10,6 @@ jobs:
         os: [macos-latest]
         toolchain:
           - {compiler: gcc, version: 13}
-          - {compiler: intel-classic, version: '2021.10'}
 
     steps:
       - uses: actions/checkout@v4
