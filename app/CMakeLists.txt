@@ -19,7 +19,7 @@ if(FAST_BUILD)
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
     )
 
-    if(UNIX AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    if(UNIX)
       target_compile_options(highs-bin PUBLIC "-Wno-unused-variable")
       target_compile_options(highs-bin PUBLIC "-Wno-unused-const-variable")
     endif()
