@@ -1,6 +1,6 @@
 # HiGHS - Linear optimization software
 
-[![Build Status](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+[![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml/badge.svg)
 [![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
@@ -11,7 +11,7 @@
   - [Installation](#installation)
     - [Build from source using CMake](#build-from-source-using-cmake)
     - [Precompiled binaries](#precompiled-binaries)
-    - [Build with Nix](#build-with-nix)
+      - [Build with Nix](#build-with-nix)
   - [Interfaces](#interfaces)
     - [Python](#python)
     - [CSharp](#csharp)
@@ -85,7 +85,7 @@ _These binaries are provided by the Julia community and are not officially suppo
 
 See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
-### Build with Nix
+#### Build with Nix
 
 There is a nix flake that provides the `highs` binary:
 
