@@ -4,7 +4,21 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+        toolchain:
+          - {compiler: gcc, version: 13}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
 
     steps:
       - uses: actions/checkout@v4
