@@ -4,10 +4,21 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: macos-latest
+
+  matrix:
+        os: [macos-latest]
+        toolchain:
+          - {compiler: gcc, version: 13}
+          - {compiler: intel-classic, version: '2021.10'}
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
