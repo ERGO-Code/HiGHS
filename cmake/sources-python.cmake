@@ -420,7 +420,7 @@ set(highs_headers_python
     src/util/HighsMatrixPic.h
     src/util/HighsMatrixSlice.h
     src/util/HighsMatrixUtils.h
-	src/util/HighsMemoryAllocation.h
+    src/util/HighsMemoryAllocation.h
     src/util/HighsRandom.h
     src/util/HighsRbTree.h
     src/util/HighsSort.h
