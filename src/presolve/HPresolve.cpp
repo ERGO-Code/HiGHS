@@ -82,7 +82,6 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(implColUpper, model->num_col_, kHighsInf)) return false;
   if (!okResize(colImplSourceByRow, model->num_row_)) return false;
   if (!okResize(implRowDualSourceByCol, model->num_col_)) return false;
-
   if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
   if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
   if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
