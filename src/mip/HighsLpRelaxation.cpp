@@ -1317,26 +1317,28 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           std::vector<double> roundsol = sol.col_value;
 
           for (const std::pair<HighsInt, double>& fracint : fractionalints) {
+            // get column index and rounded solution value
             HighsInt col = fracint.first;
-
-            if (mipsolver.mipdata_->uplocks[col] == 0 &&
-                (mipsolver.colCost(col) < 0 ||
-                 mipsolver.mipdata_->downlocks[col] != 0)) {
-              roundsol[col] =
-                  std::ceil(fracint.second - mipsolver.mipdata_->feastol);
-              // if the upper bound is fractional, the rounded bound may be
-              // out-of-bounds.
-              if (roundsol[col] > lpsolver.getLp().col_upper_[col] +
-                                      mipsolver.mipdata_->feastol)
-                roundsol[col] -= 1.0;
+            double sol_floor =
+                std::floor(fracint.second + mipsolver.mipdata_->feastol);
+            // check if rounding is feasible
+            bool floor_feasible =
+                sol_floor >=
+                lpsolver.getLp().col_lower_[col] - mipsolver.mipdata_->feastol;
+            bool ceil_feasible =
+                sol_floor + 1.0 <=
+                lpsolver.getLp().col_upper_[col] + mipsolver.mipdata_->feastol;
+            assert(floor_feasible || ceil_feasible);
+            // decide based on locks and objective function
+            bool round_up = ceil_feasible &&
+                            mipsolver.mipdata_->uplocks[col] == 0 &&
+                            (!floor_feasible || mipsolver.colCost(col) < 0 ||
+                             mipsolver.mipdata_->downlocks[col] != 0);
+            // round
+            if (round_up) {
+              roundsol[col] = sol_floor + 1.0;
             } else {
-              roundsol[col] =
-                  std::floor(fracint.second + mipsolver.mipdata_->feastol);
-              // if the lower bound is fractional, the rounded bound may be
-              // out-of-bounds.
-              if (roundsol[col] < lpsolver.getLp().col_lower_[col] -
-                                      mipsolver.mipdata_->feastol)
-                roundsol[col] += 1.0;
+              roundsol[col] = sol_floor;
             }
           }
 
