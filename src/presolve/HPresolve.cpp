@@ -76,8 +76,8 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   options = &options_;
   this->timer = timer;
 
-  if (!okResize(colLowerSource, model->num_col_, -1)) return false;
-  if (!okResize(colUpperSource, model->num_col_, -1)) return false;
+  if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
+  if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
   if (!okResize(implColLower, model->num_col_, -kHighsInf)) return false;
   if (!okResize(implColUpper, model->num_col_, kHighsInf)) return false;
   if (!okResize(colImplSourceByRow, model->num_row_)) return false;
@@ -87,8 +87,10 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
   if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
   if (!okResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
-  if (!okResize(rowDualUpperSource, model->num_row_, -1)) return false;
-  if (!okResize(rowDualLowerSource, model->num_row_, -1)) return false;
+  if (!okResize(rowDualUpperSource, model->num_row_, HighsInt{-1}))
+    return false;
+  if (!okResize(rowDualLowerSource, model->num_row_, HighsInt{-1}))
+    return false;
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
@@ -118,10 +120,10 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   // of each row and column and set the flag of processed columns to false
   // from then on they are added to the vector whenever there are changes
   if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
-  if (!okResize(rowDeleted, model->num_row_, uint8_t{0})) return false;
+  if (!okResize(rowDeleted, model->num_row_)) return false;
   if (!okReserve(changedRowIndices, model->num_row_)) return false;
   if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
-  if (!okResize(colDeleted, model->num_col_, uint8_t{0})) return false;
+  if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
@@ -2042,12 +2044,12 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   Arow.clear();
 
   freeslots.clear();
-  if (!okAssign(colhead, model->num_col_, -1)) return false;
-  if (!okAssign(rowroot, model->num_row_, -1)) return false;
-  if (!okAssign(colsize, model->num_col_, 0)) return false;
-  if (!okAssign(rowsize, model->num_row_, 0)) return false;
-  if (!okAssign(rowsizeInteger, model->num_row_, 0)) return false;
-  if (!okAssign(rowsizeImplInt, model->num_row_, 0)) return false;
+  if (!okAssign(colhead, model->num_col_, HighsInt{-1})) return false;
+  if (!okAssign(rowroot, model->num_row_, HighsInt{-1})) return false;
+  if (!okAssign(colsize, model->num_col_)) return false;
+  if (!okAssign(rowsize, model->num_row_)) return false;
+  if (!okAssign(rowsizeInteger, model->num_row_)) return false;
+  if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2106,12 +2108,12 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   Arow.clear();
 
   freeslots.clear();
-  if (!okAssign(colhead, model->num_col_, -1)) return false;
-  if (!okAssign(rowroot, model->num_row_, -1)) return false;
-  if (!okAssign(colsize, model->num_col_, 0)) return false;
-  if (!okAssign(rowsize, model->num_row_, 0)) return false;
-  if (!okAssign(rowsizeInteger, model->num_row_, 0)) return false;
-  if (!okAssign(rowsizeImplInt, model->num_row_, 0)) return false;
+  if (!okAssign(colhead, model->num_col_, HighsInt{-1})) return false;
+  if (!okAssign(rowroot, model->num_row_, HighsInt{-1})) return false;
+  if (!okAssign(colsize, model->num_col_)) return false;
+  if (!okAssign(rowsize, model->num_row_)) return false;
+  if (!okAssign(rowsizeInteger, model->num_row_)) return false;
+  if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
