@@ -15,27 +15,40 @@
 #ifndef UTIL_HIGHS_MEMORY_ALLOCATION_H_
 #define UTIL_HIGHS_MEMORY_ALLOCATION_H_
 
-#include <set>
 #include <vector>
 
 #include "util/HighsInt.h"
 
-bool okUint8Resize(std::vector<uint8_t>& use_vector, const HighsInt dimension,
-                   const bool value = false);
+template <typename T>
+bool okResize(std::vector<T>& use_vector, HighsInt dimension, T value = T{}) {
+  try {
+    use_vector.resize(dimension, value);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::okResize fails with %s\n", e.what());
+    return false;
+  }
+  return true;
+}
 
-bool okHighsIntResize(std::vector<HighsInt>& use_vector,
-                      const HighsInt dimension, const HighsInt value = 0);
+template <typename T>
+bool okReserve(std::vector<T>& use_vector, HighsInt dimension) {
+  try {
+    use_vector.reserve(dimension);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::okReserve fails with %s\n", e.what());
+    return false;
+  }
+}
 
-bool okHighsIntReserve(std::vector<HighsInt>& use_vector,
-                       const HighsInt dimension);
-
-bool okHighsIntAssign(std::vector<HighsInt>& use_vector,
-                      const HighsInt dimension, const HighsInt value = 0);
-
-bool okHighsIntSetResize(std::vector<std::set<HighsInt>>& use_vector,
-                         const HighsInt dimension);
-
-bool okDoubleResize(std::vector<double>& use_vector, const HighsInt dimension,
-                    const double value = 0);
+template <typename T>
+bool okAssign(std::vector<T>& use_vector, HighsInt dimension, T value = T{}) {
+  try {
+    use_vector.assign(dimension, value);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::okAssign fails with %s\n", e.what());
+    return false;
+  }
+  return true;
+}
 
 #endif
