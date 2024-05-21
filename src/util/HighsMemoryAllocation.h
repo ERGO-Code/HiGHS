@@ -38,6 +38,7 @@ bool okReserve(std::vector<T>& use_vector, HighsInt dimension) {
     printf("HighsMemoryAllocation::okReserve fails with %s\n", e.what());
     return false;
   }
+  return true;
 }
 
 template <typename T>
