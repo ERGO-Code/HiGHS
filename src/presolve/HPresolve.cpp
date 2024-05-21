@@ -32,6 +32,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
 #include "util/HighsLinearSumBounds.h"
+#include "util/HighsMemoryAllocation.h"
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
 
@@ -68,26 +69,29 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postsolve_stack,
 }
 #endif
 
-void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
-                         const HighsInt presolve_reduction_limit,
-                         HighsTimer* timer) {
+bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
+                           const HighsInt presolve_reduction_limit,
+                           HighsTimer* timer) {
   model = &model_;
   options = &options_;
   this->timer = timer;
 
-  colLowerSource.resize(model->num_col_, -1);
-  colUpperSource.resize(model->num_col_, -1);
-  implColLower.resize(model->num_col_, -kHighsInf);
-  implColUpper.resize(model->num_col_, kHighsInf);
-  colImplSourceByRow.resize(model->num_row_, std::set<HighsInt>());
-  implRowDualSourceByCol.resize(model->num_col_, std::set<HighsInt>());
+  if (!okHighsIntResize(colLowerSource, model->num_col_, -1)) return false;
+  if (!okHighsIntResize(colUpperSource, model->num_col_, -1)) return false;
+  if (!okDoubleResize(implColLower, model->num_col_, -kHighsInf)) return false;
+  if (!okDoubleResize(implColUpper, model->num_col_, kHighsInf)) return false;
+  if (!okHighsIntSetResize(colImplSourceByRow, model->num_row_)) return false;
+  if (!okHighsIntSetResize(implRowDualSourceByCol, model->num_col_))
+    return false;
 
-  rowDualLower.resize(model->num_row_, -kHighsInf);
-  rowDualUpper.resize(model->num_row_, kHighsInf);
-  implRowDualLower.resize(model->num_row_, -kHighsInf);
-  implRowDualUpper.resize(model->num_row_, kHighsInf);
-  rowDualUpperSource.resize(model->num_row_, -1);
-  rowDualLowerSource.resize(model->num_row_, -1);
+  if (!okDoubleResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okDoubleResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okDoubleResize(implRowDualLower, model->num_row_, -kHighsInf))
+    return false;
+  if (!okDoubleResize(implRowDualUpper, model->num_row_, kHighsInf))
+    return false;
+  if (!okHighsIntResize(rowDualUpperSource, model->num_row_, -1)) return false;
+  if (!okHighsIntResize(rowDualLowerSource, model->num_row_, -1)) return false;
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
@@ -100,23 +104,28 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   } else
     primal_feastol = options->mip_feasibility_tolerance;
 
-  if (model_.a_matrix_.isRowwise())
-    fromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
-            model->a_matrix_.start_);
-  else
-    fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-            model->a_matrix_.start_);
+  if (model_.a_matrix_.isRowwise()) {
+    // Does this even happen?
+    assert(model_.a_matrix_.isColwise());
+    if (!okFromCSR(model->a_matrix_.value_, model->a_matrix_.index_,
+                   model->a_matrix_.start_))
+      return false;
+  } else {
+    if (!okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                   model->a_matrix_.start_))
+      return false;
+  }
 
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
   // of each row and column and set the flag of processed columns to false
   // from then on they are added to the vector whenever there are changes
-  changedRowFlag.resize(model->num_row_, true);
-  rowDeleted.resize(model->num_row_, false);
-  changedRowIndices.reserve(model->num_row_);
-  changedColFlag.resize(model->num_col_, true);
-  colDeleted.resize(model->num_col_, false);
-  changedColIndices.reserve(model->num_col_);
+  if (!okUint8Resize(changedRowFlag, model->num_row_, true)) return false;
+  if (!okUint8Resize(rowDeleted, model->num_row_, false)) return false;
+  if (!okHighsIntReserve(changedRowIndices, model->num_row_)) return false;
+  if (!okUint8Resize(changedColFlag, model->num_col_, true)) return false;
+  if (!okUint8Resize(colDeleted, model->num_col_, false)) return false;
+  if (!okHighsIntReserve(changedColIndices, model->num_col_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -134,14 +143,15 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   if (options->presolve != kHighsOffString &&
       reductionLimit < kHighsSize_tInf) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
-                "HPresolve::setInput reductionLimit = %d\n",
+                "HPresolve::okSetInput reductionLimit = %d\n",
                 int(reductionLimit));
   }
+  return true;
 }
 
 // for MIP presolve
-void HPresolve::setInput(HighsMipSolver& mipsolver,
-                         const HighsInt presolve_reduction_limit) {
+bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
+                           const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
 
   probingContingent = 1000;
@@ -159,8 +169,8 @@ void HPresolve::setInput(HighsMipSolver& mipsolver,
         mipsolver.mipdata_->domain.col_upper_;
   }
 
-  setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
-           presolve_reduction_limit, &mipsolver.timer_);
+  return okSetInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
+                    presolve_reduction_limit, &mipsolver.timer_);
 }
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
@@ -1341,8 +1351,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
-  fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-          model->a_matrix_.start_);
+  okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+            model->a_matrix_.start_);
 
   mipsolver->mipdata_->cliquetable.setMaxEntries(numNonzeros());
 
@@ -2027,20 +2037,20 @@ HighsTripletPositionSlice HPresolve::getStoredRow() const {
                                    rowpositions.data(), rowpositions.size());
 }
 
-void HPresolve::fromCSC(const std::vector<double>& Aval,
-                        const std::vector<HighsInt>& Aindex,
-                        const std::vector<HighsInt>& Astart) {
+bool HPresolve::okFromCSC(const std::vector<double>& Aval,
+                          const std::vector<HighsInt>& Aindex,
+                          const std::vector<HighsInt>& Astart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
 
   freeslots.clear();
-  colhead.assign(model->num_col_, -1);
-  rowroot.assign(model->num_row_, -1);
-  colsize.assign(model->num_col_, 0);
-  rowsize.assign(model->num_row_, 0);
-  rowsizeInteger.assign(model->num_row_, 0);
-  rowsizeImplInt.assign(model->num_row_, 0);
+  if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
+  if (!okHighsIntAssign(rowroot, model->num_row_, -1)) return false;
+  if (!okHighsIntAssign(colsize, model->num_col_, 0)) return false;
+  if (!okHighsIntAssign(rowsize, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeInteger, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeImplInt, model->num_row_, 0)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2059,8 +2069,8 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
   HighsInt nnz = Aval.size();
 
   Avalue = Aval;
-  Acol.reserve(nnz);
-  Arow.reserve(nnz);
+  if (!okHighsIntReserve(Acol, nnz)) return false;
+  if (!okHighsIntReserve(Arow, nnz)) return false;
 
   for (HighsInt i = 0; i != ncol; ++i) {
     HighsInt collen = Astart[i + 1] - Astart[i];
@@ -2069,36 +2079,42 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
                 Aindex.begin() + Astart[i + 1]);
   }
 
-  Anext.resize(nnz);
-  Aprev.resize(nnz);
-  ARleft.resize(nnz);
-  ARright.resize(nnz);
+  if (!okHighsIntResize(Anext, nnz)) return false;
+  if (!okHighsIntResize(Aprev, nnz)) return false;
+  if (!okHighsIntResize(ARleft, nnz)) return false;
+  if (!okHighsIntResize(ARright, nnz)) return false;
   for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
 
   if (equations.empty()) {
-    eqiters.assign(model->num_row_, equations.end());
+    try {
+      eqiters.assign(model->num_row_, equations.end());
+    } catch (const std::bad_alloc& e) {
+      printf("HPresolve::okFromCSC eqiters.assign fails with %s\n", e.what());
+      return false;
+    }
     for (HighsInt i = 0; i != model->num_row_; ++i) {
       // register equation
       if (model->row_lower_[i] == model->row_upper_[i])
         eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
+  return true;
 }
 
-void HPresolve::fromCSR(const std::vector<double>& ARval,
-                        const std::vector<HighsInt>& ARindex,
-                        const std::vector<HighsInt>& ARstart) {
+bool HPresolve::okFromCSR(const std::vector<double>& ARval,
+                          const std::vector<HighsInt>& ARindex,
+                          const std::vector<HighsInt>& ARstart) {
   Avalue.clear();
   Acol.clear();
   Arow.clear();
 
   freeslots.clear();
-  colhead.assign(model->num_col_, -1);
-  rowroot.assign(model->num_row_, -1);
-  colsize.assign(model->num_col_, 0);
-  rowsize.assign(model->num_row_, 0);
-  rowsizeInteger.assign(model->num_row_, 0);
-  rowsizeImplInt.assign(model->num_row_, 0);
+  if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
+  if (!okHighsIntAssign(rowroot, model->num_row_, -1)) return false;
+  if (!okHighsIntAssign(colsize, model->num_col_, 0)) return false;
+  if (!okHighsIntAssign(rowsize, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeInteger, model->num_row_, 0)) return false;
+  if (!okHighsIntAssign(rowsizeImplInt, model->num_row_, 0)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2117,8 +2133,8 @@ void HPresolve::fromCSR(const std::vector<double>& ARval,
   HighsInt nnz = ARval.size();
 
   Avalue = ARval;
-  Acol.reserve(nnz);
-  Arow.reserve(nnz);
+  if (!okHighsIntReserve(Acol, nnz)) return false;
+  if (!okHighsIntReserve(Arow, nnz)) return false;
   //  entries.reserve(nnz);
 
   for (HighsInt i = 0; i != nrow; ++i) {
@@ -2128,20 +2144,26 @@ void HPresolve::fromCSR(const std::vector<double>& ARval,
                 ARindex.begin() + ARstart[i + 1]);
   }
 
-  Anext.resize(nnz);
-  Aprev.resize(nnz);
-  ARleft.resize(nnz);
-  ARright.resize(nnz);
+  if (!okHighsIntResize(Anext, nnz)) return false;
+  if (!okHighsIntResize(Aprev, nnz)) return false;
+  if (!okHighsIntResize(ARleft, nnz)) return false;
+  if (!okHighsIntResize(ARright, nnz)) return false;
   for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
 
   if (equations.empty()) {
-    eqiters.assign(nrow, equations.end());
+    try {
+      eqiters.assign(nrow, equations.end());
+    } catch (const std::bad_alloc& e) {
+      printf("HPresolve::okFromCSR eqiters.assign fails with %s\n", e.what());
+      return false;
+    }
     for (HighsInt i = 0; i != nrow; ++i) {
       // register equation
       if (model->row_lower_[i] == model->row_upper_[i])
         eqiters[i] = equations.emplace(rowsize[i], i).first;
     }
   }
+  return true;
 }
 
 HighsInt HPresolve::countFillin(HighsInt row) {
@@ -4250,8 +4272,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
-          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                  model->a_matrix_.start_);
+          okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                    model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolve_stack));
@@ -4298,8 +4320,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
                 model->a_matrix_.start_);
-          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
-                  model->a_matrix_.start_);
+          okFromCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+                    model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
         if (analysis_.allow_rule_[kPresolveRuleDependentEquations]) {
@@ -6262,7 +6284,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   postsolve_stack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   {
     HPresolve presolve;
-    presolve.setInput(model, options, options.presolve_reduction_limit);
+    presolve.okSetInput(model, options, options.presolve_reduction_limit);
     // presolve.setReductionLimit(1622017);
     if (presolve.run(postsolve_stack) != HighsModelStatus::kNotset) return;
     Highs highs;
@@ -6326,14 +6348,14 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     {
       HPresolve presolve;
-      presolve.setInput(model, options, options.presolve_reduction_limit);
+      presolve.okSetInput(model, options, options.presolve_reduction_limit);
       presolve.computeIntermediateMatrix(flagRow, flagCol, reductionLim);
     }
 #if 1
     model = lp;
     model.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
     HPresolve presolve;
-    presolve.setInput(model, options, options.presolve_reduction_limit);
+    presolve.okSetInput(model, options, options.presolve_reduction_limit);
     HighsPostsolveStack tmp;
     tmp.initializeIndexMaps(model.num_row_, model.num_col_);
     presolve.setReductionLimit(reductionLim);

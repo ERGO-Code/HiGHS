@@ -602,7 +602,8 @@ PYBIND11_MODULE(_core, m) {
       .value("kIterationLimit", HighsModelStatus::kIterationLimit)
       .value("kUnknown", HighsModelStatus::kUnknown)
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
-      .value("kInterrupt", HighsModelStatus::kInterrupt);
+      .value("kInterrupt", HighsModelStatus::kInterrupt)
+      .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
       // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)

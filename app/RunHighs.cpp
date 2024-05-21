@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
   }
   // Solve the model
   HighsStatus run_status = highs.run();
-  if (run_status == HighsStatus::kError) return (int)run_status;
+  if (run_status == HighsStatus::kError) return int(run_status);
 
   // highs.writeInfo("Info.md");
 

@@ -290,6 +290,7 @@ _srcs = [
     'util/HighsLinearSumBounds.cpp',
     'util/HighsMatrixPic.cpp',
     'util/HighsMatrixUtils.cpp',
+    'util/HighsMemoryAllocation.cpp',
     'util/HighsSort.cpp',
     'util/HighsSparseMatrix.cpp',
     'util/HighsUtils.cpp',

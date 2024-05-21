@@ -72,6 +72,7 @@ const HighsInt kHighsPresolveStatusReducedToEmpty = 4;
 const HighsInt kHighsPresolveStatusTimeout = 5;
 const HighsInt kHighsPresolveStatusNullError = 6;
 const HighsInt kHighsPresolveStatusOptionsError = 7;
+const HighsInt kHighsPresolveStatusOutOfMemory = 8;
 
 const HighsInt kHighsModelStatusNotset = 0;
 const HighsInt kHighsModelStatusLoadError = 1;
