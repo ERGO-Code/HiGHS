@@ -269,7 +269,6 @@ set(highs_sources_python
     src/util/HighsLinearSumBounds.cpp
     src/util/HighsMatrixPic.cpp
     src/util/HighsMatrixUtils.cpp
-    src/util/HighsMemoryAllocation.cpp
     src/util/HighsSort.cpp
     src/util/HighsSparseMatrix.cpp
     src/util/HighsUtils.cpp
@@ -421,6 +420,7 @@ set(highs_headers_python
     src/util/HighsMatrixPic.h
     src/util/HighsMatrixSlice.h
     src/util/HighsMatrixUtils.h
+	src/util/HighsMemoryAllocation.h
     src/util/HighsRandom.h
     src/util/HighsRbTree.h
     src/util/HighsSort.h
