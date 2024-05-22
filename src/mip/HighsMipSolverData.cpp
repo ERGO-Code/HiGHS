@@ -566,27 +566,6 @@ void HighsMipSolverData::runSetup() {
     return;
   }
 
-  // check if bounds on integer variables are inconsistent. if presolve is
-  // inactivated infeasibility may not be detected otherwise.
-  for (HighsInt i = 0; i != model.num_col_; ++i) {
-    if (mipsolver.variableType(i) == HighsVarType::kInteger) {
-      double ceillower =
-          mipsolver.model_->col_lower_[i] != -kHighsInf
-              ? std::ceil(mipsolver.model_->col_lower_[i] - feastol)
-              : -kHighsInf;
-      double floorupper =
-          mipsolver.model_->col_upper_[i] != kHighsInf
-              ? std::floor(mipsolver.model_->col_upper_[i] + feastol)
-              : kHighsInf;
-      if (ceillower > floorupper + feastol) {
-        mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
-        lower_bound = kHighsInf;
-        pruned_treeweight = 1.0;
-        return;
-      }
-    }
-  }
-
   if (checkLimits()) return;
   // extract cliques if they have not been extracted before
 
@@ -617,7 +596,17 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
         break;
       case HighsVarType::kInteger:
-        if (domain.isFixed(i)) continue;
+        if (domain.isFixed(i)) {
+          if (std::abs(domain.col_lower_[i] -
+                       std::floor(domain.col_lower_[i] + 0.5)) > feastol) {
+            // integer variable is fixed to a fractional value -> infeasible
+            mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+            lower_bound = kHighsInf;
+            pruned_treeweight = 1.0;
+            return;
+          }
+          continue;
+        }
         integer_cols.push_back(i);
         integral_cols.push_back(i);
         maxTreeSizeLog2 += (HighsInt)std::ceil(
