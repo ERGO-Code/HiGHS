@@ -1317,28 +1317,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           std::vector<double> roundsol = sol.col_value;
 
           for (const std::pair<HighsInt, double>& fracint : fractionalints) {
-            // get column index and rounded solution value
+            // get column index
             HighsInt col = fracint.first;
-            double sol_floor =
-                std::floor(fracint.second + mipsolver.mipdata_->feastol);
-            // check if rounding is feasible
-            bool floor_feasible =
-                sol_floor >=
-                lpsolver.getLp().col_lower_[col] - mipsolver.mipdata_->feastol;
-            bool ceil_feasible =
-                sol_floor + 1.0 <=
-                lpsolver.getLp().col_upper_[col] + mipsolver.mipdata_->feastol;
-            assert(floor_feasible || ceil_feasible);
-            // decide based on locks and objective function
-            bool round_up = ceil_feasible &&
-                            mipsolver.mipdata_->uplocks[col] == 0 &&
-                            (!floor_feasible || mipsolver.colCost(col) < 0 ||
-                             mipsolver.mipdata_->downlocks[col] != 0);
-            // round
-            if (round_up) {
-              roundsol[col] = sol_floor + 1.0;
+            // round based on locks and sign of objective coefficient
+            if (mipsolver.mipdata_->uplocks[col] == 0 &&
+                (mipsolver.colCost(col) < 0 ||
+                 mipsolver.mipdata_->downlocks[col] != 0)) {
+              roundsol[col] = std::min(
+                  std::ceil(fracint.second - mipsolver.mipdata_->feastol),
+                  std::floor(lpsolver.getLp().col_upper_[col] +
+                             mipsolver.mipdata_->feastol));
             } else {
-              roundsol[col] = sol_floor;
+              roundsol[col] = std::max(
+                  std::floor(fracint.second + mipsolver.mipdata_->feastol),
+                  std::ceil(lpsolver.getLp().col_lower_[col] -
+                            mipsolver.mipdata_->feastol));
             }
           }
 
