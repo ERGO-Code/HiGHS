@@ -665,7 +665,8 @@ TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   lp.col_cost_ = {1, -2, 3};
   lp.col_lower_ = {2.5, 2.5, 2.5};
   lp.col_upper_ = {6.5, 5.5, 7.5};
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
 
   // Solve
   highs.passModel(lp);
