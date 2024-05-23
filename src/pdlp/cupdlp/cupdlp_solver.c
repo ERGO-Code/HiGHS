@@ -80,7 +80,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
   // original dual residual in pdlp:
   // they compute:
   //    violation   +  reduced cost
-  //  |max(-y, 0)|  + |(I-Π)(c-Α'υ)|
+  //  |max(-y, 0)|  + |(I-\Pi)(c-Α'\nu)|
   // compute c - A'y
 
   CUPDLP_COPY_VEC(dualResidual, aty, cupdlp_float, lp->nCols);

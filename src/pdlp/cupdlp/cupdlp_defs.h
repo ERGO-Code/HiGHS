@@ -338,9 +338,9 @@ struct CUPDLP_STEPSIZE {
   cupdlp_float dSumPrimalStep;
   cupdlp_float dSumDualStep;
   // Stepsize ratio,
-  //  β = dBeta = dDualStep / dPrimalStep,
-  //    in the paper, primal weight is the ω:
-  //    ω = √β
+  //  \beta = dBeta = dDualStep / dPrimalStep,
+  //    in the paper, primal weight is the \omega:
+  //    \omega = \sqrt\beta
   cupdlp_float dBeta;
   cupdlp_float dTheta;  // Used in Malitsky-Pock stepsize
   cupdlp_int nStepSizeIter;
