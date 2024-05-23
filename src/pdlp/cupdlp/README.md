@@ -101,7 +101,21 @@ The `cuPDLP-c` iteration count is held in `pdhg->timers->nIter`, but `pdhg` is d
 
 - Make CupldlpWrapper.cpp look more like C++ than C
 
-
-
-
-
++## Using a GPU
++
++### Install CUDA
++
++* sudo apt update && sudo apt upgrade
++* sudo apt autoremove nvidia* --purge
++* sudo apt update && sudo apt upgrade
++* nvcc --version
++* sudo apt install nvidia-cuda-toolkit
++
++### Building PDLP
++
++export HIGHS_HOME=/home/jajhall/install
++export CUDA_HOME=/usr/lib/cuda
++
++
++
++

@@ -73,7 +73,17 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   void* presolvedmodel = NULL;
   void* model2solve = NULL;
 
+  // WIP on zbook?
+  //
+  //  HighsInt size_of_CUPDLPscaling = sizeof(CUPDLPscaling);
+  //
   CUPDLPscaling* scaling = (CUPDLPscaling*)cupdlp_malloc(sizeof(CUPDLPscaling));
+
+  // WIP on zbook?
+  //
+  //  printf("size_of_CUPDLPscaling = %d\n", size_of_CUPDLPscaling);
+  //  scaling->ifRuizScaling = 1;
+  //  printf("scaling->ifRuizScaling = %d\n", scaling->ifRuizScaling);
 
   // claim solvers variables
   // prepare pointers
