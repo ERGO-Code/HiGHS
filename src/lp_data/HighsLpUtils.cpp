@@ -1814,7 +1814,8 @@ HighsInt getNumInt(const HighsLp& lp) {
 
 void getLpCosts(const HighsLp& lp, const HighsInt from_col,
                 const HighsInt to_col, double* XcolCost) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
     XcolCost[col - from_col] = lp.col_cost_[col];
@@ -1823,22 +1824,24 @@ void getLpCosts(const HighsLp& lp, const HighsInt from_col,
 void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
                     const HighsInt to_col, double* XcolLower,
                     double* XcolUpper) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
-    if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
-    if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
+    if (XcolLower != nullptr) XcolLower[col - from_col] = lp.col_lower_[col];
+    if (XcolUpper != nullptr) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
 }
 
 void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
                     const HighsInt to_row, double* XrowLower,
                     double* XrowUpper) {
-  assert(0 <= to_row && from_row < lp.num_row_);
+  assert(0 <= from_row && from_row < lp.num_row_);
+  assert(0 <= to_row && to_row < lp.num_row_);
   if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
-    if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
-    if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
+    if (XrowLower != nullptr) XrowLower[row - from_row] = lp.row_lower_[row];
+    if (XrowUpper != nullptr) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
 }
 
