@@ -481,10 +481,8 @@ void completeHessian(const HighsInt full_dim, HighsHessian& hessian) {
   // diagonal entries
   assert(hessian.dim_ <= full_dim);
   if (hessian.dim_ == full_dim) return;
-  HighsInt nnz = hessian.start_[hessian.dim_];
-  hessian.start_.resize(hessian.dim_+1);
-  hessian.index_.resize(nnz);
-  hessian.value_.resize(nnz);
+  HighsInt nnz = hessian.numNz();
+  hessian.exactResize();
   for (HighsInt iCol = hessian.dim_; iCol < full_dim; iCol++) {
     hessian.index_.push_back(iCol);
     hessian.value_.push_back(0);

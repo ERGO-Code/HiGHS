@@ -639,10 +639,32 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   hessian.index_[0] = 0;
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   //  if (dev_run)
-    printf("Now solve the QP\n");
+    printf("\nNow solve the QP\n");
   highs.run();
+  highs.writeSolution("", kSolutionStylePretty);
   // Add a new variables and ensure that the Hessian dimension is correct
   REQUIRE(highs.addVar(-inf, inf) == HighsStatus::kOk);
   REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
+  //  if (dev_run)
+    printf("\nNow solve the QP\n");
+  highs.run();
+  highs.writeSolution("", kSolutionStylePretty);
+  incumbent_model.hessian_.print();
+
+  REQUIRE(highs.deleteCols(1, 1) == HighsStatus::kOk);
+  incumbent_model.hessian_.print();
+  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
+  //  if (dev_run)
+    printf("\nNow solve the QP\n");
+  highs.run();
+  highs.writeSolution("", kSolutionStylePretty);
+
+  REQUIRE(highs.deleteCols(0, 0) == HighsStatus::kOk);
+  incumbent_model.hessian_.print();
+  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
+  //  if (dev_run)
+    printf("\nNow solve the QP\n");
+  highs.run();
+  highs.writeSolution("", kSolutionStylePretty);
 }
 

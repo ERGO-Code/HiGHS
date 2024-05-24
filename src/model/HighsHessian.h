@@ -20,6 +20,7 @@
 
 #include "lp_data/HConst.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsUtils.h"
 
 // class HighsHessian;
 
@@ -37,6 +38,7 @@ class HighsHessian {
   double objectiveValue(const std::vector<double>& solution) const;
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void exactResize();
+  void deleteCols(const HighsIndexCollection& index_collection);
   void clear();
   bool formatOk() const {
     return (this->format_ == HessianFormat::kTriangular ||
@@ -45,6 +47,7 @@ class HighsHessian {
   bool scaleOk(const HighsInt cost_scale, const double small_matrix_value,
                const double large_matrix_value) const;
   HighsInt numNz() const;
+  
   void print() const;
 };
 
