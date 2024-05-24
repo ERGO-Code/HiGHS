@@ -57,7 +57,7 @@ void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
 
   // Initial pass creates a look-up to for the new index of columns
   // being retained, and -1 for columns being deleted
-  std::vector<bool> new_index;
+  std::vector<HighsInt> new_index;
   new_index.assign(this->dim_, -1);
   HighsInt new_dim = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
@@ -92,32 +92,30 @@ void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
         for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
              iEl++) {
           HighsInt iRow = new_index[this->index_[iEl]];
-          if (iRow >= 0) {
-            this->index_[new_num_entries] = iRow;
-            this->value_[new_num_entries] = this->value_[iEl];
-            if (this->value_[new_num_entries]) new_num_nz++;
-            new_num_entries++;
-          }
-          new_dim++;
-          this->start_[new_dim] = new_num_entries;
+          if (iRow < 0) continue;
+	  this->index_[new_num_entries] = iRow;
+	  this->value_[new_num_entries] = this->value_[iEl];
+	  if (this->value_[new_num_entries]) new_num_nz++;
+	  new_num_entries++;
         }
-        assert(new_dim == delete_from_col);
+	new_dim++;
+	this->start_[new_dim] = new_num_entries;
       }
+      assert(new_dim == delete_from_col);
     }
     for (HighsInt iCol = keep_from_col; iCol <= keep_to_col; iCol++) {
       assert(new_index[iCol] >= 0);
       for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
            iEl++) {
         HighsInt iRow = new_index[this->index_[iEl]];
-        if (iRow >= 0) {
-          this->index_[new_num_entries] = iRow;
-          this->value_[new_num_entries] = this->value_[iEl];
-          if (this->value_[new_num_entries]) new_num_nz++;
-          new_num_entries++;
-        }
-        new_dim++;
-        this->start_[new_dim] = new_num_entries;
+        if (iRow < 0) continue;
+	this->index_[new_num_entries] = iRow;
+	this->value_[new_num_entries] = this->value_[iEl];
+	if (this->value_[new_num_entries]) new_num_nz++;
+	new_num_entries++;
       }
+      new_dim++;
+      this->start_[new_dim] = new_num_entries;
     }
   }
   assert(new_dim == check_new_dim);

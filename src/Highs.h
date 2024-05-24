@@ -987,8 +987,9 @@ class Highs {
 
   /**
    * @brief Delete multiple columns from the incumbent model given by
-   * a mask (full length array with 1 => change; 0 => not). New index
-   * of any column not deleted is returned in place of the value 0.
+   * a mask (full length array with 1 => delete; 0 => keep). New index
+   * of any column kept is returned in place of the value 0.  For
+   * deleted columns, a value of -1 is returned.
    */
   HighsStatus deleteCols(HighsInt* mask);
 
@@ -1008,9 +1009,10 @@ class Highs {
   }
 
   /**
-   * @brief Delete multiple variables from the incumbent model given by
-   * a mask (full length array with 1 => change; 0 => not). New index
-   * of any variable not deleted is returned in place of the value 0.
+   * @brief Delete multiple variables from the incumbent model given
+   * by a mask (full length array with 1 => delete; 0 => keep). New
+   * index of any variable not deleted is returned in place of the
+   * value 0. For deleted variables, a value of -1 is returned.
    */
   HighsStatus deleteVars(HighsInt* mask) { return deleteCols(mask); }
 
@@ -1027,8 +1029,9 @@ class Highs {
 
   /**
    * @brief Delete multiple rows from the incumbent model given by a
-   * mask (full length array with 1 => change; 0 => not). New index of
-   * any row not deleted is returned in place of the value 0.
+   * mask (full length array with 1 => delete; 0 => keep). New index
+   * of any row not deleted is returned in place of the value 0. For
+   * deleted rows, a value of -1 is returned.
    */
   HighsStatus deleteRows(HighsInt* mask);
 
