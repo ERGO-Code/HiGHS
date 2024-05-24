@@ -342,8 +342,15 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
         0) {
-      loginformation(runtime, basis, factor, timer);
-      runtime.settings.endofiterationevent.fire(runtime.statistics);
+      bool log_report = true;
+      if (runtime.statistics.num_iterations > 10*runtime.settings.reportingfequency) {
+	runtime.settings.reportingfequency *= 10;
+	log_report = false;
+      }
+      if (log_report) {
+	loginformation(runtime, basis, factor, timer);
+	runtime.settings.endofiterationevent.fire(runtime.statistics);
+      }
     }
     runtime.statistics.num_iterations++;
 

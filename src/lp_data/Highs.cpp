@@ -3487,13 +3487,14 @@ HighsStatus Highs::callSolveQp() {
 
   settings.reportingfequency = 100;
 
+  // Define the QP solver logging function
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 stats.iteration[rep], stats.time[rep], stats.objval[rep],
-                 stats.nullspacedimension[rep]);
+                 "%11d  %15.8g           %6d %9.2fs\n",
+                 int(stats.iteration[rep]), stats.objval[rep],
+                 int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
   settings.timelimit = options_.time_limit;
@@ -3516,7 +3517,7 @@ HighsStatus Highs::callSolveQp() {
 
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Iteration, Runtime, ObjVal, NullspaceDim\n");
+               "  Iteration        Objective     NullspaceDim\n");
 
   QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
 
