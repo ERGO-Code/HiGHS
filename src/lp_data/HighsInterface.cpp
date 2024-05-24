@@ -213,6 +213,9 @@ HighsStatus Highs::addColsInterface(
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
+
+  // Extend any Hessian with zeros on the diagonal
+  if (this->model_.hessian.dim_) completeHessian(lp_.num_col_, this->model_.hessian);
   return return_status;
 }
 

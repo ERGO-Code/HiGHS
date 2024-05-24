@@ -626,19 +626,23 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   lp.a_matrix_.value_ = {1.0, 1.0};
   hessian.dim_ = 1;
   hessian.start_ = {0, 1};
-  hessian.index_ = {1};
   hessian.value_ = {1.0};
 
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);
+  const HighsModel& incumbent_model = highs.getModel();
   // Cannot have Hessian with index exceeding hessian.dim_-1
+  hessian.index_ = {1};
   REQUIRE(highs.passModel(model) == HighsStatus::kError);
+
+  // Correct the Hessian index
   hessian.index_[0] = 0;
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   //  if (dev_run)
     printf("Now solve the QP\n");
   highs.run();
+  // Add a new variables and ensure that the Hessian dimension is correct
   REQUIRE(highs.addVar(-inf, inf) == HighsStatus::kOk);
-
+  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
 }
 
