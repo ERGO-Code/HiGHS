@@ -363,6 +363,9 @@ HighsStatus Highs::passModel(HighsModel model) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -521,6 +524,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
   if (this->model_.lp_.user_cost_scale_) {
     // Assess and apply any user cost scaling
@@ -3433,11 +3439,10 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
-  if (hessian.dim_ != lp.num_col_) {
+  if (hessian.dim_ > lp.num_col_) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-                "Hessian dimension = %" HIGHSINT_FORMAT
-                " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
-                hessian.dim_, lp.num_col_);
+                "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
+                int(hessian.dim_), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;

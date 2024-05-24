@@ -41,6 +41,7 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
 void triangularToSquareHessian(const HighsHessian& hessian,
                                vector<HighsInt>& start, vector<HighsInt>& index,
                                vector<double>& value);
+void completeHessian(const HighsInt full_dim, HighsHessian& hessian);
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                    const HighsInt num_nz, const HighsInt* start,
                    const HighsInt* index, const double* value);
