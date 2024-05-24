@@ -613,7 +613,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
 
   lp.num_col_ = 2;
   lp.num_row_ = 1;
-  lp.col_cost_ = {0.0, -1.0};
+  lp.col_cost_ = {1.0, -1.0};
   lp.col_lower_ = {-inf, -inf};
   lp.col_upper_ = {inf, inf};
   lp.sense_ = ObjSense::kMinimize;
@@ -629,7 +629,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   hessian.value_ = {1.0};
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsModel& incumbent_model = highs.getModel();
   // Cannot have Hessian with index exceeding hessian.dim_-1
   hessian.index_ = {1};
@@ -638,33 +638,46 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   // Correct the Hessian index
   hessian.index_[0] = 0;
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
-  //  if (dev_run)
-    printf("\nNow solve the QP\n");
+  if (dev_run) {
+    printf("\nNow solve the QP\n\n");
+    incumbent_model.hessian_.print();
+  }
   highs.run();
-  highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   // Add a new variables and ensure that the Hessian dimension is correct
-  REQUIRE(highs.addVar(-inf, inf) == HighsStatus::kOk);
-  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
-  //  if (dev_run)
-    printf("\nNow solve the QP\n");
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  REQUIRE(highs.addCol(-1, 0, 1, 1, index.data(), value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the QP after adding new variable\n\n");
+    incumbent_model.hessian_.print();
+  }
   highs.run();
-  highs.writeSolution("", kSolutionStylePretty);
-  incumbent_model.hessian_.print();
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
+  // Deleting column 1 removes no nonzeros from the Hessian
   REQUIRE(highs.deleteCols(1, 1) == HighsStatus::kOk);
-  incumbent_model.hessian_.print();
-  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
-  //  if (dev_run)
-    printf("\nNow solve the QP\n");
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the QP after deleting column 1\n\n");
+    incumbent_model.hessian_.print();
+  }
   highs.run();
-  highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
+  // Deleting column 0 removes only nonzero from the Hessian, so problem is an
+  // LP
   REQUIRE(highs.deleteCols(0, 0) == HighsStatus::kOk);
-  incumbent_model.hessian_.print();
-  REQUIRE(incumbent_model.lp_.num_col_ == incumbent_model.hessian_.dim_);
-  //  if (dev_run)
-    printf("\nNow solve the QP\n");
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the LP after deleting column 0\n\n");
+    incumbent_model.hessian_.print();
+  }
   highs.run();
-  highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 }
-

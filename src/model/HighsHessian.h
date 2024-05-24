@@ -47,7 +47,7 @@ class HighsHessian {
   bool scaleOk(const HighsInt cost_scale, const double small_matrix_value,
                const double large_matrix_value) const;
   HighsInt numNz() const;
-  
+
   void print() const;
 };
 

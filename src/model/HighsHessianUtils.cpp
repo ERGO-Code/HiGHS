@@ -490,7 +490,7 @@ void completeHessian(const HighsInt full_dim, HighsHessian& hessian) {
     hessian.start_.push_back(nnz);
   }
   hessian.dim_ = full_dim;
-  assert(HighsInt(hessian.start_.size()) == hessian.dim_+1);
+  assert(HighsInt(hessian.start_.size()) == hessian.dim_ + 1);
 }
 
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,

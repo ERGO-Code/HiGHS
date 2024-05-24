@@ -3440,9 +3440,10 @@ HighsStatus Highs::callSolveQp() {
   HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
   if (hessian.dim_ > lp.num_col_) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
-                int(hessian.dim_), int(lp.num_col_));
+    highsLogDev(
+        options_.log_options, HighsLogType::kError,
+        "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
+        int(hessian.dim_), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;

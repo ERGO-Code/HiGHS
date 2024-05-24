@@ -216,7 +216,8 @@ HighsStatus Highs::addColsInterface(
   ekk_instance_.addCols(lp, local_a_matrix);
 
   // Extend any Hessian with zeros on the diagonal
-  if (this->model_.hessian_.dim_) completeHessian(lp.num_col_, this->model_.hessian_);
+  if (this->model_.hessian_.dim_)
+    completeHessian(lp.num_col_, this->model_.hessian_);
   return return_status;
 }
 
