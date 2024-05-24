@@ -659,7 +659,8 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
   // Deleting column 1 removes no nonzeros from the Hessian
-  REQUIRE(highs.deleteCols(1, 1) == HighsStatus::kOk);
+  HighsInt delete_col = 1;
+  REQUIRE(highs.deleteCols(delete_col, delete_col) == HighsStatus::kOk);
   REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
            incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
   if (dev_run) {
@@ -671,7 +672,8 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
 
   // Deleting column 0 removes only nonzero from the Hessian, so problem is an
   // LP
-  REQUIRE(highs.deleteCols(0, 0) == HighsStatus::kOk);
+  delete_col = 0;
+  REQUIRE(highs.deleteCols(delete_col, delete_col) == HighsStatus::kOk);
   REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
            incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
   if (dev_run) {
