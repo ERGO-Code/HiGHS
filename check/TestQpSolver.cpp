@@ -219,12 +219,12 @@ TEST_CASE("test-qod", "[qpsolver]") {
   highs.addCol(-1, -inf, inf, 0, NULL, NULL);
   if (dev_run) highs.writeModel("");
 
-  // Cannot solve the model until the Hessian has been replaced
+  // Can solve the model before the Hessian has been replaced
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kError);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kModelError);
+  REQUIRE(model_status == HighsModelStatus::kUnbounded);
 
   // Pass the new Hessian
   hessian.dim_ = 2;

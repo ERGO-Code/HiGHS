@@ -656,6 +656,7 @@ TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   Highs highs;
   // No presolve
+  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve", "off");
 
   // IP without constraints and fractional bounds on variables
