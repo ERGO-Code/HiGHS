@@ -412,7 +412,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   // any rows have been removed, and if there is mask to be updated
   HighsInt original_num_row = lp.num_row_;
 
-  deleteLpRows(lp, index_collection);
+  lp.deleteRows(index_collection);
   assert(lp.num_row_ <= original_num_row);
   if (lp.num_row_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate

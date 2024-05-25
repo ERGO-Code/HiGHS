@@ -438,7 +438,45 @@ void HighsLp::deleteColsFromVectors(
 }
 
 void HighsLp::deleteRowsFromVectors(
-    HighsInt& new_num_row, const HighsIndexCollection& index_collection) {}
+    HighsInt& new_num_row, const HighsIndexCollection& index_collection) {
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  // Initialise new_num_row in case none is removed due to from_k > to_k
+  new_num_row = this->num_row_;
+  if (from_k > to_k) return;
+
+  HighsInt delete_from_row;
+  HighsInt delete_to_row;
+  HighsInt keep_from_row;
+  HighsInt keep_to_row = -1;
+  HighsInt current_set_entry = 0;
+
+  HighsInt row_dim = this->num_row_;
+  new_num_row = 0;
+  bool have_names = (HighsInt)this->row_names_.size() > 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, delete_from_row, delete_to_row,
+                     keep_from_row, keep_to_row, current_set_entry);
+    if (k == from_k) {
+      // Account for the initial rows being kept
+      new_num_row = delete_from_row;
+    }
+    if (delete_to_row >= row_dim - 1) break;
+    assert(delete_to_row < row_dim);
+    for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
+      this->row_lower_[new_num_row] = this->row_lower_[row];
+      this->row_upper_[new_num_row] = this->row_upper_[row];
+      if (have_names) this->row_names_[new_num_row] = this->row_names_[row];
+      new_num_row++;
+    }
+    if (keep_to_row >= row_dim - 1) break;
+  }
+  this->row_lower_.resize(new_num_row);
+  this->row_upper_.resize(new_num_row);
+  if (have_names) this->row_names_.resize(new_num_row);
+}
 
 void HighsLp::deleteCols(const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
@@ -447,7 +485,12 @@ void HighsLp::deleteCols(const HighsIndexCollection& index_collection) {
   this->num_col_ = new_num_col;
 }
 
-void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {}
+void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
+  HighsInt new_num_row;
+  this->deleteRowsFromVectors(new_num_row, index_collection);
+  this->a_matrix_.deleteRows(index_collection);
+  this->num_row_ = new_num_row;
+}
 
 void HighsLp::unapplyMods() {
   // Restore any non-semi types
