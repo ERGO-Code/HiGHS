@@ -366,7 +366,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   // any columns have been removed, and if there is mask to be updated
   HighsInt original_num_col = lp.num_col_;
 
-  deleteLpCols(lp, index_collection);
+  lp.deleteCols(index_collection);
   model_.hessian_.deleteCols(index_collection);
   assert(lp.num_col_ <= original_num_col);
   if (lp.num_col_ < original_num_col) {

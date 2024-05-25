@@ -96,8 +96,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
 
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection);
-
 void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
                              const HighsIndexCollection& index_collection);
 

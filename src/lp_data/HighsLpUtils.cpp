@@ -1495,13 +1495,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   }
 }
 
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsInt new_num_col;
-  deleteColsFromLpVectors(lp, new_num_col, index_collection);
-  lp.a_matrix_.deleteCols(index_collection);
-  lp.num_col_ = new_num_col;
-}
-
 void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
                              const HighsIndexCollection& index_collection) {
   assert(ok(index_collection));

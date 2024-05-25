@@ -812,7 +812,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   std::vector<double> hessian_col(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     hessian_col.assign(dim, 0);
-    HighsInt kmax = std::max(1, (dim - iCol) / 3);
+    HighsInt kmax = std::max(HighsInt(1), (dim - iCol) / 3);
     hessian_col[iCol] = dim * iCol + iCol;
     if (iCol < dim - 1) {
       for (HighsInt k = 0; k < kmax; k++) {
@@ -842,7 +842,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   std::vector<HighsInt> mask;
   mask.assign(dim, 0);
 
-  HighsInt kmax = std::max(1, dim / 3);
+  HighsInt kmax = std::max(HighsInt(1), dim / 3);
   for (HighsInt k = 0; k < kmax; k++) {
     HighsInt iRow = random.integer(dim);
     assert(iRow >= 0);
