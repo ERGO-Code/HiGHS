@@ -70,6 +70,9 @@ void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
     }
     for (HighsInt iCol = keep_from_col; iCol <= keep_to_col; iCol++)
       new_index[iCol] = new_dim++;
+    // When using a mask, to_k = this->dim_, but consecutive
+    // keep/delete entries are accumulated, so may not need all passes
+    if (keep_to_col >= this->dim_ - 1) break;
   }
   assert(new_dim < this->dim_);
   // Now perform the pass that deletes rows/columns
@@ -82,6 +85,7 @@ void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
   new_dim = 0;
   HighsInt new_num_nz = 0;
   HighsInt new_num_entries = 0;
+  std::vector<HighsInt> save_start = this->start_;
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateOutInIndex(index_collection, delete_from_col, delete_to_col,
                      keep_from_col, keep_to_col, current_set_entry);
@@ -89,34 +93,34 @@ void HighsHessian::deleteCols(const HighsIndexCollection& index_collection) {
       // Account for the initial columns being kept
       for (HighsInt iCol = 0; iCol < delete_from_col; iCol++) {
         assert(new_index[iCol] >= 0);
-        for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+        for (HighsInt iEl = save_start[iCol]; iEl < save_start[iCol + 1];
              iEl++) {
           HighsInt iRow = new_index[this->index_[iEl]];
           if (iRow < 0) continue;
-	  this->index_[new_num_entries] = iRow;
-	  this->value_[new_num_entries] = this->value_[iEl];
-	  if (this->value_[new_num_entries]) new_num_nz++;
-	  new_num_entries++;
+          this->index_[new_num_entries] = iRow;
+          this->value_[new_num_entries] = this->value_[iEl];
+          if (this->value_[new_num_entries]) new_num_nz++;
+          new_num_entries++;
         }
-	new_dim++;
-	this->start_[new_dim] = new_num_entries;
+        new_dim++;
+        this->start_[new_dim] = new_num_entries;
       }
       assert(new_dim == delete_from_col);
     }
     for (HighsInt iCol = keep_from_col; iCol <= keep_to_col; iCol++) {
       assert(new_index[iCol] >= 0);
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-           iEl++) {
+      for (HighsInt iEl = save_start[iCol]; iEl < save_start[iCol + 1]; iEl++) {
         HighsInt iRow = new_index[this->index_[iEl]];
         if (iRow < 0) continue;
-	this->index_[new_num_entries] = iRow;
-	this->value_[new_num_entries] = this->value_[iEl];
-	if (this->value_[new_num_entries]) new_num_nz++;
-	new_num_entries++;
+        this->index_[new_num_entries] = iRow;
+        this->value_[new_num_entries] = this->value_[iEl];
+        if (this->value_[new_num_entries]) new_num_nz++;
+        new_num_entries++;
       }
       new_dim++;
       this->start_[new_dim] = new_num_entries;
     }
+    if (keep_to_col >= this->dim_ - 1) break;
   }
   assert(new_dim == check_new_dim);
   this->dim_ = new_dim;

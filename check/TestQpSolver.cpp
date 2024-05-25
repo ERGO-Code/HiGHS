@@ -601,13 +601,15 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
 }
 
-void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg, std::vector<double>& result) {
+void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
+                    std::vector<double>& result) {
   HighsInt dim = hessian.dim_;
   assert(HighsInt(arg.size()) == dim);
   result.resize(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     double sum = 0;
-    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol+1]; iEl++) 
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++)
       sum += hessian.value_[iEl] * arg[hessian.index_[iEl]];
     result[iCol] = sum;
   }
@@ -677,8 +679,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   std::vector<double> result1;
   arg0.resize(dim);
   HighsRandom random;
-  for (HighsInt iCol = 0; iCol < dim; iCol++)
-    arg0[iCol] = random.fraction();
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
   HighsHessian hessian0 = incumbent_model.hessian_;
   arg1 = arg0;
 
@@ -696,17 +697,17 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
 
   dim--;
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
-    arg1[iCol] = arg1[iCol+1];
+    arg1[iCol] = arg1[iCol + 1];
   arg0[delete_col] = 0;
   hessianProduct(hessian0, arg0, result0);
   for (HighsInt iCol = delete_col; iCol < dim; iCol++)
-    result0[iCol] = result0[iCol+1];
+    result0[iCol] = result0[iCol + 1];
 
   arg1.resize(dim);
   hessianProduct(incumbent_model.hessian_, arg1, result1);
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
- 
+
   // Deleting column 0 removes only nonzero from the Hessian, so problem is an
   // LP
   delete_col = 0;
@@ -741,15 +742,14 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   lp.a_matrix_.value_ = {1, 1, 1, 1, 1};
   hessian.dim_ = 5;
   hessian.start_ = {0, 4, 7, 10, 11, 12};
-  hessian.index_ = {0, 1, 3, 4,  1, 2, 4,  2, 3, 4,  3,  4};
+  hessian.index_ = {0, 1, 3, 4, 1, 2, 4, 2, 3, 4, 3, 4};
   hessian.value_ = {11, 21, 41, 51, 22, 32, 52, 33, 43, 53, 44, 55};
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsModel& incumbent_model = highs.getModel();
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
-  // if (dev_run) 
-  incumbent_model.hessian_.print();
+  if (dev_run) incumbent_model.hessian_.print();
 
   HighsInt dim = incumbent_model.lp_.num_col_;
   std::vector<double> arg0;
@@ -758,15 +758,13 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   std::vector<double> result1;
   arg0.resize(dim);
   HighsRandom random;
-  for (HighsInt iCol = 0; iCol < dim; iCol++)
-    arg0[iCol] = random.fraction();
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
   HighsHessian hessian0 = incumbent_model.hessian_;
   arg1 = arg0;
 
   std::vector<HighsInt> set = {1, 3};
   REQUIRE(highs.deleteCols(2, set.data()) == HighsStatus::kOk);
-  // if (dev_run) 
-  incumbent_model.hessian_.print();
+  if (dev_run) incumbent_model.hessian_.print();
 
   arg1[1] = arg1[2];
   arg1[2] = arg1[4];
@@ -782,7 +780,8 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   for (HighsInt iCol = 0; iCol < dim; iCol++)
     REQUIRE(result0[iCol] == result1[iCol]);
 
-  dim = 10;
+  dim = 100;
+  lp.clear();
   lp.num_col_ = dim;
   lp.num_row_ = 1;
 
@@ -799,6 +798,8 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     lp.a_matrix_.index_[iCol] = iCol;
     lp.a_matrix_.value_[iCol] = 1;
   }
+  lp.a_matrix_.start_.push_back(dim);
+
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.row_lower_ = {-inf};
@@ -810,38 +811,37 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   std::vector<double> hessian_col(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     hessian_col.assign(dim, 0);
-    HighsInt kmax = std::max(1, (dim-iCol)/3);
-    hessian_col[iCol] = dim * iCol + (iCol+1);
-    if (iCol < dim-1) {
+    HighsInt kmax = std::max(1, (dim - iCol) / 3);
+    hessian_col[iCol] = dim * iCol + iCol;
+    if (iCol < dim - 1) {
       for (HighsInt k = 0; k < kmax; k++) {
-	HighsInt iRow = iCol+1 + random.integer(dim-iCol-1);
-	assert(iRow >= 0);
-	assert(iRow < dim);
-	hessian_col[iRow] = dim * iCol + (iRow+1);
+        HighsInt iRow = iCol + 1 + random.integer(dim - iCol - 1);
+        assert(iRow >= 0);
+        assert(iRow < dim);
+        hessian_col[iRow] = dim * iCol + iRow;
       }
     }
     for (HighsInt iRow = iCol; iRow < dim; iRow++) {
       if (hessian_col[iRow]) {
-	hessian.index_.push_back(iRow);
-	hessian.value_.push_back(hessian_col[iRow]);
+        hessian.index_.push_back(iRow);
+        hessian.value_.push_back(hessian_col[iRow]);
       }
     }
     hessian.start_.push_back(HighsInt(hessian.index_.size()));
   }
- 
+
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
-  incumbent_model.hessian_.print();
+  if (dev_run) incumbent_model.hessian_.print();
 
   arg0.resize(dim);
-  for (HighsInt iCol = 0; iCol < dim; iCol++)
-    arg0[iCol] = 1;//random.fraction();
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
   hessian0 = incumbent_model.hessian_;
   arg1 = arg0;
 
   std::vector<HighsInt> mask;
   mask.assign(dim, 0);
 
-  HighsInt kmax = std::max(1, dim/3);
+  HighsInt kmax = std::max(1, dim / 3);
   for (HighsInt k = 0; k < kmax; k++) {
     HighsInt iRow = random.integer(dim);
     assert(iRow >= 0);
@@ -849,6 +849,8 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     mask[iRow] = 1;
   }
   highs.deleteCols(mask.data());
+  if (dev_run) incumbent_model.hessian_.print();
+
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     HighsInt iRow = mask[iCol];
     if (iRow < 0) {
@@ -856,16 +858,17 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     } else {
       arg1[iRow] = arg1[iCol];
     }
-    
   }
   hessianProduct(hessian0, arg0, result0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iRow = mask[iCol];
+    if (iRow >= 0) result0[iRow] = result0[iCol];
+  }
   dim = incumbent_model.hessian_.dim_;
   arg1.resize(dim);
   hessianProduct(incumbent_model.hessian_, arg1, result1);
-  for (HighsInt iCol = 0; iCol < dim; iCol++)
+
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
     REQUIRE(result0[iCol] == result1[iCol]);
-
-
+  }
 }
-
-
