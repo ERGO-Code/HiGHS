@@ -363,6 +363,9 @@ HighsStatus Highs::passModel(HighsModel model) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -521,6 +524,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
   if (this->model_.lp_.user_cost_scale_) {
     // Assess and apply any user cost scaling
@@ -3433,11 +3439,11 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
-  if (hessian.dim_ != lp.num_col_) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Hessian dimension = %" HIGHSINT_FORMAT
-                " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
-                hessian.dim_, lp.num_col_);
+  if (hessian.dim_ > lp.num_col_) {
+    highsLogDev(
+        options_.log_options, HighsLogType::kError,
+        "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
+        int(hessian.dim_), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;
@@ -3487,13 +3493,14 @@ HighsStatus Highs::callSolveQp() {
 
   settings.reportingfequency = 100;
 
+  // Define the QP solver logging function
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
 
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 stats.iteration[rep], stats.time[rep], stats.objval[rep],
-                 stats.nullspacedimension[rep]);
+                 "%11d  %15.8g           %6d %9.2fs\n",
+                 int(stats.iteration[rep]), stats.objval[rep],
+                 int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
   settings.timelimit = options_.time_limit;
@@ -3516,7 +3523,7 @@ HighsStatus Highs::callSolveQp() {
 
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Iteration, Runtime, ObjVal, NullspaceDim\n");
+               "  Iteration        Objective     NullspaceDim\n");
 
   QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
 

@@ -39,7 +39,10 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
-  if (hessian.dim_ == 0) return HighsStatus::kOk;
+  if (hessian.dim_ == 0) {
+    hessian.clear();
+    return HighsStatus::kOk;
+  }
 
   // Assess the Hessian matrix
   //
@@ -470,6 +473,24 @@ HighsStatus normaliseHessian(const HighsOptions& options,
     return_status = HighsStatus::kOk;
 
   return return_status;
+}
+
+void completeHessian(const HighsInt full_dim, HighsHessian& hessian) {
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed with explicit zero
+  // diagonal entries
+  assert(hessian.dim_ <= full_dim);
+  if (hessian.dim_ == full_dim) return;
+  HighsInt nnz = hessian.numNz();
+  hessian.exactResize();
+  for (HighsInt iCol = hessian.dim_; iCol < full_dim; iCol++) {
+    hessian.index_.push_back(iCol);
+    hessian.value_.push_back(0);
+    nnz++;
+    hessian.start_.push_back(nnz);
+  }
+  hessian.dim_ = full_dim;
+  assert(HighsInt(hessian.start_.size()) == hessian.dim_ + 1);
 }
 
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
