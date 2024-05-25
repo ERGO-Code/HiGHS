@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 
 #include "HCheckConfig.h"
