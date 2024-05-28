@@ -3530,101 +3530,12 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  HighsModelStatus highs_qp_model_status = model_status_;
-  HighsBasis qp_basis = basis_;
-  HighsSolution highs_qp_solution = solution_;
-  QpAsmStatus status = 
-    solveqp(instance, settings, stats, qp_model_status, qp_solution,
-	    highs_qp_model_status,
-	    qp_basis,
-	    highs_qp_solution,
-	    timer_);
+  QpAsmStatus status = solveqp(instance, settings, stats, model_status_, basis_,
+                               solution_, timer_);
+  // QP solver can fail, so should return something other than QpAsmStatus::kOk
   assert(status == QpAsmStatus::kOk);
 
-  HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(options_.log_options, call_status,
-                                      return_status, "QpSolver");
-  if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = qp_model_status == QpModelStatus::OPTIMAL
-                      ? HighsModelStatus::kOptimal
-                  : qp_model_status == QpModelStatus::UNBOUNDED
-                      ? HighsModelStatus::kUnbounded
-                  : qp_model_status == QpModelStatus::INFEASIBLE
-                      ? HighsModelStatus::kInfeasible
-                  : qp_model_status == QpModelStatus::ITERATIONLIMIT
-                      ? HighsModelStatus::kIterationLimit
-                  : qp_model_status == QpModelStatus::LARGE_NULLSPACE
-                      ? HighsModelStatus::kSolveError
-                  : qp_model_status == QpModelStatus::TIMELIMIT
-                      ? HighsModelStatus::kTimeLimit
-                      : HighsModelStatus::kNotset;
-  // extract variable values
-  solution_.col_value.resize(lp.num_col_);
-  solution_.col_dual.resize(lp.num_col_);
-  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    solution_.col_value[iCol] = qp_solution.primal.value[iCol];
-    solution_.col_dual[iCol] =
-        objective_multiplier * qp_solution.dualvar.value[iCol];
-  }
-  // extract constraint activity
-  solution_.row_value.resize(lp.num_row_);
-  solution_.row_dual.resize(lp.num_row_);
-  // Negate the vector and Hessian
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    solution_.row_value[iRow] = qp_solution.rowactivity.value[iRow];
-    solution_.row_dual[iRow] =
-        objective_multiplier * qp_solution.dualcon.value[iRow];
-  }
-  solution_.value_valid = true;
-  solution_.dual_valid = true;
-
-  // extract basis status
-  basis_.col_status.resize(lp.num_col_);
-  basis_.row_status.resize(lp.num_row_);
-
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
-      basis_.col_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
-      basis_.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
-      basis_.col_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.col_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-
-  for (HighsInt i = 0; i < lp.num_row_; i++) {
-    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
-      basis_.row_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
-      basis_.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
-      basis_.row_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.row_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-  basis_.valid = true;
-  basis_.alien = false;
-
-  assert(model_status_ == highs_qp_model_status);
-  assert(basis_.valid == qp_basis.valid);
-  assert(basis_.alien == qp_basis.alien);
-  assert(solution_.value_valid == highs_qp_solution.value_valid);
-  assert(solution_.dual_valid == highs_qp_solution.dual_valid);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    assert(solution_.col_value[iCol] == highs_qp_solution.col_value[iCol]);
-    assert(solution_.col_dual[iCol] == highs_qp_solution.col_dual[iCol]);
-    assert(basis_.col_status[iCol] == qp_basis.col_status[iCol]);
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    assert(solution_.row_value[iRow] == highs_qp_solution.row_value[iRow]);
-    assert(solution_.row_dual[iRow] == highs_qp_solution.row_dual[iRow]);
-    assert(basis_.row_status[iRow] == qp_basis.row_status[iRow]);
-  }
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

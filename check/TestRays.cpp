@@ -571,4 +571,3 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   highs.getDualRay(has_ray, ray_value.data());
 }
 */
-
