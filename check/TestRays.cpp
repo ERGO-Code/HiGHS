@@ -550,7 +550,10 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   lp.a_matrix_.start_ = {0, 2};
   lp.a_matrix_.index_ = {0, 1};
   lp.a_matrix_.value_ = {1, 1};
-
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {1, 1};
   Highs highs;
   //highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
