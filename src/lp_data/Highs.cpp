@@ -3526,10 +3526,6 @@ HighsStatus Highs::callSolveQp() {
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "  Iteration        Objective     NullspaceDim\n");
 
-  QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
-
-  QpSolution qp_solution(instance);
-
   QpAsmStatus status = solveqp(instance, settings, stats, model_status_, basis_,
                                solution_, timer_);
   // QP solver can fail, so should return something other than QpAsmStatus::kOk
