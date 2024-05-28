@@ -5,7 +5,12 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/crashsolution.hpp"
 
-static void computestartingpoint_highs(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpHotstartInformation& result, HighsTimer& timer) {
+static void computeStartingPointHighs(Instance& instance,
+				      Settings& settings,
+				      Statistics& stats,
+				      QpModelStatus& modelstatus,
+				      QpHotstartInformation& result,
+				      HighsTimer& timer) {
   // compute initial feasible point
   Highs highs;
 

@@ -375,8 +375,6 @@ set(highs_headers
     qpsolver/factor.hpp
     qpsolver/feasibility_bounded.hpp
     qpsolver/feasibility_highs.hpp
-    qpsolver/feasibility_quass.hpp
-    qpsolver/feasibility.hpp
     qpsolver/gradient.hpp
     qpsolver/instance.hpp
     qpsolver/matrix.hpp

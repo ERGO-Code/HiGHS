@@ -5,7 +5,12 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/crashsolution.hpp"
 
-static void computestartingpoint_bounded(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpHotstartInformation& result, HighsTimer& timer) {
+static void computeStartingPointBounded(Instance& instance,
+					Settings& settings,
+					Statistics& stats,
+					QpModelStatus& modelstatus,
+					QpHotstartInformation& result,
+					HighsTimer& timer) {
   // compute initial feasible point for problems with bounds only (no general linear constraints)
 
   // compute  Qx + c = 0 --> x = Q^-1c

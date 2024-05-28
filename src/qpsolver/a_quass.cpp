@@ -106,7 +106,7 @@ QpAsmStatus solveqp(Instance& instance,
   // compute initial feasible point
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   if (instance.num_con == 0 && instance.num_var <= 15000) {
-    computestartingpoint_bounded(instance, settings, stats, qp_model_status, startinfo, qp_timer);
+    computeStartingPointBounded(instance, settings, stats, qp_model_status, startinfo, qp_timer);
     if (qp_model_status == QpModelStatus::OPTIMAL) {
       qp_solution.primal = startinfo.primal;
       return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
@@ -115,7 +115,7 @@ QpAsmStatus solveqp(Instance& instance,
       return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } else  {
-    computestartingpoint_highs(instance, settings, stats, qp_model_status, startinfo, qp_timer);
+    computeStartingPointHighs(instance, settings, stats, qp_model_status, startinfo, qp_timer);
     if (qp_model_status == QpModelStatus::INFEASIBLE) {
       return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
