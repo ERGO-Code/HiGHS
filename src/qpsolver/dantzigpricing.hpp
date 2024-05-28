@@ -14,7 +14,7 @@ class DantzigPricing : public Pricing {
   Basis& basis;
   ReducedCosts& redcosts;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
     auto activeconstraintidx = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
@@ -54,7 +54,7 @@ class DantzigPricing : public Pricing {
   DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
       : runtime(rt), basis(bas), redcosts(rc){};
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
@@ -63,7 +63,7 @@ class DantzigPricing : public Pricing {
     // do nothing
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     // does nothing
   }

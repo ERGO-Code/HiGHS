@@ -63,8 +63,8 @@ class CholeskyFactor {
 
     Matrix temp(dim_ns, 0);
 
-    Vector buffer_Qcol(runtime.instance.num_var);
-    Vector buffer_ZtQi(dim_ns);
+    QpVector buffer_Qcol(runtime.instance.num_var);
+    QpVector buffer_ZtQi(dim_ns);
     for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
       runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
       basis.Ztprod(buffer_Qcol, buffer_ZtQi);
@@ -97,7 +97,7 @@ class CholeskyFactor {
     uptodate = true;
   }
 
-  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
+  QpSolverStatus expand(const QpVector& yp, QpVector& gyp, QpVector& l, QpVector& m) {
     if (!uptodate) {
       return QpSolverStatus::OK;
     }
@@ -173,7 +173,7 @@ class CholeskyFactor {
     return QpSolverStatus::OK;
   }
 
-  void solveL(Vector& rhs) {
+  void solveL(QpVector& rhs) {
     if (!uptodate) {
       recompute();
     }
@@ -193,7 +193,7 @@ class CholeskyFactor {
   }
 
   // solve L' u = v
-  void solveLT(Vector& rhs) {
+  void solveLT(QpVector& rhs) {
     for (HighsInt i = rhs.dim - 1; i >= 0; i--) {
       double sum = 0.0;
       for (HighsInt j = rhs.dim - 1; j > i; j--) {
@@ -203,7 +203,7 @@ class CholeskyFactor {
     }
   }
 
-  void solve(Vector& rhs) {
+  void solve(QpVector& rhs) {
     if (!uptodate || (numberofreduces >= runtime.instance.num_var / 2 &&
                       !has_negative_eigenvalue)) {
       recompute();
@@ -274,7 +274,7 @@ class CholeskyFactor {
     m[j * kmax + i] = 0.0;
   }
 
-  void reduce(const Vector& buffer_d, const HighsInt maxabsd, bool p_in_v) {
+  void reduce(const QpVector& buffer_d, const HighsInt maxabsd, bool p_in_v) {
     if (current_k == 0) {
       return;
     }

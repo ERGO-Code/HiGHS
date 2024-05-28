@@ -174,7 +174,7 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
   buffered_q = -1;
 }
 
-Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer,
+QpVector& Basis::btran(const QpVector& rhs, QpVector& target, bool buffer,
                      HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btranCall(rhs_hvec, 1.0);
@@ -191,7 +191,7 @@ Vector& Basis::btran(const Vector& rhs, Vector& target, bool buffer,
   return hvec2vec(rhs_hvec, target);
 }
 
-Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
+QpVector Basis::btran(const QpVector& rhs, bool buffer, HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btranCall(rhs_hvec, 1.0);
   if (buffer) {
@@ -207,7 +207,7 @@ Vector Basis::btran(const Vector& rhs, bool buffer, HighsInt p) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer,
+QpVector& Basis::ftran(const QpVector& rhs, QpVector& target, bool buffer,
                      HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftranCall(rhs_hvec, 1.0);
@@ -225,7 +225,7 @@ Vector& Basis::ftran(const Vector& rhs, Vector& target, bool buffer,
   return hvec2vec(rhs_hvec, target);
 }
 
-Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
+QpVector Basis::ftran(const QpVector& rhs, bool buffer, HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftranCall(rhs_hvec, 1.0);
   if (buffer) {
@@ -241,9 +241,9 @@ Vector Basis::ftran(const Vector& rhs, bool buffer, HighsInt q) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector Basis::recomputex(const Instance& inst) {
+QpVector Basis::recomputex(const Instance& inst) {
   assert((HighsInt)activeconstraintidx.size() == inst.num_var);
-  Vector rhs(inst.num_var);
+  QpVector rhs(inst.num_var);
 
   for (HighsInt i = 0; i < inst.num_var; i++) {
     HighsInt con = activeconstraintidx[i];
@@ -276,7 +276,7 @@ Vector Basis::recomputex(const Instance& inst) {
   return hvec2vec(rhs_hvec);
 }
 
-Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
+QpVector& Basis::Ztprod(const QpVector& rhs, QpVector& target, bool buffer,
                       HighsInt q) {
   ftran(rhs, Ztprod_res, buffer, q);
 
@@ -291,7 +291,7 @@ Vector& Basis::Ztprod(const Vector& rhs, Vector& target, bool buffer,
   return target;
 }
 
-Vector& Basis::Zprod(const Vector& rhs, Vector& target) {
+QpVector& Basis::Zprod(const QpVector& rhs, QpVector& target) {
   buffer_Zprod.reset();
   buffer_Zprod.dim = target.dim;
   for (HighsInt i = 0; i < rhs.num_nz; i++) {

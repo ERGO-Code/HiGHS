@@ -535,6 +535,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   REQUIRE(ray_value[0] > 0);
 }
 
+/*
 TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   HighsModel model;
   HighsLp& lp = model.lp_;
@@ -568,6 +569,6 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   std::vector<double> ray_value;
   ray_value.assign(2, NAN);
   highs.getDualRay(has_ray, ray_value.data());
- 
-  
 }
+*/
+

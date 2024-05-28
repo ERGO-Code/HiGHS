@@ -85,8 +85,8 @@ static void computestartingpoint_highs(Instance& instance, Settings& settings, S
   HighsSolution sol = highs.getSolution();
   HighsBasis bas = highs.getBasis();
 
-  Vector x0(instance.num_var);
-  Vector ra(instance.num_con);
+  QpVector x0(instance.num_var);
+  QpVector ra(instance.num_con);
   for (HighsInt i = 0; i < x0.dim; i++) {
     if (fabs(sol.col_value[i]) > 10E-5) {
       x0.value[i] = sol.col_value[i];

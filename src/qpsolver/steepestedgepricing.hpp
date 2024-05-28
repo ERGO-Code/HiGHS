@@ -14,7 +14,7 @@ class SteepestEdgePricing : public Pricing {
   ReducedCosts& redcosts;
   std::vector<double> weights;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
     auto activeconstraintidx = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
@@ -60,14 +60,14 @@ class SteepestEdgePricing : public Pricing {
           compute_exact_weights();
         };
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 
 
   double compute_exact_weight(HighsInt i) {
-    Vector y_i = basis.btran(Vector::unit(runtime.instance.num_var, i));
+    QpVector y_i = basis.btran(QpVector::unit(runtime.instance.num_var, i));
     return y_i.dot(y_i);
   }
 
@@ -120,7 +120,7 @@ class SteepestEdgePricing : public Pricing {
     compute_exact_weights();
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
     //printf("Update weights, p = %d, rowindex = %d, q = %d\n", p, rowindex_p, q);
@@ -130,7 +130,7 @@ class SteepestEdgePricing : public Pricing {
     //  exit(1);
     //}
 
-    Vector delta = basis.ftran(aq);
+    QpVector delta = basis.ftran(aq);
 
     double old_weight_p_updated = weights[rowindex_p];
     // exact weight coming in needs to come in before update.
@@ -153,7 +153,7 @@ class SteepestEdgePricing : public Pricing {
         //printf("weights[%d] = %lf\n", i, weights[i]);
       }
     }
-    //Vector new_ep = basis.btran(Vector::unit(runtime.instance.num_var, rowindex_p)); 
+    //QpVector new_ep = basis.btran(QpVector::unit(runtime.instance.num_var, rowindex_p)); 
     //double computed_weight = new_ep.dot(new_ep);
     double new_weight_p_updated = weight_p / (t_p * t_p);
     

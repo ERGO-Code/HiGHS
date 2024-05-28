@@ -383,6 +383,7 @@ set(highs_headers
     qpsolver/perturbation.hpp
     qpsolver/pricing.hpp
     qpsolver/qpconst.hpp
+    qpsolver/qpvector.hpp
     qpsolver/quass.hpp
     qpsolver/ratiotest.hpp
     qpsolver/runtime.hpp
@@ -391,7 +392,6 @@ set(highs_headers
     qpsolver/snippets.hpp
     qpsolver/statistics.hpp
     qpsolver/steepestedgepricing.hpp
-    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h

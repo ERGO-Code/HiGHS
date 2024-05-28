@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include "vector.hpp"
+#include "qpvector.hpp"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -17,11 +17,11 @@ struct MatrixBase {
   std::vector<HighsInt> index;
   std::vector<double> value;
 
-  Vector& mat_vec(const Vector& other, Vector& target) const {
+  QpVector& mat_vec(const QpVector& other, QpVector& target) const {
     return mat_vec_seq(other, target);
   }
 
-  Vector& mat_vec_seq(const Vector& other, Vector& target) const {
+  QpVector& mat_vec_seq(const QpVector& other, QpVector& target) const {
     target.reset();
     for (HighsInt i = 0; i < other.num_nz; i++) {
       HighsInt col = other.index[i];
@@ -34,14 +34,14 @@ struct MatrixBase {
     return target;
   }
 
-  Vector mat_vec(const Vector& other) {
-    Vector result(num_row);
+  QpVector mat_vec(const QpVector& other) {
+    QpVector result(num_row);
     mat_vec(other, result);
     return result;
   }
 
-  Vector vec_mat(HighsInt* idx, double* val, HighsInt nnz) {
-    Vector result(num_col);
+  QpVector vec_mat(HighsInt* idx, double* val, HighsInt nnz) {
+    QpVector result(num_col);
     for (HighsInt i = 0; i < num_col; i++) {
       double dot = 0.0;
       // HighsInt idx_other = 0;
@@ -78,11 +78,11 @@ struct MatrixBase {
     return result;
   }
 
-  Vector& vec_mat(const Vector& other, Vector& target) const {
+  QpVector& vec_mat(const QpVector& other, QpVector& target) const {
     return vec_mat_1(other, target);
   }
 
-  Vector& vec_mat_1(const Vector& other, Vector& target) const {
+  QpVector& vec_mat_1(const QpVector& other, QpVector& target) const {
     target.reset();
     for (HighsInt col = 0; col < num_col; col++) {
       double dot = 0.0;
@@ -96,8 +96,8 @@ struct MatrixBase {
     return target;
   }
 
-  Vector vec_mat(const Vector& other) const {
-    Vector result(num_col);
+  QpVector vec_mat(const QpVector& other) const {
+    QpVector result(num_col);
 
     return vec_mat(other, result);
   }
@@ -109,8 +109,8 @@ struct MatrixBase {
     res.num_col = other.num_col;
 
     res.start.push_back(0);
-    Vector buffer_col(other.num_row);
-    Vector buffer_col_res(num_col);
+    QpVector buffer_col(other.num_row);
+    QpVector buffer_col_res(num_col);
     for (HighsInt r = 0; r < other.num_col; r++) {
       other.extractcol(r, buffer_col);
 
@@ -125,7 +125,7 @@ struct MatrixBase {
     return res;
   }
 
-  Vector& extractcol(HighsInt col, Vector& target) const {
+  QpVector& extractcol(HighsInt col, QpVector& target) const {
     assert(target.dim == num_row);
     target.reset();
 
@@ -144,8 +144,8 @@ struct MatrixBase {
     return target;
   }
 
-  Vector extractcol(HighsInt col) const {
-    Vector res(num_row);
+  QpVector extractcol(HighsInt col) const {
+    QpVector res(num_row);
 
     return extractcol(col, res);
   }
@@ -207,7 +207,7 @@ struct Matrix {
     // }
   }
 
-  void append(const Vector& vec) {
+  void append(const QpVector& vec) {
     if (mat.num_col == 0 && mat.start.size() == 0) {
       mat.start.push_back(0);
     }
@@ -274,8 +274,8 @@ struct Matrix {
   Matrix mat_mat(Matrix& other) {
     Matrix res(mat.num_row, 0);
 
-    Vector buffer(other.mat.num_row);
-    Vector buffer2(mat.num_col);
+    QpVector buffer(other.mat.num_row);
+    QpVector buffer2(mat.num_col);
     for (HighsInt col = 0; col < other.mat.num_col; col++) {
       res.append(vec_mat(other.mat.extractcol(col, buffer), buffer2));
     }
@@ -286,27 +286,27 @@ struct Matrix {
   Matrix tran_mat(Matrix& other) {
     Matrix res(mat.num_col, 0);
 
-    Vector buffer(other.mat.num_row);
-    Vector buffer2(mat.num_row);
+    QpVector buffer(other.mat.num_row);
+    QpVector buffer2(mat.num_row);
     for (HighsInt col = 0; col < other.mat.num_col; col++) {
       res.append(mat_vec(other.mat.extractcol(col, buffer), buffer2));
     }
     return res;
   }
 
-  Vector& mat_vec(const Vector& other, Vector& target) {
+  QpVector& mat_vec(const QpVector& other, QpVector& target) {
     return mat.mat_vec(other, target);
   }
 
-  Vector mat_vec(const Vector& other) { return mat.mat_vec(other); }
+  QpVector mat_vec(const QpVector& other) { return mat.mat_vec(other); }
 
-  Vector vec_mat(const Vector& other) const { return mat.vec_mat(other); }
+  QpVector vec_mat(const QpVector& other) const { return mat.vec_mat(other); }
 
-  Vector& vec_mat(const Vector& other, Vector& target) const {
+  QpVector& vec_mat(const QpVector& other, QpVector& target) const {
     return mat.vec_mat(other, target);
   }
 
-  Vector vec_mat(HighsInt* index, double* value, HighsInt num_nz) {
+  QpVector vec_mat(HighsInt* index, double* value, HighsInt num_nz) {
     return mat.vec_mat(index, value, num_nz);
   }
 

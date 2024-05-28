@@ -16,7 +16,7 @@ class DevexPricing : public Pricing {
 
   std::vector<double> weights;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
     auto activeconstraintidx = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
@@ -67,8 +67,8 @@ class DevexPricing : public Pricing {
   // dual values updated as:
   // c_N^T  += alpha_D * a_p^T (pivotal row)
   // alpha_D = -c_q / a_pq
-  HighsInt price(const Vector& x, const Vector& gradient) {
-    Vector& lambda = redcosts.getReducedCosts();
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
+    QpVector& lambda = redcosts.getReducedCosts();
     HighsInt minidx = chooseconstrainttodrop(lambda);
     return minidx;
   }
@@ -77,7 +77,7 @@ class DevexPricing : public Pricing {
     // do nothing
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
     double weight_p = weights[rowindex_p];

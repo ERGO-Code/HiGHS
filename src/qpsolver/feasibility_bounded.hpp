@@ -31,7 +31,7 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
   }
 
   // solve for c
-  Vector res = -instance.c;
+  QpVector res = -instance.c;
   for (HighsInt r = 0; r <res.dim; r++) {
     for (HighsInt j = 0; j < r; j++) {
       res.value[r] -= res.value[j] * L[j * instance.num_var + r];
@@ -48,8 +48,8 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
   }
 
   // project solution to bounds and collect active bounds
-  Vector x0(instance.num_var);
-  Vector ra(instance.num_con);
+  QpVector x0(instance.num_var);
+  QpVector ra(instance.num_con);
   std::vector<HighsInt> initialactive;
   std::vector<HighsInt> initialinactive;
   std::vector<BasisStatus> atlower;

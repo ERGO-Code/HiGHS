@@ -379,6 +379,7 @@ set(highs_headers_python
     src/qpsolver/perturbation.hpp
     src/qpsolver/pricing.hpp
     src/qpsolver/qpconst.hpp
+    src/qpsolver/qpvector.hpp
     src/qpsolver/quass.hpp
     src/qpsolver/ratiotest.hpp
     src/qpsolver/runtime.hpp
@@ -387,7 +388,6 @@ set(highs_headers_python
     src/qpsolver/snippets.hpp
     src/qpsolver/statistics.hpp
     src/qpsolver/steepestedgepricing.hpp
-    src/qpsolver/vector.hpp
     src/simplex/HApp.h
     src/simplex/HEkk.h
     src/simplex/HEkkDual.h

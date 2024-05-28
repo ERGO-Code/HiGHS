@@ -14,16 +14,16 @@ enum class QpAsmStatus {
 };
 
 struct QpSolution {
-  Vector primal;
-  Vector rowactivity;
-  Vector dualvar;
-  Vector dualcon;
+  QpVector primal;
+  QpVector rowactivity;
+  QpVector dualvar;
+  QpVector dualcon;
 
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;
 
-  QpSolution(Instance& instance) : primal(Vector(instance.num_var)),
-        rowactivity(Vector(instance.num_con)),
+  QpSolution(Instance& instance) : primal(QpVector(instance.num_var)),
+        rowactivity(QpVector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),
@@ -35,11 +35,11 @@ struct QpHotstartInformation {
   std::vector<HighsInt> active;
   std::vector<HighsInt> inactive;
   std::vector<BasisStatus> status;
-  Vector primal;
-  Vector rowact;
+  QpVector primal;
+  QpVector rowact;
 
   QpHotstartInformation(HighsInt num_var, HighsInt num_row)
-      : primal(Vector(num_var)), rowact(Vector(num_row)) {}
+      : primal(QpVector(num_var)), rowact(QpVector(num_row)) {}
 };
 
 // the purpose of this is the pure algorithmic solution of a QP instance with given hotstart information.

@@ -15,10 +15,10 @@ struct Runtime {
   Settings settings;
   Statistics& statistics;
 
-  Vector primal;
-  Vector rowactivity;
-  Vector dualvar;
-  Vector dualcon;
+  QpVector primal;
+  QpVector rowactivity;
+  QpVector dualvar;
+  QpVector dualcon;
   QpModelStatus status = QpModelStatus::INDETERMINED;
 
   std::vector<BasisStatus> status_var;
@@ -26,8 +26,8 @@ struct Runtime {
 
   Runtime(Instance& inst, Statistics& stats)
       : instance(inst),
-        primal(Vector(instance.num_var)),
-        rowactivity(Vector(instance.num_con)),
+        primal(QpVector(instance.num_var)),
+        rowactivity(QpVector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),
