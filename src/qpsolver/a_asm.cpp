@@ -19,7 +19,7 @@ QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInf
   solution.rowactivity = rt.rowactivity;
   solution.dualcon = rt.dualcon;
 
-  return QpAsmStatus::OK;
+  return QpAsmStatus::kOk;
 
 }
 

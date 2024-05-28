@@ -3453,6 +3453,7 @@ HighsStatus Highs::callSolveQp() {
   // Run the QP solver
   Instance instance(lp.num_col_, lp.num_row_);
 
+  instance.sense = HighsInt(lp.sense_);
   instance.num_con = lp.num_row_;
   instance.num_var = lp.num_col_;
 
@@ -3529,7 +3530,16 @@ HighsStatus Highs::callSolveQp() {
 
   QpSolution qp_solution(instance);
 
-  solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
+  HighsModelStatus highs_qp_model_status = model_status_;
+  HighsBasis qp_basis = basis_;
+  HighsSolution highs_qp_solution = solution_;
+  QpAsmStatus status = 
+    solveqp(instance, settings, stats, qp_model_status, qp_solution,
+	    highs_qp_model_status,
+	    qp_basis,
+	    highs_qp_solution,
+	    timer_);
+  assert(status == QpAsmStatus::kOk);
 
   HighsStatus call_status = HighsStatus::kOk;
   HighsStatus return_status = HighsStatus::kOk;
@@ -3599,6 +3609,22 @@ HighsStatus Highs::callSolveQp() {
   }
   basis_.valid = true;
   basis_.alien = false;
+
+  assert(model_status_ == highs_qp_model_status);
+  assert(basis_.valid == qp_basis.valid);
+  assert(basis_.alien == qp_basis.alien);
+  assert(solution_.value_valid == highs_qp_solution.value_valid);
+  assert(solution_.dual_valid == highs_qp_solution.dual_valid);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    assert(solution_.col_value[iCol] == highs_qp_solution.col_value[iCol]);
+    assert(solution_.col_dual[iCol] == highs_qp_solution.col_dual[iCol]);
+    assert(basis_.col_status[iCol] == qp_basis.col_status[iCol]);
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    assert(solution_.row_value[iRow] == highs_qp_solution.row_value[iRow]);
+    assert(solution_.row_dual[iRow] == highs_qp_solution.row_dual[iRow]);
+    assert(basis_.row_status[iRow] == qp_basis.row_status[iRow]);
+  }
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

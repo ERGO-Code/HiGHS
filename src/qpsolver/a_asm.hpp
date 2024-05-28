@@ -8,9 +8,9 @@
 #include "util/HighsTimer.h"
 
 enum class QpAsmStatus {
-  OK,
-  NEGATIVEEIGENVALUEINREDUCEDHESSIAN,
-  BASISRANKDEFICIENT
+  kOk//,
+  //  NEGATIVEEIGENVALUEINREDUCEDHESSIAN,
+  //  BASISRANKDEFICIENT
 };
 
 struct QpSolution {

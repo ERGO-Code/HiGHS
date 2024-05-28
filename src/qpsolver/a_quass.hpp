@@ -13,8 +13,9 @@ QpAsmStatus solveqp(Instance& instance,
 		    Statistics& stats,
 		    QpModelStatus& modelstatus,
 		    QpSolution& solution,
-		    HighsBasis& basis,
-		    HighsSolution& highs_solution, 
+		    HighsModelStatus& highs_qp_model_status,
+		    HighsBasis& qp_basis,
+		    HighsSolution& highs_qp_solution, 
 		    HighsTimer& qp_timer);
 
 #endif

@@ -12,6 +12,7 @@ struct SumNum {
 };
 
 struct Instance {
+  HighsInt sense = 1; // Minimization
   HighsInt num_var = 0;
   HighsInt num_con = 0;
   double offset = 0;
