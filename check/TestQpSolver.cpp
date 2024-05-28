@@ -873,3 +873,30 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     REQUIRE(result0[iCol] == result1[iCol]);
   }
 }
+
+TEST_CASE("test-qp-hot-start", "[qpsolver]") {
+  // Test hot start
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+
+  HighsStatus return_status = highs.readModel(filename);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.writeSolution("", 1);
+
+  HighsBasis basis = highs.getBasis();
+  HighsSolution solution = highs.getSolution();
+
+  //  highs.setBasis(basis);
+  highs.setSolution(solution);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+}

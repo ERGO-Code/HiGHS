@@ -115,7 +115,7 @@ QpAsmStatus solveqp(Instance& instance,
       return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } else  {
-    computeStartingPointHighs(instance, settings, stats, qp_model_status, startinfo, qp_timer);
+    computeStartingPointHighs(instance, settings, stats, qp_model_status, startinfo, highs_model_status, highs_basis, highs_solution, qp_timer);
     if (qp_model_status == QpModelStatus::INFEASIBLE) {
       return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
