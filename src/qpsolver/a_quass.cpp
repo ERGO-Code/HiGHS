@@ -6,7 +6,8 @@
 
 
 
-QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpSolution& solution, HighsTimer& qp_timer) {
+QpAsmStatus solveqp(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpSolution& solution,
+		    HighsBasis& basis, HighsSolution& highs_solution, HighsTimer& qp_timer) {
 
   // presolve
 
