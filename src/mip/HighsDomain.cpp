@@ -46,17 +46,17 @@ static double activityContributionMax(double coef, const double& lb,
   }
 }
 
-static HighsCDouble computeDelta(HighsInt row, double val, double oldbound,
-                                 double newbound, double inf,
-                                 std::vector<HighsInt>& numinfs) {
+static double computeDelta(HighsInt row, double val, double oldbound,
+                           double newbound, double inf,
+                           std::vector<HighsInt>& numinfs) {
   if (oldbound == inf) {
     --numinfs[row];
-    return HighsCDouble(newbound) * val;
+    return newbound * val;
   } else if (newbound == inf) {
     ++numinfs[row];
-    return -HighsCDouble(oldbound) * val;
+    return -oldbound * val;
   } else {
-    return (HighsCDouble(newbound) - HighsCDouble(oldbound)) * val;
+    return (newbound - oldbound) * val;
   }
 }
 
