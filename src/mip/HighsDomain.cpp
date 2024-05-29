@@ -1263,7 +1263,6 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
         activitymin += contributionmin;
     }
 
-    activitymin.renormalize();
   } else {
     activitymin = 0.0;
     ninfmin = 0;
@@ -1281,9 +1280,8 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
       else
         activitymin += contributionmin;
     }
-
-    activitymin.renormalize();
   }
+  activitymin.renormalize();
 }
 
 void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
@@ -1309,8 +1307,6 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
       else
         activitymax += contributionmin;
     }
-
-    activitymax.renormalize();
   } else {
     activitymax = 0.0;
     ninfmax = 0;
@@ -1328,9 +1324,8 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
       else
         activitymax += contributionmin;
     }
-
-    activitymax.renormalize();
   }
+  activitymax.renormalize();
 }
 
 double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
@@ -1339,12 +1334,9 @@ double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
 
   if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
     bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
-    if (bound < col_upper_[col] &&
-        col_upper_[col] - bound >
-            1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
-      accept = true;
-    else
-      accept = false;
+    accept = bound < col_upper_[col] &&
+             col_upper_[col] - bound >
+                 1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound);
   } else {
     if (std::fabs(double(boundVal) - col_lower_[col]) <=
         mipsolver->mipdata_->epsilon)
@@ -1374,12 +1366,9 @@ double HighsDomain::adjustedLb(HighsInt col, HighsCDouble boundVal,
 
   if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
     bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
-    if (bound > col_lower_[col] &&
-        bound - col_lower_[col] >
-            1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
-      accept = true;
-    else
-      accept = false;
+    accept = bound > col_lower_[col] &&
+             bound - col_lower_[col] >
+                 1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound);
   } else {
     if (std::fabs(col_upper_[col] - double(boundVal)) <=
         mipsolver->mipdata_->epsilon)
