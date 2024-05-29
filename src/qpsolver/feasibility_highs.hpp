@@ -16,15 +16,15 @@ static void computeStartingPointHighs(Instance& instance,
 				      HighsTimer& timer) {
   printf("computeStartingPointHighs has highs_solution.value_valid = %d and basis.valid = %d\n", highs_solution.value_valid, highs_basis.valid);
   bool have_starting_point = false;
-    // #1350 add primal_feasibility_tolerance to settings
-  const double primal_feasibility_tolerance = settings.lambda_zero_threshold;
-  HighsInt num_col_infeasibilities = 0;
-  double max_col_infeasibility = 0;
-  double sum_col_infeasibilities = 0;
-  HighsInt num_row_infeasibilities = 0;
-  double max_row_infeasibility = 0;
-  double sum_row_infeasibilities = 0;
   if (highs_solution.value_valid) {
+    // #1350 add primal_feasibility_tolerance to settings
+    const double primal_feasibility_tolerance = settings.lambda_zero_threshold;
+    HighsInt num_col_infeasibilities = 0;
+    double max_col_infeasibility = 0;
+    double sum_col_infeasibilities = 0;
+    HighsInt num_row_infeasibilities = 0;
+    double max_row_infeasibility = 0;
+    double sum_row_infeasibilities = 0;
     // Valid solution, but is it feasible?
     std::vector<double> row_value;
     row_value.assign(instance.num_con, 0);
@@ -70,7 +70,10 @@ static void computeStartingPointHighs(Instance& instance,
      printf("computeStartingPointHighs highs_solution has num / max / sum col (%d / %g / %g) and row (%d / %g / %g) infeasibilities\n",
 	    int(num_col_infeasibilities), max_col_infeasibility, sum_col_infeasibilities,
 	    int(num_row_infeasibilities), max_row_infeasibility, sum_row_infeasibilities);
-     
+     have_starting_point = 1==0 &&
+       num_col_infeasibilities == 0 &&
+       num_row_infeasibilities == 0 &&
+       highs_basis.valid;
   }
   // compute initial feasible point
   HighsBasis use_basis;
@@ -221,8 +224,9 @@ static void computeStartingPointHighs(Instance& instance,
     }
   }
 
-  assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
-         instance.num_var);
+  if (!have_starting_point)
+    assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
+	   instance.num_var);
 
   for (HighsInt ia : initialinactive) {
     if (ia < instance.num_con) {

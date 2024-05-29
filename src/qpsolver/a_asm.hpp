@@ -50,6 +50,7 @@ struct QpHotstartInformation {
 // 4) start from a qp solution that was attained from a perturbed instance and cleanup
 // 5) start from a qp solution and cleanup after recomputing basis and reduced hessian factorization
 
+std::string qpBasisStatusToString(const BasisStatus qp_basis_status);
 
 QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer);
 

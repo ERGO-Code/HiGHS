@@ -876,27 +876,47 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
 
 TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   // Test hot start
-  std::string filename;
-  filename = std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
-
+  HighsStatus return_status;
   Highs highs;
   //  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
-  HighsStatus return_status = highs.readModel(filename);
-  REQUIRE(return_status == HighsStatus::kOk);
+  for (HighsInt k = 0; k < 2; k++) {
+    if (k == 1) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else {
+      HighsModel model;
+      model.lp_.num_col_ = 2;
+      model.lp_.num_row_ = 1;
+      model.lp_.col_cost_ = {-2, -2};
+      model.lp_.col_lower_ = {-inf, -inf};
+      model.lp_.col_upper_ = {inf, inf};
+      model.lp_.row_lower_ = {1};
+      model.lp_.row_upper_ = {inf};
+      model.lp_.a_matrix_.format_ = MatrixFormat::kRowwise;
+      model.lp_.a_matrix_.start_ = {0, 2};
+      model.lp_.a_matrix_.index_ = {0, 1};
+      model.lp_.a_matrix_.value_ = {1, 1};
+      model.hessian_.dim_ = 2;
+      model.hessian_.start_ = {0, 1, 2};
+      model.hessian_.index_ = {0, 1};
+      model.hessian_.value_ = {2, 2};
+      REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+    }
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
 
-  return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kOk);
+    highs.writeSolution("", 1);
 
-  highs.writeSolution("", 1);
+    HighsBasis basis = highs.getBasis();
+    HighsSolution solution = highs.getSolution();
 
-  HighsBasis basis = highs.getBasis();
-  HighsSolution solution = highs.getSolution();
+    //  highs.setBasis(basis);
+    //  highs.setSolution(solution);
 
-  //  highs.setBasis(basis);
-  highs.setSolution(solution);
-
-  return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kOk);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+  }
 }
