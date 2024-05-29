@@ -46,6 +46,14 @@ static double activityContributionMax(double coef, const double& lb,
   }
 }
 
+static inline double boundRange(double upper_bound, double lower_bound,
+                                double tolerance, HighsVarType var_type) {
+  double range = upper_bound - lower_bound;
+  return range - (var_type == HighsVarType::kContinuous
+                      ? std::max(0.3 * range, 1000.0 * tolerance)
+                      : tolerance);
+}
+
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   col_lower_ = mipsolver.model_->col_lower_;
   col_upper_ = mipsolver.model_->col_upper_;
@@ -369,14 +377,11 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
     if (domain->col_upper_[arindex[i]] == domain->col_lower_[arindex[i]])
       continue;
 
-    double boundRange =
-        domain->col_upper_[arindex[i]] - domain->col_lower_[arindex[i]];
-
-    boundRange -= domain->variableType(arindex[i]) == HighsVarType::kContinuous
-                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                      : domain->feastol();
-
-    double threshold = std::fabs(arvalue[i]) * boundRange;
+    double threshold =
+        std::fabs(arvalue[i]) * boundRange(domain->col_upper_[arindex[i]],
+                                           domain->col_lower_[arindex[i]],
+                                           domain->feastol(),
+                                           domain->variableType(arindex[i]));
 
     capacityThreshold_[cut] =
         std::max({capacityThreshold_[cut], threshold, domain->feastol()});
@@ -780,12 +785,11 @@ void HighsDomain::ObjectivePropagation::recomputeCapacityThreshold() {
   for (HighsInt i = partitionStarts[numPartitions]; i < numObjNzs; ++i) {
     HighsInt col = objNonzeros[i];
 
-    double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
-    boundRange -= domain->variableType(col) == HighsVarType::kContinuous
-                      ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                      : domain->feastol();
-    capacityThreshold =
-        std::max(capacityThreshold, std::fabs(cost[col]) * boundRange);
+    capacityThreshold = std::max(
+        capacityThreshold,
+        std::fabs(cost[col]) *
+            boundRange(domain->col_upper_[col], domain->col_lower_[col],
+                       domain->feastol(), domain->variableType(col)));
   }
 }
 
@@ -793,11 +797,11 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
     HighsInt col, double oldbound, double newbound) {
   if (cost[col] <= 0.0) {
     if (cost[col] != 0.0 && newbound < oldbound) {
-      double boundRange = domain->col_upper_[col] - newbound;
-      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
-                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                        : domain->feastol();
-      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+      capacityThreshold =
+          std::max(capacityThreshold,
+                   -cost[col] * boundRange(domain->col_upper_[col], newbound,
+                                           domain->feastol(),
+                                           domain->variableType(col)));
       isPropagated = false;
     }
     debugCheckObjectiveLower();
@@ -821,11 +825,11 @@ void HighsDomain::ObjectivePropagation::updateActivityLbChange(
     debugCheckObjectiveLower();
 
     if (newbound < oldbound) {
-      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
-      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
-                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                        : domain->feastol();
-      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+      capacityThreshold = std::max(
+          capacityThreshold,
+          cost[col] * boundRange(domain->col_upper_[col],
+                                 domain->col_lower_[col], domain->feastol(),
+                                 domain->variableType(col)));
     } else if (numInfObjLower == 0 &&
                objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
       domain->infeasible_ = true;
@@ -914,11 +918,10 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
     HighsInt col, double oldbound, double newbound) {
   if (cost[col] >= 0.0) {
     if (cost[col] != 0.0 && newbound > oldbound) {
-      double boundRange = newbound - domain->col_lower_[col];
-      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
-                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                        : domain->feastol();
-      capacityThreshold = std::max(capacityThreshold, cost[col] * boundRange);
+      capacityThreshold = std::max(
+          capacityThreshold,
+          cost[col] * boundRange(newbound, domain->col_lower_[col],
+                                 domain->feastol(), domain->variableType(col)));
       isPropagated = false;
     }
     debugCheckObjectiveLower();
@@ -942,11 +945,11 @@ void HighsDomain::ObjectivePropagation::updateActivityUbChange(
     debugCheckObjectiveLower();
 
     if (newbound > oldbound) {
-      double boundRange = (domain->col_upper_[col] - domain->col_lower_[col]);
-      boundRange -= domain->variableType(col) == HighsVarType::kContinuous
-                        ? std::max(0.3 * boundRange, 1000.0 * domain->feastol())
-                        : domain->feastol();
-      capacityThreshold = std::max(capacityThreshold, -cost[col] * boundRange);
+      capacityThreshold = std::max(
+          capacityThreshold,
+          -cost[col] * boundRange(domain->col_upper_[col],
+                                  domain->col_lower_[col], domain->feastol(),
+                                  domain->variableType(col)));
     } else if (numInfObjLower == 0 &&
                objectiveLower > domain->mipsolver->mipdata_->upper_limit) {
       domain->infeasible_ = true;
@@ -1362,7 +1365,7 @@ double HighsDomain::adjustedUb(HighsInt col, HighsCDouble boundVal,
   double bound;
 
   if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
-    bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
+    bound = static_cast<double>(floor(boundVal + mipsolver->mipdata_->feastol));
     if (bound < col_upper_[col] &&
         col_upper_[col] - bound >
             1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
@@ -1397,7 +1400,7 @@ double HighsDomain::adjustedLb(HighsInt col, HighsCDouble boundVal,
   double bound;
 
   if (mipsolver->variableType(col) != HighsVarType::kContinuous) {
-    bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
+    bound = static_cast<double>(ceil(boundVal - mipsolver->mipdata_->feastol));
     if (bound > col_lower_[col] &&
         bound - col_lower_[col] >
             1000.0 * mipsolver->mipdata_->feastol * std::fabs(bound))
@@ -1517,14 +1520,10 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
 void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
                                           double val, double& threshold) {
   if (newbound != col_upper_[col]) {
-    double boundRange = (col_upper_[col] - newbound);
-
-    boundRange -=
-        variableType(col) == HighsVarType::kContinuous
-            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
-            : mipsolver->mipdata_->feastol;
-
-    double thresholdNew = std::fabs(val) * boundRange;
+    double thresholdNew =
+        std::fabs(val) * boundRange(col_upper_[col], newbound,
+                                    mipsolver->mipdata_->feastol,
+                                    variableType(col));
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -1536,14 +1535,10 @@ void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
 void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
                                           double val, double& threshold) {
   if (newbound != col_lower_[col]) {
-    double boundRange = (newbound - col_lower_[col]);
-
-    boundRange -=
-        variableType(col) == HighsVarType::kContinuous
-            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
-            : mipsolver->mipdata_->feastol;
-
-    double thresholdNew = std::fabs(val) * boundRange;
+    double thresholdNew =
+        std::fabs(val) * boundRange(newbound, col_lower_[col],
+                                    mipsolver->mipdata_->feastol,
+                                    variableType(col));
 
     // the new threshold is now the maximum of the new threshold and the current
     // one
@@ -1908,13 +1903,9 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 
     if (col_upper_[col] == col_lower_[col]) continue;
 
-    double boundRange = col_upper_[col] - col_lower_[col];
-
-    boundRange -= variableType(col) == HighsVarType::kContinuous
-                      ? std::max(0.3 * boundRange, 1000.0 * feastol())
-                      : feastol();
-
-    double threshold = std::fabs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
+    double threshold = std::fabs(mipsolver->mipdata_->ARvalue_[i]) *
+                       boundRange(col_upper_[col], col_lower_[col], feastol(),
+                                  variableType(col));
 
     capacityThreshold_[row] =
         std::max({capacityThreshold_[row], threshold, feastol()});
@@ -3037,6 +3028,7 @@ bool HighsDomain::ConflictSet::resolveLinearGeq(HighsCDouble M, double Mupper,
             relaxUb = std::floor(relaxUb);
 
           if (relaxUb - ub <= localdom.feastol()) continue;
+
           locdomchg.domchg.boundval = relaxUb;
 
           if (relaxUb - gub >= -localdom.mipsolver->mipdata_->epsilon) {
