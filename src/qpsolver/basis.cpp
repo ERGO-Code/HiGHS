@@ -88,6 +88,7 @@ void Basis::rebuild() {
        i < activeconstraintidx.size() + nonactiveconstraintsidx.size(); i++) {
     constraintindexinbasisfactor[baseindex[i]] = i;
   }
+  reinversion_hint = false;
 }
 
 void Basis::report() {
@@ -166,7 +167,7 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
 
   updatessinceinvert++;
   if (updatessinceinvert >= settings.reinvertfrequency || hint != 99999) {
-    rebuild();
+    reinversion_hint = true;
   }
   // since basis changed, buffered values are no longer valid
   buffered_p = -1;

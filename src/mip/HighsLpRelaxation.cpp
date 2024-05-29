@@ -20,6 +20,69 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
+void HighsLpRelaxation::getCutPool(HighsInt& num_col, HighsInt& num_cut,
+                                   std::vector<double>& cut_lower,
+                                   std::vector<double>& cut_upper,
+                                   HighsSparseMatrix& cut_matrix) const {
+  // NB RESTORE reference
+  //  const HighsLp& lp = lpsolver.getLp();
+  HighsLp lp = lpsolver.getLp();
+  num_col = lp.num_col_;
+  HighsInt num_lp_row = lp.num_row_;
+  HighsInt num_model_row = mipsolver.numRow();
+  num_cut = num_lp_row - num_model_row;
+  cut_lower.resize(num_cut);
+  cut_upper.resize(num_cut);
+  // Get a map from row index to cut row index
+  std::vector<HighsInt> cut_row_index;
+  cut_row_index.assign(num_lp_row, -1);
+  HighsInt cut_num = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lprows[iRow].origin != LpRow::Origin::kCutPool) continue;
+    cut_row_index[iRow] = cut_num;
+    cut_lower[cut_num] = lp.row_lower_[iRow];
+    cut_upper[cut_num] = lp.row_upper_[iRow];
+    cut_num++;
+  }
+  assert(cut_num == num_cut);
+
+  cut_matrix.num_col_ = lp.num_col_;
+  cut_matrix.num_row_ = num_cut;
+  cut_matrix.format_ = MatrixFormat::kRowwise;
+
+  std::vector<HighsInt> cut_matrix_length;
+  cut_matrix_length.assign(num_cut, 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+      HighsInt iCut = cut_row_index[lp.a_matrix_.index_[iEl]];
+      if (iCut >= 0) cut_matrix_length[iCut]++;
+    }
+  }
+  cut_matrix.start_.resize(num_cut + 1);
+  cut_matrix.start_[0] = 0;
+  HighsInt num_cut_nz = 0;
+  for (HighsInt iCut = 0; iCut < num_cut; iCut++) {
+    HighsInt length = cut_matrix_length[iCut];
+    cut_matrix_length[iCut] = cut_matrix.start_[iCut];
+    num_cut_nz += length;
+    cut_matrix.start_[iCut + 1] = num_cut_nz;
+  }
+  cut_matrix.index_.resize(num_cut_nz);
+  cut_matrix.value_.resize(num_cut_nz);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+      HighsInt iCut = cut_row_index[lp.a_matrix_.index_[iEl]];
+      if (iCut >= 0) {
+        cut_matrix.index_[cut_matrix_length[iCut]] = iCol;
+        cut_matrix.value_[cut_matrix_length[iCut]] = lp.a_matrix_.value_[iEl];
+        cut_matrix_length[iCut]++;
+      }
+    }
+  }
+}
+
 void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver,
                                    HighsInt& len, const HighsInt*& inds,
                                    const double*& vals) const {
@@ -1254,14 +1317,28 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           std::vector<double> roundsol = sol.col_value;
 
           for (const std::pair<HighsInt, double>& fracint : fractionalints) {
+            // get column index
             HighsInt col = fracint.first;
-
+            // round based on locks and sign of objective coefficient
             if (mipsolver.mipdata_->uplocks[col] == 0 &&
                 (mipsolver.colCost(col) < 0 ||
-                 mipsolver.mipdata_->downlocks[col] != 0))
-              roundsol[col] = std::ceil(fracint.second);
-            else
-              roundsol[col] = std::floor(fracint.second);
+                 mipsolver.mipdata_->downlocks[col] != 0)) {
+              // round up
+              roundsol[col] = std::min(
+                  std::ceil(fracint.second - mipsolver.mipdata_->feastol),
+                  lpsolver.getLp().col_upper_[col] == kHighsInf
+                      ? kHighsInf
+                      : std::floor(lpsolver.getLp().col_upper_[col] +
+                                   mipsolver.mipdata_->feastol));
+            } else {
+              // round down
+              roundsol[col] = std::max(
+                  std::floor(fracint.second + mipsolver.mipdata_->feastol),
+                  lpsolver.getLp().col_lower_[col] == -kHighsInf
+                      ? -kHighsInf
+                      : std::ceil(lpsolver.getLp().col_lower_[col] -
+                                  mipsolver.mipdata_->feastol));
+            }
           }
 
           const auto& cliquesubst =

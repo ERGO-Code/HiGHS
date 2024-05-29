@@ -16,8 +16,8 @@
 #include <cassert>
 #include <iostream>
 
+#include "../extern/pdqsort/pdqsort.h"
 #include "lp_data/HConst.h"
-#include "pdqsort/pdqsort.h"
 #include "util/FactorTimer.h"
 #include "util/HFactorDebug.h"
 #include "util/HVector.h"
@@ -1039,7 +1039,12 @@ HighsInt HFactor::buildKernel() {
       }
     }
     // 1.4. If we found nothing: tell singular
-    if (!foundPivot) {
+    if (iRowPivot < 0) {
+      // To detect the absence of a pivot, it should be sufficient
+      // that iRowPivot is (still) -1, but add sanity asserts that
+      // jColPivot is (still) -1 and foundPivot is false
+      assert(jColPivot < 0);
+      assert(!foundPivot);
       rank_deficiency = nwork + 1;
       highsLogDev(log_options, HighsLogType::kWarning,
                   "Factorization identifies rank deficiency of %d\n",

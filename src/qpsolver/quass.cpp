@@ -171,6 +171,9 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
 static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
                                     ReducedCosts& redcosts) {
   switch (runtime.settings.pricing) {
+    case PricingStrategy::SteepestEdge:
+      return std::unique_ptr<Pricing>(
+          new SteepestEdgePricing(runtime, basis, redcosts));
     case PricingStrategy::Devex:
       return std::unique_ptr<Pricing>(
           new DevexPricing(runtime, basis, redcosts));
@@ -263,6 +266,20 @@ static double compute_dual_violation(Instance& instance, Vector& primal, Vector&
 }
 #endif
 
+bool check_reinvert_due(Basis& basis) {
+  // reinvert can be triggered by basis
+  return basis.getreinversionhint();
+}
+
+void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts& rc, ReducedGradient& rg, std::unique_ptr<Pricing>& pricing) {
+  basis.rebuild();
+  factor.recompute();
+  grad.recompute();
+  rc.recompute();
+  rg.recompute();
+  //pricing->recompute();
+}
+
 void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& timer) {
 
   //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
@@ -299,11 +316,6 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
 
   runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
 
-  if (basis.getnuminactive() > 4000) {
-    printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
-    runtime.status = QpModelStatus::LARGE_NULLSPACE;
-    return;
-  }
 
 
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
@@ -320,14 +332,32 @@ void Quass::solve(const Vector& x0, const Vector& ra, Basis& b0, HighsTimer& tim
       break;
     }
 
+    if (basis.getnuminactive() > 4000) {
+      printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
+      runtime.status = QpModelStatus::LARGE_NULLSPACE;
+    return;
+  }
+
     // LOGGING
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
         0) {
-      loginformation(runtime, basis, factor, timer);
-      runtime.settings.endofiterationevent.fire(runtime.statistics);
+      bool log_report = true;
+      if (runtime.statistics.num_iterations > 10*runtime.settings.reportingfequency) {
+	runtime.settings.reportingfequency *= 10;
+	log_report = false;
+      }
+      if (log_report) {
+	loginformation(runtime, basis, factor, timer);
+	runtime.settings.endofiterationevent.fire(runtime.statistics);
+      }
     }
     runtime.statistics.num_iterations++;
+
+    // REINVERSION
+    if (check_reinvert_due(basis)) {
+      reinvert(basis, factor, gradient, redcosts, redgrad, pricing);
+    }
 
     QpSolverStatus status;
 

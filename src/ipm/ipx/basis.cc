@@ -366,7 +366,7 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
             << '\n';
         Repair(info);
         if (info->basis_repairs < 0) {
-            control_.Log() << " discarding crash basis\n";
+	  control_.hLog(" discarding crash basis\n");
             SetToSlackBasis();
         }
         else if (info->basis_repairs > 0) {
@@ -499,8 +499,10 @@ bool Basis::TightenLuPivotTol() {
         lu_->pivottol(0.9);
     else
         return false;
-    control_.Log()
-        << " LU pivot tolerance tightened to " << lu_->pivottol() << '\n';
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream << " LU pivot tolerance tightened to " << lu_->pivottol() << '\n';
+    control_.hLog(h_logging_stream);
     return true;
 }
 
@@ -774,8 +776,10 @@ void Basis::PivotFreeVariablesIntoBasis(const double* colweights, Info* info) {
                 info->updates_start++;
             }
         }
-        control_.IntervalLog()
-            << " " << remaining.size() << " free variables remaining\n";
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream << " " << remaining.size() << " free variables remaining\n";
+	control_.hIntervalLog(h_logging_stream);
     }
     control_.Debug()
         << Textline("Number of free variables swapped for stability:")
@@ -909,8 +913,11 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
                 info->updates_start++;
             }
         }
-        control_.IntervalLog()
-            << " " << remaining.size() << " fixed variables remaining\n";
+	std::stringstream h_logging_stream;
+	h_logging_stream.str(std::string());
+	h_logging_stream << " " << remaining.size() << " fixed variables remaining\n";
+	control_.hIntervalLog(h_logging_stream);
+
     }
     control_.Debug()
         << Textline("Number of fixed variables swapped for stability:")

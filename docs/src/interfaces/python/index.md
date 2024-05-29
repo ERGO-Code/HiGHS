@@ -33,6 +33,14 @@ HiGHS must be initialized before making calls to the HiGHS Python library:
 h = highspy.Highs()
 ```
 
+## Logging
+
+When called from C++, or via the C API, console logging is duplicated
+to a file that, by default, is `Highs.log`. However, to channel
+logging to a file from `highspy`, the name of the file needs to be
+specified explicitly via a call to `setOptionValue('log_file',
+'foo.bar')`.
+
 ## Methods
 
 Detailed documentation of the methods and structures is given in the

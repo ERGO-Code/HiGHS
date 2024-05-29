@@ -5,7 +5,7 @@
 
 // I use dev_run to switch on/off printing and logging used for
 // development of the unit test
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 TEST_CASE("test-analytic-centre", "[highs_ipm]") {
@@ -73,10 +73,11 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   const HighsSolution& solution = highs.getSolution();
   double solution_norm = 0;
   for (HighsInt ix = 0; ix < dim; ix++) {
-    printf("Analytic centre solution %d is %g\n", int(ix),
-           solution.col_value[ix]);
+    if (dev_run)
+      printf("Analytic centre solution %d is %g\n", int(ix),
+             solution.col_value[ix]);
     solution_norm += std::fabs(solution.col_value[ix]);
   }
   REQUIRE(solution_norm < 1e-6);
-  printf("Analytic centre solution norm is %g\n", solution_norm);
+  if (dev_run) printf("Analytic centre solution norm is %g\n", solution_norm);
 }

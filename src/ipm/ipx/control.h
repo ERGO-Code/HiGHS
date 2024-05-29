@@ -5,10 +5,10 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include "io/HighsIO.h"
 #include "ipm/ipx/ipx_internal.h"
 #include "ipm/ipx/multistream.h"
 #include "ipm/ipx/timer.h"
-#include "lp_data/HighsCallback.h"
 
 namespace ipx {
 
@@ -46,13 +46,16 @@ public:
     //     control.Debug(3) << expensive_computation(...) << '\n';
     //
     // If the debug level is < 3, expensive_computation() is not performed.
-    std::ostream& Log() const;
+    void hLog(std::stringstream& logging) const;
+    void hLog(std::string str) const;
+    void hDebug(std::stringstream& logging, Int level=1) const;
     std::ostream& Debug(Int level=1) const;
 
-    // Returns the log stream if >= parameters.print_interval seconds have been
-    // elapsed since the last call to IntervalLog() or to ResetPrintInterval().
-    // Otherwise returns a stream that discards output.
-    std::ostream& IntervalLog() const;
+    // Sends logging to HiGHS logging or the log stream according to
+    // parameters.highs_logging, if >= parameters.print_interval
+    // seconds have been elapsed since the last call to IntervalLog()
+    // or to ResetPrintInterval().
+    void hIntervalLog(std::stringstream& logging) const;
     void ResetPrintInterval() const;
 
     double Elapsed() const;     // total runtime
@@ -140,10 +143,10 @@ inline std::string fix8(double d) { return Fixed(d,0,8); }
 //     Number of variables:                                1464
 //     Number of constraints:                              696
 //
-// consistently using
+// consistently via control.hLog(h_logging_stream) using 
 //
-//   control.Log() << Textline("Number of variables:") << 1464 << '\n'
-//                 << Textline("Number of constraints:") << 696 << '\n';
+//   h_logging_stream << Textline("Number of variables:") << 1464 << '\n'
+//                    << Textline("Number of constraints:") << 696 << '\n';
 //
 template <typename T>
 std::string Textline(const T& text) {

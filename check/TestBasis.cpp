@@ -111,7 +111,7 @@ TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   // Set up a basis with everything nonbasic. This will lead to
   // basic_index being empty when passed to
   // HFactor::setupGeneral. Previously this led to the creation of
-  // pointer &basic_index[0] that caused Windows faiure referenced in
+  // pointer &basic_index[0] that caused Windows failure referenced in
   // #1129, and reported in #1166. However, now that
   // basic_index.data() is used to create the pointer, there is no
   // Windows failure. Within HFactor::setupGeneral and
@@ -154,6 +154,28 @@ TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getInfo().objective_function_value == -0.5);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("Basis-singular", "[highs_basis_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {1, 1};
+  lp.row_upper_ = {2, 2};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 4};
+  highs.passModel(lp);
+  HighsBasis basis;
+  REQUIRE(highs.setBasis(basis) == HighsStatus::kError);
+  basis.col_status = {HighsBasisStatus::kBasic, HighsBasisStatus::kBasic};
+  basis.row_status = {HighsBasisStatus::kLower, HighsBasisStatus::kLower};
+  REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
 }
 
 // No commas in test case name.

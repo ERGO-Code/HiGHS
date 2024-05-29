@@ -1,0 +1,228 @@
+name: build-python-package
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python3 -m pip install build 
+          python3 -m build --sdist
+
+      - name: Install sdist
+        run: |
+          ls dist
+          python3 -m pip install dist/*.tar.gz
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE
+          
+  build_sdist_mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python3 -m pip install build --break-system-packages
+          python3 -m build --sdist
+
+      - name: Install sdist
+        run: |
+          ls dist
+          python3 -m pip install dist/*.tar.gz --break-system-packages
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE
+
+  build_sdist_win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Build sdist
+        run: |
+          python -m pip install build
+          python -m build --sdist
+
+      - name: Install sdist
+        run: |
+          $item = Get-ChildItem dist
+          python -m pip install "$item"
+          python -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python -m pip install pytest
+          python -m pytest 
+             
+  build_wheel_linux:
+    # ubuntu 22 has a latest version of cmake, but setup-python 
+    # does not seem to provide all necessary modules to find python
+    # from cmake. works on my machine, test the wheels manually
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # strategy:
+      #   matrix:
+      #     python: [3.12]
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        # with:
+        #   python-version: ${{ matrix.python }}
+
+      - name: Build wheel
+        run: |
+          python3 --version
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE
+          
+          
+  # macos 12 is Intel
+  build_wheel_macos_12:
+    runs-on: macos-12
+    strategy:
+      matrix:
+        python: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+          python3 -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest 
+          python3 -m pytest $GITHUB_WORKSPACE
+            
+  # macos 13 is Intel
+  build_wheel_macos_13:
+    runs-on: macos-13
+    strategy:
+      matrix:
+        python: [3.11]    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-macosx_x86_64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+          python3 -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE
+            
+  # macos 14 is M1 (beta)
+  build_wheel_macos_14:
+    runs-on: macos-14 
+    strategy:
+      matrix:
+        python: [3.11]    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build wheel
+        run: |
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-macosx_arm64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 --version
+          python3 -m pip install wheelhouse/*.whl
+          python3 -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE
+
+  build_wheel_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Build wheel
+        run: |
+          python -m pip install cibuildwheel
+          python -m cibuildwheel --only cp39-win_amd64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          $item = Get-ChildItem wheelhouse
+          python -m pip install "$item"
+          python -c "import highspy; print(dir(highspy))"
+
+      - name: Test highspy
+        run: |
+          python -m pip install pytest
+          python -m pytest 
+          

@@ -3,6 +3,7 @@
 
 #include "runtime.hpp"
 #include "crashsolution.hpp"
+#include "feasibility_bounded.hpp"
 #include "feasibility_highs.hpp"
 #include "feasibility_quass.hpp"
 
@@ -15,6 +16,9 @@ void computestartingpoint(Runtime& runtime, QpHotstartInformation& result) {
             break;
         case Phase1Strategy::QUASS:
             computestartingpoint_quass(runtime, result);
+            break;
+        case Phase1Strategy::BOUNDED:
+            computestartingpoint_bounded(runtime.instance, runtime.settings, runtime.statistics, runtime.status, result, qp_timer);
             break;
     }
 }

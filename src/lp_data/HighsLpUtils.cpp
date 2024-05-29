@@ -1431,6 +1431,22 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
   return HighsStatus::kOk;
 }
 
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
+  assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
+  assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
+  assert(solution.row_value.size() == static_cast<size_t>(scale.num_row));
+  assert(solution.row_dual.size() == static_cast<size_t>(scale.num_row));
+
+  for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
+    solution.col_value[iCol] *= scale.col[iCol];
+    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
+  }
+  for (HighsInt iRow = 0; iRow < scale.num_row; iRow++) {
+    solution.row_value[iRow] /= scale.row[iRow];
+    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
+  }
+}
+
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                            const vector<double>& colCost,
                            const vector<double>& colLower,
@@ -1477,105 +1493,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.row_names_[iRow] = "";
   }
-}
-
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsInt new_num_col;
-  deleteColsFromLpVectors(lp, new_num_col, index_collection);
-  lp.a_matrix_.deleteCols(index_collection);
-  lp.num_col_ = new_num_col;
-}
-
-void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
-                             const HighsIndexCollection& index_collection) {
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  ;
-  // Initialise new_num_col in case none is removed due to from_k > to_k
-  new_num_col = lp.num_col_;
-  if (from_k > to_k) return;
-
-  HighsInt delete_from_col;
-  HighsInt delete_to_col;
-  HighsInt keep_from_col;
-  HighsInt keep_to_col = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt col_dim = lp.num_col_;
-  new_num_col = 0;
-  bool have_names = (lp.col_names_.size() != 0);
-  bool have_integrality = (lp.integrality_.size() != 0);
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
-                     keep_from_col, keep_to_col, current_set_entry);
-    // Account for the initial columns being kept
-    if (k == from_k) new_num_col = delete_from_col;
-    if (delete_to_col >= col_dim - 1) break;
-    assert(delete_to_col < col_dim);
-    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      lp.col_cost_[new_num_col] = lp.col_cost_[col];
-      lp.col_lower_[new_num_col] = lp.col_lower_[col];
-      lp.col_upper_[new_num_col] = lp.col_upper_[col];
-      if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
-      if (have_integrality) lp.integrality_[new_num_col] = lp.integrality_[col];
-      new_num_col++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  lp.col_cost_.resize(new_num_col);
-  lp.col_lower_.resize(new_num_col);
-  lp.col_upper_.resize(new_num_col);
-  if (have_names) lp.col_names_.resize(new_num_col);
-}
-
-void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsInt new_num_row;
-  deleteRowsFromLpVectors(lp, new_num_row, index_collection);
-  lp.a_matrix_.deleteRows(index_collection);
-  lp.num_row_ = new_num_row;
-}
-
-void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
-                             const HighsIndexCollection& index_collection) {
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  // Initialise new_num_row in case none is removed due to from_k > to_k
-  new_num_row = lp.num_row_;
-  if (from_k > to_k) return;
-
-  HighsInt delete_from_row;
-  HighsInt delete_to_row;
-  HighsInt keep_from_row;
-  HighsInt keep_to_row = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt row_dim = lp.num_row_;
-  new_num_row = 0;
-  bool have_names = (HighsInt)lp.row_names_.size() > 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_row, delete_to_row,
-                     keep_from_row, keep_to_row, current_set_entry);
-    if (k == from_k) {
-      // Account for the initial rows being kept
-      new_num_row = delete_from_row;
-    }
-    if (delete_to_row >= row_dim - 1) break;
-    assert(delete_to_row < row_dim);
-    for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
-      lp.row_lower_[new_num_row] = lp.row_lower_[row];
-      lp.row_upper_[new_num_row] = lp.row_upper_[row];
-      if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
-      new_num_row++;
-    }
-    if (keep_to_row >= row_dim - 1) break;
-  }
-  lp.row_lower_.resize(new_num_row);
-  lp.row_upper_.resize(new_num_row);
-  if (have_names) lp.row_names_.resize(new_num_row);
 }
 
 void deleteScale(vector<double>& scale,
@@ -1798,7 +1715,8 @@ HighsInt getNumInt(const HighsLp& lp) {
 
 void getLpCosts(const HighsLp& lp, const HighsInt from_col,
                 const HighsInt to_col, double* XcolCost) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
     XcolCost[col - from_col] = lp.col_cost_[col];
@@ -1807,22 +1725,24 @@ void getLpCosts(const HighsLp& lp, const HighsInt from_col,
 void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
                     const HighsInt to_col, double* XcolLower,
                     double* XcolUpper) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
-    if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
-    if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
+    if (XcolLower != nullptr) XcolLower[col - from_col] = lp.col_lower_[col];
+    if (XcolUpper != nullptr) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
 }
 
 void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
                     const HighsInt to_row, double* XrowLower,
                     double* XrowUpper) {
-  assert(0 <= to_row && from_row < lp.num_row_);
+  assert(0 <= from_row && from_row < lp.num_row_);
+  assert(0 <= to_row && to_row < lp.num_row_);
   if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
-    if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
-    if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
+    if (XrowLower != nullptr) XrowLower[row - from_row] = lp.row_lower_[row];
+    if (XrowUpper != nullptr) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
 }
 

@@ -1,5 +1,5 @@
-project('highs', 'cpp',
-  version : '1.6.0',
+project('highs', 'cpp', 'c',
+  version : '1.7.0',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
@@ -10,10 +10,8 @@ project('highs', 'cpp',
 # Add C++ compiler options
 _args = [] # Extra arguments
 _deps = [] # Dependencies
-_linkto = [] # All the sub-libraries
 _incdirs = [] # All the includes
 
-add_languages('c', required: true)
 cc = meson.get_compiler('c')
 cppc = meson.get_compiler('cpp')
 
@@ -23,13 +21,16 @@ is_windows = host_system == 'windows'
 is_mingw = is_windows and cc.get_id() == 'gcc'
 
 # Conditional arguments
-if host_system == 'linux'
-  _args += '-Wno-return-type'
-  _args += '-Wno-switch'
-  _args += '-Wno-unused-variable'
-  _args += '-Wno-unused-but-set-variable'
-  _args += '-Wno-unused-const-variable'
-endif
+_args += cppc.get_supported_arguments([
+  '-Wno-return-type',
+  '-Wno-switch',
+  '-Wno-comment',
+  '-Wno-unused-variable',
+  '-Wno-unused-but-set-variable',
+  '-Wno-unused-const-variable',
+  '-Wno-unused-function',
+  '-Wno-unused-label',
+])
 
 if cppc.get_id() == 'msvc'
   add_project_arguments(
@@ -60,10 +61,10 @@ endif
 cpu_family = host_machine.cpu_family()
 
 if cpu_family in ['x86_64', 'i686'] and not is_windows
-    add_project_arguments('-mpopcnt', language: 'cpp')
+    add_project_arguments(cppc.get_supported_arguments('-mpopcnt'), language: 'cpp')
 endif
 if cpu_family in ['ppc64', 'powerpc64'] and not meson.is_cross_build()
-    add_project_arguments('-mpopcntd', language: 'cpp')
+    add_project_arguments(cppc.get_supported_arguments('-mpopcntd'), language: 'cpp')
 endif
 
 if is_mingw
@@ -72,9 +73,7 @@ if is_mingw
 endif
 
 # --------------------- Dependencies
-# Required
-threads_dep = dependency('threads',
-                        required: false)
+threads_dep = dependency('threads', required: false)
 _deps += threads_dep
 
 # Determine whether it is necessary to link libatomic. This could be the case
@@ -152,12 +151,6 @@ endif
 # --------------------- Library
 
 subdir('src') # defines highslib
-_linkto += highslib
-
-highs_dep = declare_dependency(link_with: _linkto,
-                               dependencies: _deps,
-                               include_directories: _incdirs,
-                               )
 
 # --------------------- Tests
 
@@ -167,12 +160,4 @@ if get_option('with_tests')
 endif
 
 # --------------------- Bindings
-highspy_cpp = files([
-  'highspy/highs_bindings.cpp'
-])
-highsoptions_cpp = files([
-  'highspy/highs_options.cpp'
-])
-if get_option('with_pybind11')
-  subdir('highspy')
-endif
+# now in src/

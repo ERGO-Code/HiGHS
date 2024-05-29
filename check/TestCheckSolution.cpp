@@ -83,7 +83,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = model + ".sol";
-  //  if (dev_run) return_status = highs.writeSolution("");
+  if (dev_run) return_status = highs.writeSolution("");
   return_status = highs.writeSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -328,6 +328,20 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   std::remove(solution_file_name.c_str());
+}
+
+TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
+  HighsStatus return_status;
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  const HighsLp& lp = highs.getLp();
+  HighsSolution solution;
+  REQUIRE(highs.setSolution(solution) == HighsStatus::kError);
+  solution.col_value.assign(lp.num_col_, 0);
+  REQUIRE(highs.setSolution(solution) == HighsStatus::kOk);
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,

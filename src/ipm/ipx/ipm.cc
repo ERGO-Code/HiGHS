@@ -129,7 +129,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
       //
       // If IPM is optimal and centring has not yet run, run centring
       // (to avoid running it twice during initial IPM and main IPM).
-      control_.Log() << "Performing centring steps...\n";
+      control_.hLog("Performing centring steps...\n");
 
       // freeze mu to its current value
       const double mu_frozen = iterate_->mu();
@@ -143,7 +143,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
       info->centring_success = false;
       // if ratio is below tolerance, point is centred
       if (prev_ratio < control_.centringRatioTolerance()) {
-	control_.Log() << "\tPoint is now centred\n";
+	control_.hLog("\tPoint is now centred\n");
 	info->centring_success = true;
       } else {
 	// perform centring steps
@@ -155,7 +155,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	  // assess whether to take the step
 	  bool accept = EvaluateCentringStep(step, prev_ratio, prev_bad_products);
 	  if (!accept) {
-	    control_.Log() << "\tPoint cannot be centred further\n";
+	    control_.hLog("\tPoint cannot be centred further\n");
 	    centring_complete = true;
 	    break;
 	  }
@@ -171,15 +171,18 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	    
 	  // if ratio is below tolerance, point is centred
 	  if (prev_ratio < control_.centringRatioTolerance()) {
-	    control_.Log() << "\tPoint is now centred\n";
+	    control_.hLog("\tPoint is now centred\n");
 	    info->centring_success = true;
 	    centring_complete = true;
 	    break;
 	  }
 	}
 	if (!centring_complete) {
-	  control_.Log() << "\tPoint could not be centred within "
-			 << control_.maxCentringSteps() << " iterations\n";
+	  std::stringstream h_logging_stream;
+	  h_logging_stream.str(std::string());
+	  h_logging_stream << "\tPoint could not be centred within "
+			   << control_.maxCentringSteps() << " iterations\n";
+	  control_.hLog(h_logging_stream);
 	}
       }
       info->centring_tried = true;
@@ -528,11 +531,14 @@ void IPM::AssessCentrality(const Vector& xl, const Vector& xu,
   centring_ratio = maxxz / minxz;
 
   if (print) {
-    control_.Log() << "\txj*zj in [ "
-		   << Scientific(minxz / mu, 8, 2) << ", "
-		   << Scientific(maxxz / mu, 8, 2) << "]; Ratio = "
-		   << Scientific(centring_ratio, 8, 2) << "; (xj*zj / mu) not_in [0.1, 10]: "
-		   << bad_products << "\n"; 
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream << "\txj*zj in [ "
+		     << Scientific(minxz / mu, 8, 2) << ", "
+		     << Scientific(maxxz / mu, 8, 2) << "]; Ratio = "
+		     << Scientific(centring_ratio, 8, 2) << "; (xj*zj / mu) not_in [0.1, 10]: "
+		     << bad_products << "\n"; 
+    control_.hLog(h_logging_stream);
   }
 }
 
@@ -812,42 +818,48 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
 }
 
 void IPM::PrintHeader() {
-    control_.Log()
-        << (kTerminationLogging ? "\n" : "")
-        << " "  << Format("Iter", 4)
-        << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
-        << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
-        << "  " << Format("mu", 8)
-        << "  " << Format("Time", 7);
-    control_.Debug()
-        << "  " << Format("stepsizes", 9)
-        << "  " << Format("pivots", 7) << " " << Format("kktiter", 7)
-        << "  " << Format("P.fixed", 7) << " " << Format("D.fixed", 7);
-    control_.Debug(4) << "  " << Format("svdmin(B)", 9);
-    control_.Debug(4) << "  " << Format("density", 8);
-    control_.Log() << '\n';
+  std::stringstream h_logging_stream;
+  h_logging_stream.str(std::string());
+  h_logging_stream
+    << (kTerminationLogging ? "\n" : "")
+    << " "  << Format("Iter", 4)
+    << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
+    << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
+    << "  " << Format("mu", 8)
+    << "  " << Format("Time", 7);
+  control_.hLog(h_logging_stream);
+  control_.Debug()
+    << "  " << Format("stepsizes", 9)
+    << "  " << Format("pivots", 7) << " " << Format("kktiter", 7)
+    << "  " << Format("P.fixed", 7) << " " << Format("D.fixed", 7);
+  control_.Debug(4) << "  " << Format("svdmin(B)", 9);
+  control_.Debug(4) << "  " << Format("density", 8);
+  control_.hLog("\n");
 }
 
 void IPM::PrintOutput() {
     const bool ipm_optimal = iterate_->feasible() && iterate_->optimal();
 
     if (kTerminationLogging) PrintHeader();
-    control_.Log()
-        << " "  << Format(info_->iter, 3)
-        << (ipm_optimal ? "*" : " ")
-        << "  " << Scientific(iterate_->presidual(), 8, 2)
-        << " "  << Scientific(iterate_->dresidual(), 8, 2)
-        << "  " << Scientific(iterate_->pobjective_after_postproc(), 15, 8)
-        << " "  << Scientific(iterate_->dobjective_after_postproc(), 15, 8)
-        << "  " << Scientific(iterate_->mu(), 8, 2)
-        << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
+    std::stringstream h_logging_stream;
+    h_logging_stream.str(std::string());
+    h_logging_stream
+      << " "  << Format(info_->iter, 3)
+      << (ipm_optimal ? "*" : " ")
+      << "  " << Scientific(iterate_->presidual(), 8, 2)
+      << " "  << Scientific(iterate_->dresidual(), 8, 2)
+      << "  " << Scientific(iterate_->pobjective_after_postproc(), 15, 8)
+      << " "  << Scientific(iterate_->dobjective_after_postproc(), 15, 8)
+      << "  " << Scientific(iterate_->mu(), 8, 2)
+      << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
+    control_.hLog(h_logging_stream);
     control_.Debug()
-        << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)
-        << "  " << Format(kkt_->basis_changes(), 7)
-        << " "  << Format(kkt_->iter(), 7);
+      << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)
+      << "  " << Format(kkt_->basis_changes(), 7)
+      << " "  << Format(kkt_->iter(), 7);
     control_.Debug()
-        << "  " << Format(info_->dual_dropped, 7)
-        << " "  << Format(info_->primal_dropped, 7);
+      << "  " << Format(info_->dual_dropped, 7)
+      << " "  << Format(info_->primal_dropped, 7);
 
     const Basis* basis = kkt_->basis();
     if (basis) {
@@ -863,7 +875,7 @@ void IPM::PrintOutput() {
         control_.Debug(4) << "  " << Format("-", 9);
         control_.Debug(4) << "  " << Format("-", 8);
     }
-    control_.Log() << '\n';
+    control_.hLog("\n");
 }
 
 }  // namespace ipx

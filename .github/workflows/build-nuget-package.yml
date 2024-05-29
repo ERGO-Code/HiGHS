@@ -1,0 +1,214 @@
+name: build-nuget-package
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # macos 12 is Intel
+  build_macos_12:
+    runs-on: macos-12
+    # strategy:
+      # matrix:
+      #   python: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+            
+  # macos 14 is M1 (beta)
+  build_macos_14:
+    runs-on: macos-14 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+  # Build windows 32 and linux 
+  build_windows_32:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build32 
+
+      - name: Configure CMake win32
+        shell: bash
+        working-directory: ${{runner.workspace}}/build32
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32
+
+      - name: Build win32
+        shell: bash
+        working-directory: ${{runner.workspace}}/build32
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-x32
+          path: ${{runner.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x64/
+
+  build_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+  build_linux_arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build_linux_arm64
+
+      - name: Configure CMake linux-arm-64
+        working-directory: ${{runner.workspace}}/build_linux_arm64
+        shell: bash
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/arm-toolchain.cmake
+
+      - name: Build linux-arm-64
+        working-directory: ${{runner.workspace}}/build_linux_arm64
+        shell: bash
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: ${{runner.workspace}}/build_linux_arm64/dotnet/Highs.Native/runtimes
+
+  build_windows:
+    runs-on: windows-latest
+    needs: [build_macos_12, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS Windows native
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: cmake --build . --config Release --parallel
+      
+      - name: Display structure of downloaded files
+        run: |
+          pwd 
+          ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - name: Download runtimes macos-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - name: Download runtimes macos-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - name: Download runtimes win-x32
+        uses: actions/download-artifact@v4
+        with:
+          name: win-x32
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes/win-x32
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - name: Download runtimes
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - name: Display structure of downloaded files
+        run: ls -R ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Dotnet pack
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.7.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: ${{runner.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
+
+  dotnet_push:
+    runs-on: windows-latest
+    needs: [build_windows]
+    environment:
+      name: nuget
+
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps: 
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+
+      - name: Download nuget
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget
+
+      - name: Dotnet push
+        run: dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://api.nuget.org/v3/index.json 
+      #     env:
+      #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

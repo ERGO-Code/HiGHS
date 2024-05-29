@@ -16,6 +16,7 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "model/HighsHessianUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
@@ -213,6 +214,10 @@ HighsStatus Highs::addColsInterface(
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
+
+  // Extend any Hessian with zeros on the diagonal
+  if (this->model_.hessian_.dim_)
+    completeHessian(lp.num_col_, this->model_.hessian_);
   return return_status;
 }
 
@@ -361,7 +366,8 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   // any columns have been removed, and if there is mask to be updated
   HighsInt original_num_col = lp.num_col_;
 
-  deleteLpCols(lp, index_collection);
+  lp.deleteCols(index_collection);
+  model_.hessian_.deleteCols(index_collection);
   assert(lp.num_col_ <= original_num_col);
   if (lp.num_col_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -406,7 +412,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   // any rows have been removed, and if there is mask to be updated
   HighsInt original_num_row = lp.num_row_;
 
-  deleteLpRows(lp, index_collection);
+  lp.deleteRows(index_collection);
   assert(lp.num_row_ <= original_num_row);
   if (lp.num_row_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -1468,6 +1474,7 @@ void Highs::zeroIterationCounts() {
   info_.simplex_iteration_count = 0;
   info_.ipm_iteration_count = 0;
   info_.crossover_iteration_count = 0;
+  info_.pdlp_iteration_count = 0;
   info_.qp_iteration_count = 0;
 }
 
@@ -1605,14 +1612,14 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   std::stringstream ss;
   ss.str(std::string());
   ss << highsFormatToString(
-      "%s solver claims optimality, but with num/sum/max "
-      "primal(%" HIGHSINT_FORMAT "/%g/%g)",
-      solver_type.c_str(), info_.num_primal_infeasibilities,
-      info_.sum_primal_infeasibilities, info_.max_primal_infeasibility);
+      "%s solver claims optimality, but with num/max/sum "
+      "primal(%d/%g/%g)",
+      solver_type.c_str(), int(info_.num_primal_infeasibilities),
+      info_.max_primal_infeasibility, info_.sum_primal_infeasibilities);
   if (info_.num_dual_infeasibilities > 0)
     ss << highsFormatToString(
-        "and dual(%" HIGHSINT_FORMAT "/%g/%g)", info_.num_dual_infeasibilities,
-        info_.sum_dual_infeasibilities, info_.max_dual_infeasibility);
+        "and dual(%d/%g/%g)", int(info_.num_dual_infeasibilities),
+        info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
   highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());

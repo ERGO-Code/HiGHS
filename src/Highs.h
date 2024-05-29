@@ -37,7 +37,6 @@ HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
 const char* highsGithash();
-const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -77,11 +76,6 @@ class Highs {
    * @brief Return githash
    */
   std::string githash() const { return highsGithash(); }
-
-  /**
-   * @brief Return compilation date
-   */
-  std::string compilationDate() const { return highsCompilationDate(); }
 
   /**
    * @brief Reset the options and then call clearModel()
@@ -415,6 +409,22 @@ class Highs {
    * @brief Return a const reference to the logging data for presolve
    */
   const HighsPresolveLog& getPresolveLog() const { return presolve_log_; }
+
+  /**
+   * @brief Return a const pointer to the original column indices for
+   * the presolved model
+   */
+  const HighsInt* getPresolveOrigColsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigColsIndex();
+  }
+
+  /**
+   * @brief Return a const pointer to the original row indices for the
+   * presolved model
+   */
+  const HighsInt* getPresolveOrigRowsIndex() const {
+    return presolve_.data_.postSolveStack.getOrigRowsIndex();
+  }
 
   /**
    * @brief Return a const reference to the incumbent LP
@@ -755,6 +765,17 @@ class Highs {
   HighsStatus writeModel(const std::string& filename = "");
 
   /**
+   * @brief Write out the incumbent presolved model to a file
+   */
+  HighsStatus writePresolvedModel(const std::string& filename = "");
+
+  /**
+   * @brief Write out the given model to a file
+   */
+  HighsStatus writeLocalModel(HighsModel& model,
+                              const std::string& filename = "");
+
+  /**
    * @brief Write out the internal HighsBasis instance to a file
    */
   HighsStatus writeBasis(const std::string& filename = "");
@@ -923,7 +944,7 @@ class Highs {
    * @brief Adds a variable to the incumbent model, without the cost or matrix
    * coefficients
    */
-  HighsStatus addVar(const double lower, const double upper) {
+  HighsStatus addVar(const double lower = 0, const double upper = kHighsInf) {
     return this->addVars(1, &lower, &upper);
   }
 
@@ -966,8 +987,9 @@ class Highs {
 
   /**
    * @brief Delete multiple columns from the incumbent model given by
-   * a mask (full length array with 1 => change; 0 => not). New index
-   * of any column not deleted is returned in place of the value 0.
+   * a mask (full length array with 1 => delete; 0 => keep). New index
+   * of any column kept is returned in place of the value 0.  For
+   * deleted columns, a value of -1 is returned.
    */
   HighsStatus deleteCols(HighsInt* mask);
 
@@ -987,9 +1009,10 @@ class Highs {
   }
 
   /**
-   * @brief Delete multiple variables from the incumbent model given by
-   * a mask (full length array with 1 => change; 0 => not). New index
-   * of any variable not deleted is returned in place of the value 0.
+   * @brief Delete multiple variables from the incumbent model given
+   * by a mask (full length array with 1 => delete; 0 => keep). New
+   * index of any variable not deleted is returned in place of the
+   * value 0. For deleted variables, a value of -1 is returned.
    */
   HighsStatus deleteVars(HighsInt* mask) { return deleteCols(mask); }
 
@@ -1006,8 +1029,9 @@ class Highs {
 
   /**
    * @brief Delete multiple rows from the incumbent model given by a
-   * mask (full length array with 1 => change; 0 => not). New index of
-   * any row not deleted is returned in place of the value 0.
+   * mask (full length array with 1 => delete; 0 => keep). New index
+   * of any row not deleted is returned in place of the value 0. For
+   * deleted rows, a value of -1 is returned.
    */
   HighsStatus deleteRows(HighsInt* mask);
 
@@ -1187,6 +1211,12 @@ class Highs {
                                        HVector& row_ep_buffer);
 
   // Start of deprecated methods
+
+  /**
+   * @brief Return compilation date
+   */
+  std::string compilationDate() const { return "deprecated"; }
+  const char* highsCompilationDate();
 
   HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
                                                        const char*, void*),

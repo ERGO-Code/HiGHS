@@ -1,0 +1,49 @@
+name: check-python-package
+
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python3 -m pip install build setuptools twine
+          python3 -m build --sdist
+          python3 -m build --wheel
+          twine check dist/*
+
+  build_mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python3 -m pip install build setuptools twine --break-system-packages
+          python3 -m build --sdist
+          python3 -m build --wheel
+          twine check dist/*
+
+  build_win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Build sdist
+        run: |
+          py -m pip install build setuptools twine
+          py -m build --sdist
+          py -m build --wheel
+          py -m twine check dist/*

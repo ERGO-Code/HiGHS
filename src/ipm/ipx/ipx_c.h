@@ -9,22 +9,9 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-    /* Returns an ipx_parameters struct with default values. */
-    struct ipx_parameters ipx_default_parameters();
-
-    /* Allocates a new LpSolver object. On success, *p_self holds a pointer to
-       the new object. If the memory allocation fails, *p_self becomes NULL
-       (the required memory is tiny). The function does nothing if @p_self is
-       NULL. */
-    void ipx_new(void** p_self);
-
-    /* Deallocates the LpSolver object pointed to by *p_self and sets *p_self to
-       NULL. If either p_self or *p_self is NULL, the function does nothing. */
-    void ipx_free(void** p_self);
-
-    /* The remaining functions call their equivalent method of LpSolver for the
-       object pointed to by @self. See src/lp_solver.h for documentation of the
-       methods. */
+    /* These functions call their equivalent method of LpSolver for
+       the object pointed to by @self. See src/lp_solver.h for
+       documentation of the methods. */
     ipxint ipx_load_model(void* self, ipxint num_var, const double* obj,
                           const double* lb, const double* ub, ipxint num_constr,
                           const ipxint* Ap, const ipxint* Ai, const double* Ax,

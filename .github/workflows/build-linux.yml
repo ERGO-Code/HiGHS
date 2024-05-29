@@ -10,7 +10,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -32,7 +32,38 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel 2 --timeout 300 --output-on-failure -C $BUILD_TYPE
+        run: ctest --parallel --timeout 300 --output-on-failure 
+
+  debug_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=ON -DALL_TESTS=ON
+
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest --parallel --timeout 300 --output-on-failure -C Debug
 
   release:
     runs-on: ${{ matrix.os }}
@@ -41,7 +72,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -63,7 +94,38 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel 2 --timeout 300 --output-on-failure -C Release
+        run: ctest --parallel --timeout 300 --output-on-failure -C Release
+
+  release_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DFAST_BUILD=ON -DALL_TESTS=ON
+
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build . --parallel --config Release
+
+      - name: Test All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest --parallel --timeout 300 --output-on-failure -C Release
 
   debug64:
     runs-on: ${{ matrix.os }}
@@ -72,7 +134,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -80,21 +142,52 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DHIGHSINT64=on -DFAST_BUILD=OFF
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DHIGHSINT64=on -DFAST_BUILD=OFF
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
         shell: bash
         # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: |
-          cmake --build . --parallel --config Release
+          cmake --build . --parallel --config Debug
 
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel 2 --timeout 300 --output-on-failure -C Release
+        run: ctest --parallel --timeout 300 --output-on-failure -C Debug 
+        
+  debug64_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=ON -DALL_TESTS=ON
+
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build . --parallel --config Debug
+
+      - name: Test All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest --parallel --timeout 300 --output-on-failure -C Debug
 
   Release64:
     runs-on: ${{ matrix.os }}
@@ -103,7 +196,7 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
@@ -125,4 +218,35 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel 2 --timeout 300 --output-on-failure -C Release
+        run: ctest --parallel --timeout 300 --output-on-failure -C Release
+
+  Release64_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DFAST_BUILD=ON -DALL_TESTS=ON
+
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        run: |
+          cmake --build . --parallel --config Release
+
+      - name: Test All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest --parallel --timeout 300 --output-on-failure -C Release

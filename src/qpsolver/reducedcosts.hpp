@@ -14,17 +14,17 @@ class ReducedCosts {
   Vector reducedcosts;
   bool uptodate;
 
-  void recompute() {
-    basis.ftran(gradient.getGradient(), reducedcosts);
-    uptodate = true;
-  }
-
  public:
   ReducedCosts(Runtime& rt, Basis& bas, Gradient& grad)
       : basis(bas),
         gradient(grad),
         reducedcosts(Vector(rt.instance.num_var)),
         uptodate(false) {}
+
+  void recompute() {
+    basis.ftran(gradient.getGradient(), reducedcosts);
+    uptodate = true;
+  }
 
   Vector& getReducedCosts() {
     if (!uptodate) {

@@ -497,3 +497,18 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue("time_limit", 1);
   REQUIRE(return_status == HighsStatus::kOk);
 }
+
+TEST_CASE("inf-value-options", "[highs_options]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string options_file =
+      std::string(HIGHS_DIR) + "/check/instances/WithInf.set";
+  REQUIRE(highs.readOptions(options_file) == HighsStatus::kOk);
+  double value;
+  highs.getOptionValue("time_limit", value);
+  REQUIRE(value == kHighsInf);
+  highs.getOptionValue("objective_bound", value);
+  REQUIRE(value == -kHighsInf);
+  highs.getOptionValue("objective_target", value);
+  REQUIRE(value == kHighsInf);
+}

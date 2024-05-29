@@ -11,12 +11,6 @@ class ReducedGradient {
   Gradient& gradient;
   Basis& basis;
 
-  void recompute() {
-    rg.dim = basis.getinactive().size();
-    basis.Ztprod(gradient.getGradient(), rg);
-    uptodate = true;
-  }
-
  public:
   ReducedGradient(Runtime& rt, Basis& bas, Gradient& grad)
       : rg(rt.instance.num_var), gradient(grad), basis(bas) {}
@@ -26,6 +20,12 @@ class ReducedGradient {
       recompute();
     }
     return rg;
+  }
+
+  void recompute() {
+    rg.dim = basis.getinactive().size();
+    basis.Ztprod(gradient.getGradient(), rg);
+    uptodate = true;
   }
 
   void reduce(const Vector& buffer_d, const HighsInt maxabsd) {

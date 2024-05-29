@@ -5,6 +5,10 @@
 
 const bool dev_run = false;
 
+bool doubleEqual(const double v0, const double v1) {
+  return std::fabs(v0 - v1) < 1e-8;
+}
+
 void presolveSolvePostsolve(const std::string& model_file,
                             const bool solve_relaxation = false);
 
@@ -45,15 +49,34 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
           int(solution.col_value.size()), int(solution.col_dual.size()));
     status = highs.postsolve(solution);
     if (k == 0) {
+      // With dual values, optimality can be identified
       REQUIRE(status == HighsStatus::kOk);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     } else {
+      // Without dual values, optimality can't be identified
       REQUIRE(status == HighsStatus::kWarning);
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
     }
     REQUIRE(std::fabs(highs.getInfo().objective_function_value -
                       objective_function_value) <=
             1e-8 * std::max(1.0, std::fabs(objective_function_value)));
+    // Compare the primal solution for the reduced and original problem
+    HighsSolution postsolve_solution = highs.getSolution();
+    const HighsInt* original_col_indices = highs.getPresolveOrigColsIndex();
+    //    const HighsInt* original_row_indices =
+    //    highs.getPresolveOrigRowsIndex();
+    if (dev_run)
+      printf(
+          "Presolved model   Original model\n"
+          "Col      Primal  Col      Primal\n");
+    for (HighsInt iCol = 0; iCol < presolved_lp.num_col_; iCol++) {
+      HighsInt original_iCol = original_col_indices[iCol];
+      if (dev_run)
+        printf("%3d %11.5g  %3d %11.5g\n", int(iCol), solution.col_value[iCol],
+               int(original_iCol), postsolve_solution.col_value[original_iCol]);
+      REQUIRE(doubleEqual(solution.col_value[iCol],
+                          postsolve_solution.col_value[original_iCol]));
+    }
     solution.dual_valid = false;
     solution.col_dual.clear();
     solution.row_dual.clear();
@@ -224,6 +247,7 @@ HighsStatus zeroCostColSing() {
   lp.col_cost_.push_back(1);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -280,6 +304,7 @@ HighsStatus colSingDoubletonEquality() {
   lp.col_cost_.push_back(1);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -335,6 +360,7 @@ HighsStatus colSingDoubletonInequality() {
   lp.col_cost_.push_back(1);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -371,6 +397,7 @@ HighsStatus twoColSingDoubletonEquality() {
   lp.col_cost_.push_back(2);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -407,6 +434,7 @@ HighsStatus twoColSingDoubletonInequality() {
   lp.col_cost_.push_back(2);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -416,36 +444,36 @@ HighsStatus twoColSingDoubletonInequality() {
 }
 
 // No commas in test case name.
-TEST_CASE("zero-cost [presolve-col-sing]") {
-  std::cout << "Presolve 1." << std::endl;
+TEST_CASE("zero-cost", "[presolve-col-sing]") {
+  if (dev_run) std::cout << "Presolve 1." << std::endl;
   HighsStatus status = zeroCostColSing();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-eq [presolve-col-sing]") {
-  std::cout << "Presolve 2." << std::endl;
+TEST_CASE("col-sing-doubleton-eq", "[presolve-col-sing]") {
+  if (dev_run) std::cout << "Presolve 2." << std::endl;
   HighsStatus status = colSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-ineq [presolve-col-sing]") {
-  std::cout << "Presolve 3." << std::endl;
+TEST_CASE("col-sing-doubleton-ineq", "[presolve-col-sing]") {
+  if (dev_run) std::cout << "Presolve 3." << std::endl;
   HighsStatus status = colSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-eq [presolve-col-sing]") {
-  std::cout << "Presolve 4." << std::endl;
+TEST_CASE("two-col-sing-doubleton-eq", "[presolve-col-sing]") {
+  if (dev_run) std::cout << "Presolve 4." << std::endl;
   HighsStatus status = twoColSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
-  std::cout << "Presolve 5." << std::endl;
+TEST_CASE("two-col-sing-doubleton-ineq", "[presolve-col-sing]") {
+  if (dev_run) std::cout << "Presolve 5." << std::endl;
   HighsStatus status = twoColSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   REQUIRE(str == "OK");
@@ -494,6 +522,7 @@ HighsStatus issue425() {
   lp.col_cost_.push_back(2);
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
 
@@ -501,9 +530,74 @@ HighsStatus issue425() {
   return status;
 }
 
-TEST_CASE("presolve-issue-425") {
-  std::cout << std::endl;
-  std::cout << "Presolve issue 425." << std::endl;
+TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
+  if (dev_run) {
+    std::cout << std::endl;
+    std::cout << "Presolve issue 425." << std::endl;
+  }
   HighsStatus status = issue425();
   REQUIRE(status == HighsStatus::kOk);
+}
+
+TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Read MIP model "egout"
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  highs.readModel(model_file);
+
+  // Turn into LP
+  std::vector<HighsInt> vars(highs.getNumCol(), 1);
+  std::vector<HighsVarType> integral(highs.getNumCol(),
+                                     HighsVarType::kContinuous);
+  highs.changeColsIntegrality(vars.data(), integral.data());
+
+  // Presolve
+  HighsStatus presolveStatus = highs.presolve();
+  REQUIRE(presolveStatus == HighsStatus::kOk);
+
+  // Presolve reduced the problem to empty
+  REQUIRE(highs.getModelPresolveStatus() ==
+          HighsPresolveStatus::kReducedToEmpty);
+
+  // Set up empty solution
+  HighsSolution hsol = HighsSolution();
+  hsol.value_valid = true;
+  hsol.dual_valid = true;
+
+  // Postsolve solution
+  HighsStatus postsolveStatus = highs.postsolve(hsol);
+  REQUIRE(postsolveStatus == HighsStatus::kOk);
+
+  // Postsolved solution should be feasible / optimal
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(highs.getInfo().num_dual_infeasibilities == 0);
+}
+
+TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
+  std::string presolved_model_file = "temp.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  highs.presolve();
+  highs.writePresolvedModel(presolved_model_file);
+  // Read and solve the presolved model using a new Highs instance
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  highs1.readModel(presolved_model_file);
+  highs1.run();
+  // Extract the optimal solution and basis
+  HighsSolution solution = highs1.getSolution();
+  HighsBasis basis = highs1.getBasis();
+  // Perform postsolve using the optimal solution and basis for the
+  // presolved model
+  highs.postsolve(solution, basis);
+  // The solution should be optimal, so no solver is run, and
+  // simplex_iteration_count is -1
+  REQUIRE(highs.getInfo().simplex_iteration_count == -1);
+  std::remove(presolved_model_file.c_str());
 }

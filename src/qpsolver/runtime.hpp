@@ -13,7 +13,7 @@ struct Runtime {
   Instance scaled;
   Instance perturbed;
   Settings settings;
-  Statistics statistics;
+  Statistics& statistics;
 
   Vector primal;
   Vector rowactivity;
@@ -24,14 +24,15 @@ struct Runtime {
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;
 
-  Runtime(Instance& inst)
+  Runtime(Instance& inst, Statistics& stats)
       : instance(inst),
         primal(Vector(instance.num_var)),
         rowactivity(Vector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),
-        status_con(instance.num_con) {}
+        status_con(instance.num_con),
+        statistics(stats) {}
 };
 
 #endif

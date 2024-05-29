@@ -10,7 +10,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         sanitizer: [address, undefined, thread]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -36,7 +36,7 @@ jobs:
           meson setup bddir -Duse_zlib=enabled -Dwith_tests=True -Db_sanitize=${{ matrix.sanitizer }}
           meson test -C bddir -t 10  # Time x10 for the tests
       - name: Upload log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: log_${{ matrix.sanitizer }}_${{ matrix.os }}.txt

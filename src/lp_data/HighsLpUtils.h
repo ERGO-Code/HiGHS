@@ -85,6 +85,8 @@ HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
 HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
                                 const double rowScale);
 
+void unscaleSolution(HighsSolution& solution, const HighsScale& scale);
+
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                            const vector<double>& colCost,
                            const vector<double>& colLower,
@@ -93,16 +95,6 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
 void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
-
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection);
-
-void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
-                             const HighsIndexCollection& index_collection);
-
-void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection);
-
-void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
-                             const HighsIndexCollection& index_collection);
 
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);

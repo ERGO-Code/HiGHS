@@ -2,8 +2,7 @@
 #include "qpsolver/quass.hpp"
 
 QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer) {
-  Runtime rt(instance);
-  rt.statistics = stats;
+  Runtime rt(instance, stats);
   rt.settings = settings;
   Quass quass(rt);
 
