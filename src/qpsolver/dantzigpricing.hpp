@@ -15,28 +15,28 @@ class DantzigPricing : public Pricing {
   ReducedCosts& redcosts;
 
   HighsInt chooseconstrainttodrop(const QpVector& lambda) {
-    auto activeconstraintidx = basis.getactive();
+    auto active_constraint_index = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
-    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < active_constraint_index.size(); i++) {
       HighsInt indexinbasis =
-          constraintindexinbasisfactor[activeconstraintidx[i]];
+          constraintindexinbasisfactor[active_constraint_index[i]];
       if (indexinbasis == -1) {
         printf("error\n");
       }
       assert(indexinbasis != -1);
 
-      if (basis.getstatus(activeconstraintidx[i]) ==
+      if (basis.getstatus(active_constraint_index[i]) ==
               BasisStatus::ActiveAtLower &&
           -lambda.value[indexinbasis] > maxabslambda) {
-        minidx = activeconstraintidx[i];
+        minidx = active_constraint_index[i];
         maxabslambda = -lambda.value[indexinbasis];
-      } else if (basis.getstatus(activeconstraintidx[i]) ==
+      } else if (basis.getstatus(active_constraint_index[i]) ==
                      BasisStatus::ActiveAtUpper &&
                  lambda.value[indexinbasis] > maxabslambda) {
-        minidx = activeconstraintidx[i];
+        minidx = active_constraint_index[i];
         maxabslambda = lambda.value[indexinbasis];
       } else {
         // TODO

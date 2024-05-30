@@ -116,7 +116,6 @@ class CholeskyFactor {
 
       current_k++;
     } else {
-      printf("lambda = %lf\n", lambda);
       return QpSolverStatus::NOTPOSITIVDEFINITE;
 
       //     |LL' 0|

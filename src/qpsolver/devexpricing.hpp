@@ -17,14 +17,14 @@ class DevexPricing : public Pricing {
   std::vector<double> weights;
 
   HighsInt chooseconstrainttodrop(const QpVector& lambda) {
-    auto activeconstraintidx = basis.getactive();
+    auto active_constraint_index = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
-    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < active_constraint_index.size(); i++) {
       HighsInt indexinbasis =
-          constraintindexinbasisfactor[activeconstraintidx[i]];
+          constraintindexinbasisfactor[active_constraint_index[i]];
       if (indexinbasis == -1) {
         printf("error\n");
       }
@@ -34,15 +34,15 @@ class DevexPricing : public Pricing {
                    weights[indexinbasis];
       if (val > maxabslambda && fabs(lambda.value[indexinbasis]) >
                                     runtime.settings.lambda_zero_threshold) {
-        if (basis.getstatus(activeconstraintidx[i]) ==
+        if (basis.getstatus(active_constraint_index[i]) ==
                 BasisStatus::ActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxabslambda = val;
-        } else if (basis.getstatus(activeconstraintidx[i]) ==
+        } else if (basis.getstatus(active_constraint_index[i]) ==
                        BasisStatus::ActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxabslambda = val;
         } else {
           // TODO

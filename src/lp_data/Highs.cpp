@@ -3505,7 +3505,6 @@ HighsStatus Highs::callSolveQp() {
   // Define the QP solver logging function
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
-
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "%11d  %15.8g           %6d %9.2fs\n",
                  int(stats.iteration[rep]), stats.objval[rep],
@@ -3537,9 +3536,10 @@ HighsStatus Highs::callSolveQp() {
   QpAsmStatus status = solveqp(instance, settings, stats, model_status_, basis_,
                                solution_, timer_);
   // QP solver can fail, so should return something other than QpAsmStatus::kOk
-  assert(status == QpAsmStatus::kOk);
+  if (status == QpAsmStatus::kError) return HighsStatus::kError;
 
-  HighsStatus return_status = HighsStatus::kOk;
+  assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
+  HighsStatus return_status = status == QpAsmStatus::kWarning ? HighsStatus::kWarning : HighsStatus::kOk;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

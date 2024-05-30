@@ -17,12 +17,12 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
   }
 
   for (size_t i = 0; i < active.size(); i++) {
-    activeconstraintidx.push_back(active[i]);
-    basisstatus[activeconstraintidx[i]] = status[i];
+    active_constraint_index.push_back(active[i]);
+    basisstatus[active_constraint_index[i]] = status[i];
   }
   for (size_t i = 0; i< inactive.size(); i++) {
-    nonactiveconstraintsidx.push_back(inactive[i]);
-    basisstatus[nonactiveconstraintsidx[i]] = BasisStatus::InactiveInBasis;
+    non_active_constraint_index.push_back(inactive[i]);
+    basisstatus[non_active_constraint_index[i]] = BasisStatus::InactiveInBasis;
   }
 
   Atran = rt.instance.A.t();
@@ -34,22 +34,24 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
 }
 
 void Basis::build() {
+  report();
+
   updatessinceinvert = 0;
 
-  baseindex.resize(activeconstraintidx.size() + nonactiveconstraintsidx.size());
+  baseindex.resize(active_constraint_index.size() + non_active_constraint_index.size());
   constraintindexinbasisfactor.clear();
 
   basisfactor = HFactor();
 
   constraintindexinbasisfactor.assign(Atran.num_row + Atran.num_col, -1);
-  assert((HighsInt)(nonactiveconstraintsidx.size() + activeconstraintidx.size()) ==
+  assert((HighsInt)(non_active_constraint_index.size() + active_constraint_index.size()) ==
          Atran.num_row);
 
   HighsInt counter = 0;
-  for (HighsInt i : nonactiveconstraintsidx) {
+  for (HighsInt i : non_active_constraint_index) {
     baseindex[counter++] = i;
   }
-  for (HighsInt i : activeconstraintidx) {
+  for (HighsInt i : active_constraint_index) {
     baseindex[counter++] = i;
   }
 
@@ -69,7 +71,7 @@ void Basis::build() {
   basisfactor.build();
 
   for (size_t i = 0;
-       i < activeconstraintidx.size() + nonactiveconstraintsidx.size(); i++) {
+       i < active_constraint_index.size() + non_active_constraint_index.size(); i++) {
     constraintindexinbasisfactor[baseindex[i]] = i;
   }
 }
@@ -81,23 +83,36 @@ void Basis::rebuild() {
   constraintindexinbasisfactor.clear();
 
   constraintindexinbasisfactor.assign(Atran.num_row + Atran.num_col, -1);
-  assert((HighsInt)(nonactiveconstraintsidx.size() + activeconstraintidx.size()) ==
+  assert((HighsInt)(non_active_constraint_index.size() + active_constraint_index.size()) ==
          Atran.num_row);
 
   basisfactor.build();
 
   for (size_t i = 0;
-       i < activeconstraintidx.size() + nonactiveconstraintsidx.size(); i++) {
+       i < active_constraint_index.size() + non_active_constraint_index.size(); i++) {
     constraintindexinbasisfactor[baseindex[i]] = i;
   }
   reinversion_hint = false;
 }
 
 void Basis::report() {
+  // Basis of dimension qp_num_var, partitioned into
+  //
+  // * Indices of active variables/constraints, so index values in {0,
+  // * ..., qp_num_con-1}. These are listed in active_constraint_index
+  // * and, for each the value of basisstatus will be ActiveAtLower or
+  // * ActiveAtUpper
+  //
+  // * Indices of inactive variables, so index values in {qp_num_con,
+  // * ..., qp_num_con+qp_num_var-1} (or possibly also from {0, ...,
+  // * qp_num_con-1}?) used to complete the basis. The number of
+  // * inactive variables defines the dimension of the null space.
+  //
+  // Remaining qp_num_con indices are of
   const HighsInt qp_num_var = Atran.num_row;
   const HighsInt qp_num_con = Atran.num_col;
-  const HighsInt num_active = activeconstraintidx.size();
-  const HighsInt num_inactive = nonactiveconstraintsidx.size();
+  const HighsInt num_active_in_basis = active_constraint_index.size();
+  const HighsInt num_inactive_in_basis = non_active_constraint_index.size();
 
   HighsInt num_var_inactive = 0;
   HighsInt num_var_active_at_lower = 0;
@@ -146,17 +161,29 @@ void Basis::report() {
     }
   }
 
-  
-  if (num_inactive + num_active < 100) {
+  const bool print_basis = num_inactive_in_basis + num_active_in_basis < 100;
+  if (print_basis) {
     printf("basis: ");
-    for (HighsInt a_ : activeconstraintidx) printf("%2d", int(a_));
+    for (HighsInt a_ : active_constraint_index) {
+      if (a_ < qp_num_con) {
+	printf("c%-3d ", int(a_));
+      } else {
+	printf("v%-3d ", int(a_-qp_num_con));
+      }
+    } 
     printf(" - ");
-    for (HighsInt n_ : nonactiveconstraintsidx) printf("%2d", int(n_));
+    for (HighsInt n_ : non_active_constraint_index) {
+      if (n_ < qp_num_con) {
+	printf("c%-3d ", int(n_));
+      } else {
+	printf("v%-3d ", int(n_-qp_num_con));
+      }
+    } 
     printf("\n");
   }
 
-  printf("Basis::rebuild() QP(%6d [inact %6d; act %6d], %6d)",
-	 int(qp_num_var), int(num_inactive), int( num_active),
+  printf("Basis::report: QP(%6d [inact %6d; act %6d], %6d)",
+	 int(qp_num_var), int(num_inactive_in_basis), int(num_active_in_basis),
 	 int(qp_num_con));
   printf(" inact / lo / up / basis for var (%6d / %6d / %6d / %6d) and con (%6d / %6d / %6d / %6d)\n",
 	 int(num_var_inactive),
@@ -167,26 +194,28 @@ void Basis::report() {
 	 int(num_con_active_at_lower),
 	 int(num_con_active_at_upper),
 	 int(num_con_inactive_in_basis));
-
+  assert(num_con_inactive_in_basis == 0);
+  assert(num_inactive_in_basis == num_var_inactive_in_basis + num_con_inactive_in_basis);
+  assert(num_active_in_basis == num_var_active_at_lower + num_var_active_at_upper + num_con_active_at_lower + num_con_active_at_upper);
 }
 
 // move that constraint into V section basis (will correspond to Nullspace
 // from now on)
 void Basis::deactivate(HighsInt conid) {
   // printf("deact %" HIGHSINT_FORMAT "\n", conid);
-  assert(contains(activeconstraintidx, conid));
+  assert(contains(active_constraint_index, conid));
   basisstatus[conid] = BasisStatus::InactiveInBasis;
-  remove(activeconstraintidx, conid);
-  nonactiveconstraintsidx.push_back(conid);
+  remove(active_constraint_index, conid);
+  non_active_constraint_index.push_back(conid);
 }
 
 QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisStatus newstatus,
                                HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
-  if (!contains(activeconstraintidx, (HighsInt)conid)) {
+  if (!contains(active_constraint_index, (HighsInt)conid)) {
     basisstatus[nonactivetoremove] = BasisStatus::Inactive;
     basisstatus[conid] = newstatus;
-    activeconstraintidx.push_back(conid);
+    active_constraint_index.push_back(conid);
   } else {
     printf("Degeneracy? constraint %" HIGHSINT_FORMAT " already in basis\n",
            conid);
@@ -198,7 +227,7 @@ QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisSt
   HighsInt rowtoremove = constraintindexinbasisfactor[nonactivetoremove];
 
   baseindex[rowtoremove] = conid;
-  remove(nonactiveconstraintsidx, nonactivetoremove);
+  remove(non_active_constraint_index, nonactivetoremove);
   updatebasis(settings, conid, nonactivetoremove, pricing);
 
   if (updatessinceinvert != 0) {
@@ -309,11 +338,11 @@ QpVector Basis::ftran(const QpVector& rhs, bool buffer, HighsInt q) {
 }
 
 QpVector Basis::recomputex(const Instance& inst) {
-  assert((HighsInt)activeconstraintidx.size() == inst.num_var);
+  assert((HighsInt)active_constraint_index.size() == inst.num_var);
   QpVector rhs(inst.num_var);
 
   for (HighsInt i = 0; i < inst.num_var; i++) {
-    HighsInt con = activeconstraintidx[i];
+    HighsInt con = active_constraint_index[i];
     if (constraintindexinbasisfactor[con] == -1) {
       printf("error\n");
     }
@@ -348,8 +377,8 @@ QpVector& Basis::Ztprod(const QpVector& rhs, QpVector& target, bool buffer,
   ftran(rhs, Ztprod_res, buffer, q);
 
   target.reset();
-  for (size_t i = 0; i < nonactiveconstraintsidx.size(); i++) {
-    HighsInt nonactive = nonactiveconstraintsidx[i];
+  for (size_t i = 0; i < non_active_constraint_index.size(); i++) {
+    HighsInt nonactive = non_active_constraint_index[i];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
     target.index[i] = static_cast<HighsInt>(i);
     target.value[i] = Ztprod_res.value[idx];
@@ -363,7 +392,7 @@ QpVector& Basis::Zprod(const QpVector& rhs, QpVector& target) {
   buffer_Zprod.dim = target.dim;
   for (HighsInt i = 0; i < rhs.num_nz; i++) {
     HighsInt nz = rhs.index[i];
-    HighsInt nonactive = nonactiveconstraintsidx[nz];
+    HighsInt nonactive = non_active_constraint_index[nz];
     HighsInt idx = constraintindexinbasisfactor[nonactive];
     buffer_Zprod.index[i] = idx;
     buffer_Zprod.value[idx] = rhs.value[nz];
@@ -375,15 +404,15 @@ QpVector& Basis::Zprod(const QpVector& rhs, QpVector& target) {
 // void Basis::write(std::string filename) {
 //    FILE* file = fopen(filename.c_str(), "w");
 
-//    fprintf(file, "%lu %lu\n", activeconstraintidx.size(),
-//    nonactiveconstraintsidx.size()); for (HighsInt i=0;
-//    i<activeconstraintidx.size(); i++) {
+//    fprintf(file, "%lu %lu\n", active_constraint_index.size(),
+//    non_active_constraint_index.size()); for (HighsInt i=0;
+//    i<active_constraint_index.size(); i++) {
 //       fprintf(file, "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT "\n",
-//       activeconstraintidx[i], (HighsInt)rowstatus[i]);
+//       active_constraint_index[i], (HighsInt)rowstatus[i]);
 //    }
-//    for (HighsInt i=0; i<nonactiveconstraintsidx.size(); i++) {
+//    for (HighsInt i=0; i<non_active_constraint_index.size(); i++) {
 //       fprintf(file, "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT "\n",
-//       nonactiveconstraintsidx[i], (HighsInt)rowstatus[i]);
+//       non_active_constraint_index[i], (HighsInt)rowstatus[i]);
 //    }
 //    // TODO
 

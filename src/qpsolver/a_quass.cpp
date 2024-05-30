@@ -10,20 +10,44 @@ QpAsmStatus quass2highs(Instance& instance,
 			HighsModelStatus& highs_model_status,
 			HighsBasis& highs_basis,
 			HighsSolution& highs_solution) {
-  highs_model_status = qp_model_status == QpModelStatus::OPTIMAL
-    ? HighsModelStatus::kOptimal
-    : qp_model_status == QpModelStatus::UNBOUNDED
-    ? HighsModelStatus::kUnbounded
-    : qp_model_status == QpModelStatus::INFEASIBLE
-    ? HighsModelStatus::kInfeasible
-    : qp_model_status == QpModelStatus::ITERATIONLIMIT
-    ? HighsModelStatus::kIterationLimit
-    : qp_model_status == QpModelStatus::LARGE_NULLSPACE
-    ? HighsModelStatus::kSolveError
-    : qp_model_status == QpModelStatus::TIMELIMIT
-    ? HighsModelStatus::kTimeLimit
-    : HighsModelStatus::kNotset;
+  QpAsmStatus qp_asm_return_status = QpAsmStatus::kError;
+  switch (qp_model_status) {
+  case QpModelStatus::OPTIMAL:
+    highs_model_status = HighsModelStatus::kOptimal;
+    qp_asm_return_status = QpAsmStatus::kOk;
+    break;
+  case QpModelStatus::UNBOUNDED:
+    highs_model_status = HighsModelStatus::kUnbounded;
+    qp_asm_return_status = QpAsmStatus::kOk;
+    break;
+  case QpModelStatus::INFEASIBLE:
+    highs_model_status = HighsModelStatus::kInfeasible;
+    qp_asm_return_status = QpAsmStatus::kOk;
+    break;
+  case QpModelStatus::ITERATIONLIMIT:
+    highs_model_status = HighsModelStatus::kIterationLimit;
+    qp_asm_return_status = QpAsmStatus::kWarning;
+    break;
+  case QpModelStatus::TIMELIMIT:
+    highs_model_status = HighsModelStatus::kTimeLimit;
+    qp_asm_return_status = QpAsmStatus::kWarning;
+    break;
+  case QpModelStatus::INDETERMINED:
+    highs_model_status = HighsModelStatus::kSolveError;
+    qp_asm_return_status = QpAsmStatus::kError;
+    return QpAsmStatus::kError;
+  case QpModelStatus::LARGE_NULLSPACE:
+    highs_model_status = HighsModelStatus::kSolveError;
+    return QpAsmStatus::kError;
+  case QpModelStatus::ERROR:
+    highs_model_status = HighsModelStatus::kSolveError;
+    return QpAsmStatus::kError;
+  default:
+    highs_model_status = HighsModelStatus::kNotset;
+    return QpAsmStatus::kError;
+  }
 
+  assert(qp_asm_return_status != QpAsmStatus::kError);
   // extract variable values
   highs_solution.col_value.resize(instance.num_var);
   highs_solution.col_dual.resize(instance.num_var);
@@ -74,7 +98,7 @@ QpAsmStatus quass2highs(Instance& instance,
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
-  return QpAsmStatus::kOk;
+  return qp_asm_return_status;
 }
 
 QpAsmStatus solveqp(Instance& instance,

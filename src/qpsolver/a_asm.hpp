@@ -8,7 +8,9 @@
 #include "util/HighsTimer.h"
 
 enum class QpAsmStatus {
-  kOk//,
+  kOk,
+  kWarning,
+  kError
   //  NEGATIVEEIGENVALUEINREDUCEDHESSIAN,
   //  BASISRANKDEFICIENT
 };
