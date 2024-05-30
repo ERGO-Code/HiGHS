@@ -38,4 +38,29 @@ std::string qpBasisStatusToString(const BasisStatus qp_basis_status) {
   }
 }
 
+std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
+  switch (qp_model_status) {
+  case QpModelStatus::kNotset:
+    return "Not set";
+  case QpModelStatus::INDETERMINED:
+    return "Undertermined";
+  case QpModelStatus::OPTIMAL:
+    return "Optimal";
+  case QpModelStatus::UNBOUNDED:
+    return "Unbounded";
+  case QpModelStatus::INFEASIBLE:
+    return "Infeasible";
+  case QpModelStatus::ITERATIONLIMIT:
+    return "Iteration limit";
+  case QpModelStatus::TIMELIMIT:
+    return "Time ;limit";
+  case QpModelStatus::LARGE_NULLSPACE:
+    return "large nullspace";
+  case QpModelStatus::ERROR:
+    return "Error";
+  default:
+    return "Unidentified QP model status";
+  }
+}
+
 

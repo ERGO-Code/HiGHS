@@ -5,11 +5,15 @@
 #include "qpsolver/feasibility_bounded.hpp"
 
 QpAsmStatus quass2highs(Instance& instance, 
+			Settings& settings,
+			Statistics& stats,
 			QpModelStatus& qp_model_status,
 			QpSolution& qp_solution,
 			HighsModelStatus& highs_model_status,
 			HighsBasis& highs_basis,
 			HighsSolution& highs_solution) {
+  stats.qp_model_status = HighsInt(qp_model_status);
+  settings.endofiterationevent.fire(stats);
   QpAsmStatus qp_asm_return_status = QpAsmStatus::kError;
   switch (qp_model_status) {
   case QpModelStatus::OPTIMAL:
@@ -41,6 +45,9 @@ QpAsmStatus quass2highs(Instance& instance,
     return QpAsmStatus::kError;
   case QpModelStatus::ERROR:
     highs_model_status = HighsModelStatus::kSolveError;
+    return QpAsmStatus::kError;
+  case QpModelStatus::kNotset:
+    highs_model_status = HighsModelStatus::kNotset;
     return QpAsmStatus::kError;
   default:
     highs_model_status = HighsModelStatus::kNotset;
@@ -136,15 +143,15 @@ QpAsmStatus solveqp(Instance& instance,
     computeStartingPointBounded(instance, settings, stats, qp_model_status, startinfo, qp_timer);
     if (qp_model_status == QpModelStatus::OPTIMAL) {
       qp_solution.primal = startinfo.primal;
-      return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
+      return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
     if (qp_model_status == QpModelStatus::UNBOUNDED) {
-      return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
+      return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } else  {
     computeStartingPointHighs(instance, settings, stats, qp_model_status, startinfo, highs_model_status, highs_basis, highs_solution, qp_timer);
     if (qp_model_status == QpModelStatus::INFEASIBLE) {
-      return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
+      return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } 
 
@@ -158,5 +165,5 @@ QpAsmStatus solveqp(Instance& instance,
   // postsolve
 
   // Transform QP status and qp_solution to HiGHS highs_basis and highs_solution
-  return quass2highs(instance, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
+  return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
 }

@@ -3495,20 +3495,32 @@ HighsStatus Highs::callSolveQp() {
   settings.reportingfequency = 100;
 
   // Setting qp_update_limit = 10 leads to error with lpHighs3
-  const HighsInt qp_update_limit = 10;// 1000; // default
+  const HighsInt qp_update_limit = 10;  // 1000; // default
   if (qp_update_limit != settings.reinvertfrequency) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo, "Changing QP reinversion frequency from %d to %d\n",
-		 int(settings.reinvertfrequency), int(qp_update_limit));
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Changing QP reinversion frequency from %d to %d\n",
+                 int(settings.reinvertfrequency), int(qp_update_limit));
     settings.reinvertfrequency = qp_update_limit;
   }
 
   // Define the QP solver logging function
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
-    int rep = stats.iteration.size() - 1;
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%11d  %15.8g           %6d %9.2fs\n",
-                 int(stats.iteration[rep]), stats.objval[rep],
-                 int(stats.nullspacedimension[rep]), stats.time[rep]);
+    if (stats.qp_model_status > -1) {
+      QpModelStatus qp_model_status = QpModelStatus(stats.qp_model_status);
+      if (qp_model_status == QpModelStatus::INDETERMINED ||
+          qp_model_status == QpModelStatus::LARGE_NULLSPACE ||
+          qp_model_status == QpModelStatus::ERROR ||
+          qp_model_status == QpModelStatus::kNotset)
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "QP solver returns status %s\n",
+                     qpModelStatusToString(qp_model_status).c_str());
+    } else {
+      int rep = stats.iteration.size() - 1;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "%11d  %15.8g           %6d %9.2fs\n",
+                   int(stats.iteration[rep]), stats.objval[rep],
+                   int(stats.nullspacedimension[rep]), stats.time[rep]);
+    }
   });
 
   settings.timelimit = options_.time_limit;
@@ -3539,7 +3551,9 @@ HighsStatus Highs::callSolveQp() {
   if (status == QpAsmStatus::kError) return HighsStatus::kError;
 
   assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
-  HighsStatus return_status = status == QpAsmStatus::kWarning ? HighsStatus::kWarning : HighsStatus::kOk;
+  HighsStatus return_status = status == QpAsmStatus::kWarning
+                                  ? HighsStatus::kWarning
+                                  : HighsStatus::kOk;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

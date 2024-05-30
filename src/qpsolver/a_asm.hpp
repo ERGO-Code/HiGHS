@@ -53,6 +53,7 @@ struct QpHotstartInformation {
 // 5) start from a qp solution and cleanup after recomputing basis and reduced hessian factorization
 
 std::string qpBasisStatusToString(const BasisStatus qp_basis_status);
+std::string qpModelStatusToString(const QpModelStatus qp_model_status);
 
 QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer);
 
