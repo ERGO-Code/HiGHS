@@ -75,65 +75,7 @@ void Basis::build() {
 }
 
 void Basis::rebuild() {
-  const HighsInt debug_qp_num_var = Atran.num_row;
-  const HighsInt debug_qp_num_con = Atran.num_col;
-  printf("Basis::rebuild() num_var = %d; num_con = %d; |nonactive_constraints| = %d; |active_constraints| = %d\n",
-	 int(debug_qp_num_var), int(debug_qp_num_con), int(nonactiveconstraintsidx.size()), int( activeconstraintidx.size()));
-  HighsInt debug_num_var_inactive = 0;
-  HighsInt debug_num_var_active_at_lower = 0;
-  HighsInt debug_num_var_active_at_upper = 0;
-  HighsInt debug_num_var_inactive_in_basis = 0;
-  HighsInt debug_num_con_inactive = 0;
-  HighsInt debug_num_con_active_at_lower = 0;
-  HighsInt debug_num_con_active_at_upper = 0;
-  HighsInt debug_num_con_inactive_in_basis = 0;
-
-  for (HighsInt i = 0; i < debug_qp_num_var; i++) {
-    switch (basisstatus[debug_qp_num_con + i]) {
-    case BasisStatus::Inactive:
-      debug_num_var_inactive++;
-      continue;
-    case BasisStatus::ActiveAtLower:
-      debug_num_var_active_at_lower++;
-      continue;
-    case BasisStatus::ActiveAtUpper:
-      debug_num_var_active_at_upper++;
-      continue;
-    case BasisStatus::InactiveInBasis:
-      debug_num_var_inactive_in_basis++;
-      continue;
-    default:
-      assert(111==123);
-    }
-  }
-
-  for (HighsInt i = 0; i < debug_qp_num_con; i++) {
-    switch (basisstatus[i]) {
-    case BasisStatus::Inactive:
-      debug_num_con_inactive++;
-      continue;
-    case BasisStatus::ActiveAtLower:
-      debug_num_con_active_at_lower++;
-      continue;
-    case BasisStatus::ActiveAtUpper:
-      debug_num_con_active_at_upper++;
-      continue;
-    case BasisStatus::InactiveInBasis:
-      debug_num_con_inactive_in_basis++;
-      continue;
-    default:
-      assert(111==123);
-    }
-  }
-  printf("Basis::rebuild() inactive / at_lower / at_upper / in_basis for var (%d / %d / %d / %d) and con (%d / %d / %d / %d)\n",
-	 int(debug_num_var_inactive),
-	 int(debug_num_var_active_at_lower),
-	 int(debug_num_var_active_at_upper),
-	 int(debug_num_var_inactive_in_basis),
-	 int(debug_num_con_inactive),
-	 int(debug_num_con_active_at_lower),
-	 int(debug_num_con_active_at_upper),
-	 int(debug_num_con_inactive_in_basis));
+  report();
 
   updatessinceinvert = 0;
   constraintindexinbasisfactor.clear();
@@ -152,15 +94,80 @@ void Basis::rebuild() {
 }
 
 void Basis::report() {
-  printf("basis: ");
-  for (HighsInt a_ : activeconstraintidx) {
-    printf("%" HIGHSINT_FORMAT " ", a_);
+  const HighsInt qp_num_var = Atran.num_row;
+  const HighsInt qp_num_con = Atran.num_col;
+  const HighsInt num_active = activeconstraintidx.size();
+  const HighsInt num_inactive = nonactiveconstraintsidx.size();
+
+  HighsInt num_var_inactive = 0;
+  HighsInt num_var_active_at_lower = 0;
+  HighsInt num_var_active_at_upper = 0;
+  HighsInt num_var_inactive_in_basis = 0;
+  HighsInt num_con_inactive = 0;
+  HighsInt num_con_active_at_lower = 0;
+  HighsInt num_con_active_at_upper = 0;
+  HighsInt num_con_inactive_in_basis = 0;
+
+  for (HighsInt i = 0; i < qp_num_var; i++) {
+    switch (basisstatus[qp_num_con + i]) {
+    case BasisStatus::Inactive:
+      num_var_inactive++;
+      continue;
+    case BasisStatus::ActiveAtLower:
+      num_var_active_at_lower++;
+      continue;
+    case BasisStatus::ActiveAtUpper:
+      num_var_active_at_upper++;
+      continue;
+    case BasisStatus::InactiveInBasis:
+      num_var_inactive_in_basis++;
+      continue;
+    default:
+      assert(111==123);
+    }
   }
-  printf(" - ");
-  for (HighsInt n_ : nonactiveconstraintsidx) {
-    printf("%" HIGHSINT_FORMAT " ", n_);
+
+  for (HighsInt i = 0; i < qp_num_con; i++) {
+    switch (basisstatus[i]) {
+    case BasisStatus::Inactive:
+      num_con_inactive++;
+      continue;
+    case BasisStatus::ActiveAtLower:
+      num_con_active_at_lower++;
+      continue;
+    case BasisStatus::ActiveAtUpper:
+      num_con_active_at_upper++;
+      continue;
+    case BasisStatus::InactiveInBasis:
+      num_con_inactive_in_basis++;
+      continue;
+    default:
+      assert(111==123);
+    }
   }
-  printf("\n");
+
+  
+  if (num_inactive + num_active < 100) {
+    printf("basis: ");
+    for (HighsInt a_ : activeconstraintidx) printf("%2d", int(a_));
+    printf(" - ");
+    for (HighsInt n_ : nonactiveconstraintsidx) printf("%2d", int(n_));
+    printf("\n");
+  }
+
+  printf("Basis::rebuild() QP(%6d [inact %6d; act %6d], %6d)",
+	 int(qp_num_var), int(num_inactive), int( num_active),
+	 int(qp_num_con));
+  printf(" inact / lo / up / basis for var (%6d / %6d / %6d / %6d) and con (%6d / %6d / %6d / %6d)\n",
+	 int(num_var_inactive),
+	 int(num_var_active_at_lower),
+	 int(num_var_active_at_upper),
+	 int(num_var_inactive_in_basis),
+	 int(num_con_inactive),
+	 int(num_con_active_at_lower),
+	 int(num_con_active_at_upper),
+	 int(num_con_inactive_in_basis));
+
 }
 
 // move that constraint into V section basis (will correspond to Nullspace
