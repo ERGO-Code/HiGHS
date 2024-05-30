@@ -224,9 +224,8 @@ static void computeStartingPointHighs(Instance& instance,
     }
   }
 
-  if (!have_starting_point)
-    assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
-	   instance.num_var);
+  assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
+	 instance.num_var);
 
   for (HighsInt ia : initialinactive) {
     if (ia < instance.num_con) {

@@ -317,7 +317,9 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
 
 
-
+  double last_logging_time = 0;
+  double logging_time_interval = 10;
+  
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
     // check iteration limit
@@ -339,15 +341,20 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   }
 
     // LOGGING
+    double run_time = timer.readRunHighsClock();
     if (runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
-        0) {
+        0 ||
+	run_time-last_logging_time > logging_time_interval) {
       bool log_report = true;
       if (runtime.statistics.num_iterations > 10*runtime.settings.reportingfequency) {
 	runtime.settings.reportingfequency *= 10;
 	log_report = false;
       }
+      if (run_time > 10*logging_time_interval) 
+	logging_time_interval *= 2.0;
       if (log_report) {
+	last_logging_time = run_time;
 	loginformation(runtime, basis, factor, timer);
 	runtime.settings.endofiterationevent.fire(runtime.statistics);
       }

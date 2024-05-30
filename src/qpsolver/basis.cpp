@@ -75,6 +75,21 @@ void Basis::build() {
 }
 
 void Basis::rebuild() {
+  printf("Basis::rebuild() Atran.num_row = %d; Atran.num_col = %d; |nonactive_constraints| = %d; |active_constraints| = %d\n",
+	 int(Atran.num_row), int(Atran.num_col), int(nonactiveconstraintsidx.size()), int( activeconstraintidx.size()));
+  HighsInt debug_num_var_inactive = 0;
+  HighsInt debug_num_var_active_at_lower = 0;
+  HighsInt debug_num_var_active_at_upper = 0;
+  HighsInt debug_num_var_inactive_in_basis = 0;
+  HighsInt debug_num_con_inactive = 0;
+  HighsInt debug_num_con_active_at_lower = 0;
+  HighsInt debug_num_con_active_at_upper = 0;
+  HighsInt debug_num_con_inactive_in_basis = 0;
+  /*
+ for (HighsInt i = 0; i < Atran.num_col; i++) {
+   switch (basis.getstatus(
+ }
+  */
   updatessinceinvert = 0;
   constraintindexinbasisfactor.clear();
 
