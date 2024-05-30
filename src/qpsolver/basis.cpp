@@ -75,8 +75,10 @@ void Basis::build() {
 }
 
 void Basis::rebuild() {
-  printf("Basis::rebuild() Atran.num_row = %d; Atran.num_col = %d; |nonactive_constraints| = %d; |active_constraints| = %d\n",
-	 int(Atran.num_row), int(Atran.num_col), int(nonactiveconstraintsidx.size()), int( activeconstraintidx.size()));
+  const HighsInt debug_qp_num_var = Atran.num_row;
+  const HighsInt debug_qp_num_con = Atran.num_col;
+  printf("Basis::rebuild() num_var = %d; num_con = %d; |nonactive_constraints| = %d; |active_constraints| = %d\n",
+	 int(debug_qp_num_var), int(debug_qp_num_con), int(nonactiveconstraintsidx.size()), int( activeconstraintidx.size()));
   HighsInt debug_num_var_inactive = 0;
   HighsInt debug_num_var_active_at_lower = 0;
   HighsInt debug_num_var_active_at_upper = 0;
@@ -85,11 +87,54 @@ void Basis::rebuild() {
   HighsInt debug_num_con_active_at_lower = 0;
   HighsInt debug_num_con_active_at_upper = 0;
   HighsInt debug_num_con_inactive_in_basis = 0;
-  /*
- for (HighsInt i = 0; i < Atran.num_col; i++) {
-   switch (basis.getstatus(
- }
-  */
+
+  for (HighsInt i = 0; i < debug_qp_num_var; i++) {
+    switch (basisstatus[debug_qp_num_con + i]) {
+    case BasisStatus::Inactive:
+      debug_num_var_inactive++;
+      continue;
+    case BasisStatus::ActiveAtLower:
+      debug_num_var_active_at_lower++;
+      continue;
+    case BasisStatus::ActiveAtUpper:
+      debug_num_var_active_at_upper++;
+      continue;
+    case BasisStatus::InactiveInBasis:
+      debug_num_var_inactive_in_basis++;
+      continue;
+    default:
+      assert(111==123);
+    }
+  }
+
+  for (HighsInt i = 0; i < debug_qp_num_con; i++) {
+    switch (basisstatus[i]) {
+    case BasisStatus::Inactive:
+      debug_num_con_inactive++;
+      continue;
+    case BasisStatus::ActiveAtLower:
+      debug_num_con_active_at_lower++;
+      continue;
+    case BasisStatus::ActiveAtUpper:
+      debug_num_con_active_at_upper++;
+      continue;
+    case BasisStatus::InactiveInBasis:
+      debug_num_con_inactive_in_basis++;
+      continue;
+    default:
+      assert(111==123);
+    }
+  }
+  printf("Basis::rebuild() inactive / at_lower / at_upper / in_basis for var (%d / %d / %d / %d) and con (%d / %d / %d / %d)\n",
+	 int(debug_num_var_inactive),
+	 int(debug_num_var_active_at_lower),
+	 int(debug_num_var_active_at_upper),
+	 int(debug_num_var_inactive_in_basis),
+	 int(debug_num_con_inactive),
+	 int(debug_num_con_active_at_lower),
+	 int(debug_num_con_active_at_upper),
+	 int(debug_num_con_inactive_in_basis));
+
   updatessinceinvert = 0;
   constraintindexinbasisfactor.clear();
 
