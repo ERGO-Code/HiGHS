@@ -591,8 +591,9 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.col_names_.resize(num_col);
+  this->model_.lp_.col_hash_.update(col, this->model_.lp_.col_names_[col],
+                                    name);
   this->model_.lp_.col_names_[col] = name;
-  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -611,8 +612,9 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
+  this->model_.lp_.row_hash_.update(row, this->model_.lp_.row_names_[row],
+                                    name);
   this->model_.lp_.row_names_[row] = name;
-  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
