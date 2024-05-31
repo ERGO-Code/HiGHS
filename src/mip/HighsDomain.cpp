@@ -49,6 +49,8 @@ static double activityContributionMax(double coef, const double& lb,
 static double computeDelta(HighsInt row, double val, double oldbound,
                            double newbound, double inf,
                            std::vector<HighsInt>& numinfs) {
+  // if bounds are huge, HighsCDouble should be used when computing bound
+  // differences. todo: qualify usage of HighsCDouble in this function.
   if (oldbound == inf) {
     --numinfs[row];
     return newbound * val;
