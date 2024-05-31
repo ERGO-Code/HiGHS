@@ -24,7 +24,7 @@ namespace ipx {
 // otherwise.
 //
 // When modifying the vector changes its pattern (e.g. by writing to v[i] for an
-// arbitray index i), you have to invalidate the pattern or provide the new one.
+// arbitrary index i), you have to invalidate the pattern or provide the new one.
 
 class IndexedVector {
 public:

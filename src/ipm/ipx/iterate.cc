@@ -279,7 +279,7 @@ void Iterate::Postprocess() {
 
     // For fixed variables compute xl[j] and xu[j] from x[j]. If the lower and
     // upper bound are equal, set zl[j] or zu[j] such that the variable is dual
-    // feasibile. Otherwise leave them zero.
+    // feasible. Otherwise leave them zero.
     for (Int j = 0; j < n+m; j++) {
         if (StateOf(j) == State::fixed) {
             xl_[j] = x_[j] - lb[j];

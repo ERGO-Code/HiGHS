@@ -25,7 +25,7 @@ public:
     //                       kLuDependencyTol as absolute pivot tolerance and to
     //                       remove columns from the active submatrix
     //                       immediately when all entries became smaller than
-    //                       the abolute pivot tolerance. Need not be supported
+    //                       the absolute pivot tolerance. Need not be supported
     //                       by the implementation.
     //
     // Factorize() cannot fail other than for out of memory, in which case
