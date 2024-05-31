@@ -336,6 +336,7 @@ class HighsDomain {
  public:
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
+  std::set<std::pair<HighsInt, double>> lifting_opportunities_;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -362,7 +363,8 @@ class HighsDomain {
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
         col_lower_(other.col_lower_),
-        col_upper_(other.col_upper_) {
+        col_upper_(other.col_upper_),
+        lifting_opportunities_(other.lifting_opportunities_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -394,6 +396,7 @@ class HighsDomain {
     branchPos_ = other.branchPos_;
     col_lower_ = other.col_lower_;
     col_upper_ = other.col_upper_;
+    lifting_opportunities_ = other.lifting_opportunities_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
