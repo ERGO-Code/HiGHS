@@ -3503,24 +3503,23 @@ HighsStatus Highs::callSolveQp() {
     settings.reinvertfrequency = qp_update_limit;
   }
 
-  // Define the QP solver logging function
-  settings.endofiterationevent.subscribe([this](Statistics& stats) {
-    if (stats.qp_model_status > -1) {
-      QpModelStatus qp_model_status = QpModelStatus(stats.qp_model_status);
-      if (qp_model_status == QpModelStatus::kUndetermined ||
-          qp_model_status == QpModelStatus::kLargeNullspace ||
-          qp_model_status == QpModelStatus::kError ||
-          qp_model_status == QpModelStatus::kNotset)
-        highsLogUser(options_.log_options, HighsLogType::kInfo,
-                     "QP solver model status: %s\n",
-                     qpModelStatusToString(qp_model_status).c_str());
-    } else {
-      int rep = stats.iteration.size() - 1;
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "%11d  %15.8g           %6d %9.2fs\n",
-                   int(stats.iteration[rep]), stats.objval[rep],
-                   int(stats.nullspacedimension[rep]), stats.time[rep]);
-    }
+  // Define the QP model status logging function
+  settings.qp_model_status_log.subscribe([this](QpModelStatus& qp_model_status) {
+    if (qp_model_status == QpModelStatus::kUndetermined ||
+	qp_model_status == QpModelStatus::kLargeNullspace ||
+	qp_model_status == QpModelStatus::kError ||
+	qp_model_status == QpModelStatus::kNotset)
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "QP solver model status: %s\n",
+		   qpModelStatusToString(qp_model_status).c_str());
+  });
+
+  // Define the QP solver iteration logging function
+  settings.iteration_log.subscribe([this](Statistics& stats) {
+    int rep = stats.iteration.size() - 1;
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+		 "%11d  %15.8g           %6d %9.2fs\n",
+		 int(stats.iteration[rep]), stats.objval[rep],
+		 int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
   settings.timelimit = options_.time_limit;

@@ -356,7 +356,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
       if (log_report) {
 	last_logging_time = run_time;
 	loginformation(runtime, basis, factor, timer);
-	runtime.settings.endofiterationevent.fire(runtime.statistics);
+	runtime.settings.iteration_log.fire(runtime.statistics);
       }
     }
     runtime.statistics.num_iterations++;
@@ -460,7 +460,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   }
 
   loginformation(runtime, basis, factor, timer);
-  runtime.settings.endofiterationevent.fire(runtime.statistics);
+  runtime.settings.iteration_log.fire(runtime.statistics);
 
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));

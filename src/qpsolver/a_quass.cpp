@@ -12,8 +12,7 @@ QpAsmStatus quass2highs(Instance& instance,
 			HighsModelStatus& highs_model_status,
 			HighsBasis& highs_basis,
 			HighsSolution& highs_solution) {
-  stats.qp_model_status = HighsInt(qp_model_status);
-  settings.endofiterationevent.fire(stats);
+  settings.qp_model_status_log.fire(qp_model_status);
   QpAsmStatus qp_asm_return_status = QpAsmStatus::kError;
   switch (qp_model_status) {
   case QpModelStatus::kOptimal:

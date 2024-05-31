@@ -5,7 +5,6 @@
 #include <vector>
 
 struct Statistics {
-  HighsInt qp_model_status = -1;
   HighsInt phase1_iterations = 0;
   HighsInt num_iterations = 0;
   std::chrono::high_resolution_clock::time_point time_start;

@@ -2,6 +2,7 @@
 #define __SRC_LIB_SETTINGS_HPP__
 
 #include "eventhandler.hpp"
+#include "qpconst.hpp"
 #include "statistics.hpp"
 
 enum class RatiotestStrategy { TwoPass, Textbook };
@@ -34,7 +35,8 @@ struct Settings {
 
   OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 1;
-  Eventhandler<Statistics&> endofiterationevent;
+  Eventhandler<Statistics&> iteration_log;
+  Eventhandler<QpModelStatus&> qp_model_status_log;
 
   HighsInt reinvertfrequency = 1000;
   HighsInt gradientrecomputefrequency = 100;
