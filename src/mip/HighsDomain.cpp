@@ -480,8 +480,8 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
   cutpool->getMatrix().forEachPositiveColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val > 0);
-        HighsCDouble deltamin = computeDelta(row, val, oldbound, newbound,
-                                             -kHighsInf, activitycutsinf_);
+        double deltamin = computeDelta(row, val, oldbound, newbound, -kHighsInf,
+                                       activitycutsinf_);
         activitycuts_[row] += deltamin;
 
         if (deltamin <= 0) {
@@ -541,8 +541,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   cutpool->getMatrix().forEachNegativeColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val < 0);
-        HighsCDouble deltamin = computeDelta(row, val, oldbound, newbound,
-                                             kHighsInf, activitycutsinf_);
+        double deltamin = computeDelta(row, val, oldbound, newbound, kHighsInf,
+                                       activitycutsinf_);
         activitycuts_[row] += deltamin;
 
         if (deltamin <= 0) {
@@ -1527,7 +1527,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
-      HighsCDouble deltamin =
+      double deltamin =
           computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
                        oldbound, newbound, -kHighsInf, activitymininf_);
       activitymin_[mip->a_matrix_.index_[i]] += deltamin;
@@ -1571,7 +1571,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         markPropagate(mip->a_matrix_.index_[i]);
     } else {
-      HighsCDouble deltamax =
+      double deltamax =
           computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
                        oldbound, newbound, -kHighsInf, activitymaxinf_);
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
@@ -1666,7 +1666,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
   for (HighsInt i = start; i != end; ++i) {
     if (mip->a_matrix_.value_[i] > 0) {
-      HighsCDouble deltamax =
+      double deltamax =
           computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
                        oldbound, newbound, kHighsInf, activitymaxinf_);
       activitymax_[mip->a_matrix_.index_[i]] += deltamax;
@@ -1713,7 +1713,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         // propagateinds_.push_back(mip->a_matrix_.index_[i]);
       }
     } else {
-      HighsCDouble deltamin =
+      double deltamin =
           computeDelta(mip->a_matrix_.index_[i], mip->a_matrix_.value_[i],
                        oldbound, newbound, kHighsInf, activitymininf_);
       activitymin_[mip->a_matrix_.index_[i]] += deltamin;
