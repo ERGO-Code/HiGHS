@@ -96,7 +96,9 @@ void Basis::rebuild() {
 }
 
 void Basis::report() {
-  // Basis of dimension qp_num_var, partitioned into
+  //
+  // Basis of dimension qp_num_var, analogous to primal simplex
+  // nonbasic variables, partitioned into
   //
   // * Indices of active variables/constraints, so index values in {0,
   // * ..., qp_num_con-1}. These are listed in active_constraint_index
@@ -108,7 +110,24 @@ void Basis::report() {
   // * qp_num_con-1}?) used to complete the basis. The number of
   // * inactive variables defines the dimension of the null space.
   //
-  // Remaining qp_num_con indices are of
+  // Remaining qp_num_con indices may be degenerate, otherwise they
+  // are off their bounds. They are analogous to primal simplex basic
+  // variables, in that their values are solved for. 
+  //
+  // Hence the correspondence between the QP basis and a HiGHS
+  // (simplex) basis is as follows
+  //
+  // For variables or constraints
+  //
+  // BasisStatus::Inactive: HighsBasisStatus::kBasic
+  //
+  // BasisStatus::ActiveAtLower: HighsBasisStatus::kLower
+  //
+  // BasisStatus::ActiveAtUpper: HighsBasisStatus::kUpper
+  //
+  // BasisStatus::InactiveInBasis: HighsBasisStatus::kNonbasic
+  //
+  // 
   const HighsInt qp_num_var = Atran.num_row;
   const HighsInt qp_num_con = Atran.num_col;
   const HighsInt num_active_in_basis = active_constraint_index.size();
@@ -195,6 +214,8 @@ void Basis::report() {
 	 int(num_con_active_at_upper),
 	 int(num_con_inactive_in_basis));
   assert(num_con_inactive_in_basis == 0);
+  assert(qp_num_var == num_inactive_in_basis + num_active_in_basis);
+  assert(qp_num_con == num_var_inactive + num_con_inactive);
   assert(num_inactive_in_basis == num_var_inactive_in_basis + num_con_inactive_in_basis);
   assert(num_active_in_basis == num_var_active_at_lower + num_var_active_at_upper + num_con_active_at_lower + num_con_active_at_upper);
 }

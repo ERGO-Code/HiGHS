@@ -87,6 +87,7 @@ QpAsmStatus quass2highs(Instance& instance,
     } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
       highs_basis.col_status[i] = HighsBasisStatus::kNonbasic;
     } else {
+      assert(qp_solution.status_var[i] == BasisStatus::Inactive);
       highs_basis.col_status[i] = HighsBasisStatus::kBasic;
     }
   }
@@ -100,6 +101,7 @@ QpAsmStatus quass2highs(Instance& instance,
     } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
       highs_basis.row_status[i] = HighsBasisStatus::kNonbasic;
     } else {
+      assert(qp_solution.status_con[i] == BasisStatus::Inactive);
       highs_basis.row_status[i] = HighsBasisStatus::kBasic;
     }
   }

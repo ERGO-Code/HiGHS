@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -832,7 +832,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   }
 
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
-  if (dev_run) incumbent_model.hessian_.print();
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
 
   arg0.resize(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
@@ -850,7 +850,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     mask[iRow] = 1;
   }
   highs.deleteCols(mask.data());
-  if (dev_run) incumbent_model.hessian_.print();
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
 
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     HighsInt iRow = mask[iCol];

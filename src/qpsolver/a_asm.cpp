@@ -30,7 +30,7 @@ std::string qpBasisStatusToString(const BasisStatus qp_basis_status) {
   case BasisStatus::ActiveAtLower:
     return "Active at lower bound";
   case BasisStatus::ActiveAtUpper:
-    return "Active at uppwer bound";
+    return "Active at upper bound";
   case BasisStatus::InactiveInBasis:
     return "Inactive in basis";
   default:

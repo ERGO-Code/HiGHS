@@ -3512,7 +3512,7 @@ HighsStatus Highs::callSolveQp() {
           qp_model_status == QpModelStatus::ERROR ||
           qp_model_status == QpModelStatus::kNotset)
         highsLogUser(options_.log_options, HighsLogType::kInfo,
-                     "QP solver returns status %s\n",
+                     "QP solver model status: %s\n",
                      qpModelStatusToString(qp_model_status).c_str());
     } else {
       int rep = stats.iteration.size() - 1;
