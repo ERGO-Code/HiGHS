@@ -183,10 +183,10 @@ static void computeStartingPointHighs(Instance& instance,
   for (HighsInt i = 0; i < (HighsInt)use_basis.row_status.size(); i++) {
     if (use_basis.row_status[i] == HighsBasisStatus::kLower) {
       initialactive.push_back(i);
-      atlower.push_back(BasisStatus::ActiveAtLower);
+      atlower.push_back(BasisStatus::kActiveAtLower);
     } else if (use_basis.row_status[i] == HighsBasisStatus::kUpper) {
       initialactive.push_back(i);
-      atlower.push_back(BasisStatus::ActiveAtUpper);
+      atlower.push_back(BasisStatus::kActiveAtUpper);
     } else if (use_basis.row_status[i] != HighsBasisStatus::kBasic) {
       // printf("row %d nonbasic\n", i);
       initialinactive.push_back(instance.num_con + i);
@@ -201,7 +201,7 @@ static void computeStartingPointHighs(Instance& instance,
         initialinactive.push_back(instance.num_con + i);
       } else {
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtLower);
+        atlower.push_back(BasisStatus::kActiveAtLower);
       }
       
     } else if (use_basis.col_status[i] == HighsBasisStatus::kUpper) {
@@ -209,7 +209,7 @@ static void computeStartingPointHighs(Instance& instance,
         initialinactive.push_back(instance.num_con + i);
       } else {
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtUpper);
+        atlower.push_back(BasisStatus::kActiveAtUpper);
       }
       
     } else if (use_basis.col_status[i] == HighsBasisStatus::kZero) {

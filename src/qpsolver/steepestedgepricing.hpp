@@ -33,12 +33,12 @@ class SteepestEdgePricing : public Pricing {
       if (val > maxval && fabs(lambda.value[indexinbasis]) >
                               runtime.settings.lambda_zero_threshold) {
         if (basis.getstatus(active_constraint_index[i]) ==
-                BasisStatus::ActiveAtLower &&
+                BasisStatus::kActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
           minidx = active_constraint_index[i];
           maxval = val;
         } else if (basis.getstatus(active_constraint_index[i]) ==
-                       BasisStatus::ActiveAtUpper &&
+                       BasisStatus::kActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
           minidx = active_constraint_index[i];
           maxval = val;

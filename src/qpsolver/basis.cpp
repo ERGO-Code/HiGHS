@@ -13,7 +13,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
   buffer_vec2hvec.setup(rt.instance.num_var);
 
   for (HighsInt i=0; i<runtime.instance.num_var + runtime.instance.num_con; i++) {
-    basisstatus[i] = BasisStatus::Inactive;
+    basisstatus[i] = BasisStatus::kInactive;
   }
 
   for (size_t i = 0; i < active.size(); i++) {
@@ -22,7 +22,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
   }
   for (size_t i = 0; i< inactive.size(); i++) {
     non_active_constraint_index.push_back(inactive[i]);
-    basisstatus[non_active_constraint_index[i]] = BasisStatus::InactiveInBasis;
+    basisstatus[non_active_constraint_index[i]] = BasisStatus::kInactiveInBasis;
   }
 
   Atran = rt.instance.A.t();
@@ -119,13 +119,13 @@ void Basis::report() {
   //
   // For variables or constraints
   //
-  // BasisStatus::Inactive: HighsBasisStatus::kBasic
+  // BasisStatus::kInactive: HighsBasisStatus::kBasic
   //
-  // BasisStatus::ActiveAtLower: HighsBasisStatus::kLower
+  // BasisStatus::kActiveAtLower: HighsBasisStatus::kLower
   //
-  // BasisStatus::ActiveAtUpper: HighsBasisStatus::kUpper
+  // BasisStatus::kActiveAtUpper: HighsBasisStatus::kUpper
   //
-  // BasisStatus::InactiveInBasis: HighsBasisStatus::kNonbasic
+  // BasisStatus::kInactiveInBasis: HighsBasisStatus::kNonbasic
   //
   // 
   const HighsInt qp_num_var = Atran.num_row;
@@ -144,16 +144,16 @@ void Basis::report() {
 
   for (HighsInt i = 0; i < qp_num_var; i++) {
     switch (basisstatus[qp_num_con + i]) {
-    case BasisStatus::Inactive:
+    case BasisStatus::kInactive:
       num_var_inactive++;
       continue;
-    case BasisStatus::ActiveAtLower:
+    case BasisStatus::kActiveAtLower:
       num_var_active_at_lower++;
       continue;
-    case BasisStatus::ActiveAtUpper:
+    case BasisStatus::kActiveAtUpper:
       num_var_active_at_upper++;
       continue;
-    case BasisStatus::InactiveInBasis:
+    case BasisStatus::kInactiveInBasis:
       num_var_inactive_in_basis++;
       continue;
     default:
@@ -163,16 +163,16 @@ void Basis::report() {
 
   for (HighsInt i = 0; i < qp_num_con; i++) {
     switch (basisstatus[i]) {
-    case BasisStatus::Inactive:
+    case BasisStatus::kInactive:
       num_con_inactive++;
       continue;
-    case BasisStatus::ActiveAtLower:
+    case BasisStatus::kActiveAtLower:
       num_con_active_at_lower++;
       continue;
-    case BasisStatus::ActiveAtUpper:
+    case BasisStatus::kActiveAtUpper:
       num_con_active_at_upper++;
       continue;
-    case BasisStatus::InactiveInBasis:
+    case BasisStatus::kInactiveInBasis:
       num_con_inactive_in_basis++;
       continue;
     default:
@@ -225,7 +225,7 @@ void Basis::report() {
 void Basis::deactivate(HighsInt conid) {
   // printf("deact %" HIGHSINT_FORMAT "\n", conid);
   assert(contains(active_constraint_index, conid));
-  basisstatus[conid] = BasisStatus::InactiveInBasis;
+  basisstatus[conid] = BasisStatus::kInactiveInBasis;
   remove(active_constraint_index, conid);
   non_active_constraint_index.push_back(conid);
 }
@@ -234,7 +234,7 @@ QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisSt
                                HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(active_constraint_index, (HighsInt)conid)) {
-    basisstatus[nonactivetoremove] = BasisStatus::Inactive;
+    basisstatus[nonactivetoremove] = BasisStatus::kInactive;
     basisstatus[conid] = newstatus;
     active_constraint_index.push_back(conid);
   } else {
@@ -367,7 +367,7 @@ QpVector Basis::recomputex(const Instance& inst) {
     if (constraintindexinbasisfactor[con] == -1) {
       printf("error\n");
     }
-    if (basisstatus[con] == BasisStatus::ActiveAtLower) {
+    if (basisstatus[con] == BasisStatus::kActiveAtLower) {
       if (con < inst.num_con) {
         rhs.value[constraintindexinbasisfactor[con]] = inst.con_lo[con];
       } else {

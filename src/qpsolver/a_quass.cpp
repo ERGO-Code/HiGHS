@@ -80,28 +80,28 @@ QpAsmStatus quass2highs(Instance& instance,
   const bool report =  instance.num_var + instance.num_con < 100;
   for (HighsInt i = 0; i < instance.num_var; i++) {
     if (report) printf("Column %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_var[i]).c_str());
-    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_var[i] == BasisStatus::kActiveAtLower) {
       highs_basis.col_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_var[i] == BasisStatus::kActiveAtUpper) {
       highs_basis.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_var[i] == BasisStatus::kInactiveInBasis) {
       highs_basis.col_status[i] = HighsBasisStatus::kNonbasic;
     } else {
-      assert(qp_solution.status_var[i] == BasisStatus::Inactive);
+      assert(qp_solution.status_var[i] == BasisStatus::kInactive);
       highs_basis.col_status[i] = HighsBasisStatus::kBasic;
     }
   }
 
   for (HighsInt i = 0; i < instance.num_con; i++) {
     if (report) printf("Row    %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_con[i]).c_str());
-    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
+    if (qp_solution.status_con[i] == BasisStatus::kActiveAtLower) {
       highs_basis.row_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
+    } else if (qp_solution.status_con[i] == BasisStatus::kActiveAtUpper) {
       highs_basis.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
+    } else if (qp_solution.status_con[i] == BasisStatus::kInactiveInBasis) {
       highs_basis.row_status[i] = HighsBasisStatus::kNonbasic;
     } else {
-      assert(qp_solution.status_con[i] == BasisStatus::Inactive);
+      assert(qp_solution.status_con[i] == BasisStatus::kInactive);
       highs_basis.row_status[i] = HighsBasisStatus::kBasic;
     }
   }

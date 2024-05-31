@@ -73,11 +73,11 @@ static void computeStartingPointBounded(Instance& instance,
     } else if (res.value[i] <= instance.var_lo[i]) {
         res.value[i] = instance.var_lo[i];
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtLower);
+        atlower.push_back(BasisStatus::kActiveAtLower);
     } else if (res.value[i] >= instance.var_up[i]) {
         res.value[i] = instance.var_up[i];
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtUpper);
+        atlower.push_back(BasisStatus::kActiveAtUpper);
     } else {
         initialinactive.push_back(i + instance.num_con);
     }

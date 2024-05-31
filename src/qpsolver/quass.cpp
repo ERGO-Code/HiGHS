@@ -209,9 +209,9 @@ static void compute_actual_duals(Runtime& rt, Basis& basis, QpVector& lambda, Qp
       // active variable bound
       HighsInt var = e - rt.instance.num_con;
 
-      if (status == BasisStatus::ActiveAtUpper) {
+      if (status == BasisStatus::kActiveAtUpper) {
         dual_var.value[var] = -lambda.value[indexinbasis];
-      } else if (status == BasisStatus::ActiveAtLower) {
+      } else if (status == BasisStatus::kActiveAtLower) {
         dual_var.value[var] = lambda.value[indexinbasis];
       } else {
         assert(lambda.value[indexinbasis] == 0);
@@ -219,9 +219,9 @@ static void compute_actual_duals(Runtime& rt, Basis& basis, QpVector& lambda, Qp
       }
         
     } else {
-      if (status == BasisStatus::ActiveAtUpper) {
+      if (status == BasisStatus::kActiveAtUpper) {
         dual_con.value[e] = -lambda.value[indexinbasis];
-      } else if (status == BasisStatus::ActiveAtLower) {
+      } else if (status == BasisStatus::kActiveAtLower) {
         dual_con.value[e] = lambda.value[indexinbasis];
       } else {
         assert(lambda.value[indexinbasis] == 0);
@@ -430,8 +430,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
         status = basis.activate(runtime.settings, stepres.limitingconstraint,
                                 stepres.nowactiveatlower
-                                    ? BasisStatus::ActiveAtLower
-                                    : BasisStatus::ActiveAtUpper,
+                                    ? BasisStatus::kActiveAtLower
+                                    : BasisStatus::kActiveAtUpper,
                                 constrainttodrop, pricing.get());
         if (status != QpSolverStatus::OK) {
           runtime.status = QpModelStatus::kUndetermined;

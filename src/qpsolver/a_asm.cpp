@@ -25,13 +25,13 @@ QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInf
 
 std::string qpBasisStatusToString(const BasisStatus qp_basis_status) {
   switch (qp_basis_status) {
-  case BasisStatus::Inactive:
+  case BasisStatus::kInactive:
     return "Inactive";
-  case BasisStatus::ActiveAtLower:
+  case BasisStatus::kActiveAtLower:
     return "Active at lower bound";
-  case BasisStatus::ActiveAtUpper:
+  case BasisStatus::kActiveAtUpper:
     return "Active at upper bound";
-  case BasisStatus::InactiveInBasis:
+  case BasisStatus::kInactiveInBasis:
     return "Inactive in basis";
   default:
     return "Unidentified QP basis status";

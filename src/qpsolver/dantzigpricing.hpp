@@ -29,12 +29,12 @@ class DantzigPricing : public Pricing {
       assert(indexinbasis != -1);
 
       if (basis.getstatus(active_constraint_index[i]) ==
-              BasisStatus::ActiveAtLower &&
+              BasisStatus::kActiveAtLower &&
           -lambda.value[indexinbasis] > maxabslambda) {
         minidx = active_constraint_index[i];
         maxabslambda = -lambda.value[indexinbasis];
       } else if (basis.getstatus(active_constraint_index[i]) ==
-                     BasisStatus::ActiveAtUpper &&
+                     BasisStatus::kActiveAtUpper &&
                  lambda.value[indexinbasis] > maxabslambda) {
         minidx = active_constraint_index[i];
         maxabslambda = lambda.value[indexinbasis];

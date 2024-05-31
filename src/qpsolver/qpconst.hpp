@@ -17,10 +17,10 @@ enum class QpModelStatus {
 };
 
 enum class BasisStatus {
-  Inactive,
-  ActiveAtLower = 1,
-  ActiveAtUpper,
-  InactiveInBasis
+  kInactive,
+  kActiveAtLower = 1,
+  kActiveAtUpper,
+  kInactiveInBasis
 };
 
 
