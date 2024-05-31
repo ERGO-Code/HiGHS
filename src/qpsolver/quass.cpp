@@ -323,22 +323,23 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   bool atfsep = basis.getnumactive() == runtime.instance.num_var;
   while (true) {
     // check iteration limit
-    if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
+    if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
       runtime.status = QpModelStatus::kIterationLimit;
       break; 
     }
 
     // check time limit
-    if (timer.readRunHighsClock() >= runtime.settings.timelimit) {
+    if (timer.readRunHighsClock() >= runtime.settings.time_limit) {
       runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
 
-    if (basis.getnuminactive() > 4000) {
-      printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
+    
+    if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
+      runtime.settings.nullspace_limit_log.fire(runtime.settings.nullspace_limit);
       runtime.status = QpModelStatus::kLargeNullspace;
-    return;
-  }
+      return;
+    }
 
     // LOGGING
     double run_time = timer.readRunHighsClock();

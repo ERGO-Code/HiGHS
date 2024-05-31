@@ -87,7 +87,7 @@ static void computeStartingPointHighs(Instance& instance,
     // set HiGHS to be silent
     highs.setOptionValue("output_flag", false);
     highs.setOptionValue("presolve", "on");
-    highs.setOptionValue("time_limit", settings.timelimit -
+    highs.setOptionValue("time_limit", settings.time_limit -
                                          timer.readRunHighsClock());
 
     HighsLp lp;

@@ -55,7 +55,7 @@ std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
   case QpModelStatus::kTimeLimit:
     return "Time ;limit";
   case QpModelStatus::kLargeNullspace:
-    return "large nullspace";
+    return "Large nullspace";
   case QpModelStatus::kError:
     return "Error";
   default:

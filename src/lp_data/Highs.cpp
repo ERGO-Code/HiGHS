@@ -3503,27 +3503,53 @@ HighsStatus Highs::callSolveQp() {
     settings.reinvertfrequency = qp_update_limit;
   }
 
+  settings.iteration_limit = options_.qp_iteration_limit;
+  const HighsInt iteration_limit = kHighsIInf;  // kHighsIInf; // default
+  if (iteration_limit != settings.iteration_limit) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Changing QP iteration limit from %d to %d\n",
+                 int(settings.iteration_limit), int(iteration_limit));
+    settings.iteration_limit = iteration_limit;
+  }
+
+  settings.nullspace_limit = options_.qp_nullspace_limit;
+  const HighsInt nullspace_limit = 4000;  // 4000; // default
+  if (nullspace_limit != settings.nullspace_limit) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Changing QP nullspace limit from %d to %d\n",
+                 int(settings.nullspace_limit), int(nullspace_limit));
+    settings.nullspace_limit = nullspace_limit;
+  }
+
   // Define the QP model status logging function
-  settings.qp_model_status_log.subscribe([this](QpModelStatus& qp_model_status) {
-    if (qp_model_status == QpModelStatus::kUndetermined ||
-	qp_model_status == QpModelStatus::kLargeNullspace ||
-	qp_model_status == QpModelStatus::kError ||
-	qp_model_status == QpModelStatus::kNotset)
-      highsLogUser(options_.log_options, HighsLogType::kInfo, "QP solver model status: %s\n",
-		   qpModelStatusToString(qp_model_status).c_str());
-  });
+  settings.qp_model_status_log.subscribe(
+      [this](QpModelStatus& qp_model_status) {
+        if (qp_model_status == QpModelStatus::kUndetermined ||
+            qp_model_status == QpModelStatus::kLargeNullspace ||
+            qp_model_status == QpModelStatus::kError ||
+            qp_model_status == QpModelStatus::kNotset)
+          highsLogUser(options_.log_options, HighsLogType::kInfo,
+                       "QP solver model status: %s\n",
+                       qpModelStatusToString(qp_model_status).c_str());
+      });
 
   // Define the QP solver iteration logging function
   settings.iteration_log.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-		 "%11d  %15.8g           %6d %9.2fs\n",
-		 int(stats.iteration[rep]), stats.objval[rep],
-		 int(stats.nullspacedimension[rep]), stats.time[rep]);
+                 "%11d  %15.8g           %6d %9.2fs\n",
+                 int(stats.iteration[rep]), stats.objval[rep],
+                 int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
-  settings.timelimit = options_.time_limit;
-  settings.iterationlimit = options_.simplex_iteration_limit;
+  // Define the QP nullspace limit logging function
+  settings.nullspace_limit_log.subscribe([this](HighsInt& nullspace_limit) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "QP solver has exceeded nullspace limit of %d\n",
+                 int(nullspace_limit));
+  });
+
+  settings.time_limit = options_.time_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
 
   switch (options_.simplex_primal_edge_weight_strategy) {

@@ -9,8 +9,6 @@ enum class RatiotestStrategy { TwoPass, Textbook };
 
 enum class PricingStrategy { SteepestEdge, DantzigWolfe, Devex };
 
-enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
-
 enum class Phase1Strategy { HIGHS, QUASS, BOUNDED };
 
 struct Settings {
@@ -33,11 +31,13 @@ struct Settings {
   bool phase1movefreevarsbasic = false;
   bool phase1boundfreevars = false;
 
-  OutputLevel outputlevel = OutputLevel::LIGHT;
   HighsInt reportingfequency = 1;
   Eventhandler<Statistics&> iteration_log;
   Eventhandler<QpModelStatus&> qp_model_status_log;
+  Eventhandler<HighsInt&> nullspace_limit_log;
 
+  HighsInt nullspace_limit = 4000;
+  
   HighsInt reinvertfrequency = 1000;
   HighsInt gradientrecomputefrequency = 100;
   HighsInt reducedgradientrecomputefrequency =
@@ -45,8 +45,8 @@ struct Settings {
   HighsInt reducedhessianrecomputefrequency =
       std::numeric_limits<HighsInt>::infinity();
 
-  HighsInt iterationlimit = std::numeric_limits<HighsInt>::infinity();
-  double timelimit = std::numeric_limits<double>::infinity();
+  HighsInt iteration_limit = std::numeric_limits<HighsInt>::infinity();
+  double time_limit = std::numeric_limits<double>::infinity();
 
   bool rowscaling = true;
   bool varscaling = true;
