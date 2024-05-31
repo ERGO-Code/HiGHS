@@ -324,19 +324,19 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iterationlimit) {
-      runtime.status = QpModelStatus::ITERATIONLIMIT;
+      runtime.status = QpModelStatus::kIterationLimit;
       break; 
     }
 
     // check time limit
     if (timer.readRunHighsClock() >= runtime.settings.timelimit) {
-      runtime.status = QpModelStatus::TIMELIMIT;
+      runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
 
     if (basis.getnuminactive() > 4000) {
       printf("nullspace too large %" HIGHSINT_FORMAT "\n", basis.getnuminactive());
-      runtime.status = QpModelStatus::LARGE_NULLSPACE;
+      runtime.status = QpModelStatus::kLargeNullspace;
     return;
   }
 
@@ -373,7 +373,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
     if (atfsep) {
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
       if (minidx == -1) {
-        runtime.status = QpModelStatus::OPTIMAL;
+        runtime.status = QpModelStatus::kOptimal;
         break;
       }
 
@@ -395,7 +395,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
       if (!zero_curvature_direction) {
         status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
         if (status != QpSolverStatus::OK) {
-          runtime.status = QpModelStatus::INDETERMINED;
+          runtime.status = QpModelStatus::kUndetermined;
           return;
         }
       }
@@ -417,7 +417,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
         status = reduce(runtime, basis, stepres.limitingconstraint, buffer_d,
                         maxabsd, constrainttodrop);
         if (status != QpSolverStatus::OK) {
-          runtime.status = QpModelStatus::INDETERMINED;
+          runtime.status = QpModelStatus::kUndetermined;
           return;
         }
         if (!zero_curvature_direction) {
@@ -434,7 +434,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
                                     : BasisStatus::ActiveAtUpper,
                                 constrainttodrop, pricing.get());
         if (status != QpSolverStatus::OK) {
-          runtime.status = QpModelStatus::INDETERMINED;
+          runtime.status = QpModelStatus::kUndetermined;
           return;
         }
         if (basis.getnumactive() != runtime.instance.num_var) {
@@ -444,7 +444,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
         if (stepres.alpha ==
             std::numeric_limits<double>::infinity()) {
           // unbounded
-          runtime.status = QpModelStatus::UNBOUNDED;
+          runtime.status = QpModelStatus::kUnbounded;
           return;
         }
         atfsep = false;

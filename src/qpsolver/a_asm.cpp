@@ -42,21 +42,21 @@ std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
   switch (qp_model_status) {
   case QpModelStatus::kNotset:
     return "Not set";
-  case QpModelStatus::INDETERMINED:
+  case QpModelStatus::kUndetermined:
     return "Undertermined";
-  case QpModelStatus::OPTIMAL:
+  case QpModelStatus::kOptimal:
     return "Optimal";
-  case QpModelStatus::UNBOUNDED:
+  case QpModelStatus::kUnbounded:
     return "Unbounded";
-  case QpModelStatus::INFEASIBLE:
+  case QpModelStatus::kInfeasible:
     return "Infeasible";
-  case QpModelStatus::ITERATIONLIMIT:
+  case QpModelStatus::kIterationLimit:
     return "Iteration limit";
-  case QpModelStatus::TIMELIMIT:
+  case QpModelStatus::kTimeLimit:
     return "Time ;limit";
-  case QpModelStatus::LARGE_NULLSPACE:
+  case QpModelStatus::kLargeNullspace:
     return "large nullspace";
-  case QpModelStatus::ERROR:
+  case QpModelStatus::kError:
     return "Error";
   default:
     return "Unidentified QP model status";

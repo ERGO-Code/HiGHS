@@ -19,7 +19,7 @@ struct Runtime {
   QpVector rowactivity;
   QpVector dualvar;
   QpVector dualcon;
-  QpModelStatus status = QpModelStatus::INDETERMINED;
+  QpModelStatus status = QpModelStatus::kUndetermined;
 
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;

@@ -3507,9 +3507,9 @@ HighsStatus Highs::callSolveQp() {
   settings.endofiterationevent.subscribe([this](Statistics& stats) {
     if (stats.qp_model_status > -1) {
       QpModelStatus qp_model_status = QpModelStatus(stats.qp_model_status);
-      if (qp_model_status == QpModelStatus::INDETERMINED ||
-          qp_model_status == QpModelStatus::LARGE_NULLSPACE ||
-          qp_model_status == QpModelStatus::ERROR ||
+      if (qp_model_status == QpModelStatus::kUndetermined ||
+          qp_model_status == QpModelStatus::kLargeNullspace ||
+          qp_model_status == QpModelStatus::kError ||
           qp_model_status == QpModelStatus::kNotset)
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "QP solver model status: %s\n",

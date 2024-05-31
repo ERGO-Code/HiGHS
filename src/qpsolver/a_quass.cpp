@@ -16,34 +16,34 @@ QpAsmStatus quass2highs(Instance& instance,
   settings.endofiterationevent.fire(stats);
   QpAsmStatus qp_asm_return_status = QpAsmStatus::kError;
   switch (qp_model_status) {
-  case QpModelStatus::OPTIMAL:
+  case QpModelStatus::kOptimal:
     highs_model_status = HighsModelStatus::kOptimal;
     qp_asm_return_status = QpAsmStatus::kOk;
     break;
-  case QpModelStatus::UNBOUNDED:
+  case QpModelStatus::kUnbounded:
     highs_model_status = HighsModelStatus::kUnbounded;
     qp_asm_return_status = QpAsmStatus::kOk;
     break;
-  case QpModelStatus::INFEASIBLE:
+  case QpModelStatus::kInfeasible:
     highs_model_status = HighsModelStatus::kInfeasible;
     qp_asm_return_status = QpAsmStatus::kOk;
     break;
-  case QpModelStatus::ITERATIONLIMIT:
+  case QpModelStatus::kIterationLimit:
     highs_model_status = HighsModelStatus::kIterationLimit;
     qp_asm_return_status = QpAsmStatus::kWarning;
     break;
-  case QpModelStatus::TIMELIMIT:
+  case QpModelStatus::kTimeLimit:
     highs_model_status = HighsModelStatus::kTimeLimit;
     qp_asm_return_status = QpAsmStatus::kWarning;
     break;
-  case QpModelStatus::INDETERMINED:
+  case QpModelStatus::kUndetermined:
     highs_model_status = HighsModelStatus::kSolveError;
     qp_asm_return_status = QpAsmStatus::kError;
     return QpAsmStatus::kError;
-  case QpModelStatus::LARGE_NULLSPACE:
+  case QpModelStatus::kLargeNullspace:
     highs_model_status = HighsModelStatus::kSolveError;
     return QpAsmStatus::kError;
-  case QpModelStatus::ERROR:
+  case QpModelStatus::kError:
     highs_model_status = HighsModelStatus::kSolveError;
     return QpAsmStatus::kError;
   case QpModelStatus::kNotset:
@@ -118,7 +118,7 @@ QpAsmStatus solveqp(Instance& instance,
 		    HighsSolution& highs_solution,
 		    HighsTimer& qp_timer) {
 
-  QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
+  QpModelStatus qp_model_status = QpModelStatus::kUndetermined;
 
   QpSolution qp_solution(instance);
 
@@ -143,16 +143,16 @@ QpAsmStatus solveqp(Instance& instance,
   QpHotstartInformation startinfo(instance.num_var, instance.num_con);
   if (instance.num_con == 0 && instance.num_var <= 15000) {
     computeStartingPointBounded(instance, settings, stats, qp_model_status, startinfo, qp_timer);
-    if (qp_model_status == QpModelStatus::OPTIMAL) {
+    if (qp_model_status == QpModelStatus::kOptimal) {
       qp_solution.primal = startinfo.primal;
       return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
-    if (qp_model_status == QpModelStatus::UNBOUNDED) {
+    if (qp_model_status == QpModelStatus::kUnbounded) {
       return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } else  {
     computeStartingPointHighs(instance, settings, stats, qp_model_status, startinfo, highs_model_status, highs_basis, highs_solution, qp_timer);
-    if (qp_model_status == QpModelStatus::INFEASIBLE) {
+    if (qp_model_status == QpModelStatus::kInfeasible) {
       return quass2highs(instance, settings, stats, qp_model_status, qp_solution, highs_model_status, highs_basis, highs_solution);
     }
   } 

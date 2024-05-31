@@ -63,12 +63,12 @@ static void computeStartingPointBounded(Instance& instance,
     if (res.value[i] > 0.5/settings.hessianregularizationfactor 
         && instance.var_up[i] == std::numeric_limits<double>::infinity()
         && instance.c.value[i] < 0.0) {
-          modelstatus = QpModelStatus::UNBOUNDED;
+          modelstatus = QpModelStatus::kUnbounded;
           return;
     } else if (res.value[i] < 0.5/settings.hessianregularizationfactor 
         && instance.var_lo[i] == std::numeric_limits<double>::infinity()
         && instance.c.value[i] > 0.0) {
-          modelstatus = QpModelStatus::UNBOUNDED;
+          modelstatus = QpModelStatus::kUnbounded;
           return;
     } else if (res.value[i] <= instance.var_lo[i]) {
         res.value[i] = instance.var_lo[i];
@@ -89,7 +89,7 @@ static void computeStartingPointBounded(Instance& instance,
 
   // if no bounds are active, solution lies in the interior -> optimal
   if (initialactive.size() == 0) {
-    modelstatus = QpModelStatus::OPTIMAL;
+    modelstatus = QpModelStatus::kOptimal;
   }
 
   assert((HighsInt)(initialactive.size() + initialinactive.size()) ==

@@ -145,7 +145,7 @@ static void computeStartingPointHighs(Instance& instance,
 
     HighsStatus status = highs.run();
     if (status != HighsStatus::kOk) {
-      modelstatus = QpModelStatus::ERROR;
+      modelstatus = QpModelStatus::kError;
       return;
     }
 
@@ -153,7 +153,7 @@ static void computeStartingPointHighs(Instance& instance,
 
     HighsModelStatus phase1stat = highs.getModelStatus();
     if (phase1stat == HighsModelStatus::kInfeasible) {
-      modelstatus = QpModelStatus::INFEASIBLE;
+      modelstatus = QpModelStatus::kInfeasible;
       return;
     }
 

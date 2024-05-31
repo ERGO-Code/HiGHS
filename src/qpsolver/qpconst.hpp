@@ -6,14 +6,14 @@ enum class QpSolverStatus { OK, NOTPOSITIVDEFINITE, DEGENERATE };
 
 enum class QpModelStatus {
   kNotset, // 0
-  INDETERMINED,
-  OPTIMAL,
-  UNBOUNDED,
-  INFEASIBLE,
-  ITERATIONLIMIT,
-  TIMELIMIT,
-  LARGE_NULLSPACE,
-  ERROR
+  kUndetermined,
+  kOptimal,
+  kUnbounded,
+  kInfeasible,
+  kIterationLimit,
+  kTimeLimit,
+  kLargeNullspace,
+  kError
 };
 
 enum class BasisStatus {
