@@ -3495,7 +3495,7 @@ HighsStatus Highs::callSolveQp() {
   settings.reportingfequency = 100;
 
   // Setting qp_update_limit = 10 leads to error with lpHighs3
-  const HighsInt qp_update_limit = 10;  // 1000; // default
+  const HighsInt qp_update_limit = 1000;  // 1000; // default
   if (qp_update_limit != settings.reinvertfrequency) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Changing QP reinversion frequency from %d to %d\n",

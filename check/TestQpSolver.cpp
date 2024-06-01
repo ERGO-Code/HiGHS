@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "io/FilereaderLp.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
@@ -874,7 +874,6 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   }
 }
 
-/*
 TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   // Test hot start
   HighsStatus return_status;
@@ -884,10 +883,19 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
 
   for (HighsInt k = 0; k < 2; k++) {
     //    if (dev_run)
-      printf("\n===================\nHot start test %d\n===================\n", int(k));
+    printf(
+        "\n"
+        "===================\n"
+        "Hot start test %d\n"
+        "===================\n",
+        int(k));
     if (k == 1) {
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else if (k == 2) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
     } else {
       HighsModel model;
@@ -910,39 +918,65 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     }
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
-    //    if (dev_run)
-    highs.writeSolution("", 1);
+
+    if (dev_run) highs.writeSolution("", 1);
 
     HighsBasis basis = highs.getBasis();
     HighsSolution solution = highs.getSolution();
     //    if (dev_run)
     printf("Saved basis has validity = %d\n", basis.valid);
 
-    printf("==============================\nHot start re-run\n================================\n");
+    printf(
+        "================\n"
+        "Hot start re-run\n"
+        "================\n");
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
 
-    printf("================================\nHot start using saved basis\n================================\n");
+    printf(
+        "===========================\n"
+        "Hot start using saved basis\n"
+        "===========================\n");
     highs.setBasis(basis);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
 
-    printf("================================\nHot start using saved solution\n================================\n");
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    printf(
+        "==============================================================\n"
+        "Hot start using saved basis and solution after clearing solver\n"
+        "==============================================================\n");
+    highs.clearSolver();
     highs.setSolution(solution);
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(info.qp_iteration_count == 0);
-
-    printf("================================\nHot start using saved basis and solution\n================================\n");
     highs.setBasis(basis);
-    highs.setSolution(solution);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
-
-
+    /*
+    printf("=================================================\n"
+           "Hot start using saved basis after clearing solver\n"
+           "=================================================\n");
+    highs.clearSolver();
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+    */
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    printf(
+        "==============================================================\n"
+        "Hot start using alien basis and solution after clearing solver\n"
+        "==============================================================\n");
+    highs.clearSolver();
+    highs.setSolution(solution);
+    basis.alien = true;
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
   }
 }
-*/
