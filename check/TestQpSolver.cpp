@@ -891,11 +891,11 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
         int(k));
     if (k == 1) {
       const std::string filename =
-          std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+          std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
     } else if (k == 2) {
       const std::string filename =
-          std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+          std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
     } else {
       HighsModel model;

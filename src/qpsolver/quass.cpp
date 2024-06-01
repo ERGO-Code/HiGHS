@@ -338,6 +338,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
     
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
+      // #qp-hot-start temporary suppression
+      //
       //      runtime.settings.nullspace_limit_log.fire(runtime.settings.nullspace_limit);
       runtime.status = QpModelStatus::kLargeNullspace;
       return;
@@ -361,6 +363,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 	last_logging_time = run_time;
 	last_logging_iteration = runtime.statistics.num_iterations;
 	loginformation(runtime, basis, factor, timer);
+	// #qp-hot-start temporary suppression
+	//
 	//	runtime.settings.iteration_log.fire(runtime.statistics);
       }
     }
@@ -475,6 +479,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   }
 
   loginformation(runtime, basis, factor, timer);
+  // #qp-hot-start temporary suppression
+  //
   //  runtime.settings.iteration_log.fire(runtime.statistics);
   basis.report();
 
