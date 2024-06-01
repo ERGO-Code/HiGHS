@@ -948,7 +948,6 @@ TEST_CASE("test-qp-free-row", "[qpsolver]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
-  
-  highs.writeSolution("", 1);
 
+  highs.writeSolution("", 1);
 }
