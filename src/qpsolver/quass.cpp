@@ -317,10 +317,12 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
 
 
+  HighsInt last_logging_iteration = runtime.statistics.num_iterations-1;
   double last_logging_time = 0;
   double logging_time_interval = 10;
   
-  bool atfsep = basis.getnumactive() == runtime.instance.num_var;
+  const HighsInt current_num_active = basis.getnumactive();
+  bool atfsep = current_num_active == runtime.instance.num_var;
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
@@ -343,10 +345,11 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
     // LOGGING
     double run_time = timer.readRunHighsClock();
-    if (runtime.statistics.num_iterations %
+    if ((runtime.statistics.num_iterations %
             runtime.settings.reportingfequency ==
         0 ||
-	run_time-last_logging_time > logging_time_interval) {
+	 run_time-last_logging_time > logging_time_interval) &&
+	runtime.statistics.num_iterations > last_logging_iteration) {
       bool log_report = true;
       if (runtime.statistics.num_iterations > 10*runtime.settings.reportingfequency) {
 	runtime.settings.reportingfequency *= 10;
@@ -356,11 +359,11 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 	logging_time_interval *= 2.0;
       if (log_report) {
 	last_logging_time = run_time;
+	last_logging_iteration = runtime.statistics.num_iterations;
 	loginformation(runtime, basis, factor, timer);
 	runtime.settings.iteration_log.fire(runtime.statistics);
       }
     }
-    runtime.statistics.num_iterations++;
 
     // REINVERSION
     if (check_reinvert_due(basis)) {
@@ -372,11 +375,15 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
     bool zero_curvature_direction = false;
     double maxsteplength = 1.0;
     if (atfsep) {
+      // Determine a variable to relax from being active. If there is
+      // none, then basis is optimal
       HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
       if (minidx == -1) {
         runtime.status = QpModelStatus::kOptimal;
         break;
       }
+      // Now perform a real iteration
+      runtime.statistics.num_iterations++;
 
       HighsInt unit = basis.getindexinfactor()[minidx];
       QpVector::unit(runtime.instance.num_var, unit, buffer_yp);
@@ -402,6 +409,10 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
       }
       redgrad.expand(buffer_yp);
     } else {
+      // Compute a search direction - which may be zero, in which case
+      // atfsep is set true and the loop repeats with this
+      // condition. In particular, this happens when the current basis
+      // is optimal
       computesearchdirection_minor(runtime, basis, factor, redgrad, p);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
@@ -411,6 +422,9 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
         maxsteplength == 0.0 || (false && fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold)) {
       atfsep = true;
     } else {
+      // Now perform a real iteration
+      runtime.statistics.num_iterations++;
+
       RatiotestResult stepres = ratiotest(runtime, p, rowmove, maxsteplength);
       if (stepres.limitingconstraint != -1) {
         HighsInt constrainttodrop;
