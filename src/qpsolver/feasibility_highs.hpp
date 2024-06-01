@@ -67,10 +67,10 @@ static void computeStartingPointHighs(Instance& instance,
 	 sum_row_infeasibilities += row_infeasibility;
        }
      }
-     printf("computeStartingPointHighs highs_solution has num / max / sum col (%d / %g / %g) and row (%d / %g / %g) infeasibilities\n",
+     printf("computeStartingPointHighs highs_solution has (num / max / sum) col (%d / %g / %g) and row (%d / %g / %g) infeasibilities\n",
 	    int(num_col_infeasibilities), max_col_infeasibility, sum_col_infeasibilities,
 	    int(num_row_infeasibilities), max_row_infeasibility, sum_row_infeasibilities);
-     have_starting_point = 1==0 &&
+     have_starting_point = 
        num_col_infeasibilities == 0 &&
        num_row_infeasibilities == 0 &&
        highs_basis.valid;
@@ -86,15 +86,15 @@ static void computeStartingPointHighs(Instance& instance,
 
     // set HiGHS to be silent
     highs.setOptionValue("output_flag", false);
+
     highs.setOptionValue("presolve", "on");
+
     highs.setOptionValue("time_limit", settings.time_limit -
-                                         timer.readRunHighsClock());
+			 timer.readRunHighsClock());
 
     HighsLp lp;
-    lp.a_matrix_.index_ =
-      *((std::vector<HighsInt>*)&instance.A.mat.index);
-    lp.a_matrix_.start_ =
-      *((std::vector<HighsInt>*)&instance.A.mat.start);
+    lp.a_matrix_.index_ = instance.A.mat.index;
+    lp.a_matrix_.start_ = instance.A.mat.start;
     lp.a_matrix_.value_ = instance.A.mat.value;
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.col_cost_.assign(instance.num_var, 0.0);
@@ -106,7 +106,8 @@ static void computeStartingPointHighs(Instance& instance,
     lp.num_col_ = instance.num_var;
     lp.num_row_ = instance.num_con;
 
-    // create artificial bounds for free variables
+    // create artificial bounds for free variables: false by default
+    assert(!settings.phase1boundfreevars);
     if (settings.phase1boundfreevars) {
       for (HighsInt i=0; i<instance.num_var; i++) {
 	if (isfreevar(instance, i)) {
@@ -117,7 +118,8 @@ static void computeStartingPointHighs(Instance& instance,
     }
 
     highs.passModel(lp);
-
+    // Make free variables basic: false by default
+    assert(!settings.phase1movefreevarsbasic);
     if (settings.phase1movefreevarsbasic) {
       HighsBasis basis;
       basis.alien = true;  // Set true when basis is instantiated
@@ -127,10 +129,8 @@ static void computeStartingPointHighs(Instance& instance,
 
       for (HighsInt i = 0; i < instance.num_var; i++) {
 	// make free variables basic
-	if (instance.var_lo[i] ==
-	    -std::numeric_limits<double>::infinity() &&
-	    instance.var_up[i] ==
-	    std::numeric_limits<double>::infinity()) {
+	if (instance.var_lo[i] == -kHighsInf &&
+	    instance.var_up[i] == kHighsInf) {
 	  // free variable
 	  basis.col_status.push_back(HighsBasisStatus::kBasic);
 	} else {
@@ -177,75 +177,109 @@ static void computeStartingPointHighs(Instance& instance,
     }
   }
 
-  std::vector<HighsInt> initialactive;
-  std::vector<HighsInt> initialinactive;
-  std::vector<BasisStatus> atlower;
-  for (HighsInt i = 0; i < (HighsInt)use_basis.row_status.size(); i++) {
-    if (use_basis.row_status[i] == HighsBasisStatus::kLower) {
-      initialactive.push_back(i);
-      atlower.push_back(BasisStatus::kActiveAtLower);
-    } else if (use_basis.row_status[i] == HighsBasisStatus::kUpper) {
-      initialactive.push_back(i);
-      atlower.push_back(BasisStatus::kActiveAtUpper);
-    } else if (use_basis.row_status[i] != HighsBasisStatus::kBasic) {
-      // printf("row %d nonbasic\n", i);
-      initialinactive.push_back(instance.num_con + i);
+  std::vector<HighsInt> initial_active;
+  std::vector<HighsInt> initial_inactive;
+  std::vector<BasisStatus> initial_status;
+
+  const HighsInt num_highs_basis_status = HighsInt(HighsBasisStatus::kNonbasic)+1;
+  std::vector<HighsInt> debug_row_status_count;
+  debug_row_status_count.assign(num_highs_basis_status, 0);
+  for (HighsInt i = 0; i < HighsInt(use_basis.row_status.size()); i++) {
+    HighsBasisStatus status = use_basis.row_status[i];
+    debug_row_status_count[HighsInt(status)]++;
+    if (status == HighsBasisStatus::kLower) {
+      initial_active.push_back(i);
+      initial_status.push_back(BasisStatus::kActiveAtLower);
+    } else if (status == HighsBasisStatus::kUpper) {
+      initial_active.push_back(i);
+      initial_status.push_back(BasisStatus::kActiveAtUpper);
+    } else if (status == HighsBasisStatus::kZero) {
+      // Shouldn't happen, since free rows are basic in a logical
+      // basis and remain basic, or are removed by presolve and
+      // restored as basic in postsolve
+      assert(111==222);
+      // That said, a free row that is nonbasic in the Highs basis
+      // must be counted as inactive in the QP basis for accounting
+      // purposes
+      initial_inactive.push_back(i);
+    } else if (status != HighsBasisStatus::kBasic) {
+      assert(status == HighsBasisStatus::kNonbasic);
+      // Surely an error, but not a problem before, since simplex
+      // solver cannot return a HighsBasisStatus::kNonbasic
+      // variable. Does matter now, since a saved QP basis will
+      // generally have such variables.
+      //
+      //      initial_inactive.push_back(instance.num_con + i);
+      //
+      // A HighsBasisStatus::kNonbasic variable corresponds one-to-one
+      // with being inactive in the QP basis
+      initial_inactive.push_back(i);
     } else {
-      assert(use_basis.row_status[i] == HighsBasisStatus::kBasic);
+      assert(status == HighsBasisStatus::kBasic);
     }
   }
 
-  for (HighsInt i = 0; i < (HighsInt)use_basis.col_status.size(); i++) {
-    if (use_basis.col_status[i] == HighsBasisStatus::kLower) {
+  std::vector<HighsInt> debug_col_status_count;
+  debug_col_status_count.assign(num_highs_basis_status, 0);
+  for (HighsInt i = 0; i < HighsInt(use_basis.col_status.size()); i++) {
+    HighsBasisStatus status = use_basis.col_status[i];
+    debug_col_status_count[HighsInt(status)]++;
+    if (status == HighsBasisStatus::kLower) {
       if (isfreevar(instance, i)) {
-        initialinactive.push_back(instance.num_con + i);
+        initial_inactive.push_back(instance.num_con + i);
       } else {
-        initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::kActiveAtLower);
+        initial_active.push_back(instance.num_con + i);
+        initial_status.push_back(BasisStatus::kActiveAtLower);
       }
       
-    } else if (use_basis.col_status[i] == HighsBasisStatus::kUpper) {
+    } else if (status == HighsBasisStatus::kUpper) {
       if (isfreevar(instance, i)) {
-        initialinactive.push_back(instance.num_con + i);
+        initial_inactive.push_back(instance.num_con + i);
       } else {
-        initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::kActiveAtUpper);
+        initial_active.push_back(instance.num_con + i);
+        initial_status.push_back(BasisStatus::kActiveAtUpper);
       }
       
-    } else if (use_basis.col_status[i] == HighsBasisStatus::kZero) {
-      // printf("col %" HIGHSINT_FORMAT " free and set to 0 %" HIGHSINT_FORMAT
-      // "\n", i, (HighsInt)use_basis.col_status[i]);
-      initialinactive.push_back(instance.num_con + i);
-    } else if (use_basis.col_status[i] != HighsBasisStatus::kBasic) {
-      // printf("Column %" HIGHSINT_FORMAT " basis stus %" HIGHSINT_FORMAT "\n",
-      // i, (HighsInt)use_basis.col_status[i]);
+    } else if (status == HighsBasisStatus::kZero) {
+      initial_inactive.push_back(instance.num_con + i);
+    } else if (status != HighsBasisStatus::kBasic) {
+      assert(status == HighsBasisStatus::kNonbasic);
+      initial_inactive.push_back(instance.num_con + i);
     } else {
-      assert(use_basis.col_status[i] == HighsBasisStatus::kBasic);
+      assert(status == HighsBasisStatus::kBasic);
     }
   }
 
-  assert((HighsInt)(initialactive.size() + initialinactive.size()) ==
+  printf("QP solver initial basis: (Lo / Bs / Up / Ze / Nb) for cols (");
+  for (HighsInt k = 0; k < num_highs_basis_status; k++) 
+    printf("%s%d", k==0 ? "" : " / ", int(debug_col_status_count[k]));
+  printf(") and rows (");
+  for (HighsInt k = 0; k < num_highs_basis_status; k++) 
+    printf("%s%d", k==0 ? "" : " / ", int(debug_row_status_count[k]));
+  printf(")\n");
+
+  assert((HighsInt)(initial_active.size() + initial_inactive.size()) ==
 	 instance.num_var);
 
-  for (HighsInt ia : initialinactive) {
-    if (ia < instance.num_con) {
-      printf("free row %d\n", (int)ia);
-      assert(instance.con_lo[ia] ==
-             -std::numeric_limits<double>::infinity());
-      assert(instance.con_up[ia] ==
-             std::numeric_limits<double>::infinity());
-    } else {
-      // printf("free col %d\n", (int)ia);
-      assert(instance.var_lo[ia - instance.num_con] ==
-             -std::numeric_limits<double>::infinity());
-      assert(instance.var_up[ia - instance.num_con] ==
-             std::numeric_limits<double>::infinity());
+  if (!have_starting_point) {
+    // When starting from a feasible basis, there will generally be
+    // inactive variables in the basis that aren't free
+    for (HighsInt ia : initial_inactive) {
+      if (ia < instance.num_con) {
+	// printf("free row %d\n", (int)ia);
+	assert(instance.con_lo[ia] == -kHighsInf);
+	assert(instance.con_up[ia] == kHighsInf);
+      } else {
+	// printf("free col %d\n", (int)ia);
+	assert(instance.var_lo[ia - instance.num_con] == -kHighsInf);
+	assert(instance.var_up[ia - instance.num_con] == kHighsInf);
+      }
     }
   }
 
-  result.status = atlower;
-  result.active = initialactive;
-  result.inactive = initialinactive;
+  result.status = initial_status;
+  result.active = initial_active;
+  result.inactive = initial_inactive;
   result.primal = x0;
   result.rowact = ra;
 }

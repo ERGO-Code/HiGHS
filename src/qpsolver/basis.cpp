@@ -204,7 +204,7 @@ void Basis::report() {
   printf("Basis::report: QP(%6d [inact %6d; act %6d], %6d)",
 	 int(qp_num_var), int(num_inactive_in_basis), int(num_active_in_basis),
 	 int(qp_num_con));
-  printf(" inact / lo / up / basis for var (%6d / %6d / %6d / %6d) and con (%6d / %6d / %6d / %6d)\n",
+  printf(" (inact / lo / up / basis) for var (%6d / %6d / %6d / %6d) and con (%6d / %6d / %6d / %6d)\n",
 	 int(num_var_inactive),
 	 int(num_var_active_at_lower),
 	 int(num_var_active_at_upper),
@@ -213,7 +213,6 @@ void Basis::report() {
 	 int(num_con_active_at_lower),
 	 int(num_con_active_at_upper),
 	 int(num_con_inactive_in_basis));
-  assert(num_con_inactive_in_basis == 0);
   assert(qp_num_var == num_inactive_in_basis + num_active_in_basis);
   assert(qp_num_con == num_var_inactive + num_con_inactive);
   assert(num_inactive_in_basis == num_var_inactive_in_basis + num_con_inactive_in_basis);
@@ -264,7 +263,8 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
     return;
   }
 
-  HighsInt hint = 99999;
+  const HighsInt kHintNotChanged = 99999;
+  HighsInt hint = kHintNotChanged;
 
   HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
   if (buffered_p != droppedcon) {
@@ -283,7 +283,7 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
   basisfactor.update(&col_aq, &row_ep, &row_out, &hint);
 
   updatessinceinvert++;
-  if (updatessinceinvert >= settings.reinvertfrequency || hint != 99999) {
+  if (updatessinceinvert >= settings.reinvertfrequency || hint != kHintNotChanged) {
     reinversion_hint = true;
   }
   // since basis changed, buffered values are no longer valid

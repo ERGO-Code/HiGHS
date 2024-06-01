@@ -6,10 +6,6 @@
 
 #include "qpvector.hpp"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 struct MatrixBase {
   HighsInt num_row;
   HighsInt num_col;

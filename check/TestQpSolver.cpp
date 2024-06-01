@@ -920,3 +920,35 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
   }
 }
+
+TEST_CASE("test-qp-free-row", "[qpsolver]") {
+  // Test handling of a free rows
+  HighsStatus return_status;
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+
+  HighsModel model;
+  model.lp_.num_col_ = 2;
+  model.lp_.num_row_ = 2;
+  model.lp_.col_cost_ = {-2, -2};
+  model.lp_.col_lower_ = {-inf, -inf};
+  model.lp_.col_upper_ = {inf, inf};
+  model.lp_.row_lower_ = {1, -inf};
+  model.lp_.row_upper_ = {inf, inf};
+  model.lp_.a_matrix_.format_ = MatrixFormat::kRowwise;
+  model.lp_.a_matrix_.start_ = {0, 2, 4};
+  model.lp_.a_matrix_.index_ = {0, 1, 0, 1};
+  model.lp_.a_matrix_.value_ = {1, 1, -1, 1};
+  model.hessian_.dim_ = 2;
+  model.hessian_.start_ = {0, 1, 2};
+  model.hessian_.index_ = {0, 1};
+  model.hessian_.value_ = {2, 2};
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  
+  highs.writeSolution("", 1);
+
+}
