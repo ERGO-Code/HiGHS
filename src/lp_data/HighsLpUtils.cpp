@@ -2119,7 +2119,7 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   read_solution.value_valid = true;
   if (sparse) {
-    if (calculateRowValues(lp, read_solution.col_value,
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
                            read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
@@ -2129,7 +2129,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // should be "Rows" and correct number
   if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
     // Compute the row values since there are none to read
-    if (calculateRowValues(lp, read_solution.col_value,
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
                            read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
@@ -2154,7 +2154,7 @@ HighsStatus readSolutionFile(const std::string filename,
                  " rows, not %" HIGHSINT_FORMAT ": row values ignored\n",
                  num_row, lp_num_row);
     // Calculate the row values
-    if (calculateRowValues(lp, read_solution.col_value,
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
                            read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
   }
@@ -2394,7 +2394,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     }
   }
   HighsStatus return_status =
-      calculateRowValues(lp, solution.col_value, row_value);
+      calculateRowValuesQuad(lp, solution.col_value, row_value);
   if (return_status != HighsStatus::kOk) return return_status;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
@@ -2573,17 +2573,17 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::kOk;
 }
 
-HighsStatus calculateRowValues(const HighsLp& lp,
-                               const std::vector<double>& col_value,
-                               std::vector<double>& row_value) {
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, const std::vector<double>& col_value,
+				   std::vector<double>& row_value,
+                                   const HighsInt report_row) {
   const bool correct_size = int(col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
   const bool data_error = !correct_size || !is_colwise;
   assert(!data_error);
   if (data_error) return HighsStatus::kError;
 
-  row_value.clear();
-  row_value.assign(lp.num_row_, 0);
+  std::vector<HighsCDouble> row_value_quad;
+  row_value_quad.assign(lp.num_row_, HighsCDouble{0.0});
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2591,54 +2591,28 @@ HighsStatus calculateRowValues(const HighsLp& lp,
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-
-      row_value[row] += col_value[col] * lp.a_matrix_.value_[i];
-    }
-  }
-
-  return HighsStatus::kOk;
-}
-
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
-  return calculateRowValues(lp, solution.col_value, solution.row_value);
-}
-
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
-                                   const HighsInt report_row) {
-  const bool correct_size = int(solution.col_value.size()) == lp.num_col_;
-  const bool is_colwise = lp.a_matrix_.isColwise();
-  const bool data_error = !correct_size || !is_colwise;
-  assert(!data_error);
-  if (data_error) return HighsStatus::kError;
-
-  std::vector<HighsCDouble> row_value;
-  row_value.assign(lp.num_row_, HighsCDouble{0.0});
-
-  solution.row_value.assign(lp.num_row_, 0);
-
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt i = lp.a_matrix_.start_[col];
-         i < lp.a_matrix_.start_[col + 1]; i++) {
-      const HighsInt row = lp.a_matrix_.index_[i];
-      assert(row >= 0);
-      assert(row < lp.num_row_);
-      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+      row_value_quad[row] += col_value[col] * lp.a_matrix_.value_[i];
       if (row == report_row) {
         printf(
             "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
             ".col_value[%d] = %g\n",
-            int(row), double(row_value[row]), int(col),
-            solution.col_value[col]);
+            int(row), double(row_value_quad[row]), int(col),
+            col_value[col]);
       }
     }
   }
 
   // assign quad values to double vector
-  solution.row_value.resize(lp.num_row_);
-  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
+  row_value.resize(lp.num_row_);
+  std::transform(row_value_quad.begin(), row_value_quad.end(), row_value.begin(),
                  [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
+                                   const HighsInt report_row) {
+  return calculateRowValuesQuad(lp, solution.col_value, solution.row_value, report_row);
 }
 
 bool isColDataNull(const HighsLogOptions& log_options,

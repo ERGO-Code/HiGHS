@@ -230,12 +230,13 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible);
 
-HighsStatus calculateRowValues(const HighsLp& lp,
-                               const std::vector<double>& col_value,
-                               std::vector<double>& row_value);
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
+HighsStatus calculateRowValuesQuad(const HighsLp& lp,
+				   const std::vector<double>& col_value,
+				   std::vector<double>& row_value,
+                                   const HighsInt report_row = -1);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
+
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 
 bool isColDataNull(const HighsLogOptions& log_options,

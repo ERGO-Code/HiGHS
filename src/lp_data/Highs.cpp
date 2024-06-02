@@ -1940,8 +1940,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateRowValues(model_.lp_, solution_),
-          return_status, "calculateRowValues");
+          options_.log_options, calculateRowValuesQuad(model_.lp_, solution_),
+          return_status, "calculateRowValuesQuad");
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.value_valid = true;
