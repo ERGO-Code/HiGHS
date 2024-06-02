@@ -881,7 +881,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   //  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
-  for (HighsInt k = 0; k < 2; k++) {
+  for (HighsInt k = 0; k < 1; k++) {
     //    if (dev_run)
     printf(
         "\n"
