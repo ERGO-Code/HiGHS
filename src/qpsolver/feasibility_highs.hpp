@@ -161,22 +161,30 @@ static void computeStartingPointHighs(Instance& instance,
     use_solution = highs.getSolution();
   }
 
+  HighsInt num_small_x0 = 0;
+  HighsInt num_small_ra = 0;
+  const double zero_activity_tolerance = have_starting_point ? 0 : 1e-4;
   QpVector x0(instance.num_var);
   QpVector ra(instance.num_con);
   for (HighsInt i = 0; i < x0.dim; i++) {
-    if (fabs(use_solution.col_value[i]) > 10E-5) {
+    if (fabs(use_solution.col_value[i]) > zero_activity_tolerance) {
       x0.value[i] = use_solution.col_value[i];
       x0.index[x0.num_nz++] = i;
+    } else if (fabs(use_solution.col_value[i]) > 0) {
+      num_small_x0++;
     }
   }
 
   for (HighsInt i = 0; i < ra.dim; i++) {
-    if (fabs(use_solution.row_value[i]) > 10E-5) {
+    if (fabs(use_solution.row_value[i]) > zero_activity_tolerance) {
       ra.value[i] = use_solution.row_value[i];
       ra.index[ra.num_nz++] = i;
+    } else if (fabs(use_solution.row_value[i]) > 0) {
+      num_small_ra++;
     }
   }
-
+  if (num_small_x0+num_small_ra) printf("feasibility_highs has %d small col values and %d small row values\n",
+					int(num_small_x0), int(num_small_ra));
   std::vector<HighsInt> initial_active;
   std::vector<HighsInt> initial_inactive;
   std::vector<BasisStatus> initial_status;
