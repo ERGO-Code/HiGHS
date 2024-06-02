@@ -534,3 +534,40 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   REQUIRE(ray_value[0] == ray_value[1]);
   REQUIRE(ray_value[0] > 0);
 }
+
+/*
+TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-1};
+  lp.row_upper_ = {-1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {1, 1};
+  Highs highs;
+  //highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  highs.run();
+  //  if (dev_run)
+    printf("Solved infeasible QP: status = %s\n",
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  bool has_ray = false;
+  REQUIRE(highs.getDualRay(has_ray) == HighsStatus::kOk);
+  REQUIRE(has_ray == true);
+  std::vector<double> ray_value;
+  ray_value.assign(2, NAN);
+  highs.getDualRay(has_ray, ray_value.data());
+}
+*/

@@ -275,10 +275,19 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
-    getVariableKktFailures(
+
+    const bool status_value_ok = getVariableKktFailures(
         primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
         value, dual, status_pointer, integrality, absolute_primal_infeasibility,
         relative_primal_infeasibility, dual_infeasibility, value_residual);
+    if (!status_value_ok)
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "getKktFailures: %s %d status-value error: [%g; %g; %g] has "
+                   "residual %g\n",
+                   iVar < lp.num_col_ ? "Column" : "Row   ",
+                   iVar < lp.num_col_ ? int(iVar) : int(iVar - lp.num_col_),
+                   lower, value, upper, value_residual);
+    assert(status_value_ok);
     // Accumulate primal infeasibilities
     if (absolute_primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
@@ -481,7 +490,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 // If the basis status is valid, then the numbers of basic and
 // nonbasic variables are updated, and the extent to which a nonbasic
 // variable is off its bound is returned.
-void getVariableKktFailures(const double primal_feasibility_tolerance,
+bool getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
@@ -491,6 +500,7 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& relative_primal_infeasibility,
                             double& dual_infeasibility,
                             double& value_residual) {
+  bool status_value_ok = true;
   // @primal_infeasibility calculation
   absolute_primal_infeasibility = 0;
   relative_primal_infeasibility = 0;
@@ -524,11 +534,11 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
     // Check that kLower and kUpper are consistent with value and
     // bounds - for debugging QP basis errors
     if (*status_pointer == HighsBasisStatus::kLower) {
-      assert(value >= lower - primal_feasibility_tolerance &&
-             value <= lower + primal_feasibility_tolerance);
+      status_value_ok = value >= lower - primal_feasibility_tolerance &&
+                        value <= lower + primal_feasibility_tolerance;
     } else if (*status_pointer == HighsBasisStatus::kUpper) {
-      assert(value >= upper - primal_feasibility_tolerance &&
-             value <= upper + primal_feasibility_tolerance);
+      status_value_ok = value >= upper - primal_feasibility_tolerance &&
+                        value <= upper + primal_feasibility_tolerance;
     }
   }
   if (at_a_bound) {
@@ -551,6 +561,7 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
     // Off bounds (or free)
     dual_infeasibility = fabs(dual);
   }
+  return status_value_ok;
 }
 
 void HighsError::print(std::string message) {
