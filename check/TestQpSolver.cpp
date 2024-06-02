@@ -878,17 +878,17 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
   // Test hot start
   HighsStatus return_status;
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsInfo& info = highs.getInfo();
 
   for (HighsInt k = 0; k < 2; k++) {
-    //    if (dev_run)
-    printf(
-        "\n"
-        "===================\n"
-        "Hot start test %d\n"
-        "===================\n",
-        int(k));
+    if (dev_run)
+      printf(
+          "\n"
+          "===================\n"
+          "Hot start test %d\n"
+          "===================\n",
+          int(k));
     if (k == 1) {
       const std::string filename =
           std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
@@ -923,21 +923,22 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
 
     HighsBasis basis = highs.getBasis();
     HighsSolution solution = highs.getSolution();
-    //    if (dev_run)
-    printf("Saved basis has validity = %d\n", basis.valid);
+    if (dev_run) printf("Saved basis has validity = %d\n", basis.valid);
 
-    printf(
-        "================\n"
-        "Hot start re-run\n"
-        "================\n");
+    if (dev_run)
+      printf(
+          "================\n"
+          "Hot start re-run\n"
+          "================\n");
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
 
-    printf(
-        "===========================\n"
-        "Hot start using saved basis\n"
-        "===========================\n");
+    if (dev_run)
+      printf(
+          "===========================\n"
+          "Hot start using saved basis\n"
+          "===========================\n");
     highs.setBasis(basis);
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
@@ -945,10 +946,11 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
 
     // QP Hot start needs a saved solution as well as a basis after
     // clearSolver()
-    printf(
-        "==============================================================\n"
-        "Hot start using saved basis and solution after clearing solver\n"
-        "==============================================================\n");
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using saved basis and solution after clearing solver\n"
+          "==============================================================\n");
     highs.clearSolver();
     highs.setSolution(solution);
     highs.setBasis(basis);
@@ -956,6 +958,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
     /*
+        if (dev_run)
     printf("=================================================\n"
            "Hot start using saved basis after clearing solver\n"
            "=================================================\n");
@@ -967,10 +970,11 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     */
     // QP Hot start needs a saved solution as well as a basis after
     // clearSolver()
-    printf(
-        "==============================================================\n"
-        "Hot start using alien basis and solution after clearing solver\n"
-        "==============================================================\n");
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using alien basis and solution after clearing solver\n"
+          "==============================================================\n");
     highs.clearSolver();
     highs.setSolution(solution);
     basis.alien = true;

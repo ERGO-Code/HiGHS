@@ -78,9 +78,9 @@ QpAsmStatus quass2highs(Instance& instance,
   highs_basis.col_status.resize(instance.num_var);
   highs_basis.row_status.resize(instance.num_con);
 
-  const bool report =  instance.num_var + instance.num_con < 100;
+  const bool debug_report = false;// instance.num_var + instance.num_con < 100;
   for (HighsInt i = 0; i < instance.num_var; i++) {
-    if (report) printf("Column %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_var[i]).c_str());
+    if (debug_report) printf("Column %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_var[i]).c_str());
     if (qp_solution.status_var[i] == BasisStatus::kActiveAtLower) {
       highs_basis.col_status[i] = HighsBasisStatus::kLower;
     } else if (qp_solution.status_var[i] == BasisStatus::kActiveAtUpper) {
@@ -94,7 +94,7 @@ QpAsmStatus quass2highs(Instance& instance,
   }
 
   for (HighsInt i = 0; i < instance.num_con; i++) {
-    if (report) printf("Row    %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_con[i]).c_str());
+    if (debug_report) printf("Row    %2d: status %s\n", int(i), qpBasisStatusToString(qp_solution.status_con[i]).c_str());
     if (qp_solution.status_con[i] == BasisStatus::kActiveAtLower) {
       highs_basis.row_status[i] = HighsBasisStatus::kLower;
     } else if (qp_solution.status_con[i] == BasisStatus::kActiveAtUpper) {

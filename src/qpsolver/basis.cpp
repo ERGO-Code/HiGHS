@@ -34,7 +34,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
 }
 
 void Basis::build() {
-  report();
+  //  report();
 
   updatessinceinvert = 0;
 
@@ -77,7 +77,7 @@ void Basis::build() {
 }
 
 void Basis::rebuild() {
-  report();
+  //  report();
 
   updatessinceinvert = 0;
   constraintindexinbasisfactor.clear();

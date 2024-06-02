@@ -478,7 +478,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
   loginformation(runtime, basis, factor, timer);
   runtime.settings.iteration_log.fire(runtime.statistics);
-  basis.report();
+  //  basis.report();
 
   runtime.instance.sumnumprimalinfeasibilities(
       runtime.primal, runtime.instance.A.mat_vec(runtime.primal));

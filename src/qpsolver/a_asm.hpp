@@ -54,7 +54,14 @@ struct QpHotstartInformation {
 
 std::string qpBasisStatusToString(const BasisStatus qp_basis_status);
 std::string qpModelStatusToString(const QpModelStatus qp_model_status);
+void assessQpPrimalFeasibility(const Instance& instance, const double primal_feasibility_tolerance,
+			       const std::vector<double>& var_value, const std::vector<double>& con_value,
+			       HighsInt& num_var_infeasibilities, double& max_var_infeasibility, double& sum_var_infeasibilities,
+			       HighsInt& num_con_infeasibilities, double& max_con_infeasibility, double& sum_con_infeasibilities,
+			       double& max_con_residual, double& sum_con_residuals);
 
 QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer);
+
+
 
 #endif
