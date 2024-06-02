@@ -338,9 +338,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
     
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
-      // #qp-hot-start temporary suppression
-      //
-      //      runtime.settings.nullspace_limit_log.fire(runtime.settings.nullspace_limit);
+      runtime.settings.nullspace_limit_log.fire(runtime.settings.nullspace_limit);
       runtime.status = QpModelStatus::kLargeNullspace;
       return;
     }
