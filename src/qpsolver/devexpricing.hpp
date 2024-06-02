@@ -89,7 +89,7 @@ class DevexPricing : public Pricing {
                       (aq.value[rowindex_p] * aq.value[rowindex_p]) * weight_p *
                       weight_p;
       }
-      if (weights[i] > 10E6) {
+      if (weights[i] > 1e7) {
         weights[i] = 1.0;
       }
     }

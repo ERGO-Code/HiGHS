@@ -80,7 +80,7 @@ class SteepestEdgePricing : public Pricing {
   bool check_weight(HighsInt i) {
     double weight_is = weights[i];
     double weight_comp = compute_exact_weight(i);
-    if(fabs(weight_comp - weight_is) > 10E-3) {
+    if(fabs(weight_comp - weight_is) > 1e-2) {
       //printf("weights[%d] = %lf, should be %lf\n", i, weight_is, weight_comp);
       return false;
     }
@@ -136,7 +136,7 @@ class SteepestEdgePricing : public Pricing {
     // exact weight coming in needs to come in before update.
     double old_weight_p_computed = ep.dot(ep);
 
-    //if (fabs(old_weight_p_computed - old_weight_p_updated) >= 10E-3) {
+    //if (fabs(old_weight_p_computed - old_weight_p_updated) >= 1e-2) {
     //  printf("old weight[p] discrepancy: updated = %lf, computed=%lf\n", old_weight_p_updated, old_weight_p_computed);
     //}
 
@@ -157,7 +157,7 @@ class SteepestEdgePricing : public Pricing {
     //double computed_weight = new_ep.dot(new_ep);
     double new_weight_p_updated = weight_p / (t_p * t_p);
     
-    //if (fabs(updated_weight - computed_weight) > 10E-5) {
+    //if (fabs(updated_weight - computed_weight) > 1e-4) {
     //  printf("updated weight %lf vs computed weight %lf. aq[p] = %lf\n", updated_weight, computed_weight, t_p);
     //  printf("old weight = %lf, aq[p] = %lf, ^2 = %lf, new weight = %lf\n", weight_p, t_p, t_p*t_p, updated_weight);
     //}

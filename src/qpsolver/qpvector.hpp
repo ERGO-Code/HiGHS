@@ -85,7 +85,7 @@ struct QpVector {
     return val;
   }
 
-  void sanitize(double threshold = 10E-15) {
+  void sanitize(double threshold = 1e-14) {
     HighsInt new_idx = 0;
 
     for (HighsInt i = 0; i < num_nz; i++) {

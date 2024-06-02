@@ -388,7 +388,7 @@ class CholeskyFactor {
     HighsInt num_nz = 0;
     for (HighsInt i = 0; i < current_k; i++) {
       for (HighsInt j = 0; j < current_k; j++) {
-        if (fabs(L[i * current_k_max + j]) > 10e-8) {
+        if (fabs(L[i * current_k_max + j]) > 1e-7) {
           num_nz++;
         }
       }

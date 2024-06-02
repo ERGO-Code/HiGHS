@@ -81,7 +81,7 @@ static void computeStartingPointBounded(Instance& instance,
     } else {
         initialinactive.push_back(i + instance.num_con);
     }
-    if (fabs(res.value[i]) > 10E-5) {
+    if (fabs(res.value[i]) > 1e-4) {
       x0.value[i] = res.value[i];
       x0.index[x0.num_nz++] = i;
     }
