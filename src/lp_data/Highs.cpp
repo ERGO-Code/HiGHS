@@ -1954,7 +1954,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateColDuals(model_.lp_, solution_),
+          options_.log_options, calculateColDualsQuad(model_.lp_, solution_),
           return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }

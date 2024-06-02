@@ -2120,7 +2120,7 @@ HighsStatus readSolutionFile(const std::string filename,
   read_solution.value_valid = true;
   if (sparse) {
     if (calculateRowValuesQuad(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
@@ -2130,7 +2130,7 @@ HighsStatus readSolutionFile(const std::string filename,
   if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
     // Compute the row values since there are none to read
     if (calculateRowValuesQuad(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
@@ -2155,7 +2155,7 @@ HighsStatus readSolutionFile(const std::string filename,
                  num_row, lp_num_row);
     // Calculate the row values
     if (calculateRowValuesQuad(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
   }
   // OK to have no EOL
@@ -2549,14 +2549,15 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
   return return_status;
 }
 
-HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
+HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution) {
   const bool correct_size = int(solution.row_dual.size()) == lp.num_row_;
   const bool is_colwise = lp.a_matrix_.isColwise();
   const bool data_error = !correct_size || !is_colwise;
   assert(!data_error);
   if (data_error) return HighsStatus::kError;
 
-  solution.col_dual.assign(lp.num_col_, 0);
+  std::vector<HighsCDouble> col_dual_quad;
+  col_dual_quad.assign(lp.num_row_, HighsCDouble{0.0});
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2564,17 +2565,23 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      // @FlipRowDual -= became +=
-      solution.col_dual[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
+      col_dual_quad[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
     }
-    solution.col_dual[col] += lp.col_cost_[col];
+    col_dual_quad[col] += lp.col_cost_[col];
   }
+
+  // assign quad values to double vector
+  solution.col_dual.resize(lp.num_col_);
+  std::transform(col_dual_quad.begin(), col_dual_quad.end(),
+                 solution.col_dual.begin(),
+                 [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
 
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, const std::vector<double>& col_value,
-				   std::vector<double>& row_value,
+HighsStatus calculateRowValuesQuad(const HighsLp& lp,
+                                   const std::vector<double>& col_value,
+                                   std::vector<double>& row_value,
                                    const HighsInt report_row) {
   const bool correct_size = int(col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
@@ -2596,23 +2603,23 @@ HighsStatus calculateRowValuesQuad(const HighsLp& lp, const std::vector<double>&
         printf(
             "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
             ".col_value[%d] = %g\n",
-            int(row), double(row_value_quad[row]), int(col),
-            col_value[col]);
+            int(row), double(row_value_quad[row]), int(col), col_value[col]);
       }
     }
   }
 
   // assign quad values to double vector
   row_value.resize(lp.num_row_);
-  std::transform(row_value_quad.begin(), row_value_quad.end(), row_value.begin(),
-                 [](HighsCDouble x) { return double(x); });
+  std::transform(row_value_quad.begin(), row_value_quad.end(),
+                 row_value.begin(), [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row) {
-  return calculateRowValuesQuad(lp, solution.col_value, solution.row_value, report_row);
+  return calculateRowValuesQuad(lp, solution.col_value, solution.row_value,
+                                report_row);
 }
 
 bool isColDataNull(const HighsLogOptions& log_options,

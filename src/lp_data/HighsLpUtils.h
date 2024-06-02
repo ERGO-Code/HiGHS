@@ -231,13 +231,13 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    bool& integral, bool& feasible);
 
 HighsStatus calculateRowValuesQuad(const HighsLp& lp,
-				   const std::vector<double>& col_value,
-				   std::vector<double>& row_value,
+                                   const std::vector<double>& col_value,
+                                   std::vector<double>& row_value,
                                    const HighsInt report_row = -1);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
 
-HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
+HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution);
 
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,
