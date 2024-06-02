@@ -3504,22 +3504,7 @@ HighsStatus Highs::callSolveQp() {
   }
 
   settings.iteration_limit = options_.qp_iteration_limit;
-  const HighsInt iteration_limit = kHighsIInf;  // kHighsIInf; // default
-  if (iteration_limit != settings.iteration_limit) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Changing QP iteration limit from %d to %d\n",
-                 int(settings.iteration_limit), int(iteration_limit));
-    settings.iteration_limit = iteration_limit;
-  }
-
   settings.nullspace_limit = options_.qp_nullspace_limit;
-  const HighsInt nullspace_limit = 4000;  // 4000; // default
-  if (nullspace_limit != settings.nullspace_limit) {
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Changing QP nullspace limit from %d to %d\n",
-                 int(settings.nullspace_limit), int(nullspace_limit));
-    settings.nullspace_limit = nullspace_limit;
-  }
 
   // Define the QP model status logging function
   settings.qp_model_status_log.subscribe(

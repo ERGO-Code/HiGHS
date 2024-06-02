@@ -984,3 +984,31 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     REQUIRE(info.qp_iteration_count == 0);
   }
 }
+
+TEST_CASE("test-qp-terminations", "[qpsolver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_iteration_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+  highs.clearSolver();
+  highs.setOptionValue("qp_iteration_limit", kHighsIInf);
+
+  highs.setOptionValue("time_limit", 0);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kTimeLimit);
+  highs.setOptionValue("time_limit", kHighsInf);
+
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_nullspace_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+  highs.setOptionValue("qp_nullspace_limit", 4000);
+}
