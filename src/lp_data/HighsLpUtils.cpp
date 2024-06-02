@@ -2557,7 +2557,7 @@ HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution) {
   if (data_error) return HighsStatus::kError;
 
   std::vector<HighsCDouble> col_dual_quad;
-  col_dual_quad.assign(lp.num_row_, HighsCDouble{0.0});
+  col_dual_quad.assign(lp.num_col_, HighsCDouble{0.0});
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
