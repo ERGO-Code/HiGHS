@@ -1549,6 +1549,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
+                            activitymininf_[mip->a_matrix_.index_[i]],
+                            activitymin_[mip->a_matrix_.index_[i]],
+                            mip->row_lower_[mip->a_matrix_.index_[i]]);
+
       if (deltamin <= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
                                 capacityThreshold_[mip->a_matrix_.index_[i]]);
@@ -1567,13 +1574,6 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         end = i + 1;
         break;
       }
-
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
-        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
-                            activitymininf_[mip->a_matrix_.index_[i]],
-                            activitymin_[mip->a_matrix_.index_[i]],
-                            mip->row_lower_[mip->a_matrix_.index_[i]]);
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1600,6 +1600,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
+                            activitymaxinf_[mip->a_matrix_.index_[i]],
+                            activitymax_[mip->a_matrix_.index_[i]],
+                            mip->row_upper_[mip->a_matrix_.index_[i]]);
+
       if (deltamax >= 0) {
         updateThresholdLbChange(col, newbound, mip->a_matrix_.value_[i],
                                 capacityThreshold_[mip->a_matrix_.index_[i]]);
@@ -1618,13 +1625,6 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         end = i + 1;
         break;
       }
-
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
-        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
-                            activitymaxinf_[mip->a_matrix_.index_[i]],
-                            activitymax_[mip->a_matrix_.index_[i]],
-                            mip->row_upper_[mip->a_matrix_.index_[i]]);
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1702,6 +1702,13 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
+                            activitymaxinf_[mip->a_matrix_.index_[i]],
+                            activitymax_[mip->a_matrix_.index_[i]],
+                            mip->row_upper_[mip->a_matrix_.index_[i]]);
+
       if (deltamax >= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
                                 capacityThreshold_[mip->a_matrix_.index_[i]]);
@@ -1720,13 +1727,6 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         end = i + 1;
         break;
       }
-
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
-        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
-                            activitymaxinf_[mip->a_matrix_.index_[i]],
-                            activitymax_[mip->a_matrix_.index_[i]],
-                            mip->row_upper_[mip->a_matrix_.index_[i]]);
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1756,6 +1756,13 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
+      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
+                            activitymininf_[mip->a_matrix_.index_[i]],
+                            activitymin_[mip->a_matrix_.index_[i]],
+                            mip->row_lower_[mip->a_matrix_.index_[i]]);
+
       if (deltamin <= 0) {
         updateThresholdUbChange(col, newbound, mip->a_matrix_.value_[i],
                                 capacityThreshold_[mip->a_matrix_.index_[i]]);
@@ -1774,13 +1781,6 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         end = i + 1;
         break;
       }
-
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
-        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
-                            activitymininf_[mip->a_matrix_.index_[i]],
-                            activitymin_[mip->a_matrix_.index_[i]],
-                            mip->row_lower_[mip->a_matrix_.index_[i]]);
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
