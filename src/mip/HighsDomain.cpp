@@ -72,6 +72,7 @@ static inline double boundRange(double upper_bound, double lower_bound,
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   col_lower_ = mipsolver.model_->col_lower_;
   col_upper_ = mipsolver.model_->col_upper_;
+  redundant_rows_.reserve(mipsolver.numRow());
   colLowerPos_.assign(mipsolver.numCol(), -1);
   colUpperPos_.assign(mipsolver.numCol(), -1);
   changedcolsflags_.resize(mipsolver.numCol());
