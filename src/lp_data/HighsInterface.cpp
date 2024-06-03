@@ -1564,9 +1564,10 @@ HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
       // No INVERT - presumably because infeasibility detected in
       // presolve
       std::string presolve = options_.presolve;
-      printf("Highs::getIisInterface options_.presolve = %s; kHighsOnString = %s\n",
-	     options_.presolve.c_str(),
-	     kHighsOnString.c_str());
+      printf(
+          "Highs::getIisInterface options_.presolve = %s; kHighsOnString = "
+          "%s\n",
+          options_.presolve.c_str(), kHighsOnString.c_str());
       options_.presolve = kHighsOffString;
       HighsStatus return_status = this->run();
       options_.presolve = presolve;
@@ -1583,10 +1584,11 @@ HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
       rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
       dual_ray_value.resize(num_row);
       HighsInt* dual_ray_num_nz = 0;
-      basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL, true);
+      basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL,
+                          true);
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
-		   "No dual ray to start IIS calculation\n");
+                   "No dual ray to start IIS calculation\n");
       return HighsStatus::kError;
     }
     HighsStatus return_status = getIisData(lp, dual_ray_value, this->iis_);
