@@ -1850,18 +1850,19 @@ void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
                                       double bound) {
   // find row
   auto it = redundant_rows_.find(row);
+  bool exists = it != redundant_rows_.end();
   if (numInf == 0 &&
       direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
     // row is redundant
     double val = static_cast<double>(activity - bound);
-    if (it == redundant_rows_.end()) {
-      // Add to map
-      redundant_rows_.emplace(row, val);
-    } else {
-      // Update
+    if (exists) {
+      // update
       it->second = val;
+    } else {
+      // add
+      redundant_rows_.emplace(row, val);
     }
-  } else if (it != redundant_rows_.end()) {
+  } else if (exists) {
     // row is not redundant anymore
     redundant_rows_.erase(it);
   }
