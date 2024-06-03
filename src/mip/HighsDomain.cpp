@@ -1569,16 +1569,20 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf &&
-          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] >
-              mip->row_lower_[mip->a_matrix_.index_[i]] +
-                  mipsolver->mipdata_->feastol) {
-        // constraint is redundant
-        redundant_rows_.insert_or_assign(
-            mip->a_matrix_.index_[i],
-            static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
-                                mip->row_lower_[mip->a_matrix_.index_[i]]));
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf) {
+        if (activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
+            activitymin_[mip->a_matrix_.index_[i]] >
+                mip->row_lower_[mip->a_matrix_.index_[i]] +
+                    mipsolver->mipdata_->feastol) {
+          // row is redundant
+          redundant_rows_.insert_or_assign(
+              mip->a_matrix_.index_[i],
+              static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
+                                  mip->row_lower_[mip->a_matrix_.index_[i]]));
+        } else {
+          // row is not redundant anymore
+          redundant_rows_.erase(mip->a_matrix_.index_[i]);
+        }
       }
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
@@ -1626,16 +1630,20 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
-          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymax_[mip->a_matrix_.index_[i]] <
-              mip->row_upper_[mip->a_matrix_.index_[i]] -
-                  mipsolver->mipdata_->feastol) {
-        // constraint is redundant
-        redundant_rows_.insert_or_assign(
-            mip->a_matrix_.index_[i],
-            static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
-                                mip->row_upper_[mip->a_matrix_.index_[i]]));
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf) {
+        if (activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
+            activitymax_[mip->a_matrix_.index_[i]] <
+                mip->row_upper_[mip->a_matrix_.index_[i]] -
+                    mipsolver->mipdata_->feastol) {
+          // row is redundant
+          redundant_rows_.insert_or_assign(
+              mip->a_matrix_.index_[i],
+              static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
+                                  mip->row_upper_[mip->a_matrix_.index_[i]]));
+        } else {
+          // row is not redundant anymore
+          redundant_rows_.erase(mip->a_matrix_.index_[i]);
+        }
       }
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
@@ -1734,16 +1742,20 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
-          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymax_[mip->a_matrix_.index_[i]] <
-              mip->row_upper_[mip->a_matrix_.index_[i]] -
-                  mipsolver->mipdata_->feastol) {
-        // constraint is redundant
-        redundant_rows_.insert_or_assign(
-            mip->a_matrix_.index_[i],
-            static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
-                                mip->row_upper_[mip->a_matrix_.index_[i]]));
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf) {
+        if (activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
+            activitymax_[mip->a_matrix_.index_[i]] <
+                mip->row_upper_[mip->a_matrix_.index_[i]] -
+                    mipsolver->mipdata_->feastol) {
+          // row is redundant
+          redundant_rows_.insert_or_assign(
+              mip->a_matrix_.index_[i],
+              static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
+                                  mip->row_upper_[mip->a_matrix_.index_[i]]));
+        } else {
+          // row is not redundant anymore
+          redundant_rows_.erase(mip->a_matrix_.index_[i]);
+        }
       }
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
@@ -1794,16 +1806,20 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf &&
-          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] >
-              mip->row_lower_[mip->a_matrix_.index_[i]] +
-                  mipsolver->mipdata_->feastol) {
-        // constraint is redundant
-        redundant_rows_.insert_or_assign(
-            mip->a_matrix_.index_[i],
-            static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
-                                mip->row_lower_[mip->a_matrix_.index_[i]]));
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf) {
+        if (activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
+            activitymin_[mip->a_matrix_.index_[i]] >
+                mip->row_lower_[mip->a_matrix_.index_[i]] +
+                    mipsolver->mipdata_->feastol) {
+          // row is redundant
+          redundant_rows_.insert_or_assign(
+              mip->a_matrix_.index_[i],
+              static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
+                                  mip->row_lower_[mip->a_matrix_.index_[i]]));
+        } else {
+          // row is not redundant anymore
+          redundant_rows_.erase(mip->a_matrix_.index_[i]);
+        }
       }
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
@@ -2473,7 +2489,8 @@ bool HighsDomain::propagate() {
             cutpoolprop.recomputeCapacityThreshold(i);
           };
 
-          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
+          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n",
+          // numproprows);
 
           for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
