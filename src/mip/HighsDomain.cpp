@@ -1861,7 +1861,7 @@ void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
       // Update
       it->second = val;
     }
-  } else {
+  } else if (it != redundant_rows_.end()) {
     // row is not redundant anymore
     redundant_rows_.erase(it);
   }
