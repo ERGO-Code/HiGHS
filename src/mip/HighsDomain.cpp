@@ -1846,12 +1846,12 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 }
 
 void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
-                                      HighsInt numInf, HighsCDouble activity,
+                                      HighsInt numinf, HighsCDouble activity,
                                       double bound) {
   // find row
   auto it = redundant_rows_.find(row);
   bool exists = it != redundant_rows_.end();
-  if (numInf == 0 &&
+  if (numinf == 0 &&
       direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
     // row is redundant
     double val = static_cast<double>(activity - bound);
