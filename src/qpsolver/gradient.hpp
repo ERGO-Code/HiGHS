@@ -2,18 +2,18 @@
 #define __SRC_LIB_GRADIENT_HPP__
 
 #include "runtime.hpp"
-#include "vector.hpp"
+#include "qpvector.hpp"
 
 class Gradient {
   Runtime& runtime;
 
-  Vector gradient;
+  QpVector gradient;
   bool uptodate;
   HighsInt numupdates = 0;
 
  public:
   Gradient(Runtime& rt)
-      : runtime(rt), gradient(Vector(rt.instance.num_var)), uptodate(false) {}
+      : runtime(rt), gradient(QpVector(rt.instance.num_var)), uptodate(false) {}
 
   void recompute() {
     runtime.instance.Q.vec_mat(runtime.primal, gradient);
@@ -22,7 +22,7 @@ class Gradient {
     numupdates = 0;
   }
 
-  Vector& getGradient() {
+  QpVector& getGradient() {
     if (!uptodate ||
         numupdates >= runtime.settings.gradientrecomputefrequency) {
       recompute();
@@ -30,7 +30,7 @@ class Gradient {
     return gradient;
   }
 
-  void update(Vector& buffer_Qp, double stepsize) {
+  void update(QpVector& buffer_Qp, double stepsize) {
     gradient.saxpy(stepsize, buffer_Qp);
     numupdates++;
   }

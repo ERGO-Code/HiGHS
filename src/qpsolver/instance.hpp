@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "matrix.hpp"
-#include "vector.hpp"
+#include "qpvector.hpp"
 
 struct SumNum {
   double sum = 0.0;
@@ -12,10 +12,11 @@ struct SumNum {
 };
 
 struct Instance {
+  HighsInt sense = 1; // Minimization
   HighsInt num_var = 0;
   HighsInt num_con = 0;
   double offset = 0;
-  Vector c;
+  QpVector c;
   Matrix Q;
   std::vector<double> con_lo;
   std::vector<double> con_up;
@@ -26,16 +27,16 @@ struct Instance {
   Instance(HighsInt nv = 0, HighsInt nc = 0)
       : num_var(nv),
         num_con(nc),
-        c(Vector(nv)),
+        c(QpVector(nv)),
         Q(Matrix(nv, nv)),
         A(Matrix(nc, nv)) {}
 
-  double objval(const Vector& x) {
+  double objval(const QpVector& x) {
     return c * x + 0.5 * (Q.vec_mat(x) * x) + offset;
   }
 
-  SumNum sumnumprimalinfeasibilities(const Vector& x,
-                                     const Vector& rowactivity) {
+  SumNum sumnumprimalinfeasibilities(const QpVector& x,
+                                     const QpVector& rowactivity) {
     SumNum res;
     for (HighsInt row = 0; row < num_con; row++) {
       if (rowactivity.value[row] < con_lo[row]) {

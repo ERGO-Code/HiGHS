@@ -832,7 +832,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   }
 
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
-  if (dev_run) incumbent_model.hessian_.print();
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
 
   arg0.resize(dim);
   for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
@@ -850,7 +850,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
     mask[iRow] = 1;
   }
   highs.deleteCols(mask.data());
-  if (dev_run) incumbent_model.hessian_.print();
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
 
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     HighsInt iRow = mask[iCol];
@@ -872,4 +872,143 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     REQUIRE(result0[iCol] == result1[iCol]);
   }
+}
+
+TEST_CASE("test-qp-hot-start", "[qpsolver]") {
+  // Test hot start
+  HighsStatus return_status;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run)
+      printf(
+          "\n"
+          "===================\n"
+          "Hot start test %d\n"
+          "===================\n",
+          int(k));
+    if (k == 1) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else if (k == 2) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else {
+      HighsModel model;
+      model.lp_.num_col_ = 2;
+      model.lp_.num_row_ = 1;
+      model.lp_.col_cost_ = {-2, -2};
+      model.lp_.col_lower_ = {-inf, -inf};
+      model.lp_.col_upper_ = {inf, inf};
+      model.lp_.row_lower_ = {1};
+      model.lp_.row_upper_ = {inf};
+      model.lp_.a_matrix_.format_ = MatrixFormat::kRowwise;
+      model.lp_.a_matrix_.start_ = {0, 2};
+      model.lp_.a_matrix_.index_ = {0, 1};
+      model.lp_.a_matrix_.value_ = {1, 1};
+      model.hessian_.dim_ = 2;
+      model.hessian_.start_ = {0, 1, 2};
+      model.hessian_.index_ = {0, 1};
+      model.hessian_.value_ = {2, 2};
+      REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+    }
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    if (dev_run) highs.writeSolution("", 1);
+
+    HighsBasis basis = highs.getBasis();
+    HighsSolution solution = highs.getSolution();
+    if (dev_run) printf("Saved basis has validity = %d\n", basis.valid);
+
+    if (dev_run)
+      printf(
+          "================\n"
+          "Hot start re-run\n"
+          "================\n");
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+
+    if (dev_run)
+      printf(
+          "===========================\n"
+          "Hot start using saved basis\n"
+          "===========================\n");
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using saved basis and solution after clearing solver\n"
+          "==============================================================\n");
+    highs.clearSolver();
+    highs.setSolution(solution);
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+    /*
+        if (dev_run)
+    printf("=================================================\n"
+           "Hot start using saved basis after clearing solver\n"
+           "=================================================\n");
+    highs.clearSolver();
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+    */
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using alien basis and solution after clearing solver\n"
+          "==============================================================\n");
+    highs.clearSolver();
+    highs.setSolution(solution);
+    basis.alien = true;
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+  }
+}
+
+TEST_CASE("test-qp-terminations", "[qpsolver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_iteration_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+  highs.clearSolver();
+  highs.setOptionValue("qp_iteration_limit", kHighsIInf);
+
+  highs.setOptionValue("time_limit", 0);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kTimeLimit);
+  highs.setOptionValue("time_limit", kHighsInf);
+
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_nullspace_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+  highs.setOptionValue("qp_nullspace_limit", 4000);
 }

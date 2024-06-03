@@ -568,6 +568,4 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   std::vector<double> ray_value;
   ray_value.assign(2, NAN);
   highs.getDualRay(has_ray, ray_value.data());
- 
-  
 }

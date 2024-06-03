@@ -8,19 +8,19 @@
 #include <string>
 #include <vector>
 
-struct Vector {
+struct QpVector {
   HighsInt num_nz;
   HighsInt dim;
   std::vector<HighsInt> index;
   std::vector<double> value;
 
-  Vector(HighsInt d) : dim(d) {
+  QpVector(HighsInt d) : dim(d) {
     index.resize(dim);
     value.resize(dim, 0.0);
     num_nz = 0;
   }
 
-  Vector(const Vector& vec)
+  QpVector(const QpVector& vec)
       : num_nz(vec.num_nz), dim(vec.dim), index(vec.index), value(vec.value) {}
 
   void reset() {
@@ -31,7 +31,7 @@ struct Vector {
     num_nz = 0;
   }
 
-  Vector& repopulate(const Vector& other) {
+  QpVector& repopulate(const QpVector& other) {
     reset();
     for (HighsInt i = 0; i < other.num_nz; i++) {
       index[i] = other.index[i];
@@ -41,7 +41,7 @@ struct Vector {
     return *this;
   }
 
-  Vector& operator=(const Vector& other) {
+  QpVector& operator=(const QpVector& other) {
     num_nz = other.num_nz;
     dim = other.dim;
     index = other.index;
@@ -49,7 +49,7 @@ struct Vector {
     return *this;
   }
 
-  static Vector& unit(HighsInt dim, HighsInt u, Vector& target) {
+  static QpVector& unit(HighsInt dim, HighsInt u, QpVector& target) {
     target.reset();
     target.index[0] = u;
     target.value[u] = 1.0;
@@ -57,8 +57,8 @@ struct Vector {
     return target;
   }
 
-  static Vector unit(HighsInt dim, HighsInt u) {
-    Vector vec(dim);
+  static QpVector unit(HighsInt dim, HighsInt u) {
+    QpVector vec(dim);
     vec.index[0] = u;
     vec.value[u] = 1.0;
     vec.num_nz = 1;
@@ -85,7 +85,7 @@ struct Vector {
     return val;
   }
 
-  void sanitize(double threshold = 10E-15) {
+  void sanitize(double threshold = 1e-14) {
     HighsInt new_idx = 0;
 
     for (HighsInt i = 0; i < num_nz; i++) {
@@ -108,20 +108,20 @@ struct Vector {
     }
   }
 
-  Vector& scale(double a) {
+  QpVector& scale(double a) {
     for (HighsInt i = 0; i < num_nz; i++) {
       value[index[i]] *= a;
     }
     return *this;
   }
 
-  Vector& saxpy(double a, double b, const Vector& x) {
+  QpVector& saxpy(double a, double b, const QpVector& x) {
     scale(a);
     saxpy(b, x);
     return *this;
   }
 
-  Vector& saxpy(double a, const Vector& x) {
+  QpVector& saxpy(double a, const QpVector& x) {
     sanitize(0.0);
     for (HighsInt i = 0; i < x.num_nz; i++) {
       if (value[x.index[i]] == 0.0) {
@@ -141,8 +141,8 @@ struct Vector {
   //    resparsify();
   // }
 
-  Vector operator+(const Vector& other) const {
-    Vector result(dim);
+  QpVector operator+(const QpVector& other) const {
+    QpVector result(dim);
 
     for (HighsInt i = 0; i < dim; i++) {
       result.value[i] = value[i] + other.value[i];
@@ -154,8 +154,8 @@ struct Vector {
     return result;
   }
 
-  Vector operator-(const Vector& other) const {
-    Vector result(dim);
+  QpVector operator-(const QpVector& other) const {
+    QpVector result(dim);
 
     for (HighsInt i = 0; i < dim; i++) {
       result.value[i] = value[i] - other.value[i];
@@ -167,8 +167,8 @@ struct Vector {
     return result;
   }
 
-  Vector operator-() const {
-    Vector result(dim);
+  QpVector operator-() const {
+    QpVector result(dim);
 
     for (HighsInt i = 0; i < num_nz; i++) {
       result.index[i] = index[i];
@@ -179,8 +179,8 @@ struct Vector {
     return result;
   }
 
-  Vector operator*(const double d) const {
-    Vector result(dim);
+  QpVector operator*(const double d) const {
+    QpVector result(dim);
 
     for (HighsInt i = 0; i < num_nz; i++) {
       result.index[i] = index[i];
@@ -191,7 +191,7 @@ struct Vector {
     return result;
   }
 
-  double dot(const Vector& other) const {
+  double dot(const QpVector& other) const {
     double dot = 0.0;
     for (HighsInt i = 0; i < num_nz; i++) {
       dot += value[index[i]] * other.value[index[i]];
@@ -200,7 +200,7 @@ struct Vector {
     return dot;
   }
 
-  double operator*(const Vector& other) const { return dot(other); }
+  double operator*(const QpVector& other) const { return dot(other); }
 
   double dot(const HighsInt* idx, const double* val, HighsInt nnz) const {
     double dot = 0.0;
@@ -211,7 +211,7 @@ struct Vector {
     return dot;
   }
 
-  Vector& operator+=(const Vector& other) {
+  QpVector& operator+=(const QpVector& other) {
     // sanitize();
     for (HighsInt i = 0; i < other.num_nz; i++) {
       // if (value[other.index[i]] == 0.0) {
@@ -223,7 +223,7 @@ struct Vector {
     return *this;
   }
 
-  Vector& operator*=(const double d) {
+  QpVector& operator*=(const double d) {
     for (HighsInt i = 0; i < num_nz; i++) {
       value[index[i]] *= d;
     }
