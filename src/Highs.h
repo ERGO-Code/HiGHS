@@ -17,6 +17,7 @@
 #include <sstream>
 
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"

@@ -1554,15 +1554,61 @@ HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
                                    HighsInt* iis_row_index,
                                    HighsInt* iis_col_bound,
                                    HighsInt* iis_row_bound) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsLp& lp = model_.lp_;
-  HighsInt num_row = lp.num_row_;
-  // For an LP with no rows the dual ray is vacuous
-  if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
-  assert(!lp.is_moved_);
-  return_status = HighsStatus::kError;
-  return return_status;
+  if (!this->iis_.valid) {
+    HighsLp& lp = model_.lp_;
+    HighsInt num_row = lp.num_row_;
+    // For an LP with no rows the dual ray is vacuous
+    if (num_row == 0) return HighsStatus::kOk;
+    assert(model_status_ == HighsModelStatus::kInfeasible);
+    if (!ekk_instance_.status_.has_invert) {
+      // No INVERT - presumably because infeasibility detected in
+      // presolve
+      std::string presolve = options_.presolve;
+      printf("Highs::getIisInterface options_.presolve = %s; kHighsOnString = %s\n",
+	     options_.presolve.c_str(),
+	     kHighsOnString.c_str());
+      options_.presolve = kHighsOffString;
+      HighsStatus return_status = this->run();
+      options_.presolve = presolve;
+      if (return_status != HighsStatus::kOk) return return_status;
+    }
+    assert(ekk_instance_.status_.has_invert);
+    assert(!lp.is_moved_);
+    const bool has_dual_ray = ekk_instance_.status_.has_dual_ray;
+    std::vector<double> dual_ray_value;
+    if (has_dual_ray) {
+      std::vector<double> rhs;
+      HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+      rhs.assign(num_row, 0);
+      rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
+      dual_ray_value.resize(num_row);
+      HighsInt* dual_ray_num_nz = 0;
+      basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL, true);
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "No dual ray to start IIS calculation\n");
+      return HighsStatus::kError;
+    }
+    HighsStatus return_status = getIisData(lp, dual_ray_value, this->iis_);
+    if (return_status != HighsStatus::kOk) return return_status;
+  }
+  assert(this->iis_.valid);
+
+  num_iis_col = this->iis_.col_index.size();
+  num_iis_row = this->iis_.row_index.size();
+  if (iis_col_index || iis_col_bound) {
+    for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) {
+      if (iis_col_index) iis_col_index[iCol] = this->iis_.col_index[iCol];
+      if (iis_col_bound) iis_col_bound[iCol] = this->iis_.col_bound[iCol];
+    }
+  }
+  if (iis_row_index || iis_row_bound) {
+    for (HighsInt iRow = 0; iRow < num_iis_row; iRow++) {
+      if (iis_row_index) iis_row_index[iRow] = this->iis_.row_index[iRow];
+      if (iis_row_bound) iis_row_bound[iRow] = this->iis_.row_bound[iRow];
+    }
+  }
+  return HighsStatus::kOk;
 }
 
 bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
@@ -2542,11 +2588,4 @@ bool Highs::infeasibleBoundsOk() {
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
   return num_true_infeasible_bound == 0;
-}
-
-void HighsIis::clear() {
-  this->col_index.clear();
-  this->row_index.clear();
-  this->col_bound.clear();
-  this->row_bound.clear();
 }
