@@ -1569,21 +1569,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf) {
-        if (activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-            activitymin_[mip->a_matrix_.index_[i]] >
-                mip->row_lower_[mip->a_matrix_.index_[i]] +
-                    mipsolver->mipdata_->feastol) {
-          // row is redundant
-          redundant_rows_.insert_or_assign(
-              mip->a_matrix_.index_[i],
-              static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
-                                  mip->row_lower_[mip->a_matrix_.index_[i]]));
-        } else {
-          // row is not redundant anymore
-          redundant_rows_.erase(mip->a_matrix_.index_[i]);
-        }
-      }
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
+                            activitymininf_[mip->a_matrix_.index_[i]],
+                            activitymin_[mip->a_matrix_.index_[i]],
+                            mip->row_lower_[mip->a_matrix_.index_[i]]);
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1630,21 +1620,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf) {
-        if (activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-            activitymax_[mip->a_matrix_.index_[i]] <
-                mip->row_upper_[mip->a_matrix_.index_[i]] -
-                    mipsolver->mipdata_->feastol) {
-          // row is redundant
-          redundant_rows_.insert_or_assign(
-              mip->a_matrix_.index_[i],
-              static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
-                                  mip->row_upper_[mip->a_matrix_.index_[i]]));
-        } else {
-          // row is not redundant anymore
-          redundant_rows_.erase(mip->a_matrix_.index_[i]);
-        }
-      }
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
+                            activitymaxinf_[mip->a_matrix_.index_[i]],
+                            activitymax_[mip->a_matrix_.index_[i]],
+                            mip->row_upper_[mip->a_matrix_.index_[i]]);
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1742,21 +1722,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf) {
-        if (activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-            activitymax_[mip->a_matrix_.index_[i]] <
-                mip->row_upper_[mip->a_matrix_.index_[i]] -
-                    mipsolver->mipdata_->feastol) {
-          // row is redundant
-          redundant_rows_.insert_or_assign(
-              mip->a_matrix_.index_[i],
-              static_cast<double>(activitymax_[mip->a_matrix_.index_[i]] -
-                                  mip->row_upper_[mip->a_matrix_.index_[i]]));
-        } else {
-          // row is not redundant anymore
-          redundant_rows_.erase(mip->a_matrix_.index_[i]);
-        }
-      }
+          mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
+                            activitymaxinf_[mip->a_matrix_.index_[i]],
+                            activitymax_[mip->a_matrix_.index_[i]],
+                            mip->row_upper_[mip->a_matrix_.index_[i]]);
 
       if (activitymaxinf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1806,21 +1776,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf) {
-        if (activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-            activitymin_[mip->a_matrix_.index_[i]] >
-                mip->row_lower_[mip->a_matrix_.index_[i]] +
-                    mipsolver->mipdata_->feastol) {
-          // row is redundant
-          redundant_rows_.insert_or_assign(
-              mip->a_matrix_.index_[i],
-              static_cast<double>(activitymin_[mip->a_matrix_.index_[i]] -
-                                  mip->row_lower_[mip->a_matrix_.index_[i]]));
-        } else {
-          // row is not redundant anymore
-          redundant_rows_.erase(mip->a_matrix_.index_[i]);
-        }
-      }
+          mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
+        updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
+                            activitymininf_[mip->a_matrix_.index_[i]],
+                            activitymin_[mip->a_matrix_.index_[i]],
+                            mip->row_lower_[mip->a_matrix_.index_[i]]);
 
       if (activitymininf_[mip->a_matrix_.index_[i]] <= 1 &&
           !propagateflags_[mip->a_matrix_.index_[i]] &&
@@ -1882,6 +1842,28 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 
     capacityThreshold_[row] =
         std::max({capacityThreshold_[row], threshold, feastol()});
+  }
+}
+
+void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
+                                      HighsInt numInf, HighsCDouble activity,
+                                      double bound) {
+  // find row
+  auto it = redundant_rows_.find(row);
+  if (numInf == 0 &&
+      direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
+    // row is redundant
+    double val = static_cast<double>(activity - bound);
+    if (it == redundant_rows_.end()) {
+      // Add to map
+      redundant_rows_.emplace(row, val);
+    } else {
+      // Update
+      it->second = val;
+    }
+  } else {
+    // row is not redundant anymore
+    redundant_rows_.erase(it);
   }
 }
 
