@@ -1549,6 +1549,22 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
+HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                                   HighsInt* iis_col_index,
+                                   HighsInt* iis_row_index,
+                                   HighsInt* iis_col_bound,
+                                   HighsInt* iis_row_bound) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsLp& lp = model_.lp_;
+  HighsInt num_row = lp.num_row_;
+  // For an LP with no rows the dual ray is vacuous
+  if (num_row == 0) return return_status;
+  assert(ekk_instance_.status_.has_invert);
+  assert(!lp.is_moved_);
+  return_status = HighsStatus::kError;
+  return return_status;
+}
+
 bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
   if (!num_nz) return true;
   const bool ok_format = format == (HighsInt)MatrixFormat::kColwise ||
@@ -2526,4 +2542,11 @@ bool Highs::infeasibleBoundsOk() {
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
   return num_true_infeasible_bound == 0;
+}
+
+void HighsIis::clear() {
+  this->col_index.clear();
+  this->row_index.clear();
+  this->col_bound.clear();
+  this->row_bound.clear();
 }

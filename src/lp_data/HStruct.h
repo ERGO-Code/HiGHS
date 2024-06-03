@@ -143,4 +143,12 @@ struct HighsIllConditioning {
   void clear();
 };
 
+struct HighsIis {
+  std::vector<HighsInt> col_index;
+  std::vector<HighsInt> row_index;
+  std::vector<HighsInt> col_bound;
+  std::vector<HighsInt> row_bound;
+  void clear();
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

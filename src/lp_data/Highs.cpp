@@ -1679,6 +1679,15 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                 ill_conditioning_bound);
 }
 
+HighsStatus Highs::getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                          HighsInt* iis_col_index, HighsInt* iis_row_index,
+                          HighsInt* iis_col_bound, HighsInt* iis_row_bound) {
+  if (!ekk_instance_.status_.has_invert)
+    return lpInvertRequirementError("getIss");
+  return getIisInterface(num_iis_col, num_iis_row, iis_col_index, iis_row_index,
+                         iis_col_bound, iis_row_bound);
+}
+
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
 
 const HighsInt* Highs::getBasicVariablesArray() const {
@@ -3311,12 +3320,15 @@ void Highs::invalidateUserSolverData() {
   invalidateRanging();
   invalidateInfo();
   invalidateEkk();
+  invalidateIis();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
   invalidateModelStatus();
   invalidateSolution();
+  invalidateRanging();
   invalidateInfo();
+  invalidateIis();
 }
 
 void Highs::invalidateModelStatus() {
@@ -3345,6 +3357,8 @@ void Highs::invalidateInfo() { info_.invalidate(); }
 void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
+
+void Highs::invalidateIis() { iis_.clear(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,

@@ -507,6 +507,11 @@ class Highs {
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
 
+  HighsStatus getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                     HighsInt* iis_col_index = nullptr,
+                     HighsInt* iis_row_index = nullptr,
+                     HighsInt* iis_col_bound = nullptr,
+                     HighsInt* iis_row_bound = nullptr);
   /**
    * @brief Get the current model objective value
    */
@@ -1330,6 +1335,7 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+  HighsIis iis_;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
@@ -1419,6 +1425,9 @@ class Highs {
   // Invalidates ekk_instance_
   void invalidateEkk();
 
+  // Invalidates iis_
+  void invalidateIis();
+
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
   HighsStatus returnFromRun(const HighsStatus return_status,
@@ -1500,6 +1509,10 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
+  HighsStatus getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                              HighsInt* iis_col_index, HighsInt* iis_row_index,
+                              HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
