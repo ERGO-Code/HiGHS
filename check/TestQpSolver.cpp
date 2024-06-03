@@ -891,7 +891,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
           int(k));
     if (k == 1) {
       const std::string filename =
-          std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+          std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
       REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
     } else if (k == 2) {
       const std::string filename =
@@ -1004,7 +1004,7 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kTimeLimit);
   highs.setOptionValue("time_limit", kHighsInf);
 
-  filename = std::string(HIGHS_DIR) + "/check/instances/primal3.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
   highs.setOptionValue("qp_nullspace_limit", 1);
