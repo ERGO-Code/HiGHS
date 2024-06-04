@@ -49,12 +49,21 @@ class HighsImplications {
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
 
  public:
+  struct LiftingOpportunity {
+    HighsInt col;
+    double val;
+  };
+  std::vector<LiftingOpportunity> liftingOpportunities;
+
+ public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
+    HighsInt numrow = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
+    liftingOpportunities.resize(numrow);
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
@@ -67,9 +76,13 @@ class HighsImplications {
     colsubstituted.shrink_to_fit();
     implications.clear();
     implications.shrink_to_fit();
+    liftingOpportunities.clear();
+    liftingOpportunities.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
+    HighsInt numrow = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
+    liftingOpportunities.resize(numcol);
     colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();
