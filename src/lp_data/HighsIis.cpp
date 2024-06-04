@@ -18,15 +18,77 @@
 
 void HighsIis::invalidate() {
   this->valid = false;
+  this->strategy = kIisStrategyMin;
   this->col_index.clear();
   this->row_index.clear();
   this->col_bound.clear();
   this->row_bound.clear();
 }
 
-HighsStatus getIisData(const HighsLp& lp,
+bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
+                           HighsIis& iis) {
+  iis.invalidate();
+  const bool col_priority =
+      options.iis_strategy == kIisStrategyFromRayColPriority ||
+      options.iis_strategy == kIisStrategyFromLpColPriority;
+  for (HighsInt k = 0; k < 2; k++) {
+    if ((col_priority && k == 0) || (!col_priority && k == 1)) {
+      // Loop over columns first
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+        if (lp.col_lower_[iCol] - lp.col_upper_[iCol] >
+            2 * options.primal_feasibility_tolerance) {
+          iis.col_index.push_back(iCol);
+          break;
+        }
+      }
+      if (iis.col_index.size() > 0) break;
+    } else {
+      // Loop over rows first
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+        if (lp.row_lower_[iRow] - lp.row_upper_[iRow] >
+            2 * options.primal_feasibility_tolerance) {
+          iis.row_index.push_back(iRow);
+          break;
+        }
+      }
+      if (iis.row_index.size() > 0) break;
+    }
+  }
+  HighsInt num_iis_col = iis.col_index.size();
+  HighsInt num_iis_row = iis.row_index.size();
+  // If none found then return false
+  if (num_iis_col + num_iis_row == 0) return false;
+  // Should have found exactly 1
+  assert((num_iis_col == 1 || num_iis_row == 1) &&
+         num_iis_col + num_iis_row < 2);
+  assert(lp.a_matrix_.isColwise());
+  if (num_iis_col > 0) {
+    // Found inconsistent column
+    HighsInt iCol = iis.col_index[0];
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      iis.row_index.push_back(lp.a_matrix_.index_[iEl]);
+
+  } else {
+    // Found inconsistent row
+    HighsInt iRow = iis.row_index[0];
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+        if (lp.a_matrix_.index_[iEl] == iRow) iis.col_index.push_back(iCol);
+    }
+  }
+  iis.valid = true;
+  iis.strategy = options.iis_strategy;
+  return true;
+}
+
+HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
                        const std::vector<double>& dual_ray_value,
                        HighsIis& iis) {
+  // Check for inconsistent column and row bounds should have been
+  // done earlier
+  assert(!iisInconsistentBounds(lp, options, iis));
   std::vector<HighsInt> from_row;
   std::vector<HighsInt> from_col;
   std::vector<HighsInt> to_row;
@@ -80,6 +142,7 @@ HighsStatus getIisData(const HighsLp& lp,
   if (status != HighsStatus::kOk) return status;
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   iis.valid = true;
+  iis.strategy = options.iis_strategy;
   iis.col_index = from_col;
   iis.row_index = from_row;
 

@@ -18,6 +18,7 @@
 
 struct HighsIis {
   bool valid = false;
+  HighsInt strategy = kIisStrategyMin;
   std::vector<HighsInt> col_index;
   std::vector<HighsInt> row_index;
   std::vector<HighsInt> col_bound;
@@ -25,8 +26,10 @@ struct HighsIis {
   void invalidate();
 };
 
-HighsStatus getIisData(const HighsLp& lp,
+HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
                        const std::vector<double>& dual_ray_value,
                        HighsIis& iis);
 
+bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
+                           HighsIis& iis);
 #endif  // LP_DATA_HIGHSIIS_H_

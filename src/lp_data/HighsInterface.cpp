@@ -1549,34 +1549,34 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
-HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
-                                   HighsInt* iis_col_index,
-                                   HighsInt* iis_row_index,
-                                   HighsInt* iis_col_bound,
-                                   HighsInt* iis_row_bound) {
-  if (!this->iis_.valid) {
-    HighsLp& lp = model_.lp_;
-    HighsInt num_row = lp.num_row_;
-    // For an LP with no rows the dual ray is vacuous
-    if (num_row == 0) return HighsStatus::kOk;
-    assert(model_status_ == HighsModelStatus::kInfeasible);
-    if (!ekk_instance_.status_.has_invert) {
-      // No INVERT - presumably because infeasibility detected in
-      // presolve
-      std::string presolve = options_.presolve;
-      printf(
-          "Highs::getIisInterface options_.presolve = %s; kHighsOnString = "
-          "%s\n",
-          options_.presolve.c_str(), kHighsOnString.c_str());
-      options_.presolve = kHighsOffString;
-      HighsStatus return_status = this->run();
-      options_.presolve = presolve;
-      if (return_status != HighsStatus::kOk) return return_status;
-    }
-    assert(ekk_instance_.status_.has_invert);
-    assert(!lp.is_moved_);
+HighsStatus Highs::getIisInterface() {
+  if (this->iis_.valid) return HighsStatus::kOk;
+  HighsLp& lp = model_.lp_;
+  // Check for inconsistent column and row bounds
+  if (iisInconsistentBounds(lp, options_, iis_)) return HighsStatus::kOk;
+  HighsInt num_row = lp.num_row_;
+  // For an LP with no rows the dual ray is vacuous
+  if (num_row == 0) return HighsStatus::kOk;
+  assert(model_status_ == HighsModelStatus::kInfeasible);
+  if (!ekk_instance_.status_.has_invert) {
+    // No INVERT - presumably because infeasibility detected in
+    // presolve
+    std::string presolve = options_.presolve;
+    printf(
+        "Highs::getIisInterface options_.presolve = %s; kHighsOnString = "
+        "%s\n",
+        options_.presolve.c_str(), kHighsOnString.c_str());
+    options_.presolve = kHighsOffString;
+    HighsStatus return_status = this->run();
+    options_.presolve = presolve;
+    if (return_status != HighsStatus::kOk) return return_status;
+  }
+  assert(ekk_instance_.status_.has_invert);
+  assert(!lp.is_moved_);
+  std::vector<double> dual_ray_value;
+  if (options_.iis_strategy == kIisStrategyFromRayRowPriority ||
+      options_.iis_strategy == kIisStrategyFromRayColPriority) {
     const bool has_dual_ray = ekk_instance_.status_.has_dual_ray;
-    std::vector<double> dual_ray_value;
     if (has_dual_ray) {
       std::vector<double> rhs;
       HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
@@ -1591,11 +1591,16 @@ HighsStatus Highs::getIisInterface(HighsInt& num_iis_col, HighsInt& num_iis_row,
                    "No dual ray to start IIS calculation\n");
       return HighsStatus::kError;
     }
-    HighsStatus return_status = getIisData(lp, dual_ray_value, this->iis_);
-    if (return_status != HighsStatus::kOk) return return_status;
   }
-  assert(this->iis_.valid);
+  return getIisData(lp, options_, dual_ray_value, this->iis_);
+}
 
+HighsStatus Highs::extractIisData(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                                  HighsInt* iis_col_index,
+                                  HighsInt* iis_row_index,
+                                  HighsInt* iis_col_bound,
+                                  HighsInt* iis_row_bound) {
+  assert(this->iis_.valid);
   num_iis_col = this->iis_.col_index.size();
   num_iis_row = this->iis_.row_index.size();
   if (iis_col_index || iis_col_bound) {
@@ -1859,17 +1864,21 @@ HighsStatus Highs::optionChangeAction() {
     dl_user_bound_scale_value = std::pow(2, dl_user_bound_scale);
   }
   // Now consider impact on primal feasibility of user bound scaling
-  // and/or primal_feasibility_tolerance change
+  // and/or primal_feasibility_tolerance change.
+  //
   double new_max_primal_infeasibility =
       info.max_primal_infeasibility * dl_user_bound_scale_value;
   if (new_max_primal_infeasibility > options.primal_feasibility_tolerance) {
-    // Not primal feasible
-    this->model_status_ = HighsModelStatus::kNotset;
-    if (info.primal_solution_status == kSolutionStatusFeasible)
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Option change leads to loss of primal feasibility\n");
-    info.primal_solution_status = kSolutionStatusInfeasible;
-    info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+    // Not primal feasible: only act if the model is currently primal
+    // feasible or dl_user_bound_scale_value > 1
+    if (info.num_primal_infeasibilities == 0 && dl_user_bound_scale_value > 1) {
+      this->model_status_ = HighsModelStatus::kNotset;
+      if (info.primal_solution_status == kSolutionStatusFeasible)
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Option change leads to loss of primal feasibility\n");
+      info.primal_solution_status = kSolutionStatusInfeasible;
+      info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+    }
   } else if (!is_mip &&
              info.primal_solution_status == kSolutionStatusInfeasible) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1891,7 +1900,10 @@ HighsStatus Highs::optionChangeAction() {
     }
   }
   if (dl_user_bound_scale) {
-    // Update info and solution with respect to non-trivial user bound scaling
+    // Update info and solution with respect to non-trivial user bound
+    // scaling
+    //
+    // max and sum of infeasibilities scales: num is handled later
     info.objective_function_value *= dl_user_bound_scale_value;
     info.max_primal_infeasibility *= dl_user_bound_scale_value;
     info.sum_primal_infeasibilities *= dl_user_bound_scale_value;
@@ -1927,14 +1939,17 @@ HighsStatus Highs::optionChangeAction() {
     double new_max_dual_infeasibility =
         info.max_dual_infeasibility * dl_user_cost_scale_value;
     if (new_max_dual_infeasibility > options.dual_feasibility_tolerance) {
-      // Not dual feasible
-      this->model_status_ = HighsModelStatus::kNotset;
-      if (info.dual_solution_status == kSolutionStatusFeasible) {
-        highsLogUser(options_.log_options, HighsLogType::kInfo,
-                     "Option change leads to loss of dual feasibility\n");
-        info.dual_solution_status = kSolutionStatusInfeasible;
+      // Not dual feasible: only act if the model is currently dual
+      // feasible or dl_user_bound_scale_value > 1
+      if (info.num_dual_infeasibilities == 0 && dl_user_cost_scale_value > 1) {
+        this->model_status_ = HighsModelStatus::kNotset;
+        if (info.dual_solution_status == kSolutionStatusFeasible) {
+          highsLogUser(options_.log_options, HighsLogType::kInfo,
+                       "Option change leads to loss of dual feasibility\n");
+          info.dual_solution_status = kSolutionStatusInfeasible;
+        }
+        info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
       }
-      info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     } else if (info.dual_solution_status == kSolutionStatusInfeasible) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Option change leads to gain of dual feasibility\n");
@@ -1949,6 +1964,8 @@ HighsStatus Highs::optionChangeAction() {
     }
     // Now update data and solution with respect to non-trivial user
     // cost scaling
+    //
+    // max and sum of infeasibilities scales: num is handled earlier
     info.objective_function_value *= dl_user_cost_scale_value;
     info.max_dual_infeasibility *= dl_user_cost_scale_value;
     info.sum_dual_infeasibilities *= dl_user_cost_scale_value;
@@ -1967,6 +1984,8 @@ HighsStatus Highs::optionChangeAction() {
     }
   }
   if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
+  if (this->iis_.valid && options_.iis_strategy != this->iis_.strategy)
+    this->iis_.invalidate();
   return HighsStatus::kOk;
 }
 

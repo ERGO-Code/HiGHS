@@ -1687,8 +1687,10 @@ HighsStatus Highs::getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                  "getIis: model status is not infeasible\n");
     return HighsStatus::kError;
   }
-  return getIisInterface(num_iis_col, num_iis_row, iis_col_index, iis_row_index,
-                         iis_col_bound, iis_row_bound);
+  HighsStatus return_status = this->getIisInterface();
+  if (return_status != HighsStatus::kOk) return return_status;
+  return this->extractIisData(num_iis_col, num_iis_row, iis_col_index,
+                              iis_row_index, iis_col_bound, iis_row_bound);
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
