@@ -8,7 +8,7 @@ void perturb(Runtime& rt) {
     return;
   }
 
-  std::uniform_real_distribution<double> randomperturb(10E-6, 10E-5);
+  std::uniform_real_distribution<double> randomperturb(1e-5, 1e-4);
   std::default_random_engine re;
 
   for (HighsInt i = 0; i < rt.perturbed.num_con; i++) {

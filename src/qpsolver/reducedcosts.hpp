@@ -4,21 +4,21 @@
 #include "qpsolver/basis.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/runtime.hpp"
-#include "qpsolver/vector.hpp"
+#include "qpsolver/qpvector.hpp"
 
 class ReducedCosts {
   Basis& basis;
 
   Gradient& gradient;
 
-  Vector reducedcosts;
+  QpVector reducedcosts;
   bool uptodate;
 
  public:
   ReducedCosts(Runtime& rt, Basis& bas, Gradient& grad)
       : basis(bas),
         gradient(grad),
-        reducedcosts(Vector(rt.instance.num_var)),
+        reducedcosts(QpVector(rt.instance.num_var)),
         uptodate(false) {}
 
   void recompute() {
@@ -26,7 +26,7 @@ class ReducedCosts {
     uptodate = true;
   }
 
-  Vector& getReducedCosts() {
+  QpVector& getReducedCosts() {
     if (!uptodate) {
       recompute();
     }

@@ -591,8 +591,9 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.col_names_.resize(num_col);
+  this->model_.lp_.col_hash_.update(col, this->model_.lp_.col_names_[col],
+                                    name);
   this->model_.lp_.col_names_[col] = name;
-  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -611,8 +612,9 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
+  this->model_.lp_.row_hash_.update(row, this->model_.lp_.row_names_[row],
+                                    name);
   this->model_.lp_.row_names_[row] = name;
-  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -1940,8 +1942,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateRowValues(model_.lp_, solution_),
-          return_status, "calculateRowValues");
+          options_.log_options, calculateRowValuesQuad(model_.lp_, solution_),
+          return_status, "calculateRowValuesQuad");
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.value_valid = true;
@@ -1954,7 +1956,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateColDuals(model_.lp_, solution_),
+          options_.log_options, calculateColDualsQuad(model_.lp_, solution_),
           return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
@@ -3453,6 +3455,7 @@ HighsStatus Highs::callSolveQp() {
   // Run the QP solver
   Instance instance(lp.num_col_, lp.num_row_);
 
+  instance.sense = HighsInt(lp.sense_);
   instance.num_con = lp.num_row_;
   instance.num_var = lp.num_col_;
 
@@ -3493,18 +3496,47 @@ HighsStatus Highs::callSolveQp() {
 
   settings.reportingfequency = 100;
 
-  // Define the QP solver logging function
-  settings.endofiterationevent.subscribe([this](Statistics& stats) {
-    int rep = stats.iteration.size() - 1;
+  // Setting qp_update_limit = 10 leads to error with lpHighs3
+  const HighsInt qp_update_limit = 1000;  // 1000; // default
+  if (qp_update_limit != settings.reinvertfrequency) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Changing QP reinversion frequency from %d to %d\n",
+                 int(settings.reinvertfrequency), int(qp_update_limit));
+    settings.reinvertfrequency = qp_update_limit;
+  }
 
+  settings.iteration_limit = options_.qp_iteration_limit;
+  settings.nullspace_limit = options_.qp_nullspace_limit;
+
+  // Define the QP model status logging function
+  settings.qp_model_status_log.subscribe(
+      [this](QpModelStatus& qp_model_status) {
+        if (qp_model_status == QpModelStatus::kUndetermined ||
+            qp_model_status == QpModelStatus::kLargeNullspace ||
+            qp_model_status == QpModelStatus::kError ||
+            qp_model_status == QpModelStatus::kNotset)
+          highsLogUser(options_.log_options, HighsLogType::kInfo,
+                       "QP solver model status: %s\n",
+                       qpModelStatusToString(qp_model_status).c_str());
+      });
+
+  // Define the QP solver iteration logging function
+  settings.iteration_log.subscribe([this](Statistics& stats) {
+    int rep = stats.iteration.size() - 1;
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "%11d  %15.8g           %6d %9.2fs\n",
                  int(stats.iteration[rep]), stats.objval[rep],
                  int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
-  settings.timelimit = options_.time_limit;
-  settings.iterationlimit = options_.simplex_iteration_limit;
+  // Define the QP nullspace limit logging function
+  settings.nullspace_limit_log.subscribe([this](HighsInt& nullspace_limit) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "QP solver has exceeded nullspace limit of %d\n",
+                 int(nullspace_limit));
+  });
+
+  settings.time_limit = options_.time_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
 
   switch (options_.simplex_primal_edge_weight_strategy) {
@@ -3525,80 +3557,15 @@ HighsStatus Highs::callSolveQp() {
   highsLogUser(options_.log_options, HighsLogType::kInfo,
                "  Iteration        Objective     NullspaceDim\n");
 
-  QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
+  QpAsmStatus status = solveqp(instance, settings, stats, model_status_, basis_,
+                               solution_, timer_);
+  // QP solver can fail, so should return something other than QpAsmStatus::kOk
+  if (status == QpAsmStatus::kError) return HighsStatus::kError;
 
-  QpSolution qp_solution(instance);
-
-  solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
-
-  HighsStatus call_status = HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(options_.log_options, call_status,
-                                      return_status, "QpSolver");
-  if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = qp_model_status == QpModelStatus::OPTIMAL
-                      ? HighsModelStatus::kOptimal
-                  : qp_model_status == QpModelStatus::UNBOUNDED
-                      ? HighsModelStatus::kUnbounded
-                  : qp_model_status == QpModelStatus::INFEASIBLE
-                      ? HighsModelStatus::kInfeasible
-                  : qp_model_status == QpModelStatus::ITERATIONLIMIT
-                      ? HighsModelStatus::kIterationLimit
-                  : qp_model_status == QpModelStatus::LARGE_NULLSPACE
-                      ? HighsModelStatus::kSolveError
-                  : qp_model_status == QpModelStatus::TIMELIMIT
-                      ? HighsModelStatus::kTimeLimit
-                      : HighsModelStatus::kNotset;
-  // extract variable values
-  solution_.col_value.resize(lp.num_col_);
-  solution_.col_dual.resize(lp.num_col_);
-  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    solution_.col_value[iCol] = qp_solution.primal.value[iCol];
-    solution_.col_dual[iCol] =
-        objective_multiplier * qp_solution.dualvar.value[iCol];
-  }
-  // extract constraint activity
-  solution_.row_value.resize(lp.num_row_);
-  solution_.row_dual.resize(lp.num_row_);
-  // Negate the vector and Hessian
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    solution_.row_value[iRow] = qp_solution.rowactivity.value[iRow];
-    solution_.row_dual[iRow] =
-        objective_multiplier * qp_solution.dualcon.value[iRow];
-  }
-  solution_.value_valid = true;
-  solution_.dual_valid = true;
-
-  // extract basis status
-  basis_.col_status.resize(lp.num_col_);
-  basis_.row_status.resize(lp.num_row_);
-
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
-      basis_.col_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
-      basis_.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
-      basis_.col_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.col_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-
-  for (HighsInt i = 0; i < lp.num_row_; i++) {
-    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
-      basis_.row_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
-      basis_.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
-      basis_.row_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.row_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-  basis_.valid = true;
-  basis_.alien = false;
+  assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
+  HighsStatus return_status = status == QpAsmStatus::kWarning
+                                  ? HighsStatus::kWarning
+                                  : HighsStatus::kOk;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);

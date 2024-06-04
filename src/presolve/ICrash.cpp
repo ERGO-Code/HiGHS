@@ -158,7 +158,7 @@ void update(Quadratic& idata) {
   idata.lp_objective = vectorProduct(idata.lp.col_cost_, idata.xk.col_value);
 
   // residual & residual_norm_2
-  calculateRowValues(idata.lp, idata.xk);
+  calculateRowValuesQuad(idata.lp, idata.xk);
   updateResidual(idata.options.breakpoints, idata.lp, idata.xk, idata.residual);
   idata.residual_norm_2 = getNorm2(idata.residual);
 
@@ -232,7 +232,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
       } else {
-        calculateRowValues(idata.lp, idata.xk);
+        calculateRowValuesQuad(idata.lp, idata.xk);
         std::vector<double> residual(idata.lp.num_row_, 0);
         updateResidualFast(idata.lp, idata.xk, residual);
         for (int row = 0; row < idata.lp.num_row_; row++)
@@ -289,7 +289,7 @@ static void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
 static void solveSubproblemQP(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
 
-  calculateRowValues(idata.lp, idata.xk);
+  calculateRowValuesQuad(idata.lp, idata.xk);
   std::vector<double> residual(idata.lp.num_row_, 0);
   updateResidualFast(idata.lp, idata.xk, residual);
   double objective = 0;

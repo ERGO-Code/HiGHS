@@ -8,22 +8,24 @@
 #include "util/HighsTimer.h"
 
 enum class QpAsmStatus {
-  OK,
-  NEGATIVEEIGENVALUEINREDUCEDHESSIAN,
-  BASISRANKDEFICIENT
+  kOk,
+  kWarning,
+  kError
+  //  NEGATIVEEIGENVALUEINREDUCEDHESSIAN,
+  //  BASISRANKDEFICIENT
 };
 
 struct QpSolution {
-  Vector primal;
-  Vector rowactivity;
-  Vector dualvar;
-  Vector dualcon;
+  QpVector primal;
+  QpVector rowactivity;
+  QpVector dualvar;
+  QpVector dualcon;
 
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;
 
-  QpSolution(Instance& instance) : primal(Vector(instance.num_var)),
-        rowactivity(Vector(instance.num_con)),
+  QpSolution(Instance& instance) : primal(QpVector(instance.num_var)),
+        rowactivity(QpVector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),
@@ -35,11 +37,11 @@ struct QpHotstartInformation {
   std::vector<HighsInt> active;
   std::vector<HighsInt> inactive;
   std::vector<BasisStatus> status;
-  Vector primal;
-  Vector rowact;
+  QpVector primal;
+  QpVector rowact;
 
   QpHotstartInformation(HighsInt num_var, HighsInt num_row)
-      : primal(Vector(num_var)), rowact(Vector(num_row)) {}
+      : primal(QpVector(num_var)), rowact(QpVector(num_row)) {}
 };
 
 // the purpose of this is the pure algorithmic solution of a QP instance with given hotstart information.
@@ -50,7 +52,16 @@ struct QpHotstartInformation {
 // 4) start from a qp solution that was attained from a perturbed instance and cleanup
 // 5) start from a qp solution and cleanup after recomputing basis and reduced hessian factorization
 
+std::string qpBasisStatusToString(const BasisStatus qp_basis_status);
+std::string qpModelStatusToString(const QpModelStatus qp_model_status);
+void assessQpPrimalFeasibility(const Instance& instance, const double primal_feasibility_tolerance,
+			       const std::vector<double>& var_value, const std::vector<double>& con_value,
+			       HighsInt& num_var_infeasibilities, double& max_var_infeasibility, double& sum_var_infeasibilities,
+			       HighsInt& num_con_infeasibilities, double& max_con_infeasibility, double& sum_con_infeasibilities,
+			       double& max_con_residual, double& sum_con_residuals);
 
 QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer);
+
+
 
 #endif

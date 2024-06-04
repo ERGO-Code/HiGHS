@@ -5,7 +5,12 @@
 #include "qpsolver/a_asm.hpp"
 #include "qpsolver/crashsolution.hpp"
 
-static void computestartingpoint_bounded(Instance& instance, Settings& settings, Statistics& stats, QpModelStatus& modelstatus, QpHotstartInformation& result, HighsTimer& timer) {
+static void computeStartingPointBounded(Instance& instance,
+					Settings& settings,
+					Statistics& stats,
+					QpModelStatus& modelstatus,
+					QpHotstartInformation& result,
+					HighsTimer& timer) {
   // compute initial feasible point for problems with bounds only (no general linear constraints)
 
   // compute  Qx + c = 0 --> x = Q^-1c
@@ -31,7 +36,7 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
   }
 
   // solve for c
-  Vector res = -instance.c;
+  QpVector res = -instance.c;
   for (HighsInt r = 0; r <res.dim; r++) {
     for (HighsInt j = 0; j < r; j++) {
       res.value[r] -= res.value[j] * L[j * instance.num_var + r];
@@ -48,8 +53,8 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
   }
 
   // project solution to bounds and collect active bounds
-  Vector x0(instance.num_var);
-  Vector ra(instance.num_con);
+  QpVector x0(instance.num_var);
+  QpVector ra(instance.num_con);
   std::vector<HighsInt> initialactive;
   std::vector<HighsInt> initialinactive;
   std::vector<BasisStatus> atlower;
@@ -58,25 +63,25 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
     if (res.value[i] > 0.5/settings.hessianregularizationfactor 
         && instance.var_up[i] == std::numeric_limits<double>::infinity()
         && instance.c.value[i] < 0.0) {
-          modelstatus = QpModelStatus::UNBOUNDED;
+          modelstatus = QpModelStatus::kUnbounded;
           return;
     } else if (res.value[i] < 0.5/settings.hessianregularizationfactor 
         && instance.var_lo[i] == std::numeric_limits<double>::infinity()
         && instance.c.value[i] > 0.0) {
-          modelstatus = QpModelStatus::UNBOUNDED;
+          modelstatus = QpModelStatus::kUnbounded;
           return;
     } else if (res.value[i] <= instance.var_lo[i]) {
         res.value[i] = instance.var_lo[i];
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtLower);
+        atlower.push_back(BasisStatus::kActiveAtLower);
     } else if (res.value[i] >= instance.var_up[i]) {
         res.value[i] = instance.var_up[i];
         initialactive.push_back(i + instance.num_con);
-        atlower.push_back(BasisStatus::ActiveAtUpper);
+        atlower.push_back(BasisStatus::kActiveAtUpper);
     } else {
         initialinactive.push_back(i + instance.num_con);
     }
-    if (fabs(res.value[i]) > 10E-5) {
+    if (fabs(res.value[i]) > 1e-4) {
       x0.value[i] = res.value[i];
       x0.index[x0.num_nz++] = i;
     }
@@ -84,7 +89,7 @@ static void computestartingpoint_bounded(Instance& instance, Settings& settings,
 
   // if no bounds are active, solution lies in the interior -> optimal
   if (initialactive.size() == 0) {
-    modelstatus = QpModelStatus::OPTIMAL;
+    modelstatus = QpModelStatus::kOptimal;
   }
 
   assert((HighsInt)(initialactive.size() + initialinactive.size()) ==

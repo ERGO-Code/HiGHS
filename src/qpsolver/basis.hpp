@@ -16,10 +16,10 @@
 
 class Basis {
   HVector buffer_vec2hvec;
-  Vector Ztprod_res;
-  Vector buffer_Zprod;
+  QpVector Ztprod_res;
+  QpVector buffer_Zprod;
 
-  HVector& vec2hvec(const Vector& vec) {
+  HVector& vec2hvec(const QpVector& vec) {
     buffer_vec2hvec.clear();
     for (HighsInt i = 0; i < vec.num_nz; i++) {
       buffer_vec2hvec.index[i] = vec.index[i];
@@ -30,7 +30,7 @@ class Basis {
     return buffer_vec2hvec;
   }
 
-  Vector& hvec2vec(const HVector& hvec, Vector& target) {
+  QpVector& hvec2vec(const HVector& hvec, QpVector& target) {
     target.reset();
     for (HighsInt i = 0; i < hvec.count; i++) {
       target.index[i] = hvec.index[i];
@@ -44,8 +44,8 @@ class Basis {
     return target;
   }
 
-  Vector hvec2vec(const HVector& hvec) {
-    Vector vec(hvec.size);
+  QpVector hvec2vec(const HVector& hvec) {
+    QpVector vec(hvec.size);
 
     return hvec2vec(hvec, vec);
   }
@@ -57,11 +57,11 @@ class Basis {
   MatrixBase Atran;
 
   // indices of active constraints in basis
-  std::vector<HighsInt> activeconstraintidx;
+  std::vector<HighsInt> active_constraint_index;
 
   // ids of constraints that are in the basis but not active
   // I need to extract those columns to get Z
-  std::vector<HighsInt> nonactiveconstraintsidx;
+  std::vector<HighsInt> non_active_constraint_index;
 
   // ids of constraints that are in the basis
   std::vector<HighsInt> baseindex;
@@ -75,8 +75,8 @@ class Basis {
   void build();
 
   // buffer to avoid recreating vectors
-  Vector buffer_column_aq;
-  Vector buffer_row_ep;
+  QpVector buffer_column_aq;
+  QpVector buffer_row_ep;
 
   // buffers to prevent multiple btran/ftran
   HighsInt buffered_q = -1;
@@ -97,16 +97,16 @@ class Basis {
 
   HighsInt getnupdatessinceinvert() { return updatessinceinvert; }
 
-  HighsInt getnumactive() const { return activeconstraintidx.size(); };
+  HighsInt getnumactive() const { return active_constraint_index.size(); };
 
-  HighsInt getnuminactive() const { return nonactiveconstraintsidx.size(); };
+  HighsInt getnuminactive() const { return non_active_constraint_index.size(); };
 
   const std::vector<HighsInt>& getactive() const {
-    return activeconstraintidx;
+    return active_constraint_index;
   };
 
   const std::vector<HighsInt>& getinactive() const {
-    return nonactiveconstraintsidx;
+    return non_active_constraint_index;
   };
 
   const std::vector<HighsInt>& getindexinfactor() const {
@@ -127,24 +127,24 @@ class Basis {
   void updatebasis(const Settings& settings, HighsInt newactivecon, HighsInt droppedcon,
                    Pricing* pricing);
 
-  Vector btran(const Vector& rhs, bool buffer = false, HighsInt p = -1);
+  QpVector btran(const QpVector& rhs, bool buffer = false, HighsInt p = -1);
 
-  Vector ftran(const Vector& rhs, bool buffer = false, HighsInt q = -1);
+  QpVector ftran(const QpVector& rhs, bool buffer = false, HighsInt q = -1);
 
-  Vector& btran(const Vector& rhs, Vector& target, bool buffer = false,
+  QpVector& btran(const QpVector& rhs, QpVector& target, bool buffer = false,
                 HighsInt p = -1);
 
-  Vector& ftran(const Vector& rhs, Vector& target, bool buffer = false,
+  QpVector& ftran(const QpVector& rhs, QpVector& target, bool buffer = false,
                 HighsInt q = -1);
 
-  Vector recomputex(const Instance& inst);
+  QpVector recomputex(const Instance& inst);
 
   void write(std::string filename);
 
-  Vector& Ztprod(const Vector& rhs, Vector& target, bool buffer = false,
+  QpVector& Ztprod(const QpVector& rhs, QpVector& target, bool buffer = false,
                  HighsInt q = -1);
 
-  Vector& Zprod(const Vector& rhs, Vector& target);
+  QpVector& Zprod(const QpVector& rhs, QpVector& target);
 };
 
 #endif
