@@ -6299,7 +6299,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   basis = reducedbasis;
   postsolve_stack.undo(options, sol, basis);
   refineBasis(lp, sol, basis);
-  calculateRowValues(model, sol);
+  calculateRowValuesQuad(model, sol);
 #if 0
   Highs highs;
   highs.passModel(model);
@@ -6382,7 +6382,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
       temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
     }
     temp_sol.row_value.resize(model.num_row_);
-    calculateRowValues(model, sol);
+    calculateRowValuesQuad(model, sol);
     temp_basis.valid = true;
     refineBasis(model, temp_sol, temp_basis);
     Highs highs;
@@ -6410,7 +6410,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     postsolve_stack.undoUntil(options, flagRow, flagCol, sol, basis,
                               reductionLim);
 
-    calculateRowValues(model, sol);
+    calculateRowValuesQuad(model, sol);
     kktinfo = dev_kkt_check::initInfo();
     checkResult = dev_kkt_check::checkKkt(state, kktinfo);
     checkResult = checkResult && kktinfo.pass_bfs;

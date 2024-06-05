@@ -35,3 +35,7 @@ QP solver logging is now neater and quieter
 Any Hessian for the incumbent model is modified with zero entries when adding columns to the model, and rows/columns are removed when columns are deleted from the model.
 
 Minor bug fix in MIP presolve
+
+QP solver will now hot start given a basis and solution
+
+
