@@ -2339,6 +2339,7 @@ HighsStatus analyseSetCreateError(HighsLogOptions log_options,
                                   const HighsInt create_error,
                                   const bool ordered,
                                   const HighsInt num_set_entries,
+				  const HighsInt* set,
                                   const HighsInt dimension) {
   if (create_error == kIndexCollectionCreateIllegalSetSize) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2359,10 +2360,12 @@ HighsStatus analyseSetCreateError(HighsLogOptions log_options,
                    "Set supplied to Highs::%s not ordered\n", method.c_str());
     }
   } else if (create_error < 0) {
+    HighsInt illegal_set_index = -1 - create_error;
+    HighsInt illegal_set_entry = set[illegal_set_index];
     highsLogUser(
         log_options, HighsLogType::kError,
-        "Set supplied to Highs::%s has entry %d out of range [0, %d)\n",
-        method.c_str(), int(-1 - create_error), int(dimension));
+        "Set supplied to Highs::%s has entry %d of %d out of range [0, %d)\n",
+        method.c_str(), int(illegal_set_index), int(illegal_set_entry), int(dimension));
   }
   assert(create_error != kIndexCollectionCreateIllegalSetDimension);
   return HighsStatus::kError;
@@ -2384,7 +2387,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
                                        local_set.data(), model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsIntegrality",
-                                 create_error, true, num_set_entries,
+                                 create_error, true, num_set_entries, local_set.data(), 
                                  model_.lp_.num_col_);
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, local_integrality.data());
@@ -2454,7 +2457,7 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
                                        local_set.data(), model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsCost",
-                                 create_error, true, num_set_entries,
+                                 create_error, true, num_set_entries, local_set.data(), 
                                  model_.lp_.num_col_);
   HighsStatus call_status =
       changeCostsInterface(index_collection, local_cost.data());
@@ -2533,7 +2536,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
                                        local_set.data(), model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsBounds",
-                                 create_error, true, num_set_entries,
+                                 create_error, true, num_set_entries, local_set.data(), 
                                  model_.lp_.num_col_);
   HighsStatus call_status = changeColBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
@@ -2614,7 +2617,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
                                        local_set.data(), model_.lp_.num_row_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeRowsBounds",
-                                 create_error, true, num_set_entries,
+                                 create_error, true, num_set_entries, local_set.data(), 
                                  model_.lp_.num_row_);
   HighsStatus call_status = changeRowBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
@@ -2720,7 +2723,7 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
       create(index_collection, num_set_entries, set, model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "getCols", create_error,
-                                 false, num_set_entries, model_.lp_.num_col_);
+                                 false, num_set_entries, set, model_.lp_.num_col_);
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2839,7 +2842,7 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
       create(index_collection, num_set_entries, set, model_.lp_.num_row_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "getRows", create_error,
-                                 false, num_set_entries, model_.lp_.num_row_);
+                                 false, num_set_entries, set, model_.lp_.num_row_);
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2947,7 +2950,7 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
       create(index_collection, num_set_entries, set, model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "deleteCols",
-                                 create_error, false, num_set_entries,
+                                 create_error, false, num_set_entries, set, 
                                  model_.lp_.num_col_);
   deleteColsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
@@ -2991,7 +2994,7 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
       create(index_collection, num_set_entries, set, model_.lp_.num_row_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "deleteRows",
-                                 create_error, false, num_set_entries,
+                                 create_error, false, num_set_entries, set,
                                  model_.lp_.num_row_);
   deleteRowsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
