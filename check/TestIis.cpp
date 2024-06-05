@@ -179,6 +179,46 @@ TEST_CASE("lp-get-iis", "[iis]") {
 }
 
 TEST_CASE("lp-get-iis-galenet", "[iis]") {
+  // Dual ray corresponds to constraints
+  //
+  // r0: 0  <= c0 + c1      - c3 - c4 <=0
+  //
+  // r1: 20 <=           c2 + c3  
+  //
+  // r2: 30 <=                     c4
+  //
+  // Where
+  //
+  // 0 <= c0 <= 10
+  //
+  // 0 <= c1 <= 10
+  //
+  // 0 <= c2 <=  2
+  //
+  // 0 <= c3 <= 20
+  //
+  // 0 <= c4 <= 30
+  // 
+  // This is infeasible since c4 >= 30 and c4 <= 30 fices c4 = 30,
+  // then c0 + c1 >= c3 + c4 >= 30 cannot be satisfied due to the
+  // upper bounds of 10 on these variables
+  //
+  // r1 can be removed and infeasibility is retained, but not r0 or r2
+  //
+  // The upper bound on r0 can be removed
+  //
+  // The lower bounds on c0 and c1 can be removed, but not their upper
+  // bounds
+  //
+  // c2 can be removed, as it is empty once r1 is removed
+  //
+  // c3 can be removed, as the value of c4 is sufficient to make r0
+  // infeasible
+  //
+  // The bounds on c4 can be removed, since it's the lower bound from
+  // r2 that makes r0 infeasible
+  //
+  // Hence only empty columns can be removed
   std::string model = "galenet";
   testMps(model);
 }
