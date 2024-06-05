@@ -21,8 +21,8 @@ class HighsIis {
   HighsIis() {}
 
   void invalidate();
-  void removeCddCol(const HighsInt cdd_col);
-  void removeCddRow(const HighsInt cdd_row);
+  void removeCol(const HighsInt col);
+  void removeRow(const HighsInt row);
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
 		      const std::vector<double>& dual_ray_value);
 

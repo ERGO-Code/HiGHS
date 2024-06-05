@@ -25,18 +25,18 @@ void HighsIis::invalidate() {
   this->row_bound_.clear();
 }
 
-void HighsIis::removeCddCol(const HighsInt cdd_col) {
-  HighsInt num_cdd = this->col_index_.size();
-  assert(cdd_col < num_cdd);
-  this->col_index_[cdd_col] = this->col_index_[num_cdd-1];
-  this->col_index_.resize(num_cdd-1);  
+void HighsIis::removeCol(const HighsInt col) {
+  HighsInt num_col = this->col_index_.size();
+  assert(col < num_col);
+  this->col_index_[col] = this->col_index_[num_col-1];
+  this->col_index_.resize(num_col-1);  
 }
 
-void HighsIis::removeCddRow(const HighsInt cdd_row) {
-  HighsInt num_cdd = this->row_index_.size();
-  assert(cdd_row < num_cdd);
-  this->row_index_[cdd_row] = this->row_index_[num_cdd-1];
-  this->row_index_.resize(num_cdd-1);  
+void HighsIis::removeRow(const HighsInt row) {
+  HighsInt num_row = this->row_index_.size();
+  assert(row < num_row);
+  this->row_index_[row] = this->row_index_[num_row-1];
+  this->row_index_.resize(num_row-1);  
 }
 
 bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options) {
@@ -167,6 +167,10 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   this->invalidate();
   const HighsLogOptions& log_options = options.log_options;
+  const bool row_priority =
+    options.iis_strategy == kIisStrategyFromRayRowPriority ||
+    options.iis_strategy == kIisStrategyFromLpRowPriority;
+  if (!row_priority) return HighsStatus::kError; 
   // Initially all columns and rows are candidates for the IIS
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     this->col_index_.push_back(iCol);
@@ -177,70 +181,77 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   highs.setOptionValue("output_flag", false);
   HighsStatus status = highs.passModel(lp);
   assert(status == HighsStatus::kOk);
+  // Zero the objective
+  std::vector<double> cost;
+  cost.assign(lp.num_col_, 0);
+  status = highs.changeColsCost(0, lp.num_col_-1, cost.data());
+  assert(status == HighsStatus::kOk);
   status = highs.run();
   if (status != HighsStatus::kOk) return status;
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  // Perform row-deletion pass
 
-  HighsInt num_row_cdd = this->row_index_.size();
-  for (HighsInt iCddRow = 0; iCddRow < num_row_cdd; iCddRow++) {
-    for (;;) {
-      HighsInt iRow = this->row_index_[iCddRow];
-      const double row_lower = lp.row_lower_[iRow];
-      const double row_upper = lp.row_upper_[iRow];
-      // Record whether a bound can be dropped: by default it's
-      // possible, and only not possible if the bound is finite and the
-      // LP remains infeasible if the bound is dropped
-      bool drop_lower = true;
-      bool drop_upper = true;
-      if (row_lower > -kHighsInf) {
-	// Drop the lower bound temporarily
-	status = highs.changeRowBounds(iRow, -kHighsInf, row_upper);
-	assert(status == HighsStatus::kOk);
-	status = highs.run();
-	assert(status == HighsStatus::kOk);
-	HighsModelStatus model_status = highs.getModelStatus();
-	if (model_status == HighsModelStatus::kOptimal) {
-	  // Now feasible, so restore the lower bound and indicate that
-	  // it cannot be dropped permanently
-	  status = highs.changeRowBounds(iRow, row_lower, row_upper);
+  if (row_priority) {
+    // Perform row-deletion pass
+    HighsInt num_row_cdd = this->row_index_.size();
+    for (HighsInt iCddRow = 0; iCddRow < num_row_cdd; iCddRow++) {
+      for (;;) {
+	HighsInt iRow = this->row_index_[iCddRow];
+	const double row_lower = lp.row_lower_[iRow];
+	const double row_upper = lp.row_upper_[iRow];
+	// Record whether a bound can be dropped: by default it's
+	// possible, and only not possible if the bound is finite and the
+	// LP remains infeasible if the bound is dropped
+	bool drop_lower = true;
+	bool drop_upper = true;
+	if (row_lower > -kHighsInf) {
+	  // Drop the lower bound temporarily
+	  status = highs.changeRowBounds(iRow, -kHighsInf, row_upper);
 	  assert(status == HighsStatus::kOk);
-	  drop_lower = false;
-	} else {
-	  assert(model_status == HighsModelStatus::kInfeasible);
-	  // Bound can be dropped permanently
-	}
-      }	
-      if (row_upper < kHighsInf) {
-	// Drop the upper bound temporarily
-	status = highs.changeRowBounds(iRow, row_lower, kHighsInf);
-	assert(status == HighsStatus::kOk);
-	status = highs.run();
-	assert(status == HighsStatus::kOk);
-	HighsModelStatus model_status = highs.getModelStatus();
-	if (model_status == HighsModelStatus::kOptimal) {
-	  // Now feasible, so restore the upper bound and indicate that
-	  // it cannot be dropped permanently
-	  status = highs.changeRowBounds(iRow, row_lower, row_upper);
+	  status = highs.run();
 	  assert(status == HighsStatus::kOk);
-	  drop_upper = false;
-	} else {
-	  assert(model_status == HighsModelStatus::kInfeasible);
-	  // Bound can be dropped permanently
+	  HighsModelStatus model_status = highs.getModelStatus();
+	  if (model_status == HighsModelStatus::kOptimal) {
+	    // Now feasible, so restore the lower bound and indicate that
+	    // it cannot be dropped permanently
+	    status = highs.changeRowBounds(iRow, row_lower, row_upper);
+	    assert(status == HighsStatus::kOk);
+	    drop_lower = false;
+	  } else {
+	    assert(model_status == HighsModelStatus::kInfeasible);
+	    // Bound can be dropped permanently
+	  }
+	}	
+	if (row_upper < kHighsInf) {
+	  // Drop the upper bound temporarily
+	  status = highs.changeRowBounds(iRow, row_lower, kHighsInf);
+	  assert(status == HighsStatus::kOk);
+	  status = highs.run();
+	  assert(status == HighsStatus::kOk);
+	  HighsModelStatus model_status = highs.getModelStatus();
+	  if (model_status == HighsModelStatus::kOptimal) {
+	    // Now feasible, so restore the upper bound and indicate that
+	    // it cannot be dropped permanently
+	    status = highs.changeRowBounds(iRow, row_lower, row_upper);
+	    assert(status == HighsStatus::kOk);
+	    drop_upper = false;
+	  } else {
+	    assert(model_status == HighsModelStatus::kInfeasible);
+	    // Bound can be dropped permanently
+	  }
 	}
-      }
-      if (drop_lower && drop_upper) {
-	// Both bounds can be dropped, so remove the row from the set of
-	// candidates
+	if (drop_lower && drop_upper) {
+	  // Both bounds can be dropped, so remove the row from the set of
+	  // candidates
 	  status = highs.changeRowBounds(iRow, -kHighsInf, kHighsInf);
 	  assert(status == HighsStatus::kOk);
-	  this->removeCddRow(iCddRow);
-	num_row_cdd--;
-	highsLogUser(log_options, HighsLogType::kInfo, "Dropped  row %d from candidate set\n", int(iRow));
-	if (iCddRow >= num_row_cdd) break;
-      } else {
-	highsLogUser(log_options, HighsLogType::kInfo, "Retained row %d in   candidate set\n", int(iRow));
-	break;
+	  this->removeRow(iCddRow);
+	  num_row_cdd--;
+	  highsLogUser(log_options, HighsLogType::kInfo, "Dropped  row %d from candidate set\n", int(iRow));
+	  if (iCddRow >= num_row_cdd) break;
+	} else {
+	  highsLogUser(log_options, HighsLogType::kInfo, "Retained row %d in   candidate set\n", int(iRow));
+	  break;
+	}
       }
     }
   }
