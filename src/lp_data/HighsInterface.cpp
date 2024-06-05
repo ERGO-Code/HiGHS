@@ -1550,10 +1550,10 @@ HighsStatus Highs::getRangingInterface() {
 }
 
 HighsStatus Highs::getIisInterface() {
-  if (this->iis_.valid) return HighsStatus::kOk;
+  if (this->iis_.valid_) return HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Check for inconsistent column and row bounds
-  if (iisInconsistentBounds(lp, options_, iis_)) return HighsStatus::kOk;
+  if (this->iis_.inconsistentBounds(lp, options_)) return HighsStatus::kOk;
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return HighsStatus::kOk;
@@ -1592,7 +1592,7 @@ HighsStatus Highs::getIisInterface() {
       return HighsStatus::kError;
     }
   }
-  return getIisData(lp, options_, dual_ray_value, this->iis_);
+  return this->iis_.getData(lp, options_, dual_ray_value);
 }
 
 HighsStatus Highs::extractIisData(HighsInt& num_iis_col, HighsInt& num_iis_row,
@@ -1600,19 +1600,19 @@ HighsStatus Highs::extractIisData(HighsInt& num_iis_col, HighsInt& num_iis_row,
                                   HighsInt* iis_row_index,
                                   HighsInt* iis_col_bound,
                                   HighsInt* iis_row_bound) {
-  assert(this->iis_.valid);
-  num_iis_col = this->iis_.col_index.size();
-  num_iis_row = this->iis_.row_index.size();
+  assert(this->iis_.valid_);
+  num_iis_col = this->iis_.col_index_.size();
+  num_iis_row = this->iis_.row_index_.size();
   if (iis_col_index || iis_col_bound) {
     for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) {
-      if (iis_col_index) iis_col_index[iCol] = this->iis_.col_index[iCol];
-      if (iis_col_bound) iis_col_bound[iCol] = this->iis_.col_bound[iCol];
+      if (iis_col_index) iis_col_index[iCol] = this->iis_.col_index_[iCol];
+      if (iis_col_bound) iis_col_bound[iCol] = this->iis_.col_bound_[iCol];
     }
   }
   if (iis_row_index || iis_row_bound) {
     for (HighsInt iRow = 0; iRow < num_iis_row; iRow++) {
-      if (iis_row_index) iis_row_index[iRow] = this->iis_.row_index[iRow];
-      if (iis_row_bound) iis_row_bound[iRow] = this->iis_.row_bound[iRow];
+      if (iis_row_index) iis_row_index[iRow] = this->iis_.row_index_[iRow];
+      if (iis_row_bound) iis_row_bound[iRow] = this->iis_.row_bound_[iRow];
     }
   }
   return HighsStatus::kOk;
@@ -1984,7 +1984,7 @@ HighsStatus Highs::optionChangeAction() {
     }
   }
   if (!user_bound_scale_ok || !user_cost_scale_ok) return HighsStatus::kError;
-  if (this->iis_.valid && options_.iis_strategy != this->iis_.strategy)
+  if (this->iis_.valid_ && options_.iis_strategy != this->iis_.strategy_)
     this->iis_.invalidate();
   return HighsStatus::kOk;
 }

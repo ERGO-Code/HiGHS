@@ -17,31 +17,30 @@
 #include "Highs.h"
 
 void HighsIis::invalidate() {
-  this->valid = false;
-  this->strategy = kIisStrategyMin;
-  this->col_index.clear();
-  this->row_index.clear();
-  this->col_bound.clear();
-  this->row_bound.clear();
+  this->valid_ = false;
+  this->strategy_ = kIisStrategyMin;
+  this->col_index_.clear();
+  this->row_index_.clear();
+  this->col_bound_.clear();
+  this->row_bound_.clear();
 }
 
-void iisRemoveCddCol(const HighsInt cdd_col, HighsIis& iis) {
-  HighsInt num_cdd = iis.col_index.size();
+void HighsIis::removeCddCol(const HighsInt cdd_col) {
+  HighsInt num_cdd = this->col_index_.size();
   assert(cdd_col < num_cdd);
-  iis.col_index[cdd_col] = iis.col_index[num_cdd-1];
-  iis.col_index.resize(num_cdd-1);  
+  this->col_index_[cdd_col] = this->col_index_[num_cdd-1];
+  this->col_index_.resize(num_cdd-1);  
 }
 
-void iisRemoveCddRow(const HighsInt cdd_row, HighsIis& iis) {
-  HighsInt num_cdd = iis.row_index.size();
+void HighsIis::removeCddRow(const HighsInt cdd_row) {
+  HighsInt num_cdd = this->row_index_.size();
   assert(cdd_row < num_cdd);
-  iis.row_index[cdd_row] = iis.row_index[num_cdd-1];
-  iis.row_index.resize(num_cdd-1);  
+  this->row_index_[cdd_row] = this->row_index_[num_cdd-1];
+  this->row_index_.resize(num_cdd-1);  
 }
 
-bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
-                           HighsIis& iis) {
-  iis.invalidate();
+bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options) {
+  this->invalidate();
   const bool col_priority =
       options.iis_strategy == kIisStrategyFromRayColPriority ||
       options.iis_strategy == kIisStrategyFromLpColPriority;
@@ -51,25 +50,25 @@ bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
         if (lp.col_lower_[iCol] - lp.col_upper_[iCol] >
             2 * options.primal_feasibility_tolerance) {
-          iis.col_index.push_back(iCol);
+          this->col_index_.push_back(iCol);
           break;
         }
       }
-      if (iis.col_index.size() > 0) break;
+      if (this->col_index_.size() > 0) break;
     } else {
       // Loop over rows first
       for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
         if (lp.row_lower_[iRow] - lp.row_upper_[iRow] >
             2 * options.primal_feasibility_tolerance) {
-          iis.row_index.push_back(iRow);
+          this->row_index_.push_back(iRow);
           break;
         }
       }
-      if (iis.row_index.size() > 0) break;
+      if (this->row_index_.size() > 0) break;
     }
   }
-  HighsInt num_iis_col = iis.col_index.size();
-  HighsInt num_iis_row = iis.row_index.size();
+  HighsInt num_iis_col = this->col_index_.size();
+  HighsInt num_iis_row = this->row_index_.size();
   // If none found then return false
   if (num_iis_col + num_iis_row == 0) return false;
   // Should have found exactly 1
@@ -78,31 +77,30 @@ bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
   assert(lp.a_matrix_.isColwise());
   if (num_iis_col > 0) {
     // Found inconsistent column
-    HighsInt iCol = iis.col_index[0];
+    HighsInt iCol = this->col_index_[0];
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
          iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      iis.row_index.push_back(lp.a_matrix_.index_[iEl]);
+      this->row_index_.push_back(lp.a_matrix_.index_[iEl]);
 
   } else {
     // Found inconsistent row
-    HighsInt iRow = iis.row_index[0];
+    HighsInt iRow = this->row_index_[0];
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       for (HighsInt iEl = lp.a_matrix_.start_[iCol];
            iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-        if (lp.a_matrix_.index_[iEl] == iRow) iis.col_index.push_back(iCol);
+        if (lp.a_matrix_.index_[iEl] == iRow) this->col_index_.push_back(iCol);
     }
   }
-  iis.valid = true;
-  iis.strategy = options.iis_strategy;
+  this->valid_ = true;
+  this->strategy_ = options.iis_strategy;
   return true;
 }
 
-HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
-                       const std::vector<double>& dual_ray_value,
-                       HighsIis& iis) {
+HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
+			      const std::vector<double>& dual_ray_value) {
   // Check for inconsistent column and row bounds should have been
   // done earlier
-  assert(!iisInconsistentBounds(lp, options, iis));
+  assert(!this->inconsistentBounds(lp, options));
 
   if (options.iis_strategy == kIisStrategyFromRayRowPriority ||
       options.iis_strategy == kIisStrategyFromRayColPriority) {
@@ -117,7 +115,7 @@ HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
 	to_row[iRow] = from_row.size();
 	from_row.push_back(iRow);
       }
-      printf("getIisData: dual_ray_value[%2d] = %g; to_row[%2d] = %d\n",
+      printf("HighsIis::getData: dual_ray_value[%2d] = %g; to_row[%2d] = %d\n",
 	     int(iRow), dual_ray_value[iRow], int(iRow), to_row[iRow]);
     }
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -152,29 +150,28 @@ HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
       to_lp.row_lower_.push_back(lp.row_lower_[from_row[iRow]]);
       to_lp.row_upper_.push_back(lp.row_upper_[from_row[iRow]]);
     }
-    if (computeIis(to_lp, options, iis) != HighsStatus::kOk) return HighsStatus::kError;
+    if (this->compute(to_lp, options) != HighsStatus::kOk) return HighsStatus::kError;
     // IIS col/row information is for to_lp, so indirect the values
     // into the original LP
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      iis.col_index[iCol] = from_col[iCol];
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-      iis.row_index[iRow] = from_row[iRow];
+    for (HighsInt iCol = 0; iCol < HighsInt(this->col_index_.size()); iCol++)
+      this->col_index_[iCol] = from_col[iCol];
+    for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
+      this->row_index_[iRow] = from_row[iRow];
   } else {
     // Use the whole LP
-    if (computeIis(lp, options, iis) != HighsStatus::kOk) return HighsStatus::kError;
+    if (this->compute(lp, options) != HighsStatus::kOk) return HighsStatus::kError;
   }
   return HighsStatus::kOk;
 }
 
-HighsStatus computeIis(const HighsLp& lp, const HighsOptions& options,
-                       HighsIis& iis) {
-  iis.invalidate();
+HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
+  this->invalidate();
   const HighsLogOptions& log_options = options.log_options;
   // Initially all columns and rows are candidates for the IIS
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    iis.col_index.push_back(iCol);
+    this->col_index_.push_back(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    iis.row_index.push_back(iRow);
+    this->row_index_.push_back(iRow);
   Highs highs;
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("output_flag", false);
@@ -185,10 +182,10 @@ HighsStatus computeIis(const HighsLp& lp, const HighsOptions& options,
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   // Perform row-deletion pass
 
-  HighsInt num_row_cdd = iis.row_index.size();
+  HighsInt num_row_cdd = this->row_index_.size();
   for (HighsInt iCddRow = 0; iCddRow < num_row_cdd; iCddRow++) {
     for (;;) {
-      HighsInt iRow = iis.row_index[iCddRow];
+      HighsInt iRow = this->row_index_[iCddRow];
       const double row_lower = lp.row_lower_[iRow];
       const double row_upper = lp.row_upper_[iRow];
       // Record whether a bound can be dropped: by default it's
@@ -237,7 +234,7 @@ HighsStatus computeIis(const HighsLp& lp, const HighsOptions& options,
 	// candidates
 	  status = highs.changeRowBounds(iRow, -kHighsInf, kHighsInf);
 	  assert(status == HighsStatus::kOk);
-	iisRemoveCddRow(iCddRow, iis);
+	  this->removeCddRow(iCddRow);
 	num_row_cdd--;
 	highsLogUser(log_options, HighsLogType::kInfo, "Dropped  row %d from candidate set\n", int(iRow));
 	if (iCddRow >= num_row_cdd) break;
@@ -247,7 +244,7 @@ HighsStatus computeIis(const HighsLp& lp, const HighsOptions& options,
       }
     }
   }
-  iis.valid = true;
-  iis.strategy = options.iis_strategy;
+  this->valid_ = true;
+  this->strategy_ = options.iis_strategy;
   return HighsStatus::kOk;
 }

@@ -16,23 +16,27 @@
 
 #include "lp_data/HighsLp.h"
 
-struct HighsIis {
-  bool valid = false;
-  HighsInt strategy = kIisStrategyMin;
-  std::vector<HighsInt> col_index;
-  std::vector<HighsInt> row_index;
-  std::vector<HighsInt> col_bound;
-  std::vector<HighsInt> row_bound;
+class HighsIis {
+ public:
+  HighsIis() {}
+
   void invalidate();
+  void removeCddCol(const HighsInt cdd_col);
+  void removeCddRow(const HighsInt cdd_row);
+  HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
+		      const std::vector<double>& dual_ray_value);
+
+  HighsStatus compute(const HighsLp& lp, const HighsOptions& options);
+
+  bool inconsistentBounds(const HighsLp& lp, const HighsOptions& options);
+
+  // Data members
+  bool valid_ = false;
+  HighsInt strategy_ = kIisStrategyMin;
+  std::vector<HighsInt> col_index_;
+  std::vector<HighsInt> row_index_;
+  std::vector<HighsInt> col_bound_;
+  std::vector<HighsInt> row_bound_;
 };
 
-HighsStatus getIisData(const HighsLp& lp, const HighsOptions& options,
-                       const std::vector<double>& dual_ray_value,
-                       HighsIis& iis);
-
-HighsStatus computeIis(const HighsLp& lp, const HighsOptions& options,
-                       HighsIis& iis);
-
-bool iisInconsistentBounds(const HighsLp& lp, const HighsOptions& options,
-                           HighsIis& iis);
 #endif  // LP_DATA_HIGHSIIS_H_
