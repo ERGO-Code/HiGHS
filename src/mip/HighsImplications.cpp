@@ -51,7 +51,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   // store lifting opportunities
   std::for_each(globaldomain.redundant_rows_.cbegin(),
-                globaldomain.redundant_rows_.cend(), [&](const auto& elm) {
+                globaldomain.redundant_rows_.cend(),
+                [&](const std::pair<HighsInt, double>& elm) {
                   // new lifting opportunity; negate column index if variable is
                   // set to its upper bound
                   LiftingOpportunity lift{val ? -col : col, elm.second};
