@@ -26,25 +26,35 @@ void HighsIis::invalidate() {
 }
 
 std::string iisBoundStatusToString(HighsInt bound_status) {
-  if (bound_status == kIisBoundStatusNull) return " Null";
-  if (bound_status == kIisBoundStatusFree) return " Free";
-  if (bound_status == kIisBoundStatusLower) return "Lower";
-  if (bound_status == kIisBoundStatusUpper) return "Upper";
-  if (bound_status == kIisBoundStatusBoxed) return "Boxed";
+  if (bound_status == kIisBoundStatusDropped) return "Dropped";
+  if (bound_status == kIisBoundStatusNull) return "   Null";
+  if (bound_status == kIisBoundStatusFree) return "   Free";
+  if (bound_status == kIisBoundStatusLower) return "  Lower";
+  if (bound_status == kIisBoundStatusUpper) return "  Upper";
+  if (bound_status == kIisBoundStatusBoxed) return "  Boxed";
   return "*****";
 }
 
-void HighsIis::report(const HighsLp& lp) {
-  printf("\nIIS\n===\n");
-  printf("Status: ");
+void HighsIis::report(const std::string message, const HighsLp& lp) {
+  printf("\nIIS %s\n===\n", message.c_str());
+  printf("Column: ");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("%9d ", iCol);
+  printf("\nStatus: ");
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
     printf("%9s ", iisBoundStatusToString(this->col_bound_[iCol]).c_str());
-  printf("\nLower: ");
+  printf("\nLower:  ");
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
     printf("%9.2g ", lp.col_lower_[iCol]);
-  printf("\nUpper: ");
+  printf("\nUpper:  ");
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
-    printf("%9.2g ", lp.col_lower_[iCol]);
+    printf("%9.2g ", lp.col_upper_[iCol]);
+  printf("\n");
+  printf("Row:    Status     Lower     Upper\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+    printf("%2d   %9s %9.2g %9.2g\n", int(iRow),
+	   iisBoundStatusToString(this->row_bound_[iRow]).c_str(),
+	   lp.row_lower_[iRow], lp.row_upper_[iRow]);
   printf("\n");
 }
 
@@ -193,9 +203,9 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     // IIS col/row information is for to_lp, so indirect the values
     // into the original LP
     for (HighsInt iCol = 0; iCol < HighsInt(this->col_index_.size()); iCol++)
-      this->col_index_[iCol] = from_col[iCol];
+      this->col_index_[iCol] = from_col[this->col_index_[iCol]];
     for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
-      this->row_index_[iRow] = from_row[iRow];
+      this->row_index_[iRow] = from_row[this->row_index_[iRow]];
   } else {
     // Use the whole LP
     if (this->compute(lp, options) != HighsStatus::kOk) return HighsStatus::kError;
@@ -213,9 +223,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
-  const HighsLp& incumbent_lp;
-  highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("threads", 1);
+  highs.setOptionValue("presolve", kHighsOffString);
+  const HighsLp& incumbent_lp = highs.getLp();
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   const bool write_model = false;
@@ -230,18 +241,19 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   run_status = highs.changeColsCost(0, lp.num_col_-1, cost.data());
   assert(run_status == HighsStatus::kOk);
   run_status = highs.run();
+  assert(run_status == HighsStatus::kOk);
   if (run_status != HighsStatus::kOk) return run_status;
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   // Pass twice: rows before columns, or columns before rows, according to row_priority
   for (HighsInt k = 0; k < 2; k++) {
     const bool row_deletion = (row_priority && k == 0) || (!row_priority && k == 1);
-    std::string type = row_deletion ? "row" : "col";
+    std::string type = row_deletion ? "Row" : "Col";
     // Perform deletion pass
     HighsInt num_index = row_deletion ? lp.num_row_ : lp.num_col_;
     for (HighsInt iX = 0; iX < num_index; iX++) {
       const HighsInt ix_status = row_deletion ? this->row_bound_[iX] : this->col_bound_[iX];
-      if (ix_status == kIisBoundStatusFree) continue;
+      if (ix_status == kIisBoundStatusDropped || ix_status == kIisBoundStatusFree) continue;
       double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
       // Record whether the upper bound has been dropped due to the lower bound being kept
@@ -314,7 +326,13 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
       HighsInt iss_bound_status = kIisBoundStatusNull;
       if (lower <= -kHighsInf) {
 	if (upper >= kHighsInf) {
-	  iss_bound_status = kIisBoundStatusFree;
+	  if (row_deletion) {
+	    // Free rows can be dropped
+	    iss_bound_status = kIisBoundStatusDropped;
+	  } else {
+	    // Free columns can only be dropped if they are empty
+	    iss_bound_status = kIisBoundStatusFree;
+	  }
 	} else {
 	  iss_bound_status = kIisBoundStatusUpper;
 	}
@@ -333,52 +351,37 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
       } else {
 	this->col_bound_[iX] = iss_bound_status;
       }
-      if (iss_bound_status == kIisBoundStatusFree) {
-	highsLogUser(log_options, HighsLogType::kInfo, "Dropped  %s %d from candidate set\n", type.c_str(), int(iX));
-      } else {
-	highsLogUser(log_options, HighsLogType::kInfo, "Retained %s %d in   candidate set\n", type.c_str(), int(iX));
-      }
+      highsLogUser(log_options, HighsLogType::kInfo, "%s %d has status %s\n",
+		   type.c_str(), int(iX), iisBoundStatusToString(iss_bound_status).c_str());
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
-    this->report(incumbent_lp);
+    this->report("End of deletion", incumbent_lp);
     if (row_deletion) {
-      // Mark empty columns as free
+      // Mark empty columns as dropped
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-	bool empty_col = false;
+	bool empty_col = true;
 	for (HighsInt iEl = lp.a_matrix_.start_[iCol];
 	     iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-	  if (this->row_bound_[lp.a_matrix_.index_[iEl]] != kIisBoundStatusFree) {
-	    empty_col = true;
+	  if (this->row_bound_[lp.a_matrix_.index_[iEl]] != kIisBoundStatusDropped) {
+	    empty_col = false;
 	    break;
 	  }
 	}
-	if (empty_col) this->col_bound_[iCol] = kIisBoundStatusFree;
-      }
-    } else {
-      // Look for empty rows - which should be feasible for zero activity - and mark them as free
-      std::vector<HighsInt> col_count;
-      col_count.assign(lp.num_row_, 0);
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-	for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	     iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-	  HighsInt iRow = lp.a_matrix_.index_[iEl];
-	  if (this->row_bound_[iRow] != kIisBoundStatusFree) col_count[iRow]++;
+	if (empty_col) {
+	  highsLogUser(log_options, HighsLogType::kInfo, "Col %d has status Dropped: Empty\n", int(iCol));
+	  this->col_bound_[iCol] = kIisBoundStatusDropped;
+	  run_status = highs.changeColBounds(iCol, -kHighsInf, kHighsInf);
+	  assert(run_status == HighsStatus::kOk);
 	}
       }
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-	if (col_count[iRow] > 0) continue;
-	double lower = lp.row_lower_[iRow];
-	double upper = lp.row_upper_[iRow];
-	bool trivially_feasible = !(lower > options.primal_feasibility_tolerance && upper < -options.primal_feasibility_tolerance);
-	assert(trivially_feasible);
-	this->row_bound_[iRow] = kIisBoundStatusFree;
-      }
     }
+    this->report("End of pass 1", incumbent_lp);
   }
+  this->report("End of pass 2", incumbent_lp);
   HighsInt iss_num_col = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (this->col_bound_[iCol] != kIisBoundStatusFree) {
+    if (this->col_bound_[iCol] != kIisBoundStatusDropped) {
       this->col_index_[iss_num_col] = this->col_index_[iCol];
       this->col_bound_[iss_num_col] = this->col_bound_[iCol];
       iss_num_col++;
@@ -386,7 +389,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   }
   HighsInt iss_num_row = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (this->row_bound_[iRow] != kIisBoundStatusFree) {
+    if (this->row_bound_[iRow] != kIisBoundStatusDropped) {
       this->row_index_[iss_num_row] = this->row_index_[iRow];
       this->row_bound_[iss_num_row] = this->row_bound_[iRow];
       iss_num_row++;

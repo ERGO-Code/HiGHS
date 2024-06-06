@@ -17,7 +17,8 @@
 #include "lp_data/HighsLp.h"
 
 enum IisBoundStatus {
-  kIisBoundStatusNull = 0,
+  kIisBoundStatusDropped = -1,
+  kIisBoundStatusNull,  // 0
   kIisBoundStatusFree,  // 1
   kIisBoundStatusLower, // 2
   kIisBoundStatusUpper, // 3
@@ -29,6 +30,7 @@ class HighsIis {
   HighsIis() {}
 
   void invalidate();
+  void report(const std::string message, const HighsLp& lp);
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);
