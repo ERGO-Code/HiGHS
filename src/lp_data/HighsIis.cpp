@@ -25,6 +25,16 @@ void HighsIis::invalidate() {
   this->row_bound_.clear();
 }
 
+void HighsIis::addCol(const HighsInt col, const HighsInt status) {
+  this->col_index_.push_back(col);
+  this->col_bound_.push_back(status);
+}
+
+void HighsIis::addRow(const HighsInt row, const HighsInt status) {
+  this->row_index_.push_back(row);
+  this->row_bound_.push_back(status);
+}
+
 void HighsIis::removeCol(const HighsInt col) {
   HighsInt num_col = this->col_index_.size();
   assert(col < num_col);
@@ -39,7 +49,7 @@ void HighsIis::removeRow(const HighsInt row) {
   this->row_index_.resize(num_row-1);  
 }
 
-bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options) {
+bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
   this->invalidate();
   const bool col_priority =
       options.iis_strategy == kIisStrategyFromRayColPriority ||
@@ -50,7 +60,7 @@ bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
         if (lp.col_lower_[iCol] - lp.col_upper_[iCol] >
             2 * options.primal_feasibility_tolerance) {
-          this->col_index_.push_back(iCol);
+          this->addCol(iCol, kIisBoundStatusBoxed);
           break;
         }
       }
@@ -60,7 +70,7 @@ bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options
       for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
         if (lp.row_lower_[iRow] - lp.row_upper_[iRow] >
             2 * options.primal_feasibility_tolerance) {
-          this->row_index_.push_back(iRow);
+          this->addRow(iRow, kIisBoundStatusBoxed);
           break;
         }
       }
@@ -69,38 +79,44 @@ bool HighsIis::inconsistentBounds(const HighsLp& lp, const HighsOptions& options
   }
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
-  // If none found then return false
-  if (num_iis_col + num_iis_row == 0) return false;
-  // Should have found exactly 1
-  assert((num_iis_col == 1 || num_iis_row == 1) &&
-         num_iis_col + num_iis_row < 2);
-  assert(lp.a_matrix_.isColwise());
-  if (num_iis_col > 0) {
-    // Found inconsistent column
-    HighsInt iCol = this->col_index_[0];
+  // If one is found then we're done
+  if (num_iis_col + num_iis_row > 0) {
+    // Should have found exactly 1
+    assert((num_iis_col == 1 || num_iis_row == 1) &&
+	   num_iis_col + num_iis_row < 2);
+    this->valid_ = true;
+    this->strategy_ = options.iis_strategy;
+    return true;
+  }
+  // Now look for empty rows that cannot have zero activity
+  std::vector<HighsInt> count;
+  count.assign(lp.num_row_, 0);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      this->row_index_.push_back(lp.a_matrix_.index_[iEl]);
-
-  } else {
-    // Found inconsistent row
-    HighsInt iRow = this->row_index_[0];
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-        if (lp.a_matrix_.index_[iEl] == iRow) this->col_index_.push_back(iCol);
+	 iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      count[lp.a_matrix_.index_[iEl]]++;
+  }
+  assert(this->row_index_.size() == 0);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (count[iRow] > 0) continue;
+    if (lp.row_lower_[iRow] > options.primal_feasibility_tolerance) {
+      this->addRow(iRow, kIisBoundStatusLower);
+    } else if (lp.row_upper_[iRow] < -options.primal_feasibility_tolerance) {
+      this->addRow(iRow, kIisBoundStatusUpper);
+    }
+    if (this->row_index_.size() > 0) {
+      this->valid_ = true;
+      this->strategy_ = options.iis_strategy;
+      return true;
     }
   }
-  this->valid_ = true;
-  this->strategy_ = options.iis_strategy;
-  return true;
+  return false;
 }
 
 HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
 			      const std::vector<double>& dual_ray_value) {
-  // Check for inconsistent column and row bounds should have been
-  // done earlier
-  assert(!this->inconsistentBounds(lp, options));
+  // Check for trivial IIS should have been done earlier
+  assert(!this->trivial(lp, options));
 
   if (options.iis_strategy == kIisStrategyFromRayRowPriority ||
       options.iis_strategy == kIisStrategyFromRayColPriority) {
@@ -171,25 +187,23 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
     options.iis_strategy == kIisStrategyFromRayRowPriority ||
     options.iis_strategy == kIisStrategyFromLpRowPriority;
   // Initially all columns and rows are candidates for the IIS
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    this->col_index_.push_back(iCol);
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    this->row_index_.push_back(iRow);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("output_flag", false);
-  HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::kOk);
+  HighsStatus run_status = highs.passModel(lp);
+  assert(run_status == HighsStatus::kOk);
   highs.setOptionValue("output_flag", true);
   highs.writeModel("");
   highs.setOptionValue("output_flag", false);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
-  status = highs.changeColsCost(0, lp.num_col_-1, cost.data());
-  assert(status == HighsStatus::kOk);
-  status = highs.run();
-  if (status != HighsStatus::kOk) return status;
+  run_status = highs.changeColsCost(0, lp.num_col_-1, cost.data());
+  assert(run_status == HighsStatus::kOk);
+  run_status = highs.run();
+  if (run_status != HighsStatus::kOk) return run_status;
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   // Pass twice: rows before columns, or columns before rows, according to row_priority
@@ -197,73 +211,163 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
     const bool row_deletion = (row_priority && k == 0) || (!row_priority && k == 1);
     std::string type = row_deletion ? "row" : "col";
     // Perform deletion pass
-    HighsInt num_cdd = row_deletion ? this->row_index_.size() : this->col_index_.size();
-    for (HighsInt iCdd = 0; iCdd < num_cdd; iCdd++) {
-      for (;;) {
-	const HighsInt iX = row_deletion ? this->row_index_[iCdd] : this->col_index_[iCdd];
-	const double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
-	const double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
-	// Record whether a bound can be dropped: by default it's
-	// possible, and only not possible if the bound is finite and the
-	// LP remains infeasible if the bound is dropped
-	bool drop_lower = true;
-	bool drop_upper = true;
-	if (lower > -kHighsInf) {
-	  // Drop the lower bound temporarily
-	  status = row_deletion ? highs.changeRowBounds(iX, -kHighsInf, upper) : highs.changeColBounds(iX, -kHighsInf, upper);
-	  assert(status == HighsStatus::kOk);
-	  status = highs.run();
-	  assert(status == HighsStatus::kOk);
-	  HighsModelStatus model_status = highs.getModelStatus();
-	  if (model_status == HighsModelStatus::kOptimal) {
-	    // Now feasible, so restore the lower bound and indicate that
-	    // it cannot be dropped permanently
-	    status = row_deletion ? highs.changeRowBounds(iX, lower, upper) : highs.changeColBounds(iX, lower, upper);
-	    assert(status == HighsStatus::kOk);
-	    drop_lower = false;
-	  } else {
-	    assert(model_status == HighsModelStatus::kInfeasible);
-	    // Bound can be dropped permanently
+    HighsInt num_index = row_deletion ? lp.num_row_ : lp.num_col_;
+    for (HighsInt iX = 0; iX < num_index; iX++) {
+      const HighsInt ix_status = row_deletion ? this->row_bound_[iX] : this->col_bound_[iX];
+      if (ix_status == kIisBoundStatusFree) continue;
+      double lower = row_deletion ? lp.row_lower_[iX] : lp.col_lower_[iX];
+      double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
+      // Record whether the upper bound has been dropped due to the lower bound being kept
+      bool drop_upper = false;
+      if (lower > -kHighsInf) {
+	// Drop the lower bound temporarily
+	run_status = row_deletion ? highs.changeRowBounds(iX, -kHighsInf, upper) : highs.changeColBounds(iX, -kHighsInf, upper);
+	assert(run_status == HighsStatus::kOk);
+	run_status = highs.run();
+	assert(run_status == HighsStatus::kOk);
+	HighsModelStatus model_status = highs.getModelStatus();
+	if (model_status == HighsModelStatus::kOptimal) {
+	  // Now feasible, so restore the lower bound
+	  run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper) : highs.changeColBounds(iX, lower, upper);
+	  assert(run_status == HighsStatus::kOk);
+	  // If the lower bound must be kept, then any finite upper bound
+	  // must be dropped
+	  const bool apply_reciprocal_rule = false;
+	  if (apply_reciprocal_rule) {
+	    if (upper < kHighsInf) {
+	      // Drop the upper bound permanently
+	      upper = kHighsInf;
+	      run_status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf) : highs.changeColBounds(iX, lower, upper);
+	      assert(run_status == HighsStatus::kOk);
+	      drop_upper = true;
+	    }
+	    //	    continue;
 	  }
-	}	
-	if (upper < kHighsInf) {
-	  // Drop the upper bound temporarily
-	  status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf) : highs.changeColBounds(iX, lower, kHighsInf);
-	  assert(status == HighsStatus::kOk);
-	  status = highs.run();
-	  assert(status == HighsStatus::kOk);
-	  HighsModelStatus model_status = highs.getModelStatus();
-	  if (model_status == HighsModelStatus::kOptimal) {
-	    // Now feasible, so restore the upper bound and indicate that
-	    // it cannot be dropped permanently
-	    status = row_deletion ? highs.changeRowBounds(iX, lower, upper) : highs.changeColBounds(iX, lower, upper);
-	    assert(status == HighsStatus::kOk);
-	    drop_upper = false;
-	  } else {
-	    assert(model_status == HighsModelStatus::kInfeasible);
-	    // Bound can be dropped permanently
-	  }
-	}
-	if (drop_lower && drop_upper) {
-	  // Both bounds can be dropped, so remove from the set of
-	  // candidates
-	  status = row_deletion ? highs.changeRowBounds(iX, -kHighsInf, kHighsInf) : highs.changeColBounds(iX, -kHighsInf, kHighsInf);
-	  assert(status == HighsStatus::kOk);
-	  if (row_deletion) {
-	    this->removeRow(iCdd);
-	  } else {
-	    this->removeCol(iCdd);
-	  }	   
-	  num_cdd--;
-	  highsLogUser(log_options, HighsLogType::kInfo, "Dropped  %s %d from candidate set\n", type.c_str(), int(iX));
-	  if (iCdd >= num_cdd) break;
 	} else {
-	  highsLogUser(log_options, HighsLogType::kInfo, "Retained %s %d in   candidate set\n", type.c_str(), int(iX));
-	  break;
+	  // Bound can be dropped permanently
+	  assert(model_status == HighsModelStatus::kInfeasible);
+	  lower = -kHighsInf;
 	}
+      }	
+      if (upper < kHighsInf) {
+	// Drop the upper bound temporarily
+	run_status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf) : highs.changeColBounds(iX, lower, kHighsInf);
+	assert(run_status == HighsStatus::kOk);
+	run_status = highs.run();
+	assert(run_status == HighsStatus::kOk);
+	HighsModelStatus model_status = highs.getModelStatus();
+	// If the upper bound has been dropped due to the reciprical
+	// rule, the LP must be infeasible
+	if (drop_upper) assert(model_status == HighsModelStatus::kInfeasible);
+	if (model_status == HighsModelStatus::kOptimal) {
+	  // Now feasible, so restore the upper bound
+	  run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper) : highs.changeColBounds(iX, lower, upper);
+	  assert(run_status == HighsStatus::kOk);
+	} else {
+	  // Bound can be dropped permanently
+	  assert(model_status == HighsModelStatus::kInfeasible);
+	  upper = kHighsInf;
+	}
+      }
+      const bool debug_bound_change = true;
+      if (debug_bound_change) {
+	// Check bounds have been changed correctly
+	double check_lower;
+	double check_upper;
+	double check_cost;
+	HighsInt check_num_ix;
+	HighsInt check_num_nz;
+	run_status = row_deletion ?
+	  highs.getRows(iX, iX, check_num_ix, &check_lower, &check_upper, check_num_nz, nullptr, nullptr, nullptr) :
+	  highs.getCols(iX, iX, check_num_ix, &check_cost, &check_lower, &check_upper, check_num_nz, nullptr, nullptr, nullptr);
+	assert(run_status == HighsStatus::kOk);
+	assert(check_lower == lower);
+	assert(check_upper == upper);
+      }
+      HighsInt iss_bound_status = kIisBoundStatusNull;
+      if (lower <= -kHighsInf) {
+	if (upper >= kHighsInf) {
+	  iss_bound_status = kIisBoundStatusFree;
+	} else {
+	  iss_bound_status = kIisBoundStatusUpper;
+	}
+      } else {
+	if (upper >= kHighsInf) {
+	  iss_bound_status = kIisBoundStatusLower;
+	} else {
+	  // FX or BX: shouldn't happen
+	  iss_bound_status = kIisBoundStatusBoxed;
+	}
+      }
+      assert(iss_bound_status != kIisBoundStatusNull);
+      assert(iss_bound_status != kIisBoundStatusBoxed);
+      if (row_deletion) {
+	this->row_bound_[iX] = iss_bound_status;
+      } else {
+	this->col_bound_[iX] = iss_bound_status;
+      }
+      if (iss_bound_status == kIisBoundStatusFree) {
+	highsLogUser(log_options, HighsLogType::kInfo, "Dropped  %s %d from candidate set\n", type.c_str(), int(iX));
+      } else {
+	highsLogUser(log_options, HighsLogType::kInfo, "Retained %s %d in   candidate set\n", type.c_str(), int(iX));
+      }
+    }
+    if (k == 1) continue;
+    // End of first pass: look to simplify second pass
+    if (row_deletion) {
+      // Mark empty columns as free
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+	bool empty_col = false;
+	for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	     iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+	  if (this->row_bound_[lp.a_matrix_.index_[iEl]] != kIisBoundStatusFree) {
+	    empty_col = true;
+	    break;
+	  }
+	}
+	if (empty_col) this->col_bound_[iCol] = kIisBoundStatusFree;
+      }
+    } else {
+      // Look for empty rows - which should be feasible for zero activity - and mark them as free
+      std::vector<HighsInt> col_count;
+      col_count.assign(lp.num_row_, 0);
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+	for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	     iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+	  HighsInt iRow = lp.a_matrix_.index_[iEl];
+	  if (this->row_bound_[iRow] != kIisBoundStatusFree) col_count[iRow]++;
+	}
+      }
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+	if (col_count[iRow] > 0) continue;
+	double lower = lp.row_lower_[iRow];
+	double upper = lp.row_upper_[iRow];
+	bool trivially_feasible = !(lower > options.primal_feasibility_tolerance && upper < -options.primal_feasibility_tolerance);
+	assert(trivially_feasible);
+	this->row_bound_[iRow] = kIisBoundStatusFree;
       }
     }
   }
+  HighsInt iss_num_col = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (this->col_bound_[iCol] != kIisBoundStatusFree) {
+      this->col_index_[iss_num_col] = this->col_index_[iCol];
+      this->col_bound_[iss_num_col] = this->col_bound_[iCol];
+      iss_num_col++;
+    }
+  }
+  this->col_index_.resize(iss_num_col);
+  this->col_bound_.resize(iss_num_col);
+  HighsInt iss_num_row = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (this->row_bound_[iRow] != kIisBoundStatusFree) {
+      this->row_index_[iss_num_row] = this->row_index_[iRow];
+      this->row_bound_[iss_num_row] = this->row_bound_[iRow];
+      iss_num_row++;
+    }
+  }
+  this->row_index_.resize(iss_num_row);
+  this->row_bound_.resize(iss_num_row);
   this->valid_ = true;
   this->strategy_ = options.iis_strategy;
   return HighsStatus::kOk;

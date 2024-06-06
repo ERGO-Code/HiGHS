@@ -1552,8 +1552,8 @@ HighsStatus Highs::getRangingInterface() {
 HighsStatus Highs::getIisInterface() {
   if (this->iis_.valid_) return HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
-  // Check for inconsistent column and row bounds
-  if (this->iis_.inconsistentBounds(lp, options_)) return HighsStatus::kOk;
+  // Check for trivial IIS: empty infeasible row or inconsistent bounds
+  if (this->iis_.trivial(lp, options_)) return HighsStatus::kOk;
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return HighsStatus::kOk;

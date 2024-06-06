@@ -16,11 +16,21 @@
 
 #include "lp_data/HighsLp.h"
 
+enum IisBoundStatus {
+  kIisBoundStatusNull = 0,
+  kIisBoundStatusFree,  // 1
+  kIisBoundStatusLower, // 2
+  kIisBoundStatusUpper, // 3
+  kIisBoundStatusBoxed  // 4
+};
+
 class HighsIis {
  public:
   HighsIis() {}
 
   void invalidate();
+  void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
+  void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);
   void removeRow(const HighsInt row);
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
@@ -28,7 +38,7 @@ class HighsIis {
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options);
 
-  bool inconsistentBounds(const HighsLp& lp, const HighsOptions& options);
+  bool trivial(const HighsLp& lp, const HighsOptions& options);
 
   // Data members
   bool valid_ = false;

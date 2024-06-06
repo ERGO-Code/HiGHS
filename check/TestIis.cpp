@@ -106,7 +106,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   std::vector<HighsInt> iis_row_bound;
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
-  REQUIRE(num_iis_col == 2);
+  REQUIRE(num_iis_col == 0);
   REQUIRE(num_iis_row == 1);
   iis_col_index.resize(num_iis_col);
   iis_row_index.resize(num_iis_row);
@@ -114,26 +114,78 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
                        iis_row_index.data(),
-                       // iis_col_bound.data(), iis_row_bound.data()
-                       nullptr, nullptr) == HighsStatus::kOk);
-  REQUIRE(iis_col_index[0] == 1);
-  REQUIRE(iis_col_index[1] == 2);
+                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_row_index[0] == 0);
+  REQUIRE(iis_row_bound[0] == kIisBoundStatusBoxed);
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpColPriority);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
   REQUIRE(num_iis_col == 1);
-  REQUIRE(num_iis_row == 2);
+  REQUIRE(num_iis_row == 0);
   iis_col_index.resize(num_iis_col);
   iis_row_index.resize(num_iis_row);
   iis_col_bound.resize(num_iis_col);
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
                        iis_row_index.data(),
-                       // iis_col_bound.data(), iis_row_bound.data()
-                       nullptr, nullptr) == HighsStatus::kOk);
+                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_col_index[0] == 2);
-  REQUIRE(iis_row_index[0] == 0);
-  REQUIRE(iis_row_index[1] == 1);
+  REQUIRE(iis_col_bound[0] == kIisBoundStatusBoxed);
+}
+
+TEST_CASE("lp-empty-infeasible-row", "[iis]") {
+  // Second row is empty, with bounds of [1, 2]
+  const HighsInt empty_row = 1;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf, 1, -inf};
+  lp.row_upper_ = {8, 2, 9};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {2, 1, 1, 3};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  HighsInt num_iis_col;
+  HighsInt num_iis_row;
+  std::vector<HighsInt> iis_col_index;
+  std::vector<HighsInt> iis_row_index;
+  std::vector<HighsInt> iis_col_bound;
+  std::vector<HighsInt> iis_row_bound;
+  REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
+  REQUIRE(num_iis_col == 0);
+  REQUIRE(num_iis_row == 1);
+  iis_col_index.resize(num_iis_col);
+  iis_row_index.resize(num_iis_row);
+  iis_col_bound.resize(num_iis_col);
+  iis_row_bound.resize(num_iis_row);
+  REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
+                       iis_row_index.data(),
+                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+  REQUIRE(iis_row_index[0] == empty_row);
+  REQUIRE(iis_row_bound[0] == kIisBoundStatusLower);
+  REQUIRE(highs.changeRowBounds(empty_row, -2, -1)  == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
+  REQUIRE(num_iis_col == 0);
+  REQUIRE(num_iis_row == 1);
+  iis_col_index.resize(num_iis_col);
+  iis_row_index.resize(num_iis_row);
+  iis_col_bound.resize(num_iis_col);
+  iis_row_bound.resize(num_iis_row);
+  REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
+                       iis_row_index.data(),
+                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+  REQUIRE(iis_row_index[0] == empty_row);
+  REQUIRE(iis_row_bound[0] == kIisBoundStatusUpper);
+  
 }
 
 TEST_CASE("lp-get-iis", "[iis]") {
