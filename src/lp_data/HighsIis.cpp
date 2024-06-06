@@ -25,6 +25,29 @@ void HighsIis::invalidate() {
   this->row_bound_.clear();
 }
 
+std::string iisBoundStatusToString(HighsInt bound_status) {
+  if (bound_status == kIisBoundStatusNull) return " Null";
+  if (bound_status == kIisBoundStatusFree) return " Free";
+  if (bound_status == kIisBoundStatusLower) return "Lower";
+  if (bound_status == kIisBoundStatusUpper) return "Upper";
+  if (bound_status == kIisBoundStatusBoxed) return "Boxed";
+  return "*****";
+}
+
+void HighsIis::report(const HighsLp& lp) {
+  printf("\nIIS\n===\n");
+  printf("Status: ");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("%9s ", iisBoundStatusToString(this->col_bound_[iCol]).c_str());
+  printf("\nLower: ");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("%9.2g ", lp.col_lower_[iCol]);
+  printf("\nUpper: ");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("%9.2g ", lp.col_lower_[iCol]);
+  printf("\n");
+}
+
 void HighsIis::addCol(const HighsInt col, const HighsInt status) {
   this->col_index_.push_back(col);
   this->col_bound_.push_back(status);
@@ -190,13 +213,17 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
+  const HighsLp& incumbent_lp;
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("output_flag", false);
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
-  highs.setOptionValue("output_flag", true);
-  highs.writeModel("");
-  highs.setOptionValue("output_flag", false);
+  const bool write_model = false;
+  if (write_model) {
+    highs.setOptionValue("output_flag", true);
+    highs.writeModel("");
+    highs.setOptionValue("output_flag", false);
+  }
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -314,6 +341,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
+    this->report(incumbent_lp);
     if (row_deletion) {
       // Mark empty columns as free
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -356,8 +384,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
       iss_num_col++;
     }
   }
-  this->col_index_.resize(iss_num_col);
-  this->col_bound_.resize(iss_num_col);
   HighsInt iss_num_row = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (this->row_bound_[iRow] != kIisBoundStatusFree) {
@@ -366,6 +392,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
       iss_num_row++;
     }
   }
+  this->col_index_.resize(iss_num_col);
+  this->col_bound_.resize(iss_num_col);
   this->row_index_.resize(iss_num_row);
   this->row_bound_.resize(iss_num_row);
   this->valid_ = true;
