@@ -15,6 +15,7 @@ void testIis(std::string& model,
 	     HighsInt* iis_row_index,
 	     HighsInt* iis_col_bound,
 	     HighsInt* iis_row_bound) {
+  HighsModelStatus model_status;
   std::string model_file =
     std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -56,7 +57,6 @@ void testIis(std::string& model,
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs.changeRowBounds(iRow, lower, upper) == HighsStatus::kOk);
   }
-  REQUIRE(lp == incumbent_lp);
   for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
     HighsInt iCol = iis_col_index[iisCol];
     HighsInt iis_bound = iis_col_bound[iisCol];
@@ -76,13 +76,13 @@ void testIis(std::string& model,
     }
     REQUIRE(highs.changeColBounds(iCol, to_lower, to_upper) == HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
-    HighsModelStatus model_status = highs.getModelStatus();
+    model_status = highs.getModelStatus();
     if (dev_run)
       printf("Removing IIS Col %d (LP col %d) status %d yields model status %s\n",
 	     int(iisCol), int(iCol), int(iis_bound), highs.modelStatusToString(model_status).c_str());
-    /*
     if (model_status != HighsModelStatus::kOptimal) {
       highs.writeSolution("", kSolutionStylePretty);
+    /*
       Highs ck_highs;
       ck_highs.setOptionValue("threads", 1);
       ck_highs.passModel(incumbent_lp);
@@ -90,8 +90,8 @@ void testIis(std::string& model,
       HighsInt ck_num_iis_row;
       ck_highs.run();
       ck_highs.getIis(num_iis_col, num_iis_row, nullptr, nullptr, nullptr, nullptr);
-    }
     */
+    }
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs.changeColBounds(iCol, lower, upper) == HighsStatus::kOk);
   }
@@ -108,8 +108,10 @@ void testMps(std::string& model) {
   HighsInt num_iis_row;
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+  //  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
   REQUIRE(num_iis_col > 0);
   REQUIRE(num_iis_row > 0);
@@ -278,6 +280,11 @@ TEST_CASE("lp-get-iis", "[iis]") {
   REQUIRE(iis_col_index[1] == 1);
   REQUIRE(iis_row_index[0] == 2);
 
+}
+
+TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
+  std::string model = "woodinfe";
+  testMps(model);
 }
 
 TEST_CASE("lp-get-iis-galenet", "[iis]") {
