@@ -49,6 +49,24 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     return true;
   }
 
+  // store lifting opportunities
+  std::for_each(globaldomain.redundant_rows_.cbegin(),
+                globaldomain.redundant_rows_.cend(), [&](const auto& elm) {
+                  // new lifting opportunity; negate column index if variable is
+                  // set to its upper bound
+                  LiftingOpportunity lift{val ? -col : col, elm.second};
+                  // find existing set of lifting opportunities
+                  auto it = liftingOpportunities.find(elm.first);
+                  if (it != liftingOpportunities.end()) {
+                    // add to existing set
+                    (*it).second.emplace(lift);
+                  } else {
+                    // add new element
+                    liftingOpportunities.emplace(
+                        elm.first, std::set<LiftingOpportunity>{lift});
+                  }
+                });
+
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,

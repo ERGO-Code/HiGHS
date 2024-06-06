@@ -49,11 +49,9 @@ class HighsImplications {
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
 
  public:
-  struct LiftingOpportunity {
-    HighsInt col;
-    double val;
-  };
-  std::vector<LiftingOpportunity> liftingOpportunities;
+  typedef std::pair<HighsInt, double> LiftingOpportunity;
+  std::unordered_map<HighsInt, std::set<LiftingOpportunity>>
+      liftingOpportunities;
 
  public:
   const HighsMipSolver& mipsolver;
@@ -61,9 +59,8 @@ class HighsImplications {
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     HighsInt numcol = mipsolver.numCol();
-    HighsInt numrow = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
-    liftingOpportunities.resize(numrow);
+    liftingOpportunities.reserve(mipsolver.numRow());
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
     vlbs.resize(numcol);
@@ -77,12 +74,10 @@ class HighsImplications {
     implications.clear();
     implications.shrink_to_fit();
     liftingOpportunities.clear();
-    liftingOpportunities.shrink_to_fit();
 
     HighsInt numcol = mipsolver.numCol();
-    HighsInt numrow = mipsolver.numCol();
     implications.resize(2 * static_cast<size_t>(numcol));
-    liftingOpportunities.resize(numcol);
+    liftingOpportunities.reserve(mipsolver.numRow());
     colsubstituted.resize(numcol);
     numImplications = 0;
     vubs.clear();
