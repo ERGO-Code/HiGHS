@@ -54,15 +54,16 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
                 globaldomain.redundant_rows_.end(),
                 [&](const HighsHashTableEntry<HighsInt, double>& elm) {
                   // new lifting opportunity; negate column index if variable is
-                  // set to its upper bound
-                  HighsInt bincol = val ? -col : col;
+                  // set to its lower bound
+                  HighsInt bincol = (val ? 1 : -1) * col;
+                  double value = (val ? -1 : 1) * elm.value();
                   // find lifting opportunities for row
                   auto& htree = liftingOpportunities[elm.key()];
                   // add element
-                  auto insertresult = htree.insert_or_get(bincol, elm.value());
+                  auto insertresult = htree.insert_or_get(bincol, value);
                   if (!insertresult.second) {
                     double& currentval = *insertresult.first;
-                    currentval = elm.value();
+                    currentval = value;
                   }
                 });
 

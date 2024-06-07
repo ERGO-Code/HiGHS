@@ -1545,6 +1545,22 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (!rowDeleted[delrow]) removeRow(delrow);
     cliquetable.getDeletedRows().clear();
 
+    // consider lifting opportunities
+    std::for_each(
+        implications.liftingOpportunities.begin(),
+        implications.liftingOpportunities.end(),
+        [&](const HighsHashTableEntry<HighsInt,
+                                      HighsHashTree<HighsInt, double>>& elm) {
+          HighsInt row = elm.key();
+          if (!rowDeleted[row]) {
+            auto& htree = elm.value();
+            HighsCDouble rhs_update = 0.0;
+            htree.for_each([&](HighsInt bincol, double value) {
+              if (bincol < 0) rhs_update += value;
+            });
+          }
+        });
+
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
     auto& extensionvars = cliquetable.getCliqueExtensions();
