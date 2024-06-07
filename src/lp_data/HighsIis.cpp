@@ -25,7 +25,7 @@ void HighsIis::invalidate() {
   this->row_bound_.clear();
 }
 
-std::string iisBoundStatusToString(HighsInt bound_status) {
+std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
   if (bound_status == kIisBoundStatusDropped) return "Dropped";
   if (bound_status == kIisBoundStatusNull) return "   Null";
   if (bound_status == kIisBoundStatusFree) return "   Free";
@@ -35,23 +35,26 @@ std::string iisBoundStatusToString(HighsInt bound_status) {
   return "*****";
 }
 
-void HighsIis::report(const std::string message, const HighsLp& lp) {
+void HighsIis::report(const std::string message, const HighsLp& lp) const {
+  HighsInt num_iis_col = this->col_index_.size();
+  HighsInt num_iis_row = this->row_index_.size();
+  if (num_iis_col > 10 || num_iis_row > 10) return;
   printf("\nIIS %s\n===\n", message.c_str());
   printf("Column: ");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) 
     printf("%9d ", iCol);
   printf("\nStatus: ");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) 
     printf("%9s ", iisBoundStatusToString(this->col_bound_[iCol]).c_str());
   printf("\nLower:  ");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) 
     printf("%9.2g ", lp.col_lower_[iCol]);
   printf("\nUpper:  ");
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) 
     printf("%9.2g ", lp.col_upper_[iCol]);
   printf("\n");
   printf("Row:    Status     Lower     Upper\n");
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+  for (HighsInt iRow = 0; iRow < num_iis_row; iRow++)
     printf("%2d   %9s %9.2g %9.2g\n", int(iRow),
 	   iisBoundStatusToString(this->row_bound_[iRow]).c_str(),
 	   lp.row_lower_[iRow], lp.row_upper_[iRow]);
@@ -210,6 +213,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     // Use the whole LP
     if (this->compute(lp, options) != HighsStatus::kOk) return HighsStatus::kError;
   }
+  this->report("On exit", lp);
   return HighsStatus::kOk;
 }
 
@@ -223,8 +227,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options) {
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
-  highs.setOptionValue("output_flag", false);
-  highs.setOptionValue("threads", 1);
+  //  highs.setOptionValue("output_flag", false);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
   HighsStatus run_status = highs.passModel(lp);
