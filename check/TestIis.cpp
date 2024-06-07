@@ -9,30 +9,100 @@
 const bool dev_run = true;
 const double inf = kHighsInf;
 
-void testIis(std::string& model,
-	     HighsInt& num_iis_col, HighsInt& num_iis_row,
-	     HighsInt* iis_col_index,
-	     HighsInt* iis_row_index,
-	     HighsInt* iis_col_bound,
-	     HighsInt* iis_row_bound) {
+void testIis(const std::string& model, const HighsIis& iis) {
   HighsModelStatus model_status;
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  HighsInt num_iis_col = iis.col_index_.size();
+  HighsInt num_iis_row = iis.row_index_.size();
+
   Highs highs;
   highs.setOptionValue("output_flag", false);
-  highs.setOptionValue("threads", 1);
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   const HighsLp& incumbent_lp = highs.getLp();
   HighsLp lp = highs.getLp();
   // Zero the objective
   lp.col_cost_.assign(lp.num_col_, 0);
-  REQUIRE(highs.changeColsCost(0, lp.num_col_-1, lp.col_cost_.data()) == HighsStatus::kOk);
+  REQUIRE(highs.changeColsCost(0, lp.num_col_ - 1, lp.col_cost_.data()) ==
+          HighsStatus::kOk);
 
-  highs.run();
-  lp = highs.getLp();
+  // Save the bounds
+  std::vector<double> iis_col_lower;
+  std::vector<double> iis_col_upper;
+  std::vector<double> iis_row_lower;
+  std::vector<double> iis_row_upper;
+  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
+    HighsInt iCol = iis.col_index_[iisCol];
+    iis_col_lower.push_back(lp.col_lower_[iCol]);
+    iis_col_upper.push_back(lp.col_upper_[iCol]);
+  }
   for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
-    HighsInt iRow = iis_row_index[iisRow];
-    HighsInt iis_bound = iis_row_bound[iisRow];
+    HighsInt iRow = iis.row_index_[iisRow];
+    iis_row_lower.push_back(lp.row_lower_[iRow]);
+    iis_row_upper.push_back(lp.row_upper_[iRow]);
+  }
+
+  // Free all the columns and rows
+  lp.col_lower_.assign(lp.num_col_, -inf);
+  lp.col_upper_.assign(lp.num_col_, inf);
+  lp.row_lower_.assign(lp.num_row_, -inf);
+  lp.row_upper_.assign(lp.num_row_, inf);
+  // Restore the bounds for the IIS columns and rows
+  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
+    HighsInt iCol = iis.col_index_[iisCol];
+    lp.col_lower_[iCol] = iis_col_lower[iisCol];
+    lp.col_upper_[iCol] = iis_col_upper[iisCol];
+  }
+  for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
+    HighsInt iRow = iis.row_index_[iisRow];
+    lp.row_lower_[iRow] = iis_row_lower[iisRow];
+    lp.row_upper_[iRow] = iis_row_upper[iisRow];
+  }
+
+  highs.passModel(lp);
+  highs.run();
+  model_status = highs.getModelStatus();
+  printf("IIS LP yields model status %s\n",
+         highs.modelStatusToString(model_status).c_str());
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
+  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
+    HighsInt iCol = iis.col_index_[iisCol];
+    HighsInt iis_bound = iis.col_bound_[iisCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    double to_lower = lower;
+    double to_upper = upper;
+    REQUIRE(iis_bound != kIisBoundStatusDropped);
+    REQUIRE(iis_bound != kIisBoundStatusNull);
+    REQUIRE(iis_bound != kIisBoundStatusBoxed);
+    if (iis_bound == kIisBoundStatusLower) {
+      to_lower = -inf;
+    } else if (iis_bound == kIisBoundStatusUpper) {
+      to_upper = inf;
+    } else if (iis_bound == kIisBoundStatusFree) {
+      printf("IIS Col %2d (LP col %6d) status %s\n", int(iisCol), int(iCol),
+             iis.iisBoundStatusToString(iis_bound).c_str());
+      continue;
+    }
+    REQUIRE(highs.changeColBounds(iCol, to_lower, to_upper) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    model_status = highs.getModelStatus();
+    if (dev_run)
+      printf(
+          "IIS Col %2d (LP col %6d) status %s: removal yields model status "
+          "%s\n",
+          int(iisCol), int(iCol), iis.iisBoundStatusToString(iis_bound).c_str(),
+          highs.modelStatusToString(model_status).c_str());
+    //    if (model_status != HighsModelStatus::kOptimal)
+    //    highs.writeSolution("", kSolutionStylePretty);
+    REQUIRE(model_status == HighsModelStatus::kOptimal);
+    REQUIRE(highs.changeColBounds(iCol, lower, upper) == HighsStatus::kOk);
+  }
+  for (HighsInt iisRow = 0; iisRow < num_iis_row; iisRow++) {
+    HighsInt iRow = iis.row_index_[iisRow];
+    HighsInt iis_bound = iis.row_bound_[iisRow];
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
     double to_lower = lower;
@@ -46,54 +116,20 @@ void testIis(std::string& model,
     } else if (iis_bound == kIisBoundStatusUpper) {
       to_upper = inf;
     }
-    REQUIRE(highs.changeRowBounds(iRow, to_lower, to_upper) == HighsStatus::kOk);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    HighsModelStatus model_status = highs.getModelStatus();
-    if (dev_run)
-      printf("Removing IIS Row %d (LP row %d) status %d yields model status %s\n",
-	     int(iisRow), int(iRow), int(iis_bound), highs.modelStatusToString(model_status).c_str());
-    if (model_status != HighsModelStatus::kOptimal) 
-      highs.writeSolution("", kSolutionStylePretty);
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs.changeRowBounds(iRow, lower, upper) == HighsStatus::kOk);
-  }
-  for (HighsInt iisCol = 0; iisCol < num_iis_col; iisCol++) {
-    HighsInt iCol = iis_col_index[iisCol];
-    HighsInt iis_bound = iis_col_bound[iisCol];
-    const double lower = lp.col_lower_[iCol];
-    const double upper = lp.col_upper_[iCol];
-    double to_lower = lower;
-    double to_upper = upper;
-    REQUIRE(iis_bound != kIisBoundStatusDropped);
-    REQUIRE(iis_bound != kIisBoundStatusNull);
-    REQUIRE(iis_bound != kIisBoundStatusBoxed);
-    if (iis_bound == kIisBoundStatusLower) {
-      to_lower = -inf;
-    } else if (iis_bound == kIisBoundStatusUpper) {
-      to_upper = inf;
-    } else if (iis_bound == kIisBoundStatusFree) {
-      continue;
-    }
-    REQUIRE(highs.changeColBounds(iCol, to_lower, to_upper) == HighsStatus::kOk);
+    REQUIRE(highs.changeRowBounds(iRow, to_lower, to_upper) ==
+            HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     model_status = highs.getModelStatus();
     if (dev_run)
-      printf("Removing IIS Col %d (LP col %d) status %d yields model status %s\n",
-	     int(iisCol), int(iCol), int(iis_bound), highs.modelStatusToString(model_status).c_str());
-    if (model_status != HighsModelStatus::kOptimal) {
-      highs.writeSolution("", kSolutionStylePretty);
-    /*
-      Highs ck_highs;
-      ck_highs.setOptionValue("threads", 1);
-      ck_highs.passModel(incumbent_lp);
-      HighsInt ck_num_iis_col;
-      HighsInt ck_num_iis_row;
-      ck_highs.run();
-      ck_highs.getIis(num_iis_col, num_iis_row, nullptr, nullptr, nullptr, nullptr);
-    */
-    }
+      printf(
+          "IIS Row %2d (LP row %6d) status %s: removal yields model status "
+          "%s\n",
+          int(iisRow), int(iRow), iis.iisBoundStatusToString(iis_bound).c_str(),
+          highs.modelStatusToString(model_status).c_str());
+    //    if (model_status != HighsModelStatus::kOptimal)
+    //    highs.writeSolution("", kSolutionStylePretty);
     REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs.changeColBounds(iCol, lower, upper) == HighsStatus::kOk);
+    REQUIRE(highs.changeRowBounds(iRow, lower, upper) == HighsStatus::kOk);
   }
 }
 
@@ -102,37 +138,32 @@ void testMps(std::string& model) {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("threads", 1);
-
-  HighsInt num_iis_col;
-  HighsInt num_iis_row;
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   //  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
-  REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
+  REQUIRE(highs.computeIis() == HighsStatus::kOk);
+  const HighsIis& iis = highs.getIis();
+  HighsInt num_iis_col = iis.col_index_.size();
+  HighsInt num_iis_row = iis.row_index_.size();
   REQUIRE(num_iis_col > 0);
   REQUIRE(num_iis_row > 0);
-  std::vector<HighsInt> iis_col_index(num_iis_col);
-  std::vector<HighsInt> iis_row_index(num_iis_row);
-  std::vector<HighsInt> iis_col_bound(num_iis_col);
-  std::vector<HighsInt> iis_row_bound(num_iis_row);
-  REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
-                       iis_row_index.data(),
-                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
   if (dev_run)
-    printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(), int(num_iis_col), int(num_iis_row));
-  testIis(model, num_iis_col, num_iis_row, iis_col_index.data(), iis_row_index.data(), iis_col_bound.data(), iis_row_bound.data());
+    printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(),
+           int(num_iis_col), int(num_iis_row));
+  testIis(model, iis);
 }
 
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
   //
-  // When prioritising rows, row0 and its constituent columns (1, 2) should be found
+  // When prioritising rows, row0 and its constituent columns (1, 2) should be
+  // found
   //
-  // When prioritising columns, col2 and its constituent rows (0, 1) should be found
+  // When prioritising columns, col2 and its constituent rows (0, 1) should be
+  // found
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -165,8 +196,8 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   iis_col_bound.resize(num_iis_col);
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
-                       iis_row_index.data(),
-                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+                       iis_row_index.data(), iis_col_bound.data(),
+                       iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_row_index[0] == 0);
   REQUIRE(iis_row_bound[0] == kIisBoundStatusBoxed);
   highs.setOptionValue("iis_strategy", kIisStrategyFromLpColPriority);
@@ -178,8 +209,8 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   iis_col_bound.resize(num_iis_col);
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
-                       iis_row_index.data(),
-                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+                       iis_row_index.data(), iis_col_bound.data(),
+                       iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_col_index[0] == 2);
   REQUIRE(iis_col_bound[0] == kIisBoundStatusBoxed);
 }
@@ -218,11 +249,11 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   iis_col_bound.resize(num_iis_col);
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
-                       iis_row_index.data(),
-                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+                       iis_row_index.data(), iis_col_bound.data(),
+                       iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_row_index[0] == empty_row);
   REQUIRE(iis_row_bound[0] == kIisBoundStatusLower);
-  REQUIRE(highs.changeRowBounds(empty_row, -2, -1)  == HighsStatus::kOk);
+  REQUIRE(highs.changeRowBounds(empty_row, -2, -1) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row) == HighsStatus::kOk);
@@ -233,11 +264,10 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
   iis_col_bound.resize(num_iis_col);
   iis_row_bound.resize(num_iis_row);
   REQUIRE(highs.getIis(num_iis_col, num_iis_row, iis_col_index.data(),
-                       iis_row_index.data(),
-                       iis_col_bound.data(), iis_row_bound.data()) == HighsStatus::kOk);
+                       iis_row_index.data(), iis_col_bound.data(),
+                       iis_row_bound.data()) == HighsStatus::kOk);
   REQUIRE(iis_row_index[0] == empty_row);
   REQUIRE(iis_row_bound[0] == kIisBoundStatusUpper);
-  
 }
 
 TEST_CASE("lp-get-iis", "[iis]") {
@@ -279,7 +309,6 @@ TEST_CASE("lp-get-iis", "[iis]") {
   REQUIRE(iis_col_index[0] == 0);
   REQUIRE(iis_col_index[1] == 1);
   REQUIRE(iis_row_index[0] == 2);
-
 }
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
@@ -292,7 +321,7 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   //
   // r0: 0  <= c0 + c1      - c3 - c4 <=0
   //
-  // r1: 20 <=           c2 + c3  
+  // r1: 20 <=           c2 + c3
   //
   // r2: 30 <=                     c4
   //
@@ -307,7 +336,7 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   // 0 <= c3 <= 20
   //
   // 0 <= c4 <= 30
-  // 
+  //
   // This is infeasible since c4 >= 30 and c4 <= 30 fices c4 = 30,
   // then c0 + c1 >= c3 + c4 >= 30 cannot be satisfied due to the
   // upper bounds of 10 on these variables

@@ -1592,14 +1592,13 @@ HighsStatus Highs::computeIisInterface() {
       return HighsStatus::kError;
     }
   }
-  return this->iis_.getData(lp, options_, dual_ray_value);
+  return this->iis_.getData(lp, options_, basis_, dual_ray_value.data());
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
-			      HighsInt* iis_col_index,
-			      HighsInt* iis_row_index,
-			      HighsInt* iis_col_bound,
-			      HighsInt* iis_row_bound) {
+                              HighsInt* iis_col_index, HighsInt* iis_row_index,
+                              HighsInt* iis_col_bound,
+                              HighsInt* iis_row_bound) {
   assert(this->iis_.valid_);
   num_iis_col = this->iis_.col_index_.size();
   num_iis_row = this->iis_.row_index_.size();

@@ -514,7 +514,7 @@ class Highs {
                      HighsInt* iis_col_bound = nullptr,
                      HighsInt* iis_row_bound = nullptr);
   HighsStatus computeIis();
-  const HighsIis& getIis() const {return iis_; }
+  const HighsIis& getIis() const { return iis_; }
 
   /**
    * @brief Get the current model objective value
@@ -1516,8 +1516,8 @@ class Highs {
 
   HighsStatus computeIisInterface();
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
-			 HighsInt* iis_col_index, HighsInt* iis_row_index,
-			 HighsInt* iis_col_bound, HighsInt* iis_row_bound);
+                         HighsInt* iis_col_index, HighsInt* iis_row_index,
+                         HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);

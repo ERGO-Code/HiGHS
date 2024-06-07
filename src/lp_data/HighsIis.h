@@ -18,11 +18,11 @@
 
 enum IisBoundStatus {
   kIisBoundStatusDropped = -1,
-  kIisBoundStatusNull,  // 0
-  kIisBoundStatusFree,  // 1
-  kIisBoundStatusLower, // 2
-  kIisBoundStatusUpper, // 3
-  kIisBoundStatusBoxed  // 4
+  kIisBoundStatusNull,   // 0
+  kIisBoundStatusFree,   // 1
+  kIisBoundStatusLower,  // 2
+  kIisBoundStatusUpper,  // 3
+  kIisBoundStatusBoxed   // 4
 };
 
 class HighsIis {
@@ -37,9 +37,10 @@ class HighsIis {
   void removeCol(const HighsInt col);
   void removeRow(const HighsInt row);
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
-		      const std::vector<double>& dual_ray_value);
+                      const HighsBasis& basis, const double* dual_ray_value);
 
-  HighsStatus compute(const HighsLp& lp, const HighsOptions& options);
+  HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
+                      const HighsBasis* basis = nullptr);
 
   bool trivial(const HighsLp& lp, const HighsOptions& options);
 
