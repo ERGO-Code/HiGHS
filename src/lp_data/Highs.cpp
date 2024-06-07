@@ -1682,16 +1682,21 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 HighsStatus Highs::getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                           HighsInt* iis_col_index, HighsInt* iis_row_index,
                           HighsInt* iis_col_bound, HighsInt* iis_row_bound) {
+  HighsStatus return_status = this->computeIis();
+  if (return_status != HighsStatus::kOk) return return_status;
+  return this->extractIis(num_iis_col, num_iis_row, iis_col_index,
+			  iis_row_index, iis_col_bound, iis_row_bound);
+}
+
+HighsStatus Highs::computeIis() {
   if (model_status_ != HighsModelStatus::kInfeasible) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "getIis: model status is not infeasible\n");
     return HighsStatus::kError;
   }
-  HighsStatus return_status = this->getIisInterface();
-  if (return_status != HighsStatus::kOk) return return_status;
-  return this->extractIisData(num_iis_col, num_iis_row, iis_col_index,
-                              iis_row_index, iis_col_bound, iis_row_bound);
+  return this->computeIisInterface();
 }
+
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
 

@@ -1549,7 +1549,7 @@ HighsStatus Highs::getRangingInterface() {
   return getRangingData(this->ranging_, solver_object);
 }
 
-HighsStatus Highs::getIisInterface() {
+HighsStatus Highs::computeIisInterface() {
   if (this->iis_.valid_) return HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Check for trivial IIS: empty infeasible row or inconsistent bounds
@@ -1595,11 +1595,11 @@ HighsStatus Highs::getIisInterface() {
   return this->iis_.getData(lp, options_, dual_ray_value);
 }
 
-HighsStatus Highs::extractIisData(HighsInt& num_iis_col, HighsInt& num_iis_row,
-                                  HighsInt* iis_col_index,
-                                  HighsInt* iis_row_index,
-                                  HighsInt* iis_col_bound,
-                                  HighsInt* iis_row_bound) {
+HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
+			      HighsInt* iis_col_index,
+			      HighsInt* iis_row_index,
+			      HighsInt* iis_col_bound,
+			      HighsInt* iis_row_bound) {
   assert(this->iis_.valid_);
   num_iis_col = this->iis_.col_index_.size();
   num_iis_row = this->iis_.row_index_.size();

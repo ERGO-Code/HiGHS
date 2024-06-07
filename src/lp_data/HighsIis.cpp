@@ -167,8 +167,6 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
 	to_row[iRow] = from_row.size();
 	from_row.push_back(iRow);
       }
-      printf("HighsIis::getData: dual_ray_value[%2d] = %g; to_row[%2d] = %d\n",
-	     int(iRow), dual_ray_value[iRow], int(iRow), to_row[iRow]);
     }
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       bool use_col = false;
@@ -183,7 +181,6 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     to_lp.num_col_ = to_num_col;
     to_lp.num_row_ = to_num_row;
     for (HighsInt iCol = 0; iCol < to_num_col; iCol++) {
-      printf("getIisData: from_col[%2d] = %d\n", int(iCol), int(from_col[iCol]));
       to_lp.col_cost_.push_back(0);
       to_lp.col_lower_.push_back(lp.col_lower_[from_col[iCol]]);
       to_lp.col_upper_.push_back(lp.col_upper_[from_col[iCol]]);
@@ -198,7 +195,6 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
       to_lp.a_matrix_.start_.push_back(to_lp.a_matrix_.index_.size());
     }
     for (HighsInt iRow = 0; iRow < to_num_row; iRow++) {
-      printf("getIisData: from_row[%2d] = %d\n", int(iRow), int(from_row[iRow]));
       to_lp.row_lower_.push_back(lp.row_lower_[from_row[iRow]]);
       to_lp.row_upper_.push_back(lp.row_upper_[from_row[iRow]]);
     }
