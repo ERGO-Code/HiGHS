@@ -1412,6 +1412,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   cliquetable.cleanupFixed(domain);
   if (domain.infeasible()) return Result::kPrimalInfeasible;
 
+  // clear lifting opportunities
+  implications.liftingOpportunities.clear();
+
   // store binary variables in vector with their number of implications on
   // other binaries
   std::vector<std::tuple<int64_t, HighsInt, HighsInt, HighsInt>> binaries;
