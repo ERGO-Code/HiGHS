@@ -50,21 +50,19 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   // store lifting opportunities
-  std::for_each(globaldomain.redundant_rows_.cbegin(),
-                globaldomain.redundant_rows_.cend(),
-                [&](const std::pair<HighsInt, double>& elm) {
+  std::for_each(globaldomain.redundant_rows_.begin(),
+                globaldomain.redundant_rows_.end(),
+                [&](const HighsHashTableEntry<HighsInt, double>& elm) {
                   // new lifting opportunity; negate column index if variable is
                   // set to its upper bound
-                  LiftingOpportunity lift{val ? -col : col, elm.second};
-                  // find existing set of lifting opportunities
-                  auto it = liftingOpportunities.find(elm.first);
-                  if (it != liftingOpportunities.end()) {
-                    // add to existing set
-                    (*it).second.emplace(lift);
-                  } else {
-                    // add new element
-                    liftingOpportunities.emplace(
-                        elm.first, std::set<LiftingOpportunity>{lift});
+                  HighsInt bincol = val ? -col : col;
+                  // find lifting opportunities for row
+                  auto& htree = liftingOpportunities[elm.key()];
+                  // add element
+                  auto insertresult = htree.insert_or_get(bincol, elm.value());
+                  if (!insertresult.second) {
+                    double& currentval = *insertresult.first;
+                    currentval = elm.value();
                   }
                 });
 

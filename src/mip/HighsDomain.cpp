@@ -72,7 +72,6 @@ static inline double boundRange(double upper_bound, double lower_bound,
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   col_lower_ = mipsolver.model_->col_lower_;
   col_upper_ = mipsolver.model_->col_upper_;
-  redundant_rows_.reserve(mipsolver.numRow());
   colLowerPos_.assign(mipsolver.numCol(), -1);
   colUpperPos_.assign(mipsolver.numCol(), -1);
   changedcolsflags_.resize(mipsolver.numCol());
@@ -1848,23 +1847,15 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
                                       HighsInt numinf, HighsCDouble activity,
                                       double bound) {
-  // find row
-  auto it = redundant_rows_.find(row);
-  bool exists = it != redundant_rows_.end();
   if (numinf == 0 &&
       direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
     // row is redundant
     double val = static_cast<double>(activity - bound);
-    if (exists) {
-      // update
-      it->second = val;
-    } else {
-      // add
-      redundant_rows_.emplace(row, val);
-    }
-  } else if (exists) {
+    double& currentval = redundant_rows_[row];
+    currentval = val;
+  } else {
     // row is not redundant anymore
-    redundant_rows_.erase(it);
+    redundant_rows_.erase(row);
   }
 }
 
