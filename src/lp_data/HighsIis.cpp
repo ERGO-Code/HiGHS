@@ -232,44 +232,97 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
 
-  /*
   // Elasticity filter
   //
   // Constraints L <= Ax <= U; l <= x <= u
   //
   // Transformed to
   //
-  // L <=
+  // L <= Ax + e_L - e_U <= U,
+  //
+  // l <=  x + e_l - e_u <= u,
+  //
+  // where the elastic variables are not used if the corresponding bound is infinite.
+  //
+  // x is free, and the objective is the sum of the elastic variables.
+  //
   // Determine the number of lower and upper elastic variables for
   // columns and rows
-  std::vector<HighsInt> col_lower_evar;
-  std::vector<HighsInt> col_upper_evar;
-  std::vector<HighsInt> row_lower_evar;
-  std::vector<HighsInt> row_upper_evar;
+  //
+  // col_evar lists the column indices corresponding to the entries in
+  // erow_bound so that the results can be interpreted
+  std::vector<HighsInt> col_evar;
+  std::vector<HighsInt> row_evar;
+  std::vector<double> erow_bound;
   std::vector<double> erow_lower;
   std::vector<double> erow_upper;
   std::vector<HighsInt> erow_start;
   std::vector<HighsInt> erow_index;
   std::vector<double> erow_value;
-  HighsInt nz_offset = 0;
   erow_start.push_back(0);
-  col_offset.assign(lp.num_col_, 0);
+  HighsInt evar_ix = lp.num_col_;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_lower_[iCol] > -kHighsInf) {
-      col_lower_evar.push_back(iCol);
-      erow_index.push_back(iCol);
+    // Free columns have no erow
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
+    if (lower <= -kHighsInf && upper >= kHighsInf) continue;
+    erow_lower.push_back(lower);
+    erow_upper.push_back(upper);
+    // Define the entry for x[iCol]
+    erow_index.push_back(iCol);
+    erow_value.push_back(1);
+    if (lower > -kHighsInf) {
+      // New e_l variable 
+      col_evar.push_back(iCol);
+      erow_bound.push_back(lower);
+      erow_index.push_back(evar_ix);
       erow_value.push_back(1);
-      erow_index.push_back(col_lower_evar.size());
-      erow_value.push_back(1);
-      erow_lower
+      evar_ix++;
     }
+    if (upper < kHighsInf) {
+      // New e_u variable 
+      col_evar.push_back(iCol);
+      erow_bound.push_back(upper);
+      erow_index.push_back(evar_ix);
+      erow_value.push_back(-1);
+      evar_ix++;
+    }
+    erow_start.push_back(erow_index.size());
+    HighsInt row_nz = erow_start[erow_start.size()-1] - erow_start[erow_start.size()-2];
+    printf("eRow for column %d has %d nonzeros\n", int(iCol), int(row_nz));
+    assert(row_nz == 2 || row_nz == 3);
   }
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_upper_[iCol] < kHighsInf) {
-      col_upper_evar.push_back(iCol);
+  HighsInt num_new_col = col_evar.size();
+  HighsInt num_new_row = erow_start.size()-1;
+  HighsInt num_new_nz = erow_start[num_new_row];
+  printf("Elasticity filter: For columns there are %d variables and %d constraints\n", int(num_new_col), int(num_new_row));
+  const bool write_model = true;
+  // Free the original columns
+  std::vector<double> col_lower;
+  std::vector<double> col_upper;
+  col_lower.assign(lp.num_col_, -kHighsInf);
+  col_upper.assign(lp.num_col_, kHighsInf);
+  run_status = highs.changeColsBounds(0, lp.num_col_-1, col_lower.data(), col_upper.data());
+  assert(run_status == HighsStatus::kOk);
+  // Add the new columns
+  std::vector<double> ecol_cost;
+  std::vector<double> ecol_lower;
+  std::vector<double> ecol_upper;
+  ecol_cost.assign(num_new_col, 1);
+  ecol_lower.assign(num_new_col, 0);
+  ecol_upper.assign(num_new_col, kHighsInf);
+  run_status = highs.addCols(num_new_col, ecol_cost.data(), ecol_lower.data(), ecol_upper.data(),
+			     0, nullptr, nullptr, nullptr);
+  assert(run_status == HighsStatus::kOk);
+  
+  // Add the new rows
+  run_status = highs.addRows(num_new_row, erow_lower.data(), erow_upper.data(),
+			     num_new_nz, erow_start.data(), erow_index.data(), erow_value.data());
+  assert(run_status == HighsStatus::kOk);
+  // Add the columns corresponding to the e_L and e_U variables for
+  // the constraints
 
-    }
-  }
+  /*
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > -kHighsInf) {
       row_lower_evar.push_back(iRow);
@@ -285,12 +338,14 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (
   */
 
-  const bool write_model = false;
   if (write_model) {
+    bool output_flag;
+    run_status = highs.getOptionValue("output_flag", output_flag);
     highs.setOptionValue("output_flag", true);
     highs.writeModel("");
-    highs.setOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", output_flag);
   }
+  assert(666==999);
   // Zero the objective
   std::vector<double> cost;
   cost.assign(lp.num_col_, 0);
@@ -313,7 +368,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     highs.writeSolution("", kSolutionStylePretty);
   }
 
-  //  assert(666==999);
   // Pass twice: rows before columns, or columns before rows, according to
   // row_priority
   for (HighsInt k = 0; k < 2; k++) {

@@ -4240,7 +4240,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   const bool dimensions_ok =
       lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
-    printf("LP Dimension error in returnFromHighs()\n");
+    highsLogDev(options_.log_options, HighsLogType::kError,
+		"LP Dimension error in returnFromHighs()\n");
+    return_status = HighsStatus::kError;
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
