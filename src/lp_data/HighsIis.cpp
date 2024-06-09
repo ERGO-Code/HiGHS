@@ -234,8 +234,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
-
+  //
   // Elasticity filter
+  //
+  // Construct the e-LP:
   //
   // Constraints L <= Ax <= U; l <= x <= u
   //
@@ -254,9 +256,13 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   //
   // col_evar lists the column indices corresponding to the entries in
   // erow_bound so that the results can be interpreted
+  //
+  // row_evar lists the row indices corresponding to the entries in
+  // ecol_bound so that the results can be interpreted
   std::vector<HighsInt> col_evar;
   std::vector<HighsInt> row_evar;
   std::vector<std::string> erow_name;
+  std::vector<double> ecol_bound;
   std::vector<double> erow_bound;
   std::vector<double> erow_lower;
   std::vector<double> erow_upper;
@@ -266,6 +272,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   std::vector<std::string> ecol_name;
   HighsInt previous_num_col = highs.getNumCol();
   HighsInt previous_num_row = highs.getNumRow();
+  HighsInt col_ecol_offset = previous_num_col;
   erow_start.push_back(0);
   HighsInt evar_ix = lp.num_col_;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -324,7 +331,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   run_status = highs.addCols(num_new_col, ecol_cost.data(), ecol_lower.data(), ecol_upper.data(),
 			     0, nullptr, nullptr, nullptr);
   assert(run_status == HighsStatus::kOk);
-  
   // Add the new rows
   run_status = highs.addRows(num_new_row, erow_lower.data(), erow_upper.data(),
 			     num_new_nz, erow_start.data(), erow_index.data(), erow_value.data());
@@ -343,10 +349,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     highs.writeModel("");
     highs.setOptionValue("output_flag", output_flag);
   }
-  
   // Add the columns corresponding to the e_L and e_U variables for
   // the constraints
-
   ecol_name.clear();
   std::vector<HighsInt> ecol_start;
   std::vector<HighsInt> ecol_index;
@@ -356,21 +360,25 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
     if (lower > -kHighsInf) {
+      // Create an e-var for the row lower bound
+      row_evar.push_back(iRow);
+      ecol_name.push_back(lp.row_names_[iRow]+"_lower");
+      ecol_bound.push_back(lower);
+      // Define the sub-matrix column
       ecol_index.push_back(iRow);
       ecol_value.push_back(1);
       ecol_start.push_back(ecol_index.size());
-      std::string name = lp.row_names_[iRow]+"_lower";
-      printf("E-column for row %d lower has name %s\n", int(iRow), name.c_str());
-      ecol_name.push_back(name);
       evar_ix++;
     }
     if (upper < kHighsInf) {
+      // Create an e-var for the row upper bound
+      row_evar.push_back(iRow);
+      ecol_name.push_back(lp.row_names_[iRow]+"_upper");
+      ecol_bound.push_back(upper);
+      // Define the sub-matrix column
       ecol_index.push_back(iRow);
       ecol_value.push_back(-1);
       ecol_start.push_back(ecol_index.size());
-      std::string name = lp.row_names_[iRow]+"_upper";
-      printf("E-column for row %d lower has name %s\n", int(iRow), name.c_str());
-      ecol_name.push_back(name);
       evar_ix++;
     }
   }
@@ -380,6 +388,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   ecol_lower.assign(num_new_col, 0);
   ecol_upper.assign(num_new_col, kHighsInf);
   previous_num_col = highs.getNumCol();
+  HighsInt row_ecol_offset = previous_num_col;
   run_status = highs.addCols(num_new_col, ecol_cost.data(), ecol_lower.data(), ecol_upper.data(),
 			     num_new_nz, ecol_start.data(), ecol_index.data(), ecol_value.data());
   assert(run_status == HighsStatus::kOk);
@@ -398,8 +407,24 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   run_status = highs.run();
   assert(run_status == HighsStatus::kOk);
   highs.writeSolution("", kSolutionStylePretty);
+  HighsModelStatus model_status = highs.getModelStatus();
+  assert(model_status == HighsModelStatus::kOptimal);
 
-
+  const HighsSolution& solution = highs.getSolution();
+  // Now fix e-variables that are positive and re-solve until e-LP is infeasible
+  for (;;) {
+    for (HighsInt eCol = 0; eCol < col_evar.size(); eCol++) {
+      HighsInt iCol = col_evar[eCol];
+      printf("E-col %d corresponds to column %d with bound %g and has solution value %g\n",
+	     int(eCol), int(iCol), erow_bound[eCol], solution.col_value[col_ecol_offset+eCol]);
+    }
+    for (HighsInt eRow = 0; eRow < row_evar.size(); eRow++) {
+      HighsInt iRow = row_evar[eRow];
+      printf("E-row %d corresponds to row %d with bound %g and has solution value %g\n",
+	     int(eRow), int(iRow), ecol_bound[eRow], solution.col_value[row_ecol_offset+eRow]);
+    }
+    break;
+  }
 
 
   assert(666==999);
