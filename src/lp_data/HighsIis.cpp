@@ -261,7 +261,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   // bound_of_row_of_ecol so that the results can be interpreted
   std::vector<HighsInt> col_of_ecol;
   std::vector<HighsInt> row_of_ecol;
-  std::vector<std::string> erow_name;
   std::vector<double> bound_of_row_of_ecol;
   std::vector<double> bound_of_col_of_ecol;
   std::vector<double> erow_lower;
@@ -269,7 +268,11 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   std::vector<HighsInt> erow_start;
   std::vector<HighsInt> erow_index;
   std::vector<double> erow_value;
+  // Accumulate names for ecols and erows, re-using ecol_name for the
+  // names of row ecols after defining the names of col ecols
   std::vector<std::string> ecol_name;
+  std::vector<std::string> erow_name;
+  // When defining names, need to know the column number 
   HighsInt previous_num_col = highs.getNumCol();
   HighsInt previous_num_row = highs.getNumRow();
   HighsInt col_ecol_offset = previous_num_col;
@@ -282,14 +285,14 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     if (lower <= -kHighsInf && upper >= kHighsInf) continue;
     erow_lower.push_back(lower);
     erow_upper.push_back(upper);
-    erow_name.push_back(lp.col_names_[iCol]+"_erow");
+    erow_name.push_back("row_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_erow");
     // Define the entry for x[iCol]
     erow_index.push_back(iCol);
     erow_value.push_back(1);
     if (lower > -kHighsInf) {
       // New e_l variable 
       col_of_ecol.push_back(iCol);
-      ecol_name.push_back(lp.col_names_[iCol]+"_lower");
+      ecol_name.push_back("col_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_lower");
       bound_of_col_of_ecol.push_back(lower);
       erow_index.push_back(evar_ix);
       erow_value.push_back(1);
@@ -298,7 +301,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     if (upper < kHighsInf) {
       // New e_u variable 
       col_of_ecol.push_back(iCol);
-      ecol_name.push_back(lp.col_names_[iCol]+"_upper");
+      ecol_name.push_back("col_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_upper");
       bound_of_col_of_ecol.push_back(upper);
       erow_index.push_back(evar_ix);
       erow_value.push_back(-1);
@@ -362,7 +365,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     if (lower > -kHighsInf) {
       // Create an e-var for the row lower bound
       row_of_ecol.push_back(iRow);
-      ecol_name.push_back(lp.row_names_[iRow]+"_lower");
+      ecol_name.push_back("row_"+std::to_string(iRow)+"_"+lp.row_names_[iRow]+"_lower");
       bound_of_row_of_ecol.push_back(lower);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
@@ -373,7 +376,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     if (upper < kHighsInf) {
       // Create an e-var for the row upper bound
       row_of_ecol.push_back(iRow);
-      ecol_name.push_back(lp.row_names_[iRow]+"_upper");
+      ecol_name.push_back("row_"+std::to_string(iRow)+"_"+lp.row_names_[iRow]+"_upper");
       bound_of_row_of_ecol.push_back(upper);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
@@ -412,20 +415,57 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   const HighsSolution& solution = highs.getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
+  HighsInt loop_k = 0;
   for (;;) {
+    printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
+    HighsInt num_fixed = 0;
     for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
       HighsInt iCol = col_of_ecol[eCol];
-      printf("E-col %d corresponds to column %d with bound %g and has solution value %g\n",
-	     int(eCol), int(iCol), bound_of_col_of_ecol[eCol], solution.col_value[col_ecol_offset+eCol]);
+      if (solution.col_value[col_ecol_offset+eCol] > options.primal_feasibility_tolerance) {
+      printf("E-col %2d (column %2d) corresponds to column %2d with bound %g and has solution value %g\n",
+	     int(eCol), int(col_ecol_offset+eCol), int(iCol), bound_of_col_of_ecol[eCol], solution.col_value[col_ecol_offset+eCol]);
+	highs.changeColBounds(col_ecol_offset+eCol, 0, 0);
+	num_fixed++;
+      }
     }
     for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
       HighsInt iRow = row_of_ecol[eCol];
-      printf("E-row %d corresponds to row %d with bound %g and has solution value %g\n",
-	     int(eCol), int(iRow), bound_of_row_of_ecol[eCol], solution.col_value[row_ecol_offset+eCol]);
+      if (solution.col_value[row_ecol_offset+eCol] > options.primal_feasibility_tolerance) {
+      printf("E-row %2d (column %2d) corresponds to    row %2d with bound %g and has solution value %g\n",
+	     int(eCol), int(row_ecol_offset+eCol), int(iRow), bound_of_row_of_ecol[eCol], solution.col_value[row_ecol_offset+eCol]);
+	highs.changeColBounds(row_ecol_offset+eCol, 0, 0);
+	num_fixed++;
+      }
     }
-    break;
+    assert(num_fixed>0);
+    run_status = highs.run();
+    assert(run_status == HighsStatus::kOk);
+    highs.writeSolution("", kSolutionStylePretty);
+    HighsModelStatus model_status = highs.getModelStatus();
+    if (model_status == HighsModelStatus::kInfeasible) break;
+    loop_k++;
+    if (loop_k>10) assert(1666==1999);
   }
 
+  HighsInt num_enforced_col_ecol = 0;
+  HighsInt num_enforced_row_ecol = 0;
+  for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+    HighsInt iCol = col_of_ecol[eCol];
+    if (incumbent_lp.col_upper_[col_ecol_offset+eCol] == 0) {
+      num_enforced_col_ecol++;
+      printf("Col e-col %2d (column %2d) corresponds to column %2d with bound %g and is enforced\n",
+	     int(eCol), int(col_ecol_offset+eCol), int(iCol), bound_of_col_of_ecol[eCol]);
+    }
+  }
+  for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+    HighsInt iRow = row_of_ecol[eCol];
+    if (incumbent_lp.col_upper_[row_ecol_offset+eCol] == 0) {
+      num_enforced_row_ecol++;
+      printf("Row e-col %2d (column %2d) corresponds to    row %2d with bound %g and is enforced\n",
+	     int(eCol), int(row_ecol_offset+eCol), int(iRow), bound_of_row_of_ecol[eCol]);
+    }
+  }
+  printf("\nElasticity filter after %d passes enforces bounds on %d cols and %d rows\n", int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
   assert(666==999);
   // Zero the objective

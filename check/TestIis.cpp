@@ -133,7 +133,7 @@ void testIis(const std::string& model, const HighsIis& iis) {
   }
 }
 
-void testMps(std::string& model) {
+void testMps(std::string& model, const HighsInt iis_strategy) {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -143,7 +143,7 @@ void testMps(std::string& model) {
   highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-  //  highs.setOptionValue("iis_strategy", kIisStrategyFromLpRowPriority);
+  highs.setOptionValue("iis_strategy", iis_strategy);
   REQUIRE(highs.computeIis() == HighsStatus::kOk);
   const HighsIis& iis = highs.getIis();
   HighsInt num_iis_col = iis.col_index_.size();
@@ -313,7 +313,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
   std::string model = "woodinfe";
-  testMps(model);
+  testMps(model, kIisStrategyFromRayRowPriority);
 }
 
 TEST_CASE("lp-get-iis-galenet", "[iis]") {
@@ -358,5 +358,6 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   //
   // Hence only empty columns can be removed
   std::string model = "galenet";
-  testMps(model);
+  testMps(model, kIisStrategyFromLpRowPriority);
+  testMps(model, kIisStrategyFromRayRowPriority);
 }
