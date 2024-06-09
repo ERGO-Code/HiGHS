@@ -254,16 +254,16 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   // Determine the number of lower and upper elastic variables for
   // columns and rows
   //
-  // col_evar lists the column indices corresponding to the entries in
-  // erow_bound so that the results can be interpreted
+  // col_of_ecol lists the column indices corresponding to the entries in
+  // bound_of_col_of_ecol so that the results can be interpreted
   //
-  // row_evar lists the row indices corresponding to the entries in
-  // ecol_bound so that the results can be interpreted
-  std::vector<HighsInt> col_evar;
-  std::vector<HighsInt> row_evar;
+  // row_of_ecol lists the row indices corresponding to the entries in
+  // bound_of_row_of_ecol so that the results can be interpreted
+  std::vector<HighsInt> col_of_ecol;
+  std::vector<HighsInt> row_of_ecol;
   std::vector<std::string> erow_name;
-  std::vector<double> ecol_bound;
-  std::vector<double> erow_bound;
+  std::vector<double> bound_of_row_of_ecol;
+  std::vector<double> bound_of_col_of_ecol;
   std::vector<double> erow_lower;
   std::vector<double> erow_upper;
   std::vector<HighsInt> erow_start;
@@ -288,18 +288,18 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     erow_value.push_back(1);
     if (lower > -kHighsInf) {
       // New e_l variable 
-      col_evar.push_back(iCol);
+      col_of_ecol.push_back(iCol);
       ecol_name.push_back(lp.col_names_[iCol]+"_lower");
-      erow_bound.push_back(lower);
+      bound_of_col_of_ecol.push_back(lower);
       erow_index.push_back(evar_ix);
       erow_value.push_back(1);
       evar_ix++;
     }
     if (upper < kHighsInf) {
       // New e_u variable 
-      col_evar.push_back(iCol);
+      col_of_ecol.push_back(iCol);
       ecol_name.push_back(lp.col_names_[iCol]+"_upper");
-      erow_bound.push_back(upper);
+      bound_of_col_of_ecol.push_back(upper);
       erow_index.push_back(evar_ix);
       erow_value.push_back(-1);
       evar_ix++;
@@ -309,7 +309,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     printf("eRow for column %d has %d nonzeros\n", int(iCol), int(row_nz));
     assert(row_nz == 2 || row_nz == 3);
   }
-  HighsInt num_new_col = col_evar.size();
+  HighsInt num_new_col = col_of_ecol.size();
   HighsInt num_new_row = erow_start.size()-1;
   HighsInt num_new_nz = erow_start[num_new_row];
   printf("Elasticity filter: For columns there are %d variables and %d constraints\n", int(num_new_col), int(num_new_row));
@@ -361,9 +361,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     const double upper = lp.row_upper_[iRow];
     if (lower > -kHighsInf) {
       // Create an e-var for the row lower bound
-      row_evar.push_back(iRow);
+      row_of_ecol.push_back(iRow);
       ecol_name.push_back(lp.row_names_[iRow]+"_lower");
-      ecol_bound.push_back(lower);
+      bound_of_row_of_ecol.push_back(lower);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
       ecol_value.push_back(1);
@@ -372,9 +372,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     }
     if (upper < kHighsInf) {
       // Create an e-var for the row upper bound
-      row_evar.push_back(iRow);
+      row_of_ecol.push_back(iRow);
       ecol_name.push_back(lp.row_names_[iRow]+"_upper");
-      ecol_bound.push_back(upper);
+      bound_of_row_of_ecol.push_back(upper);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
       ecol_value.push_back(-1);
@@ -413,15 +413,15 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   const HighsSolution& solution = highs.getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   for (;;) {
-    for (HighsInt eCol = 0; eCol < col_evar.size(); eCol++) {
-      HighsInt iCol = col_evar[eCol];
+    for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+      HighsInt iCol = col_of_ecol[eCol];
       printf("E-col %d corresponds to column %d with bound %g and has solution value %g\n",
-	     int(eCol), int(iCol), erow_bound[eCol], solution.col_value[col_ecol_offset+eCol]);
+	     int(eCol), int(iCol), bound_of_col_of_ecol[eCol], solution.col_value[col_ecol_offset+eCol]);
     }
-    for (HighsInt eRow = 0; eRow < row_evar.size(); eRow++) {
-      HighsInt iRow = row_evar[eRow];
+    for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+      HighsInt iRow = row_of_ecol[eCol];
       printf("E-row %d corresponds to row %d with bound %g and has solution value %g\n",
-	     int(eRow), int(iRow), ecol_bound[eRow], solution.col_value[row_ecol_offset+eRow]);
+	     int(eCol), int(iRow), bound_of_row_of_ecol[eCol], solution.col_value[row_ecol_offset+eCol]);
     }
     break;
   }
