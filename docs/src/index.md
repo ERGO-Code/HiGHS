@@ -1,16 +1,5 @@
 # HiGHS - High Performance Optimization Software
 
-<!-- 
-[![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster) -->
-
-[![Build Status][fast_build_svg]][fast_build_link] 
-<!-- [![Build Status][linux_build_svg]][linux_build_link] 
-[![Build Status][macos_build_svg]][macos_build_link] 
-[![Build Status][windows_build_svg]][windows_build_link] -->
-
-[fast_build_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml/badge.svg
-[fast_build_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml
-
 !!! warning
     This HiGHS documentation is a work in progress.
 
