@@ -1,9 +1,14 @@
 # HiGHS - Linear optimization software
 
-[![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build-fast.yml/badge.svg)
+![Build Status](https://github.com/ERGO-Code/HiGHS/actions/workflows/build.yml/badge.svg)
 [![Conan Center](https://img.shields.io/conan/v/highs)](https://conan.io/center/recipes/highs)
+\
 [![PyPi](https://img.shields.io/pypi/v/highspy.svg)](https://pypi.python.org/pypi/highspy)
 [![PyPi](https://img.shields.io/pypi/dm/highspy.svg)](https://pypi.python.org/pypi/highspy)
+\
+[![NuGet version](https://img.shields.io/nuget/v/Highs.Native.svg)](https://www.nuget.org/packages/Highs.Native)
+[![NuGet download](https://img.shields.io/nuget/dt/Highs.Native.svg)](https://www.nuget.org/packages/Highs.Native)
+\
 
 - [HiGHS - Linear optimization software](#highs---linear-optimization-software)
   - [About HiGHS](#about-highs)
