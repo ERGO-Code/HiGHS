@@ -34,7 +34,9 @@
     - [Precompiled binaries](#precompiled-binaries)
   - [Interfaces](#interfaces)
     - [Python](#python)
+    - [C](#c)
     - [CSharp](#csharp)
+    - [Fortran](#fortran)
   - [Reference](#reference)
 
 ## About HiGHS
@@ -161,6 +163,9 @@ The installation can be tested using the small example `HiGHS/examples/call_high
 
 The [Google Colab Example Notebook](https://colab.research.google.com/drive/1JmHF53OYfU-0Sp9bzLw-D2TQyRABSjHb?usp=sharing) also demonstrates how to call `highspy`.
 
+### C 
+The C API is in `HiGHS/src/interfaces/highs_c_api.h`. It is included in the default build. For more details, check out our documentation website https://ergo-code.github.io/HiGHS/.
+
 ### CSharp
 
 The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget.org/packages/Highs.Native/. 
@@ -181,6 +186,11 @@ The nuget package contains runtime libraries for
 * `macos-arm64`
 
 Details for building locally can be found in `nuget/README.md`.
+
+### Fortran 
+
+The Fortran API is in `HiGHS/src/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out our documentation website https://ergo-code.github.io/HiGHS/.
+
 
 ## Reference
 
