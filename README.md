@@ -24,21 +24,20 @@
 [windows_build_svg]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-windows.yml/badge.svg
 [windows_build_link]: https://github.com/ERGO-Code/HiGHS/actions/workflows/build-windows.yml
 
-- [HiGHS - Linear optimization software](#highs---linear-optimization-software)
-  - [About HiGHS](#about-highs)
-  - [Documentation](#documentation)
-  - [Installation](#installation)
-    - [Build from source using CMake](#build-from-source-using-cmake)
-    - [Build with Meson*](#build-with-meson)
-    - [Build with Nix*](#build-with-nix)
-    - [Precompiled binaries](#precompiled-binaries)
-  - [Running HiGHS](#running-highs)
-  - [Interfaces](#interfaces)
-    - [Python](#python)
-    - [C](#c)
-    - [CSharp](#csharp)
-    - [Fortran](#fortran)
-  - [Reference](#reference)
+- [About HiGHS](#about-highs)
+- [Documentation](#documentation)
+- [Installation](#installation)
+  - [Build from source using CMake](#build-from-source-using-cmake)
+  - [Build with Meson*](#build-with-meson)
+  - [Build with Nix*](#build-with-nix)
+  - [Precompiled binaries](#precompiled-binaries)
+- [Running HiGHS](#running-highs)
+- [Interfaces](#interfaces)
+  - [Python](#python)
+  - [C](#c)
+  - [CSharp](#csharp)
+  - [Fortran](#fortran)
+- [Reference](#reference)
 
 ## About HiGHS
 
