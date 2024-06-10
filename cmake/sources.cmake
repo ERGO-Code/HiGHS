@@ -270,7 +270,6 @@ set(highs_sources
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
-    util/HighsMemoryAllocation.cpp
     util/HighsSort.cpp
     util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
@@ -376,14 +375,13 @@ set(highs_headers
     qpsolver/factor.hpp
     qpsolver/feasibility_bounded.hpp
     qpsolver/feasibility_highs.hpp
-    qpsolver/feasibility_quass.hpp
-    qpsolver/feasibility.hpp
     qpsolver/gradient.hpp
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
     qpsolver/perturbation.hpp
     qpsolver/pricing.hpp
     qpsolver/qpconst.hpp
+    qpsolver/qpvector.hpp
     qpsolver/quass.hpp
     qpsolver/ratiotest.hpp
     qpsolver/runtime.hpp
@@ -392,7 +390,6 @@ set(highs_headers
     qpsolver/snippets.hpp
     qpsolver/statistics.hpp
     qpsolver/steepestedgepricing.hpp
-    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h

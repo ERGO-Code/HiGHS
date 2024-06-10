@@ -83,7 +83,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   if (dev_run) printf("Num nodes = %d\n", int(scratch_num_nodes));
 
   std::string solution_file = model + ".sol";
-  //  if (dev_run) return_status = highs.writeSolution("");
+  if (dev_run) return_status = highs.writeSolution("");
   return_status = highs.writeSolution(solution_file);
   REQUIRE(return_status == HighsStatus::kOk);
 

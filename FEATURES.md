@@ -30,6 +30,12 @@ Logging and error return when user-supplied solution or basis is rejected on vec
 
 Memory allocation errors in presolve are caught and `Highs::run()` returns `HighsStatus::kError` with `model_status_ = HighsModelStatus::kMemoryLimit`
 
+QP solver logging is now neater and quieter
 
+Any Hessian for the incumbent model is modified with zero entries when adding columns to the model, and rows/columns are removed when columns are deleted from the model.
+
+Minor bug fix in MIP presolve
+
+QP solver will now hot start given a basis and solution
 
 

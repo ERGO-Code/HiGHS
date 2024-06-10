@@ -1141,13 +1141,13 @@ void full_api_qp() {
   return_status = Highs_addCol(highs, -1.0, -inf, inf, 0, NULL, NULL);
   assert( return_status == kHighsStatusOk );
   num_col++;
-  // Cannot solve the model until the Hessian has been replaced
+  // Can solve the model before the Hessian has been replaced
   return_status = Highs_run(highs);
-  assert( return_status == kHighsStatusError );
-  assertIntValuesEqual("Run status for 2-d QP with illegal Hessian", return_status, -1);
+  assert( return_status == kHighsStatusOk );
+  assertIntValuesEqual("Run status for 2-d QP with OK Hessian", return_status, 0);
 
   model_status = Highs_getModelStatus(highs);
-  assertIntValuesEqual("Model status for 2-d QP with illegal Hessian", model_status, 2);
+  assertIntValuesEqual("Model status for this 2-d QP with OK Hessian", model_status, kHighsModelStatusUnbounded);
 
   free(q_start);
   free(q_index);
@@ -1775,6 +1775,6 @@ int main() {
   test_passHessian();
   test_ranging();
   test_getModel();
-  //  test_setSolution();
   return 0;
 }
+  //  test_setSolution();

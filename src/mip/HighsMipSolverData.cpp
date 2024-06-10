@@ -596,7 +596,17 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
         break;
       case HighsVarType::kInteger:
-        if (domain.isFixed(i)) continue;
+        if (domain.isFixed(i)) {
+          if (std::abs(domain.col_lower_[i] -
+                       std::floor(domain.col_lower_[i] + 0.5)) > feastol) {
+            // integer variable is fixed to a fractional value -> infeasible
+            mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+            lower_bound = kHighsInf;
+            pruned_treeweight = 1.0;
+            return;
+          }
+          continue;
+        }
         integer_cols.push_back(i);
         integral_cols.push_back(i);
         maxTreeSizeLog2 += (HighsInt)std::ceil(

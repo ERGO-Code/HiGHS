@@ -76,22 +76,20 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   options = &options_;
   this->timer = timer;
 
-  if (!okHighsIntResize(colLowerSource, model->num_col_, -1)) return false;
-  if (!okHighsIntResize(colUpperSource, model->num_col_, -1)) return false;
-  if (!okDoubleResize(implColLower, model->num_col_, -kHighsInf)) return false;
-  if (!okDoubleResize(implColUpper, model->num_col_, kHighsInf)) return false;
-  if (!okHighsIntSetResize(colImplSourceByRow, model->num_row_)) return false;
-  if (!okHighsIntSetResize(implRowDualSourceByCol, model->num_col_))
+  if (!okResize(colLowerSource, model->num_col_, HighsInt{-1})) return false;
+  if (!okResize(colUpperSource, model->num_col_, HighsInt{-1})) return false;
+  if (!okResize(implColLower, model->num_col_, -kHighsInf)) return false;
+  if (!okResize(implColUpper, model->num_col_, kHighsInf)) return false;
+  if (!okResize(colImplSourceByRow, model->num_row_)) return false;
+  if (!okResize(implRowDualSourceByCol, model->num_col_)) return false;
+  if (!okResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okResize(implRowDualLower, model->num_row_, -kHighsInf)) return false;
+  if (!okResize(implRowDualUpper, model->num_row_, kHighsInf)) return false;
+  if (!okResize(rowDualUpperSource, model->num_row_, HighsInt{-1}))
     return false;
-
-  if (!okDoubleResize(rowDualLower, model->num_row_, -kHighsInf)) return false;
-  if (!okDoubleResize(rowDualUpper, model->num_row_, kHighsInf)) return false;
-  if (!okDoubleResize(implRowDualLower, model->num_row_, -kHighsInf))
+  if (!okResize(rowDualLowerSource, model->num_row_, HighsInt{-1}))
     return false;
-  if (!okDoubleResize(implRowDualUpper, model->num_row_, kHighsInf))
-    return false;
-  if (!okHighsIntResize(rowDualUpperSource, model->num_row_, -1)) return false;
-  if (!okHighsIntResize(rowDualLowerSource, model->num_row_, -1)) return false;
 
   for (HighsInt i = 0; i != model->num_row_; ++i) {
     if (model->row_lower_[i] == -kHighsInf) rowDualUpper[i] = 0;
@@ -120,12 +118,12 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   // since the first thing presolve will do is a scan for easy reductions
   // of each row and column and set the flag of processed columns to false
   // from then on they are added to the vector whenever there are changes
-  if (!okUint8Resize(changedRowFlag, model->num_row_, true)) return false;
-  if (!okUint8Resize(rowDeleted, model->num_row_, false)) return false;
-  if (!okHighsIntReserve(changedRowIndices, model->num_row_)) return false;
-  if (!okUint8Resize(changedColFlag, model->num_col_, true)) return false;
-  if (!okUint8Resize(colDeleted, model->num_col_, false)) return false;
-  if (!okHighsIntReserve(changedColIndices, model->num_col_)) return false;
+  if (!okResize(changedRowFlag, model->num_row_, uint8_t{1})) return false;
+  if (!okResize(rowDeleted, model->num_row_)) return false;
+  if (!okReserve(changedRowIndices, model->num_row_)) return false;
+  if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
+  if (!okResize(colDeleted, model->num_col_)) return false;
+  if (!okReserve(changedColIndices, model->num_col_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -2045,12 +2043,12 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   Arow.clear();
 
   freeslots.clear();
-  if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
-  if (!okHighsIntAssign(rowroot, model->num_row_, -1)) return false;
-  if (!okHighsIntAssign(colsize, model->num_col_, 0)) return false;
-  if (!okHighsIntAssign(rowsize, model->num_row_, 0)) return false;
-  if (!okHighsIntAssign(rowsizeInteger, model->num_row_, 0)) return false;
-  if (!okHighsIntAssign(rowsizeImplInt, model->num_row_, 0)) return false;
+  if (!okAssign(colhead, model->num_col_, HighsInt{-1})) return false;
+  if (!okAssign(rowroot, model->num_row_, HighsInt{-1})) return false;
+  if (!okAssign(colsize, model->num_col_)) return false;
+  if (!okAssign(rowsize, model->num_row_)) return false;
+  if (!okAssign(rowsizeInteger, model->num_row_)) return false;
+  if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2069,8 +2067,8 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
   HighsInt nnz = Aval.size();
 
   Avalue = Aval;
-  if (!okHighsIntReserve(Acol, nnz)) return false;
-  if (!okHighsIntReserve(Arow, nnz)) return false;
+  if (!okReserve(Acol, nnz)) return false;
+  if (!okReserve(Arow, nnz)) return false;
 
   for (HighsInt i = 0; i != ncol; ++i) {
     HighsInt collen = Astart[i + 1] - Astart[i];
@@ -2079,10 +2077,10 @@ bool HPresolve::okFromCSC(const std::vector<double>& Aval,
                 Aindex.begin() + Astart[i + 1]);
   }
 
-  if (!okHighsIntResize(Anext, nnz)) return false;
-  if (!okHighsIntResize(Aprev, nnz)) return false;
-  if (!okHighsIntResize(ARleft, nnz)) return false;
-  if (!okHighsIntResize(ARright, nnz)) return false;
+  if (!okResize(Anext, nnz)) return false;
+  if (!okResize(Aprev, nnz)) return false;
+  if (!okResize(ARleft, nnz)) return false;
+  if (!okResize(ARright, nnz)) return false;
   for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
 
   if (equations.empty()) {
@@ -2109,12 +2107,12 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   Arow.clear();
 
   freeslots.clear();
-  if (!okHighsIntAssign(colhead, model->num_col_, -1)) return false;
-  if (!okHighsIntAssign(rowroot, model->num_row_, -1)) return false;
-  if (!okHighsIntAssign(colsize, model->num_col_, 0)) return false;
-  if (!okHighsIntAssign(rowsize, model->num_row_, 0)) return false;
-  if (!okHighsIntAssign(rowsizeInteger, model->num_row_, 0)) return false;
-  if (!okHighsIntAssign(rowsizeImplInt, model->num_row_, 0)) return false;
+  if (!okAssign(colhead, model->num_col_, HighsInt{-1})) return false;
+  if (!okAssign(rowroot, model->num_row_, HighsInt{-1})) return false;
+  if (!okAssign(colsize, model->num_col_)) return false;
+  if (!okAssign(rowsize, model->num_row_)) return false;
+  if (!okAssign(rowsizeInteger, model->num_row_)) return false;
+  if (!okAssign(rowsizeImplInt, model->num_row_)) return false;
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -2133,8 +2131,8 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   HighsInt nnz = ARval.size();
 
   Avalue = ARval;
-  if (!okHighsIntReserve(Acol, nnz)) return false;
-  if (!okHighsIntReserve(Arow, nnz)) return false;
+  if (!okReserve(Acol, nnz)) return false;
+  if (!okReserve(Arow, nnz)) return false;
   //  entries.reserve(nnz);
 
   for (HighsInt i = 0; i != nrow; ++i) {
@@ -2144,10 +2142,10 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
                 ARindex.begin() + ARstart[i + 1]);
   }
 
-  if (!okHighsIntResize(Anext, nnz)) return false;
-  if (!okHighsIntResize(Aprev, nnz)) return false;
-  if (!okHighsIntResize(ARleft, nnz)) return false;
-  if (!okHighsIntResize(ARright, nnz)) return false;
+  if (!okResize(Anext, nnz)) return false;
+  if (!okResize(Aprev, nnz)) return false;
+  if (!okResize(ARleft, nnz)) return false;
+  if (!okResize(ARright, nnz)) return false;
   for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
 
   if (equations.empty()) {
@@ -6301,7 +6299,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   basis = reducedbasis;
   postsolve_stack.undo(options, sol, basis);
   refineBasis(lp, sol, basis);
-  calculateRowValues(model, sol);
+  calculateRowValuesQuad(model, sol);
 #if 0
   Highs highs;
   highs.passModel(model);
@@ -6384,7 +6382,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
       temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
     }
     temp_sol.row_value.resize(model.num_row_);
-    calculateRowValues(model, sol);
+    calculateRowValuesQuad(model, sol);
     temp_basis.valid = true;
     refineBasis(model, temp_sol, temp_basis);
     Highs highs;
@@ -6412,7 +6410,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     postsolve_stack.undoUntil(options, flagRow, flagCol, sol, basis,
                               reductionLim);
 
-    calculateRowValues(model, sol);
+    calculateRowValuesQuad(model, sol);
     kktinfo = dev_kkt_check::initInfo();
     checkResult = dev_kkt_check::checkKkt(state, kktinfo);
     checkResult = checkResult && kktinfo.pass_bfs;

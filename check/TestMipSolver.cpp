@@ -653,6 +653,41 @@ TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
   std::remove(solution_file.c_str());
 }
 
+TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
+  Highs highs;
+  // No presolve
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", "off");
+
+  // IP without constraints and fractional bounds on variables
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -2, 3};
+  lp.col_lower_ = {2.5, 2.5, 2.5};
+  lp.col_upper_ = {6.5, 5.5, 7.5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+
+  // Solve
+  highs.passModel(lp);
+  highs.run();
+
+  // Check status and optimal objective value
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(objectiveOk(highs.getInfo().objective_function_value, 2.0, dev_run));
+
+  // Fix an integer variable to a fractional value
+  lp.col_upper_[0] = 2.5;
+
+  // Solve again
+  highs.passModel(lp);
+  highs.run();
+
+  // Infeasible
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective, const bool dev_run) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /

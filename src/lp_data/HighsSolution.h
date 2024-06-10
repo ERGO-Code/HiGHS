@@ -85,7 +85,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
-void getVariableKktFailures(const double primal_feasibility_tolerance,
+bool getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,

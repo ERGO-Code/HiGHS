@@ -228,11 +228,11 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode PDHG_Scale_Data_cuda(cupdlp_int log_level,
-				    CUPDLPcsc *csc, cupdlp_int ifScaling,
-                                    CUPDLPscaling *scaling, cupdlp_float *cost,
-                                    cupdlp_float *lower, cupdlp_float *upper,
-                                    cupdlp_float *rhs) {
+cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
+				      CUPDLPcsc *csc, cupdlp_int ifScaling,
+				      CUPDLPscaling *scaling, cupdlp_float *cost,
+				      cupdlp_float *lower, cupdlp_float *upper,
+				      cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;
   // scaling->dObjScale = 1.0;
 
@@ -395,10 +395,10 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode Init_Scaling(cupdlp_int log_level,
-			    CUPDLPscaling *scaling, cupdlp_int ncols,
-                            cupdlp_int nrows, cupdlp_float *cost,
-                            cupdlp_float *rhs) {
+cupdlp_retcode H_Init_Scaling(cupdlp_int log_level,
+			      CUPDLPscaling *scaling, cupdlp_int ncols,
+			      cupdlp_int nrows, cupdlp_float *cost,
+			      cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;
 
   scaling->ifRuizScaling = 1;

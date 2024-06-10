@@ -14,15 +14,15 @@ class SteepestEdgePricing : public Pricing {
   ReducedCosts& redcosts;
   std::vector<double> weights;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
-    auto activeconstraintidx = basis.getactive();
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
+    auto active_constraint_index = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
     double maxval = 0.0;
-    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < active_constraint_index.size(); i++) {
       HighsInt indexinbasis =
-          constraintindexinbasisfactor[activeconstraintidx[i]];
+          constraintindexinbasisfactor[active_constraint_index[i]];
       if (indexinbasis == -1) {
         printf("error\n");
       }
@@ -32,15 +32,15 @@ class SteepestEdgePricing : public Pricing {
                    weights[indexinbasis];
       if (val > maxval && fabs(lambda.value[indexinbasis]) >
                               runtime.settings.lambda_zero_threshold) {
-        if (basis.getstatus(activeconstraintidx[i]) ==
-                BasisStatus::ActiveAtLower &&
+        if (basis.getstatus(active_constraint_index[i]) ==
+                BasisStatus::kActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxval = val;
-        } else if (basis.getstatus(activeconstraintidx[i]) ==
-                       BasisStatus::ActiveAtUpper &&
+        } else if (basis.getstatus(active_constraint_index[i]) ==
+                       BasisStatus::kActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxval = val;
         } else {
           // TODO
@@ -60,14 +60,14 @@ class SteepestEdgePricing : public Pricing {
           compute_exact_weights();
         };
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 
 
   double compute_exact_weight(HighsInt i) {
-    Vector y_i = basis.btran(Vector::unit(runtime.instance.num_var, i));
+    QpVector y_i = basis.btran(QpVector::unit(runtime.instance.num_var, i));
     return y_i.dot(y_i);
   }
 
@@ -80,7 +80,7 @@ class SteepestEdgePricing : public Pricing {
   bool check_weight(HighsInt i) {
     double weight_is = weights[i];
     double weight_comp = compute_exact_weight(i);
-    if(fabs(weight_comp - weight_is) > 10E-3) {
+    if(fabs(weight_comp - weight_is) > 1e-2) {
       //printf("weights[%d] = %lf, should be %lf\n", i, weight_is, weight_comp);
       return false;
     }
@@ -120,7 +120,7 @@ class SteepestEdgePricing : public Pricing {
     compute_exact_weights();
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
     //printf("Update weights, p = %d, rowindex = %d, q = %d\n", p, rowindex_p, q);
@@ -130,13 +130,13 @@ class SteepestEdgePricing : public Pricing {
     //  exit(1);
     //}
 
-    Vector delta = basis.ftran(aq);
+    QpVector delta = basis.ftran(aq);
 
     double old_weight_p_updated = weights[rowindex_p];
     // exact weight coming in needs to come in before update.
     double old_weight_p_computed = ep.dot(ep);
 
-    //if (fabs(old_weight_p_computed - old_weight_p_updated) >= 10E-3) {
+    //if (fabs(old_weight_p_computed - old_weight_p_updated) >= 1e-2) {
     //  printf("old weight[p] discrepancy: updated = %lf, computed=%lf\n", old_weight_p_updated, old_weight_p_computed);
     //}
 
@@ -153,11 +153,11 @@ class SteepestEdgePricing : public Pricing {
         //printf("weights[%d] = %lf\n", i, weights[i]);
       }
     }
-    //Vector new_ep = basis.btran(Vector::unit(runtime.instance.num_var, rowindex_p)); 
+    //QpVector new_ep = basis.btran(QpVector::unit(runtime.instance.num_var, rowindex_p)); 
     //double computed_weight = new_ep.dot(new_ep);
     double new_weight_p_updated = weight_p / (t_p * t_p);
     
-    //if (fabs(updated_weight - computed_weight) > 10E-5) {
+    //if (fabs(updated_weight - computed_weight) > 1e-4) {
     //  printf("updated weight %lf vs computed weight %lf. aq[p] = %lf\n", updated_weight, computed_weight, t_p);
     //  printf("old weight = %lf, aq[p] = %lf, ^2 = %lf, new weight = %lf\n", weight_p, t_p, t_p*t_p, updated_weight);
     //}

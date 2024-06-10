@@ -224,7 +224,7 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
     dY /= 2.0 * sqrt(stepsize->dBeta);
     dMovement = dX + dY;
 
-    //      Δx' (AΔy)
+    //      \Deltax' (A\Deltay)
     cupdlp_diffDotDiff(pdhg, iterates->x->data, iterates->xUpdate->data,
                        iterates->aty->data, iterates->atyUpdate->data,
                        problem->nCols, &dInteraction);
@@ -232,7 +232,7 @@ cupdlp_retcode PDHG_Update_Iterate_Adaptive_Step_Size(CUPDLPwork *pdhg) {
 
 #if CUPDLP_DUMP_LINESEARCH_STATS & CUPDLP_DEBUG
     cupdlp_float dInteractiony = 0.0;
-    //      Δy' (AΔx)
+    //      \Deltay' (A\Deltax)
     cupdlp_diffDotDiff(pdhg, iterates->y->data, iterates->yUpdate->data,
                        iterates->ax->data, iterates->axUpdate->data,
                        problem->nRows, &dInteractiony);

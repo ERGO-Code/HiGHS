@@ -338,6 +338,10 @@ struct HighsOptionsStruct {
   HighsInt pdlp_e_restart_method;
   double pdlp_d_gap_tol;
 
+  // Options for QP solver
+  HighsInt qp_iteration_limit;
+  HighsInt qp_nullspace_limit;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -932,6 +936,16 @@ class HighsOptions : public HighsOptionsStruct {
         "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
         &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
     records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "qp_iteration_limit", "Iteration limit for QP solver", advanced,
+        &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("qp_nullspace_limit",
+                                     "Nullspace limit for QP solver", advanced,
+                                     &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    records.push_back(record_int);
 
     // Fix the number of user settable options
     num_user_settable_options_ = static_cast<HighsInt>(records.size());
