@@ -1515,6 +1515,8 @@ class Highs {
   HighsStatus getRangingInterface();
 
   HighsStatus computeIisInterface();
+  HighsStatus computeInfeasibleRows(const bool elastic_columns = false,
+				    HighsInt* infeasible_row = nullptr);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
