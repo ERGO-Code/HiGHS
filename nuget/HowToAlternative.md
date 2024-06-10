@@ -27,7 +27,7 @@ In order to check if the runtimes are contained in the nuget package, one can op
 
 ## nuget structure for native libraries
 The nuget package is required to look like this for the native libraries
-```
+``` bash
 package/
 |-- lib/
 |   |-- netstandard2.0/
@@ -35,13 +35,13 @@ package/
 |-- runtimes/
 |   |-- linux-x64/
 |   |   |-- native/
-|   |       |-- [linux-x64 native libraries]
+|   |       ! [linux-x64 native libraries]
 |   |-- linux-arm64/
 |   |   |-- native/
-|   |       |-- [linux-arm64 native libraries]
+|   |       ! [linux-arm64 native libraries]
 |   |-- win-x64/
 |   |   |-- native/
-|   |       |-- [win-x64 native libraries]
+|   |       ! [win-x64 native libraries]
 ```
 
 ## Examples for the builds

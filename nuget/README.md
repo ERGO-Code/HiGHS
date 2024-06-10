@@ -6,7 +6,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 
 It can be added to your C# project with `dotnet`
 
-```bash
+```shell
 dotnet add package Highs.Native --version 1.7.0
 ```
 
@@ -29,7 +29,7 @@ cmake -S. -Bbuild -DCSHARP=ON -DBUILD_DOTNET=ON
 
 Then, from `build/dotnet/Highs.Native`, run 
 
-```bash
+```shell
 dotnet pack -c Release /p:Version=$version
 ```
 
