@@ -169,7 +169,7 @@ Usage:
       --version                 Print version.
   -h, --help                    Print help.
 ```
-For a full list of options, go to our [documentation page](https://ergo-code.github.io/HiGHS/stable/options/definitions/).
+For a full list of options, go to the [options page](https://ergo-code.github.io/HiGHS/stable/options/definitions/) on the documentation website.
 
 ## Interfaces
 
