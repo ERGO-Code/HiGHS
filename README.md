@@ -60,14 +60,9 @@ solves the model in `ml.mps`
 ```sh
     highs ml.mps
 ```
-HiGHS is installed using the command
+More details on building with CMake can be found in `HiGHS/cmake/README.md`.
 
-```sh
-    cmake --install build
-```
-
-with the optional setting of `--prefix <prefix>`, or the cmake option `CMAKE_INSTALL_PREFIX` if it is to be installed anywhere other than the default location.
-
+#### Building with Meson
 
 As an alternative, HiGHS can be installed using the `meson` build interface:
 ``` sh
@@ -116,7 +111,6 @@ python
 >>> import highspy
 >>> highspy.Highs()
 ```
-
 
 _The nix build files are provided by the community and are not officially supported by the HiGHS development team._
 

@@ -172,60 +172,58 @@ if (BUILD_CXX)
   message(STATUS "Found int * size: ${SIZEOF_INT_P}")
   cmake_pop_check_state()
  
-  if (NOT (FORTRAN AND MACOS))
-    # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
-    # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
-    if(MSVC AND BUILD_SHARED_LIBS)
-      # MSVC does support LTO, but WINDOWS_EXPORT_ALL_SYMBOLS does not work if
-      # LTO is enabled.
-      set(ipo_supported NO)
-      message(STATUS "IPO / LTO not supported on MSVC when building a shared library")
-    elseif(MINGW AND NOT CLANG)
-      # MinGW supports LTO, but it causes tests to fail at runtime like this:
-      #
-      #   Mingw-w64 runtime failure:
-      #   32 bit pseudo relocation at 00007FF779C9D070 out of range, targeting 00007FFAAC101400, yielding the value 000000033246438C.
-      #
-      # TODO Figure out and fix the root cause of that, then remove this section.
-      set(ipo_supported NO)
-      message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
-    else()
-      if(CMAKE_VERSION VERSION_GREATER "3.23.0") 
-        cmake_policy(SET CMP0138 NEW)
-      endif()
-
-      include(CheckIPOSupported)
-      check_ipo_supported(RESULT ipo_supported OUTPUT check_ipo_support_output)
-      message(STATUS "IPO / LTO supported by compiler: ${ipo_supported}")
+  # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
+  # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
+  if(MSVC AND BUILD_SHARED_LIBS)
+    # MSVC does support LTO, but WINDOWS_EXPORT_ALL_SYMBOLS does not work if
+    # LTO is enabled.
+    set(ipo_supported NO)
+    message(STATUS "IPO / LTO not supported on MSVC when building a shared library")
+  elseif(MINGW AND NOT CLANG)
+    # MinGW supports LTO, but it causes tests to fail at runtime like this:
+    #
+    #   Mingw-w64 runtime failure:
+    #   32 bit pseudo relocation at 00007FF779C9D070 out of range, targeting 00007FFAAC101400, yielding the value 000000033246438C.
+    #
+    # TODO Figure out and fix the root cause of that, then remove this section.
+    set(ipo_supported NO)
+    message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
+  else()
+    if(CMAKE_VERSION VERSION_GREATER "3.23.0") 
+      cmake_policy(SET CMP0138 NEW)
     endif()
 
-    if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-      # The user explicitly requested IPO. If it's not supported, CMake *should*
-      # produce an error: https://cmake.org/cmake/help/latest/policy/CMP0069.html
-      # However, we can give a more helpful error message ourselves.
-      message(STATUS "IPO / LTO: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION} as requested by user")
-      if(CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT ipo_supported)
-        message(SEND_ERROR
-                "IPO / LTO was requested through CMAKE_INTERPROCEDURAL_OPTIMIZATION, "
-                "but it is not supported by the compiler. The check failed with this output:\n"
-                "${check_ipo_support_output}")
-      endif()
-    elseif(NOT ipo_supported)
-      message(STATUS "IPO / LTO: disabled because it is not supported")
-    elseif(NOT BUILD_SHARED_LIBS)
-      # For a static library, we can't be sure whether the final linking will
-      # happen with IPO enabled, so we err on the side of caution. A better
-      # approach would be to request "fat LTO" in this case (for gcc/clang), to
-      # make the static library usable whether or not LTO is enabled at link
-      # time. Unfortunately CMake makes that impossible:
-      # https://gitlab.kitware.com/cmake/cmake/-/issues/23136
-      message(STATUS
-              "IPO / LTO: disabled by default when building a static library; "
-              "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
-    else()
-      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-      message(STATUS "IPO / LTO: enabled")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT check_ipo_support_output)
+    message(STATUS "IPO / LTO supported by compiler: ${ipo_supported}")
+  endif()
+
+  if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    # The user explicitly requested IPO. If it's not supported, CMake *should*
+    # produce an error: https://cmake.org/cmake/help/latest/policy/CMP0069.html
+    # However, we can give a more helpful error message ourselves.
+    message(STATUS "IPO / LTO: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION} as requested by user")
+    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT ipo_supported)
+      message(SEND_ERROR
+              "IPO / LTO was requested through CMAKE_INTERPROCEDURAL_OPTIMIZATION, "
+              "but it is not supported by the compiler. The check failed with this output:\n"
+              "${check_ipo_support_output}")
     endif()
+  elseif(NOT ipo_supported)
+    message(STATUS "IPO / LTO: disabled because it is not supported")
+  elseif(NOT BUILD_SHARED_LIBS)
+    # For a static library, we can't be sure whether the final linking will
+    # happen with IPO enabled, so we err on the side of caution. A better
+    # approach would be to request "fat LTO" in this case (for gcc/clang), to
+    # make the static library usable whether or not LTO is enabled at link
+    # time. Unfortunately CMake makes that impossible:
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/23136
+    message(STATUS
+            "IPO / LTO: disabled by default when building a static library; "
+            "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
+  else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    message(STATUS "IPO / LTO: enabled")
   endif()
 endif()
 
