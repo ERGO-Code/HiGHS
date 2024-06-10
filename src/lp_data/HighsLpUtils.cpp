@@ -1495,105 +1495,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   }
 }
 
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsInt new_num_col;
-  deleteColsFromLpVectors(lp, new_num_col, index_collection);
-  lp.a_matrix_.deleteCols(index_collection);
-  lp.num_col_ = new_num_col;
-}
-
-void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
-                             const HighsIndexCollection& index_collection) {
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  ;
-  // Initialise new_num_col in case none is removed due to from_k > to_k
-  new_num_col = lp.num_col_;
-  if (from_k > to_k) return;
-
-  HighsInt delete_from_col;
-  HighsInt delete_to_col;
-  HighsInt keep_from_col;
-  HighsInt keep_to_col = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt col_dim = lp.num_col_;
-  new_num_col = 0;
-  bool have_names = (lp.col_names_.size() != 0);
-  bool have_integrality = (lp.integrality_.size() != 0);
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
-                     keep_from_col, keep_to_col, current_set_entry);
-    // Account for the initial columns being kept
-    if (k == from_k) new_num_col = delete_from_col;
-    if (delete_to_col >= col_dim - 1) break;
-    assert(delete_to_col < col_dim);
-    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      lp.col_cost_[new_num_col] = lp.col_cost_[col];
-      lp.col_lower_[new_num_col] = lp.col_lower_[col];
-      lp.col_upper_[new_num_col] = lp.col_upper_[col];
-      if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
-      if (have_integrality) lp.integrality_[new_num_col] = lp.integrality_[col];
-      new_num_col++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  lp.col_cost_.resize(new_num_col);
-  lp.col_lower_.resize(new_num_col);
-  lp.col_upper_.resize(new_num_col);
-  if (have_names) lp.col_names_.resize(new_num_col);
-}
-
-void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
-  HighsInt new_num_row;
-  deleteRowsFromLpVectors(lp, new_num_row, index_collection);
-  lp.a_matrix_.deleteRows(index_collection);
-  lp.num_row_ = new_num_row;
-}
-
-void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
-                             const HighsIndexCollection& index_collection) {
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  // Initialise new_num_row in case none is removed due to from_k > to_k
-  new_num_row = lp.num_row_;
-  if (from_k > to_k) return;
-
-  HighsInt delete_from_row;
-  HighsInt delete_to_row;
-  HighsInt keep_from_row;
-  HighsInt keep_to_row = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt row_dim = lp.num_row_;
-  new_num_row = 0;
-  bool have_names = (HighsInt)lp.row_names_.size() > 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_row, delete_to_row,
-                     keep_from_row, keep_to_row, current_set_entry);
-    if (k == from_k) {
-      // Account for the initial rows being kept
-      new_num_row = delete_from_row;
-    }
-    if (delete_to_row >= row_dim - 1) break;
-    assert(delete_to_row < row_dim);
-    for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
-      lp.row_lower_[new_num_row] = lp.row_lower_[row];
-      lp.row_upper_[new_num_row] = lp.row_upper_[row];
-      if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
-      new_num_row++;
-    }
-    if (keep_to_row >= row_dim - 1) break;
-  }
-  lp.row_lower_.resize(new_num_row);
-  lp.row_upper_.resize(new_num_row);
-  if (have_names) lp.row_names_.resize(new_num_row);
-}
-
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection) {
   assert(ok(index_collection));
@@ -1814,7 +1715,8 @@ HighsInt getNumInt(const HighsLp& lp) {
 
 void getLpCosts(const HighsLp& lp, const HighsInt from_col,
                 const HighsInt to_col, double* XcolCost) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
     XcolCost[col - from_col] = lp.col_cost_[col];
@@ -1823,22 +1725,24 @@ void getLpCosts(const HighsLp& lp, const HighsInt from_col,
 void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
                     const HighsInt to_col, double* XcolLower,
                     double* XcolUpper) {
-  assert(0 <= from_col && to_col < lp.num_col_);
+  assert(0 <= from_col && from_col < lp.num_col_);
+  assert(0 <= to_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
-    if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
-    if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
+    if (XcolLower != nullptr) XcolLower[col - from_col] = lp.col_lower_[col];
+    if (XcolUpper != nullptr) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
 }
 
 void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
                     const HighsInt to_row, double* XrowLower,
                     double* XrowUpper) {
-  assert(0 <= to_row && from_row < lp.num_row_);
+  assert(0 <= from_row && from_row < lp.num_row_);
+  assert(0 <= to_row && to_row < lp.num_row_);
   if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
-    if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
-    if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
+    if (XrowLower != nullptr) XrowLower[row - from_row] = lp.row_lower_[row];
+    if (XrowUpper != nullptr) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
 }
 
@@ -2215,8 +2119,8 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   read_solution.value_valid = true;
   if (sparse) {
-    if (calculateRowValues(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
@@ -2225,8 +2129,8 @@ HighsStatus readSolutionFile(const std::string filename,
   // should be "Rows" and correct number
   if (!readSolutionFileHashKeywordIntLineOk(keyword, num_row, in_file)) {
     // Compute the row values since there are none to read
-    if (calculateRowValues(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
     return readSolutionFileReturn(HighsStatus::kOk, solution, basis,
                                   read_solution, read_basis, in_file);
@@ -2250,8 +2154,8 @@ HighsStatus readSolutionFile(const std::string filename,
                  " rows, not %" HIGHSINT_FORMAT ": row values ignored\n",
                  num_row, lp_num_row);
     // Calculate the row values
-    if (calculateRowValues(lp, read_solution.col_value,
-                           read_solution.row_value) != HighsStatus::kOk)
+    if (calculateRowValuesQuad(lp, read_solution.col_value,
+                               read_solution.row_value) != HighsStatus::kOk)
       return readSolutionFileErrorReturn(in_file);
   }
   // OK to have no EOL
@@ -2490,7 +2394,7 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
     }
   }
   HighsStatus return_status =
-      calculateRowValues(lp, solution.col_value, row_value);
+      calculateRowValuesQuad(lp, solution.col_value, row_value);
   if (return_status != HighsStatus::kOk) return return_status;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     const double primal = solution.row_value[iRow];
@@ -2645,14 +2549,15 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options,
   return return_status;
 }
 
-HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
+HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution) {
   const bool correct_size = int(solution.row_dual.size()) == lp.num_row_;
   const bool is_colwise = lp.a_matrix_.isColwise();
   const bool data_error = !correct_size || !is_colwise;
   assert(!data_error);
   if (data_error) return HighsStatus::kError;
 
-  solution.col_dual.assign(lp.num_col_, 0);
+  std::vector<HighsCDouble> col_dual_quad;
+  col_dual_quad.assign(lp.num_col_, HighsCDouble{0.0});
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2660,26 +2565,32 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-      // @FlipRowDual -= became +=
-      solution.col_dual[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
+      col_dual_quad[col] += solution.row_dual[row] * lp.a_matrix_.value_[i];
     }
-    solution.col_dual[col] += lp.col_cost_[col];
+    col_dual_quad[col] += lp.col_cost_[col];
   }
+
+  // assign quad values to double vector
+  solution.col_dual.resize(lp.num_col_);
+  std::transform(col_dual_quad.begin(), col_dual_quad.end(),
+                 solution.col_dual.begin(),
+                 [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
 }
 
-HighsStatus calculateRowValues(const HighsLp& lp,
-                               const std::vector<double>& col_value,
-                               std::vector<double>& row_value) {
+HighsStatus calculateRowValuesQuad(const HighsLp& lp,
+                                   const std::vector<double>& col_value,
+                                   std::vector<double>& row_value,
+                                   const HighsInt report_row) {
   const bool correct_size = int(col_value.size()) == lp.num_col_;
   const bool is_colwise = lp.a_matrix_.isColwise();
   const bool data_error = !correct_size || !is_colwise;
   assert(!data_error);
   if (data_error) return HighsStatus::kError;
 
-  row_value.clear();
-  row_value.assign(lp.num_row_, 0);
+  std::vector<HighsCDouble> row_value_quad;
+  row_value_quad.assign(lp.num_row_, HighsCDouble{0.0});
 
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     for (HighsInt i = lp.a_matrix_.start_[col];
@@ -2687,54 +2598,28 @@ HighsStatus calculateRowValues(const HighsLp& lp,
       const HighsInt row = lp.a_matrix_.index_[i];
       assert(row >= 0);
       assert(row < lp.num_row_);
-
-      row_value[row] += col_value[col] * lp.a_matrix_.value_[i];
-    }
-  }
-
-  return HighsStatus::kOk;
-}
-
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
-  return calculateRowValues(lp, solution.col_value, solution.row_value);
-}
-
-HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
-                                   const HighsInt report_row) {
-  const bool correct_size = int(solution.col_value.size()) == lp.num_col_;
-  const bool is_colwise = lp.a_matrix_.isColwise();
-  const bool data_error = !correct_size || !is_colwise;
-  assert(!data_error);
-  if (data_error) return HighsStatus::kError;
-
-  std::vector<HighsCDouble> row_value;
-  row_value.assign(lp.num_row_, HighsCDouble{0.0});
-
-  solution.row_value.assign(lp.num_row_, 0);
-
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt i = lp.a_matrix_.start_[col];
-         i < lp.a_matrix_.start_[col + 1]; i++) {
-      const HighsInt row = lp.a_matrix_.index_[i];
-      assert(row >= 0);
-      assert(row < lp.num_row_);
-      row_value[row] += solution.col_value[col] * lp.a_matrix_.value_[i];
+      row_value_quad[row] += col_value[col] * lp.a_matrix_.value_[i];
       if (row == report_row) {
         printf(
             "calculateRowValuesQuad: Row %d becomes %g due to contribution of "
             ".col_value[%d] = %g\n",
-            int(row), double(row_value[row]), int(col),
-            solution.col_value[col]);
+            int(row), double(row_value_quad[row]), int(col), col_value[col]);
       }
     }
   }
 
   // assign quad values to double vector
-  solution.row_value.resize(lp.num_row_);
-  std::transform(row_value.begin(), row_value.end(), solution.row_value.begin(),
-                 [](HighsCDouble x) { return double(x); });
+  row_value.resize(lp.num_row_);
+  std::transform(row_value_quad.begin(), row_value_quad.end(),
+                 row_value.begin(), [](HighsCDouble x) { return double(x); });
 
   return HighsStatus::kOk;
+}
+
+HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
+                                   const HighsInt report_row) {
+  return calculateRowValuesQuad(lp, solution.col_value, solution.row_value,
+                                report_row);
 }
 
 bool isColDataNull(const HighsLogOptions& log_options,

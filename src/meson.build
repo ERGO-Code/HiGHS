@@ -22,42 +22,36 @@ if host_machine.cpu_family() == 'x86_64'
 else
     conf_data.set('HIGHSINT64', false)
 endif
-# Commit hash
-commit_hash = 'unknown' # Default value
-if (not meson.is_subproject())
-    git = find_program('git', required: false)
-    if git.found()
-        commit_hash_cmd = run_command(git, 'rev-parse', '--short',
-                                      '-C', meson.project_source_root(), 'HEAD',
-                                      check: false, # Don't abort on failure
-                                     )
-        if commit_hash_cmd.returncode() == 0
-            commit_hash = commit_hash_cmd.stdout().strip()
-        endif
-    endif
-endif
-conf_data.set_quoted('HIGHS_GITHASH', commit_hash)
 # Date
-today_str = 'unknown'
-if (not meson.is_subproject())
-    python_getdate = '''
-    import datetime
-    import os
-    import time
+# today_str = 'unknown'
+# if (not meson.is_subproject())
+#     python_getdate = '''
+# import datetime
+# import os
+# import time
 
-    build_date = datetime.datetime.utcfromtimestamp(
-        int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-    )
-    build_date_str = build_date.strftime('%Y-%m-%d')
-    print(build_date_str)
-    '''
-    today_cmd = run_command('python3', '-c',
-                            python_getdate,
-                           check: false)
-    today_str = today_cmd.stdout().strip()
-endif
+# (ig)
+# Deprecate compilation date
+
+# build_date = datetime.datetime.utcfromtimestamp(
+#     int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
+# )
+# build_date_str = build_date.strftime('%Y-%m-%d')
+# print(build_date_str)
+#     '''
+#     # Note: this is not guaranteed to work on Windows. This should be removed
+#     #       (as proposed in gh-1735), and otherwise moved into a .py script with
+#     #       a `#!/usr/bin/env python3` shebang, and `python3 -c` dropped.
+#     today_cmd = run_command('python3', '-c',
+#                             python_getdate,
+#                             check: false)
+#     today_str = today_cmd.stdout().strip()
+# endif
+# conf_data.set_quoted('HIGHS_COMPILATION_DATE',
+#                      today_str)
+
 conf_data.set_quoted('HIGHS_COMPILATION_DATE',
-                     today_str)
+                     'deprecated')
 
 # Conditional compiler options
 _mm_pause_code = '''
@@ -105,10 +99,17 @@ else
                 _have_builtin_clz)
 endif
 
-configure_file(
+interim_conf = configure_file(
   input: 'HConfig.h.meson.in',
-  output: 'HConfig.h',
+  output: 'HConfig.h.meson.interim',
   configuration: conf_data
+)
+
+highs_conf_file = vcs_tag(
+  input: interim_conf,
+  output: 'HConfig.h',
+  fallback: 'unknown',
+  replace_string: '_HIGHS_GITHASH_', # Remember to quote manually
 )
 
 _incdirs += include_directories('.')
@@ -298,6 +299,7 @@ _srcs = [
 ]
 
 highslib_srcs = [
+  highs_conf_file,
   _srcs,
   'ipm/IpxWrapper.cpp',
   'pdlp/CupdlpWrapper.cpp',
@@ -307,13 +309,20 @@ highslib_srcs = [
 ]
 
 
+symbol_visibility = 'default'
+if get_option('default_library') == 'static'
+  # Ensure that if we link a static library into a shared library,
+  # private symbols don't get re-exported.
+  symbol_visibility = 'inlineshidden'
+endif
+
 highslib = library('highs',
                    highslib_srcs,
                    dependencies: _deps,
                    cpp_args: _args,
                    c_args: _args,
-                   link_with: _linkto,
                    include_directories: _incdirs,
+                   gnu_symbol_visibility: symbol_visibility,
                    pic: true,
                    install: true)
 
@@ -329,7 +338,7 @@ if get_option('with_fortran')
                         _fsrcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -345,7 +354,7 @@ if get_option('with_csharp')
                         _cs_srcs,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
@@ -365,8 +374,52 @@ if get_option('with_c')
                         _c_src,
                         dependencies: _deps,
                         cpp_args: _args,
-                        link_with: [ _linkto, highslib ],
+                        link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
                         install: true)
+endif
+
+highs_dep = declare_dependency(link_with: highslib,
+                               dependencies: _deps,
+                               include_directories: _incdirs,
+                               )
+
+if get_option('with_pybind11')
+  py = import('python').find_installation(pure: false)
+
+  pyb11_dep = [
+    # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
+    # that is the minimum supported Python version
+    py.dependency(),
+    dependency('pybind11')
+  ]
+
+  highspy_cpp = files([
+    'highs_bindings.cpp'
+  ])
+  highsoptions_cpp = files([
+    'highs_options.cpp'
+  ])
+
+  py.extension_module(
+    '_highs',
+    sources : highspy_cpp,
+    dependencies: [pyb11_dep, highs_dep],
+    cpp_args: _args,
+    install: true,
+    subdir: 'highspy',
+    include_directories: _incdirs,
+  )
+
+  py.extension_module(
+    '_highs_options',
+    sources : highsoptions_cpp,
+    dependencies: [pyb11_dep, highs_dep],
+    cpp_args: _args,
+    install: true,
+    subdir: 'highspy',
+    include_directories: _incdirs,
+  )
+
 endif

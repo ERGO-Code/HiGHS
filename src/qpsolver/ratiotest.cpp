@@ -10,8 +10,8 @@ static double step(double x, double p, double l, double u, double t) {
   }
 }
 
-static RatiotestResult ratiotest_textbook(Runtime& rt, const Vector& p,
-                                   const Vector& rowmove, Instance& instance,
+static RatiotestResult ratiotest_textbook(Runtime& rt, const QpVector& p,
+                                   const QpVector& rowmove, Instance& instance,
                                    const double alphastart) {
   RatiotestResult result;
   result.limitingconstraint = -1;
@@ -45,8 +45,8 @@ static RatiotestResult ratiotest_textbook(Runtime& rt, const Vector& p,
   return result;
 }
 
-static RatiotestResult ratiotest_twopass(Runtime& runtime, const Vector& p,
-                                  const Vector& rowmove, Instance& relaxed,
+static RatiotestResult ratiotest_twopass(Runtime& runtime, const QpVector& p,
+                                  const QpVector& rowmove, Instance& relaxed,
                                   const double alphastart) {
   RatiotestResult res1 =
       ratiotest_textbook(runtime, p, rowmove, relaxed, alphastart);
@@ -123,8 +123,8 @@ Instance ratiotest_relax_instance(Runtime& runtime) {
   return relaxed_instance;
 }
 
-RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
-                          const Vector& rowmove, double alphastart) {
+RatiotestResult ratiotest(Runtime& runtime, const QpVector& p,
+                          const QpVector& rowmove, double alphastart) {
   switch (runtime.settings.ratiotest) {
     case RatiotestStrategy::Textbook:
       return ratiotest_textbook(runtime, p, rowmove, runtime.instance,

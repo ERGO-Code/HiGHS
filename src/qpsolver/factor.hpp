@@ -26,6 +26,33 @@ class CholeskyFactor {
   bool has_negative_eigenvalue = false;
   std::vector<double> a;
 
+  void resize(HighsInt new_k_max) {
+    std::vector<double> L_old = L;
+    L.clear();
+    L.resize((new_k_max) * (new_k_max));
+    const HighsInt l_size = L.size();
+    // Driven by #958, changes made in following lines to avoid array
+    // bound error when new_k_max < current_k_max
+    HighsInt min_k_max = min(new_k_max, current_k_max);
+    for (HighsInt i = 0; i < min_k_max; i++) {
+      for (HighsInt j = 0; j < min_k_max; j++) {
+	assert(i * (new_k_max) + j < l_size);
+        L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
+      }
+    }
+    current_k_max = new_k_max;
+  }
+
+ public:
+  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
+    uptodate = false;
+    current_k_max =
+        max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
+            basis.getnuminactive());
+    L.resize(current_k_max * current_k_max);
+  }
+
+
   void recompute() {
     std::vector<std::vector<double>> orig;
     HighsInt dim_ns = basis.getinactive().size();
@@ -36,8 +63,8 @@ class CholeskyFactor {
 
     Matrix temp(dim_ns, 0);
 
-    Vector buffer_Qcol(runtime.instance.num_var);
-    Vector buffer_ZtQi(dim_ns);
+    QpVector buffer_Qcol(runtime.instance.num_var);
+    QpVector buffer_ZtQi(dim_ns);
     for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
       runtime.instance.Q.mat.extractcol(i, buffer_Qcol);
       basis.Ztprod(buffer_Qcol, buffer_ZtQi);
@@ -70,33 +97,7 @@ class CholeskyFactor {
     uptodate = true;
   }
 
-  void resize(HighsInt new_k_max) {
-    std::vector<double> L_old = L;
-    L.clear();
-    L.resize((new_k_max) * (new_k_max));
-    const HighsInt l_size = L.size();
-    // Driven by #958, changes made in following lines to avoid array
-    // bound error when new_k_max < current_k_max
-    HighsInt min_k_max = min(new_k_max, current_k_max);
-    for (HighsInt i = 0; i < min_k_max; i++) {
-      for (HighsInt j = 0; j < min_k_max; j++) {
-	assert(i * (new_k_max) + j < l_size);
-        L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
-      }
-    }
-    current_k_max = new_k_max;
-  }
-
- public:
-  CholeskyFactor(Runtime& rt, Basis& bas) : runtime(rt), basis(bas) {
-    uptodate = false;
-    current_k_max =
-        max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
-            basis.getnuminactive());
-    L.resize(current_k_max * current_k_max);
-  }
-
-  QpSolverStatus expand(const Vector& yp, Vector& gyp, Vector& l, Vector& m) {
+  QpSolverStatus expand(const QpVector& yp, QpVector& gyp, QpVector& l, QpVector& m) {
     if (!uptodate) {
       return QpSolverStatus::OK;
     }
@@ -115,7 +116,6 @@ class CholeskyFactor {
 
       current_k++;
     } else {
-      printf("lambda = %lf\n", lambda);
       return QpSolverStatus::NOTPOSITIVDEFINITE;
 
       //     |LL' 0|
@@ -172,7 +172,7 @@ class CholeskyFactor {
     return QpSolverStatus::OK;
   }
 
-  void solveL(Vector& rhs) {
+  void solveL(QpVector& rhs) {
     if (!uptodate) {
       recompute();
     }
@@ -192,7 +192,7 @@ class CholeskyFactor {
   }
 
   // solve L' u = v
-  void solveLT(Vector& rhs) {
+  void solveLT(QpVector& rhs) {
     for (HighsInt i = rhs.dim - 1; i >= 0; i--) {
       double sum = 0.0;
       for (HighsInt j = rhs.dim - 1; j > i; j--) {
@@ -202,8 +202,8 @@ class CholeskyFactor {
     }
   }
 
-  void solve(Vector& rhs) {
-    if (!uptodate || (numberofreduces >= runtime.instance.num_con / 2 &&
+  void solve(QpVector& rhs) {
+    if (!uptodate || (numberofreduces >= runtime.instance.num_var / 2 &&
                       !has_negative_eigenvalue)) {
       recompute();
     }
@@ -273,7 +273,7 @@ class CholeskyFactor {
     m[j * kmax + i] = 0.0;
   }
 
-  void reduce(const Vector& buffer_d, const HighsInt maxabsd, bool p_in_v) {
+  void reduce(const QpVector& buffer_d, const HighsInt maxabsd, bool p_in_v) {
     if (current_k == 0) {
       return;
     }
@@ -388,7 +388,7 @@ class CholeskyFactor {
     HighsInt num_nz = 0;
     for (HighsInt i = 0; i < current_k; i++) {
       for (HighsInt j = 0; j < current_k; j++) {
-        if (fabs(L[i * current_k_max + j]) > 10e-8) {
+        if (fabs(L[i * current_k_max + j]) > 1e-7) {
           num_nz++;
         }
       }

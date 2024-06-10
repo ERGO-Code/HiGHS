@@ -285,6 +285,14 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<Hig
     return h->deleteRows(num_set_entries, indices.data());
 }
 
+HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
+  return h->setBasis(basis);
+}
+
+HighsStatus highs_setLogicalBasis(Highs* h) {
+  return h->setBasis();
+}
+
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
     Highs* h, const std::string& option) {
   HighsOptionType option_type;
@@ -551,22 +559,21 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 
-PYBIND11_MODULE(highspy, m) {
-     
+PYBIND11_MODULE(_core, m) {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
-      .value("kMaximize", ObjSense::kMaximize)
-      .export_values();
+      .value("kMaximize", ObjSense::kMaximize);
+      // // .export_values();
   py::enum_<MatrixFormat>(m, "MatrixFormat")
       .value("kColwise", MatrixFormat::kColwise)
       .value("kRowwise", MatrixFormat::kRowwise)
-      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned)
-      .export_values();
+      .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
+      // // .export_values();
   py::enum_<HessianFormat>(m, "HessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
-      .value("kSquare", HessianFormat::kSquare)
-      .export_values();
+      .value("kSquare", HessianFormat::kSquare);
+      // .export_values();
   py::enum_<SolutionStatus>(m, "SolutionStatus")
       .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
       .value("kSolutionStatusInfeasible",
@@ -596,7 +603,8 @@ PYBIND11_MODULE(highspy, m) {
       .value("kUnknown", HighsModelStatus::kUnknown)
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
       .value("kInterrupt", HighsModelStatus::kInterrupt)
-      .export_values();
+      .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
+      // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)
@@ -607,44 +615,44 @@ PYBIND11_MODULE(highspy, m) {
       .value("kReducedToEmpty", HighsPresolveStatus::kReducedToEmpty)
       .value("kTimeout", HighsPresolveStatus::kTimeout)
       .value("kNullError", HighsPresolveStatus::kNullError)
-      .value("kOptionsError", HighsPresolveStatus::kOptionsError)
-      .export_values();
+      .value("kOptionsError", HighsPresolveStatus::kOptionsError);
+      // .export_values();
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
       .value("kLower", HighsBasisStatus::kLower)
       .value("kBasic", HighsBasisStatus::kBasic)
       .value("kUpper", HighsBasisStatus::kUpper)
       .value("kZero", HighsBasisStatus::kZero)
-      .value("kNonbasic", HighsBasisStatus::kNonbasic)
-      .export_values();
+      .value("kNonbasic", HighsBasisStatus::kNonbasic);
+      // .export_values();
   py::enum_<HighsVarType>(m, "HighsVarType")
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
-      .value("kSemiInteger", HighsVarType::kSemiInteger)
-      .export_values();
+      .value("kSemiInteger", HighsVarType::kSemiInteger);
+      // .export_values();
   py::enum_<HighsOptionType>(m, "HighsOptionType")
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
       .value("kDouble", HighsOptionType::kDouble)
-      .value("kString", HighsOptionType::kString)
-      .export_values();
+      .value("kString", HighsOptionType::kString);
+      // .export_values();
   py::enum_<HighsInfoType>(m, "HighsInfoType")
       .value("kInt64", HighsInfoType::kInt64)
       .value("kInt", HighsInfoType::kInt)
-      .value("kDouble", HighsInfoType::kDouble)
-      .export_values();
+      .value("kDouble", HighsInfoType::kDouble);
+      // .export_values();
   py::enum_<HighsStatus>(m, "HighsStatus")
       .value("kError", HighsStatus::kError)
       .value("kOk", HighsStatus::kOk)
-      .value("kWarning", HighsStatus::kWarning)
-      .export_values();
+      .value("kWarning", HighsStatus::kWarning);
+      // .export_values();
   py::enum_<HighsLogType>(m, "HighsLogType")
       .value("kInfo", HighsLogType::kInfo)
       .value("kDetailed", HighsLogType::kDetailed)
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
-      .value("kError", HighsLogType::kError)
-      .export_values();
+      .value("kError", HighsLogType::kError);
+      // .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -811,14 +819,13 @@ PYBIND11_MODULE(highspy, m) {
                      &HighsOptions::mip_heuristic_effort)
       .def_readwrite("mip_min_logging_interval",
                      &HighsOptions::mip_min_logging_interval);
-  py::class_<Highs>(m, "Highs")
+  py::class_<Highs>(m, "_Highs")
       .def(py::init<>())
       .def("version", &Highs::version)
       .def("versionMajor", &Highs::versionMajor)
       .def("versionMinor", &Highs::versionMinor)
       .def("versionPatch", &Highs::versionPatch)
       .def("githash", &Highs::githash)
-      .def("compilationDate", &Highs::compilationDate)
       .def("clear", &Highs::clear)
       .def("clearModel", &Highs::clearModel)
       .def("clearSolver", &Highs::clearSolver)
@@ -907,6 +914,7 @@ PYBIND11_MODULE(highspy, m) {
       .def("getRowByName", &highs_getRowByName)
 
       .def("writeModel", &Highs::writeModel)
+      .def("writePresolvedModel", &Highs::writePresolvedModel)
       .def("crossover", &Highs::crossover)
       .def("changeObjectiveSense", &Highs::changeObjectiveSense)
       .def("changeObjectiveOffset", &Highs::changeObjectiveOffset)
@@ -928,6 +936,8 @@ PYBIND11_MODULE(highspy, m) {
       .def("deleteVars", &highs_deleteCols) // alias
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &Highs::setSolution)
+      .def("setBasis", &highs_setBasis)
+      .def("setBasis", &highs_setLogicalBasis)
       .def("modelStatusToString", &Highs::modelStatusToString)
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)

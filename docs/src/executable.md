@@ -6,7 +6,7 @@ For convenience, the executable is assumed to be `bin/highs`.
 
 The model given by the MPS file `model.mps` is solved by the command:
 
-```bash
+```shell
 $ bin/highs model.mps
 ```
 
@@ -19,7 +19,7 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```bash
+```shell
 $ bin/highs --help
 HiGHS options
 Usage:

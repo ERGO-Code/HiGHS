@@ -117,6 +117,8 @@ struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
   void form(const std::vector<std::string>& name);
   bool hasDuplicate(const std::vector<std::string>& name);
+  void update(int index, const std::string& old_name,
+              const std::string& new_name);
   void clear();
 };
 

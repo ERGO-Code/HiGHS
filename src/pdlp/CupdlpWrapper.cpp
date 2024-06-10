@@ -73,7 +73,17 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   void* presolvedmodel = NULL;
   void* model2solve = NULL;
 
+  // WIP on zbook?
+  //
+  //  HighsInt size_of_CUPDLPscaling = sizeof(CUPDLPscaling);
+  //
   CUPDLPscaling* scaling = (CUPDLPscaling*)cupdlp_malloc(sizeof(CUPDLPscaling));
+
+  // WIP on zbook?
+  //
+  //  printf("size_of_CUPDLPscaling = %d\n", size_of_CUPDLPscaling);
+  //  scaling->ifRuizScaling = 1;
+  //  printf("scaling->ifRuizScaling = %d\n", scaling->ifRuizScaling);
 
   // claim solvers variables
   // prepare pointers
@@ -103,7 +113,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
-  Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
+  H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   cupdlp_int ifScaling = 1;
 
   CUPDLPwork* w = cupdlp_NULL;
@@ -125,8 +135,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost,
-                       lower, upper, rhs);
+  H_PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost,
+                         lower, upper, rhs);
   scaling_time = getTimeStamp() - scaling_time;
 
   cupdlp_float alloc_matrix_time = 0.0;

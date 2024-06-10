@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 
 #include "HCheckConfig.h"
@@ -219,12 +220,12 @@ TEST_CASE("test-qod", "[qpsolver]") {
   highs.addCol(-1, -inf, inf, 0, NULL, NULL);
   if (dev_run) highs.writeModel("");
 
-  // Cannot solve the model until the Hessian has been replaced
+  // Can solve the model before the Hessian has been replaced
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::kError);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kModelError);
+  REQUIRE(model_status == HighsModelStatus::kUnbounded);
 
   // Pass the new Hessian
   hessian.dim_ = 2;
@@ -599,4 +600,415 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] + 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
+}
+
+void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
+                    std::vector<double>& result) {
+  HighsInt dim = hessian.dim_;
+  assert(HighsInt(arg.size()) == dim);
+  result.resize(dim);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    double sum = 0;
+    for (HighsInt iEl = hessian.start_[iCol]; iEl < hessian.start_[iCol + 1];
+         iEl++)
+      sum += hessian.value_[iEl] * arg[hessian.index_[iEl]];
+    result[iCol] = sum;
+  }
+}
+
+TEST_CASE("test-qp-modification", "[qpsolver]") {
+  //  HighsStatus return_status;
+  //  HighsModelStatus model_status;
+  //  double required_objective_function_value;
+
+  HighsModel model;
+
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1.0, -1.0};
+  lp.col_lower_ = {-inf, -inf};
+  lp.col_upper_ = {inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+  hessian.dim_ = 1;
+  hessian.start_ = {0, 1};
+  hessian.value_ = {1.0};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsModel& incumbent_model = highs.getModel();
+  // Cannot have Hessian with index exceeding hessian.dim_-1
+  hessian.index_ = {1};
+  REQUIRE(highs.passModel(model) == HighsStatus::kError);
+
+  // Correct the Hessian index
+  hessian.index_[0] = 0;
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  if (dev_run) {
+    printf("\nNow solve the QP\n\n");
+    incumbent_model.hessian_.print();
+  }
+  highs.run();
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  // Add a new variables and ensure that the Hessian dimension is correct
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  REQUIRE(highs.addCol(-1, 0, 1, 1, index.data(), value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the QP after adding new variable\n\n");
+    incumbent_model.hessian_.print();
+  }
+  highs.run();
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  HighsInt dim = incumbent_model.lp_.num_col_;
+  std::vector<double> arg0;
+  std::vector<double> arg1;
+  std::vector<double> result0;
+  std::vector<double> result1;
+  arg0.resize(dim);
+  HighsRandom random;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
+  HighsHessian hessian0 = incumbent_model.hessian_;
+  arg1 = arg0;
+
+  // Deleting column 1 removes no nonzeros from the Hessian
+  HighsInt delete_col = 1;
+  REQUIRE(highs.deleteCols(delete_col, delete_col) == HighsStatus::kOk);
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the QP after deleting column 1\n\n");
+    incumbent_model.hessian_.print();
+  }
+  highs.run();
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  dim--;
+  for (HighsInt iCol = delete_col; iCol < dim; iCol++)
+    arg1[iCol] = arg1[iCol + 1];
+  arg0[delete_col] = 0;
+  hessianProduct(hessian0, arg0, result0);
+  for (HighsInt iCol = delete_col; iCol < dim; iCol++)
+    result0[iCol] = result0[iCol + 1];
+
+  arg1.resize(dim);
+  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    REQUIRE(result0[iCol] == result1[iCol]);
+
+  // Deleting column 0 removes only nonzero from the Hessian, so problem is an
+  // LP
+  delete_col = 0;
+  REQUIRE(highs.deleteCols(delete_col, delete_col) == HighsStatus::kOk);
+  REQUIRE((incumbent_model.hessian_.dim_ == 0 ||
+           incumbent_model.hessian_.dim_ == incumbent_model.lp_.num_col_));
+  if (dev_run) {
+    printf("\nNow solve the LP after deleting column 0\n\n");
+    incumbent_model.hessian_.print();
+  }
+  highs.run();
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+}
+
+TEST_CASE("test-qp-delete-col", "[qpsolver]") {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 5;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-2, -1, 0, 1, 2};
+  lp.col_lower_ = {0, 0, 0, 0, 0};
+  lp.col_upper_ = {inf, inf, inf, inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 5};
+  lp.a_matrix_.index_ = {0, 1, 2, 3, 4};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 1};
+  hessian.dim_ = 5;
+  hessian.start_ = {0, 4, 7, 10, 11, 12};
+  hessian.index_ = {0, 1, 3, 4, 1, 2, 4, 2, 3, 4, 3, 4};
+  hessian.value_ = {11, 21, 41, 51, 22, 32, 52, 33, 43, 53, 44, 55};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsModel& incumbent_model = highs.getModel();
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  if (dev_run) incumbent_model.hessian_.print();
+
+  HighsInt dim = incumbent_model.lp_.num_col_;
+  std::vector<double> arg0;
+  std::vector<double> arg1;
+  std::vector<double> result0;
+  std::vector<double> result1;
+  arg0.resize(dim);
+  HighsRandom random;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
+  HighsHessian hessian0 = incumbent_model.hessian_;
+  arg1 = arg0;
+
+  std::vector<HighsInt> set = {1, 3};
+  REQUIRE(highs.deleteCols(2, set.data()) == HighsStatus::kOk);
+  if (dev_run) incumbent_model.hessian_.print();
+
+  arg1[1] = arg1[2];
+  arg1[2] = arg1[4];
+  arg0[1] = 0;
+  arg0[3] = 0;
+  hessianProduct(hessian0, arg0, result0);
+  result0[1] = result0[2];
+  result0[2] = result0[4];
+
+  dim = 3;
+  arg1.resize(dim);
+  hessianProduct(incumbent_model.hessian_, arg1, result1);
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    REQUIRE(result0[iCol] == result1[iCol]);
+
+  dim = 100;
+  lp.clear();
+  lp.num_col_ = dim;
+  lp.num_row_ = 1;
+
+  lp.col_cost_.resize(dim);
+  lp.col_lower_.resize(dim);
+  lp.col_upper_.resize(dim);
+  lp.a_matrix_.index_.resize(dim);
+  lp.a_matrix_.value_.resize(dim);
+
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    lp.col_cost_[iCol] = double(iCol);
+    lp.col_lower_[iCol] = 0;
+    lp.col_upper_[iCol] = inf;
+    lp.a_matrix_.index_[iCol] = iCol;
+    lp.a_matrix_.value_[iCol] = 1;
+  }
+  lp.a_matrix_.start_.push_back(dim);
+
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+
+  hessian.clear();
+  hessian.dim_ = dim;
+  std::vector<double> hessian_col(dim);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    hessian_col.assign(dim, 0);
+    HighsInt kmax = std::max(HighsInt(1), (dim - iCol) / 3);
+    hessian_col[iCol] = dim * iCol + iCol;
+    if (iCol < dim - 1) {
+      for (HighsInt k = 0; k < kmax; k++) {
+        HighsInt iRow = iCol + 1 + random.integer(dim - iCol - 1);
+        assert(iRow >= 0);
+        assert(iRow < dim);
+        hessian_col[iRow] = dim * iCol + iRow;
+      }
+    }
+    for (HighsInt iRow = iCol; iRow < dim; iRow++) {
+      if (hessian_col[iRow]) {
+        hessian.index_.push_back(iRow);
+        hessian.value_.push_back(hessian_col[iRow]);
+      }
+    }
+    hessian.start_.push_back(HighsInt(hessian.index_.size()));
+  }
+
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
+
+  arg0.resize(dim);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) arg0[iCol] = random.fraction();
+  hessian0 = incumbent_model.hessian_;
+  arg1 = arg0;
+
+  std::vector<HighsInt> mask;
+  mask.assign(dim, 0);
+
+  HighsInt kmax = std::max(HighsInt(1), dim / 3);
+  for (HighsInt k = 0; k < kmax; k++) {
+    HighsInt iRow = random.integer(dim);
+    assert(iRow >= 0);
+    assert(iRow < dim);
+    mask[iRow] = 1;
+  }
+  highs.deleteCols(mask.data());
+  if (dev_run && dim < 20) incumbent_model.hessian_.print();
+
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iRow = mask[iCol];
+    if (iRow < 0) {
+      arg0[iCol] = 0;
+    } else {
+      arg1[iRow] = arg1[iCol];
+    }
+  }
+  hessianProduct(hessian0, arg0, result0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iRow = mask[iCol];
+    if (iRow >= 0) result0[iRow] = result0[iCol];
+  }
+  dim = incumbent_model.hessian_.dim_;
+  arg1.resize(dim);
+  hessianProduct(incumbent_model.hessian_, arg1, result1);
+
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    REQUIRE(result0[iCol] == result1[iCol]);
+  }
+}
+
+TEST_CASE("test-qp-hot-start", "[qpsolver]") {
+  // Test hot start
+  HighsStatus return_status;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run)
+      printf(
+          "\n"
+          "===================\n"
+          "Hot start test %d\n"
+          "===================\n",
+          int(k));
+    if (k == 1) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else if (k == 2) {
+      const std::string filename =
+          std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+      REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+    } else {
+      HighsModel model;
+      model.lp_.num_col_ = 2;
+      model.lp_.num_row_ = 1;
+      model.lp_.col_cost_ = {-2, -2};
+      model.lp_.col_lower_ = {-inf, -inf};
+      model.lp_.col_upper_ = {inf, inf};
+      model.lp_.row_lower_ = {1};
+      model.lp_.row_upper_ = {inf};
+      model.lp_.a_matrix_.format_ = MatrixFormat::kRowwise;
+      model.lp_.a_matrix_.start_ = {0, 2};
+      model.lp_.a_matrix_.index_ = {0, 1};
+      model.lp_.a_matrix_.value_ = {1, 1};
+      model.hessian_.dim_ = 2;
+      model.hessian_.start_ = {0, 1, 2};
+      model.hessian_.index_ = {0, 1};
+      model.hessian_.value_ = {2, 2};
+      REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+    }
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+
+    if (dev_run) highs.writeSolution("", 1);
+
+    HighsBasis basis = highs.getBasis();
+    HighsSolution solution = highs.getSolution();
+    if (dev_run) printf("Saved basis has validity = %d\n", basis.valid);
+
+    if (dev_run)
+      printf(
+          "================\n"
+          "Hot start re-run\n"
+          "================\n");
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+
+    if (dev_run)
+      printf(
+          "===========================\n"
+          "Hot start using saved basis\n"
+          "===========================\n");
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using saved basis and solution after clearing solver\n"
+          "==============================================================\n");
+    highs.clearSolver();
+    highs.setSolution(solution);
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+    /*
+        if (dev_run)
+    printf("=================================================\n"
+           "Hot start using saved basis after clearing solver\n"
+           "=================================================\n");
+    highs.clearSolver();
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+    */
+    // QP Hot start needs a saved solution as well as a basis after
+    // clearSolver()
+    if (dev_run)
+      printf(
+          "==============================================================\n"
+          "Hot start using alien basis and solution after clearing solver\n"
+          "==============================================================\n");
+    highs.clearSolver();
+    highs.setSolution(solution);
+    basis.alien = true;
+    highs.setBasis(basis);
+    return_status = highs.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(info.qp_iteration_count == 0);
+  }
+}
+
+TEST_CASE("test-qp-terminations", "[qpsolver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_iteration_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+  highs.clearSolver();
+  highs.setOptionValue("qp_iteration_limit", kHighsIInf);
+
+  highs.setOptionValue("time_limit", 0);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kTimeLimit);
+  highs.setOptionValue("time_limit", kHighsInf);
+
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  highs.setOptionValue("qp_nullspace_limit", 1);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+  highs.setOptionValue("qp_nullspace_limit", 4000);
 }

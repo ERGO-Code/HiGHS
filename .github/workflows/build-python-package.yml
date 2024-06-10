@@ -14,8 +14,8 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install setuptools
-          python3 setup.py sdist
+          python3 -m pip install build 
+          python3 -m build --sdist
 
       - name: Install sdist
         run: |
@@ -25,7 +25,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
           
   build_sdist_mac:
     runs-on: macos-latest
@@ -34,21 +34,21 @@ jobs:
 
       - name: Build sdist
         run: |
-          python3 -m pip install setuptools
-          python3 setup.py sdist
+          python3 -m pip install build --break-system-packages
+          python3 -m build --sdist
 
       - name: Install sdist
         run: |
           ls dist
-          python3 -m pip install dist/*.tar.gz
+          python3 -m pip install dist/*.tar.gz --break-system-packages
 
       - name: Test highspy
         run: |
-          python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pip install pytest --break-system-packages
+          python3 -m pytest $GITHUB_WORKSPACE
 
   build_sdist_win:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v4
 
@@ -59,8 +59,8 @@ jobs:
 
       - name: Build sdist
         run: |
-          python -m pip install setuptools
-          python setup.py sdist
+          python -m pip install build
+          python -m build --sdist
 
       - name: Install sdist
         run: |
@@ -71,12 +71,23 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest ./highspy/tests/test_highspy.py
+          python -m pytest 
              
   build_wheel_linux:
+    # ubuntu 22 has a latest version of cmake, but setup-python 
+    # does not seem to provide all necessary modules to find python
+    # from cmake. works on my machine, test the wheels manually
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # strategy:
+      #   matrix:
+      #     python: [3.12]
+
+      - name: Install correct python version
+        uses: actions/setup-python@v5
+        # with:
+        #   python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
@@ -92,7 +103,8 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
+          
           
   # macos 12 is Intel
   build_wheel_macos_12:
@@ -123,7 +135,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest 
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
             
   # macos 13 is Intel
   build_wheel_macos_13:
@@ -154,7 +166,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
             
   # macos 14 is M1 (beta)
   build_wheel_macos_14:
@@ -185,7 +197,7 @@ jobs:
       - name: Test highspy
         run: |
           python3 -m pip install pytest
-          python3 -m pytest $GITHUB_WORKSPACE/highspy/tests/test_highspy.py
+          python3 -m pytest $GITHUB_WORKSPACE
 
   build_wheel_windows:
     runs-on: windows-latest
@@ -212,5 +224,5 @@ jobs:
       - name: Test highspy
         run: |
           python -m pip install pytest
-          python -m pytest highspy/tests/test_highspy.py
+          python -m pytest 
           

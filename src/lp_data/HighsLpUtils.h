@@ -96,16 +96,6 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
 
-void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection);
-
-void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
-                             const HighsIndexCollection& index_collection);
-
-void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection);
-
-void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
-                             const HighsIndexCollection& index_collection);
-
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);
 
@@ -240,13 +230,14 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible);
 
-HighsStatus calculateRowValues(const HighsLp& lp,
-                               const std::vector<double>& col_value,
-                               std::vector<double>& row_value);
-HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
+HighsStatus calculateRowValuesQuad(const HighsLp& lp,
+                                   const std::vector<double>& col_value,
+                                   std::vector<double>& row_value,
+                                   const HighsInt report_row = -1);
 HighsStatus calculateRowValuesQuad(const HighsLp& lp, HighsSolution& solution,
                                    const HighsInt report_row = -1);
-HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
+
+HighsStatus calculateColDualsQuad(const HighsLp& lp, HighsSolution& solution);
 
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,

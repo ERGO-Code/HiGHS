@@ -40,8 +40,8 @@ subject to              x1 <= 7
 Using the simplified interface, the model can be built as follows:
 
 ```python
-x0 = h.addVar(lb = 0, ub = 4)
-x1 = h.addVar(lb = 1, ub = 7)
+x0 = h.addVariable(lb = 0, ub = 4)
+x1 = h.addVariable(lb = 1, ub = 7)
 
 h.addConstr(5 <=   x0 + 2*x1 <= 15)
 h.addConstr(6 <= 3*x0 + 2*x1)

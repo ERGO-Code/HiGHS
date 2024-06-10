@@ -12,6 +12,74 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
+void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out, const char* name, HighsInt valid) {
+  const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
+  if (valid) {
+    if (!name_p) printf("checkGetCallbackDataOutItem fail for %s (valid = %d)\n", name, (int)valid);
+    assert(name_p);
+  } else {
+    if (name_p) printf("checkGetCallbackDataOutItem fail for %s (valid = %d)\n",
+			name, (int)valid);
+    assert(!name_p);
+  }
+}
+    
+void checkGetCallbackDataOutHighsInt(const HighsCallbackDataOut* data_out, const char* name, HighsInt value) {
+  const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
+  if (!name_p) {
+    printf("checkGetCallbackDataOutItem fail for %s\n", name);
+    assert(name_p);
+  } else {
+    HighsInt check_value = *(HighsInt*)(name_p);
+    HighsInt value_ok = check_value == value;
+    if (!value_ok) printf("checkGetCallbackDataOutItem fail for %s (%d = check_value != value = %d)\n",
+			  name, (int)check_value, (int)value);
+    assert(value_ok);
+  }
+}
+    
+void checkGetCallbackDataOutInt(const HighsCallbackDataOut* data_out, const char* name, int value) {
+  const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
+  if (!name_p) {
+    printf("checkGetCallbackDataOutInt fail for %s\n", name);
+    assert(name_p);
+  } else {
+    int check_value = *(int*)(name_p);
+    int value_ok = check_value == value;
+    if (!value_ok) printf("checkGetCallbackDataOutInt fail for %s (%d = check_value != value = %d)\n",
+			  name, check_value, value);
+    assert(value_ok);
+  }
+}
+    
+void checkGetCallbackDataOutInt64(const HighsCallbackDataOut* data_out, const char* name, int64_t value) {
+  const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
+  if (!name_p) {
+    printf("checkGetCallbackDataOutInt64 fail for %s\n", name);
+    assert(name_p);
+  } else {
+    int64_t check_value = *(int*)(name_p);
+    int value_ok = check_value == value;
+    if (!value_ok) printf("checkGetCallbackDataOutInt64 fail for %s (%d = check_value != value = %d)\n",
+			  name, (int)check_value, (int)value);
+    assert(value_ok);
+  }
+}
+    
+void checkGetCallbackDataOutDouble(const HighsCallbackDataOut* data_out, const char* name, double value) {
+  const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
+  if (!name_p) {
+    printf("checkGetCallbackDataOutDouble fail for %s\n", name);
+    assert(name_p);
+  } else {
+    double check_value = *(double*)(name_p);
+    double value_ok = check_value == value;
+    if (!value_ok) printf("checkGetCallbackDataOutDouble fail for %s (%g = check_value != value = %g)\n",
+			  name, check_value, value);
+    assert(value_ok);
+  }
+}
+    
 static void userCallback(const int callback_type, const char* message,
 			 const HighsCallbackDataOut* data_out,
 			 HighsCallbackDataIn* data_in,
@@ -22,7 +90,78 @@ static void userCallback(const int callback_type, const char* message,
   if (callback_type == kHighsCallbackLogging) {
     if (dev_run) printf("userCallback(%11.4g): %s\n", local_callback_data, message);
   } else if (callback_type == kHighsCallbackMipImprovingSolution) {
-    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n", local_callback_data, data_out->objective_function_value);
+    // Test the accessor function for data_out
+    //
+    // Check that passing an valid name returns a non-null pointer,
+    // and that the corresponding value is the same as obtained using
+    // the struct
+    const void* objective_function_value_p =
+	Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutObjectiveFunctionValueName);
+    assert(objective_function_value_p);
+    double objective_function_value = *(double*)(objective_function_value_p);
+    assert(objective_function_value == data_out->objective_function_value);
+    if (dev_run) printf("userCallback(%11.4g): improving solution with objective = %g\n",
+			local_callback_data, objective_function_value);
+    // Now test all more simply
+    checkGetCallbackDataOutInt(data_out,
+			       kHighsCallbackDataOutLogTypeName, -1);
+    checkGetCallbackDataOutDouble(data_out,
+				  kHighsCallbackDataOutRunningTimeName,
+				  data_out->running_time);
+    checkGetCallbackDataOutHighsInt(data_out,
+				    kHighsCallbackDataOutSimplexIterationCountName,
+				    data_out->simplex_iteration_count);
+    checkGetCallbackDataOutHighsInt(data_out,
+				    kHighsCallbackDataOutIpmIterationCountName,
+				    data_out->ipm_iteration_count);
+    checkGetCallbackDataOutHighsInt(data_out,
+				    kHighsCallbackDataOutPdlpIterationCountName,
+				    data_out->pdlp_iteration_count);
+    checkGetCallbackDataOutDouble(data_out,
+				  kHighsCallbackDataOutObjectiveFunctionValueName,
+				  data_out->objective_function_value);
+    checkGetCallbackDataOutInt64(data_out,
+				 kHighsCallbackDataOutMipNodeCountName,
+				 data_out->mip_node_count);
+    checkGetCallbackDataOutDouble(data_out,
+				  kHighsCallbackDataOutMipPrimalBoundName,
+				  data_out->mip_primal_bound);
+    checkGetCallbackDataOutDouble(data_out,
+				  kHighsCallbackDataOutMipDualBoundName,
+				  data_out->mip_dual_bound);
+    checkGetCallbackDataOutDouble(data_out,
+				  kHighsCallbackDataOutMipGapName,
+				  data_out->mip_gap);
+    // Cutpool data structure is not assigned, so num_col, num_cut and
+    // num_nz are unassigned
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumColName, 0);
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumCutName, 0);
+    //    checkGetCallbackDataOutHighsInt(data_out,
+    //				    kHighsCallbackDataOutCutpoolNumNzName, 0);
+
+    // Check that passing an unrecognised name returns NULL
+    const void* foo_p = Highs_getCallbackDataOutItem(data_out, "foo");
+    assert(!foo_p);
+    // Check that passing the name of an assigned vector returns
+    // non-NULL, and that the corresponding value is the same as
+    // obtained using the struct
+    const void* mip_solution_void_p =
+      Highs_getCallbackDataOutItem(data_out,
+				   kHighsCallbackDataOutMipSolutionName);
+    assert(mip_solution_void_p);
+    double mip_solution0 = *(double*)(mip_solution_void_p);
+    assert(mip_solution0 == *(data_out->mip_solution));
+    if (dev_run) printf("userCallback(%11.4g): improving solution with value[0] = %g\n",
+			local_callback_data, mip_solution0);
+    // Cutpool data structure is not assigned, so cannot check that
+    // passing names of the unassigned vectors returns NULL
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolStartName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolIndexName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolValueName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolLowerName));
+    //    assert(!Highs_getCallbackDataOutItem(data_out, kHighsCallbackDataOutCutpoolUpperName));
   } else if (callback_type == kHighsCallbackMipLogging) {
     if (dev_run) printf("userCallback(%11.4g): MIP logging\n", local_callback_data);
     data_in->user_interrupt = 1;
@@ -32,7 +171,7 @@ static void userCallback(const int callback_type, const char* message,
   }
 }
 
-HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
+HighsInt highsIntArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
   for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
 }
@@ -71,7 +210,8 @@ void version_api() {
     printf("HiGHS version minor %"HIGHSINT_FORMAT"\n", Highs_versionMinor());
     printf("HiGHS version patch %"HIGHSINT_FORMAT"\n", Highs_versionPatch());
     printf("HiGHS githash: %s\n", Highs_githash());
-    printf("HiGHS compilation date %s\n", Highs_compilationDate());
+    // Compilation date is deprecated.
+    // printf("HiGHS compilation date %s\n", Highs_compilationDate());
   }
 }
 
@@ -415,8 +555,8 @@ void full_api() {
   assert( doubleArraysEqual(num_col, ck_cu, cu) );
   assert( doubleArraysEqual(num_row, ck_rl, rl) );
   assert( doubleArraysEqual(num_row, ck_ru, ru) );
-  assert( intArraysEqual(num_col, ck_a_start, a_start) );
-  assert( intArraysEqual(num_nz, ck_a_index, a_index) );
+  assert( highsIntArraysEqual(num_col, ck_a_start, a_start) );
+  assert( highsIntArraysEqual(num_nz, ck_a_index, a_index) );
   assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
 
   return_status = Highs_run(highs);
@@ -1001,13 +1141,13 @@ void full_api_qp() {
   return_status = Highs_addCol(highs, -1.0, -inf, inf, 0, NULL, NULL);
   assert( return_status == kHighsStatusOk );
   num_col++;
-  // Cannot solve the model until the Hessian has been replaced
+  // Can solve the model before the Hessian has been replaced
   return_status = Highs_run(highs);
-  assert( return_status == kHighsStatusError );
-  assertIntValuesEqual("Run status for 2-d QP with illegal Hessian", return_status, -1);
+  assert( return_status == kHighsStatusOk );
+  assertIntValuesEqual("Run status for 2-d QP with OK Hessian", return_status, 0);
 
   model_status = Highs_getModelStatus(highs);
-  assertIntValuesEqual("Model status for 2-d QP with illegal Hessian", model_status, 2);
+  assertIntValuesEqual("Model status for this 2-d QP with OK Hessian", model_status, kHighsModelStatusUnbounded);
 
   free(q_start);
   free(q_index);
@@ -1499,6 +1639,79 @@ void test_callback() {
   Highs_destroy(highs);
 }
 
+void test_getModel() {
+  void* highs;
+  highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  const double inf = Highs_getInfinity(highs);
+  
+  HighsInt num_col = 2;
+  HighsInt num_row = 2;
+  HighsInt num_nz = 4;
+  HighsInt sense = -1;
+  double offset;
+  double col_cost[2] = {8, 10};
+  double col_lower[2] = {0, 0};
+  double col_upper[2] = {inf, inf};
+  double row_lower[2] = {-inf, -inf};
+  double row_upper[2] = {120, 210};
+  HighsInt a_index[4] = {0, 1, 0, 1};
+  double a_value[4] = {0.3, 0.5, 0.7, 0.5};
+  HighsInt a_start[2] = {0, 2};
+  Highs_addVars(highs, num_col, col_lower, col_upper);
+  Highs_changeColsCostByRange(highs, 0, num_col-1, col_cost);
+  Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, a_start, a_index, a_value);
+  Highs_changeObjectiveSense(highs, sense);
+  Highs_run(highs);
+
+  HighsInt ck_num_col;
+  HighsInt ck_num_row;
+  HighsInt ck_num_nz;
+  HighsInt ck_sense;
+  double ck_offset;
+
+  // Get the model dimensions by passing array pointers as NULL
+  Highs_getLp(highs, kHighsMatrixFormatRowwise,
+	      &ck_num_col, &ck_num_row, &ck_num_nz,		  
+	      &ck_sense, &ck_offset, NULL,
+	      NULL, NULL, NULL,
+	      NULL, NULL, NULL,
+	      NULL, NULL);
+
+  assert( ck_num_col == num_col );
+  assert( ck_num_row == num_row );
+  assert( ck_num_nz == num_nz );
+  // Motivated by #1712, ensure that the correct sense is returned when maximizing
+  assert( ck_sense == sense );
+
+  double* ck_col_cost = (double*)malloc(sizeof(double) * ck_num_col);;
+  double* ck_col_lower = (double*)malloc(sizeof(double) * ck_num_col);
+  double* ck_col_upper = (double*)malloc(sizeof(double) * ck_num_col);
+  double* ck_row_lower = (double*)malloc(sizeof(double) * ck_num_row);
+  double* ck_row_upper = (double*)malloc(sizeof(double) * ck_num_row);
+  HighsInt* ck_a_start = (HighsInt*)malloc(sizeof(HighsInt) * ck_num_col);
+  HighsInt* ck_a_index = (HighsInt*)malloc(sizeof(HighsInt) * ck_num_nz);
+  double* ck_a_value = (double*)malloc(sizeof(double) * num_nz);
+  
+  // Get the arrays
+  Highs_getLp(highs, kHighsMatrixFormatRowwise,
+	      &ck_num_col, &ck_num_row, &ck_num_nz,
+	      &ck_sense, &ck_offset, ck_col_cost,
+	      ck_col_lower, ck_col_upper, ck_row_lower,
+	      ck_row_upper, ck_a_start, ck_a_index,
+	      ck_a_value, NULL);
+
+  assert( doubleArraysEqual(num_col, ck_col_cost, col_cost) );
+  assert( doubleArraysEqual(num_col, ck_col_lower, col_lower) );
+  assert( doubleArraysEqual(num_col, ck_col_upper, col_upper) );
+  assert( doubleArraysEqual(num_row, ck_row_lower, row_lower) );
+  assert( doubleArraysEqual(num_row, ck_row_upper, row_upper) );
+  assert( highsIntArraysEqual(num_col, ck_a_start, a_start) );
+  assert( highsIntArraysEqual(num_nz, ck_a_index, a_index) );
+  assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
+
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1515,7 +1728,7 @@ void test_setSolution() {
   strcat(model_file0, "\0");
   char* substr = model_file0 + 1;
   memmove(model_file0, substr, strlen(substr) + 1);
-  int length = strlen(model_file0) + 1;
+  HighsInt length = strlen(model_file0) + 1;
   char model_file[length];
   strcpy(model_file, model_file0);
   
@@ -1524,9 +1737,9 @@ void test_setSolution() {
 
   Highs_readModel(highs, model_file);
   Highs_run(highs);
-  int iteration_count0;
+ HighsInt iteration_count0;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count0);
-  int num_col = Highs_getNumCol(highs);
+ HighsInt num_col = Highs_getNumCol(highs);
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   Highs_getSolution(highs, col_value, NULL, NULL, NULL);
   Highs_clear(highs);
@@ -1535,9 +1748,9 @@ void test_setSolution() {
   Highs_readModel(highs, model_file);
   Highs_setSolution(highs, col_value, NULL, NULL, NULL);
   Highs_run(highs);
-  int iteration_count1;
+  HighsInt iteration_count1;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count1);
-  int logic = iteration_count0 > iteration_count1;
+  HighsInt logic = iteration_count0 > iteration_count1;
   printf("Iteration counts are %d and %d\n", iteration_count0, iteration_count1);
   assertLogical("Dual", logic);
   
@@ -1561,6 +1774,7 @@ int main() {
   test_getColsByRange();
   test_passHessian();
   test_ranging();
-  //  test_setSolution();
+  test_getModel();
   return 0;
 }
+  //  test_setSolution();

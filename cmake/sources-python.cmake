@@ -369,15 +369,15 @@ set(highs_headers_python
     src/qpsolver/devexpricing.hpp
     src/qpsolver/eventhandler.hpp
     src/qpsolver/factor.hpp
+    src/qpsolver/feasibility_bounded.hpp
     src/qpsolver/feasibility_highs.hpp
-    src/qpsolver/feasibility_quass.hpp
-    src/qpsolver/feasibility.hpp
     src/qpsolver/gradient.hpp
     src/qpsolver/instance.hpp
     src/qpsolver/matrix.hpp
     src/qpsolver/perturbation.hpp
     src/qpsolver/pricing.hpp
     src/qpsolver/qpconst.hpp
+    src/qpsolver/qpvector.hpp
     src/qpsolver/quass.hpp
     src/qpsolver/ratiotest.hpp
     src/qpsolver/runtime.hpp
@@ -386,7 +386,6 @@ set(highs_headers_python
     src/qpsolver/snippets.hpp
     src/qpsolver/statistics.hpp
     src/qpsolver/steepestedgepricing.hpp
-    src/qpsolver/vector.hpp
     src/simplex/HApp.h
     src/simplex/HEkk.h
     src/simplex/HEkkDual.h
@@ -419,6 +418,7 @@ set(highs_headers_python
     src/util/HighsMatrixPic.h
     src/util/HighsMatrixSlice.h
     src/util/HighsMatrixUtils.h
+    src/util/HighsMemoryAllocation.h
     src/util/HighsRandom.h
     src/util/HighsRbTree.h
     src/util/HighsSort.h

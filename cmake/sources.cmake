@@ -128,7 +128,7 @@ set(ipx_sources
   ipm/ipx/symbolic_invert.cc
   ipm/ipx/timer.cc
   ipm/ipx/utils.cc)
-  
+
 set(ipx_headers
   ipm/ipx/basiclu_kernel.h
   ipm/ipx/basiclu_wrapper.h
@@ -186,6 +186,7 @@ set(highs_sources
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInfoDebug.cpp
+    lp_data/HighsDeprecated.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
@@ -372,15 +373,15 @@ set(highs_headers
     qpsolver/devexpricing.hpp
     qpsolver/eventhandler.hpp
     qpsolver/factor.hpp
+    qpsolver/feasibility_bounded.hpp
     qpsolver/feasibility_highs.hpp
-    qpsolver/feasibility_quass.hpp
-    qpsolver/feasibility.hpp
     qpsolver/gradient.hpp
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
     qpsolver/perturbation.hpp
     qpsolver/pricing.hpp
     qpsolver/qpconst.hpp
+    qpsolver/qpvector.hpp
     qpsolver/quass.hpp
     qpsolver/ratiotest.hpp
     qpsolver/runtime.hpp
@@ -389,7 +390,6 @@ set(highs_headers
     qpsolver/snippets.hpp
     qpsolver/statistics.hpp
     qpsolver/steepestedgepricing.hpp
-    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/HEkk.h
     simplex/HEkkDual.h
@@ -422,6 +422,7 @@ set(highs_headers
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
     util/HighsMatrixUtils.h
+    util/HighsMemoryAllocation.h
     util/HighsRandom.h
     util/HighsRbTree.h
     util/HighsSort.h
