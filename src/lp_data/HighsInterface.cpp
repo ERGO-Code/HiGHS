@@ -1573,7 +1573,7 @@ HighsStatus Highs::computeIisInterface() {
   }
   assert(ekk_instance_.status_.has_invert);
   assert(!lp.is_moved_);
-  std::vector<double> dual_ray_value;
+  std::vector<HighsInt> infeasible_row;
   if (options_.iis_strategy == kIisStrategyFromRayRowPriority ||
       options_.iis_strategy == kIisStrategyFromRayColPriority) {
     const bool has_dual_ray = ekk_instance_.status_.has_dual_ray;
@@ -1582,21 +1582,25 @@ HighsStatus Highs::computeIisInterface() {
       HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
       rhs.assign(num_row, 0);
       rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
-      dual_ray_value.resize(num_row);
+      std::vector<double> dual_ray_value(num_row);
       HighsInt* dual_ray_num_nz = 0;
       basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL,
                           true);
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+	if (dual_ray_value[iRow]) infeasible_row.push_back(iRow);
     } else {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "No dual ray to start IIS calculation\n");
       return HighsStatus::kError;
     }
+  } else {
+    this->computeInfeasibleRows(false, infeasible_row);
   }
-  return this->iis_.getData(lp, options_, basis_, dual_ray_value.data());
+  return this->iis_.getData(lp, options_, basis_, infeasible_row);
 }
 
 HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
-					 HighsInt* infeasible_row) {
+					 std::vector<HighsInt>& infeasible_row) {
   // Elasticity filter
   //
   // Construct the e-LP:

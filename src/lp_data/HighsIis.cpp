@@ -150,23 +150,22 @@ bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
 
 HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
                               const HighsBasis& basis,
-                              const double* dual_ray_value) {
+                              const std::vector<HighsInt>& infeasible_row) {
   // Check for trivial IIS should have been done earlier
   assert(!this->trivial(lp, options));
 
   if (options.iis_strategy == kIisStrategyFromRayRowPriority ||
       options.iis_strategy == kIisStrategyFromRayColPriority) {
     // Identify the LP corresponding to the ray
-    std::vector<HighsInt> from_row;
+    std::vector<HighsInt> from_row = infeasible_row;
     std::vector<HighsInt> from_col;
     std::vector<HighsInt> to_row;
     to_row.assign(lp.num_row_, -1);
     assert(lp.a_matrix_.isColwise());
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (dual_ray_value[iRow]) {
-        to_row[iRow] = from_row.size();
-        from_row.push_back(iRow);
-      }
+    for (HighsInt iX = 0; iX < HighsInt(infeasible_row.size()); iX++) {
+      HighsInt iRow = infeasible_row[iX];
+      to_row[iRow] = iX;
+      from_row.push_back(iRow);
     }
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       bool use_col = false;
