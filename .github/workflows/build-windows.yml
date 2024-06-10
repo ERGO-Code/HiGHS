@@ -43,7 +43,7 @@ jobs:
         run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON
 
   fast_build_release_all_tests:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
         run: cmake --install .
 
   windows_release_fb_off:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4
@@ -211,7 +211,7 @@ jobs:
         run: ctest --parallel --timeout 300 --output-on-failure -C Debug
 
   windows_release64:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4
@@ -245,7 +245,7 @@ jobs:
         run: ctest --timeout 300 --output-on-failure -C Release 
   
   windows_release64_all_tests:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4
@@ -280,7 +280,7 @@ jobs:
         
         
   windows_release64_fb_off:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4
