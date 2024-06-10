@@ -143,7 +143,7 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```bash
+```sh
 $ bin/highs --help
 HiGHS options
 Usage:
