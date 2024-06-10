@@ -123,26 +123,26 @@ cmake --install build
 
 By default, CMake builds the debug version of the binaries. These are generated in a directory `Debug`. To build a release version, add the option `--config Release`
 
-```bash
+```shell
     cmake -S . -B build
     cmake --build build --config Release
 ```
 
 It is also possible to specify a specific Visual studio version to build with:
-```bash
+```shell
     cmake -G "Visual Studio 17 2022" -S . -B build
     cmake --build build
 ```
 
 When building under Windows, some extra options are available.  One is building a 32 bit version or a 64 bit version. The default build is 64 bit. To build 32 bit, the following commands can be used from the `HiGHS/` directory:
 
-```bash
+```shell
     cmake -A Win32 -S . -B buildWin32
     cmake --build buildWin32
 ```
 
 Another thing specific for windows is the calling convention, particularly important for the HiGHS dynamic library (dll). The default calling convention in windows is cdecl calling convention, however, dlls are most often compiled with stdcall. Most applications which expect stdcall, can't access dlls with cdecl and vice versa. To change the default calling convention from cdecl to stdcall the following option can be added
-```bash
+```shell
     cmake -DSTDCALL=ON -S . -B build
     cmake --build build
 ```
@@ -163,12 +163,12 @@ before running `cmake --build <your_chosen_build_directory>`<br>
 For example, to generate build files in a new
 subdirectory called 'build', run:
 
-```sh
+```shell
 cmake -S. -Bbuild 
 ```
 and then build with:
 
-```sh
+```shell
 cmake --build build
 ```
 
@@ -187,7 +187,7 @@ Following is a list of available options:
 
 <!-- Following is a list of available options, for the full list run:
 
-```sh
+```shell
 cmake -S. -Bbuild -LH
 ``` -->
 

@@ -64,7 +64,7 @@ Documentation is available at https://ergo-code.github.io/HiGHS/.
 
 HiGHS uses CMake as build system, and requires at least version 3.15. To generate build files in a new subdirectory called 'build', run:
 
-```sh
+```shell
     cmake -S . -B build
     cmake --build build
 ```
@@ -72,7 +72,7 @@ This installs the executable `bin/highs` and the library `lib/highs`.
 
 To test whether the compilation was successful, change into the build directory and run
 
-```sh
+```shell
     ctest
 ```
 More details on building with CMake can be found in `HiGHS/cmake/README.md`.
@@ -134,7 +134,7 @@ See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 HiGHS can read MPS files and (CPLEX) LP files, and the following command
 solves the model in `ml.mps`
 
-```sh
+```shell
     highs ml.mps
 ```
 #### Command line options
@@ -181,13 +181,13 @@ We are happy to give a reasonable level of support via email sent to highsopt@gm
 
 The python package `highspy` is a thin wrapper around HiGHS and is available on [PyPi](https://pypi.org/project/highspy/). It can be easily installed via `pip` by running
 
-```sh
+```shell
 $ pip install highspy
 ```
 
 Alternatively, `highspy` can be built from source.  Download the HiGHS source code and run
 
-```sh
+```shell
 pip install .
 ```
 from the root directory.
@@ -207,7 +207,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 
 It can be added to your C# project with `dotnet`
 
-```bash
+```shell
 dotnet add package Highs.Native --version 1.7.0
 ```
 

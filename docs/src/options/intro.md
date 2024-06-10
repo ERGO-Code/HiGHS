@@ -15,7 +15,7 @@ options file.
 A sample options file, giving documentation of all the options is written to the
 console by the command:
 
-```bash
+```shell
 $ bin/highs --options_file=""
 ```
 
