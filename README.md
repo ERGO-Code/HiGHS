@@ -29,8 +29,9 @@
   - [Documentation](#documentation)
   - [Installation](#installation)
     - [Build from source using CMake](#build-from-source-using-cmake)
+    - [Build with Meson*](#build-with-meson)
+    - [Build with Nix*](#build-with-nix)
     - [Precompiled binaries](#precompiled-binaries)
-      - [Build with Nix](#build-with-nix)
   - [Interfaces](#interfaces)
     - [Python](#python)
     - [CSharp](#csharp)
@@ -81,7 +82,7 @@ solves the model in `ml.mps`
 ```
 More details on building with CMake can be found in `HiGHS/cmake/README.md`.
 
-#### Building with Meson
+#### Build with Meson
 
 As an alternative, HiGHS can be installed using the `meson` build interface:
 ``` sh
@@ -89,15 +90,6 @@ meson setup bbdir -Dwith_tests=True
 meson test -C bbdir
 ```
 _The meson build files are provided by the community and are not officially supported by the HiGHS development team._
-
-### Precompiled binaries
-
-Precompiled static executables are available for a variety of platforms at
-https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
-
-_These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
-
-See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
 #### Build with Nix
 
@@ -132,6 +124,15 @@ python
 ```
 
 _The nix build files are provided by the community and are not officially supported by the HiGHS development team._
+
+### Precompiled binaries
+
+Precompiled static executables are available for a variety of platforms at
+https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
+
+_These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
+
+See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
 
 ## Interfaces
 
