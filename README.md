@@ -224,7 +224,7 @@ Details for building locally can be found in `nuget/README.md`.
 
 ### Fortran 
 
-The Fortran API is in `HiGHS/src/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out our documentation website https://ergo-code.github.io/HiGHS/.
+The Fortran API is in `HiGHS/src/interfaces/highs_fortran_api.f90`. It is *not* included in the default build. For more details, check out the documentation website https://ergo-code.github.io/HiGHS/.
 
 
 ## Reference
