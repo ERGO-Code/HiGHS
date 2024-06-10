@@ -32,6 +32,7 @@
     - [Build with Meson*](#build-with-meson)
     - [Build with Nix*](#build-with-nix)
     - [Precompiled binaries](#precompiled-binaries)
+  - [Running HiGHS](#running-highs)
   - [Interfaces](#interfaces)
     - [Python](#python)
     - [C](#c)
@@ -74,13 +75,6 @@ To test whether the compilation was successful, change into the build directory 
 
 ```sh
     ctest
-```
-
-HiGHS can read MPS files and (CPLEX) LP files, and the following command
-solves the model in `ml.mps`
-
-```sh
-    highs ml.mps
 ```
 More details on building with CMake can be found in `HiGHS/cmake/README.md`.
 
@@ -135,6 +129,48 @@ https://github.com/JuliaBinaryWrappers/HiGHSstatic_jll.jl/releases
 _These binaries are provided by the Julia community and are not officially supported by the HiGHS development team. If you have trouble using these libraries, please open a GitHub issue and tag `@odow` in your question._
 
 See https://ergo-code.github.io/HiGHS/stable/installation/#Precompiled-Binaries.
+
+## Running HiGHS
+
+HiGHS can read MPS files and (CPLEX) LP files, and the following command
+solves the model in `ml.mps`
+
+```sh
+    highs ml.mps
+```
+#### Command line options
+
+When HiGHS is run from the command line, some fundamental option values may be
+specified directly. Many more may be specified via a file. Formally, the usage
+is:
+
+```bash
+$ bin/highs --help
+HiGHS options
+Usage:
+  bin/highs [OPTION...] [file]
+
+      --model_file arg          File of model to solve.
+      --read_solution_file arg  File of solution to read.
+      --options_file arg        File containing HiGHS options.
+      --presolve arg            Presolve: "choose" by default - "on"/"off"
+                                are alternatives.
+      --solver arg              Solver: "choose" by default - "simplex"/"ipm"
+                                are alternatives.
+      --parallel arg            Parallel solve: "choose" by default -
+                                "on"/"off" are alternatives.
+      --run_crossover arg       Run crossover: "on" by default -
+                                "choose"/"off" are alternatives.
+      --time_limit arg          Run time limit (seconds - double).
+      --solution_file arg       File for writing out model solution.
+      --write_model_file arg    File for writing out model.
+      --random_seed arg         Seed to initialize random number generation.
+      --ranging arg             Compute cost, bound, RHS and basic solution
+                                ranging.
+      --version                 Print version.
+  -h, --help                    Print help.
+```
+For a full list of options, go to our [documentation page](https://ergo-code.github.io/HiGHS/stable/options/definitions/).
 
 ## Interfaces
 
