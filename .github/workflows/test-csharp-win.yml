@@ -1,4 +1,4 @@
-name: test-csharp
+name: test-csharp-win
 
 on: [push, pull_request]
 
