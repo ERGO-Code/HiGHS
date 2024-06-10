@@ -208,7 +208,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.7.0
+dotnet add package Highs.Native --version 1.7.1
 ```
 
 The nuget package contains runtime libraries for 
