@@ -1,4 +1,4 @@
-name: test-fortran-ubuntu
+name: test-fortran
 
 on: [push, pull_request]
 

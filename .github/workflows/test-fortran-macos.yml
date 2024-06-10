@@ -3,25 +3,17 @@ name: test-fortran-macos
 on: [push, pull_request]
 
 jobs:
-  fast_build_release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
-        toolchain:
-          - {compiler: gcc, version: 13}
+  release:
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: fortran-lang/setup-fortran@v1
-        id: setup-fortran
-        with:
-          compiler: ${{ matrix.toolchain.compiler }}
-          version: ${{ matrix.toolchain.version }}
-
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: gfortran
+        run: brew install gfortran
 
       - name: Configure CMake
         shell: bash
