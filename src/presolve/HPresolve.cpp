@@ -1545,21 +1545,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (!rowDeleted[delrow]) removeRow(delrow);
     cliquetable.getDeletedRows().clear();
 
-    // consider lifting opportunities
-    std::for_each(
-        implications.liftingOpportunities.begin(),
-        implications.liftingOpportunities.end(),
-        [&](const HighsHashTableEntry<HighsInt,
-                                      HighsHashTree<HighsInt, double>>& elm) {
-          HighsInt row = elm.key();
-          if (!rowDeleted[row]) {
-            auto& htree = elm.value();
-            HighsCDouble rhs_update = 0.0;
-            htree.for_each([&](HighsInt bincol, double value) {
-              if (bincol < 0) rhs_update += value;
-            });
-          }
-        });
+    // lifting
+    liftingForProbing();
 
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
@@ -1609,6 +1596,69 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
   }
 
   return checkLimits(postsolve_stack);
+}
+
+void HPresolve::liftingForProbing() {
+  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
+  const HighsImplications& implications = mipsolver->mipdata_->implications;
+
+  // consider lifting opportunities
+  for (const HighsHashTableEntry<
+           HighsInt, std::pair<HighsHashTree<HighsInt, double>, std::size_t>>&
+           elm : implications.liftingOpportunities) {
+    // get row index and skip deleted rows
+    HighsInt row = elm.key();
+    if (rowDeleted[row]) continue;
+    // get lifting opportunities for row and store them in a vector
+    auto& htree = elm.value();
+    std::vector<std::pair<HighsInt, double>> liftopps;
+    liftopps.reserve(htree.second);
+    htree.first.for_each([&](HighsInt bincol, double value) {
+      liftopps.push_back(std::make_pair(bincol, value));
+    });
+    // sort according to absolute values of coefficients
+    pdqsort(liftopps.begin(), liftopps.end(),
+            [&liftopps](const std::pair<HighsInt, double>& a,
+                        const std::pair<HighsInt, double>& b) {
+              double aabs = std::abs(a.second);
+              double babs = std::abs(b.second);
+              if (aabs > babs) return true;
+              if (aabs < babs) return false;
+              return std::make_pair(
+                         HighsHashHelpers::hash((uint64_t(a.first) << 32) +
+                                                liftopps.size()),
+                         a.first) >
+                     std::make_pair(
+                         HighsHashHelpers::hash((uint64_t(b.first) << 32) +
+                                                liftopps.size()),
+                         b.first);
+            });
+    // find a clique greedily
+    std::vector<std::pair<HighsCliqueTable::CliqueVar, double>> clique;
+    clique.reserve(htree.second);
+    for (const std::pair<HighsInt, double>& opp : liftopps) {
+      HighsInt bincol = std::abs(opp.first);
+      HighsInt direction = opp.first < 0 ? 0 : 1;
+      // check if candidate can be added to existing clique
+      bool addToClique = true;
+      HighsCliqueTable::CliqueVar candidate{bincol, direction};
+      for (const std::pair<HighsCliqueTable::CliqueVar, double>& clvar :
+           clique) {
+        addToClique = cliquetable.haveCommonClique(clvar.first, candidate);
+        if (!addToClique) break;
+      }
+      if (addToClique) {
+        // add candidate
+        clique.emplace_back(candidate, opp.second);
+      }
+    }
+    // add to matrix
+    HighsCDouble update = 0.0;
+    for (const std::pair<HighsCliqueTable::CliqueVar, double>& var : clique) {
+      // compute term to update left-hand / right-hand side
+      if (var.first.val == 0) update += var.second;
+    }
+  }
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,

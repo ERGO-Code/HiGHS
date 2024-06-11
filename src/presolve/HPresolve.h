@@ -292,6 +292,8 @@ class HPresolve {
 
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 
+  void HPresolve::liftingForProbing();
+
   Result dominatedColumns(HighsPostsolveStack& postsolve_stack);
 
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,

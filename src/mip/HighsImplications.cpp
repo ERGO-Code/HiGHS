@@ -50,22 +50,23 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   }
 
   // store lifting opportunities
-  std::for_each(globaldomain.redundant_rows_.begin(),
-                globaldomain.redundant_rows_.end(),
-                [&](const HighsHashTableEntry<HighsInt, double>& elm) {
-                  // new lifting opportunity; negate column index if variable is
-                  // set to its lower bound
-                  HighsInt bincol = (val ? 1 : -1) * col;
-                  double value = (val ? -1 : 1) * elm.value();
-                  // find lifting opportunities for row
-                  auto& htree = liftingOpportunities[elm.key()];
-                  // add element
-                  auto insertresult = htree.insert_or_get(bincol, value);
-                  if (!insertresult.second) {
-                    double& currentval = *insertresult.first;
-                    currentval = value;
-                  }
-                });
+  for (const HighsHashTableEntry<HighsInt, double>& elm :
+       globaldomain.redundant_rows_) {
+    // new lifting opportunity; negate column index if variable is
+    // set to its lower bound
+    HighsInt bincol = (val ? 1 : -1) * col;
+    double value = (val ? -1 : 1) * elm.value();
+    // find lifting opportunities for row
+    auto& htree = liftingOpportunities[elm.key()];
+    // add element
+    auto insertresult = htree.first.insert_or_get(bincol, value);
+    if (!insertresult.second) {
+      double& currentval = *insertresult.first;
+      currentval = value;
+    } else {
+      htree.second++;
+    }
+  }
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;

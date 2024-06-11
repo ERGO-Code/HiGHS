@@ -49,7 +49,8 @@ class HighsImplications {
   std::vector<HighsHashTree<HighsInt, VarBound>> vlbs;
 
  public:
-  HighsHashTable<HighsInt, HighsHashTree<HighsInt, double>>
+  HighsHashTable<HighsInt,
+                 std::pair<HighsHashTree<HighsInt, double>, std::size_t>>
       liftingOpportunities;
 
  public:
