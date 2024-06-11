@@ -68,17 +68,18 @@ Documenter.makedocs(
 	],
         "Callbacks" => "callbacks.md",
         "Interfaces" => Any[
+            "C++" => Any[
+                "interfaces/cpp/index.md",
+                "The HiGHS library" => "interfaces/cpp/library.md",
+                "Examples" => "interfaces/cpp/examples.md",
+            ],
+            "C" => "interfaces/c_api.md",
+            "Fortran" => "interfaces/fortran.md",
             "Python" => Any[
                 "interfaces/python/index.md",
                 "interfaces/python/example-py.md",
             ],
-            "C++" => Any[
-                "interfaces/cpp/index.md",
-                "The HiGHS library" => "interfaces/cpp/library.md",
-                "Linking" => "interfaces/cpp/link.md",
-                "Examples" => "interfaces/cpp/examples.md",
-            ],
-            "C" => "interfaces/c/index.md",
+            "CSharp" => "interfaces/csharp.md",
             "Julia" => "interfaces/julia/index.md",
             "Other" => "interfaces/other.md",
         ],

@@ -1,10 +1,10 @@
-name: test-csharp
+name: test-csharp-win
 
 on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
       - uses: actions/checkout@v4

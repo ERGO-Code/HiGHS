@@ -1,0 +1,101 @@
+name: test-nuget-macos
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # macos 12 is Intel
+  build_macos_12:
+    runs-on: macos-12
+    # strategy:
+      # matrix:
+      #   python: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/nugets
+         cmake -E make_directory ${{runner.workspace}}/test_nuget
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Dotnet pack
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.7.1
+
+      - name: Add local feed 
+        run: dotnet nuget add source ${{runner.workspace}}/nugets
+
+      - name: Dotnet push to local feed
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+
+      - name: Create new project and test
+        shell: bash
+        working-directory: ${{runner.workspace}}/test_nuget
+        run: |
+          dotnet new console
+          rm Program.cs 
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet run
+
+
+            
+  # macos 14 is M1 (beta)
+  build_macos_14:
+    runs-on: macos-14 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory ${{runner.workspace}}/build
+         cmake -E make_directory ${{runner.workspace}}/nugets
+         cmake -E make_directory ${{runner.workspace}}/test_nuget
+
+      - name: Configure CMake
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Dotnet pack
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.7.1
+
+      - name: Add local feed 
+        run: dotnet nuget add source ${{runner.workspace}}/nugets
+
+      - name: Dotnet push to local feed
+        working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
+        run: dotnet nuget push ./bin/Release/*.nupkg -s ${{runner.workspace}}/nugets
+
+      - name: Create new project and test
+        shell: bash
+        working-directory: ${{runner.workspace}}/test_nuget
+        run: |
+          dotnet new console
+          rm Program.cs 
+          cp $GITHUB_WORKSPACE/examples/call_highs_from_csharp.cs . 
+          dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
+          dotnet run

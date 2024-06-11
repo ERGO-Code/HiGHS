@@ -26,13 +26,13 @@ struct Runtime {
 
   Runtime(Instance& inst, Statistics& stats)
       : instance(inst),
+        statistics(stats),
         primal(QpVector(instance.num_var)),
         rowactivity(QpVector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),
-        status_con(instance.num_con),
-        statistics(stats) {}
+        status_con(instance.num_con) {}
 };
 
 #endif
