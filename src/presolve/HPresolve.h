@@ -292,7 +292,7 @@ class HPresolve {
 
   Result runProbing(HighsPostsolveStack& postsolve_stack);
 
-  void HPresolve::liftingForProbing();
+  void liftingForProbing();
 
   Result dominatedColumns(HighsPostsolveStack& postsolve_stack);
 
