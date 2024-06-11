@@ -4,7 +4,7 @@
 #include "qpsolver/feasibility_highs.hpp"
 #include "qpsolver/feasibility_bounded.hpp"
 
-QpAsmStatus quass2highs(Instance& instance, 
+static QpAsmStatus quass2highs(Instance& instance,
 			Settings& settings,
 			Statistics& stats,
 			QpModelStatus& qp_model_status,

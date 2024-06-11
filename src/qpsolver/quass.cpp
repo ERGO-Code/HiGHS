@@ -266,12 +266,12 @@ static double compute_dual_violation(Instance& instance, QpVector& primal, QpVec
 }
 #endif
 
-bool check_reinvert_due(Basis& basis) {
+static bool check_reinvert_due(Basis& basis) {
   // reinvert can be triggered by basis
   return basis.getreinversionhint();
 }
 
-void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts& rc, ReducedGradient& rg, std::unique_ptr<Pricing>& pricing) {
+static void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts& rc, ReducedGradient& rg, std::unique_ptr<Pricing>& pricing) {
   basis.rebuild();
   factor.recompute();
   grad.recompute();
