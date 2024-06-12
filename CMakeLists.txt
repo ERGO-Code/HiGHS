@@ -209,7 +209,7 @@ if (BUILD_CXX)
               "but it is not supported by the compiler. The check failed with this output:\n"
               "${check_ipo_support_output}")
     endif()
-  elseif(NOT ipo_supported)
+  elseif(NOT ipo_supported OR APPLE)
     message(STATUS "IPO / LTO: disabled because it is not supported")
   elseif(NOT BUILD_SHARED_LIBS)
     # For a static library, we can't be sure whether the final linking will
