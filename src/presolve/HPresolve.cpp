@@ -1600,7 +1600,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
 void HPresolve::liftingForProbing() {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  const HighsImplications& implications = mipsolver->mipdata_->implications;
+  HighsImplications& implications = mipsolver->mipdata_->implications;
 
   // consider lifting opportunities
   for (const HighsHashTableEntry<
@@ -1659,6 +1659,8 @@ void HPresolve::liftingForProbing() {
       if (var.first.val == 0) update += var.second;
     }
   }
+  // clear lifting opportunities
+  implications.liftingOpportunities.clear();
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
