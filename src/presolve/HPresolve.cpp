@@ -1456,77 +1456,75 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
-      if (cliquetable.getSubstitution(i) != nullptr) continue;
+      if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
+        continue;
 
-      if (domain.isBinary(i)) {
-        // when a large percentage of columns have been deleted, stop this round
-        // of probing
-        // if (numDel > std::max(model->num_col_ * 0.2, 1000.)) break;
-        if (numDel >
-            std::max(1000., (model->num_row_ + model->num_col_) * 0.05)) {
-          probingEarlyAbort = true;
-          break;
-        }
+      // when a large percentage of columns have been deleted, stop this round
+      // of probing
+      // if (numDel > std::max(model->num_col_ * 0.2, 1000.)) break;
+      probingEarlyAbort =
+          numDel >
+          std::max(HighsInt{1000}, (model->num_row_ + model->num_col_) / 20);
+      if (probingEarlyAbort) break;
 
-        // break in case of too many new implications to not spent ages in
-        // probing
-        if (cliquetable.isFull() ||
-            cliquetable.numCliques() - numCliquesStart >
-                std::max(HighsInt{1000000}, 2 * numNonzeros()) ||
-            implications.getNumImplications() - numImplicsStart >
-                std::max(HighsInt{1000000}, 2 * numNonzeros()))
-          break;
+      // break in case of too many new implications to not spent ages in
+      // probing
+      if (cliquetable.isFull() ||
+          cliquetable.numCliques() - numCliquesStart >
+              std::max(HighsInt{1000000}, 2 * numNonzeros()) ||
+          implications.getNumImplications() - numImplicsStart >
+              std::max(HighsInt{1000000}, 2 * numNonzeros()))
+        break;
 
-        // if (numProbed % 10 == 0)
-        //   printf(
-        //       "numprobed=%d  numDel=%d  newcliques=%d "
-        //       "numNeighbourhoodQueries=%ld  "
-        //       "splayContingent=%ld\n",
-        //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
-        //       cliquetable.numNeighbourhoodQueries, splayContingent);
-        if (cliquetable.numNeighbourhoodQueries > splayContingent) break;
+      // if (numProbed % 10 == 0)
+      //   printf(
+      //       "numprobed=%d  numDel=%d  newcliques=%d "
+      //       "numNeighbourhoodQueries=%ld  "
+      //       "splayContingent=%ld\n",
+      //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
+      //       cliquetable.numNeighbourhoodQueries, splayContingent);
+      if (cliquetable.numNeighbourhoodQueries > splayContingent) break;
 
-        if (probingContingent - numProbed < 0) break;
+      if (probingContingent - numProbed < 0) break;
 
-        HighsInt numBoundChgs = 0;
-        HighsInt numNewCliques = -cliquetable.numCliques();
-        if (!implications.runProbing(i, numBoundChgs)) continue;
-        probingContingent += numBoundChgs;
-        numNewCliques += cliquetable.numCliques();
-        numNewCliques = std::max(numNewCliques, HighsInt{0});
-        while (domain.getChangedCols().size() != numChangedCols) {
-          if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
-            ++probingNumDelCol;
-        }
-        HighsInt newNumDel = probingNumDelCol - numDelStart +
-                             implications.substitutions.size() +
-                             cliquetable.getSubstitutions().size();
+      HighsInt numBoundChgs = 0;
+      HighsInt numNewCliques = -cliquetable.numCliques();
+      if (!implications.runProbing(i, numBoundChgs)) continue;
+      probingContingent += numBoundChgs;
+      numNewCliques += cliquetable.numCliques();
+      numNewCliques = std::max(numNewCliques, HighsInt{0});
+      while (domain.getChangedCols().size() != numChangedCols) {
+        if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
+          ++probingNumDelCol;
+      }
+      HighsInt newNumDel = probingNumDelCol - numDelStart +
+                           implications.substitutions.size() +
+                           cliquetable.getSubstitutions().size();
 
-        if (newNumDel > numDel) {
-          probingContingent += numDel;
-          if (!mipsolver->submip) {
-            splayContingent += 100 * (newNumDel + numDelStart);
-            splayContingent += 1000 * numNewCliques;
-          }
-          numDel = newNumDel;
-          numFail = 0;
-        } else if (mipsolver->submip || numNewCliques == 0) {
-          splayContingent -= 100 * numFail;
-          ++numFail;
-        } else {
+      if (newNumDel > numDel) {
+        probingContingent += numDel;
+        if (!mipsolver->submip) {
+          splayContingent += 100 * (newNumDel + numDelStart);
           splayContingent += 1000 * numNewCliques;
-          numFail = 0;
         }
+        numDel = newNumDel;
+        numFail = 0;
+      } else if (mipsolver->submip || numNewCliques == 0) {
+        splayContingent -= 100 * numFail;
+        ++numFail;
+      } else {
+        splayContingent += 1000 * numNewCliques;
+        numFail = 0;
+      }
 
-        ++numProbed;
-        numProbes[i] += 1;
+      ++numProbed;
+      numProbes[i] += 1;
 
-        // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
-        // "\n", nprobed,
-        //       cliquetable.numCliques());
-        if (domain.infeasible()) {
-          return Result::kPrimalInfeasible;
-        }
+      // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
+      // "\n", nprobed,
+      //       cliquetable.numCliques());
+      if (domain.infeasible()) {
+        return Result::kPrimalInfeasible;
       }
     }
 
@@ -5195,8 +5193,7 @@ HighsInt HPresolve::strengthenInequalities() {
 
     // do not run on very dense rows as this could get expensive
     if (rowsize[row] >
-        std::max(HighsInt{1000},
-                 HighsInt(0.05 * (model->num_col_ - numDeletedCols))))
+        std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20))
       continue;
 
     // printf("strengthening knapsack of %" HIGHSINT_FORMAT " vars\n",
