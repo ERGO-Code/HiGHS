@@ -11,7 +11,7 @@ To edit the documentation, checkout a branch and edit the Markdown files in the
 
 To build locally, [install Julia](https://julialang.org/downloads/), then (from the `docs` directory) run:
 
-```
+``` bash
 $ julia make.jl
 ```
 

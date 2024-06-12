@@ -18,8 +18,8 @@ static void computeStartingPointBounded(Instance& instance,
   L.resize(instance.num_var * instance.num_var);
 
   // compute cholesky factorization of Q
-  for (size_t col = 0; col < instance.num_var; col++) {
-    for (size_t idx = instance.Q.mat.start[col]; idx < instance.Q.mat.start[col+1]; idx++) {
+  for (size_t col = 0; col < (size_t)instance.num_var; col++) {
+    for (size_t idx = instance.Q.mat.start[col]; idx < (size_t)instance.Q.mat.start[col+1]; idx++) {
       double sum = 0;
       size_t row = instance.Q.mat.index[idx]; 
       if (row == col) {

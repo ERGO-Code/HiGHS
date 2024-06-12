@@ -47,6 +47,7 @@ option(BUILD_TESTING "Build Tests" ON)
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
+message(STATUS "Build CSharp: ${CSHARP}")
 
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
@@ -170,7 +171,7 @@ if (BUILD_CXX)
   check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
   message(STATUS "Found int * size: ${SIZEOF_INT_P}")
   cmake_pop_check_state()
-
+ 
   # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
   # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
   if(MSVC AND BUILD_SHARED_LIBS)

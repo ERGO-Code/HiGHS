@@ -6,7 +6,7 @@ HiGHS is available as `highspy` on [PyPi](https://pypi.org/project/highspy/).
 
 If `highspy` is not already installed, run:
 
-```bash
+```shell
 $ pip install highspy
 ```
 

@@ -5,22 +5,22 @@ The HiGHS library is defined in the [`src/Highs.h`](https://github.com/ERGO-Code
 Models in HiGHS are defined as an instance of the `HighsModel` class. This consists of one instance of the `HighsLp` class, and one instance of the `HighsHessian` class. Communication of models to and from HiGHS is possible via instances of the `HighsLp` or `HighsModel` class. In the C and other interfaces, communication of models is via scalar values and addresses of arrays.
 
 In C++, the neatest way of passing a model to HiGHS is to create an instance of the `HighsModel` class, populate its data, and call
-```
+``` cpp
 Highs::passModel(const HighsModel& model)
 ```
 
 or create and populate an instance of the `HighsLp` class, and call
-```
+``` cpp
 Highs::passModel(const HighsLp& lp)
 ```
 
 For reading models from a file, use
-```
+``` cpp
 Highs::readModel(const std::string& filename)
 ```
 
 Below is an example of building a `HighsModel`
-```
+``` cpp
   // Create and populate a HighsModel instance for the LP
   
   // Min    f  =  x_0 +  x_1 + 3
@@ -56,7 +56,7 @@ Below is an example of building a `HighsModel`
 
 ## Solve model
 
-```
+``` cpp
   // Create a Highs instance
   Highs highs;
   HighsStatus return_status;
@@ -79,7 +79,7 @@ Below is an example of building a `HighsModel`
 
 Solution information:
 
-```
+``` cpp
   const HighsInfo& info = highs.getInfo();
   cout << "Simplex iteration count: " << info.simplex_iteration_count << endl;
   cout << "Objective function value: " << info.objective_function_value << endl;
@@ -91,7 +91,7 @@ Solution information:
 ## Integrality variables
 
 To indicate that variables must take integer values use the `HighsLp::integrality` vector.
-```
+``` cpp
   model.lp_.integrality_.resize(lp.num_col_);
   for (int col=0; col < lp.num_col_; col++)
     model.lp_.integrality_[col] = HighsVarType::kInteger;
