@@ -1,7 +1,7 @@
 name: build-wheels-push
 
 # on: push
-
+ 
 on:
  release:
    types:
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17
+        uses: pypa/cibuildwheel@v2.19
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
       - uses: actions/upload-artifact@v3

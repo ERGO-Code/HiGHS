@@ -1,6 +1,6 @@
 module(
     name = "highs",
-    version = "1.7.0",
+    version = "1.7.1",
 )
 
 bazel_dep(

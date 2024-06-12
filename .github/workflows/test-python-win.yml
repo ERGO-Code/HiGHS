@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         # os: [self-hosted]
-        os: [windows-latest]
+        os: [windows-2019]
         python: [3.12]
     steps:
       - uses: actions/checkout@v4

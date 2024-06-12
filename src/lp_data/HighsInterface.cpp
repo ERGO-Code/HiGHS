@@ -1594,7 +1594,11 @@ HighsStatus Highs::computeIisInterface() {
       return HighsStatus::kError;
     }
   } else {
-    this->computeInfeasibleRows(false, infeasible_row);
+    HighsLp check_lp_before = this->model_.lp_;
+    HighsStatus return_status = this->computeInfeasibleRows(false, infeasible_row);
+    HighsLp check_lp_after = this->model_.lp_;
+    assert(check_lp_before == check_lp_after);
+    if (return_status != HighsStatus::kOk) return return_status;
   }
   return this->iis_.getData(lp, options_, basis_, infeasible_row);
 }
@@ -1643,11 +1647,21 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
   std::vector<double> ecol_cost;
   std::vector<double> ecol_lower;
   std::vector<double> ecol_upper;
-  const HighsLp lp = this->model_.lp_;
+  const HighsLp& lp = this->model_.lp_;
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
   const bool write_model = true;
   HighsInt col_ecol_offset;
+  const HighsInt original_num_col = lp.num_col_;
+  const HighsInt original_num_row = lp.num_row_;
+  const std::vector<double> original_col_cost = lp.col_cost_;
+  const std::vector<double> original_col_lower = lp.col_lower_;
+  const std::vector<double> original_col_upper = lp.col_upper_;
+  std::vector<double> zero_costs;
+  zero_costs.assign(original_num_col, 0);
+  run_status = this->changeColsCost(0, lp.num_col_-1, zero_costs.data());
+  assert(run_status == HighsStatus::kOk);
+  
   if (elastic_columns) {
     // When defining names, need to know the column number 
     HighsInt previous_num_col = lp.num_col_;
@@ -1841,7 +1855,24 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
     }
   }
   printf("\nElasticity filter after %d passes enforces bounds on %d cols and %d rows\n", int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
-  assert(666==999);
+
+  // Delete any additional rows and columns, and restore the original
+  // column costs and bounds
+  run_status = this->deleteRows(original_num_row, lp.num_row_-1);
+  assert(run_status == HighsStatus::kOk);
+  
+  run_status = this->deleteCols(original_num_col, lp.num_col_-1);
+  assert(run_status == HighsStatus::kOk);
+  
+  run_status = this->changeColsCost(0, original_num_col-1, original_col_cost.data());
+  assert(run_status == HighsStatus::kOk);
+
+  run_status = this->changeColsBounds(0, original_num_col-1, original_col_lower.data(), original_col_upper.data());
+  assert(run_status == HighsStatus::kOk);
+
+  assert(lp.num_col_ == original_num_col);
+  assert(lp.num_row_ == original_num_row);
+
   return HighsStatus::kOk;
 }
 

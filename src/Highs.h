@@ -38,6 +38,7 @@ HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
 const char* highsGithash();
+const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -1225,7 +1226,6 @@ class Highs {
    * @brief Return compilation date
    */
   std::string compilationDate() const { return "deprecated"; }
-  const char* highsCompilationDate();
 
   HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
                                                        const char*, void*),

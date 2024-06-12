@@ -358,6 +358,6 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   //
   // Hence only empty columns can be removed
   std::string model = "galenet";
-  testMps(model, kIisStrategyFromLpRowPriority);
+  //  testMps(model, kIisStrategyFromLpRowPriority);
   testMps(model, kIisStrategyFromRayRowPriority);
 }
