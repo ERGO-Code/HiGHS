@@ -173,7 +173,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   
    set(successMacArmInstances
       "25fv47\;3103\; 5.5018458883\;"
-      "80bau3b\;3686\; 9.8722419241\;"
+      "80bau3b\;3705\; 9.8722419241\;"
       "adlittle\;74\; 2.2549496316\;"
       "afiro\;22\;-4.6475314286\;"
       "etamacro\;531\;-7.5571523330\;"
