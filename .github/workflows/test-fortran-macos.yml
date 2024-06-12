@@ -8,22 +8,9 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        # toolchain:
-        #   - {compiler: gcc, version: 13}
-        #   # - {compiler: intel, version: '2023.2'}
-        #   # - {compiler: nvidia-hpc, version: '23.11'}
-        # include:
-        #   - os: ubuntu-latest
-        #     toolchain: {compiler: gcc, version: 12}
 
     steps:
       - uses: actions/checkout@v4
-
-      # - uses: fortran-lang/setup-fortran@v1
-      #   id: setup-fortran
-      #   with:
-      #     compiler: ${{ matrix.toolchain.compiler }}
-      #     version: ${{ matrix.toolchain.version }}
 
       - name: Install GFortran
         run: brew install gfortran
