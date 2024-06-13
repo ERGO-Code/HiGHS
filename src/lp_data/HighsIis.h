@@ -38,7 +38,7 @@ class HighsIis {
   void removeRow(const HighsInt row);
   HighsStatus getData(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis& basis,
-		      const std::vector<HighsInt>& infeasible_row);
+                      const std::vector<HighsInt>& infeasible_row);
 
   HighsStatus compute(const HighsLp& lp, const HighsOptions& options,
                       const HighsBasis* basis = nullptr);

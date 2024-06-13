@@ -1683,8 +1683,9 @@ HighsStatus Highs::getIis(HighsIis& iis) {
   if (this->model_status_ == HighsModelStatus::kOptimal ||
       this->model_status_ == HighsModelStatus::kUnbounded) {
     // Strange to call getIis for a model that's known to be feasible
-    highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "Calling Highs::getIis for a model that is known to be feasible\n");
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Calling Highs::getIis for a model that is known to be feasible\n");
     iis.invalidate();
     // No IIS exists, so validate the empty HighsIis instance
     iis.valid_ = true;
@@ -1696,9 +1697,11 @@ HighsStatus Highs::getIis(HighsIis& iis) {
     return_status = HighsStatus::kWarning;
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Calling Highs::getIis for a model with status %s\n",
-		 this->modelStatusToString(this->model_status_).c_str());
+                 this->modelStatusToString(this->model_status_).c_str());
   }
-  return_status = interpretCallStatus(options_.log_options, this->getIisInterface(), return_status, "getIisInterface");
+  return_status =
+      interpretCallStatus(options_.log_options, this->getIisInterface(),
+                          return_status, "getIisInterface");
   iis = this->iis_;
   return return_status;
 }
@@ -2349,7 +2352,7 @@ static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
                                          const HighsInt create_error,
                                          const bool ordered,
                                          const HighsInt num_set_entries,
-					 const HighsInt* set,
+                                         const HighsInt* set,
                                          const HighsInt dimension) {
   if (create_error == kIndexCollectionCreateIllegalSetSize) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -4247,7 +4250,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
       lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-		"LP Dimension error in returnFromHighs()\n");
+                "LP Dimension error in returnFromHighs()\n");
     return_status = HighsStatus::kError;
   }
   assert(dimensions_ok);

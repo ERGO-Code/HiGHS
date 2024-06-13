@@ -12,7 +12,8 @@ const double inf = kHighsInf;
 void testIis(const std::string& model, const HighsIis& iis);
 
 void testMps(std::string& model, const HighsInt iis_strategy,
-	     const HighsModelStatus require_model_status = HighsModelStatus::kInfeasible);
+             const HighsModelStatus require_model_status =
+                 HighsModelStatus::kInfeasible);
 
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
@@ -122,6 +123,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
   std::string model = "woodinfe";
+  testMps(model, kIisStrategyFromLpRowPriority);
   testMps(model, kIisStrategyFromRayRowPriority);
 }
 
@@ -299,7 +301,7 @@ void testIis(const std::string& model, const HighsIis& iis) {
 }
 
 void testMps(std::string& model, const HighsInt iis_strategy,
-	     const HighsModelStatus require_model_status) {
+             const HighsModelStatus require_model_status) {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -319,11 +321,10 @@ void testMps(std::string& model, const HighsInt iis_strategy,
     REQUIRE(num_iis_row > 0);
     if (dev_run)
       printf("Model %s has IIS with %d columns and %d rows\n", model.c_str(),
-	     int(num_iis_col), int(num_iis_row));
+             int(num_iis_col), int(num_iis_row));
     testIis(model, iis);
   } else {
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
   }
 }
-

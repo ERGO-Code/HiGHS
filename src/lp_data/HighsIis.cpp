@@ -170,7 +170,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     bool use_col = false;
     for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-	 iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
       use_col = use_col || to_row[lp.a_matrix_.index_[iEl]] >= 0;
     if (use_col) from_col.push_back(iCol);
   }
@@ -184,13 +184,14 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     to_lp.col_cost_.push_back(0);
     to_lp.col_lower_.push_back(lp.col_lower_[from_col[iCol]]);
     to_lp.col_upper_.push_back(lp.col_upper_[from_col[iCol]]);
-    if (has_col_names) to_lp.col_names_.push_back(lp.col_names_[from_col[iCol]]);
+    if (has_col_names)
+      to_lp.col_names_.push_back(lp.col_names_[from_col[iCol]]);
     for (HighsInt iEl = lp.a_matrix_.start_[from_col[iCol]];
-	 iEl < lp.a_matrix_.start_[from_col[iCol] + 1]; iEl++) {
+         iEl < lp.a_matrix_.start_[from_col[iCol] + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       if (to_row[iRow] >= 0) {
-	to_lp.a_matrix_.index_.push_back(to_row[iRow]);
-	to_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+        to_lp.a_matrix_.index_.push_back(to_row[iRow]);
+        to_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
       }
     }
     to_lp.a_matrix_.start_.push_back(to_lp.a_matrix_.index_.size());
@@ -199,7 +200,8 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < to_num_row; iRow++) {
     to_lp.row_lower_.push_back(lp.row_lower_[from_row[iRow]]);
     to_lp.row_upper_.push_back(lp.row_upper_[from_row[iRow]]);
-    if (has_row_names) to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
+    if (has_row_names)
+      to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
   }
   if (this->compute(to_lp, options) != HighsStatus::kOk)
     return HighsStatus::kError;

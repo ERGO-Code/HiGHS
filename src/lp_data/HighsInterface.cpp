@@ -1560,13 +1560,14 @@ HighsStatus Highs::getIisInterface() {
     // For an LP with no rows, the only scope for infeasibility is
     // inconsistent columns bounds - which has already been assessed,
     // so validate the empty HighsIis instance
-    this->iis_.valid_ = true;    
+    this->iis_.valid_ = true;
     return HighsStatus::kOk;
   }
   const bool ray_option =
-    options_.iis_strategy == kIisStrategyFromRayRowPriority ||
-    options_.iis_strategy == kIisStrategyFromRayColPriority;
-  if (this->model_status_ == HighsModelStatus::kInfeasible && ray_option && !ekk_instance_.status_.has_invert) {
+      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
+      options_.iis_strategy == kIisStrategyFromRayColPriority;
+  if (this->model_status_ == HighsModelStatus::kInfeasible && ray_option &&
+      !ekk_instance_.status_.has_invert) {
     // Model is known to be infeasible, and a dual ray option is
     // chosen, but it has no INVERT, presumably because infeasibility
     // detected in presolve, so solve without presolve
@@ -1577,16 +1578,20 @@ HighsStatus Highs::getIisInterface() {
     if (return_status != HighsStatus::kOk) return return_status;
     // Model should remain infeasible!
     if (this->model_status_ != HighsModelStatus::kInfeasible) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "Model status has switched from %s to %s when solving without presolve\n",
-		   this->modelStatusToString(HighsModelStatus::kInfeasible).c_str(),
-		   this->modelStatusToString(this->model_status_).c_str());
-      return HighsStatus::kError; 
+      highsLogUser(
+          options_.log_options, HighsLogType::kError,
+          "Model status has switched from %s to %s when solving without "
+          "presolve\n",
+          this->modelStatusToString(HighsModelStatus::kInfeasible).c_str(),
+          this->modelStatusToString(this->model_status_).c_str());
+      return HighsStatus::kError;
     }
   }
   const bool has_dual_ray = ekk_instance_.status_.has_dual_ray;
-  if (ray_option && !has_dual_ray) highsLogUser(options_.log_options, HighsLogType::kWarning,
-						"No known dual ray from which to compute IIS: using whole model\n");
+  if (ray_option && !has_dual_ray)
+    highsLogUser(
+        options_.log_options, HighsLogType::kWarning,
+        "No known dual ray from which to compute IIS: using whole model\n");
   std::vector<HighsInt> infeasible_row_subset;
   if (ray_option && has_dual_ray) {
     // Compute the dual ray to identify an infeasible subset of rows
@@ -1595,31 +1600,40 @@ HighsStatus Highs::getIisInterface() {
     std::vector<double> rhs;
     HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
     rhs.assign(num_row, 0);
-    rhs[iRow] = 1; // ekk_instance_.info_.dual_ray_sign_;
+    rhs[iRow] = 1;  // ekk_instance_.info_.dual_ray_sign_;
     std::vector<double> dual_ray_value(num_row);
     HighsInt* dual_ray_num_nz = 0;
     basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL,
-			true);
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+                        true);
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       if (dual_ray_value[iRow]) infeasible_row_subset.push_back(iRow);
   } else {
     // Full LP option chosen or no dual ray to use
     //
+    // Working on the whole model so clear all solver data
+    this->invalidateUserSolverData();
     // 1789 Remove this check!
     HighsLp check_lp_before = this->model_.lp_;
-    // Apply the elasticity filter to the whole LP in order to
+    // Apply the elasticity filter to the whole model in order to
     // determine an infeasible subset of rows
-    HighsStatus return_status = this->computeInfeasibleRows(false, infeasible_row_subset);
+    HighsStatus return_status =
+        this->computeInfeasibleRows(false, infeasible_row_subset);
     HighsLp check_lp_after = this->model_.lp_;
-    assert(check_lp_before == check_lp_after);
+    assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
     if (return_status != HighsStatus::kOk) return return_status;
   }
-  HighsStatus return_status = this->iis_.getData(lp, options_, basis_, infeasible_row_subset);
+  HighsStatus return_status =
+      this->iis_.getData(lp, options_, basis_, infeasible_row_subset);
+  if (return_status == HighsStatus::kOk) {
+    // Existence of non-empty IIS => infeasibility
+    if (this->iis_.col_index_.size() > 0 || this->iis_.row_index_.size() > 0)
+      this->model_status_ = HighsModelStatus::kInfeasible;
+  }
   return return_status;
 }
 
-HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
-					 std::vector<HighsInt>& infeasible_row_subset) {
+HighsStatus Highs::computeInfeasibleRows(
+    const bool elastic_columns, std::vector<HighsInt>& infeasible_row_subset) {
   // Elasticity filter
   //
   // Construct the e-LP:
@@ -1674,12 +1688,13 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
   const std::vector<double> original_col_upper = lp.col_upper_;
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
-  run_status = this->changeColsCost(0, lp.num_col_-1, zero_costs.data());
+  run_status = this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
   assert(run_status == HighsStatus::kOk);
-  
-  printf("Highs::computeInfeasibleRows: After entry - model status is %s\n", this->modelStatusToString(this->model_status_).c_str());
+
+  printf("Highs::computeInfeasibleRows: After entry - model status is %s\n",
+         this->modelStatusToString(this->model_status_).c_str());
   if (elastic_columns) {
-    // When defining names, need to know the column number 
+    // When defining names, need to know the column number
     HighsInt previous_num_col = lp.num_col_;
     HighsInt previous_num_row = lp.num_row_;
     const bool has_col_names = lp.col_names_.size() > 0;
@@ -1691,69 +1706,81 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
       if (lower <= -kHighsInf && upper >= kHighsInf) continue;
       erow_lower.push_back(lower);
       erow_upper.push_back(upper);
-      if (has_col_names) erow_name.push_back("row_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_erow");
+      if (has_col_names)
+        erow_name.push_back("row_" + std::to_string(iCol) + "_" +
+                            lp.col_names_[iCol] + "_erow");
       // Define the entry for x[iCol]
       erow_index.push_back(iCol);
       erow_value.push_back(1);
       if (lower > -kHighsInf) {
-	// New e_l variable 
-	col_of_ecol.push_back(iCol);
-	if (has_col_names) ecol_name.push_back("col_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_lower");
-	bound_of_col_of_ecol.push_back(lower);
-	erow_index.push_back(evar_ix);
-	erow_value.push_back(1);
-	evar_ix++;
+        // New e_l variable
+        col_of_ecol.push_back(iCol);
+        if (has_col_names)
+          ecol_name.push_back("col_" + std::to_string(iCol) + "_" +
+                              lp.col_names_[iCol] + "_lower");
+        bound_of_col_of_ecol.push_back(lower);
+        erow_index.push_back(evar_ix);
+        erow_value.push_back(1);
+        evar_ix++;
       }
       if (upper < kHighsInf) {
-	// New e_u variable 
-	col_of_ecol.push_back(iCol);
-	if (has_col_names) ecol_name.push_back("col_"+std::to_string(iCol)+"_"+lp.col_names_[iCol]+"_upper");
-	bound_of_col_of_ecol.push_back(upper);
-	erow_index.push_back(evar_ix);
-	erow_value.push_back(-1);
-	evar_ix++;
+        // New e_u variable
+        col_of_ecol.push_back(iCol);
+        if (has_col_names)
+          ecol_name.push_back("col_" + std::to_string(iCol) + "_" +
+                              lp.col_names_[iCol] + "_upper");
+        bound_of_col_of_ecol.push_back(upper);
+        erow_index.push_back(evar_ix);
+        erow_value.push_back(-1);
+        evar_ix++;
       }
       erow_start.push_back(erow_index.size());
-      HighsInt row_nz = erow_start[erow_start.size()-1] - erow_start[erow_start.size()-2];
+      HighsInt row_nz =
+          erow_start[erow_start.size() - 1] - erow_start[erow_start.size() - 2];
       printf("eRow for column %d has %d nonzeros\n", int(iCol), int(row_nz));
       assert(row_nz == 2 || row_nz == 3);
     }
     HighsInt num_new_col = col_of_ecol.size();
-    HighsInt num_new_row = erow_start.size()-1;
+    HighsInt num_new_row = erow_start.size() - 1;
     HighsInt num_new_nz = erow_start[num_new_row];
-    printf("Elasticity filter: For columns there are %d variables and %d constraints\n", int(num_new_col), int(num_new_row));
+    printf(
+        "Elasticity filter: For columns there are %d variables and %d "
+        "constraints\n",
+        int(num_new_col), int(num_new_row));
     const bool write_model = true;
     // Free the original columns
     std::vector<double> col_lower;
     std::vector<double> col_upper;
     col_lower.assign(lp.num_col_, -kHighsInf);
     col_upper.assign(lp.num_col_, kHighsInf);
-    run_status = this->changeColsBounds(0, lp.num_col_-1, col_lower.data(), col_upper.data());
+    run_status = this->changeColsBounds(0, lp.num_col_ - 1, col_lower.data(),
+                                        col_upper.data());
     assert(run_status == HighsStatus::kOk);
     // Add the new columns
     ecol_cost.assign(num_new_col, 1);
     ecol_lower.assign(num_new_col, 0);
     ecol_upper.assign(num_new_col, kHighsInf);
-    run_status = this->addCols(num_new_col, ecol_cost.data(), ecol_lower.data(), ecol_upper.data(),
-			       0, nullptr, nullptr, nullptr);
+    run_status = this->addCols(num_new_col, ecol_cost.data(), ecol_lower.data(),
+                               ecol_upper.data(), 0, nullptr, nullptr, nullptr);
     assert(run_status == HighsStatus::kOk);
     // Add the new rows
-    run_status = this->addRows(num_new_row, erow_lower.data(), erow_upper.data(),
-			       num_new_nz, erow_start.data(), erow_index.data(), erow_value.data());
+    run_status = this->addRows(num_new_row, erow_lower.data(),
+                               erow_upper.data(), num_new_nz, erow_start.data(),
+                               erow_index.data(), erow_value.data());
     assert(run_status == HighsStatus::kOk);
     if (has_col_names) {
-      for (HighsInt iCol = 0; iCol < num_new_col; iCol++) 
-	this->passColName(previous_num_col+iCol, ecol_name[iCol]);
-      for (HighsInt iRow = 0; iRow < num_new_row; iRow++) 
-	this->passRowName(previous_num_row+iRow, erow_name[iRow]);
+      for (HighsInt iCol = 0; iCol < num_new_col; iCol++)
+        this->passColName(previous_num_col + iCol, ecol_name[iCol]);
+      for (HighsInt iRow = 0; iRow < num_new_row; iRow++)
+        this->passRowName(previous_num_row + iRow, erow_name[iRow]);
     }
     if (write_model) {
       printf("\nAfter adding e-rows\n=============\n");
       bool output_flag;
-    run_status = this->getOptionValue("output_flag", output_flag);
-    this->setOptionValue("output_flag", true);
-    this->writeModel("");
-    this->setOptionValue("output_flag", output_flag);
+      run_status = this->getOptionValue("output_flag", output_flag);
+      this->setOptionValue("output_flag", true);
+      this->writeModel("");
+      this->setOptionValue("output_flag", output_flag);
     }
   }
   // Add the columns corresponding to the e_L and e_U variables for
@@ -1770,8 +1797,9 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
     if (lower > -kHighsInf) {
       // Create an e-var for the row lower bound
       row_of_ecol.push_back(iRow);
-      if (has_row_names) 
-	ecol_name.push_back("row_"+std::to_string(iRow)+"_"+lp.row_names_[iRow]+"_lower");
+      if (has_row_names)
+        ecol_name.push_back("row_" + std::to_string(iRow) + "_" +
+                            lp.row_names_[iRow] + "_lower");
       bound_of_row_of_ecol.push_back(lower);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
@@ -1782,8 +1810,9 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
     if (upper < kHighsInf) {
       // Create an e-var for the row upper bound
       row_of_ecol.push_back(iRow);
-      if (has_row_names) 
-	ecol_name.push_back("row_"+std::to_string(iRow)+"_"+lp.row_names_[iRow]+"_upper");
+      if (has_row_names)
+        ecol_name.push_back("row_" + std::to_string(iRow) + "_" +
+                            lp.row_names_[iRow] + "_upper");
       bound_of_row_of_ecol.push_back(upper);
       // Define the sub-matrix column
       ecol_index.push_back(iRow);
@@ -1792,19 +1821,20 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
       evar_ix++;
     }
   }
-  HighsInt num_new_col = ecol_start.size()-1;
+  HighsInt num_new_col = ecol_start.size() - 1;
   HighsInt num_new_nz = ecol_start[num_new_col];
   ecol_cost.assign(num_new_col, 1);
   ecol_lower.assign(num_new_col, 0);
   ecol_upper.assign(num_new_col, kHighsInf);
   HighsInt previous_num_col = lp.num_col_;
   HighsInt row_ecol_offset = previous_num_col;
-  run_status = this->addCols(num_new_col, ecol_cost.data(), ecol_lower.data(), ecol_upper.data(),
-			     num_new_nz, ecol_start.data(), ecol_index.data(), ecol_value.data());
+  run_status = this->addCols(num_new_col, ecol_cost.data(), ecol_lower.data(),
+                             ecol_upper.data(), num_new_nz, ecol_start.data(),
+                             ecol_index.data(), ecol_value.data());
   assert(run_status == HighsStatus::kOk);
   if (has_row_names) {
-    for (HighsInt iCol = 0; iCol < num_new_col; iCol++) 
-      this->passColName(previous_num_col+iCol, ecol_name[iCol]);
+    for (HighsInt iCol = 0; iCol < num_new_col; iCol++)
+      this->passColName(previous_num_col + iCol, ecol_name[iCol]);
   }
 
   if (write_model) {
@@ -1829,32 +1859,42 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
     HighsInt num_fixed = 0;
     if (elastic_columns) {
       for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
-	HighsInt iCol = col_of_ecol[eCol];
-	if (solution.col_value[col_ecol_offset+eCol] > this->options_.primal_feasibility_tolerance) {
-	  printf("E-col %2d (column %2d) corresponds to column %2d with bound %g and has solution value %g\n",
-		 int(eCol), int(col_ecol_offset+eCol), int(iCol), bound_of_col_of_ecol[eCol], solution.col_value[col_ecol_offset+eCol]);
-	  this->changeColBounds(col_ecol_offset+eCol, 0, 0);
-	  num_fixed++;
-	}
+        HighsInt iCol = col_of_ecol[eCol];
+        if (solution.col_value[col_ecol_offset + eCol] >
+            this->options_.primal_feasibility_tolerance) {
+          printf(
+              "E-col %2d (column %2d) corresponds to column %2d with bound %g "
+              "and has solution value %g\n",
+              int(eCol), int(col_ecol_offset + eCol), int(iCol),
+              bound_of_col_of_ecol[eCol],
+              solution.col_value[col_ecol_offset + eCol]);
+          this->changeColBounds(col_ecol_offset + eCol, 0, 0);
+          num_fixed++;
+        }
       }
     }
     for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
       HighsInt iRow = row_of_ecol[eCol];
-      if (solution.col_value[row_ecol_offset+eCol] > this->options_.primal_feasibility_tolerance) {
-      printf("E-row %2d (column %2d) corresponds to    row %2d with bound %g and has solution value %g\n",
-	     int(eCol), int(row_ecol_offset+eCol), int(iRow), bound_of_row_of_ecol[eCol], solution.col_value[row_ecol_offset+eCol]);
-	this->changeColBounds(row_ecol_offset+eCol, 0, 0);
-	num_fixed++;
+      if (solution.col_value[row_ecol_offset + eCol] >
+          this->options_.primal_feasibility_tolerance) {
+        printf(
+            "E-row %2d (column %2d) corresponds to    row %2d with bound %g "
+            "and has solution value %g\n",
+            int(eCol), int(row_ecol_offset + eCol), int(iRow),
+            bound_of_row_of_ecol[eCol],
+            solution.col_value[row_ecol_offset + eCol]);
+        this->changeColBounds(row_ecol_offset + eCol, 0, 0);
+        num_fixed++;
       }
     }
-    assert(num_fixed>0);
+    assert(num_fixed > 0);
     run_status = this->run();
     assert(run_status == HighsStatus::kOk);
     this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
     loop_k++;
-    if (loop_k>10) assert(1666==1999);
+    if (loop_k > 10) assert(1666 == 1999);
   }
 
   infeasible_row_subset.clear();
@@ -1862,42 +1902,60 @@ HighsStatus Highs::computeInfeasibleRows(const bool elastic_columns,
   HighsInt num_enforced_row_ecol = 0;
   for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
     HighsInt iCol = col_of_ecol[eCol];
-    if (lp.col_upper_[col_ecol_offset+eCol] == 0) {
+    if (lp.col_upper_[col_ecol_offset + eCol] == 0) {
       num_enforced_col_ecol++;
-      printf("Col e-col %2d (column %2d) corresponds to column %2d with bound %g and is enforced\n",
-	     int(eCol), int(col_ecol_offset+eCol), int(iCol), bound_of_col_of_ecol[eCol]);
+      printf(
+          "Col e-col %2d (column %2d) corresponds to column %2d with bound %g "
+          "and is enforced\n",
+          int(eCol), int(col_ecol_offset + eCol), int(iCol),
+          bound_of_col_of_ecol[eCol]);
     }
   }
   for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
     HighsInt iRow = row_of_ecol[eCol];
-    if (lp.col_upper_[row_ecol_offset+eCol] == 0) {
+    if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
       num_enforced_row_ecol++;
-      printf("Row e-col %2d (column %2d) corresponds to    row %2d with bound %g and is enforced\n",
-	     int(eCol), int(row_ecol_offset+eCol), int(iRow), bound_of_row_of_ecol[eCol]);
+      printf(
+          "Row e-col %2d (column %2d) corresponds to    row %2d with bound %g "
+          "and is enforced\n",
+          int(eCol), int(row_ecol_offset + eCol), int(iRow),
+          bound_of_row_of_ecol[eCol]);
       infeasible_row_subset.push_back(iRow);
     }
   }
-  printf("\nElasticity filter after %d passes enforces bounds on %d cols and %d rows\n", int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
+  printf(
+      "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
+      "rows\n",
+      int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
-  printf("Highs::computeInfeasibleRows: Before clearing additional rows and columns - model status is %s\n", this->modelStatusToString(this->model_status_).c_str());
+  printf(
+      "Highs::computeInfeasibleRows: Before clearing additional rows and "
+      "columns - model status is %s\n",
+      this->modelStatusToString(this->model_status_).c_str());
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
-  run_status = this->deleteRows(original_num_row, lp.num_row_-1);
-  assert(run_status == HighsStatus::kOk);
-  
-  run_status = this->deleteCols(original_num_col, lp.num_col_-1);
-  assert(run_status == HighsStatus::kOk);
-  
-  run_status = this->changeColsCost(0, original_num_col-1, original_col_cost.data());
+  run_status = this->deleteRows(original_num_row, lp.num_row_ - 1);
   assert(run_status == HighsStatus::kOk);
 
-  run_status = this->changeColsBounds(0, original_num_col-1, original_col_lower.data(), original_col_upper.data());
+  run_status = this->deleteCols(original_num_col, lp.num_col_ - 1);
+  assert(run_status == HighsStatus::kOk);
+
+  run_status =
+      this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
+  assert(run_status == HighsStatus::kOk);
+
+  run_status =
+      this->changeColsBounds(0, original_num_col - 1, original_col_lower.data(),
+                             original_col_upper.data());
   assert(run_status == HighsStatus::kOk);
 
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
-  printf("Highs::computeInfeasibleRows: After clearing additional rows and columns - model status is %s\n", this->modelStatusToString(this->model_status_).c_str());
+  printf(
+      "Highs::computeInfeasibleRows: After clearing additional rows and "
+      "columns - model status is %s\n",
+      this->modelStatusToString(this->model_status_).c_str());
   return HighsStatus::kOk;
 }
 

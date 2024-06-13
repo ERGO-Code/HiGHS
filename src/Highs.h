@@ -1515,7 +1515,7 @@ class Highs {
   HighsStatus getIisInterface();
 
   HighsStatus computeInfeasibleRows(const bool elastic_columns,
-				    std::vector<HighsInt>& infeasible_row);
+                                    std::vector<HighsInt>& infeasible_row);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
