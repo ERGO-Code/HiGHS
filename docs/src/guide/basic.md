@@ -22,8 +22,9 @@ and [classes](@ref classes-overview), and are referred to below.
 
 Enums are scalar identifier types that can take only a limited range of values.
 
-#### [Classes](@id guide-basic-classes) The advantage of using the
-native `C++` classes in HiGHS is that many fewer parameters are needed
+#### [Classes](@id guide-basic-classes)
+
+The advantage of using the native `C++` classes in HiGHS is that many fewer parameters are needed
 when passing data to and from HiGHS. The binding of the data members
 of these classes to `highspy` structures allows them to be used when
 calling HiGHS from Python, although they are not necessary for the
