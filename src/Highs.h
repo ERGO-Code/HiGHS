@@ -509,13 +509,11 @@ class Highs {
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
 
-  HighsStatus getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
-                     HighsInt* iis_col_index = nullptr,
-                     HighsInt* iis_row_index = nullptr,
-                     HighsInt* iis_col_bound = nullptr,
-                     HighsInt* iis_row_bound = nullptr);
-  HighsStatus computeIis();
-  const HighsIis& getIis() const { return iis_; }
+  /**
+   * @brief Get (any) irreducible infeasible subsystem (IIS)
+   * information for the incumbent model
+   */
+  HighsStatus getIis(HighsIis& iis);
 
   /**
    * @brief Get the current model objective value
@@ -1514,7 +1512,8 @@ class Highs {
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
 
-  HighsStatus computeIisInterface();
+  HighsStatus getIisInterface();
+
   HighsStatus computeInfeasibleRows(const bool elastic_columns,
 				    std::vector<HighsInt>& infeasible_row);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,

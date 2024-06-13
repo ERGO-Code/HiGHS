@@ -1679,22 +1679,28 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                 ill_conditioning_bound);
 }
 
-HighsStatus Highs::getIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
-                          HighsInt* iis_col_index, HighsInt* iis_row_index,
-                          HighsInt* iis_col_bound, HighsInt* iis_row_bound) {
-  HighsStatus return_status = this->computeIis();
-  if (return_status != HighsStatus::kOk) return return_status;
-  return this->extractIis(num_iis_col, num_iis_row, iis_col_index,
-                          iis_row_index, iis_col_bound, iis_row_bound);
-}
-
-HighsStatus Highs::computeIis() {
-  if (model_status_ != HighsModelStatus::kInfeasible) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "getIis: model status is not infeasible\n");
-    return HighsStatus::kError;
+HighsStatus Highs::getIis(HighsIis& iis) {
+  if (this->model_status_ == HighsModelStatus::kOptimal ||
+      this->model_status_ == HighsModelStatus::kUnbounded) {
+    // Strange to call getIis for a model that's known to be feasible
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Calling Highs::getIis for a model that is known to be feasible\n");
+    iis.invalidate();
+    // No IIS exists, so validate the empty HighsIis instance
+    iis.valid_ = true;
+    return HighsStatus::kOk;
   }
-  return this->computeIisInterface();
+  HighsStatus return_status = HighsStatus::kOk;
+  if (this->model_status_ != HighsModelStatus::kNotset &&
+      this->model_status_ != HighsModelStatus::kInfeasible) {
+    return_status = HighsStatus::kWarning;
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Calling Highs::getIis for a model with status %s\n",
+		 this->modelStatusToString(this->model_status_).c_str());
+  }
+  return_status = interpretCallStatus(options_.log_options, this->getIisInterface(), return_status, "getIisInterface");
+  iis = this->iis_;
+  return return_status;
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }

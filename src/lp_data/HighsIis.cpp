@@ -153,65 +153,61 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
                               const std::vector<HighsInt>& infeasible_row) {
   // Check for trivial IIS should have been done earlier
   assert(!this->trivial(lp, options));
-
-  if (options.iis_strategy == kIisStrategyFromRayRowPriority ||
-      options.iis_strategy == kIisStrategyFromRayColPriority) {
-    // Identify the LP corresponding to the ray
-    std::vector<HighsInt> from_row = infeasible_row;
-    std::vector<HighsInt> from_col;
-    std::vector<HighsInt> to_row;
-    to_row.assign(lp.num_row_, -1);
-    assert(lp.a_matrix_.isColwise());
-    for (HighsInt iX = 0; iX < HighsInt(infeasible_row.size()); iX++) {
-      HighsInt iRow = infeasible_row[iX];
-      to_row[iRow] = iX;
-      from_row.push_back(iRow);
-    }
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      bool use_col = false;
-      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-        use_col = use_col || to_row[lp.a_matrix_.index_[iEl]] >= 0;
-      if (use_col) from_col.push_back(iCol);
-    }
-    HighsInt to_num_col = from_col.size();
-    HighsInt to_num_row = from_row.size();
-    HighsLp to_lp;
-    to_lp.num_col_ = to_num_col;
-    to_lp.num_row_ = to_num_row;
-    for (HighsInt iCol = 0; iCol < to_num_col; iCol++) {
-      to_lp.col_cost_.push_back(0);
-      to_lp.col_lower_.push_back(lp.col_lower_[from_col[iCol]]);
-      to_lp.col_upper_.push_back(lp.col_upper_[from_col[iCol]]);
-      to_lp.col_names_.push_back(lp.col_names_[from_col[iCol]]);
-      for (HighsInt iEl = lp.a_matrix_.start_[from_col[iCol]];
-           iEl < lp.a_matrix_.start_[from_col[iCol] + 1]; iEl++) {
-        HighsInt iRow = lp.a_matrix_.index_[iEl];
-        if (to_row[iRow] >= 0) {
-          to_lp.a_matrix_.index_.push_back(to_row[iRow]);
-          to_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
-        }
-      }
-      to_lp.a_matrix_.start_.push_back(to_lp.a_matrix_.index_.size());
-    }
-    for (HighsInt iRow = 0; iRow < to_num_row; iRow++) {
-      to_lp.row_lower_.push_back(lp.row_lower_[from_row[iRow]]);
-      to_lp.row_upper_.push_back(lp.row_upper_[from_row[iRow]]);
-      to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
-    }
-    if (this->compute(to_lp, options) != HighsStatus::kOk)
-      return HighsStatus::kError;
-    // IIS col/row information is for to_lp, so indirect the values
-    // into the original LP
-    for (HighsInt iCol = 0; iCol < HighsInt(this->col_index_.size()); iCol++)
-      this->col_index_[iCol] = from_col[this->col_index_[iCol]];
-    for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
-      this->row_index_[iRow] = from_row[this->row_index_[iRow]];
-  } else {
-    // Use the whole LP
-    if (this->compute(lp, options, &basis) != HighsStatus::kOk)
-      return HighsStatus::kError;
+  // The number of infeasible rows must be positive
+  assert(infeasible_row.size() > 0);
+  // Identify the LP corresponding to the set of infeasible rows
+  std::vector<HighsInt> from_row = infeasible_row;
+  std::vector<HighsInt> from_col;
+  std::vector<HighsInt> to_row;
+  to_row.assign(lp.num_row_, -1);
+  assert(lp.a_matrix_.isColwise());
+  // Determine how to detect whether a row is in infeasible_row and
+  // (then) gather information about it
+  for (HighsInt iX = 0; iX < HighsInt(infeasible_row.size()); iX++)
+    to_row[infeasible_row[iX]] = iX;
+  // Identify the columns (from_col) with nonzeros in the infeasible
+  // rows
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    bool use_col = false;
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+	 iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      use_col = use_col || to_row[lp.a_matrix_.index_[iEl]] >= 0;
+    if (use_col) from_col.push_back(iCol);
   }
+  HighsInt to_num_col = from_col.size();
+  HighsInt to_num_row = from_row.size();
+  HighsLp to_lp;
+  to_lp.num_col_ = to_num_col;
+  to_lp.num_row_ = to_num_row;
+  const bool has_col_names = lp.col_names_.size() > 0;
+  for (HighsInt iCol = 0; iCol < to_num_col; iCol++) {
+    to_lp.col_cost_.push_back(0);
+    to_lp.col_lower_.push_back(lp.col_lower_[from_col[iCol]]);
+    to_lp.col_upper_.push_back(lp.col_upper_[from_col[iCol]]);
+    if (has_col_names) to_lp.col_names_.push_back(lp.col_names_[from_col[iCol]]);
+    for (HighsInt iEl = lp.a_matrix_.start_[from_col[iCol]];
+	 iEl < lp.a_matrix_.start_[from_col[iCol] + 1]; iEl++) {
+      HighsInt iRow = lp.a_matrix_.index_[iEl];
+      if (to_row[iRow] >= 0) {
+	to_lp.a_matrix_.index_.push_back(to_row[iRow]);
+	to_lp.a_matrix_.value_.push_back(lp.a_matrix_.value_[iEl]);
+      }
+    }
+    to_lp.a_matrix_.start_.push_back(to_lp.a_matrix_.index_.size());
+  }
+  const bool has_row_names = lp.row_names_.size() > 0;
+  for (HighsInt iRow = 0; iRow < to_num_row; iRow++) {
+    to_lp.row_lower_.push_back(lp.row_lower_[from_row[iRow]]);
+    to_lp.row_upper_.push_back(lp.row_upper_[from_row[iRow]]);
+    if (has_row_names) to_lp.row_names_.push_back(lp.row_names_[from_row[iRow]]);
+  }
+  if (this->compute(to_lp, options) != HighsStatus::kOk)
+    return HighsStatus::kError;
+  // Indirect the values into the original LP
+  for (HighsInt iCol = 0; iCol < HighsInt(this->col_index_.size()); iCol++)
+    this->col_index_[iCol] = from_col[this->col_index_[iCol]];
+  for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
+    this->row_index_[iRow] = from_row[this->row_index_[iRow]];
   this->report("On exit", lp);
   return HighsStatus::kOk;
 }
