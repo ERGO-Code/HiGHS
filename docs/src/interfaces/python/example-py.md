@@ -210,7 +210,7 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `changeColCost`
  * `changeColBounds`
  * `changeRowBounds`
- * `changeColsCosts`
+ * `changeColsCost`
  * `changeColsBounds`
  * `changeRowsBounds`
  * `changeCoeff`
