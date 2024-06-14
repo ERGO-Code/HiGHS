@@ -1679,7 +1679,7 @@ HighsStatus Highs::computeInfeasibleRows(
   const HighsLp& lp = this->model_.lp_;
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
-  const bool write_model = true;
+  const bool write_model = false;
   HighsInt col_ecol_offset;
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
@@ -1691,8 +1691,6 @@ HighsStatus Highs::computeInfeasibleRows(
   run_status = this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
   assert(run_status == HighsStatus::kOk);
 
-  printf("Highs::computeInfeasibleRows: After entry - model status is %s\n",
-         this->modelStatusToString(this->model_status_).c_str());
   if (elastic_columns) {
     // When defining names, need to know the column number
     HighsInt previous_num_col = lp.num_col_;
@@ -1743,11 +1741,11 @@ HighsStatus Highs::computeInfeasibleRows(
     HighsInt num_new_col = col_of_ecol.size();
     HighsInt num_new_row = erow_start.size() - 1;
     HighsInt num_new_nz = erow_start[num_new_row];
-    printf(
-        "Elasticity filter: For columns there are %d variables and %d "
-        "constraints\n",
-        int(num_new_col), int(num_new_row));
-    const bool write_model = true;
+    if (kIisDevReport)
+      printf(
+          "Elasticity filter: For columns there are %d variables and %d"
+          "constraints\n",
+          int(num_new_col), int(num_new_row));
     // Free the original columns
     std::vector<double> col_lower;
     std::vector<double> col_upper;
@@ -1847,7 +1845,7 @@ HighsStatus Highs::computeInfeasibleRows(
   }
   run_status = this->run();
   assert(run_status == HighsStatus::kOk);
-  this->writeSolution("", kSolutionStylePretty);
+  if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   HighsModelStatus model_status = this->getModelStatus();
   assert(model_status == HighsModelStatus::kOptimal);
 
@@ -1855,19 +1853,22 @@ HighsStatus Highs::computeInfeasibleRows(
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
   for (;;) {
-    printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
+    if (kIisDevReport)
+      printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     HighsInt num_fixed = 0;
     if (elastic_columns) {
       for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
         HighsInt iCol = col_of_ecol[eCol];
         if (solution.col_value[col_ecol_offset + eCol] >
             this->options_.primal_feasibility_tolerance) {
-          printf(
-              "E-col %2d (column %2d) corresponds to column %2d with bound %g "
-              "and has solution value %g\n",
-              int(eCol), int(col_ecol_offset + eCol), int(iCol),
-              bound_of_col_of_ecol[eCol],
-              solution.col_value[col_ecol_offset + eCol]);
+          if (kIisDevReport)
+            printf(
+                "E-col %2d (column %2d) corresponds to column %2d with bound "
+                "%g "
+                "and has solution value %g\n",
+                int(eCol), int(col_ecol_offset + eCol), int(iCol),
+                bound_of_col_of_ecol[eCol],
+                solution.col_value[col_ecol_offset + eCol]);
           this->changeColBounds(col_ecol_offset + eCol, 0, 0);
           num_fixed++;
         }
@@ -1877,12 +1878,13 @@ HighsStatus Highs::computeInfeasibleRows(
       HighsInt iRow = row_of_ecol[eCol];
       if (solution.col_value[row_ecol_offset + eCol] >
           this->options_.primal_feasibility_tolerance) {
-        printf(
-            "E-row %2d (column %2d) corresponds to    row %2d with bound %g "
-            "and has solution value %g\n",
-            int(eCol), int(row_ecol_offset + eCol), int(iRow),
-            bound_of_row_of_ecol[eCol],
-            solution.col_value[row_ecol_offset + eCol]);
+        if (kIisDevReport)
+          printf(
+              "E-row %2d (column %2d) corresponds to    row %2d with bound %g "
+              "and has solution value %g\n",
+              int(eCol), int(row_ecol_offset + eCol), int(iRow),
+              bound_of_row_of_ecol[eCol],
+              solution.col_value[row_ecol_offset + eCol]);
         this->changeColBounds(row_ecol_offset + eCol, 0, 0);
         num_fixed++;
       }
@@ -1890,7 +1892,7 @@ HighsStatus Highs::computeInfeasibleRows(
     assert(num_fixed > 0);
     run_status = this->run();
     assert(run_status == HighsStatus::kOk);
-    this->writeSolution("", kSolutionStylePretty);
+    if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
     loop_k++;
@@ -1915,23 +1917,26 @@ HighsStatus Highs::computeInfeasibleRows(
     HighsInt iRow = row_of_ecol[eCol];
     if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
       num_enforced_row_ecol++;
-      printf(
-          "Row e-col %2d (column %2d) corresponds to    row %2d with bound %g "
-          "and is enforced\n",
-          int(eCol), int(row_ecol_offset + eCol), int(iRow),
-          bound_of_row_of_ecol[eCol]);
+      if (kIisDevReport)
+        printf(
+            "Row e-col %2d (column %2d) corresponds to    row %2d with bound "
+            "%g "
+            "and is enforced\n",
+            int(eCol), int(row_ecol_offset + eCol), int(iRow),
+            bound_of_row_of_ecol[eCol]);
       infeasible_row_subset.push_back(iRow);
     }
   }
-  printf(
-      "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
-      "rows\n",
-      int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
-
-  printf(
-      "Highs::computeInfeasibleRows: Before clearing additional rows and "
-      "columns - model status is %s\n",
-      this->modelStatusToString(this->model_status_).c_str());
+  if (kIisDevReport) {
+    printf(
+        "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
+        "rows\n",
+        int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
+    printf(
+        "Highs::computeInfeasibleRows: Before clearing additional rows and "
+        "columns - model status is %s\n",
+        this->modelStatusToString(this->model_status_).c_str());
+  }
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
   run_status = this->deleteRows(original_num_row, lp.num_row_ - 1);
@@ -1952,10 +1957,11 @@ HighsStatus Highs::computeInfeasibleRows(
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
-  printf(
-      "Highs::computeInfeasibleRows: After clearing additional rows and "
-      "columns - model status is %s\n",
-      this->modelStatusToString(this->model_status_).c_str());
+  if (kIisDevReport)
+    printf(
+        "Highs::computeInfeasibleRows: After clearing additional rows and "
+        "columns - model status is %s\n",
+        this->modelStatusToString(this->model_status_).c_str());
   return HighsStatus::kOk;
 }
 

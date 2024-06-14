@@ -6,7 +6,7 @@
 #include "catch.hpp"
 //#include "io/FilereaderLp.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 void testIis(const std::string& model, const HighsIis& iis);
@@ -248,8 +248,9 @@ void testIis(const std::string& model, const HighsIis& iis) {
     } else if (iis_bound == kIisBoundStatusUpper) {
       to_upper = inf;
     } else if (iis_bound == kIisBoundStatusFree) {
-      printf("IIS Col %2d (LP col %6d) status %s\n", int(iisCol), int(iCol),
-             iis.iisBoundStatusToString(iis_bound).c_str());
+      if (dev_run)
+        printf("IIS Col %2d (LP col %6d) status %s\n", int(iisCol), int(iCol),
+               iis.iisBoundStatusToString(iis_bound).c_str());
       continue;
     }
     REQUIRE(highs.changeColBounds(iCol, to_lower, to_upper) ==

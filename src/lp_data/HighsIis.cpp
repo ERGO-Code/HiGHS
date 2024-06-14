@@ -210,7 +210,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     this->col_index_[iCol] = from_col[this->col_index_[iCol]];
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
     this->row_index_[iRow] = from_row[this->row_index_[iRow]];
-  this->report("On exit", lp);
+  if (kIisDevReport) this->report("On exit", lp);
   return HighsStatus::kOk;
 }
 
@@ -225,7 +225,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
-  //  highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
   HighsStatus run_status = highs.passModel(lp);
@@ -246,12 +246,15 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   const bool use_sensitivity_filter = false;
   if (use_sensitivity_filter) {
+    bool output_flag;
+    highs.getOptionValue("output_flag", output_flag);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     //
     highs.setOptionValue("output_flag", true);
     // Solve the LP
     run_status = highs.run();
     highs.writeSolution("", kSolutionStylePretty);
+    highs.setOptionValue("output_flag", output_flag);
   }
 
   // Pass twice: rows before columns, or columns before rows, according to
@@ -384,7 +387,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
-    this->report("End of deletion", incumbent_lp);
+    if (kIisDevReport) this->report("End of deletion", incumbent_lp);
     if (row_deletion) {
       // Mark empty columns as dropped
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -406,9 +409,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         }
       }
     }
-    this->report("End of pass 1", incumbent_lp);
+    if (kIisDevReport) this->report("End of pass 1", incumbent_lp);
   }
-  this->report("End of pass 2", incumbent_lp);
+  if (kIisDevReport) this->report("End of pass 2", incumbent_lp);
   HighsInt iss_num_col = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (this->col_bound_[iCol] != kIisBoundStatusDropped) {
