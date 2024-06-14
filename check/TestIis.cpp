@@ -175,7 +175,11 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
 
 TEST_CASE("lp-get-iis-avgas", "[iis]") {
   std::string model = "avgas";
-  testMps(model, kIisStrategyFromLpRowPriority, HighsModelStatus::kOptimal);
+  // For the whole LP calculation the elasticity filter only
+  // identified feasibility, so the model status is not set
+  testMps(model, kIisStrategyFromLpRowPriority, HighsModelStatus::kNotset);
+  // For the ray calculation the model is solved, so its status is
+  // known
   testMps(model, kIisStrategyFromRayRowPriority, HighsModelStatus::kOptimal);
 }
 
@@ -263,8 +267,6 @@ void testIis(const std::string& model, const HighsIis& iis) {
           "%s\n",
           int(iisCol), int(iCol), iis.iisBoundStatusToString(iis_bound).c_str(),
           highs.modelStatusToString(model_status).c_str());
-    //    if (model_status != HighsModelStatus::kOptimal)
-    //    highs.writeSolution("", kSolutionStylePretty);
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs.changeColBounds(iCol, lower, upper) == HighsStatus::kOk);
   }
@@ -309,7 +311,11 @@ void testMps(std::string& model, const HighsInt iis_strategy,
   highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(highs.run() == HighsStatus::kOk);
+  if (iis_strategy == kIisStrategyFromRayRowPriority ||
+      iis_strategy == kIisStrategyFromRayColPriority) {
+    // For a ray strategy, solve the LP first
+    REQUIRE(highs.run() == HighsStatus::kOk);
+  }
   highs.setOptionValue("iis_strategy", iis_strategy);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);

@@ -1573,9 +1573,17 @@ HighsStatus Highs::getIisInterface() {
     // detected in presolve, so solve without presolve
     std::string presolve = options_.presolve;
     options_.presolve = kHighsOffString;
-    HighsStatus return_status = this->run();
+
+    HighsIisInfo iis_info;
+    iis_info.simplex_time = -this->getRunTime();
+    iis_info.simplex_iterations = -info_.simplex_iteration_count;
+    HighsStatus run_status = this->run();
     options_.presolve = presolve;
-    if (return_status != HighsStatus::kOk) return return_status;
+    if (run_status != HighsStatus::kOk) return run_status;
+    iis_info.simplex_time += this->getRunTime();
+    iis_info.simplex_iterations += -info_.simplex_iteration_count;
+    this->iis_.info_.push_back(iis_info);
+
     // Model should remain infeasible!
     if (this->model_status_ != HighsModelStatus::kInfeasible) {
       highsLogUser(
@@ -1600,7 +1608,7 @@ HighsStatus Highs::getIisInterface() {
     std::vector<double> rhs;
     HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
     rhs.assign(num_row, 0);
-    rhs[iRow] = 1;  // ekk_instance_.info_.dual_ray_sign_;
+    rhs[iRow] = 1;
     std::vector<double> dual_ray_value(num_row);
     HighsInt* dual_ray_num_nz = 0;
     basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL,
@@ -1622,12 +1630,45 @@ HighsStatus Highs::getIisInterface() {
     assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
     if (return_status != HighsStatus::kOk) return return_status;
   }
-  HighsStatus return_status =
-      this->iis_.getData(lp, options_, basis_, infeasible_row_subset);
-  if (return_status == HighsStatus::kOk) {
-    // Existence of non-empty IIS => infeasibility
-    if (this->iis_.col_index_.size() > 0 || this->iis_.row_index_.size() > 0)
-      this->model_status_ = HighsModelStatus::kInfeasible;
+  HighsStatus return_status = HighsStatus::kOk;
+  if (infeasible_row_subset.size() == 0) {
+    // No subset of infeasible rows, so model is feasible
+    this->iis_.valid_ = true;
+  } else {
+    return_status =
+        this->iis_.getData(lp, options_, basis_, infeasible_row_subset);
+    if (return_status == HighsStatus::kOk) {
+      // Existence of non-empty IIS => infeasibility
+      if (this->iis_.col_index_.size() > 0 || this->iis_.row_index_.size() > 0)
+        this->model_status_ = HighsModelStatus::kInfeasible;
+    }
+    // Analyse the LP solution data
+    const HighsInt num_lp_solved = this->iis_.info_.size();
+    double min_time = kHighsInf;
+    double sum_time = 0;
+    double max_time = 0;
+    HighsInt min_iterations = kHighsIInf;
+    HighsInt sum_iterations = 0;
+    HighsInt max_iterations = 0;
+    for (HighsInt iX = 0; iX < num_lp_solved; iX++) {
+      double time = this->iis_.info_[iX].simplex_time;
+      HighsInt iterations = this->iis_.info_[iX].simplex_iterations;
+      min_time = std::min(time, min_time);
+      sum_time += time;
+      max_time = std::max(time, max_time);
+      min_iterations = std::min(iterations, min_iterations);
+      sum_iterations += iterations;
+      max_iterations = std::max(iterations, max_iterations);
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
+                 " and time (%6.2f / %6.2f / % 6.2f) \n",
+                 int(this->iis_.col_index_.size()),
+                 int(this->iis_.row_index_.size()), int(num_lp_solved),
+                 int(min_iterations),
+                 num_lp_solved > 0 ? (1.0 * sum_iterations) / num_lp_solved : 0,
+                 int(max_iterations), min_time,
+                 num_lp_solved > 0 ? sum_time / num_lp_solved : 0, max_time);
   }
   return return_status;
 }
@@ -1843,15 +1884,31 @@ HighsStatus Highs::computeInfeasibleRows(
     this->writeModel("");
     this->setOptionValue("output_flag", output_flag);
   }
-  run_status = this->run();
-  assert(run_status == HighsStatus::kOk);
+  // Lambda for gathering data when solving an LP
+  auto solveLp = [&]() -> HighsStatus {
+    HighsIisInfo iis_info;
+    iis_info.simplex_time = -this->getRunTime();
+    iis_info.simplex_iterations = -info_.simplex_iteration_count;
+    run_status = this->run();
+    assert(run_status == HighsStatus::kOk);
+    if (run_status != HighsStatus::kOk) return run_status;
+    iis_info.simplex_time += this->getRunTime();
+    iis_info.simplex_iterations += info_.simplex_iteration_count;
+    this->iis_.info_.push_back(iis_info);
+    return run_status;
+  };
+
+  run_status = solveLp();
+  if (run_status != HighsStatus::kOk) return run_status;
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
-  HighsModelStatus model_status = this->getModelStatus();
-  assert(model_status == HighsModelStatus::kOptimal);
+  // Model status should be optimal, unless model is unbounded
+  assert(this->model_status_ == HighsModelStatus::kOptimal ||
+         this->model_status_ == HighsModelStatus::kUnbounded);
 
   const HighsSolution& solution = this->getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
+  bool feasible_model = false;
   for (;;) {
     if (kIisDevReport)
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
@@ -1889,14 +1946,17 @@ HighsStatus Highs::computeInfeasibleRows(
         num_fixed++;
       }
     }
-    assert(num_fixed > 0);
-    run_status = this->run();
-    assert(run_status == HighsStatus::kOk);
+    if (num_fixed == 0) {
+      // No elastic variables were positive, so problem is feasible
+      feasible_model = true;
+      break;
+    }
+    HighsStatus run_status = solveLp();
+    if (run_status != HighsStatus::kOk) return run_status;
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
     loop_k++;
-    if (loop_k > 10) assert(1666 == 1999);
   }
 
   infeasible_row_subset.clear();
@@ -1917,26 +1977,31 @@ HighsStatus Highs::computeInfeasibleRows(
     HighsInt iRow = row_of_ecol[eCol];
     if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
       num_enforced_row_ecol++;
+      infeasible_row_subset.push_back(iRow);
       if (kIisDevReport)
         printf(
             "Row e-col %2d (column %2d) corresponds to    row %2d with bound "
-            "%g "
-            "and is enforced\n",
+            "%g and is enforced\n",
             int(eCol), int(row_ecol_offset + eCol), int(iRow),
             bound_of_row_of_ecol[eCol]);
-      infeasible_row_subset.push_back(iRow);
     }
   }
-  if (kIisDevReport) {
+
+  if (feasible_model)
+    assert(num_enforced_col_ecol == 0 && num_enforced_row_ecol == 0);
+
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo,
+      "Elasticity filter after %d passes enforces bounds on %d cols and %d "
+      "rows\n",
+      int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
+
+  if (kIisDevReport)
     printf(
         "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
         "rows\n",
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
-    printf(
-        "Highs::computeInfeasibleRows: Before clearing additional rows and "
-        "columns - model status is %s\n",
-        this->modelStatusToString(this->model_status_).c_str());
-  }
+
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
   run_status = this->deleteRows(original_num_row, lp.num_row_ - 1);
@@ -1957,11 +2022,9 @@ HighsStatus Highs::computeInfeasibleRows(
   assert(lp.num_col_ == original_num_col);
   assert(lp.num_row_ == original_num_row);
 
-  if (kIisDevReport)
-    printf(
-        "Highs::computeInfeasibleRows: After clearing additional rows and "
-        "columns - model status is %s\n",
-        this->modelStatusToString(this->model_status_).c_str());
+  // If the model is feasible, then the status of model is not known
+  if (feasible_model) this->model_status_ = HighsModelStatus::kNotset;
+
   return HighsStatus::kOk;
 }
 

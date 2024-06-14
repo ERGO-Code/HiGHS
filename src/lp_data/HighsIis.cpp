@@ -12,8 +12,6 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include "lp_data/HighsIis.h"
-
 #include "Highs.h"
 
 void HighsIis::invalidate() {
@@ -23,6 +21,7 @@ void HighsIis::invalidate() {
   this->row_index_.clear();
   this->col_bound_.clear();
   this->row_bound_.clear();
+  this->info_.clear();
 }
 
 std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
@@ -216,7 +215,6 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
 
 HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
                               const HighsBasis* basis) {
-  this->invalidate();
   const HighsLogOptions& log_options = options.log_options;
   const bool row_priority =
       options.iis_strategy == kIisStrategyFromRayRowPriority ||
@@ -225,6 +223,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
+  const HighsInfo& info = highs.getInfo();
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
@@ -239,9 +238,24 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(run_status == HighsStatus::kOk);
   // Solve the LP
   if (basis) highs.setBasis(*basis);
-  run_status = highs.run();
-  assert(run_status == HighsStatus::kOk);
+
+  // Lambda for gathering data when solving an LP
+  auto solveLp = [&]() -> HighsStatus {
+    HighsIisInfo iis_info;
+    iis_info.simplex_time = -highs.getRunTime();
+    iis_info.simplex_iterations = -info.simplex_iteration_count;
+    run_status = highs.run();
+    assert(run_status == HighsStatus::kOk);
+    if (run_status != HighsStatus::kOk) return run_status;
+    iis_info.simplex_time += highs.getRunTime();
+    iis_info.simplex_iterations += info.simplex_iteration_count;
+    this->info_.push_back(iis_info);
+    return run_status;
+  };
+
+  run_status = solveLp();
   if (run_status != HighsStatus::kOk) return run_status;
+
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   const bool use_sensitivity_filter = false;
@@ -252,7 +266,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     //
     highs.setOptionValue("output_flag", true);
     // Solve the LP
-    run_status = highs.run();
+    run_status = solveLp();
+    if (run_status != HighsStatus::kOk) return run_status;
     highs.writeSolution("", kSolutionStylePretty);
     highs.setOptionValue("output_flag", output_flag);
   }
@@ -275,15 +290,15 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
       // Record whether the upper bound has been dropped due to the lower bound
       // being kept
-      bool drop_upper = false;
       if (lower > -kHighsInf) {
         // Drop the lower bound temporarily
         run_status = row_deletion
                          ? highs.changeRowBounds(iX, -kHighsInf, upper)
                          : highs.changeColBounds(iX, -kHighsInf, upper);
         assert(run_status == HighsStatus::kOk);
-        run_status = highs.run();
-        assert(run_status == HighsStatus::kOk);
+        // Solve the LP
+        run_status = solveLp();
+        if (run_status != HighsStatus::kOk) return run_status;
         HighsModelStatus model_status = highs.getModelStatus();
         if (model_status == HighsModelStatus::kOptimal) {
           // Now feasible, so restore the lower bound
@@ -292,18 +307,21 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
           assert(run_status == HighsStatus::kOk);
           // If the lower bound must be kept, then any finite upper bound
           // must be dropped
-          const bool apply_reciprocal_rule = false;
+          const bool apply_reciprocal_rule = true;
           if (apply_reciprocal_rule) {
             if (upper < kHighsInf) {
               // Drop the upper bound permanently
               upper = kHighsInf;
               run_status = row_deletion
-                               ? highs.changeRowBounds(iX, lower, kHighsInf)
+                               ? highs.changeRowBounds(iX, lower, upper)
                                : highs.changeColBounds(iX, lower, upper);
               assert(run_status == HighsStatus::kOk);
-              drop_upper = true;
             }
-            //	    continue;
+            assert(upper >= kHighsInf);
+            // Since upper = kHighsInf, allow the loop to run so that
+            // bound status is set as if upper were set to kHighsInf
+            // by relaxing it and finding that the LP was still
+            // infeasible
           }
         } else {
           // Bound can be dropped permanently
@@ -316,12 +334,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         run_status = row_deletion ? highs.changeRowBounds(iX, lower, kHighsInf)
                                   : highs.changeColBounds(iX, lower, kHighsInf);
         assert(run_status == HighsStatus::kOk);
-        run_status = highs.run();
-        assert(run_status == HighsStatus::kOk);
+        // Solve the LP
+        run_status = solveLp();
+        if (run_status != HighsStatus::kOk) return run_status;
         HighsModelStatus model_status = highs.getModelStatus();
-        // If the upper bound has been dropped due to the reciprical
-        // rule, the LP must be infeasible
-        if (drop_upper) assert(model_status == HighsModelStatus::kInfeasible);
         if (model_status == HighsModelStatus::kOptimal) {
           // Now feasible, so restore the upper bound
           run_status = row_deletion ? highs.changeRowBounds(iX, lower, upper)

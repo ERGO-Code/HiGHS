@@ -27,6 +27,11 @@ enum IisBoundStatus {
   kIisBoundStatusBoxed   // 4
 };
 
+struct HighsIisInfo {
+  double simplex_time = 0;
+  HighsInt simplex_iterations = 0;
+};
+
 class HighsIis {
  public:
   HighsIis() {}
@@ -54,6 +59,7 @@ class HighsIis {
   std::vector<HighsInt> row_index_;
   std::vector<HighsInt> col_bound_;
   std::vector<HighsInt> row_bound_;
+  std::vector<HighsIisInfo> info_;
 };
 
 #endif  // LP_DATA_HIGHSIIS_H_
