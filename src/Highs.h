@@ -37,7 +37,6 @@ HighsInt highsVersionMajor();
 HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
 const char* highsGithash();
-const char* highsCompilationDate();
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -1213,9 +1212,6 @@ class Highs {
 
   // Start of deprecated methods
 
-  /**
-   * @brief Return compilation date
-   */
   std::string compilationDate() const { return "deprecated"; }
 
   HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
@@ -1525,4 +1521,9 @@ class Highs {
                               const double ill_conditioning_bound);
   bool infeasibleBoundsOk();
 };
+
+// Start of deprecated methods not in the Highs class
+
+const char* highsCompilationDate();
+
 #endif
