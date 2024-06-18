@@ -20,14 +20,17 @@ and [classes](@ref classes-overview), and are referred to below.
 
 #### [Enums](@id guide-basic-enums)
 
-Enums are scalar identifier types that can take only a limited range of values.????
+Enums are scalar identifier types that can take only a limited range of values.
 
-#### The
-advantage using these classes is that many fewer parameters are
-needed when passing data to and from HiGHS. However, the use of
-classes is not necessary for the basic use of `highspy`. As with the
-`C` and `Fortran` interfaces, there are equivalent methods that use
-simple scalars and vectors of data.
+#### [Classes](@id guide-basic-classes)
+
+The advantage of using the native `C++` classes in HiGHS is that many fewer parameters are needed
+when passing data to and from HiGHS. The binding of the data members
+of these classes to `highspy` structures allows them to be used when
+calling HiGHS from Python, although they are not necessary for the
+basic use of `highspy`. As with the `C` and `Fortran` interfaces,
+there are equivalent methods that use simple scalars and vectors of
+data.
 
 ## Defining a model
 
