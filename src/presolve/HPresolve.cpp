@@ -1542,9 +1542,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (!rowDeleted[delrow]) removeRow(delrow);
     cliquetable.getDeletedRows().clear();
 
-    // lifting
-    liftingForProbing();
-
     // add nonzeros from clique lifting before removing fixed variables, since
     // this might lead to stronger constraint sides
     auto& extensionvars = cliquetable.getCliqueExtensions();
@@ -1562,6 +1559,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       } else
         val = 1.0;
       addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
+      // modifications to row invalidate lifting opportunities
+      implications.liftingOpportunities.erase(cliqueextension.first);
     }
     extensionvars.clear();
 
@@ -1583,6 +1582,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
+    // lifting
+    liftingForProbing();
+
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
                 " deleted rows, %" HIGHSINT_FORMAT
@@ -1598,6 +1600,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 void HPresolve::liftingForProbing() {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
+  const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // consider lifting opportunities
   for (const HighsHashTableEntry<
@@ -1611,7 +1614,8 @@ void HPresolve::liftingForProbing() {
     std::vector<std::pair<HighsInt, double>> liftopps;
     liftopps.reserve(htree.second);
     htree.first.for_each([&](HighsInt bincol, double value) {
-      liftopps.push_back(std::make_pair(bincol, value));
+      if (!domain.isFixed(std::abs(bincol)))
+        liftopps.push_back(std::make_pair(bincol, value));
     });
     // sort according to absolute values of coefficients
     pdqsort(liftopps.begin(), liftopps.end(),
@@ -1632,7 +1636,7 @@ void HPresolve::liftingForProbing() {
             });
     // find a clique greedily
     std::vector<std::pair<HighsCliqueTable::CliqueVar, double>> clique;
-    clique.reserve(htree.second);
+    clique.reserve(liftopps.size());
     for (const std::pair<HighsInt, double>& opp : liftopps) {
       HighsInt bincol = std::abs(opp.first);
       HighsInt direction = opp.first < 0 ? 0 : 1;
