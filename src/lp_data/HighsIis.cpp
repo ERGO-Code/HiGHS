@@ -227,6 +227,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   highs.setOptionValue("output_flag", kIisDevReport);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
+  const HighsBasis& incumbent_basis = highs.getBasis();
+  const HighsSolution& solution = highs.getSolution();
   HighsStatus run_status = highs.passModel(lp);
   assert(run_status == HighsStatus::kOk);
   if (basis) highs.setBasis(*basis);
@@ -238,6 +240,11 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(run_status == HighsStatus::kOk);
   // Solve the LP
   if (basis) highs.setBasis(*basis);
+  const bool use_sensitivity_filter = false;
+  std::vector<double> primal_phase1_dual;
+  bool row_deletion = false;
+  HighsInt iX = -1;
+  bool drop_lower = false;
 
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
@@ -247,6 +254,64 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     run_status = highs.run();
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;
+    HighsModelStatus model_status = highs.getModelStatus();
+    if (use_sensitivity_filter &&
+        model_status == HighsModelStatus::kInfeasible) {
+      printf("\nHighsIis::compute %s deletion for %d and %s bound\n",
+             row_deletion ? "Row" : "Col", int(iX),
+             drop_lower ? "Lower" : "Upper");
+      bool output_flag;
+      highs.getOptionValue("output_flag", output_flag);
+      highs.setOptionValue("output_flag", true);
+      HighsInt simplex_strategy;
+      highs.getOptionValue("simplex_strategy", simplex_strategy);
+      highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+      // Solve the LP
+      run_status = highs.run();
+      if (run_status != HighsStatus::kOk) return run_status;
+      highs.writeSolution("", kSolutionStylePretty);
+      primal_phase1_dual = highs.getPrimalPhase1Dual();
+      HighsInt num_zero_dual = 0;
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+        const HighsBasisStatus status = incumbent_basis.col_status[iCol];
+        const double dual = primal_phase1_dual[iCol];
+        const double lower = lp.col_lower_[iCol];
+        const double upper = lp.col_upper_[iCol];
+        const double value = solution.col_value[iCol];
+        if (status != HighsBasisStatus::kBasic &&
+            std::fabs(dual) < options.dual_feasibility_tolerance) {
+          num_zero_dual++;
+          // Small dual for nonbasic variable
+          printf(
+              "HighsIis::compute Column %d [%g, %g, %g] with status %s has "
+              "dual %g\n",
+              int(iCol), lower, value, upper,
+              highs.basisStatusToString(status).c_str(), dual);
+          //	  assert(123 == 456);
+        }
+      }
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+        const HighsBasisStatus status = incumbent_basis.row_status[iRow];
+        const double dual = primal_phase1_dual[lp.num_col_ + iRow];
+        const double lower = lp.row_lower_[iRow];
+        const double upper = lp.row_upper_[iRow];
+        const double value = solution.row_value[iRow];
+        if (status != HighsBasisStatus::kBasic &&
+            std::fabs(dual) < options.dual_feasibility_tolerance) {
+          num_zero_dual++;
+          // Small dual for nonbasic variable
+          printf(
+              "HighsIis::compute Row    %d [%g, %g, %g] with status %s has "
+              "dual %g\n",
+              int(iRow), lower, value, upper,
+              highs.basisStatusToString(status).c_str(), dual);
+          //	  assert(123 == 456);
+        }
+      }
+      highs.setOptionValue("output_flag", output_flag);
+      highs.setOptionValue("simplex_strategy", simplex_strategy);
+      assert(!num_zero_dual);
+    }
     iis_info.simplex_time += highs.getRunTime();
     iis_info.simplex_iterations += info.simplex_iteration_count;
     this->info_.push_back(iis_info);
@@ -258,29 +323,14 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   assert(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  const bool use_sensitivity_filter = false;
-  if (use_sensitivity_filter) {
-    bool output_flag;
-    highs.getOptionValue("output_flag", output_flag);
-    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-    //
-    highs.setOptionValue("output_flag", true);
-    // Solve the LP
-    run_status = solveLp();
-    if (run_status != HighsStatus::kOk) return run_status;
-    highs.writeSolution("", kSolutionStylePretty);
-    highs.setOptionValue("output_flag", output_flag);
-  }
-
   // Pass twice: rows before columns, or columns before rows, according to
   // row_priority
   for (HighsInt k = 0; k < 2; k++) {
-    const bool row_deletion =
-        (row_priority && k == 0) || (!row_priority && k == 1);
+    row_deletion = (row_priority && k == 0) || (!row_priority && k == 1);
     std::string type = row_deletion ? "Row" : "Col";
     // Perform deletion pass
     HighsInt num_index = row_deletion ? lp.num_row_ : lp.num_col_;
-    for (HighsInt iX = 0; iX < num_index; iX++) {
+    for (iX = 0; iX < num_index; iX++) {
       const HighsInt ix_status =
           row_deletion ? this->row_bound_[iX] : this->col_bound_[iX];
       if (ix_status == kIisBoundStatusDropped ||
@@ -292,6 +342,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       // being kept
       if (lower > -kHighsInf) {
         // Drop the lower bound temporarily
+        bool drop_lower = true;
         run_status = row_deletion
                          ? highs.changeRowBounds(iX, -kHighsInf, upper)
                          : highs.changeColBounds(iX, -kHighsInf, upper);

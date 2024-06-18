@@ -161,6 +161,8 @@ void HEkk::clearEkkData() {
   this->debug_max_relative_dual_steepest_edge_weight_error = 0;
 
   clearBadBasisChange();
+
+  this->primal_phase1_dual_.clear();
 }
 
 void HEkk::clearEkkDataInfo() {

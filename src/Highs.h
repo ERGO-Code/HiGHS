@@ -1217,6 +1217,14 @@ class Highs {
   HighsStatus getBasisInverseRowSparse(const HighsInt row,
                                        HVector& row_ep_buffer);
 
+  /**
+   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * method: for HiGHS IIS calculation
+   */
+  const std::vector<double>& getPrimalPhase1Dual() const {
+    return ekk_instance_.primal_phase1_dual_;
+  }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
