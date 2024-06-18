@@ -1453,6 +1453,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
+    implications.liftingOpportunities.clear();
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
@@ -1526,6 +1527,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // "\n", nprobed,
       //       cliquetable.numCliques());
       if (domain.infeasible()) {
+        implications.liftingOpportunities.clear();
         return Result::kPrimalInfeasible;
       }
     }

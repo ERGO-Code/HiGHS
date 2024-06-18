@@ -17,11 +17,13 @@
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
+  globaldomain.redundant_rows_.clear();
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) {
     globaldomain.redundant_rows_.clear();
     return true;
   }
+
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   HighsInt changedend = globaldomain.getChangedCols().size();
