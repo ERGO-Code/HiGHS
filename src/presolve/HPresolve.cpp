@@ -1614,7 +1614,9 @@ void HPresolve::liftingForProbing() {
     std::vector<std::pair<HighsInt, double>> liftopps;
     liftopps.reserve(htree.second);
     htree.first.for_each([&](HighsInt bincol, double value) {
-      if (!domain.isFixed(std::abs(bincol)))
+      HighsInt col = std::abs(bincol);
+      if (!colDeleted[col] && !domain.isFixed(col) &&
+          findNonzero(row, col) == -1)
         liftopps.push_back(std::make_pair(bincol, value));
     });
     // sort according to absolute values of coefficients
