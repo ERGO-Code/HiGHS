@@ -398,10 +398,12 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
   if (style == kSolutionStyleOldRaw) {
     writeOldRawSolution(file, lp, basis, solution);
   } else if (style == kSolutionStylePretty) {
-    writeModelBoundSolution(
-        file, true, lp.num_col_, lp.col_lower_, lp.col_upper_, lp.col_names_,
-        have_primal, solution.col_value, have_dual, solution.col_dual,
-        have_basis, basis.col_status, lp.integrality_.data());
+    const HighsVarType* integrality =
+        lp.integrality_.size() > 0 ? lp.integrality_.data() : nullptr;
+    writeModelBoundSolution(file, true, lp.num_col_, lp.col_lower_,
+                            lp.col_upper_, lp.col_names_, have_primal,
+                            solution.col_value, have_dual, solution.col_dual,
+                            have_basis, basis.col_status, integrality);
     writeModelBoundSolution(file, false, lp.num_row_, lp.row_lower_,
                             lp.row_upper_, lp.row_names_, have_primal,
                             solution.row_value, have_dual, solution.row_dual,
