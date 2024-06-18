@@ -1655,12 +1655,19 @@ void HPresolve::liftingForProbing() {
         clique.emplace_back(candidate, opp.second);
       }
     }
-    // add to matrix
+    // update matrix
     HighsCDouble update = 0.0;
     for (const std::pair<HighsCliqueTable::CliqueVar, double>& var : clique) {
+      // add non-zero to matrix
+      addToMatrix(row, var.first.col, var.second);
       // compute term to update left-hand / right-hand side
       if (var.first.val == 0) update += var.second;
     }
+    // update left-hand / right-hand sides
+    if (model->row_lower_[row] != -kHighsInf)
+      model->row_lower_[row] += static_cast<double>(update);
+    if (model->row_upper_[row] != kHighsInf)
+      model->row_upper_[row] += static_cast<double>(update);
   }
   // clear lifting opportunities
   implications.liftingOpportunities.clear();

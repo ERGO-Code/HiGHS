@@ -18,7 +18,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
-  if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
+  if (globaldomain.infeasible() || globaldomain.isFixed(col)) {
+    globaldomain.redundant_rows_.clear();
+    return true;
+  }
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
   HighsInt changedend = globaldomain.getChangedCols().size();
@@ -30,24 +33,20 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
-  if (globaldomain.infeasible()) {
+  auto isInfeasible = [&]() {
+    if (!globaldomain.infeasible()) return false;
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
-
+    globaldomain.redundant_rows_.clear();
     return true;
-  }
+  };
+
+  if (isInfeasible()) return true;
 
   globaldomain.propagate();
 
-  if (globaldomain.infeasible()) {
-    globaldomain.backtrack();
-    globaldomain.clearChangedCols(changedend);
-
-    cliquetable.vertexInfeasible(globaldomain, col, val);
-
-    return true;
-  }
+  if (isInfeasible()) return true;
 
   // store lifting opportunities
   for (const HighsHashTableEntry<HighsInt, double>& elm :
