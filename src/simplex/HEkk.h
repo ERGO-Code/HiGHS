@@ -38,7 +38,7 @@ class HEkk {
         iteration_count_(0),
         dual_simplex_cleanup_level_(0),
         dual_simplex_phase1_cleanup_level_(0),
-        previous_iteration_cycling_detected(-kHighsInf),
+        previous_iteration_cycling_detected(-kHighsIInf),
         solve_bailout_(false),
         called_return_from_solve_(false),
         exit_algorithm_(SimplexAlgorithm::kNone),
