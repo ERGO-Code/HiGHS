@@ -58,7 +58,133 @@ const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis() {}
+  HighsSimplexAnalysis()
+      : timer_(nullptr),
+        pointer_serial_factor_clocks(nullptr),
+        numRow(0),
+        numCol(0),
+        numTot(0),
+        model_name_(""),
+        lp_name_(""),
+        analyse_lp_data(false),
+        analyse_simplex_summary_data(false),
+        analyse_simplex_runtime_data(false),
+        analyse_simplex_time(false),
+        analyse_factor_data(false),
+        analyse_factor_time(false),
+        analyse_simplex_data(false),
+        simplex_strategy(0),
+        edge_weight_mode(EdgeWeightMode::kSteepestEdge),
+        solve_phase(0),
+        simplex_iteration_count(0),
+        devex_iteration_count(0),
+        pivotal_row_index(0),
+        leaving_variable(0),
+        entering_variable(0),
+        rebuild_reason(0),
+        rebuild_reason_string(""),
+        reduced_rhs_value(0.0),
+        reduced_cost_value(0.0),
+        edge_weight(0.0),
+        edge_weight_error(0.0),
+        primal_delta(0.0),
+        primal_step(0.0),
+        dual_step(0.0),
+        pivot_value_from_column(0.0),
+        pivot_value_from_row(0.0),
+        factor_pivot_threshold(0.0),
+        numerical_trouble(0.0),
+        objective_value(0.0),
+        num_primal_infeasibility(0),
+        num_dual_infeasibility(0),
+        sum_primal_infeasibility(0.0),
+        sum_dual_infeasibility(0.0),
+        num_dual_phase_1_lp_dual_infeasibility(0),
+        max_dual_phase_1_lp_dual_infeasibility(0.0),
+        sum_dual_phase_1_lp_dual_infeasibility(0.0),
+        num_devex_framework(0),
+        col_aq_density(0.0),
+        row_ep_density(0.0),
+        row_ap_density(0.0),
+        row_DSE_density(0.0),
+        col_steepest_edge_density(0.0),
+        col_basic_feasibility_change_density(0.0),
+        row_basic_feasibility_change_density(0.0),
+        col_BFRT_density(0.0),
+        primal_col_density(0.0),
+        dual_col_density(0.0),
+        num_costly_DSE_iteration(0),
+        costly_DSE_measure(0.0),
+        multi_iteration_count(0),
+        multi_chosen(0),
+        multi_finished(0),
+        min_concurrency(0),
+        num_concurrency(0),
+        max_concurrency(0),
+        num_col_price(0),
+        num_row_price(0),
+        num_row_price_with_switch(0),
+        num_primal_cycling_detections(0),
+        num_dual_cycling_detections(0),
+        num_quad_chuzc(0),
+        num_heap_chuzc(0),
+        sum_quad_chuzc_size(0.0),
+        sum_heap_chuzc_size(0.0),
+        max_quad_chuzc_size(0),
+        max_heap_chuzc_size(0),
+        num_improve_choose_column_row_call(0),
+        num_remove_pivot_from_pack(0),
+        num_correct_dual_primal_flip(0),
+        min_correct_dual_primal_flip_dual_infeasibility(kHighsInf),
+        max_correct_dual_primal_flip(0.0),
+        num_correct_dual_cost_shift(0),
+        max_correct_dual_cost_shift_dual_infeasibility(0.0),
+        max_correct_dual_cost_shift(0.0),
+        net_num_single_cost_shift(0),
+        num_single_cost_shift(0),
+        max_single_cost_shift(0.0),
+        sum_single_cost_shift(0.0),
+        num_dual_steepest_edge_weight_check(0),
+        num_dual_steepest_edge_weight_reject(0),
+        num_wrong_low_dual_steepest_edge_weight(0),
+        num_wrong_high_dual_steepest_edge_weight(0),
+        average_frequency_low_dual_steepest_edge_weight(0.0),
+        average_frequency_high_dual_steepest_edge_weight(0.0),
+        average_log_low_dual_steepest_edge_weight_error(0.0),
+        average_log_high_dual_steepest_edge_weight_error(0.0),
+        max_average_frequency_low_dual_steepest_edge_weight(0.0),
+        max_average_frequency_high_dual_steepest_edge_weight(0.0),
+        max_sum_average_frequency_extreme_dual_steepest_edge_weight(0.0),
+        max_average_log_low_dual_steepest_edge_weight_error(0.0),
+        max_average_log_high_dual_steepest_edge_weight_error(0.0),
+        max_sum_average_log_extreme_dual_steepest_edge_weight_error(0.0),
+        num_invert_report_since_last_header(-1),
+        num_iteration_report_since_last_header(-1),
+        last_user_log_time(-kHighsInf),
+        delta_user_log_time(1e0),
+        average_concurrency(0.0),
+        average_fraction_of_possible_minor_iterations_performed(0.0),
+        sum_multi_chosen(0),
+        sum_multi_finished(0),
+        num_invert(0),
+        num_kernel(0),
+        num_major_kernel(0),
+        max_kernel_dim(0.0),
+        sum_kernel_dim(0.0),
+        running_average_kernel_dim(0.0),
+        sum_invert_fill_factor(0.0),
+        sum_kernel_fill_factor(0.0),
+        sum_major_kernel_fill_factor(0.0),
+        running_average_invert_fill_factor(1.0),
+        running_average_kernel_fill_factor(1.0),
+        running_average_major_kernel_fill_factor(1.0),
+        AnIterIt0(0),
+        AnIterPrevIt(0),
+        AnIterTraceNumRec(0),
+        AnIterTraceIterDl(0),
+        AnIterNumInvert{},
+        AnIterNumEdWtIt{} {}
+
   // Pointer to timer
   HighsTimer* timer_;
 
@@ -162,38 +288,38 @@ class HighsSimplexAnalysis {
   //  double dual_steepest_edge_weight_log_error_threshold;
 
   // Local copies of simplex data for reporting
-  HighsInt simplex_strategy = 0;
-  EdgeWeightMode edge_weight_mode = EdgeWeightMode::kSteepestEdge;
-  HighsInt solve_phase = 0;
-  HighsInt simplex_iteration_count = 0;
-  HighsInt devex_iteration_count = 0;
-  HighsInt pivotal_row_index = 0;
-  HighsInt leaving_variable = 0;
-  HighsInt entering_variable = 0;
-  HighsInt rebuild_reason = 0;
-  std::string rebuild_reason_string = "";
-  double reduced_rhs_value = 0;
-  double reduced_cost_value = 0;
-  double edge_weight = 0;
-  double edge_weight_error = 0;
-  double primal_delta = 0;
-  double primal_step = 0;
-  double dual_step = 0;
-  double pivot_value_from_column = 0;
-  double pivot_value_from_row = 0;
-  double factor_pivot_threshold = 0;
-  double numerical_trouble = 0;
-  double objective_value = 0;
-  HighsInt num_primal_infeasibility = 0;
-  HighsInt num_dual_infeasibility = 0;
-  double sum_primal_infeasibility = 0;
-  double sum_dual_infeasibility = 0;
+  HighsInt simplex_strategy;
+  EdgeWeightMode edge_weight_mode;
+  HighsInt solve_phase;
+  HighsInt simplex_iteration_count;
+  HighsInt devex_iteration_count;
+  HighsInt pivotal_row_index;
+  HighsInt leaving_variable;
+  HighsInt entering_variable;
+  HighsInt rebuild_reason;
+  std::string rebuild_reason_string;
+  double reduced_rhs_value;
+  double reduced_cost_value;
+  double edge_weight;
+  double edge_weight_error;
+  double primal_delta;
+  double primal_step;
+  double dual_step;
+  double pivot_value_from_column;
+  double pivot_value_from_row;
+  double factor_pivot_threshold;
+  double numerical_trouble;
+  double objective_value;
+  HighsInt num_primal_infeasibility;
+  HighsInt num_dual_infeasibility;
+  double sum_primal_infeasibility;
+  double sum_dual_infeasibility;
   // This triple is an original infeasibility record, so it includes max,
   // but it's only used for reporting
-  HighsInt num_dual_phase_1_lp_dual_infeasibility = 0;
-  double max_dual_phase_1_lp_dual_infeasibility = 0;
-  double sum_dual_phase_1_lp_dual_infeasibility = 0;
-  HighsInt num_devex_framework = 0;
+  HighsInt num_dual_phase_1_lp_dual_infeasibility;
+  double max_dual_phase_1_lp_dual_infeasibility;
+  double sum_dual_phase_1_lp_dual_infeasibility;
+  HighsInt num_devex_framework;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
@@ -208,21 +334,21 @@ class HighsSimplexAnalysis {
   double costly_DSE_measure;
 
   // Local copies of parallel simplex data for reporting
-  HighsInt multi_iteration_count = 0;
-  HighsInt multi_chosen = 0;
-  HighsInt multi_finished = 0;
-  HighsInt min_concurrency = 0;
-  HighsInt num_concurrency = 0;
-  HighsInt max_concurrency = 0;
+  HighsInt multi_iteration_count;
+  HighsInt multi_chosen;
+  HighsInt multi_finished;
+  HighsInt min_concurrency;
+  HighsInt num_concurrency;
+  HighsInt max_concurrency;
 
   // Unused
   //  HighsInt multi_num = 0; // Useless
   //  double basis_condition = 0; // Maybe useful
 
   // Records of how pivotal row PRICE was done
-  HighsInt num_col_price = 0;
-  HighsInt num_row_price = 0;
-  HighsInt num_row_price_with_switch = 0;
+  HighsInt num_col_price;
+  HighsInt num_row_price;
+  HighsInt num_row_price_with_switch;
 
   HighsValueDistribution before_ftran_upper_sparse_density;
   HighsValueDistribution ftran_upper_sparse_density;
@@ -235,29 +361,29 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
 
-  HighsInt num_primal_cycling_detections = 0;
-  HighsInt num_dual_cycling_detections = 0;
+  HighsInt num_primal_cycling_detections;
+  HighsInt num_dual_cycling_detections;
 
-  HighsInt num_quad_chuzc = 0;
-  HighsInt num_heap_chuzc = 0;
-  double sum_quad_chuzc_size = 0;
-  double sum_heap_chuzc_size = 0;
-  HighsInt max_quad_chuzc_size = 0;
-  HighsInt max_heap_chuzc_size = 0;
+  HighsInt num_quad_chuzc;
+  HighsInt num_heap_chuzc;
+  double sum_quad_chuzc_size;
+  double sum_heap_chuzc_size;
+  HighsInt max_quad_chuzc_size;
+  HighsInt max_heap_chuzc_size;
 
-  HighsInt num_improve_choose_column_row_call = 0;
-  HighsInt num_remove_pivot_from_pack = 0;
+  HighsInt num_improve_choose_column_row_call;
+  HighsInt num_remove_pivot_from_pack;
 
-  HighsInt num_correct_dual_primal_flip = 0;
-  double min_correct_dual_primal_flip_dual_infeasibility = kHighsInf;
-  double max_correct_dual_primal_flip = 0;
-  HighsInt num_correct_dual_cost_shift = 0;
-  double max_correct_dual_cost_shift_dual_infeasibility = 0;
-  double max_correct_dual_cost_shift = 0;
-  HighsInt net_num_single_cost_shift = 0;
-  HighsInt num_single_cost_shift = 0;
-  double max_single_cost_shift = 0;
-  double sum_single_cost_shift = 0;
+  HighsInt num_correct_dual_primal_flip;
+  double min_correct_dual_primal_flip_dual_infeasibility;
+  double max_correct_dual_primal_flip;
+  HighsInt num_correct_dual_cost_shift;
+  double max_correct_dual_cost_shift_dual_infeasibility;
+  double max_correct_dual_cost_shift;
+  HighsInt net_num_single_cost_shift;
+  HighsInt num_single_cost_shift;
+  double max_single_cost_shift;
+  double sum_single_cost_shift;
 
   // Tolerances for analysis of TRAN stages - could be needed for
   // control if this is ever used again!
@@ -290,46 +416,46 @@ class HighsSimplexAnalysis {
   //  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
   //  double AnIterCostlyDseMeasure;
 
-  HighsInt num_dual_steepest_edge_weight_check = 0;
-  HighsInt num_dual_steepest_edge_weight_reject = 0;
-  HighsInt num_wrong_low_dual_steepest_edge_weight = 0;
-  HighsInt num_wrong_high_dual_steepest_edge_weight = 0;
-  double average_frequency_low_dual_steepest_edge_weight = 0;
-  double average_frequency_high_dual_steepest_edge_weight = 0;
-  double average_log_low_dual_steepest_edge_weight_error = 0;
-  double average_log_high_dual_steepest_edge_weight_error = 0;
-  double max_average_frequency_low_dual_steepest_edge_weight = 0;
-  double max_average_frequency_high_dual_steepest_edge_weight = 0;
-  double max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
-  double max_average_log_low_dual_steepest_edge_weight_error = 0;
-  double max_average_log_high_dual_steepest_edge_weight_error = 0;
-  double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
+  HighsInt num_dual_steepest_edge_weight_check;
+  HighsInt num_dual_steepest_edge_weight_reject;
+  HighsInt num_wrong_low_dual_steepest_edge_weight;
+  HighsInt num_wrong_high_dual_steepest_edge_weight;
+  double average_frequency_low_dual_steepest_edge_weight;
+  double average_frequency_high_dual_steepest_edge_weight;
+  double average_log_low_dual_steepest_edge_weight_error;
+  double average_log_high_dual_steepest_edge_weight_error;
+  double max_average_frequency_low_dual_steepest_edge_weight;
+  double max_average_frequency_high_dual_steepest_edge_weight;
+  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
+  double max_average_log_low_dual_steepest_edge_weight_error;
+  double max_average_log_high_dual_steepest_edge_weight_error;
+  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
 
-  HighsInt num_invert_report_since_last_header = -1;
-  HighsInt num_iteration_report_since_last_header = -1;
-  double last_user_log_time = -kHighsInf;
-  double delta_user_log_time = 1e0;
+  HighsInt num_invert_report_since_last_header;
+  HighsInt num_iteration_report_since_last_header;
+  double last_user_log_time;
+  double delta_user_log_time;
 
   double average_concurrency;
   double average_fraction_of_possible_minor_iterations_performed;
-  HighsInt sum_multi_chosen = 0;
-  HighsInt sum_multi_finished = 0;
+  HighsInt sum_multi_chosen;
+  HighsInt sum_multi_finished;
 
   // Analysis of INVERT form
-  HighsInt num_invert = 0;
-  HighsInt num_kernel = 0;
-  HighsInt num_major_kernel = 0;
-  double max_kernel_dim = 0;
-  double sum_kernel_dim = 0;
-  double running_average_kernel_dim = 0;
-  double sum_invert_fill_factor = 0;
-  double sum_kernel_fill_factor = 0;
-  double sum_major_kernel_fill_factor = 0;
-  double running_average_invert_fill_factor = 1;
-  double running_average_kernel_fill_factor = 1;
-  double running_average_major_kernel_fill_factor = 1;
+  HighsInt num_invert;
+  HighsInt num_kernel;
+  HighsInt num_major_kernel;
+  double max_kernel_dim;
+  double sum_kernel_dim;
+  double running_average_kernel_dim;
+  double sum_invert_fill_factor;
+  double sum_kernel_fill_factor;
+  double sum_major_kernel_fill_factor;
+  double running_average_invert_fill_factor;
+  double running_average_kernel_fill_factor;
+  double running_average_major_kernel_fill_factor;
 
-  HighsInt AnIterIt0 = 0;
+  HighsInt AnIterIt0;
   HighsInt AnIterPrevIt;
 
   // Major operation analysis struct
