@@ -341,3 +341,15 @@
 - Range: [1e-12, inf]
 - Default: 0.0001
 
+## qp\_iteration\_limit
+- Iteration limit for QP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 2147483647
+
+## qp\_nullspace\_limit
+- Nullspace limit for QP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 4000
+
