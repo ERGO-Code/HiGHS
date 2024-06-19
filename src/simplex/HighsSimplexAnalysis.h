@@ -182,6 +182,7 @@ class HighsSimplexAnalysis {
         AnIterPrevIt(0),
         AnIterTraceNumRec(0),
         AnIterTraceIterDl(0),
+        AnIterTrace{},
         AnIterNumInvert{},
         AnIterNumEdWtIt{} {}
 
