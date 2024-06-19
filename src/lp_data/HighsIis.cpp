@@ -178,6 +178,8 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
   HighsLp to_lp;
   to_lp.num_col_ = to_num_col;
   to_lp.num_row_ = to_num_row;
+  to_lp.a_matrix_.num_col_ = to_lp.num_col_;
+  to_lp.a_matrix_.num_row_ = to_lp.num_row_;
   const bool has_col_names = lp.col_names_.size() > 0;
   for (HighsInt iCol = 0; iCol < to_num_col; iCol++) {
     to_lp.col_cost_.push_back(0);
@@ -240,7 +242,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(run_status == HighsStatus::kOk);
   // Solve the LP
   if (basis) highs.setBasis(*basis);
-  const bool use_sensitivity_filter = false;
+  const bool use_sensitivity_filter = true;
   std::vector<double> primal_phase1_dual;
   bool row_deletion = false;
   HighsInt iX = -1;
@@ -270,6 +272,32 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       run_status = highs.run();
       if (run_status != HighsStatus::kOk) return run_status;
       highs.writeSolution("", kSolutionStylePretty);
+      const HighsInt* basic_index = highs.getBasicVariablesArray();
+      std::vector<double> rhs;
+      rhs.assign(lp.num_row_, 0);
+      // Get duals for nonbasic rows, and initialise duals so that basic duals are zero
+      assert(101==202);
+
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+	HighsInt iVar = basic_index[iRow];
+        const double lower = iVar < lp.num_col_ ? lp.col_lower_[iVar] : lp.row_lower_[iVar-lp.num_col_];
+        const double upper = iVar < lp.num_col_ ? lp.col_upper_[iVar] : lp.row_upper_[iVar-lp.num_col_];
+        const double value = iVar < lp.num_col_ ? solution.col_value[iVar] : solution.row_value[iVar-lp.num_col_];
+	if (value < lower - options.primal_feasibility_tolerance) {
+	  rhs[iRow] = -1;
+	} else if (value > upper + options.primal_feasibility_tolerance) {
+	  rhs[iRow] = 1;
+	}
+      }
+      HVector pi;
+      pi.setup(lp.num_row_);
+      highs.getBasisTransposeSolve(rhs.data(), &pi.array[0], NULL, NULL);
+      pi.count = lp.num_row_;
+      std::vector<double> reduced_costs_value;
+      std::vector<HighsInt> reduced_costs_index;
+      lp.a_matrix_.productTransposeQuad(reduced_costs_value, reduced_costs_index, pi);
+      
+      
       primal_phase1_dual = highs.getPrimalPhase1Dual();
       HighsInt num_zero_dual = 0;
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
