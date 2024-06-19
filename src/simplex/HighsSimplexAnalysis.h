@@ -180,6 +180,7 @@ class HighsSimplexAnalysis {
         running_average_major_kernel_fill_factor(1.0),
         AnIterIt0(0),
         AnIterPrevIt(0),
+        AnIterOp{},
         AnIterTraceNumRec(0),
         AnIterTraceIterDl(0),
         AnIterTrace{},

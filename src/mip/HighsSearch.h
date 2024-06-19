@@ -96,6 +96,7 @@ class HighsSearch {
              std::shared_ptr<const StabilizerOrbits> stabilizerOrbits = nullptr)
         : lower_bound(parentlb),
           estimate(parentestimate),
+          branching_point(0.0),
           lp_objective(-kHighsInf),
           other_child_lb(parentlb),
           nodeBasis(std::move(parentBasis)),
