@@ -186,7 +186,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     alt_workCount = workCount;
   }
   analysis->simplexTimerStart(Chuzc4Clock);
-  bool choose_ok;
+  bool choose_ok = false;
   if (use_quad_sort) {
     // Use the O(n^2) quadratic sort for the candidates
     analysis->simplexTimerStart(Chuzc4a0Clock);
