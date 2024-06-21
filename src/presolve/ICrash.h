@@ -85,7 +85,13 @@ struct Quadratic {
   double mu;
   std::vector<double> lambda;
 
-  Quadratic(HighsLp lp_, ICrashOptions options_) : lp(lp_), options(options_) {}
+  Quadratic(HighsLp lp_, ICrashOptions options_)
+      : lp(lp_),
+        options(options_),
+        lp_objective(0.0),
+        quadratic_objective(0.0),
+        residual_norm_2(0.0),
+        mu(0.0) {}
 };
 
 // Functions: Call.
