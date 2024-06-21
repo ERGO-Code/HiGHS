@@ -212,10 +212,10 @@ HighsInt HEkkDualRow::chooseFinal() {
 
   // 3. Choose large alpha
   analysis->simplexTimerStart(Chuzc4bClock);
-  HighsInt breakIndex;
-  HighsInt breakGroup;
-  HighsInt alt_breakIndex;
-  HighsInt alt_breakGroup;
+  HighsInt breakIndex = -1;
+  HighsInt breakGroup = -1;
+  HighsInt alt_breakIndex = -1;
+  HighsInt alt_breakGroup = -1;
   if (use_quad_sort)
     chooseFinalLargeAlpha(breakIndex, breakGroup, workCount, workData,
                           workGroup);

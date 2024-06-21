@@ -189,7 +189,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
   if (data.stop()) return;
 
   double pivweight = -1.0;
-  CliqueVar pivot;
+  CliqueVar pivot{0, 0};
 
   for (HighsInt i = 0; i != Xlen; ++i) {
     if (X[i].weight(data.sol) > pivweight) {
