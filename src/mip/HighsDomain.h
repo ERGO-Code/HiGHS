@@ -358,7 +358,7 @@ class HighsDomain {
         conflictPoolPropagation(other.conflictPoolPropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
-        infeasible_pos(0),
+        infeasible_pos(other.infeasible_pos),
         colLowerPos_(other.colLowerPos_),
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
