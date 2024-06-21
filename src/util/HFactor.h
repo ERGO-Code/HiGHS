@@ -333,10 +333,10 @@ class HFactor {
   RefactorInfo refactor_info_;
 
   // Properties of data held in HFactor.h
-  HighsInt basis_matrix_num_el = 0;
-  HighsInt invert_num_el = 0;
-  HighsInt kernel_dim = 0;
-  HighsInt kernel_num_el = 0;
+  HighsInt basis_matrix_num_el;
+  HighsInt invert_num_el;
+  HighsInt kernel_dim;
+  HighsInt kernel_num_el;
 
   /**
    * Data of the factor
@@ -368,7 +368,7 @@ class HFactor {
   HighsLogOptions log_options;
 
   bool use_original_HFactor_logic;
-  bool debug_report_ = false;
+  bool debug_report_;
   HighsInt basis_matrix_limit_size;
   HighsInt update_method;
 
