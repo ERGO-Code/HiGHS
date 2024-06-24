@@ -2021,8 +2021,9 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
           std::remove_if(clique.begin(), clique.end(),
                          [&](CliqueVar v) {
                            return globaldomain.isFixed(v.col) &&
-                                  int(globaldomain.col_lower_[v.col]) ==
-                                      (1 - v.val);
+                                  static_cast<int>(
+                                      globaldomain.col_lower_[v.col]) ==
+                                      static_cast<int>(1 - v.val);
                          }),
           clique.end());
     }
@@ -2190,8 +2191,9 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
             std::remove_if(extensionvars.begin(), extensionvars.end(),
                            [&](CliqueVar v) {
                              return globaldomain.isFixed(v.col) &&
-                                    int(globaldomain.col_lower_[v.col]) ==
-                                        (1 - v.val);
+                                    static_cast<int>(
+                                        globaldomain.col_lower_[v.col]) ==
+                                        static_cast<int>(1 - v.val);
                            }),
             extensionvars.end());
 
