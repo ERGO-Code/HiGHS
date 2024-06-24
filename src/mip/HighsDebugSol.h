@@ -88,54 +88,47 @@ struct HighsDebugSol {
 
 #else
 struct HighsDebugSol {
-  HighsDebugSol(HighsMipSolver& mipsolver) {}
+  HighsDebugSol(HighsMipSolver&) {}
 
   void newIncumbentFound() const {}
 
   void activate() const {}
 
-  void shrink(const std::vector<HighsInt>& newColIndex) const {}
+  void shrink(const std::vector<HighsInt>&) const {}
 
-  void registerDomain(const HighsDomain& domain) const {}
+  void registerDomain(const HighsDomain&) const {}
 
-  void boundChangeAdded(const HighsDomain& domain,
-                        const HighsDomainChange& domchg,
-                        bool branching = false) const {}
+  void boundChangeAdded(const HighsDomain&, const HighsDomainChange&,
+                        bool = false) const {}
 
-  void boundChangeRemoved(const HighsDomain& domain,
-                          const HighsDomainChange& domchg) const {}
+  void boundChangeRemoved(const HighsDomain&, const HighsDomainChange&) const {}
 
-  void resetDomain(const HighsDomain& domain) const {}
+  void resetDomain(const HighsDomain&) const {}
 
-  void nodePruned(const HighsDomain& localdomain) const {}
+  void nodePruned(const HighsDomain&) const {}
 
-  void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                double rhs) const {}
+  void checkCut(const HighsInt*, const double*, HighsInt, double) const {}
 
-  void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                double Rlower, double Rupper) const {}
+  void checkRow(const HighsInt*, const double*, HighsInt, double,
+                double) const {}
 
-  void checkRowAggregation(const HighsLp& lp, const HighsInt* Rindex,
-                           const double* Rvalue, HighsInt Rlen) const {}
+  void checkRowAggregation(const HighsLp&, const HighsInt*, const double*,
+                           HighsInt) const {}
 
-  void checkClique(const HighsCliqueTable::CliqueVar* clq,
-                   HighsInt clqlen) const {}
+  void checkClique(const HighsCliqueTable::CliqueVar*, HighsInt) const {}
 
-  void checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
-                double vubconstant) const {}
+  void checkVub(HighsInt, HighsInt, double, double) const {}
 
-  void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
-                double vlbconstant) const {}
+  void checkVlb(HighsInt, HighsInt, double, double) const {}
 
   void checkConflictReasonFrontier(
-      const std::set<HighsDomain::ConflictSet::LocalDomChg>& reasonSideFrontier,
-      const std::vector<HighsDomainChange>& domchgstack) const {}
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&,
+      const std::vector<HighsDomainChange>&) const {}
 
   void checkConflictReconvergenceFrontier(
-      const std::set<HighsDomain::ConflictSet::LocalDomChg>&
-          reconvergenceFrontier,
-      const HighsDomain::ConflictSet::LocalDomChg& reconvDomchgPos,
-      const std::vector<HighsDomainChange>& domchgstack) const {}
+      const std::set<HighsDomain::ConflictSet::LocalDomChg>&,
+      const HighsDomain::ConflictSet::LocalDomChg&,
+      const std::vector<HighsDomainChange>&) const {}
 };
 #endif
 
