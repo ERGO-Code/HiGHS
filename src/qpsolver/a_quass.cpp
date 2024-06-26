@@ -157,7 +157,7 @@ QpAsmStatus solveqp(Instance& instance,
   } 
 
   // solve
-  QpAsmStatus status = solveqp_actual(instance, settings, startinfo, stats, qp_model_status, qp_solution, qp_timer);
+  solveqp_actual(instance, settings, startinfo, stats, qp_model_status, qp_solution, qp_timer);
 
   // undo perturbation and resolve
 

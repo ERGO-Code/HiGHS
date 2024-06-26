@@ -697,7 +697,7 @@ void HEkkPrimal::rebuild() {
   // basic variables, and baseValue only corresponds to the new
   // ordering once computePrimal has been called
   const bool check_updated_objective_value = status.has_primal_objective_value;
-  double previous_primal_objective_value;
+  double previous_primal_objective_value = -kHighsInf;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "Before INVERT");

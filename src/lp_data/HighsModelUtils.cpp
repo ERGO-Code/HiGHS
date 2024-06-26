@@ -319,8 +319,8 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options,
                         const std::vector<std::string>& names) {
   HighsInt num_names_with_spaces = 0;
   for (HighsInt ix = 0; ix < num_name; ix++) {
-    HighsInt space_pos = names[ix].find(" ");
-    if (space_pos >= 0) {
+    size_t space_pos = names[ix].find(" ");
+    if (space_pos != std::string::npos) {
       if (num_names_with_spaces == 0) {
         highsLogDev(
             log_options, HighsLogType::kInfo,
