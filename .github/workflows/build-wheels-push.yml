@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU # Required for aarch64 builds
-        if: matrix.buildplat == [ubuntu-20.04, manylinux_aarch64] || matrix.buildplat == [ubuntu-20.04, musllinux_aarch64]
+        if: matrix.buildplat[1] == 'manylinux_aarch64' || matrix.buildplat[1] == 'musllinux_aarch64'
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
