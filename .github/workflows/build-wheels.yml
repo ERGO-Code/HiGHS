@@ -21,8 +21,10 @@ jobs:
         buildplat:
           - [ubuntu-20.04, manylinux_x86_64]
           - [ubuntu-20.04, manylinux_i686]
+          - [ubuntu-20.04, manylinux_aarch64]
           - [ubuntu-20.04, musllinux_x86_64] # No OpenBlas, no test
           - [ubuntu-20.04, musllinux_i686]
+          - [ubuntu-20.04, musllinux_aarch64]
           - [macos-12, macosx_x86_64]
           - [macos-14, macosx_arm64]
           - [windows-2019, win_amd64]
@@ -31,6 +33,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Set up QEMU # Required for aarch64 builds
+        if: matrix.buildplat == [ubuntu-20.04, manylinux_aarch64] || matrix.buildplat == [ubuntu-20.04, musllinux_aarch64]
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19
         env:
