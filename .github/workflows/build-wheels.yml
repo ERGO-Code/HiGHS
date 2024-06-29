@@ -38,17 +38,11 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
-      - name: Build wheels (aarch64)
-        if: ${{ contains(matrix.buildplat[1], 'aarch64') }}
+      - name: Build wheels
         uses: pypa/cibuildwheel@v2.19
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          CIBW_ARCHS_LINUX: aarch64
-      - name: Build wheels (not aarch64)
-        if: ${{ !contains(matrix.buildplat[1], 'aarch64') }}
-        uses: pypa/cibuildwheel@v2.19
-        env:
-          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
+          CIBW_ARCHS_LINUX: ${{ contains(matrix.buildplat[1], 'aarch64') && 'aarch64' || '' }}
 
   build_sdist:
     name: Build source distribution
