@@ -32,7 +32,7 @@ class HighsCDouble {
   // Proceedings of. 2005.
 
   /// performs an exact transformation such that x + y = a + b
-  /// and x = double(a + b). The operation uses 6 flops (addition/substraction).
+  /// and x = double(a + b). The operation uses 6 flops (addition/subtraction).
   static void two_sum(double& x, double& y, double a, double b) {
     x = a + b;
     double z = x - a;
@@ -50,7 +50,7 @@ class HighsCDouble {
 
   /// performs an exact transformation such that x + y = a * b
   /// and x = double(a * b). The operation uses 10 flops for
-  /// addition/substraction and 7 flops for multiplication.
+  /// addition/subtraction and 7 flops for multiplication.
   static void two_product(double& x, double& y, double a, double b) {
     x = a * b;
     double a1, a2, b1, b2;

@@ -44,7 +44,7 @@ public:
     // as long as the Crossover object is used.
     Crossover(const Control& control);
 
-    // First runs the dual push phase; if this was succesful, then runs the
+    // First runs the dual push phase; if this was successful, then runs the
     // primal push phase.
     //
     // weights: Must either be NULL or an array of size n+m.

@@ -2198,7 +2198,7 @@ void Highs::formIllConditioningLp0(HighsLp& ill_conditioning_lp,
     ill_conditioning_matrix.value_.push_back(1.0);
     ill_conditioning_matrix.start_.push_back(
         HighsInt(ill_conditioning_matrix.index_.size()));
-    // Subracting x_- with cost 1
+    // Subtracting x_- with cost 1
     ill_conditioning_lp.col_cost_.push_back(1);
     ill_conditioning_lp.col_lower_.push_back(0);
     ill_conditioning_lp.col_upper_.push_back(kHighsInf);
@@ -2312,7 +2312,7 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   }
   assert(ill_conditioning_lp.num_col_ == incumbent_num_row);
   if (constraint) {
-    // Add the identiy matrix for constraint y - u + w = 0
+    // Add the identity matrix for constraint y - u + w = 0
     for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
       ill_conditioning_matrix.index_.push_back(iRow);
       ill_conditioning_matrix.value_.push_back(1.0);

@@ -154,7 +154,7 @@ struct CUPDLP_CSC_MATRIX {
   cupdlp_int *colMatIdx;
   cupdlp_float *colMatElem;
 
-  // Used to aviod implementing NormInf on cuda
+  // Used to avoid implementing NormInf on cuda
   cupdlp_float MatElemNormInf;
 #ifndef CUPDLP_CPU
   // Pointers to GPU vectors

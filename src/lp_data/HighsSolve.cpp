@@ -254,7 +254,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 
   if (lp.num_row_ > 0) {
     // Assign primal, dual and basis status for rows, checking for
-    // infeasiblility
+    // infeasibility
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
       double primal_infeasibility = 0;
       double lower = lp.row_lower_[iRow];
