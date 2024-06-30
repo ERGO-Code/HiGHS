@@ -905,10 +905,12 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
   const double scale = colScale;
   const bool x_int = colIntegral;
   const bool y_int = duplicateColIntegral;
-  const double x_lo = x_int ? std::ceil(colLower) : colLower;
-  const double x_up = x_int ? std::floor(colUpper) : colUpper;
-  const double y_lo = y_int ? std::ceil(duplicateColLower) : duplicateColLower;
-  const double y_up = y_int ? std::floor(duplicateColUpper) : duplicateColUpper;
+  const double x_lo = x_int ? std::ceil(colLower - tolerance) : colLower;
+  const double x_up = x_int ? std::floor(colUpper + tolerance) : colUpper;
+  const double y_lo =
+      y_int ? std::ceil(duplicateColLower - tolerance) : duplicateColLower;
+  const double y_up =
+      y_int ? std::floor(duplicateColUpper + tolerance) : duplicateColUpper;
   const double x_len = x_up - x_lo;
   const double y_len = y_up - y_lo;
   std::string newline = "\n";
@@ -1027,10 +1029,16 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   const bool y_int = duplicateColIntegral;
   const int x_ix = col;
   const int y_ix = duplicateCol;
-  const double x_lo = x_int ? std::ceil(colLower) : colLower;
-  const double x_up = x_int ? std::floor(colUpper) : colUpper;
-  const double y_lo = y_int ? std::ceil(duplicateColLower) : duplicateColLower;
-  const double y_up = y_int ? std::floor(duplicateColUpper) : duplicateColUpper;
+  const double x_lo =
+      x_int ? std::ceil(colLower - mip_feasibility_tolerance) : colLower;
+  const double x_up =
+      x_int ? std::floor(colUpper + mip_feasibility_tolerance) : colUpper;
+  const double y_lo =
+      y_int ? std::ceil(duplicateColLower - mip_feasibility_tolerance)
+            : duplicateColLower;
+  const double y_up =
+      y_int ? std::floor(duplicateColUpper + mip_feasibility_tolerance)
+            : duplicateColUpper;
   if (kAllowDeveloperAssert) assert(scale);
   double x_v = merge_value;
   double y_v;
