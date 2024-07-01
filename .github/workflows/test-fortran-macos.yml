@@ -23,7 +23,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake --version
-          gfortran --version
+          gfortran-11 --version
           cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
 
       - name: Build
