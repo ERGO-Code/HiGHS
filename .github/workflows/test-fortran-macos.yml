@@ -16,10 +16,6 @@ jobs:
           compiler: gcc 
           version: 13
 
-      - run: |
-          ${{ env.FC }} ... # environment vars FC, CC, and CXX are set
-          ${{ steps.setup-fortran.outputs.fc }} ... # outputs work too
-
       # - name: Install GFortran
       #   run: brew install gfortran gcc
 
