@@ -4,34 +4,29 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-12 
     strategy:
-      matrix:
-        os: [macos-latest]
+      toolchain:
+        - {compiler: gcc, version: 13}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GFortran
-        run: brew install gfortran gcc
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: gcc 
+          version: 13
+
+      - run: |
+          ${{ env.FC }} ... # environment vars FC, CC, and CXX are set
+          ${{ steps.setup-fortran.outputs.fc }} ... # outputs work too
+
+      # - name: Install GFortran
+      #   run: brew install gfortran gcc
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-        
-      - name: Symlink gfortran (macOS)
-        run: |
-          # make sure gfortran is available
-          # https://github.com/actions/virtual-environments/issues/2524
-          # https://github.com/cbg-ethz/dce/blob/master/.github/workflows/pkgdown.yaml
-          gfortran-11 --version
-          gcc-11 --version 
-          whereis gcc-11
-          gcc --version
-          ls  /usr/local/Cellar/gcc@11/*/lib/gcc/11
-          sudo ln -s /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
-          sudo mkdir /usr/local/gfortran
-          sudo ln -s /usr/local/Cellar/gcc@11/*/lib/gcc/11 /usr/local/gfortran/lib
-          gfortran --version
           
       - name: Configure CMake
         shell: bash
