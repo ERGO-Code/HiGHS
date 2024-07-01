@@ -12,8 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Install GFortran
-      #  run: brew install gfortran
+      - name: Install GFortran
+        run: brew install gfortran gcc
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
