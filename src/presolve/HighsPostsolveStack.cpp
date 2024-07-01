@@ -1017,9 +1017,8 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   };
 
   auto isFeasible = [&](const double l, const double v, const double u) {
-    if (v < l - primal_feasibility_tolerance) return false;
-    if (v > u + primal_feasibility_tolerance) return false;
-    return true;
+    return v >= l - primal_feasibility_tolerance &&
+           v <= u + primal_feasibility_tolerance;
   };
   const double merge_value = col_value[col];
   const double value_max = 1000;
