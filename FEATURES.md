@@ -1,5 +1,10 @@
 ## Build changes
 
+The python wrapper highspy is now available for aarch64 on manylinux
+This allows highs to be run through Python on AWS arm64 
+
+Bug fix for fortran on macOS
+
 ## Code changes
 
 The accessor function Highs_getCallbackDataOutItem in the C API means
