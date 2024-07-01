@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: fortran-lang/setup-fortran@latest
+      - uses: fortran-lang/setup-fortran@1.6
         id: setup-fortran
         with:
           compiler: gcc 
