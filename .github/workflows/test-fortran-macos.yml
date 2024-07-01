@@ -21,7 +21,9 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
+        run: |
+          cmake --version
+          cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
 
       - name: Build
         shell: bash
