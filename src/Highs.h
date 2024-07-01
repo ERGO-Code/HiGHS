@@ -17,6 +17,7 @@
 #include <sstream>
 
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -506,6 +507,12 @@ class Highs {
                                  const bool constraint,
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
+
+  /**
+   * @brief Get (any) irreducible infeasible subsystem (IIS)
+   * information for the incumbent model
+   */
+  HighsStatus getIis(HighsIis& iis);
 
   /**
    * @brief Get the current model objective value
@@ -1210,6 +1217,14 @@ class Highs {
   HighsStatus getBasisInverseRowSparse(const HighsInt row,
                                        HVector& row_ep_buffer);
 
+  /**
+   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * method: for HiGHS IIS calculation
+   */
+  const std::vector<double>& getPrimalPhase1Dual() const {
+    return ekk_instance_.primal_phase1_dual_;
+  }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
@@ -1326,6 +1341,7 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+  HighsIis iis_;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
@@ -1415,6 +1431,9 @@ class Highs {
   // Invalidates ekk_instance_
   void invalidateEkk();
 
+  // Invalidates iis_
+  void invalidateIis();
+
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
   HighsStatus returnFromRun(const HighsStatus return_status,
@@ -1496,6 +1515,14 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
+  HighsStatus getIisInterface();
+
+  HighsStatus computeInfeasibleRows(const bool elastic_columns,
+                                    std::vector<HighsInt>& infeasible_row);
+  HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                         HighsInt* iis_col_index, HighsInt* iis_row_index,
+                         HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);

@@ -264,6 +264,15 @@ enum PresolveRuleType : int {
   kPresolveRuleCount,
 };
 
+enum IisStrategy {
+  kIisStrategyMin = 0,
+  kIisStrategyFromRayRowPriority = kIisStrategyMin,  // 0
+  kIisStrategyFromRayColPriority,                    // 1
+  kIisStrategyFromLpRowPriority,                     // 2
+  kIisStrategyFromLpColPriority,                     // 3
+  kIisStrategyMax = kIisStrategyFromLpColPriority
+};
+
 // Default and max allowed power-of-two matrix scale factor
 const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;

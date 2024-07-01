@@ -57,6 +57,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       TestHighsSparseMatrix.cpp
       TestHSet.cpp
       TestICrash.cpp
+      TestIis.cpp
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp

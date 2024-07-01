@@ -205,6 +205,7 @@ _srcs = [
     'lp_data/Highs.cpp',
     'lp_data/HighsCallback.cpp',
     'lp_data/HighsDebug.cpp',
+    'lp_data/HighsIis.cpp',
     'lp_data/HighsInfo.cpp',
     'lp_data/HighsInfoDebug.cpp',
     'lp_data/HighsDeprecated.cpp',

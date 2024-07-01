@@ -61,7 +61,9 @@ class HighsLp {
 
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
+  bool equalButForScalingAndNames(const HighsLp& lp) const;
   bool equalNames(const HighsLp& lp) const;
+  bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
