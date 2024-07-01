@@ -2320,12 +2320,12 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
   return returnFromHighs(return_status);
 }
 
-HighsStatus analyseSetCreateError(HighsLogOptions log_options,
-                                  const std::string method,
-                                  const HighsInt create_error,
-                                  const bool ordered,
-                                  const HighsInt num_set_entries,
-                                  const HighsInt dimension) {
+static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
+                                         const std::string method,
+                                         const HighsInt create_error,
+                                         const bool ordered,
+                                         const HighsInt num_set_entries,
+                                         const HighsInt dimension) {
   if (create_error == kIndexCollectionCreateIllegalSetSize) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Set supplied to Highs::%s has illegal size of %d\n",

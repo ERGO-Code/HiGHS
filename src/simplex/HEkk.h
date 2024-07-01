@@ -25,7 +25,41 @@ class HighsLpSolverObject;
 
 class HEkk {
  public:
-  HEkk() {}
+  HEkk()
+      : callback_(nullptr),
+        options_(nullptr),
+        timer_(nullptr),
+        lp_name_(""),
+        model_status_(HighsModelStatus::kNotset),
+        simplex_in_scaled_space_(false),
+        cost_scale_(1.0),
+        cost_perturbation_base_(0.0),
+        cost_perturbation_max_abs_cost_(0.0),
+        iteration_count_(0),
+        dual_simplex_cleanup_level_(0),
+        dual_simplex_phase1_cleanup_level_(0),
+        previous_iteration_cycling_detected(-kHighsIInf),
+        solve_bailout_(false),
+        called_return_from_solve_(false),
+        exit_algorithm_(SimplexAlgorithm::kNone),
+        return_primal_solution_status_(0),
+        return_dual_solution_status_(0),
+        original_num_col_(0),
+        original_num_row_(0),
+        original_num_nz_(0),
+        original_offset_(0.0),
+        edge_weight_error_(0.0),
+        build_synthetic_tick_(0.0),
+        total_synthetic_tick_(0.0),
+        debug_solve_call_num_(0),
+        debug_basis_id_(0),
+        time_report_(false),
+        debug_initial_build_synthetic_tick_(0),
+        debug_solve_report_(false),
+        debug_iteration_report_(false),
+        debug_basis_report_(false),
+        debug_dual_feasible(false),
+        debug_max_relative_dual_steepest_edge_weight_error(0) {}
   /**
    * @brief Interface to simplex solvers
    */
@@ -155,14 +189,14 @@ class HEkk {
   HSimplexNla simplex_nla_;
   HotStart hot_start_;
 
-  double cost_scale_ = 1;
+  double cost_scale_;
   double cost_perturbation_base_;
   double cost_perturbation_max_abs_cost_;
-  HighsInt iteration_count_ = 0;
-  HighsInt dual_simplex_cleanup_level_ = 0;
-  HighsInt dual_simplex_phase1_cleanup_level_ = 0;
+  HighsInt iteration_count_;
+  HighsInt dual_simplex_cleanup_level_;
+  HighsInt dual_simplex_phase1_cleanup_level_;
 
-  HighsInt previous_iteration_cycling_detected = -kHighsIInf;
+  HighsInt previous_iteration_cycling_detected;
 
   bool solve_bailout_;
   bool called_return_from_solve_;
@@ -197,17 +231,17 @@ class HEkk {
 
   double edge_weight_error_;
 
-  double build_synthetic_tick_ = 0;
-  double total_synthetic_tick_ = 0;
-  HighsInt debug_solve_call_num_ = 0;
-  HighsInt debug_basis_id_ = 0;
-  bool time_report_ = false;
-  HighsInt debug_initial_build_synthetic_tick_ = 0;
-  bool debug_solve_report_ = false;
-  bool debug_iteration_report_ = false;
-  bool debug_basis_report_ = false;
-  bool debug_dual_feasible = false;
-  double debug_max_relative_dual_steepest_edge_weight_error = 0;
+  double build_synthetic_tick_;
+  double total_synthetic_tick_;
+  HighsInt debug_solve_call_num_;
+  HighsInt debug_basis_id_;
+  bool time_report_;
+  HighsInt debug_initial_build_synthetic_tick_;
+  bool debug_solve_report_;
+  bool debug_iteration_report_;
+  bool debug_basis_report_;
+  bool debug_dual_feasible;
+  double debug_max_relative_dual_steepest_edge_weight_error;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
 

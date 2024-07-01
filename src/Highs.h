@@ -1212,11 +1212,7 @@ class Highs {
 
   // Start of deprecated methods
 
-  /**
-   * @brief Return compilation date
-   */
   std::string compilationDate() const { return "deprecated"; }
-  const char* highsCompilationDate();
 
   HighsStatus setLogCallback(void (*user_log_callback)(HighsLogType,
                                                        const char*, void*),
@@ -1525,4 +1521,9 @@ class Highs {
                               const double ill_conditioning_bound);
   bool infeasibleBoundsOk();
 };
+
+// Start of deprecated methods not in the Highs class
+
+const char* highsCompilationDate();
+
 #endif

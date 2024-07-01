@@ -183,17 +183,17 @@ void HighsMipSolverData::finishSymmetryDetection(
                  "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Found %" HIGHSINT_FORMAT " generators\n\n",
+                 "Found %" HIGHSINT_FORMAT " generator(s)\n\n",
                  symmetries.numGenerators);
 
   } else {
     if (symmetries.numPerms != 0) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Found %" HIGHSINT_FORMAT " generators and %" HIGHSINT_FORMAT
-                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                   " columns\n\n",
-                   symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-                   (HighsInt)symmetries.columnToOrbitope.size());
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+          "Found %" HIGHSINT_FORMAT " generator(s) and %" HIGHSINT_FORMAT
+          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
+          symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
+          (HighsInt)symmetries.columnToOrbitope.size());
     } else {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Found %" HIGHSINT_FORMAT

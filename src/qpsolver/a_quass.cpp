@@ -4,7 +4,7 @@
 #include "qpsolver/feasibility_highs.hpp"
 #include "qpsolver/feasibility_bounded.hpp"
 
-QpAsmStatus quass2highs(Instance& instance, 
+static QpAsmStatus quass2highs(Instance& instance,
 			Settings& settings,
 			Statistics& stats,
 			QpModelStatus& qp_model_status,
@@ -157,7 +157,7 @@ QpAsmStatus solveqp(Instance& instance,
   } 
 
   // solve
-  QpAsmStatus status = solveqp_actual(instance, settings, startinfo, stats, qp_model_status, qp_solution, qp_timer);
+  solveqp_actual(instance, settings, startinfo, stats, qp_model_status, qp_solution, qp_timer);
 
   // undo perturbation and resolve
 
