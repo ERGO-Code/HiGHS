@@ -26,6 +26,7 @@ jobs:
           gfortran-11 --version
           gcc-11 --version
           gcc --version
+          ls  /usr/local/Cellar/gcc@11/*/lib/gcc/11
           sudo ln -s /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
           sudo mkdir /usr/local/gfortran
           sudo ln -s /usr/local/Cellar/gcc@11/*/lib/gcc/11 /usr/local/gfortran/lib
