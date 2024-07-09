@@ -89,6 +89,13 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
 /**
+ * @brief Replaces fprintf(file,... so that when file=stdout highsLogUser is used
+ */
+// Printing format: must contain exactly one "\n" at end of format
+void highsFprintfString(FILE* file, const HighsLogOptions& log_options_, 
+			const std::string& s);
+
+/**
  * @brief For development logging when true log_options may not be available -
  * indicated by null pointer
  */

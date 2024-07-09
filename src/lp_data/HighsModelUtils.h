@@ -31,7 +31,8 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options,
                         const HighsInt num_name,
                         const std::vector<std::string>& names);
 void writeModelBoundSolution(
-    FILE* file, const bool columns, const HighsInt dim,
+    FILE* file, const HighsLogOptions& log_options,
+    const bool columns, const HighsInt dim,
     const std::vector<double>& lower, const std::vector<double>& upper,
     const std::vector<std::string>& names, const bool have_primal,
     const std::vector<double>& primal, const bool have_dual,
@@ -39,19 +40,24 @@ void writeModelBoundSolution(
     const std::vector<HighsBasisStatus>& status,
     const HighsVarType* integrality = NULL);
 
-void writeModelObjective(FILE* file, const HighsModel& model,
+void writeModelObjective(FILE* file, const HighsLogOptions& log_options,
+			 const HighsModel& model,
                          const std::vector<double>& primal_solution);
 
-void writeLpObjective(FILE* file, const HighsLp& lp,
+void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
+		      const HighsLp& lp,
                       const std::vector<double>& primal_solution);
 
-void writeObjectiveValue(FILE* file, const double objective_value);
+void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
+			 const double objective_value);
 
-void writePrimalSolution(FILE* file, const HighsLp& lp,
+void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
+			 const HighsLp& lp,
                          const std::vector<double>& primal_solution,
                          const bool sparse = false);
 
-void writeModelSolution(FILE* file, const HighsModel& model,
+void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
+			const HighsModel& model,
                         const HighsSolution& solution, const HighsInfo& info,
                         const bool sparse = false);
 
@@ -78,7 +84,8 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw);
 
-void writeOldRawSolution(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+void writeOldRawSolution(FILE* file, const HighsLogOptions& log_options,
+			 const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution);
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(

@@ -1941,10 +1941,11 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   }
   FILE* file = mipsolver.improving_solution_file_;
   if (file) {
-    writeLpObjective(file, *(mipsolver.orig_model_), mipsolver.solution_);
-    writePrimalSolution(
-        file, *(mipsolver.orig_model_), mipsolver.solution_,
-        mipsolver.options_mip_->mip_improving_solution_report_sparse);
+    writeLpObjective(file, mipsolver.options_mip_->log_options,
+		     *(mipsolver.orig_model_), mipsolver.solution_);
+    writePrimalSolution(file, mipsolver.options_mip_->log_options,
+			*(mipsolver.orig_model_), mipsolver.solution_,
+			mipsolver.options_mip_->mip_improving_solution_report_sparse);
   }
 }
 

@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -122,8 +122,9 @@ HighsCallbackFunctionType userInterruptCallback =
         }
         if (callback_type == kCallbackLogging) {
           if (dev_run)
-            printf("userInterruptCallback(type %2d; data %2d): %s",
-                   callback_type, local_callback_data, message.c_str());
+          printf("Callback: %s", message.c_str());
+//            printf("userInterruptCallback(type %2d; data %2d): %s",
+//                   callback_type, local_callback_data, message.c_str());
         } else if (callback_type == kCallbackSimplexInterrupt) {
           if (dev_run)
             printf(
@@ -263,6 +264,21 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
+}
+
+TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
+    std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  int user_callback_data = kUserCallbackData;
+  void* p_user_callback_data =
+      reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  highs.run();
+  highs.setCallback(userInterruptCallback, p_user_callback_data);
+  highs.startCallback(kCallbackLogging);
+  highs.writeSolution("", kSolutionStylePretty);
+  highs.writeBasis("");
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
