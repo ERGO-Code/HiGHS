@@ -1999,6 +1999,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
+  mipsolver.callback_->data_out.mip_total_lp_iterations =
+      mipsolver.mipdata_->total_lp_iterations;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
   // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,

@@ -190,12 +190,13 @@ std::function<void(int, const std::string&, const HighsCallbackDataOut*,
       if (dev_run)
         printf(
             "userDataCallback: Node count = %" PRId64
+            "; LP total iterations = %" PRId64
             "; Time = %6.2f; "
             "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
-            data_out->mip_node_count, data_out->running_time,
-            data_out->mip_dual_bound, data_out->mip_primal_bound,
-            data_out->mip_gap, data_out->objective_function_value,
-            message.c_str());
+            data_out->mip_node_count, data_out->mip_total_lp_iterations,
+            data_out->running_time, data_out->mip_dual_bound,
+            data_out->mip_primal_bound, data_out->mip_gap,
+            data_out->objective_function_value, message.c_str());
     };
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
