@@ -120,6 +120,8 @@ const char* const kHighsCallbackDataOutPdlpIterationCountName =
 const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
 const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
+    "mip_total_lp_iterations";
 const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
 const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
 const char* const kHighsCallbackDataOutMipGapName = "mip_gap";

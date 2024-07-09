@@ -1364,6 +1364,9 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->objective_function_value);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipNodeCountName)) {
     return (void*)(&data_out->mip_node_count);
+  } else if (!strcmp(item_name,
+                     kHighsCallbackDataOutMipTotalLpIterationsName)) {
+    return (void*)(&data_out->mip_total_lp_iterations);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipPrimalBoundName)) {
     return (void*)(&data_out->mip_primal_bound);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipDualBoundName)) {

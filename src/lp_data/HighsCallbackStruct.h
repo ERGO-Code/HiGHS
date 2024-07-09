@@ -32,6 +32,7 @@ typedef struct {
   HighsInt pdlp_iteration_count;
   double objective_function_value;
   int64_t mip_node_count;
+  int64_t mip_total_lp_iterations;
   double mip_primal_bound;
   double mip_dual_bound;
   double mip_gap;
