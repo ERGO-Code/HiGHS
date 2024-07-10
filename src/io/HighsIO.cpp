@@ -219,14 +219,14 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_end(argptr);
 }
 
-void highsFprintfString(FILE* file, const HighsLogOptions& log_options_, 
-                  const std::string& s) {
+void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
+                        const std::string& s) {
   if (file == nullptr) return;
   if (file == stdout) {
     highsLogUser(log_options_, HighsLogType::kInfo, "%s", s.c_str());
   } else {
     fprintf(file, "%s", s.c_str());
-  }      
+  }
 }
 
 void highsReportDevInfo(const HighsLogOptions* log_options,

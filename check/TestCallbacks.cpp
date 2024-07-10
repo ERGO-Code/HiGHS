@@ -121,10 +121,10 @@ HighsCallbackFunctionType userInterruptCallback =
           REQUIRE(local_callback_data == kUserCallbackNoData);
         }
         if (callback_type == kCallbackLogging) {
-          if (dev_run)
-          printf("Callback: %s", message.c_str());
-//            printf("userInterruptCallback(type %2d; data %2d): %s",
-//                   callback_type, local_callback_data, message.c_str());
+          if (dev_run) printf("Callback: %s", message.c_str());
+          //            printf("userInterruptCallback(type %2d; data %2d): %s",
+          //                   callback_type, local_callback_data,
+          //                   message.c_str());
         } else if (callback_type == kCallbackSimplexInterrupt) {
           if (dev_run)
             printf(
@@ -267,7 +267,7 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
-    std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   int user_callback_data = kUserCallbackData;
   void* p_user_callback_data =
       reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
