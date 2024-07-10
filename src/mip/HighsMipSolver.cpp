@@ -137,6 +137,11 @@ void HighsMipSolver::run() {
   mipdata_->runSetup();
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
+    // Check limits have not been reached before evaluating root node
+    if (mipdata_->checkLimits()) {
+      cleanupSolve();
+      return;
+    }
     mipdata_->evaluateRootNode();
     // age 5 times to remove stored but never violated cuts after root
     // separation
@@ -146,7 +151,7 @@ restart:
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
   }
-  if (mipdata_->nodequeue.empty()) {
+  if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
     cleanupSolve();
     return;
   }
