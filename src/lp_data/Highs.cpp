@@ -1965,6 +1965,14 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::setSolution(const HighsInt num_entries,
+			  const HighsInt* index,
+			  const double* value) {
+  HighsStatus return_status = HighsStatus::kOk;
+  return_status = HighsStatus::kError;
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
   this->callback_.clear();

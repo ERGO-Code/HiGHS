@@ -5,7 +5,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,
                                const HighsModelStatus require_model_status,
@@ -89,7 +89,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
   highs.clear();
 
-  const bool other_tests = true;
+  const bool other_tests = false;//true;
   const bool test0 = other_tests;
   bool valid, integral, feasible;
   if (test0) {
@@ -229,6 +229,44 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
+  const bool test6 = true;//other_tests;
+  if (test6) {
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from sparse integer "
+          "solution\n");
+    HighsInt num_integer_variable = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) num_integer_variable++;
+
+    
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+
+    std::vector<bool> is_set;
+    is_set.assign(lp.num_col_, false);
+    std::vector<HighsInt> index;
+    std::vector<double> value;
+    HighsInt num_to_set = std::max(10, (8*num_integer_variable)/10);
+    assert(num_to_set>0);
+    HighsRandom random;
+    for (HighsInt iSet = 0; iSet < num_to_set;) {
+      HighsInt iCol = random.integer(lp.num_col_);
+      if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
+      if (is_set[iCol]) continue;
+      index.push_back(iCol);
+      value.push_back(optimal_solution.col_value[iCol]);
+      iSet++;
+    }
+    HighsInt num_entries = index.size();
+    assert(num_entries == num_to_set);
+    return_status = highs.setSolution(num_entries, index.data(), value.data());
+    REQUIRE(return_status == HighsStatus::kOk);
+    highs.run();
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
+  }
+  assert(other_tests);
   std::remove(solution_file.c_str());
 }
 
