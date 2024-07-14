@@ -668,6 +668,11 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
+HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
+                                 const HighsInt* index, const double* value) {
+  return (HighsInt)((Highs*)highs)->setSolution(num_entries, index, value);
+}
+
 HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
