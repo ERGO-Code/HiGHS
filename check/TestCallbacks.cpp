@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -277,8 +277,8 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
   highs.run();
   highs.setCallback(userInterruptCallback, p_user_callback_data);
   highs.startCallback(kCallbackLogging);
-  highs.writeSolution("", kSolutionStylePretty);
-  highs.writeBasis("");
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeBasis("");
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
