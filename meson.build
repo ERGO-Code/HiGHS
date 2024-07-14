@@ -28,7 +28,7 @@ _args += cppc.get_supported_arguments([
 ])
 
 if cppc.get_id() == 'msvc'
-  add_project_arguments(
+_args +=  cppc.get_supported_arguments([
       '/wd4018',  # Disable warning: 'expression' : signed/unsigned mismatch
       '/wd4061',  # Disable warning: enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
       '/wd4100',  # Disable warning: 'identifier' : unreferenced formal parameter
@@ -48,9 +48,8 @@ if cppc.get_id() == 'msvc'
       '/wd4514',  # Disable warning: 'function' : unreferenced inline function has been removed
       '/wd4701',  # Disable warning: potentially uninitialized local variable 'name' used
       '/wd4820',  # Disable warning: 'bytes' bytes padding added after construct 'member_name'
-      language: 'cpp',
-  )
-  _args += '-D_CRT_SECURE_NO_WARNINGS'
+      ])
+_args += '-D_CRT_SECURE_NO_WARNINGS'
 endif
 
 cpu_family = host_machine.cpu_family()
@@ -64,7 +63,7 @@ endif
 
 if is_mingw
   # For mingw-w64, don't use LTO 
-  add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
+  add_project_arguments(cppc.get_supported_arguments('-fno-use-linker-plugin'), language: ['c', 'cpp'])
 endif
 
 # --------------------- Dependencies
