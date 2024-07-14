@@ -3,8 +3,8 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["meson-python>=0.16.0", "meson>=1.2.0", "pybind11", "ninja"]
-build-backend = "mesonpy"
+requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
@@ -30,14 +30,154 @@ classifiers = [
 [project.optional-dependencies]
 test = ["pytest", "numpy"]
 
-[tool.meson-python.args]
-setup = ['-Dwith_pybind11=True',
-        '-Dhighsint64=False',
-        '-Dwrap_mode=forcefallback',
-         # ^-- collects pybind11, see https://github.com/ERGO-Code/HiGHS/pull/1343#discussion_r1252446966
-        ]
-dist = ['--include-subprojects']
-install = ['--skip-subprojects']
+[tool.scikit-build]
+cmake.args = ["-DPYTHON_BUILD_SETUP=ON"]
+wheel.expand-macos-universal-tags = true
+
+# A list of packages to auto-copy into the wheel. If this is not set, it will
+# default to the first of ``src/<package>``, ``python/<package>``, or
+# ``<package>`` if they exist.  The prefix(s) will be stripped from the package
+# name inside the wheel.
+wheel.packages = ["src/highspy"]
+
+# Files to include in the SDist even if they are skipped by default. Supports
+# gitignore syntax.
+sdist.include = [
+  "src/highspy/highs.py",
+  "tests/test_highspy.py",
+  "Version.txt",
+  "LICENSE",
+  "README.md",
+  "src/HConfig.h.in",
+  "src",
+  "external",
+  "cmake",
+]
+
+sdist.exclude = [
+  ".github",
+  ".gitattributes",
+  ".gitignore",
+  ".github",
+  "app",
+  "build",
+  "check",
+  "docs",
+  "subprojects",
+  ".coin-or",
+  "build_webdemo.sh",
+  ".clang-format",
+  "__setup.py",
+  "BUILD.bazel",
+  "meson*",
+  "MODS.md",
+  "WORKSPACE",
+]
+
+
+# # Verbose printout when building.
+# cmake.verbose = false
+
+# # The build type to use when building the project. Valid options are: "Debug",
+# # "Release", "RelWithDebInfo", "MinSizeRel", "", etc.
+# cmake.build-type = "Release"
+
+# # The versions of Ninja to allow. If Ninja is not present on the system or does
+# # not pass this specifier, it will be downloaded via PyPI if possible. An empty
+# # string will disable this check.
+# ninja.version = ">=1.5"
+
+# # If CMake is not present on the system or is older required, it will be
+# # downloaded via PyPI if possible. An empty string will disable this check.
+# ninja.make-fallback = true
+
+# # The logging level to display, "DEBUG", "INFO", "WARNING", and "ERROR" are
+# # possible options.
+# logging.level = "WARNING"
+
+
+# # If set to True, try to build a reproducible distribution (Unix and Python 3.9+
+# # recommended).  ``SOURCE_DATE_EPOCH`` will be used for timestamps, or a fixed
+# # value if not set.
+# sdist.reproducible = true
+
+# # If set to True, CMake will be run before building the SDist.
+# sdist.cmake = false
+
+# # The Python tags. The default (empty string) will use the default Python
+# # version. You can also set this to "cp37" to enable the CPython 3.7+ Stable ABI
+# # / Limited API (only on CPython and if the version is sufficient, otherwise
+# # this has no effect). Or you can set it to "py3" or "py2.py3" to ignore Python
+# # ABI compatibility. The ABI tag is inferred from this tag.
+# wheel.py-api = ""
+
+# # Fill out extra tags that are not required. This adds "x86_64" and "arm64" to
+# # the list of platforms when "universal2" is used, which helps older Pip's
+# # (before 21.0.1) find the correct wheel.
+# # wheel.expand-macos-universal-tags = false
+
+# # The install directory for the wheel. This is relative to the platlib root. You
+# # might set this to the package name. The original dir is still at
+# # SKBUILD_PLATLIB_DIR (also SKBUILD_DATA_DIR, etc. are available). EXPERIMENTAL:
+# # An absolute path will be one level higher than the platlib root, giving access
+# # to "/platlib", "/data", "/headers", and "/scripts".
+# # wheel.install-dir = ""
+
+# # A list of license files to include in the wheel. Supports glob patterns.
+# wheel.license-files = ["LICEN[CS]E*", "COPYING*", "NOTICE*", "AUTHORS*"]
+
+# # If set to True (the default), CMake will be run before building the wheel.
+# wheel.cmake = true
+
+# # Target the platlib or the purelib. If not set, the default is to target the
+# # platlib if wheel.cmake is true, and the purelib otherwise.
+# # wheel.platlib = ""
+
+# # A set of patterns to exclude from the wheel. This is additive to the SDist
+# # exclude patterns. This applies to the final paths in the wheel, and can
+# # exclude files from CMake output as well.  Editable installs may not respect
+# # this exclusion.
+# wheel.exclude = []
+
+# # The build tag to use for the wheel. If empty, no build tag is used.
+# wheel.build-tag = ""
+
+# # If CMake is less than this value, backport a copy of FindPython. Set to 0
+# # disable this, or the empty string.
+# backport.find-python = "3.26.1"
+
+# # Select the editable mode to use. Can be "redirect" (default) or "inplace".
+# editable.mode = "redirect"
+
+# # Turn on verbose output for the editable mode rebuilds.
+# editable.verbose = true
+
+# # Rebuild the project when the package is imported. The build-directory must be
+# # set.
+# editable.rebuild = false
+
+# # The components to install. If empty, all default components are installed.
+# install.components = []
+
+# # Whether to strip the binaries. True for scikit-build-core 0.5+.
+# install.strip = false
+
+# # List dynamic metadata fields and hook locations in this table.
+# metadata = {}
+
+# # Strictly check all config options. If False, warnings will be printed for
+# # unknown options. If True, an error will be raised.
+# strict-config = true
+
+# # Enable early previews of features not finalized yet.
+# experimental = false
+
+# # If set, this will provide a method for backward compatibility.
+# # minimum-version = "0.8"  # current version
+
+# # The build directory. Defaults to a temporary directory, but can be set.
+# # build-dir = ""
+
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -56,25 +196,3 @@ test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
-
-[tool.cibuildwheel.linux]
-manylinux-x86_64-image = "manylinux2014"
-manylinux-i686-image = "manylinux2014"
-repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64 arm64"]
-environment = { RUNNER_OS="macOS" }
-repair-wheel-command = [
-  "delocate-listdeps {wheel}",
-  "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-]
-
-#[tool.cibuildwheel.windows]
-#before-build = "pip install delvewheel"
-#repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
-
-[tool.cibuildwheel.windows]
-# Use delvewheel on windows, and install the project so delvewheel can find it
-before-build = "pip install delvewheel meson ninja && meson setup bbdir && meson install -C bbdir"
-repair-wheel-command = "delvewheel repair --add-path c:/bin;c:/lib;c:/bin/src;c:/lib/src;D:/a/HiGHS/HiGHS/bbdir/src/ -w {dest_dir} {wheel}"
