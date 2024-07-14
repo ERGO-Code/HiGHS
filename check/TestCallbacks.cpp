@@ -277,8 +277,8 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
   highs.run();
   highs.setCallback(userInterruptCallback, p_user_callback_data);
   highs.startCallback(kCallbackLogging);
-  highs.writeSolution("", kSolutionStylePretty);
-  highs.writeBasis("");
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeBasis("");
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {

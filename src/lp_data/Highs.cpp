@@ -3406,14 +3406,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   HighsLp& lp = model_.lp_;
   // Determine whether the solution contains undefined values, in
   // order to decide whether to check its feasibility
-  bool contains_undefined_values = false;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (solution_.col_value[iCol] == kHighsUndefined) {
-      contains_undefined_values = true;
-      break;
-    }
-  }
-  assert(solution_.hasUndefined() == contains_undefined_values);
+  const bool contains_undefined_values = solution_.hasUndefined();
   if (!contains_undefined_values) {
     bool valid, integral, feasible;
     // Determine whether this solution is integer feasible
@@ -3466,6 +3459,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
       }
     }
   }
+  assert(!solution_.hasUndefined());
   const HighsInt num_discrete_variable =
       num_unfixed_discrete_variable + num_fixed_discrete_variable;
   const HighsInt num_continuous_variable = lp.num_col_ - num_discrete_variable;
