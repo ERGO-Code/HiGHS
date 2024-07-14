@@ -1438,6 +1438,12 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
+bool HighsSolution::hasUndefined() {
+  for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++) 
+    if (this->col_value[iCol] == kHighsUndefined) return true;
+  return false;
+}
+
 void HighsSolution::invalidate() {
   this->value_valid = false;
   this->dual_valid = false;

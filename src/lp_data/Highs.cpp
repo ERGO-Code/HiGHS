@@ -3413,6 +3413,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
       break;
     }
   }
+  assert(solution_.hasUndefined() == contains_undefined_values);
   if (!contains_undefined_values) {
     bool valid, integral, feasible;
     // Determine whether this solution is integer feasible
