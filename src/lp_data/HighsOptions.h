@@ -401,6 +401,7 @@ struct HighsOptionsStruct {
   bool mip_allow_restart;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
+  HighsInt mip_max_start_nodes;
   HighsInt mip_max_leaves;
   HighsInt mip_max_improving_sols;
   HighsInt mip_lp_age_limit;
@@ -527,6 +528,7 @@ struct HighsOptionsStruct {
         mip_allow_restart(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
+        mip_max_start_nodes(0),
         mip_max_leaves(0),
         mip_max_improving_sols(0),
         mip_lp_age_limit(0),
@@ -916,6 +918,13 @@ class HighsOptions : public HighsOptionsStruct {
         "MIP solver max number of nodes where estimate is above cutoff bound",
         advanced, &mip_max_stall_nodes, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_start_nodes",
+        "MIP solver max number of nodes when completing a partial MIP start",
+        advanced, &mip_max_start_nodes, 0, 500, kHighsIInf);
+    records.push_back(record_int);
+
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
         "mip_debug_solution_file",
@@ -944,7 +953,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
-        "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
+        "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
