@@ -3465,6 +3465,8 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   const HighsInt num_continuous_variable = lp.num_col_ - num_discrete_variable;
   assert(num_continuous_variable >= 0);
   bool call_run = true;
+  const bool few_fixed_discrete_variables =
+      10 * num_fixed_discrete_variable < num_discrete_variable;
   if (num_unfixed_discrete_variable == 0) {
     // Solution is integer valued
     if (num_continuous_variable == 0) {
@@ -3484,14 +3486,14 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     }
   } else {
     // There are unfixed discrete variables
-    if (10 * num_fixed_discrete_variable < num_discrete_variable) {
-      // Too few discrete variables are fixed
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "User-supplied values fix only %d / %d discrete variables, "
-                   "so not attempting to complete a feasible solution\n",
-                   int(num_fixed_discrete_variable),
-                   int(num_discrete_variable));
-      call_run = false;
+    if (few_fixed_discrete_variables) {
+      // Too few discrete variables are fixed so warn, but still
+      // attempt to complete a feasible solution
+      highsLogUser(
+          options_.log_options, HighsLogType::kWarning,
+          "User-supplied values fix only %d / %d discrete variables, "
+          "so attempt to complete a feasible solution may be expensive\n",
+          int(num_fixed_discrete_variable), int(num_discrete_variable));
     } else {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Attempting to find feasible solution "
@@ -3508,9 +3510,15 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // feasible - or it's not worth using the user solution
   solution_.clear();
   if (call_run) {
+    // Solve the model, using mip_max_start_nodes for
+    // mip_max_nodes...
+    const HighsInt mip_max_nodes = options_.mip_max_nodes;
+    options_.mip_max_nodes = options_.mip_max_start_nodes;
     // Solve the model
     basis_.clear();
     return_status = this->run();
+    // ... remembering to recover the original value of mip_max_nodes
+    options_.mip_max_nodes = mip_max_nodes;
   }
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
