@@ -119,6 +119,10 @@ class HighsImplications {
 
     vlbs[col].for_each(transformVbd);
     vubs[col].for_each(transformVbd);
+
+    for (auto& substitution : substitutions) {
+      if (substitution.substcol == col) substitution.offset -= constant;
+    }
   }
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,
