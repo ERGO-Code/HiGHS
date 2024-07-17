@@ -121,7 +121,10 @@ class HighsImplications {
     vubs[col].for_each(transformVbd);
 
     for (auto& substitution : substitutions) {
-      if (substitution.substcol == col) substitution.offset -= constant;
+      if (substitution.substcol == col) {
+        substitution.offset -= substitution.scale * constant;
+        substitution.scale /= scale;
+      }
     }
   }
 
