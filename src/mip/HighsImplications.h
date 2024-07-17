@@ -122,7 +122,8 @@ class HighsImplications {
 
     for (auto& substitution : substitutions) {
       if (substitution.substcol == col) {
-        substitution.offset -= substitution.scale * constant;
+        substitution.offset -= constant;
+        substitution.offset /= scale;
         substitution.scale /= scale;
       }
     }
