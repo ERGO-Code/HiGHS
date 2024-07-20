@@ -408,10 +408,11 @@ highs_dep = declare_dependency(link_with: highslib,
     include_directories: _incdirs,
   )
 
-  py.install_sources([
+ highs_py_srcs = files(
       'highspy/__init__.py',
-      'highspy/highs.py',
-    ],
+      'highspy/highs.py',)
+
+  py.install_sources(highs_py_srcs,
     pure: false,
     subdir: 'highspy'
   )
