@@ -418,7 +418,7 @@ highs_dep = declare_dependency(link_with: highslib,
   )
 
 if is_windows
-  rootdir = meson.source_root()
+  rootdir = meson.project_source_root()
   meson.add_install_script(f'@rootdir@' / 'scripts' / 'post_install_win.bat', '{dest_dir}', '{wheel}')
 endif
 
