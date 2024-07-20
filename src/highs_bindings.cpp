@@ -326,6 +326,7 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
   py::buffer_info index_info = indices.request();
   HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
   return h->deleteRows(num_set_entries, index_ptr);
+}
 
 HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
   return h->setSolution(solution);
@@ -633,20 +634,27 @@ HighsStatus highs_setCallback(
 }
 
 PYBIND11_MODULE(_core, m) {
-  // enumerations
-  // Older enums, need to have values exported
-  py::enum_<SolutionStatus>(m, "SolutionStatus")
-      .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
-      .value("kSolutionStatusInfeasible",
-             SolutionStatus::kSolutionStatusInfeasible)
-      .value("kSolutionStatusFeasible", SolutionStatus::kSolutionStatusFeasible)
+  // enum classes
+  py::enum_<SolutionStatus>(m, "HighsSolutionStatus")
+      .value("kNone", SolutionStatus::kSolutionStatusNone)
+      .value("kInfeasible", SolutionStatus::kSolutionStatusInfeasible)
+      .value("kFeasible", SolutionStatus::kSolutionStatusFeasible)
       .export_values();
-  py::enum_<BasisValidity>(m, "BasisValidity")
-      .value("kBasisValidityInvalid", BasisValidity::kBasisValidityInvalid)
-      .value("kBasisValidityValid", BasisValidity::kBasisValidityValid)
+  py::enum_<BasisValidity>(m, "HighsBasisValidity", py::module_local())
+      .value("kInvalid", BasisValidity::kBasisValidityInvalid)
+      .value("kValid", BasisValidity::kBasisValidityValid)
+      .export_values();
+  py::enum_<HighsDebugLevel>(m, "HighsDebugLevel")
+      /* k is prefixed since None is reserved */
+      .value("kNone", HighsDebugLevel::kHighsDebugLevelNone)
+      .value("kCheap", HighsDebugLevel::kHighsDebugLevelCheap)
+      .value("kCostly", HighsDebugLevel::kHighsDebugLevelCostly)
+      .value("kExpensive", HighsDebugLevel::kHighsDebugLevelExpensive)
+      .value("kMin", HighsDebugLevel::kHighsDebugLevelMin)
+      .value("kMax", HighsDebugLevel::kHighsDebugLevelMax)
       .export_values();
   // C++ enum classes do not need to have values exported
-  py::enum_<ObjSense>(m, "ObjSense")
+  py::enum_<ObjSense>(m, "HighsObjSense")
       .value("kMinimize", ObjSense::kMinimize)
       .value("kMaximize", ObjSense::kMaximize);
   py::enum_<MatrixFormat>(m, "MatrixFormat")
@@ -656,8 +664,8 @@ PYBIND11_MODULE(_core, m) {
   py::enum_<HessianFormat>(m, "HessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
       .value("kSquare", HessianFormat::kSquare);
-  py::enum_<HighsModelStatus>(m, "HighsModelStatus")
-      .value("kNotset", HighsModelStatus::kNotset)
+  py::enum_<HighsModelStatus>(m, "HighsModelStatus", py::module_local())
+      .value("kNotSet", HighsModelStatus::kNotset)
       .value("kLoadError", HighsModelStatus::kLoadError)
       .value("kModelError", HighsModelStatus::kModelError)
       .value("kPresolveError", HighsModelStatus::kPresolveError)
@@ -668,7 +676,8 @@ PYBIND11_MODULE(_core, m) {
       .value("kInfeasible", HighsModelStatus::kInfeasible)
       .value("kUnboundedOrInfeasible", HighsModelStatus::kUnboundedOrInfeasible)
       .value("kUnbounded", HighsModelStatus::kUnbounded)
-      .value("kObjectiveBound", HighsModelStatus::kObjectiveBound)
+      .value("kObjectiveBound", HighsModelStatus::kObjectiveBound,
+             "Reached dual objective value upper bound")
       .value("kObjectiveTarget", HighsModelStatus::kObjectiveTarget)
       .value("kTimeLimit", HighsModelStatus::kTimeLimit)
       .value("kIterationLimit", HighsModelStatus::kIterationLimit)
@@ -732,7 +741,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
       .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed);
   // Classes
-  py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
+  py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix", py::module_local())
       .def(py::init<>())
       .def_readwrite("format_", &HighsSparseMatrix::format_)
       .def_readwrite("num_col_", &HighsSparseMatrix::num_col_)
@@ -763,18 +772,18 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("is_scaled_", &HighsLp::is_scaled_)
       .def_readwrite("is_moved_", &HighsLp::is_moved_)
       .def_readwrite("mods_", &HighsLp::mods_);
-  py::class_<HighsHessian>(m, "HighsHessian")
+  py::class_<HighsHessian>(m, "HighsHessian", py::module_local())
       .def(py::init<>())
       .def_readwrite("dim_", &HighsHessian::dim_)
       .def_readwrite("format_", &HighsHessian::format_)
       .def_readwrite("start_", &HighsHessian::start_)
       .def_readwrite("index_", &HighsHessian::index_)
       .def_readwrite("value_", &HighsHessian::value_);
-  py::class_<HighsModel>(m, "HighsModel")
+  py::class_<HighsModel>(m, "HighsModel", py::module_local())
       .def(py::init<>())
       .def_readwrite("lp_", &HighsModel::lp_)
       .def_readwrite("hessian_", &HighsModel::hessian_);
-  py::class_<HighsInfo>(m, "HighsInfo")
+  py::class_<HighsInfo>(m, "HighsInfo", py::module_local())
       .def(py::init<>())
       .def_readwrite("valid", &HighsInfo::valid)
       .def_readwrite("mip_node_count", &HighsInfo::mip_node_count)
@@ -811,7 +820,7 @@ PYBIND11_MODULE(_core, m) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
                      &HighsInfo::sum_complementarity_violations);
-  py::class_<HighsOptions>(m, "HighsOptions")
+  py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
       .def_readwrite("solver", &HighsOptions::solver)
@@ -899,7 +908,7 @@ PYBIND11_MODULE(_core, m) {
                      &HighsOptions::mip_heuristic_effort)
       .def_readwrite("mip_min_logging_interval",
                      &HighsOptions::mip_min_logging_interval);
-  py::class_<Highs>(m, "_Highs")
+  py::class_<Highs>(m, "_Highs", py::module_local())
       .def(py::init<>())
       .def("version", &Highs::version)
       .def("versionMajor", &Highs::versionMajor)
@@ -1081,7 +1090,7 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("row_bound", &HighsIis::row_bound_)
       .def_readwrite("info", &HighsIis::info_);
   // structs
-  py::class_<HighsSolution>(m, "HighsSolution")
+  py::class_<HighsSolution>(m, "HighsSolution", py::module_local())
       .def(py::init<>())
       .def_readwrite("value_valid", &HighsSolution::value_valid)
       .def_readwrite("dual_valid", &HighsSolution::dual_valid)
@@ -1089,11 +1098,12 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("col_dual", &HighsSolution::col_dual)
       .def_readwrite("row_value", &HighsSolution::row_value)
       .def_readwrite("row_dual", &HighsSolution::row_dual);
-  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution")
+  py::class_<HighsObjectiveSolution>(m, "HighsObjectiveSolution",
+                                     py::module_local())
       .def(py::init<>())
       .def_readwrite("objective", &HighsObjectiveSolution::objective)
       .def_readwrite("col_value", &HighsObjectiveSolution::col_value);
-  py::class_<HighsBasis>(m, "HighsBasis")
+  py::class_<HighsBasis>(m, "HighsBasis", py::module_local())
       .def(py::init<>())
       .def_readwrite("valid", &HighsBasis::valid)
       .def_readwrite("alien", &HighsBasis::alien)
@@ -1103,13 +1113,13 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("debug_origin_name", &HighsBasis::debug_origin_name)
       .def_readwrite("col_status", &HighsBasis::col_status)
       .def_readwrite("row_status", &HighsBasis::row_status);
-  py::class_<HighsRangingRecord>(m, "HighsRangingRecord")
+  py::class_<HighsRangingRecord>(m, "HighsRangingRecord", py::module_local())
       .def(py::init<>())
       .def_readwrite("value_", &HighsRangingRecord::value_)
       .def_readwrite("objective_", &HighsRangingRecord::objective_)
       .def_readwrite("in_var_", &HighsRangingRecord::in_var_)
       .def_readwrite("ou_var_", &HighsRangingRecord::ou_var_);
-  py::class_<HighsRanging>(m, "HighsRanging")
+  py::class_<HighsRanging>(m, "HighsRanging", py::module_local())
       .def(py::init<>())
       .def_readwrite("valid", &HighsRanging::valid)
       .def_readwrite("col_cost_up", &HighsRanging::col_cost_up)
@@ -1134,7 +1144,7 @@ PYBIND11_MODULE(_core, m) {
   py::module_ simpc =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
 
-  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy")
+  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy", py::module_local())
       .value("kSimplexStrategyMin", SimplexStrategy::kSimplexStrategyMin)
       .value("kSimplexStrategyChoose", SimplexStrategy::kSimplexStrategyChoose)
       .value("kSimplexStrategyDual", SimplexStrategy::kSimplexStrategyDual)
@@ -1278,6 +1288,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kDevex", EdgeWeightMode::kDevex)
       .value("kSteepestEdge", EdgeWeightMode::kSteepestEdge)
       .value("kCount", EdgeWeightMode::kCount);
+
   py::module_ callbacks = m.def_submodule("cb", "Callback interface submodule");
   // Types for interface
   py::enum_<HighsCallbackType>(callbacks, "HighsCallbackType")
