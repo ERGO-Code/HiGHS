@@ -68,7 +68,7 @@ the interior point solver, the reference is _Implementation of an
 interior point method with basis preconditioning_, Mathematical
 Programming Computation, 12, 603-635, 2020. [DOI:
 10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8). There
-are no rspecific eferences to the techniques used in the MIP or QP
+are no specific references to the techniques used in the MIP or QP
 solvers.
 
 
