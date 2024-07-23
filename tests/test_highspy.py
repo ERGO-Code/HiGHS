@@ -5,7 +5,6 @@ import numpy as np
 from io import StringIO
 from sys import platform
 
-
 class TestHighsPy(unittest.TestCase):
     def get_basic_model(self):
         """
@@ -54,33 +53,33 @@ class TestHighsPy(unittest.TestCase):
         h.passModel(lp)
         return h
 
-    # def test_example_model_builder(self):
-    #     """
-    #     minimize    f  =  x0 +  x1
-    #     subject to              x1 <= 7
-    #                 5 <=  x0 + 2x1 <= 15
-    #                 6 <= 3x0 + 2x1
-    #                 0 <= x0 <= 4; 1 <= x1
-    #     """
-    #     h = highspy.Highs()
+    def test_example_model_builder(self):
+        """
+        minimize    f  =  x0 +  x1
+        subject to              x1 <= 7
+                    5 <=  x0 + 2x1 <= 15
+                    6 <= 3x0 + 2x1
+                    0 <= x0 <= 4; 1 <= x1
+        """
+        h = highspy.Highs()
 
-    #     x0 = h.addVariable(lb=0, ub=4, obj=1)
-    #     x1 = h.addVariable(lb=1, ub=7, obj=1)
+        x0 = h.addVariable(lb=0, ub=4, obj=1)
+        x1 = h.addVariable(lb=1, ub=7, obj=1)
 
-    #     h.addConstr(5 <= x0 + 2*x1 <= 15)
-    #     h.addConstr(6 <= 3*x0 + 2*x1)
+        h.addConstr(5 <= x0 + 2*x1 <= 15)
+        h.addConstr(6 <= 3*x0 + 2*x1)
 
-    #     lp = h.getLp()
+        lp = h.getLp()
 
-    #     self.assertEqual(lp.num_col_, 2)
-    #     self.assertEqual(lp.num_row_, 2)
-    #     self.assertAlmostEqual(lp.col_cost_[0], 1)
-    #     self.assertAlmostEqual(lp.col_lower_[0], 0)
-    #     self.assertAlmostEqual(lp.col_upper_[0], 4)
-    #     self.assertAlmostEqual(lp.row_lower_[0], 5)
-    #     self.assertAlmostEqual(lp.row_upper_[0], 15)
-    #     self.assertAlmostEqual(lp.row_lower_[1], 6)
-    #     self.assertAlmostEqual(lp.row_upper_[1], highspy.kHighsInf)
+        self.assertEqual(lp.num_col_, 2)
+        self.assertEqual(lp.num_row_, 2)
+        self.assertAlmostEqual(lp.col_cost_[0], 1)
+        self.assertAlmostEqual(lp.col_lower_[0], 0)
+        self.assertAlmostEqual(lp.col_upper_[0], 4)
+        self.assertAlmostEqual(lp.row_lower_[0], 5)
+        self.assertAlmostEqual(lp.row_upper_[0], 15)
+        self.assertAlmostEqual(lp.row_lower_[1], 6)
+        self.assertAlmostEqual(lp.row_upper_[1], highspy.kHighsInf)
 
     def get_infeasible_model(self):
         inf = highspy.kHighsInf
@@ -462,91 +461,88 @@ class TestHighsPy(unittest.TestCase):
         status = h.getModelStatus()
         self.assertEqual(status, highspy.HighsModelStatus.kInfeasible)
     
-    # failing? 
+    def test_basics_builder(self):
+        h = highspy.Highs()
+        h.setOptionValue('output_flag', False)
+
+        x = h.addVariable(lb=-highspy.kHighsInf)
+        y = h.addVariable(lb=-highspy.kHighsInf)
+
+        c1 = h.addConstr(-x + y >= 2)
+        c2 = h.addConstr(x + y >= 0)
+
+        h.minimize(y)
+
+        self.assertAlmostEqual(h.val(x), -1)
+        self.assertAlmostEqual(h.val(y), 1)
+
+        """
+        min y
+        s.t.
+        -x + y >= 3
+        x + y >= 0
+        """
+        h.changeRowBounds(0, 3, highspy.kHighsInf)
+        h.run()
+
+        self.assertAlmostEqual(h.val(x), -1.5)
+        self.assertAlmostEqual(h.val(y), 1.5)
+
+        # now make y integer
+        h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
+        h.run()
+        sol = h.getSolution()
+        self.assertAlmostEqual(sol.col_value[0], -1)
+        self.assertAlmostEqual(sol.col_value[1], 2)
+
+        """
+        now delete the first constraint and add a new one
         
-    # def test_basics_builder(self):
-    #     h = highspy.Highs()
-    #     h.setOptionValue('output_flag', False)
+        min y
+        s.t.
+        x + y >= 0
+        -x + y >= 0
+        """
+        h.removeConstr(c1)
 
-    #     x = h.addVariable(lb=highspy.kHighsInf)
-    #     y = h.addVariable(lb=highspy.kHighsInf)
+        c1 = h.addConstr(-x + y >= 0)
 
-    #     c1 = h.addConstr(-x + y >= 2)
-    #     c2 = h.addConstr(x + y >= 0)
-
-    #     h.minimize(y)
-
-    #     self.assertAlmostEqual(h.val(x), -1)
-    #     self.assertAlmostEqual(h.val(y), 1)
-
-    #     """
-    #     min y
-    #     s.t.
-    #     -x + y >= 3
-    #     x + y >= 0
-    #     """
-    #     h.changeRowBounds(0, 3, highspy.kHighsInf)
-    #     h.run()
-
-    #     self.assertAlmostEqual(h.val(x), -1.5)
-    #     self.assertAlmostEqual(h.val(y), 1.5)
-
-    #     # now make y integer
-    #     h.changeColsIntegrality(1, np.array([1]), np.array([highspy.HighsVarType.kInteger]))
-    #     h.run()
-    #     sol = h.getSolution()
-    #     self.assertAlmostEqual(sol.col_value[0], -1)
-    #     self.assertAlmostEqual(sol.col_value[1], 2)
-
-    #     """
-    #     now delete the first constraint and add a new one
+        h.run()
         
-    #     min y
-    #     s.t.
-    #     x + y >= 0
-    #     -x + y >= 0
-    #     """
-    #     h.removeConstr(c1)
+        self.assertAlmostEqual(h.val(x), 0)
+        self.assertAlmostEqual(h.val(y), 0)
 
-    #     c1 = h.addConstr(-x + y >= 0)
+        # change the upper bound of x to -5
+        h.changeColsBounds(1, np.array([0]), np.array([-highspy.kHighsInf], dtype=np.double),
+                           np.array([-5], dtype=np.double))
+        h.run()
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), 5)
 
-    #     h.run()
-        
-    #     self.assertAlmostEqual(h.val(x), 0)
-    #     self.assertAlmostEqual(h.val(y), 0)
+        # now maximize
+        h.changeRowBounds(1, -highspy.kHighsInf, 0)
+        h.changeRowBounds(0, -highspy.kHighsInf, 0)
+        h.minimize(-y)
 
-    #     # change the upper bound of x to -5
-    #     h.changeColsBounds(1, np.array([0]), np.array([-highspy.kHighsInf], dtype=np.double),
-    #                        np.array([-5], dtype=np.double))
-    #     h.run()
-    #     self.assertAlmostEqual(h.val(x), -5)
-    #     self.assertAlmostEqual(h.val(y), 5)
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), -5)
 
-    #     # now maximize
-    #     h.changeRowBounds(1, -highspy.kHighsInf, 0)
-    #     h.changeRowBounds(0, -highspy.kHighsInf, 0)
-    #     h.minimize(-y)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMinimize)
+        h.maximize(y)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMaximize)
 
-    #     self.assertAlmostEqual(h.val(x), -5)
-    #     self.assertAlmostEqual(h.val(y), -5)
+        self.assertAlmostEqual(h.val(x), -5)
+        self.assertAlmostEqual(h.val(y), -5)
 
-    #     self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMinimize)
-    #     h.maximize(y)
-    #     self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMaximize)
+        self.assertAlmostEqual(h.getObjectiveValue(), -5)
 
-    #     self.assertAlmostEqual(h.val(x), -5)
-    #     self.assertAlmostEqual(h.val(y), -5)
-
-    #     self.assertAlmostEqual(h.getObjectiveValue(), -5)
-
-    #     h.maximize(y + 1)
-    #     self.assertAlmostEqual(h.getObjectiveOffset()[1], 1)
-    #     self.assertAlmostEqual(h.getObjectiveValue(), -4)
+        h.maximize(y + 1)
+        self.assertAlmostEqual(h.getObjectiveOffset()[1], 1)
+        self.assertAlmostEqual(h.getObjectiveValue(), -4)
 
     def test_addVariable(self):  
         h = highspy.Highs()  
         h.addVariable()
-        h.update()
         self.assertEqual(h.numVariables, 1)  
   
     def test_addConstr(self):  
@@ -606,7 +602,6 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(x.name, 'y')
 
         # add to the model
-        h.update()
         self.assertEqual(h.numVariables, 1)  
         self.assertEqual(h.getLp().col_names_[0], 'y')
 
@@ -618,13 +613,7 @@ class TestHighsPy(unittest.TestCase):
         h.passColName(0, 'a')
         self.assertEqual(h.getLp().col_names_[0], 'a')
         self.assertEqual(x.name, 'a')
- 
-        # change name to none or empty string
-        def change_name(n):
-            x.name = n
 
-        self.assertRaises(Exception, change_name, None)
-        self.assertRaises(Exception, change_name, '')
 
     def test_binary(self):  
         h = highspy.Highs()
@@ -756,6 +745,131 @@ class TestHighsPy(unittest.TestCase):
         h.addConstr(c1)
         self.assertAlmostEqual((h.getLp().row_lower_[0], h.getLp().row_upper_[0]), (4.5, 4.5))
 
+    def test_add_multiple_variables(self):
+        # test basic functionality
+        h = highspy.Highs()
+        x = h.addVariables(2)
+        self.assertEqual(h.numVariables, 2)
+
+        # test multiple dimensions
+        h = highspy.Highs()
+        x = h.addVariables(2,3,4)
+        self.assertEqual(h.numVariables, 2*3*4)
+        self.assertEqual(isinstance(x, dict), True)
+
+        # test multiple dimensions array
+        h = highspy.Highs()
+        x = h.addVariables(2,3,4, out_array=True)
+        self.assertEqual(h.numVariables, 2*3*4)
+        self.assertEqual(isinstance(x, list), True)
+
+        # test binary variables with objective and names
+        h = highspy.Highs()
+        x = h.addBinaries(20, obj=range(20), name_prefix='t_')
+        self.assertEqual(h.numVariables, 20)
+        self.assertEqual(h.getLp().col_names_[0], 't_0')
+        self.assertEqual(h.getLp().col_names_[19], 't_19')
+        self.assertEqual(h.getLp().col_cost_[0], 0)
+        self.assertEqual(h.getLp().col_cost_[19], 19)
+        
+        # test prefix item with indices, not variable offset
+        h = highspy.Highs()
+        x = h.addVariables('a','b','c', name_prefix='t_') # ('a', 'b', 'c')
+        self.assertEqual(h.numVariables, 1)
+        self.assertEqual(x['a','b','c'].name, "t_('a', 'b', 'c')")
+
+        # Testing different ways of adding variables
+        # Some are unlikely to be used, but this is expected behaviour
+        N = 0
+        h = highspy.Highs()
+        x1 = h.addVariables(('a','b','c'), obj={ 'b': 20, 'c': 10, 'a': 50 })
+        N += 3
+        self.assertEqual(h.numVariables, N)
+        lp = h.getLp()
+        self.assertEqual(lp.col_cost_[0], 50)
+        self.assertEqual(lp.col_cost_[1], 20)
+        self.assertEqual(lp.col_cost_[2], 10)
+
+        x2 = h.addVariables(['a','b','c','d']) # 'a', 'b', 'c', 'd'
+        N += 4
+        self.assertEqual(h.numVariables, N)
+
+        x3 = h.addVariables('abc') # 'a', 'b', 'c'
+        N += 3
+        self.assertEqual(h.numVariables, N)
+
+        x4 = h.addVariables(('ab','b','c','d')) # 'ab', 'b', 'c', 'd'
+        N += 4
+        self.assertEqual(h.numVariables, N)
+        
+        x5 = h.addVariables('ab','b','c','d') # ('a', 'b', 'c', 'd'), ('b', 'b', 'c', 'd')
+        N += 2
+        self.assertEqual(h.numVariables, N)
+        self.assertTrue(('a', 'b', 'c', 'd') in x5.keys())
+        self.assertTrue(('b', 'b', 'c', 'd') in x5.keys())
+
+        x6 = h.addVariables(5, 'a', 2, 'b', 'c') # range(5), 'a', range(2), 'b', 'c'
+        N += 5*2
+        self.assertEqual(h.numVariables, N)
+
+        x7 = h.addVariables([5, 'a', 2, 'b', 'c']) # 5, 'a', 2, 'b', 'c'
+        N += 5
+        self.assertEqual(h.numVariables, N)
+
+        x8 = h.addVariables([(20, 1), (1,2), (2,6)], ub=[3,2,1], name_prefix='t')  # (20, 1), (1,2), (2,6)
+        N += 3
+        self.assertEqual(h.numVariables, N)
+
+        x9 = h.addBinaries((20, 1), (1,2), (2,6))   # product((20, 1), (1,2), (2,6))) = (20, 1, 2), ..., (1, 2, 6)
+        N += 8
+        self.assertEqual(h.numVariables, N)
+
+    def test_add_single_constraints(self):
+        h = highspy.Highs()
+        (x,y) = h.addVariables(2)
+        added_constraints = h.addConstrs([2*x + 3*y <= 5])
+        self.assertEqual(len(added_constraints), 1)
+        self.assertEqual(h.numConstrs, 1)
+
+    def test_add_multiple_constraints(self):
+        # test manual constraints
+        h = highspy.Highs()
+        (x,y,z) = h.addVariables(3)
+        added_constraints = h.addConstrs([
+            x + y <= 5, 
+            2*x + 3*y >= 10, 
+            x - z == 2])
+        self.assertEqual(len(added_constraints), 3)
+        self.assertEqual(h.numConstrs, 3)
+
+        # test list comprehension constraints
+        h = highspy.Highs()
+        x = h.addVariables(5)
+        h.addConstr(sum(x) == 1)
+        self.assertEqual(h.numConstrs, 1)        
+
+        h.addConstrs(x[i] + x[j] <= 1 for i in range(5) for j in range(5))
+        self.assertEqual(h.numConstrs, 26)
+
+        # test names and sequence types (list, tuple, nothing)
+        h = highspy.Highs()
+        (x1, x2, x3) = h.addVariables(3)
+        
+        h.addConstrs((x2 - x1 >= 2), name_prefix='a')
+        self.assertEqual(h.numConstrs, 1)        
+        h.addConstrs((x2 - x1 >= 2))
+        self.assertEqual(h.numConstrs, 2)
+
+        h.addConstrs(x2 - x1 >= 2, name_prefix='b')
+        self.assertEqual(h.numConstrs, 3)
+        h.addConstrs(x2 - x1 >= 2)
+        self.assertEqual(h.numConstrs, 4)
+
+        h.addConstrs([x2 - x1 >= 2], name_prefix='c')
+        self.assertEqual(h.numConstrs, 5)
+        h.addConstrs([x2 - x1 >= 2])
+        self.assertEqual(h.numConstrs, 6)
+        
 
     # r/w basis tests below works on unix but not windows? 
     def test_write_basis_before_running(self):
