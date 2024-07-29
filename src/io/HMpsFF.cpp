@@ -592,12 +592,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     // Detect if file is in fixed format.
     if (!is_end(strline, rowname_end)) {
-      std::string name = strline.substr(start + 1);
-      name = trim(name);
-      if (name.size() > 8)
-        return HMpsFF::Parsekey::kFail;
-      else
-        return HMpsFF::Parsekey::kFixedFormat;
+      //Either the name contains spaces, or extra fields are populated.
+      return HMpsFF::Parsekey::kFixedFormat;
     }
 
     // Do not add to matrix if row is free.
