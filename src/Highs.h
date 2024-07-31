@@ -1374,7 +1374,7 @@ class Highs {
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, HighsFileType& file_type) const;
 
-  void reportModel();
+  void reportModel(const HighsModel& model);
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
   //
