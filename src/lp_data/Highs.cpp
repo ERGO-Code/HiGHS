@@ -710,7 +710,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   }
   if (filename == "") {
     // Empty file name: report model on logging stream
-    reportModel();
+    reportModel(model);
     return_status = HighsStatus::kOk;
   } else {
     Filereader* writer =
@@ -4019,13 +4019,13 @@ void Highs::logHeader() {
   return;
 }
 
-void Highs::reportModel() {
-  reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
-  if (model_.hessian_.dim_) {
-    const HighsInt dim = model_.hessian_.dim_;
-    reportHessian(options_.log_options, dim, model_.hessian_.start_[dim],
-                  model_.hessian_.start_.data(), model_.hessian_.index_.data(),
-                  model_.hessian_.value_.data());
+void Highs::reportModel(const HighsModel& model) {
+  reportLp(options_.log_options, model.lp_, HighsLogType::kVerbose);
+  if (model.hessian_.dim_) {
+    const HighsInt dim = model.hessian_.dim_;
+    reportHessian(options_.log_options, dim, model.hessian_.start_[dim],
+                  model.hessian_.start_.data(), model.hessian_.index_.data(),
+                  model.hessian_.value_.data());
   }
 }
 

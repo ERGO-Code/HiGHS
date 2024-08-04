@@ -276,6 +276,7 @@ const string kSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
 const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
+const string kWritePresolvedModelFileString = "write_presolved_model_file";
 const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
@@ -320,9 +321,11 @@ struct HighsOptionsStruct {
 
   std::string log_file;
   bool write_model_to_file;
+  bool write_presolved_model_to_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
+  std::string write_presolved_model_file;
 
   // Control of HiGHS log
   bool output_flag;
@@ -434,6 +437,7 @@ struct HighsOptionsStruct {
         time_limit(0.0),
         solution_file(""),
         write_model_file(""),
+        write_presolved_model_file(""),
         random_seed(0),
         ranging(""),
         infinite_cost(0.0),
@@ -461,6 +465,7 @@ struct HighsOptionsStruct {
         simplex_max_concurrency(0),
         log_file(""),
         write_model_to_file(false),
+        write_presolved_model_to_file(false),
         write_solution_to_file(false),
         write_solution_style(0),
         glpsol_cost_row_location(0),
@@ -896,6 +901,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool =
         new OptionRecordBool("write_model_to_file", "Write the model to a file",
                              advanced, &write_model_to_file, false);
+    records.push_back(record_bool);
+
+    record_string = new OptionRecordString(
+        kWritePresolvedModelFileString, "Write presolved model file", advanced,
+        &write_presolved_model_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_bool = new OptionRecordBool(
+        "write_presolved_model_to_file", "Write the presolved model to a file",
+        advanced, &write_presolved_model_to_file, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
