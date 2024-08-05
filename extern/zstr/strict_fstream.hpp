@@ -17,7 +17,7 @@
 namespace strict_fstream
 {
 
-// Help people out a bit, it seems like this is a common recommenation since
+// Help people out a bit, it seems like this is a common recommendation since
 // musl breaks all over the place.
 #if defined(__NEED_size_t) && !defined(__MUSL__)
 #warning "It seems to be recommended to patch in a define for __MUSL__ if you use musl globally: https://www.openwall.com/lists/musl/2013/02/10/5"

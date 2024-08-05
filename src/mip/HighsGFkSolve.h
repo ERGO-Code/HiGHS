@@ -39,7 +39,7 @@ struct HighsGFk;
 template <>
 struct HighsGFk<2> {
   static constexpr unsigned int powk(unsigned int a) { return a * a; }
-  static constexpr unsigned int inverse(unsigned int a) { return 1; }
+  static constexpr unsigned int inverse(unsigned int) { return 1; }
 };
 
 template <>

@@ -668,6 +668,11 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   return (HighsInt)((Highs*)highs)->setSolution(solution);
 }
 
+HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
+                                 const HighsInt* index, const double* value) {
+  return (HighsInt)((Highs*)highs)->setSolution(num_entries, index, value);
+}
+
 HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
                            void* user_callback_data) {
   auto status = static_cast<Highs*>(highs)->setCallback(user_callback,
@@ -1364,6 +1369,9 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->objective_function_value);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipNodeCountName)) {
     return (void*)(&data_out->mip_node_count);
+  } else if (!strcmp(item_name,
+                     kHighsCallbackDataOutMipTotalLpIterationsName)) {
+    return (void*)(&data_out->mip_total_lp_iterations);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipPrimalBoundName)) {
     return (void*)(&data_out->mip_primal_bound);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipDualBoundName)) {

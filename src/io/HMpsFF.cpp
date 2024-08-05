@@ -2036,12 +2036,12 @@ double HMpsFF::getValue(const std::string& word, bool& is_nan,
                         const HighsInt id) const {
   // Lambda to replace any d or D by E
   auto dD2e = [&](std::string& word) {
-    HighsInt ix = word.find("D");
-    if (ix >= 0) {
+    size_t ix = word.find("D");
+    if (ix != std::string::npos) {
       word.replace(ix, 1, "E");
     } else {
       ix = word.find("d");
-      if (ix >= 0) word.replace(ix, 1, "E");
+      if (ix != std::string::npos) word.replace(ix, 1, "E");
     }
   };
 

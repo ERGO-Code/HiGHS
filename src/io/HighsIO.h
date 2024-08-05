@@ -45,14 +45,23 @@ struct HighsLogOptions {
   bool* output_flag;
   bool* log_to_console;
   HighsInt* log_dev_level;
-  void (*user_log_callback)(HighsLogType, const char*, void*) = nullptr;
-  void* user_log_callback_data = nullptr;
+  void (*user_log_callback)(HighsLogType, const char*, void*);
+  void* user_log_callback_data;
   std::function<void(int, const std::string&, const HighsCallbackDataOut*,
                      HighsCallbackDataIn*, void*)>
       user_callback;
-  void* user_callback_data = nullptr;
-  bool user_callback_active = false;
+  void* user_callback_data;
+  bool user_callback_active;
   void clear();
+  HighsLogOptions()
+      : log_stream(nullptr),
+        output_flag(nullptr),
+        log_to_console(nullptr),
+        log_dev_level(nullptr),
+        user_log_callback(nullptr),
+        user_log_callback_data(nullptr),
+        user_callback_data(nullptr),
+        user_callback_active(false){};
 };
 
 /**
@@ -78,6 +87,14 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
  */
 void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
+
+/**
+ * @brief Replaces fprintf(file,... so that when file=stdout highsLogUser is
+ * used
+ */
+// Printing format: must contain exactly one "\n" at end of format
+void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
+                        const std::string& s);
 
 /**
  * @brief For development logging when true log_options may not be available -
