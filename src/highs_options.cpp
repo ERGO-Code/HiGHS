@@ -8,16 +8,10 @@
 
 namespace py = pybind11;
 
-bool log_to_console = false;
-bool output_flag = true;
-
-// HighsLogOptions highs_log_options = {nullptr, &output_flag, &log_to_console,
-//                                      nullptr};
-HighsLogOptions highs_log_options = {};
-
 class HighsOptionsManager {
  public:
   HighsOptionsManager() {
+    initialize_log_options();
     for (const auto& record : highs_options_.records) {
       record_type_lookup_.emplace(record->name, record->type);
     }
@@ -55,6 +49,21 @@ class HighsOptionsManager {
   HighsOptions highs_options_;
   std::mutex highs_options_mutex;
   std::map<std::string, HighsOptionType> record_type_lookup_;
+  HighsLogOptions highs_log_options;
+
+  static constexpr bool log_to_console = false;
+  static constexpr bool output_flag = true;
+
+  void initialize_log_options() {
+    highs_log_options.log_stream = nullptr;
+    highs_log_options.output_flag = const_cast<bool*>(&output_flag);
+    highs_log_options.log_to_console = const_cast<bool*>(&log_to_console);
+    highs_log_options.log_dev_level = nullptr;
+    highs_log_options.user_log_callback = nullptr;
+    highs_log_options.user_log_callback_data = nullptr;
+    highs_log_options.user_callback_data = nullptr;
+    highs_log_options.user_callback_active = false;
+  }
 };
 
 PYBIND11_MODULE(_highs_options, m) {
@@ -79,16 +88,32 @@ PYBIND11_MODULE(_highs_options, m) {
            })
       .def("check_int_option",
            [](HighsOptionsManager& self, const std::string& name, int value) {
-             return self.check_option<OptionRecordInt, int>(name, value);
+             try {
+               return self.check_option<OptionRecordInt, int>(name, value);
+             } catch (const std::exception& e) {
+               py::print("Exception caught in check_int_option:", e.what());
+               return false;
+             }
            })
       .def(
           "check_double_option",
           [](HighsOptionsManager& self, const std::string& name, double value) {
-            return self.check_option<OptionRecordDouble, double>(name, value);
+            try {
+              return self.check_option<OptionRecordDouble, double>(name, value);
+            } catch (const std::exception& e) {
+              py::print("Exception caught in check_double_option:", e.what());
+              return false;
+            }
           })
-      .def("check_string_option", [](HighsOptionsManager& self,
-                                     const std::string& name,
-                                     const std::string& value) {
-        return self.check_option<OptionRecordString, std::string>(name, value);
-      });
+      .def("check_string_option",
+           [](HighsOptionsManager& self, const std::string& name,
+              const std::string& value) {
+             try {
+               return self.check_option<OptionRecordString, std::string>(name,
+                                                                         value);
+             } catch (const std::exception& e) {
+               py::print("Exception caught in check_string_option:", e.what());
+               return false;
+             }
+           });
 }

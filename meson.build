@@ -22,18 +22,13 @@ is_mingw = is_windows and cc.get_id() == 'gcc'
 
 # Conditional arguments
 _args += cppc.get_supported_arguments([
-  '-Wno-return-type',
-  '-Wno-switch',
-  '-Wno-comment',
   '-Wno-unused-variable',
   '-Wno-unused-but-set-variable',
-  '-Wno-unused-const-variable',
-  '-Wno-unused-function',
   '-Wno-unused-label',
 ])
 
 if cppc.get_id() == 'msvc'
-  add_project_arguments(
+_args +=  cppc.get_supported_arguments([
       '/wd4018',  # Disable warning: 'expression' : signed/unsigned mismatch
       '/wd4061',  # Disable warning: enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
       '/wd4100',  # Disable warning: 'identifier' : unreferenced formal parameter
@@ -53,9 +48,8 @@ if cppc.get_id() == 'msvc'
       '/wd4514',  # Disable warning: 'function' : unreferenced inline function has been removed
       '/wd4701',  # Disable warning: potentially uninitialized local variable 'name' used
       '/wd4820',  # Disable warning: 'bytes' bytes padding added after construct 'member_name'
-      language: 'cpp',
-  )
-  _args += '-D_CRT_SECURE_NO_WARNINGS'
+      ])
+_args += '-D_CRT_SECURE_NO_WARNINGS'
 endif
 
 cpu_family = host_machine.cpu_family()
@@ -69,13 +63,10 @@ endif
 
 if is_mingw
   # For mingw-w64, don't use LTO 
-  add_project_arguments('-fno-use-linker-plugin', language: ['c', 'cpp'])
+  add_project_arguments(cppc.get_supported_arguments('-fno-use-linker-plugin'), language: ['c', 'cpp'])
 endif
 
 # --------------------- Dependencies
-threads_dep = dependency('threads', required: false)
-_deps += threads_dep
-
 # Determine whether it is necessary to link libatomic. This could be the case
 # e.g. on 32-bit platforms when atomic operations are used on 64-bit types.
 # The check is copied from SciPy which in turn came from
@@ -115,6 +106,11 @@ endif
 
 _deps += atomic_dep
 
+threads_dep = null_dep
+if not is_windows
+ threads_dep = dependency('threads', required: false)
+endif
+_deps += threads_dep
 # Optional
 zlib_dep = dependency('zlib',
                       required: get_option('use_zlib'))
