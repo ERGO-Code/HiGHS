@@ -125,6 +125,7 @@ TEST_NAMES = [
     "TestBasisSolves",
     "TestCheckSolution",
     "TestCrossover",
+    "TestCallbacks",
     "TestDualize",
     "TestEkk",
     "TestFactor",
