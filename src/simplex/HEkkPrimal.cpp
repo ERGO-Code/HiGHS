@@ -253,6 +253,11 @@ HighsStatus HEkkPrimal::solve(const bool pass_force_phase2) {
       // LP identified as not having an optimal solution
       assert(ekk_instance_.model_status_ == HighsModelStatus::kInfeasible ||
              ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
+      // If infeasible, save the primal phase 1 dual values before
+      // they are overwritten with the duals for the original
+      // objective
+      if (ekk_instance_.model_status_ == HighsModelStatus::kInfeasible)
+        ekk_instance_.primal_phase1_dual_ = ekk_instance_.info_.workDual_;
       break;
     }
     if (solve_phase == kSolvePhaseOptimalCleanup) {
