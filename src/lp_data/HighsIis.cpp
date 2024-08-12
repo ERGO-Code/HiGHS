@@ -86,7 +86,7 @@ void HighsIis::removeRow(const HighsInt row) {
 bool HighsIis::trivial(const HighsLp& lp, const HighsOptions& options) {
   this->invalidate();
   const bool col_priority =
-      options.iis_strategy == kIisStrategyFromRayColPriority ||
+      //      options.iis_strategy == kIisStrategyFromRayColPriority ||
       options.iis_strategy == kIisStrategyFromLpColPriority;
   for (HighsInt k = 0; k < 2; k++) {
     if ((col_priority && k == 0) || (!col_priority && k == 1)) {
@@ -219,7 +219,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
                               const HighsBasis* basis) {
   const HighsLogOptions& log_options = options.log_options;
   const bool row_priority =
-      options.iis_strategy == kIisStrategyFromRayRowPriority ||
+      //      options.iis_strategy == kIisStrategyFromRayRowPriority ||
       options.iis_strategy == kIisStrategyFromLpRowPriority;
   // Initially all columns and rows are candidates for the IIS
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) this->addCol(iCol);
@@ -242,7 +242,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   assert(run_status == HighsStatus::kOk);
   // Solve the LP
   if (basis) highs.setBasis(*basis);
-  const bool use_sensitivity_filter = true;
+  const bool use_sensitivity_filter = false;
   std::vector<double> primal_phase1_dual;
   bool row_deletion = false;
   HighsInt iX = -1;
@@ -275,19 +275,26 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       const HighsInt* basic_index = highs.getBasicVariablesArray();
       std::vector<double> rhs;
       rhs.assign(lp.num_row_, 0);
-      // Get duals for nonbasic rows, and initialise duals so that basic duals are zero
-      assert(101==202);
+      // Get duals for nonbasic rows, and initialise duals so that basic duals
+      // are zero
+      assert(101 == 202);
 
       for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-	HighsInt iVar = basic_index[iRow];
-        const double lower = iVar < lp.num_col_ ? lp.col_lower_[iVar] : lp.row_lower_[iVar-lp.num_col_];
-        const double upper = iVar < lp.num_col_ ? lp.col_upper_[iVar] : lp.row_upper_[iVar-lp.num_col_];
-        const double value = iVar < lp.num_col_ ? solution.col_value[iVar] : solution.row_value[iVar-lp.num_col_];
-	if (value < lower - options.primal_feasibility_tolerance) {
-	  rhs[iRow] = -1;
-	} else if (value > upper + options.primal_feasibility_tolerance) {
-	  rhs[iRow] = 1;
-	}
+        HighsInt iVar = basic_index[iRow];
+        const double lower = iVar < lp.num_col_
+                                 ? lp.col_lower_[iVar]
+                                 : lp.row_lower_[iVar - lp.num_col_];
+        const double upper = iVar < lp.num_col_
+                                 ? lp.col_upper_[iVar]
+                                 : lp.row_upper_[iVar - lp.num_col_];
+        const double value = iVar < lp.num_col_
+                                 ? solution.col_value[iVar]
+                                 : solution.row_value[iVar - lp.num_col_];
+        if (value < lower - options.primal_feasibility_tolerance) {
+          rhs[iRow] = -1;
+        } else if (value > upper + options.primal_feasibility_tolerance) {
+          rhs[iRow] = 1;
+        }
       }
       HVector pi;
       pi.setup(lp.num_row_);
@@ -295,9 +302,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       pi.count = lp.num_row_;
       std::vector<double> reduced_costs_value;
       std::vector<HighsInt> reduced_costs_index;
-      lp.a_matrix_.productTransposeQuad(reduced_costs_value, reduced_costs_index, pi);
-      
-      
+      lp.a_matrix_.productTransposeQuad(reduced_costs_value,
+                                        reduced_costs_index, pi);
+
       primal_phase1_dual = highs.getPrimalPhase1Dual();
       HighsInt num_zero_dual = 0;
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {

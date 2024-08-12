@@ -124,7 +124,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
   std::string model = "woodinfe";
   testMps(model, kIisStrategyFromLpRowPriority);
-  testMps(model, kIisStrategyFromRayRowPriority);
+  //  testMps(model, kIisStrategyFromRayRowPriority);
 }
 
 TEST_CASE("lp-get-iis-galenet", "[iis]") {
@@ -170,7 +170,7 @@ TEST_CASE("lp-get-iis-galenet", "[iis]") {
   // Hence only empty columns can be removed
   std::string model = "galenet";
   testMps(model, kIisStrategyFromLpRowPriority);
-  testMps(model, kIisStrategyFromRayRowPriority);
+  //  testMps(model, kIisStrategyFromRayRowPriority);
 }
 
 TEST_CASE("lp-get-iis-avgas", "[iis]") {
@@ -180,7 +180,8 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
   testMps(model, kIisStrategyFromLpRowPriority, HighsModelStatus::kNotset);
   // For the ray calculation the model is solved, so its status is
   // known
-  testMps(model, kIisStrategyFromRayRowPriority, HighsModelStatus::kOptimal);
+  //  testMps(model, kIisStrategyFromRayRowPriority,
+  //  HighsModelStatus::kOptimal);
 }
 
 void testIis(const std::string& model, const HighsIis& iis) {
@@ -311,11 +312,11 @@ void testMps(std::string& model, const HighsInt iis_strategy,
   highs.setOptionValue("output_flag", dev_run);
 
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  if (iis_strategy == kIisStrategyFromRayRowPriority ||
-      iis_strategy == kIisStrategyFromRayColPriority) {
-    // For a ray strategy, solve the LP first
-    REQUIRE(highs.run() == HighsStatus::kOk);
-  }
+  //  if (iis_strategy == kIisStrategyFromRayRowPriority ||
+  //      iis_strategy == kIisStrategyFromRayColPriority) {
+  //    // For a ray strategy, solve the LP first
+  //    REQUIRE(highs.run() == HighsStatus::kOk);
+  //  }
   highs.setOptionValue("iis_strategy", iis_strategy);
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);

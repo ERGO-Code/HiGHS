@@ -1099,13 +1099,17 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "iis_strategy",
         "Strategy for IIS calculation: "
-        "Use unbounded dual ray and prioritise low number of rows (default) / "
-        "Use ray and prioritise low numbers of columns / "
-        "Use LP and prioritise rows / "
-        "Use LP and prioritise columns"
-        " (/0/1/2/3)",
-        advanced, &iis_strategy, kIisStrategyMin,
-        kIisStrategyFromRayRowPriority, kIisStrategyMax);
+        //        "Use LP and p"
+        "Prioritise rows (default) / "
+        //        "Use LP and p"
+        "Prioritise columns"
+        //        "Use unbounded dual ray and prioritise low number of rows
+        //        (default) / " "Use ray and prioritise low numbers of columns "
+        " (0/1"
+        //        "/2/3)",
+        ")",
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
+        kIisStrategyMax);
     records.push_back(record_int);
 
     // Fix the number of user settable options

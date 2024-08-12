@@ -1563,9 +1563,9 @@ HighsStatus Highs::getIisInterface() {
     this->iis_.valid_ = true;
     return HighsStatus::kOk;
   }
-  const bool ray_option =
-      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
-      options_.iis_strategy == kIisStrategyFromRayColPriority;
+  const bool ray_option = false;
+  //      options_.iis_strategy == kIisStrategyFromRayRowPriority ||
+  //      options_.iis_strategy == kIisStrategyFromRayColPriority;
   if (this->model_status_ == HighsModelStatus::kInfeasible && ray_option &&
       !ekk_instance_.status_.has_invert) {
     // Model is known to be infeasible, and a dual ray option is
