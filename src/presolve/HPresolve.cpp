@@ -1596,8 +1596,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
-    // lifting
-    liftingForProbing();
+    // lifting for probing
+    if (numDeletedRows == 0 && numDeletedCols == 0) liftingForProbing();
+    // clear lifting opportunities
+    liftingOpportunities.clear();
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
@@ -1683,8 +1685,6 @@ void HPresolve::liftingForProbing() {
     if (model->row_upper_[row] != kHighsInf)
       model->row_upper_[row] += static_cast<double>(update);
   }
-  // clear lifting opportunities
-  liftingOpportunities.clear();
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
