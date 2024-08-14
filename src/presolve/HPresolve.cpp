@@ -1453,7 +1453,22 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
-    implications.liftingOpportunities.clear();
+
+    // store lifting opportunities
+    implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
+                                               double val) {
+      // find lifting opportunities for row
+      auto& htree = liftingOpportunities[row];
+      // add element
+      auto insertresult = htree.first.insert_or_get(col, val);
+      if (!insertresult.second) {
+        double& currentval = *insertresult.first;
+        currentval = val;
+      } else {
+        htree.second++;
+      }
+    };
+
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
@@ -1525,7 +1540,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // "\n", nprobed,
       //       cliquetable.numCliques());
       if (domain.infeasible()) {
-        implications.liftingOpportunities.clear();
         return Result::kPrimalInfeasible;
       }
     }
@@ -1560,7 +1574,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         val = 1.0;
       addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
       // modifications to row invalidate lifting opportunities
-      implications.liftingOpportunities.erase(cliqueextension.first);
+      liftingOpportunities.erase(cliqueextension.first);
     }
     extensionvars.clear();
 
@@ -1605,7 +1619,7 @@ void HPresolve::liftingForProbing() {
   // consider lifting opportunities
   for (const HighsHashTableEntry<
            HighsInt, std::pair<HighsHashTree<HighsInt, double>, std::size_t>>&
-           elm : implications.liftingOpportunities) {
+           elm : liftingOpportunities) {
     // get row index and skip deleted rows
     HighsInt row = elm.key();
     if (rowDeleted[row]) continue;
@@ -1670,7 +1684,7 @@ void HPresolve::liftingForProbing() {
       model->row_upper_[row] += static_cast<double>(update);
   }
   // clear lifting opportunities
-  implications.liftingOpportunities.clear();
+  liftingOpportunities.clear();
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,

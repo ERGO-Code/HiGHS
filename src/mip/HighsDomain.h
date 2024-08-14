@@ -329,17 +329,17 @@ class HighsDomain {
 
   void updateRedundantRows(HighsInt row, HighsInt direction, HighsInt numInf,
                            HighsCDouble activity, double bound);
-
+  
   double doChangeBound(const HighsDomainChange& boundchg);
 
   std::vector<HighsInt> colLowerPos_;
   std::vector<HighsInt> colUpperPos_;
   std::vector<HighsInt> branchPos_;
+  HighsHashTable<HighsInt> redundant_rows_;
 
  public:
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
-  HighsHashTable<HighsInt, double> redundant_rows_;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -640,6 +640,12 @@ class HighsDomain {
   HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 
   bool inSubmip() const { return mipsolver->submip; }
+
+  void clearRedundantRows();
+
+  const HighsHashTable<HighsInt>& getRedundantRows();
+
+  double getRedundantRowValue(HighsInt row);
 };
 
 #endif

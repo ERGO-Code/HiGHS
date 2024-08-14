@@ -1850,12 +1850,28 @@ void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
   if (numinf == 0 &&
       direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
     // row is redundant
-    double val = static_cast<double>(activity - bound);
-    double& currentval = redundant_rows_[row];
-    currentval = val;
+    redundant_rows_.insert(row);
   } else {
     // row is not redundant anymore
     redundant_rows_.erase(row);
+  }
+}
+
+void HighsDomain::clearRedundantRows() { redundant_rows_.clear(); }
+
+const HighsHashTable<HighsInt>& HighsDomain::getRedundantRows() {
+  return redundant_rows_;
+}
+
+double HighsDomain::getRedundantRowValue(HighsInt row) {
+  if (mipsolver->model_->row_lower_[row] != -kHighsInf) {
+    assert(mipsolver->model_->row_upper_[row] == kHighsInf);
+    return static_cast<double>(activitymin_[row] -
+                               mipsolver->model_->row_lower_[row]);
+  } else {
+    assert(mipsolver->model_->row_upper_[row] != kHighsInf);
+    return static_cast<double>(activitymax_[row] -
+                               mipsolver->model_->row_upper_[row]);
   }
 }
 

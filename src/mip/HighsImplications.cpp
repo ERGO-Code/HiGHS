@@ -17,10 +17,10 @@
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
-  globaldomain.redundant_rows_.clear();
+  globaldomain.clearRedundantRows();
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) {
-    globaldomain.redundant_rows_.clear();
+    globaldomain.clearRedundantRows();
     return true;
   }
 
@@ -40,7 +40,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
-    globaldomain.redundant_rows_.clear();
+    globaldomain.clearRedundantRows();
     return true;
   };
 
@@ -50,24 +50,13 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   if (isInfeasible()) return true;
 
-  // store lifting opportunities
-  for (const HighsHashTableEntry<HighsInt, double>& elm :
-       globaldomain.redundant_rows_) {
-    // new lifting opportunity; negate column index if variable is
-    // set to its lower bound
-    HighsInt bincol = (val ? 1 : -1) * col;
-    double value = (val ? -1 : 1) * elm.value();
-    // find lifting opportunities for row
-    auto& htree = liftingOpportunities[elm.key()];
-    // add element
-    auto insertresult = htree.first.insert_or_get(bincol, value);
-    if (!insertresult.second) {
-      double& currentval = *insertresult.first;
-      currentval = value;
-    } else {
-      htree.second++;
-    }
-  }
+  // new lifting opportunity; negate column index if variable is set to its
+  // lower bound
+  for (const HighsHashTableEntry<HighsInt>& elm :
+       globaldomain.getRedundantRows())
+    storeLiftingOpportunity(
+        elm.key(), (val ? 1 : -1) * col,
+        (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
