@@ -184,6 +184,27 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
   //  HighsModelStatus::kOptimal);
 }
 
+TEST_CASE("lp-feasibility-relaxation", "[iis]") {
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {1, -2};
+  lp.col_lower_ = {5, -inf};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {2, -inf, -inf};
+  lp.row_upper_ = {inf, 1, 20};
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {-1, -3, 20, 21, 2, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  Highs h;
+  h.passModel(lp);
+  //  h.run();
+  h.feasibilityRelaxation(1, 1, 1);
+  h.writeSolution("", 1);
+
+}
+
 void testIis(const std::string& model, const HighsIis& iis) {
   HighsModelStatus model_status;
   std::string model_file =

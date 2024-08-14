@@ -452,6 +452,7 @@ void HighsLp::deleteColsFromVectors(
   this->col_cost_.resize(new_num_col);
   this->col_lower_.resize(new_num_col);
   this->col_upper_.resize(new_num_col);
+  if (have_integrality) this->integrality_.resize(new_num_col);
   if (have_names) this->col_names_.resize(new_num_col);
 }
 
