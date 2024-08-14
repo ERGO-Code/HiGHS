@@ -1667,19 +1667,16 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
 }
 
 HighsStatus Highs::feasibilityRelaxation(const double global_lower_penalty,
-					 const double global_upper_penalty,
-					 const double global_rhs_penalty,
-					 const double* local_lower_penalty,
-					 const double* local_upper_penalty,
-					 const double* local_rhs_penalty) {
-  std::vector<HighsInt>infeasible_row_subset;
-  return elasticityFilter(global_lower_penalty,
-			  global_upper_penalty,
-			  global_rhs_penalty,
-			  local_lower_penalty,
-			  local_upper_penalty,
-			  local_rhs_penalty,
-			  false, infeasible_row_subset);
+                                         const double global_upper_penalty,
+                                         const double global_rhs_penalty,
+                                         const double* local_lower_penalty,
+                                         const double* local_upper_penalty,
+                                         const double* local_rhs_penalty) {
+  std::vector<HighsInt> infeasible_row_subset;
+  return elasticityFilter(global_lower_penalty, global_upper_penalty,
+                          global_rhs_penalty, local_lower_penalty,
+                          local_upper_penalty, local_rhs_penalty, false,
+                          infeasible_row_subset);
 }
 
 HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,

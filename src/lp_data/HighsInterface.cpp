@@ -1624,9 +1624,9 @@ HighsStatus Highs::getIisInterface() {
     HighsLp check_lp_before = this->model_.lp_;
     // Apply the elasticity filter to the whole model in order to
     // determine an infeasible subset of rows
-    HighsStatus return_status = this->elasticityFilter(-1.0, -1.0, 1.0,
-						       nullptr, nullptr, nullptr, true,
-						       infeasible_row_subset);
+    HighsStatus return_status =
+        this->elasticityFilter(-1.0, -1.0, 1.0, nullptr, nullptr, nullptr, true,
+                               infeasible_row_subset);
     HighsLp check_lp_after = this->model_.lp_;
     assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
     if (return_status != HighsStatus::kOk) return return_status;
@@ -1674,14 +1674,13 @@ HighsStatus Highs::getIisInterface() {
   return return_status;
 }
 
-HighsStatus Highs::elasticityFilterReturn(const HighsStatus return_status,
-					  const bool feasible_model,
-					  const HighsInt original_num_col,
-					  const HighsInt original_num_row,
-					  const std::vector<double>& original_col_cost,
-					  const std::vector<double>& original_col_lower,
-					  const std::vector<double> original_col_upper,
-					  const std::vector<HighsVarType> original_integrality) {
+HighsStatus Highs::elasticityFilterReturn(
+    const HighsStatus return_status, const bool feasible_model,
+    const HighsInt original_num_col, const HighsInt original_num_row,
+    const std::vector<double>& original_col_cost,
+    const std::vector<double>& original_col_lower,
+    const std::vector<double> original_col_upper,
+    const std::vector<HighsVarType> original_integrality) {
   const HighsLp& lp = this->model_.lp_;
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
@@ -1702,7 +1701,8 @@ HighsStatus Highs::elasticityFilterReturn(const HighsStatus return_status,
   assert(run_status == HighsStatus::kOk);
 
   if (original_integrality.size()) {
-    this->changeColsIntegrality(0, original_num_col - 1, original_integrality.data());
+    this->changeColsIntegrality(0, original_num_col - 1,
+                                original_integrality.data());
     assert(run_status == HighsStatus::kOk);
   }
 
@@ -1713,12 +1713,14 @@ HighsStatus Highs::elasticityFilterReturn(const HighsStatus return_status,
   if (feasible_model) this->model_status_ = HighsModelStatus::kNotset;
 
   return return_status;
-  
 }
 
-HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const double global_upper_penalty, const double global_rhs_penalty,
-				    const double* local_lower_penalty, const double* local_upper_penalty, const double* local_rhs_penalty, 
-				    const bool get_infeasible_row, std::vector<HighsInt>& infeasible_row_subset) {
+HighsStatus Highs::elasticityFilter(
+    const double global_lower_penalty, const double global_upper_penalty,
+    const double global_rhs_penalty, const double* local_lower_penalty,
+    const double* local_upper_penalty, const double* local_rhs_penalty,
+    const bool get_infeasible_row,
+    std::vector<HighsInt>& infeasible_row_subset) {
   // Solve the feasibility relaxation problem for the given penalties,
   // continuing to act as the elasticity filter get_infeasible_row is
   // true, resulting in an infeasibility subset for further refinement
@@ -1784,24 +1786,27 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const dou
   if (lp.integrality_.size()) {
     std::vector<HighsVarType> all_continuous;
     all_continuous.assign(original_num_col, HighsVarType::kContinuous);
-    run_status = this->changeColsIntegrality(0, lp.num_col_ - 1, all_continuous.data());
+    run_status =
+        this->changeColsIntegrality(0, lp.num_col_ - 1, all_continuous.data());
     assert(run_status == HighsStatus::kOk);
   }
 
   // For the columns
   const bool has_local_lower_penalty = local_lower_penalty;
   const bool has_global_elastic_lower = global_lower_penalty >= 0;
-  const bool has_elastic_lower = has_local_lower_penalty || has_global_elastic_lower;
+  const bool has_elastic_lower =
+      has_local_lower_penalty || has_global_elastic_lower;
   const bool has_local_upper_penalty = local_upper_penalty;
   const bool has_global_elastic_upper = global_upper_penalty >= 0;
-  const bool has_elastic_upper = has_local_upper_penalty || has_global_elastic_upper;
+  const bool has_elastic_upper =
+      has_local_upper_penalty || has_global_elastic_upper;
   const bool has_elastic_columns = has_elastic_lower || has_elastic_upper;
   // For the rows
   const bool has_local_rhs_penalty = local_rhs_penalty;
   const bool has_global_elastic_rhs = global_rhs_penalty >= 0;
   const bool has_elastic_rows = has_local_rhs_penalty || has_global_elastic_rhs;
   assert(has_elastic_columns || has_elastic_rows);
-  
+
   if (has_elastic_columns) {
     // When defining names, need to know the column number
     HighsInt previous_num_col = lp.num_col_;
@@ -1902,7 +1907,8 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const dou
   const bool has_row_names = lp.row_names_.size() > 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     // Get the penalty for violating the bounds on this row
-    const double penalty = has_local_rhs_penalty ? local_rhs_penalty[iRow] : global_rhs_penalty;
+    const double penalty =
+        has_local_rhs_penalty ? local_rhs_penalty[iRow] : global_rhs_penalty;
     // Negative penalty implies that the bounds cannot be violated
     if (penalty < 0) continue;
     const double lower = lp.row_lower_[iRow];
@@ -1975,20 +1981,20 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const dou
 
   run_status = solveLp();
   if (run_status != HighsStatus::kOk)
-    return elasticityFilterReturn(run_status, false,
-				  original_num_col, original_num_row,
-				  original_col_cost, original_col_lower,
-				  original_col_upper, original_integrality);
+    return elasticityFilterReturn(run_status, false, original_num_col,
+                                  original_num_row, original_col_cost,
+                                  original_col_lower, original_col_upper,
+                                  original_integrality);
   if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
   assert(this->model_status_ == HighsModelStatus::kOptimal ||
          this->model_status_ == HighsModelStatus::kUnbounded);
 
   if (!get_infeasible_row)
-    return elasticityFilterReturn(HighsStatus::kOk, false,
-				  original_num_col, original_num_row,
-				  original_col_cost, original_col_lower,
-				  original_col_upper, original_integrality);
+    return elasticityFilterReturn(HighsStatus::kOk, false, original_num_col,
+                                  original_num_row, original_col_cost,
+                                  original_col_lower, original_col_upper,
+                                  original_integrality);
   const HighsSolution& solution = this->getSolution();
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
@@ -2038,9 +2044,9 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const dou
     HighsStatus run_status = solveLp();
     if (run_status != HighsStatus::kOk)
       return elasticityFilterReturn(run_status, feasible_model,
-				    original_num_col, original_num_row,
-				    original_col_cost, original_col_lower,
-				    original_col_upper, original_integrality);
+                                    original_num_col, original_num_row,
+                                    original_col_cost, original_col_lower,
+                                    original_col_upper, original_integrality);
     if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
@@ -2091,9 +2097,9 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const dou
         int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
   return elasticityFilterReturn(HighsStatus::kOk, feasible_model,
-				original_num_col, original_num_row,
-				original_col_cost, original_col_lower,
-				original_col_upper, original_integrality);
+                                original_num_col, original_num_row,
+                                original_col_cost, original_col_lower,
+                                original_col_upper, original_integrality);
 }
 
 HighsStatus Highs::extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,

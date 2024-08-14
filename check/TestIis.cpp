@@ -202,7 +202,6 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   //  h.run();
   h.feasibilityRelaxation(1, 1, 1);
   h.writeSolution("", 1);
-
 }
 
 void testIis(const std::string& model, const HighsIis& iis) {

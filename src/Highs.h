@@ -504,11 +504,11 @@ class Highs {
    * @brief Solve the feasibility relaxation problem
    */
   HighsStatus feasibilityRelaxation(const double global_lower_penalty,
-				    const double global_upper_penalty,
-				    const double global_rhs_penalty,
-				    const double* local_lower_penalty = nullptr,
-				    const double* local_upper_penalty = nullptr,
-				    const double* local_rhs_penalty = nullptr);
+                                    const double global_upper_penalty,
+                                    const double global_rhs_penalty,
+                                    const double* local_lower_penalty = nullptr,
+                                    const double* local_upper_penalty = nullptr,
+                                    const double* local_rhs_penalty = nullptr);
 
   /**
    * @brief Get the ill-conditioning information for the current basis
@@ -1534,17 +1534,21 @@ class Highs {
 
   HighsStatus getIisInterface();
 
-  HighsStatus elasticityFilterReturn(const HighsStatus return_status,
-				     const bool feasible_model,
-				     const HighsInt original_num_col,
-				     const HighsInt original_num_row,
-				     const std::vector<double>& original_col_cost,
-				     const std::vector<double>& original_col_lower,
-				     const std::vector<double> original_col_upper,
-				     const std::vector<HighsVarType> original_integrality);
-  HighsStatus elasticityFilter(const double global_lower_penalty, const double global_upper_penalty, const double global_rhs_penalty,
-			       const double* local_lower_penalty, const double* local_upper_penalty, const double* local_rhs_penalty, 
-			       const bool get_infeasible_row, std::vector<HighsInt>& infeasible_row_subset);
+  HighsStatus elasticityFilterReturn(
+      const HighsStatus return_status, const bool feasible_model,
+      const HighsInt original_num_col, const HighsInt original_num_row,
+      const std::vector<double>& original_col_cost,
+      const std::vector<double>& original_col_lower,
+      const std::vector<double> original_col_upper,
+      const std::vector<HighsVarType> original_integrality);
+  HighsStatus elasticityFilter(const double global_lower_penalty,
+                               const double global_upper_penalty,
+                               const double global_rhs_penalty,
+                               const double* local_lower_penalty,
+                               const double* local_upper_penalty,
+                               const double* local_rhs_penalty,
+                               const bool get_infeasible_row,
+                               std::vector<HighsInt>& infeasible_row_subset);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
