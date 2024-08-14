@@ -1534,6 +1534,13 @@ class Highs {
 
   HighsStatus getIisInterface();
 
+  HighsStatus elasticityFilterReturn(const HighsStatus return_status,
+				     const bool feasible_model,
+				     const HighsInt original_num_col,
+				     const HighsInt original_num_row,
+				     const std::vector<double>& original_col_cost,
+				     const std::vector<double>& original_col_lower,
+				     const std::vector<double> original_col_upper);
   HighsStatus elasticityFilter(const double global_lower_penalty, const double global_upper_penalty, const double global_rhs_penalty,
 			       const double* local_lower_penalty, const double* local_upper_penalty, const double* local_rhs_penalty, 
 			       const bool get_infeasible_row, std::vector<HighsInt>& infeasible_row_subset);
