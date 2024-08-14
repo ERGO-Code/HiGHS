@@ -501,6 +501,16 @@ class Highs {
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
+   * @brief Solve the feasibility relaxation problem
+   */
+  HighsStatus feasibilityRelaxation(const double global_lower_penalty,
+				    const double global_upper_penalty,
+				    const double global_rhs_penalty,
+				    const double* local_lower_penalty = nullptr,
+				    const double* local_upper_penalty = nullptr,
+				    const double* local_rhs_penalty = nullptr);
+
+  /**
    * @brief Get the ill-conditioning information for the current basis
    */
   HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
@@ -1524,8 +1534,9 @@ class Highs {
 
   HighsStatus getIisInterface();
 
-  HighsStatus computeInfeasibleRows(const bool elastic_columns,
-                                    std::vector<HighsInt>& infeasible_row);
+  HighsStatus elasticityFilter(const double global_lower_penalty, const double global_upper_penalty, const double global_rhs_penalty,
+			       const double* local_lower_penalty, const double* local_upper_penalty, const double* local_rhs_penalty, 
+			       const bool get_infeasible_row, std::vector<HighsInt>& infeasible_row_subset);
   HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);

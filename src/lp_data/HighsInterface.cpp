@@ -1624,8 +1624,9 @@ HighsStatus Highs::getIisInterface() {
     HighsLp check_lp_before = this->model_.lp_;
     // Apply the elasticity filter to the whole model in order to
     // determine an infeasible subset of rows
-    HighsStatus return_status =
-        this->computeInfeasibleRows(false, infeasible_row_subset);
+    HighsStatus return_status = this->elasticityFilter(-1.0, -1.0, 1.0,
+						       nullptr, nullptr, nullptr, true,
+						       infeasible_row_subset);
     HighsLp check_lp_after = this->model_.lp_;
     assert(check_lp_before.equalButForScalingAndNames(check_lp_after));
     if (return_status != HighsStatus::kOk) return return_status;
@@ -1673,9 +1674,13 @@ HighsStatus Highs::getIisInterface() {
   return return_status;
 }
 
-HighsStatus Highs::computeInfeasibleRows(
-    const bool elastic_columns, std::vector<HighsInt>& infeasible_row_subset) {
-  // Elasticity filter
+HighsStatus Highs::elasticityFilter(const double global_lower_penalty, const double global_upper_penalty, const double global_rhs_penalty,
+				    const double* local_lower_penalty, const double* local_upper_penalty, const double* local_rhs_penalty, 
+				    const bool get_infeasible_row, std::vector<HighsInt>& infeasible_row_subset) {
+  // Solve the feasibility relaxation problem for the given penalties,
+  // continuing to act as the elasticity filter get_infeasible_row is
+  // true, resulting in an infeasibility subset for further refinement
+  // as an IIS
   //
   // Construct the e-LP:
   //
@@ -1688,13 +1693,10 @@ HighsStatus Highs::computeInfeasibleRows(
   // l <=  x + e_l - e_u <= u,
   //
   // where the elastic variables are not used if the corresponding
-  // bound is infinite, and the elastic variables e_l and e_u are not
-  // used if elastic_columns is false
+  // bound is infinite or the local/global penalty is negative.
   //
-  // x is free, and the objective is the sum of the elastic variables.
-  //
-  // Determine the number of lower and upper elastic variables for
-  // columns and rows
+  // x is free, and the objective is the linear function of the
+  // elastic variables given by the local/global penalties
   //
   // col_of_ecol lists the column indices corresponding to the entries in
   // bound_of_col_of_ecol so that the results can be interpreted
@@ -1722,17 +1724,31 @@ HighsStatus Highs::computeInfeasibleRows(
   HighsStatus run_status;
   const bool write_model = false;
   HighsInt col_ecol_offset;
+  // Take copies of the original model dimensions and column data
+  // vectors, as they will be modified in forming the e-LP
   const HighsInt original_num_col = lp.num_col_;
   const HighsInt original_num_row = lp.num_row_;
   const std::vector<double> original_col_cost = lp.col_cost_;
   const std::vector<double> original_col_lower = lp.col_lower_;
   const std::vector<double> original_col_upper = lp.col_upper_;
+  // Zero the column costs
   std::vector<double> zero_costs;
   zero_costs.assign(original_num_col, 0);
   run_status = this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
   assert(run_status == HighsStatus::kOk);
 
-  if (elastic_columns) {
+  const bool has_local_lower_penalty = local_lower_penalty;
+  const bool has_global_elastic_lower = global_lower_penalty >= 0;
+  const bool has_elastic_lower = has_local_lower_penalty || has_global_elastic_lower;
+  const bool has_local_upper_penalty = local_upper_penalty;
+  const bool has_global_elastic_upper = global_upper_penalty >= 0;
+  const bool has_elastic_upper = has_local_upper_penalty || has_global_elastic_upper;
+  const bool has_local_rhs_penalty = local_rhs_penalty;
+  const bool has_global_elastic_rhs = global_rhs_penalty >= 0;
+  const bool has_elastic_rows = has_local_rhs_penalty || has_global_elastic_rhs;
+  const bool has_elastic_columns = has_elastic_lower || has_elastic_upper;
+  
+  if (has_elastic_columns) {
     // When defining names, need to know the column number
     HighsInt previous_num_col = lp.num_col_;
     HighsInt previous_num_row = lp.num_row_;
@@ -1913,7 +1929,7 @@ HighsStatus Highs::computeInfeasibleRows(
     if (kIisDevReport)
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     HighsInt num_fixed = 0;
-    if (elastic_columns) {
+    if (has_elastic_columns) {
       for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
         HighsInt iCol = col_of_ecol[eCol];
         if (solution.col_value[col_ecol_offset + eCol] >
