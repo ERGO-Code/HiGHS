@@ -329,7 +329,7 @@ class HighsDomain {
 
   void updateRedundantRows(HighsInt row, HighsInt direction, HighsInt numInf,
                            HighsCDouble activity, double bound);
-  
+
   double doChangeBound(const HighsDomainChange& boundchg);
 
   std::vector<HighsInt> colLowerPos_;

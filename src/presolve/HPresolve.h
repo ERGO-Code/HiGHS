@@ -29,9 +29,9 @@
 #include "presolve/HPresolveAnalysis.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
+#include "util/HighsHashTree.h"
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsMatrixSlice.h"
-#include "util/HighsHashTree.h"
 
 namespace presolve {
 
