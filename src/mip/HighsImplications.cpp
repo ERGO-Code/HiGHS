@@ -50,8 +50,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   if (isInfeasible()) return true;
 
-  // new lifting opportunity; negate column index if variable is set to its
-  // lower bound
+  // use callback to store new lifting opportunities; negate column index if
+  // variable is set to its lower bound
   for (const HighsHashTableEntry<HighsInt>& elm :
        globaldomain.getRedundantRows())
     storeLiftingOpportunity(
