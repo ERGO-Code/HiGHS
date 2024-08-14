@@ -52,11 +52,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   // use callback to store new lifting opportunities; negate column index if
   // variable is set to its lower bound
-  for (const HighsHashTableEntry<HighsInt>& elm :
-       globaldomain.getRedundantRows())
-    storeLiftingOpportunity(
-        elm.key(), (val ? 1 : -1) * col,
-        (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
+  if (storeLiftingOpportunity != nullptr)
+    for (const HighsHashTableEntry<HighsInt>& elm :
+         globaldomain.getRedundantRows())
+      storeLiftingOpportunity(
+          elm.key(), (val ? 1 : -1) * col,
+          (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;

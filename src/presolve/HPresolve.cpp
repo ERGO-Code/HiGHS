@@ -1600,6 +1600,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     if (numDeletedRows == 0 && numDeletedCols == 0) liftingForProbing();
     // clear lifting opportunities
     liftingOpportunities.clear();
+    implications.storeLiftingOpportunity = nullptr;
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
