@@ -1063,7 +1063,7 @@ void HEkkDual::rebuild() {
   // Note that computePrimalObjectiveValue sets
   // has_primal_objective_value
   const bool check_updated_objective_value = status.has_dual_objective_value;
-  double previous_dual_objective_value;
+  double previous_dual_objective_value = -kHighsInf;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "Before computeDual");

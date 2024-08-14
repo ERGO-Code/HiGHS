@@ -710,7 +710,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   }
   if (filename == "") {
     // Empty file name: report model on logging stream
-    reportModel();
+    reportModel(model);
     return_status = HighsStatus::kOk;
   } else {
     Filereader* writer =
@@ -1963,6 +1963,56 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     solution_.dual_valid = true;
   }
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::setSolution(const HighsInt num_entries,
+                               const HighsInt* index, const double* value) {
+  HighsStatus return_status = HighsStatus::kOk;
+  // Warn about duplicates in index
+  HighsInt num_duplicates = 0;
+  std::vector<bool> is_set;
+  is_set.assign(model_.lp_.num_col_, false);
+  for (HighsInt iX = 0; iX < num_entries; iX++) {
+    HighsInt iCol = index[iX];
+    if (iCol < 0 || iCol > model_.lp_.num_col_) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "setSolution: User solution index %d has value %d out of "
+                   "range [0, %d)",
+                   int(iX), int(iCol), int(model_.lp_.num_col_));
+      return HighsStatus::kError;
+    } else if (value[iX] < model_.lp_.col_lower_[iCol] -
+                               options_.primal_feasibility_tolerance ||
+               model_.lp_.col_upper_[iCol] +
+                       options_.primal_feasibility_tolerance <
+                   value[iX]) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "setSolution: User solution value %d of %g is infeasible "
+                   "for bounds [%g, %g]",
+                   int(iX), value[iX], model_.lp_.col_lower_[iCol],
+                   model_.lp_.col_upper_[iCol]);
+      return HighsStatus::kError;
+    }
+    if (is_set[iCol]) num_duplicates++;
+    is_set[iCol] = true;
+  }
+  if (num_duplicates > 0) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "setSolution: User set of indices has %d duplicate%s: last "
+                 "value used\n",
+                 int(num_duplicates), num_duplicates > 1 ? "s" : "");
+    return_status = HighsStatus::kWarning;
+  }
+
+  // Clear the solution, indicate the values not determined by the
+  // user, and insert the values determined by the user
+  HighsSolution new_solution;
+  new_solution.col_value.assign(model_.lp_.num_col_, kHighsUndefined);
+  for (HighsInt iX = 0; iX < num_entries; iX++) {
+    HighsInt iCol = index[iX];
+    new_solution.col_value[iCol] = value[iX];
+  }
+  return interpretCallStatus(options_.log_options, setSolution(new_solution),
+                             return_status, "setSolution");
 }
 
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
@@ -3348,62 +3398,128 @@ void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
-  // if not, try to assign values to continuous variables to achieve a
-  // feasible solution. Valuable in the case where users make a
-  // heuristic assignment of discrete variables
+  // if not, try to assign values to continuous variables and discrete
+  // variables not at integer values to achieve a feasible
+  // solution. Valuable in the case where users make a heuristic
+  // (partial) assignment of discrete variables
   assert(model_.isMip() && solution_.value_valid);
   HighsLp& lp = model_.lp_;
-  bool valid, integral, feasible;
-  // Determine whether this solution is feasible, or just integer feasible
-  HighsStatus return_status = assessLpPrimalSolution(options_, lp, solution_,
-                                                     valid, integral, feasible);
-  assert(return_status != HighsStatus::kError);
-  assert(valid);
-  // If the current solution is feasible, then solution can be used by
-  // MIP solver to get a primal bound
-  if (feasible) return HighsStatus::kOk;
+  // Determine whether the solution contains undefined values, in
+  // order to decide whether to check its feasibility
+  const bool contains_undefined_values = solution_.hasUndefined();
+  if (!contains_undefined_values) {
+    bool valid, integral, feasible;
+    // Determine whether this solution is integer feasible
+    HighsStatus return_status = assessLpPrimalSolution(
+        options_, lp, solution_, valid, integral, feasible);
+    assert(return_status != HighsStatus::kError);
+    assert(valid);
+    // If the current solution is integer feasible, then it can be
+    // used by MIP solver to get a primal bound
+    if (feasible) return HighsStatus::kOk;
+  }
   // Save the column bounds and integrality in preparation for fixing
-  // the non-continuous variables when user-supplied values are
+  // the discrete variables when user-supplied values are
   // integer
   std::vector<double> save_col_lower = lp.col_lower_;
   std::vector<double> save_col_upper = lp.col_upper_;
   std::vector<HighsVarType> save_integrality = lp.integrality_;
   const bool have_integrality = (lp.integrality_.size() != 0);
-  bool is_integer = true;
+  assert(have_integrality);
+  // Count the number of fixed and unfixed discrete variables
+  HighsInt num_fixed_discrete_variable = 0;
+  HighsInt num_unfixed_discrete_variable = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
-    // Fix non-continuous variable if it has integer value
     const double primal = solution_.col_value[iCol];
-    const double lower = lp.col_lower_[iCol];
-    const double upper = lp.col_upper_[iCol];
-    const HighsVarType type =
-        have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
-    double col_infeasibility = 0;
-    double integer_infeasibility = 0;
-    assessColPrimalSolution(options_, primal, lower, upper, type,
-                            col_infeasibility, integer_infeasibility);
-    if (integer_infeasibility > options_.mip_feasibility_tolerance) {
-      // Variable is not integer feasible, so record that a MIP will
-      // have to be solved
-      is_integer = false;
+    // Default value is lower bound, unless primal is integer for a
+    // discrete variable
+    solution_.col_value[iCol] = lp.col_lower_[iCol];
+    if (lp.integrality_[iCol] == HighsVarType::kContinuous) continue;
+    // Fix discrete variable if its value is defined and integer
+    if (primal == kHighsUndefined) {
+      num_unfixed_discrete_variable++;
     } else {
-      // Variable is integer feasible, so fix it at this value and
-      // remove its integrality
-      lp.col_lower_[iCol] = solution_.col_value[iCol];
-      lp.col_upper_[iCol] = solution_.col_value[iCol];
-      lp.integrality_[iCol] = HighsVarType::kContinuous;
+      const double lower = lp.col_lower_[iCol];
+      const double upper = lp.col_upper_[iCol];
+      const HighsVarType type =
+          have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+      double col_infeasibility = 0;
+      double integer_infeasibility = 0;
+      assessColPrimalSolution(options_, primal, lower, upper, type,
+                              col_infeasibility, integer_infeasibility);
+      if (integer_infeasibility > options_.mip_feasibility_tolerance) {
+        num_unfixed_discrete_variable++;
+      } else {
+        // Variable is integer feasible, so fix it at this value and
+        // remove its integrality
+        num_fixed_discrete_variable++;
+        lp.col_lower_[iCol] = primal;
+        lp.col_upper_[iCol] = primal;
+        lp.integrality_[iCol] = HighsVarType::kContinuous;
+      }
     }
   }
-  // If the solution is integer valued, only an LP needs to be solved,
-  // so clear all integrality
-  if (is_integer) lp.integrality_.clear();
+  assert(!solution_.hasUndefined());
+  const HighsInt num_discrete_variable =
+      num_unfixed_discrete_variable + num_fixed_discrete_variable;
+  const HighsInt num_continuous_variable = lp.num_col_ - num_discrete_variable;
+  assert(num_continuous_variable >= 0);
+  bool call_run = true;
+  const bool few_fixed_discrete_variables =
+      10 * num_fixed_discrete_variable < num_discrete_variable;
+  if (num_unfixed_discrete_variable == 0) {
+    // Solution is integer valued
+    if (num_continuous_variable == 0) {
+      // There are no continuous variables, so no feasible solution can be
+      // deduced
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "User-supplied values of discrete variables cannot yield "
+                   "feasible solution\n");
+      call_run = false;
+    } else {
+      // Solve an LP, so clear all integrality
+      lp.integrality_.clear();
+      highsLogUser(
+          options_.log_options, HighsLogType::kInfo,
+          "Attempting to find feasible solution "
+          "by solving LP for user-supplied values of discrete variables\n");
+    }
+  } else {
+    // There are unfixed discrete variables
+    if (few_fixed_discrete_variables) {
+      // Too few discrete variables are fixed so warn, but still
+      // attempt to complete a feasible solution
+      highsLogUser(
+          options_.log_options, HighsLogType::kWarning,
+          "User-supplied values fix only %d / %d discrete variables, "
+          "so attempt to complete a feasible solution may be expensive\n",
+          int(num_fixed_discrete_variable), int(num_discrete_variable));
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Attempting to find feasible solution "
+                   "by solving MIP for user-supplied values of %d / %d "
+                   "discrete variables\n",
+                   int(num_fixed_discrete_variable),
+                   int(num_discrete_variable));
+    }
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  // Clear the current solution since either the user solution has
+  // been used to fix (a subset of) discrete variables - so a valid
+  // solution will be obtained from run() if the local model is
+  // feasible - or it's not worth using the user solution
   solution_.clear();
-  basis_.clear();
-  // Solve the model
-  highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Attempting to find feasible solution "
-               "for (partial) user-supplied values of discrete variables\n");
-  return_status = this->run();
+  if (call_run) {
+    // Solve the model, using mip_max_start_nodes for
+    // mip_max_nodes...
+    const HighsInt mip_max_nodes = options_.mip_max_nodes;
+    options_.mip_max_nodes = options_.mip_max_start_nodes;
+    // Solve the model
+    basis_.clear();
+    return_status = this->run();
+    // ... remembering to recover the original value of mip_max_nodes
+    options_.mip_max_nodes = mip_max_nodes;
+  }
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
   lp.col_upper_ = save_col_upper;
@@ -3903,13 +4019,13 @@ void Highs::logHeader() {
   return;
 }
 
-void Highs::reportModel() {
-  reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
-  if (model_.hessian_.dim_) {
-    const HighsInt dim = model_.hessian_.dim_;
-    reportHessian(options_.log_options, dim, model_.hessian_.start_[dim],
-                  model_.hessian_.start_.data(), model_.hessian_.index_.data(),
-                  model_.hessian_.value_.data());
+void Highs::reportModel(const HighsModel& model) {
+  reportLp(options_.log_options, model.lp_, HighsLogType::kVerbose);
+  if (model.hessian_.dim_) {
+    const HighsInt dim = model.hessian_.dim_;
+    reportHessian(options_.log_options, dim, model.hessian_.start_[dim],
+                  model.hessian_.start_.data(), model.hessian_.index_.data(),
+                  model.hessian_.value_.data());
   }
 }
 

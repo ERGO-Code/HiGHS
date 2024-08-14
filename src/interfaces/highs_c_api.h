@@ -120,6 +120,8 @@ const char* const kHighsCallbackDataOutPdlpIterationCountName =
 const char* const kHighsCallbackDataOutObjectiveFunctionValueName =
     "objective_function_value";
 const char* const kHighsCallbackDataOutMipNodeCountName = "mip_node_count";
+const char* const kHighsCallbackDataOutMipTotalLpIterationsName =
+    "mip_total_lp_iterations";
 const char* const kHighsCallbackDataOutMipPrimalBoundName = "mip_primal_bound";
 const char* const kHighsCallbackDataOutMipDualBoundName = "mip_dual_bound";
 const char* const kHighsCallbackDataOutMipGapName = "mip_gap";
@@ -1136,6 +1138,19 @@ HighsInt Highs_setLogicalBasis(void* highs);
 HighsInt Highs_setSolution(void* highs, const double* col_value,
                            const double* row_value, const double* col_dual,
                            const double* row_dual);
+
+/**
+ * Set a partial primal solution by passing values for a set of variables
+ *
+ * @param highs       A pointer to the Highs instance.
+ * @param num_entries Number of variables in the set
+ * @param index       Indices of variables in the set
+ * @param value       Values of variables in the set
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
+                                 const HighsInt* index, const double* value);
 
 /**
  * Set the callback method to use for HiGHS

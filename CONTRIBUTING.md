@@ -12,7 +12,7 @@ Contact [Julian](https://github.com/jajhall) (General issues and solvers), [Ivet
 
 ## Improve the documentation
 
-The top level [documentation](https://ergo-code.github.io/HiGHS/) is created using [Docsy](https://www.docsy.dev/), with the files held on the [HiGHS repository](https://github.com/ERGO-Code/HiGHS/tree/docsy). If your change is small (like fixing typos, or one or two sentence corrections), the easiest way to do this is to fork the branch and create a pull request. (See *Contribute code to HiGHS* below for more on this.) If your change is larger, or touches multiple files, please raise an issue describing what you want to do.
+The top level [documentation](https://ergo-code.github.io/HiGHS/) is created using [Docsy](https://www.docsy.dev/), with the files held on the [HiGHS repository](https://github.com/ERGO-Code/HiGHS/tree/master/docs). If your change is small (like fixing typos, or one or two sentence corrections), the easiest way to do this is to fork the branch and create a pull request. (See *Contribute code to HiGHS* below for more on this.) If your change is larger, or touches multiple files, please raise an issue describing what you want to do.
 
 ## Raise an issue
 

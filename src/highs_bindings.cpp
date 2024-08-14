@@ -285,6 +285,24 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<Hig
     return h->deleteRows(num_set_entries, indices.data());
 }
 
+
+HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
+  return h->setSolution(solution);
+}
+
+HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
+				    py::array_t<HighsInt> index,
+				    py::array_t<double> value) {
+  py::buffer_info index_info = index.request();
+  py::buffer_info value_info = value.request();
+
+  HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
+  double* value_ptr = static_cast<double*>(value_info.ptr);
+
+  return h->setSolution(num_entries, index_ptr, value_ptr);
+}
+
+
 HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
   return h->setBasis(basis);
 }
@@ -935,7 +953,8 @@ PYBIND11_MODULE(_core, m) {
       .def("deleteCols", &highs_deleteCols)
       .def("deleteVars", &highs_deleteCols) // alias
       .def("deleteRows", &highs_deleteRows)
-      .def("setSolution", &Highs::setSolution)
+      .def("setSolution", &highs_setSolution)
+      .def("setSolution", &highs_setSparseSolution)
       .def("setBasis", &highs_setBasis)
       .def("setBasis", &highs_setLogicalBasis)
       .def("modelStatusToString", &Highs::modelStatusToString)

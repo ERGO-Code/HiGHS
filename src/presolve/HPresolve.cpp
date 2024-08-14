@@ -1457,10 +1457,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
-      if (cliquetable.getSubstitution(i) != nullptr) continue;
-
-      // skip non-binary variables
-      if (!domain.isBinary(i)) continue;
+      if (cliquetable.getSubstitution(i) != nullptr || !domain.isBinary(i))
+        continue;
 
       // when a large percentage of columns have been deleted, stop this round
       // of probing

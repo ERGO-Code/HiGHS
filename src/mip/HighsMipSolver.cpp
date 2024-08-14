@@ -115,6 +115,10 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
+  if (!submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
+                 timer_.read(timer_.solve_clock));
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
       timer_.read(timer_.solve_clock) >= options_mip_->time_limit)
@@ -134,10 +138,33 @@ void HighsMipSolver::run() {
     return;
   }
 
+  if (!submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
+                 timer_.read(timer_.solve_clock));
   mipdata_->runSetup();
+  if (!submip)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
+                 timer_.read(timer_.solve_clock));
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
+    // Check limits have not been reached before evaluating root node
+    if (mipdata_->checkLimits()) {
+      cleanupSolve();
+      return;
+    }
+    if (!submip)
+      highsLogUser(
+          options_mip_->log_options, HighsLogType::kInfo,
+          "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
+          timer_.read(timer_.solve_clock));
     mipdata_->evaluateRootNode();
+    if (!submip)
+      highsLogUser(
+          options_mip_->log_options, HighsLogType::kInfo,
+          "MIP-Timing: After %6.4fs - completed mipdata_->evaluateRootNode()\n",
+          timer_.read(timer_.solve_clock));
     // age 5 times to remove stored but never violated cuts after root
     // separation
     mipdata_->cutpool.performAging();
@@ -146,7 +173,7 @@ restart:
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
   }
-  if (mipdata_->nodequeue.empty()) {
+  if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
     cleanupSolve();
     return;
   }

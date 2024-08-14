@@ -4,24 +4,31 @@ on: [push, pull_request]
 
 jobs:
   fast_build_release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
+    runs-on: macos-12 
+    
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GFortran
-        run: brew install gfortran
+      - uses: fortran-lang/setup-fortran@v1.6
+        id: setup-fortran
+        with:
+          compiler: gcc 
+          version: 11
+
+      # - name: Install GFortran
+      #   run: brew install gfortran gcc
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
-
+          
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
+        run: |
+          cmake --version
+          gfortran-11 --version
+          cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
 
       - name: Build
         shell: bash

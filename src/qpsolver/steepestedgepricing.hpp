@@ -91,7 +91,6 @@ class SteepestEdgePricing : public Pricing {
 
     std::vector<int> correct_weights;
     std::vector<int> incorrect_weights;
-    bool ret = true;
     for (int i=0; i<runtime.instance.num_var; i++) {
       bool correct = check_weight(i);
         if (correct) {
@@ -132,7 +131,7 @@ class SteepestEdgePricing : public Pricing {
 
     QpVector delta = basis.ftran(aq);
 
-    double old_weight_p_updated = weights[rowindex_p];
+    //double old_weight_p_updated = weights[rowindex_p];
     // exact weight coming in needs to come in before update.
     double old_weight_p_computed = ep.dot(ep);
 

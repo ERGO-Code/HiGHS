@@ -186,7 +186,7 @@ HighsInt HEkkDualRow::chooseFinal() {
     alt_workCount = workCount;
   }
   analysis->simplexTimerStart(Chuzc4Clock);
-  bool choose_ok;
+  bool choose_ok = false;
   if (use_quad_sort) {
     // Use the O(n^2) quadratic sort for the candidates
     analysis->simplexTimerStart(Chuzc4a0Clock);
@@ -212,10 +212,10 @@ HighsInt HEkkDualRow::chooseFinal() {
 
   // 3. Choose large alpha
   analysis->simplexTimerStart(Chuzc4bClock);
-  HighsInt breakIndex;
-  HighsInt breakGroup;
-  HighsInt alt_breakIndex;
-  HighsInt alt_breakGroup;
+  HighsInt breakIndex = -1;
+  HighsInt breakGroup = -1;
+  HighsInt alt_breakIndex = -1;
+  HighsInt alt_breakGroup = -1;
   if (use_quad_sort)
     chooseFinalLargeAlpha(breakIndex, breakGroup, workCount, workData,
                           workGroup);

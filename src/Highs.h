@@ -1064,6 +1064,12 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
+   * @brief Pass a sparse primal solution
+   */
+  HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
+                          const double* value);
+
+  /**
    * @brief Set the callback method to use for HiGHS
    */
   HighsStatus setCallback(HighsCallbackFunctionType user_callback,
@@ -1368,7 +1374,7 @@ class Highs {
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, HighsFileType& file_type) const;
 
-  void reportModel();
+  void reportModel(const HighsModel& model);
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
   //

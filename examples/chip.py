@@ -9,23 +9,12 @@ import highspy
 h = highspy.Highs()
 h.silent()
 
-varNames = list()
-varNames.append('Tables')
-varNames.append('Sets of chairs')
+items = ['Tables', 'Sets of chairs']
+x = h.addVariables(items, obj = [10, 20], name = items)
 
-x1 = h.addVariable(obj = 10, name = varNames[0])
-x2 = h.addVariable(obj = 25, name = varNames[1])
-
-vars = list()
-vars.append(x1)
-vars.append(x2)
-
-constrNames = list()
-constrNames.append('Assembly')
-constrNames.append('Finishing')
-
-h.addConstr(x1 + 2*x2 <=  80, name = constrNames[0])
-h.addConstr(x1 + 4*x2 <= 120, name = constrNames[1])
+constrNames = ['Assembly', 'Finishing']
+cons = h.addConstrs(x['Tables'] + 2*x['Sets of chairs'] <=  80, 
+                    x['Tables'] + 4*x['Sets of chairs'] <= 120, name = constrNames)
 
 h.setMaximize()
 
@@ -36,16 +25,17 @@ print('writeModel(\'Chip.mps\') status =', status)
 
 h.solve()
 
-for var in vars:
+
+for n, var in x.items():
     print('Make', h.variableValue(var), h.variableName(var), ': Reduced cost', h.variableDual(var))
-print('Make', h.variableValues(vars), 'of', h.variableNames(vars))
+    
+print('Make', h.variableValues(x.values()), 'of', h.variableNames(x.values()))
 print('Make', h.allVariableValues(), 'of', h.allVariableNames())
 
-for name in constrNames:
-    print('Constraint', name, 'has value', h.constrValue(name), 'and dual', h.constrDual(name))
-
-print('Constraints have values', h.constrValues(constrNames), 'and duals', h.constrDuals(constrNames))
-
+for c in cons:
+    print('Constraint', c.name, 'has value', h.constrValue(c), 'and dual', h.constrDual(c))
+    
+print('Constraints have values', h.constrValues(cons), 'and duals', h.constrDuals(cons))
 print('Constraints have values', h.allConstrValues(), 'and duals', h.allConstrDuals())
 
 print('Optimal objective value is', h.getObjectiveValue())
