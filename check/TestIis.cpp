@@ -6,7 +6,7 @@
 #include "catch.hpp"
 //#include "io/FilereaderLp.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 void testIis(const std::string& model, const HighsIis& iis);
@@ -185,23 +185,103 @@ TEST_CASE("lp-get-iis-avgas", "[iis]") {
 }
 
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
+  // Using infeasible LP from AMPL documentation
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {1, -2};
   lp.col_lower_ = {5, -inf};
   lp.col_upper_ = {inf, inf};
+  lp.col_names_ = {"X", "Y"};
   lp.row_lower_ = {2, -inf, -inf};
   lp.row_upper_ = {inf, 1, 20};
+  lp.row_names_ = {"R0", "R1", "R2"};
   lp.a_matrix_.start_ = {0, 3, 6};
   lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
   lp.a_matrix_.value_ = {-1, -3, 20, 21, 2, 1};
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsSolution& solution = h.getSolution();
   h.passModel(lp);
   //  h.run();
-  h.feasibilityRelaxation(1, 1, 1);
-  h.writeSolution("", 1);
+
+  const bool all_tests = false;
+  const bool test0 = false || all_tests;
+  const bool test1 = false || all_tests;
+  const bool test2 = true || all_tests;
+  const bool test3 = false || all_tests;
+  if (test0) {
+    // Vanilla feasibility relaxation
+    if (dev_run)
+      printf(
+          "==============================\n"
+          "Vanilla feasibility relaxation\n"
+          "==============================\n");
+    REQUIRE(h.feasibilityRelaxation(1, 1, 1) == HighsStatus::kOk);
+    // Should get solution (1, 1)
+    h.writeSolution("", 1);
+    REQUIRE(solution.col_value[0] == 1);
+    REQUIRE(solution.col_value[1] == 1);
+  }
+
+  if (test1) {
+    // Now we want to force all variable lower bounds to be respected
+    if (dev_run)
+      printf(
+          "========================\n"
+          "Respect all lower bounds\n"
+          "========================\n");
+    h.feasibilityRelaxation(-1, 1, 1);
+    // Should get solution (5, 1)
+    h.writeSolution("", 1);
+    REQUIRE(solution.col_value[0] == 5);
+    REQUIRE(solution.col_value[1] == 1);
+  }
+
+  if (test2) {
+    if (dev_run)
+      printf(
+          "===============================\n"
+          "Local penalties RHS {1, -1, 10}\n"
+          "===============================\n");
+    // Now test local penalties
+    //
+    // constraint 0: normal weight
+    //
+    // constraint 1: cannot be violated
+    //
+    // constraint 2: rather not violate
+    //
+    std::vector<double> local_rhs_penalty = {1, -1, 10};
+    h.feasibilityRelaxation(1, 1, 0, nullptr, nullptr,
+                            local_rhs_penalty.data());
+    // Should get slacks (-3, 4, 0)
+    h.writeSolution("", 1);
+    REQUIRE(solution.row_value[0] == lp.row_lower_[0] - 3);
+    REQUIRE(solution.row_value[1] == lp.row_upper_[1] - 4);
+    REQUIRE(solution.row_value[2] == lp.row_upper_[2]);
+  }
+
+  if (test3) {
+    if (dev_run)
+      printf(
+          "==============================\n"
+          "Local penalties RHS {10, 1, 1}\n"
+          "==============================\n");
+    //
+    // constraint 0: rather not violate
+    //
+    // constraint 1: normal weight
+    //
+    // constraint 2: normal weight
+    //
+    std::vector<double> local_rhs_penalty = {10, 1, 1};
+    // Should get row activities (18, 2, -1)
+    REQUIRE(solution.row_value[0] == 18);
+    REQUIRE(solution.row_value[1] == 2);
+    REQUIRE(solution.row_value[2] == -1);
+  }
 }
 
 void testIis(const std::string& model, const HighsIis& iis) {

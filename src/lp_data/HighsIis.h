@@ -16,7 +16,7 @@
 
 #include "lp_data/HighsLp.h"
 
-const bool kIisDevReport = false;
+const bool kIisDevReport = true;
 
 enum IisBoundStatus {
   kIisBoundStatusDropped = -1,
