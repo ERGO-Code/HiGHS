@@ -1586,6 +1586,55 @@ void test_ranging() {
   Highs_destroy(highs);
 }
 
+void test_feasibilityRelaxation() {
+  void* highs;
+  highs = Highs_create();
+  const double kHighsInf = Highs_getInfinity(highs);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt return_status;
+  
+  HighsInt num_col = 2;
+  HighsInt num_row = 3;
+  HighsInt num_nz = 6;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMinimize;
+  double offset = 0;
+  double col_cost[2] = {1, -2};
+  double col_lower[2] = {5, -kHighsInf};
+  double col_upper[2] = {kHighsInf, kHighsInf};
+  double row_lower[3] = {2, -kHighsInf, -kHighsInf};
+  double row_upper[3] = {kHighsInf, 1, 20};
+  HighsInt a_start[2] = {0, 3};
+  HighsInt a_index[6] = {0, 1, 2, 0, 1, 2};
+  double a_value[6] = {-1, -3, 20, 21, 2, 1};
+  HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
+
+  Highs_passMip(highs, num_col, num_row, num_nz, a_format, sense, offset,
+		col_cost, col_lower, col_upper,
+		row_lower, row_upper,
+		a_start, a_index, a_value,
+		integrality);
+  Highs_feasibilityRelaxation(highs, 1, 1, 1, NULL, NULL, NULL);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+  return_status = Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+  assert( return_status == kHighsStatusOk );
+  assertDoubleValuesEqual("objective_function_value", objective_function_value, 5);
+  assertDoubleValuesEqual("solution_value[0]", col_value[0], 1);
+  assertDoubleValuesEqual("solution_value[1]", col_value[1], 1);
+  
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+
+  Highs_destroy(highs);
+}
+
 void test_callback() {
   HighsInt num_col = 7;
   HighsInt num_row = 1;
@@ -1710,6 +1759,7 @@ void test_getModel() {
   assert( highsIntArraysEqual(num_nz, ck_a_index, a_index) );
   assert( doubleArraysEqual(num_nz, ck_a_value, a_value) );
 
+  Highs_destroy(highs);
 }
 
 /*
@@ -1758,23 +1808,24 @@ void test_setSolution() {
 }
 */
 int main() {
-  minimal_api_illegal_lp();
-  test_callback();
-  version_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_options();
-  full_api_lp();
-  full_api_mip();
-  full_api_qp();
-  pass_presolve_get_lp();
-  options();
-  test_getColsByRange();
-  test_passHessian();
-  test_ranging();
-  test_getModel();
+  //  minimal_api_illegal_lp();
+  //  test_callback();
+  //  version_api();
+  //  full_api();
+  //  minimal_api_lp();
+  //  minimal_api_mip();
+  //  minimal_api_qp();
+  //  full_api_options();
+  //  full_api_lp();
+  //  full_api_mip();
+  //  full_api_qp();
+  //  pass_presolve_get_lp();
+  //  options();
+  //  test_getColsByRange();
+  //  test_passHessian();
+  //  test_ranging();
+  test_feasibilityRelaxation();
+  //  test_getModel();
   return 0;
 }
   //  test_setSolution();

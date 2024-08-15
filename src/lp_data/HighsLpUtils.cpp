@@ -1613,6 +1613,9 @@ void changeLpIntegrality(HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.integrality_[col] = new_integrality[usr_col];
   }
+  // If integrality_ contains only HighsVarType::kContinuous then
+  // clear it
+  if (!lp.isMip()) lp.integrality_.clear();
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,

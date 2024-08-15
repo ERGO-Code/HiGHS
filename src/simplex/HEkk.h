@@ -244,6 +244,7 @@ class HEkk {
   double debug_max_relative_dual_steepest_edge_weight_error;
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
+  std::vector<double> primal_phase1_dual_;
 
  private:
   bool isUnconstrainedLp();

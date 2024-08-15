@@ -184,6 +184,7 @@ set(highs_sources_python
     src/lp_data/Highs.cpp
     src/lp_data/HighsCallback.cpp
     src/lp_data/HighsDebug.cpp
+    src/lp_data/HighsIis.cpp
     src/lp_data/HighsInfo.cpp
     src/lp_data/HighsInfoDebug.cpp
     src/lp_data/HighsInterface.cpp
@@ -298,6 +299,7 @@ set(highs_headers_python
     src/lp_data/HighsCallback.h
     src/lp_data/HighsCallbackStruct.h
     src/lp_data/HighsDebug.h
+    src/lp_data/HighsIis.h
     src/lp_data/HighsInfo.h
     src/lp_data/HighsInfoDebug.h
     src/lp_data/HighsLp.h

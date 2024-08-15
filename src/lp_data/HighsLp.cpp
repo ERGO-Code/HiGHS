@@ -68,6 +68,34 @@ bool HighsLp::operator==(const HighsLp& lp) const {
   return equal;
 }
 
+bool HighsLp::equalButForNames(const HighsLp& lp) const {
+  bool equal = equalButForScalingAndNames(lp);
+  equal = equalScaling(lp) && equal;
+  return equal;
+}
+
+bool HighsLp::equalButForScalingAndNames(const HighsLp& lp) const {
+  bool equal_vectors = true;
+  equal_vectors = this->num_col_ == lp.num_col_ && equal_vectors;
+  equal_vectors = this->num_row_ == lp.num_row_ && equal_vectors;
+  equal_vectors = this->sense_ == lp.sense_ && equal_vectors;
+  equal_vectors = this->offset_ == lp.offset_ && equal_vectors;
+  equal_vectors = this->model_name_ == lp.model_name_ && equal_vectors;
+  equal_vectors = this->col_cost_ == lp.col_cost_ && equal_vectors;
+  equal_vectors = this->col_upper_ == lp.col_upper_ && equal_vectors;
+  equal_vectors = this->col_lower_ == lp.col_lower_ && equal_vectors;
+  equal_vectors = this->row_upper_ == lp.row_upper_ && equal_vectors;
+  equal_vectors = this->row_lower_ == lp.row_lower_ && equal_vectors;
+#ifndef NDEBUG
+  if (!equal_vectors) printf("HighsLp::equalButForNames: Unequal vectors\n");
+#endif
+  const bool equal_matrix = this->a_matrix_ == lp.a_matrix_;
+#ifndef NDEBUG
+  if (!equal_matrix) printf("HighsLp::equalButForNames: Unequal matrix\n");
+#endif
+  return equal_vectors && equal_matrix;
+}
+
 bool HighsLp::equalNames(const HighsLp& lp) const {
   bool equal = true;
   equal = this->objective_name_ == lp.objective_name_ && equal;
@@ -76,21 +104,8 @@ bool HighsLp::equalNames(const HighsLp& lp) const {
   return equal;
 }
 
-bool HighsLp::equalButForNames(const HighsLp& lp) const {
+bool HighsLp::equalScaling(const HighsLp& lp) const {
   bool equal = true;
-  equal = this->num_col_ == lp.num_col_ && equal;
-  equal = this->num_row_ == lp.num_row_ && equal;
-  equal = this->sense_ == lp.sense_ && equal;
-  equal = this->offset_ == lp.offset_ && equal;
-  equal = this->model_name_ == lp.model_name_ && equal;
-  equal = this->col_cost_ == lp.col_cost_ && equal;
-  equal = this->col_upper_ == lp.col_upper_ && equal;
-  equal = this->col_lower_ == lp.col_lower_ && equal;
-  equal = this->row_upper_ == lp.row_upper_ && equal;
-  equal = this->row_lower_ == lp.row_lower_ && equal;
-
-  equal = this->a_matrix_ == lp.a_matrix_;
-
   equal = this->scale_.strategy == lp.scale_.strategy && equal;
   equal = this->scale_.has_scaling == lp.scale_.has_scaling && equal;
   equal = this->scale_.num_col == lp.scale_.num_col && equal;
@@ -98,6 +113,9 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   equal = this->scale_.cost == lp.scale_.cost && equal;
   equal = this->scale_.col == lp.scale_.col && equal;
   equal = this->scale_.row == lp.scale_.row && equal;
+#ifndef NDEBUG
+  if (!equal) printf("HighsLp::equalScaling: Unequal scaling\n");
+#endif
   return equal;
 }
 
@@ -434,6 +452,7 @@ void HighsLp::deleteColsFromVectors(
   this->col_cost_.resize(new_num_col);
   this->col_lower_.resize(new_num_col);
   this->col_upper_.resize(new_num_col);
+  if (have_integrality) this->integrality_.resize(new_num_col);
   if (have_names) this->col_names_.resize(new_num_col);
 }
 

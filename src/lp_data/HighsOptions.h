@@ -345,6 +345,9 @@ struct HighsOptionsStruct {
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
 
+  // Options for IIS calculation
+  HighsInt iis_strategy;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -1091,6 +1094,22 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("qp_nullspace_limit",
                                      "Nullspace limit for QP solver", advanced,
                                      &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "iis_strategy",
+        "Strategy for IIS calculation: "
+        //        "Use LP and p"
+        "Prioritise rows (default) / "
+        //        "Use LP and p"
+        "Prioritise columns"
+        //        "Use unbounded dual ray and prioritise low number of rows
+        //        (default) / " "Use ray and prioritise low numbers of columns "
+        " (0/1"
+        //        "/2/3)",
+        ")",
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
+        kIisStrategyMax);
     records.push_back(record_int);
 
     // Fix the number of user settable options

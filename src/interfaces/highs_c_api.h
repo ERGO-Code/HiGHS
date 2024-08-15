@@ -2165,6 +2165,38 @@ HighsInt Highs_getRanging(
     HighsInt* row_bound_dn_in_var, HighsInt* row_bound_dn_ou_var);
 
 /**
+ * Compute the solution corresponding to a (possibly weighted) sum of
+ * (allowable) infeasibilities in an LP/MIP.
+ *
+ * If local penalties are not defined, pass NULL, and the global
+ * penalty will be used. Negative penalty values imply that the bound
+ * or RHS value cannot be violated
+ *
+ * @param highs                             A pointer to the Highs instance.
+ * @param const double global_lower_penalty The penalty for violating lower
+ * bounds on variables
+ * @param const double global_upper_penalty The penalty for violating upper
+ * bounds on variables
+ * @param const double global_rhs_penalty   The penalty for violating constraint
+ * RHS values
+ * @param const double* local_lower_penalty The penalties for violating specific
+ * lower bounds on variables
+ * @param const double* local_upper_penalty The penalties for violating specific
+ * upper bounds on variables
+ * @param const double* local_rhs_penalty   The penalties for violating specific
+ * constraint RHS values
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_feasibilityRelaxation(void* highs,
+                                     const double global_lower_penalty,
+                                     const double global_upper_penalty,
+                                     const double global_rhs_penalty,
+                                     const double* local_lower_penalty,
+                                     const double* local_upper_penalty,
+                                     const double* local_rhs_penalty);
+
+/**
  * Releases all resources held by the global scheduler instance.
  *
  * It is not thread-safe to call this function while calling `Highs_run` or one

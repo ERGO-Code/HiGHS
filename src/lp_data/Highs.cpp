@@ -1666,6 +1666,19 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   return return_status;
 }
 
+HighsStatus Highs::feasibilityRelaxation(const double global_lower_penalty,
+                                         const double global_upper_penalty,
+                                         const double global_rhs_penalty,
+                                         const double* local_lower_penalty,
+                                         const double* local_upper_penalty,
+                                         const double* local_rhs_penalty) {
+  std::vector<HighsInt> infeasible_row_subset;
+  return elasticityFilter(global_lower_penalty, global_upper_penalty,
+                          global_rhs_penalty, local_lower_penalty,
+                          local_upper_penalty, local_rhs_penalty, false,
+                          infeasible_row_subset);
+}
+
 HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                       const bool constraint,
                                       const HighsInt method,
@@ -1677,6 +1690,33 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
   }
   return computeIllConditioning(ill_conditioning, constraint, method,
                                 ill_conditioning_bound);
+}
+
+HighsStatus Highs::getIis(HighsIis& iis) {
+  if (this->model_status_ == HighsModelStatus::kOptimal ||
+      this->model_status_ == HighsModelStatus::kUnbounded) {
+    // Strange to call getIis for a model that's known to be feasible
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Calling Highs::getIis for a model that is known to be feasible\n");
+    iis.invalidate();
+    // No IIS exists, so validate the empty HighsIis instance
+    iis.valid_ = true;
+    return HighsStatus::kOk;
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  if (this->model_status_ != HighsModelStatus::kNotset &&
+      this->model_status_ != HighsModelStatus::kInfeasible) {
+    return_status = HighsStatus::kWarning;
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Calling Highs::getIis for a model with status %s\n",
+                 this->modelStatusToString(this->model_status_).c_str());
+  }
+  return_status =
+      interpretCallStatus(options_.log_options, this->getIisInterface(),
+                          return_status, "getIisInterface");
+  iis = this->iis_;
+  return return_status;
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
@@ -2375,6 +2415,7 @@ static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
                                          const HighsInt create_error,
                                          const bool ordered,
                                          const HighsInt num_set_entries,
+                                         const HighsInt* set,
                                          const HighsInt dimension) {
   if (create_error == kIndexCollectionCreateIllegalSetSize) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -2395,10 +2436,13 @@ static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
                    "Set supplied to Highs::%s not ordered\n", method.c_str());
     }
   } else if (create_error < 0) {
+    HighsInt illegal_set_index = -1 - create_error;
+    HighsInt illegal_set_entry = set[illegal_set_index];
     highsLogUser(
         log_options, HighsLogType::kError,
-        "Set supplied to Highs::%s has entry %d out of range [0, %d)\n",
-        method.c_str(), int(-1 - create_error), int(dimension));
+        "Set supplied to Highs::%s has entry %d of %d out of range [0, %d)\n",
+        method.c_str(), int(illegal_set_index), int(illegal_set_entry),
+        int(dimension));
   }
   assert(create_error != kIndexCollectionCreateIllegalSetDimension);
   return HighsStatus::kError;
@@ -2421,7 +2465,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsIntegrality",
                                  create_error, true, num_set_entries,
-                                 model_.lp_.num_col_);
+                                 local_set.data(), model_.lp_.num_col_);
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, local_integrality.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2491,7 +2535,7 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsCost",
                                  create_error, true, num_set_entries,
-                                 model_.lp_.num_col_);
+                                 local_set.data(), model_.lp_.num_col_);
   HighsStatus call_status =
       changeCostsInterface(index_collection, local_cost.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2570,7 +2614,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeColsBounds",
                                  create_error, true, num_set_entries,
-                                 model_.lp_.num_col_);
+                                 local_set.data(), model_.lp_.num_col_);
   HighsStatus call_status = changeColBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2651,7 +2695,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   if (create_error)
     return analyseSetCreateError(options_.log_options, "changeRowsBounds",
                                  create_error, true, num_set_entries,
-                                 model_.lp_.num_row_);
+                                 local_set.data(), model_.lp_.num_row_);
   HighsStatus call_status = changeRowBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2756,7 +2800,8 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
       create(index_collection, num_set_entries, set, model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "getCols", create_error,
-                                 false, num_set_entries, model_.lp_.num_col_);
+                                 false, num_set_entries, set,
+                                 model_.lp_.num_col_);
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2875,7 +2920,8 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
       create(index_collection, num_set_entries, set, model_.lp_.num_row_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "getRows", create_error,
-                                 false, num_set_entries, model_.lp_.num_row_);
+                                 false, num_set_entries, set,
+                                 model_.lp_.num_row_);
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2983,7 +3029,7 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
       create(index_collection, num_set_entries, set, model_.lp_.num_col_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "deleteCols",
-                                 create_error, false, num_set_entries,
+                                 create_error, false, num_set_entries, set,
                                  model_.lp_.num_col_);
   deleteColsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
@@ -3027,7 +3073,7 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
       create(index_collection, num_set_entries, set, model_.lp_.num_row_);
   if (create_error)
     return analyseSetCreateError(options_.log_options, "deleteRows",
-                                 create_error, false, num_set_entries,
+                                 create_error, false, num_set_entries, set,
                                  model_.lp_.num_row_);
   deleteRowsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
@@ -3361,12 +3407,15 @@ void Highs::invalidateUserSolverData() {
   invalidateRanging();
   invalidateInfo();
   invalidateEkk();
+  invalidateIis();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
   invalidateModelStatus();
   invalidateSolution();
+  invalidateRanging();
   invalidateInfo();
+  invalidateIis();
 }
 
 void Highs::invalidateModelStatus() {
@@ -3395,6 +3444,8 @@ void Highs::invalidateInfo() { info_.invalidate(); }
 void Highs::invalidateRanging() { ranging_.invalidate(); }
 
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
+
+void Highs::invalidateIis() { iis_.invalidate(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
@@ -4327,7 +4378,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   const bool dimensions_ok =
       lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
-    printf("LP Dimension error in returnFromHighs()\n");
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "LP Dimension error in returnFromHighs()\n");
+    return_status = HighsStatus::kError;
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
