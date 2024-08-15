@@ -1682,6 +1682,7 @@ HighsStatus Highs::elasticityFilterReturn(
     const std::vector<double> original_col_upper,
     const std::vector<HighsVarType> original_integrality) {
   const HighsLp& lp = this->model_.lp_;
+  double objective_function_value = info_.objective_function_value;
   // Delete any additional rows and columns, and restore the original
   // column costs and bounds
   HighsStatus run_status;
@@ -1716,6 +1717,10 @@ HighsStatus Highs::elasticityFilterReturn(
     this->model_.lp_.a_matrix_.productQuad(this->solution_.row_value,
                                            this->solution_.col_value);
     this->solution_.value_valid = true;
+    // Set the feasibility objective and any KKT failures
+    info_.objective_function_value = objective_function_value;
+    getKktFailures(options_, model_, solution_, basis_, info_);
+    info_.valid = true;
   }
 
   // If the model is feasible, then the status of model is not known
@@ -1776,7 +1781,7 @@ HighsStatus Highs::elasticityFilter(
   const HighsLp& lp = this->model_.lp_;
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
-  const bool write_model = true;
+  const bool write_model = false;
   HighsInt col_ecol_offset;
   HighsInt row_ecol_offset;
   // Take copies of the original model dimensions and column data

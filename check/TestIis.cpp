@@ -4,9 +4,8 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-//#include "io/FilereaderLp.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 void testIis(const std::string& model, const HighsIis& iis);
@@ -14,6 +13,11 @@ void testIis(const std::string& model, const HighsIis& iis);
 void testMps(std::string& model, const HighsInt iis_strategy,
              const HighsModelStatus require_model_status =
                  HighsModelStatus::kInfeasible);
+
+void testFeasibilityRelaxation(
+    std::string& model, const double lower_penalty, const double upper_penalty,
+    const double rhs_penalty,
+    const double require_feasibility_objective_function_value);
 
 TEST_CASE("lp-incompatible-bounds", "[iis]") {
   // LP has row0 and col2 with inconsistent bounds.
@@ -209,7 +213,7 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   const bool all_tests = false;
   const bool test0 = false || all_tests;
   const bool test1 = false || all_tests;
-  const bool test2 = true || all_tests;
+  const bool test2 = false || all_tests;
   const bool test3 = false || all_tests;
   if (test0) {
     // Vanilla feasibility relaxation
@@ -277,11 +281,19 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
     // constraint 2: normal weight
     //
     std::vector<double> local_rhs_penalty = {10, 1, 1};
-    // Should get row activities (18, 2, -1)
-    REQUIRE(solution.row_value[0] == 18);
-    REQUIRE(solution.row_value[1] == 2);
-    REQUIRE(solution.row_value[2] == -1);
+    h.feasibilityRelaxation(1, 1, 0, nullptr, nullptr,
+                            local_rhs_penalty.data());
+    // Should get slacks (18, 2, -1)
+    REQUIRE(solution.row_value[0] == lp.row_lower_[0] + 18);
+    REQUIRE(solution.row_value[1] == lp.row_upper_[1] - 2);
+    REQUIRE(solution.row_value[2] == lp.row_upper_[2] + 1);
   }
+  std::string model = "galenet";
+  testFeasibilityRelaxation(model, 1, 1, 1, 28.0);
+  model = "woodinfe";
+  testFeasibilityRelaxation(model, 1, 1, 1, 15.0);
+  model = "avgas";
+  testFeasibilityRelaxation(model, 1, 1, 1, 0);
 }
 
 void testIis(const std::string& model, const HighsIis& iis) {
@@ -435,4 +447,18 @@ void testMps(std::string& model, const HighsInt iis_strategy,
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
   }
+}
+
+void testFeasibilityRelaxation(
+    std::string& model, const double lower_penalty, const double upper_penalty,
+    const double rhs_penalty,
+    const double require_feasibility_objective_function_value) {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.readModel(model_file);
+  REQUIRE(h.feasibilityRelaxation(lower_penalty, upper_penalty, rhs_penalty) ==
+          HighsStatus::kOk);
+  REQUIRE(h.getInfo().objective_function_value ==
+          require_feasibility_objective_function_value);
 }
