@@ -100,9 +100,7 @@ class HPresolve {
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
-  HighsHashTable<HighsInt,
-                 std::pair<HighsHashTree<HighsInt, double>, std::size_t>>
-      liftingOpportunities;
+  std::map<HighsInt, HighsHashTree<HighsInt, double>> liftingOpportunities;
 
   // set with the sizes and indices of equation rows sorted by the size and a
   // vector to access there iterator positions in the set by index for quick

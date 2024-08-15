@@ -1460,12 +1460,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // find lifting opportunities for row
       auto& htree = liftingOpportunities[row];
       // add element
-      auto insertresult = htree.first.insert_or_get(col, val);
+      auto insertresult = htree.insert_or_get(col, val);
       if (!insertresult.second) {
         double& currentval = *insertresult.first;
         currentval = val;
-      } else {
-        htree.second++;
       }
     };
 
@@ -1620,17 +1618,14 @@ void HPresolve::liftingForProbing() {
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // consider lifting opportunities
-  for (const HighsHashTableEntry<
-           HighsInt, std::pair<HighsHashTree<HighsInt, double>, std::size_t>>&
-           elm : liftingOpportunities) {
+  for (const auto& elm : liftingOpportunities) {
     // get row index and skip deleted rows
-    HighsInt row = elm.key();
+    HighsInt row = elm.first;
     if (rowDeleted[row]) continue;
     // get lifting opportunities for row and store them in a vector
-    auto& htree = elm.value();
+    auto& htree = elm.second;
     std::vector<std::pair<HighsInt, double>> liftopps;
-    liftopps.reserve(htree.second);
-    htree.first.for_each([&](HighsInt bincol, double value) {
+    htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
       if (!colDeleted[col] && !domain.isFixed(col) &&
           findNonzero(row, col) == -1)
