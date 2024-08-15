@@ -456,6 +456,7 @@ void testFeasibilityRelaxation(
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
   h.readModel(model_file);
   REQUIRE(h.feasibilityRelaxation(lower_penalty, upper_penalty, rhs_penalty) ==
           HighsStatus::kOk);

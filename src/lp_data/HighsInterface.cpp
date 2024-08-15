@@ -1735,7 +1735,7 @@ HighsStatus Highs::elasticityFilter(
     const double* local_upper_penalty, const double* local_rhs_penalty,
     const bool get_infeasible_row,
     std::vector<HighsInt>& infeasible_row_subset) {
-  this->writeModel("infeasible.mps");
+  //  this->writeModel("infeasible.mps");
   // Solve the feasibility relaxation problem for the given penalties,
   // continuing to act as the elasticity filter get_infeasible_row is
   // true, resulting in an infeasibility subset for further refinement
@@ -1896,7 +1896,8 @@ HighsStatus Highs::elasticityFilter(
       erow_start.push_back(erow_index.size());
       HighsInt row_nz =
           erow_start[erow_start.size() - 1] - erow_start[erow_start.size() - 2];
-      printf("eRow for column %d has %d nonzeros\n", int(iCol), int(row_nz));
+      //      printf("eRow for column %d has %d nonzeros\n", int(iCol),
+      //      int(row_nz));
       assert(row_nz == 2 || row_nz == 3);
     }
     HighsInt num_new_col = col_of_ecol.size();
