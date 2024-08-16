@@ -61,6 +61,8 @@ Documenter.makedocs(
                 "structures/classes/index.md",
                 "structures/classes/HighsSparseMatrix.md",
                 "structures/classes/HighsLp.md",
+                "structures/classes/HighsHessian.md",
+                "structures/classes/HighsModel.md",
                 "structures/classes/HighsSolution.md",
                 "structures/classes/HighsBasis.md",
                 "structures/classes/HighsInfo.md",
