@@ -1657,8 +1657,7 @@ void HPresolve::liftingForProbing() {
       // check if candidate can be added to existing clique
       bool addToClique = true;
       HighsCliqueTable::CliqueVar candidate{bincol, direction};
-      for (const std::pair<HighsCliqueTable::CliqueVar, double>& clvar :
-           clique) {
+      for (const auto& clvar : clique) {
         addToClique = cliquetable.haveCommonClique(clvar.first, candidate);
         if (!addToClique) break;
       }
@@ -1669,7 +1668,7 @@ void HPresolve::liftingForProbing() {
     }
     // update matrix
     HighsCDouble update = 0.0;
-    for (const std::pair<HighsCliqueTable::CliqueVar, double>& var : clique) {
+    for (const auto& var : clique) {
       // add non-zero to matrix
       addToMatrix(row, var.first.col, var.second);
       // compute term to update left-hand / right-hand side
