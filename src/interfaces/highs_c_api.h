@@ -229,11 +229,14 @@ HighsInt Highs_mipCall(const HighsInt num_col, const HighsInt num_row,
  * @param q_format  The format of the Hessian matrix in the form of a
  *                  `kHighsHessianStatus` constant. If q_num_nz > 0, this must
  *                  be `kHighsHessianFormatTriangular`.
- * @param q_start   The Hessian matrix is provided in the same format as the
- *                  constraint matrix, using `q_start`, `q_index`, and `q_value`
- *                  in the place of `a_start`, `a_index`, and `a_value`.
+ * @param q_start   The Hessian matrix is provided to HiGHS as the lower
+ *                  triangular component in compressed sparse column form
+ *                  (or, equivalently, as the upper triangular component
+ *                  in compressed sparse row form). The sparse matrix consists
+ *                  of three arrays, `q_start`, `q_index`, and `q_value`.
+ *                  `q_start` is an array of length [num_col].
  * @param q_index   An array of length [q_num_nz] with indices of matrix
- *                  sentries.
+ *                  entries.
  * @param q_value   An array of length [q_num_nz] with values of matrix entries.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
@@ -498,10 +501,13 @@ HighsInt Highs_passMip(void* highs, const HighsInt num_col,
  * @param a_index     An array of length [num_nz] with indices of matrix
  *                    entries.
  * @param a_value     An array of length [num_nz] with values of matrix entries.
- * @param q_start     The Hessian matrix is provided in the same format as the
- *                    constraint matrix, using `q_start`, `q_index`, and
- *                    `q_value` in the place of `a_start`, `a_index`, and
- *                    `a_value`. If the model is linear, pass NULL.
+ * @param q_start     The Hessian matrix is provided to HiGHS as the lower
+ *                    triangular component in compressed sparse column form
+ *                    (or, equivalently, as the upper triangular component
+ *                    in compressed sparse row form). The sparse matrix consists
+ *                    of three arrays, `q_start`, `q_index`, and `q_value`.
+ *                    `q_start` is an array of length [num_col]. If the model
+ *                    is linear, pass NULL.
  * @param q_index     An array of length [q_num_nz] with indices of matrix
  *                    entries. If the model is linear, pass NULL.
  * @param q_value     An array of length [q_num_nz] with values of matrix
@@ -531,9 +537,13 @@ HighsInt Highs_passModel(void* highs, const HighsInt num_col,
  * @param num_nz    The number of non-zero elements in the Hessian matrix.
  * @param format    The format of the Hessian matrix as a `kHighsHessianFormat`
  *                  constant. This must be `kHighsHessianFormatTriangular`.
- * @param start     The Hessian matrix is provided to HiGHS as the upper
- *                  triangular component in compressed sparse column form. The
- *                  sparse matrix consists of three arrays, `start`, `index`,
+ * @param start     The Hessian matrix is provided to HiGHS as the lower
+ *                  triangular component in compressed sparse column form
+ *                  (or, equivalently, as the upper triangular component
+ *                  in compressed sparse row form), using `q_start`, `q_index`,
+ *                  and `q_value`.The Hessian matrix is provided to HiGHS as the
+ *                  lower triangular component in compressed sparse column form.
+ *                  The sparse matrix consists of three arrays, `start`, `index`,
  *                  and `value`. `start` is an array of length [num_col]
  *                  containing the starting index of each column in `index`.
  * @param index     An array of length [num_nz] with indices of matrix entries.
