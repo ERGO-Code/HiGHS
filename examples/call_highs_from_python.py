@@ -248,7 +248,7 @@ def user_interrupt_callback(
             print(f"userCallback(type {callback_type};")
             print(f"data {local_callback_data:.4g}): {message}")
             print(f"with objective {data_out.objective_function_value}")
-            print(f"and solution[0] = {data_out.mip_solution[0]}")
+            print(f"and solution = {data_out.mip_solution}")
 
         # Check and update the objective function value
         assert (

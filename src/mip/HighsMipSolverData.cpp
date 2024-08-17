@@ -463,6 +463,8 @@ void HighsMipSolverData::runSetup() {
       assert(!mipsolver.submip);
       mipsolver.callback_->clearHighsCallbackDataOut();
       mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      mipsolver.callback_->data_out.mip_solution_size =
+          mipsolver.solution_.size();
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipSolution, mipsolver.solution_objective_,
           "Feasible solution");
@@ -832,6 +834,7 @@ try_again:
       mipsolver.callback_->active[kCallbackMipSolution]) {
     mipsolver.callback_->clearHighsCallbackDataOut();
     mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
+    mipsolver.callback_->data_out.mip_solution_size = solution.col_value.size();
     const bool interrupt = interruptFromCallbackWithData(
         kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
     assert(!interrupt);
@@ -1928,6 +1931,8 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
       mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      mipsolver.callback_->data_out.mip_solution_size =
+          mipsolver.solution_.size();
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipImprovingSolution, mipsolver.solution_objective_,
           "Improving solution");

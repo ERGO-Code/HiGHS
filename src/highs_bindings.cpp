@@ -1195,12 +1195,11 @@ PYBIND11_MODULE(_core, m) {
       .def_property(
           "mip_solution",
           [](const HighsCallbackDataOut& self) -> py::array {
-            // XXX: This is clearly wrong, most likely we need to have the
-            // length as an input data parameter
-            return py::array(3, self.mip_solution);
+            return py::array(self.mip_solution_size, self.mip_solution);
           },
           [](HighsCallbackDataOut& self, py::array_t<double> new_mip_solution) {
                       self.mip_solution = new_mip_solution.mutable_data();
+                      self.mip_solution_size = new_mip_solution.shape(0);
           });
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
       .def(py::init<>())
