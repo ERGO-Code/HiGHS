@@ -575,3 +575,29 @@ TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(highs.getInfo().num_dual_infeasibilities == 0);
 }
+
+TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
+  std::string presolved_model_file = "temp.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  highs.presolve();
+  highs.writePresolvedModel(presolved_model_file);
+  // Read and solve the presolved model using a new Highs instance
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  highs1.readModel(presolved_model_file);
+  highs1.run();
+  // Extract the optimal solution and basis
+  HighsSolution solution = highs1.getSolution();
+  HighsBasis basis = highs1.getBasis();
+  // Perform postsolve using the optimal solution and basis for the
+  // presolved model
+  highs.postsolve(solution, basis);
+  // The solution should be optimal, so no solver is run, and
+  // simplex_iteration_count is -1
+  REQUIRE(highs.getInfo().simplex_iteration_count == -1);
+  std::remove(presolved_model_file.c_str());
+}

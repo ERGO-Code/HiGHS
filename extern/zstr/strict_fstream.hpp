@@ -17,7 +17,7 @@
 namespace strict_fstream
 {
 
-// Help people out a bit, it seems like this is a common recommenation since
+// Help people out a bit, it seems like this is a common recommendation since
 // musl breaks all over the place.
 #if defined(__NEED_size_t) && !defined(__MUSL__)
 #warning "It seems to be recommended to patch in a define for __MUSL__ if you use musl globally: https://www.openwall.com/lists/musl/2013/02/10/5"
@@ -64,7 +64,7 @@ static std::string strerror()
     } else {
         return "Unknown error (" + std::to_string(err_num) + ")";
     }
-#elif ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 || defined(__APPLE__) || defined(__FreeBSD__)) && ! _GNU_SOURCE) || defined(__MUSL__)
+#elif ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)) && ! _GNU_SOURCE) || defined(__MUSL__)
 // XSI-compliant strerror_r()
     const int err_num = errno; // See above
     if (strerror_r(err_num, buff.data(), buff.size()) == 0) {

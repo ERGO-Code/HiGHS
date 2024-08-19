@@ -77,7 +77,7 @@ public:
     double zl(Int j) const { return zl_[j]; }
     double zu(Int j) const { return zu_[j]; }
 
-    // Returns const rerefences to the residual vectors
+    // Returns const references to the residual vectors
     // rb = b-AI*x,
     // rl = lb-x+xl,
     // ru = ub-x-xu,
@@ -155,7 +155,7 @@ public:
     double presidual() const;
     double dresidual() const;
 
-    // copmlementarity() returns the sum of the pairwise complementarity
+    // complementarity() returns the sum of the pairwise complementarity
     // products xl[j]*zl[j] and xu[j]*zu[j] from all barrier terms. mu()
     // returns the average, mu_min() the minimum and mu_max() the maximum.
     double complementarity() const;

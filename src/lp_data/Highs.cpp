@@ -48,7 +48,7 @@ HighsInt highsVersionMajor() { return HIGHS_VERSION_MAJOR; }
 HighsInt highsVersionMinor() { return HIGHS_VERSION_MINOR; }
 HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
-const char* highsCompilationDate() { return HIGHS_COMPILATION_DATE; }
+const char* highsCompilationDate() { return "deprecated"; }
 
 Highs::Highs() {}
 
@@ -124,7 +124,7 @@ HighsStatus Highs::readOptions(const std::string& filename) {
     default:
       break;
   }
-  return HighsStatus::kOk;
+  return optionChangeAction();
 }
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
@@ -363,6 +363,9 @@ HighsStatus Highs::passModel(HighsModel model) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -521,6 +524,9 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
       hessian.clear();
     }
   }
+  // Ensure that any non-zero Hessian of dimension less than the
+  // number of columns in the model is completed
+  if (hessian.dim_) completeHessian(this->model_.lp_.num_col_, hessian);
 
   if (this->model_.lp_.user_cost_scale_) {
     // Assess and apply any user cost scaling
@@ -585,8 +591,9 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.col_names_.resize(num_col);
+  this->model_.lp_.col_hash_.update(col, this->model_.lp_.col_names_[col],
+                                    name);
   this->model_.lp_.col_names_[col] = name;
-  this->model_.lp_.col_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -605,8 +612,9 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
     return HighsStatus::kError;
   }
   this->model_.lp_.row_names_.resize(num_row);
+  this->model_.lp_.row_hash_.update(row, this->model_.lp_.row_names_[row],
+                                    name);
   this->model_.lp_.row_names_[row] = name;
-  this->model_.lp_.row_hash_.clear();
   return HighsStatus::kOk;
 }
 
@@ -676,17 +684,26 @@ HighsStatus Highs::readBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::writeModel(const std::string& filename) {
+  return writeLocalModel(model_, filename);
+}
+
+HighsStatus Highs::writePresolvedModel(const std::string& filename) {
+  return writeLocalModel(presolved_model_, filename);
+}
+
+HighsStatus Highs::writeLocalModel(HighsModel& model,
+                                   const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  model_.lp_.ensureColwise();
+  model.lp_.ensureColwise();
   // Check for repeated column or row names that would corrupt the file
-  if (model_.lp_.col_hash_.hasDuplicate(model_.lp_.col_names_)) {
+  if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated column names\n");
     return returnFromHighs(HighsStatus::kError);
   }
-  if (model_.lp_.row_hash_.hasDuplicate(model_.lp_.row_names_)) {
+  if (model.lp_.row_hash_.hasDuplicate(model.lp_.row_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Model has repeated row names\n");
     return returnFromHighs(HighsStatus::kError);
@@ -706,10 +723,10 @@ HighsStatus Highs::writeModel(const std::string& filename) {
     // Report to user that model is being written
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the model to %s\n", filename.c_str());
-    return_status = interpretCallStatus(
-        options_.log_options,
-        writer->writeModelToFile(options_, filename, model_), return_status,
-        "writeModelToFile");
+    return_status =
+        interpretCallStatus(options_.log_options,
+                            writer->writeModelToFile(options_, filename, model),
+                            return_status, "writeModelToFile");
     delete writer;
   }
   return returnFromHighs(return_status);
@@ -805,7 +822,10 @@ HighsStatus Highs::presolve() {
       break;
     }
     default: {
-      // case HighsPresolveStatus::kError
+      // case HighsPresolveStatus::kOutOfMemory
+      assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory);
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Presolve fails due to memory allocation error\n");
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       return_status = HighsStatus::kError;
@@ -1363,15 +1383,15 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kTimeout: {
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kTimeLimit);
-        highsLogDev(log_options, HighsLogType::kError,
+        highsLogDev(log_options, HighsLogType::kWarning,
                     "Presolve reached timeout\n");
         return returnFromRun(HighsStatus::kWarning, undo_mods);
       }
-      case HighsPresolveStatus::kOptionsError: {
+      case HighsPresolveStatus::kOutOfMemory: {
         setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kPresolveError);
-        highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve options error\n");
+            HighsModelStatus::kMemoryLimit);
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Presolve fails due to memory allocation error\n");
         return returnFromRun(HighsStatus::kError, undo_mods);
       }
       default: {
@@ -1385,6 +1405,9 @@ HighsStatus Highs::run() {
       }
     }
     // End of presolve
+    //
+    // Cases of infeasibility/unboundedness timeout and memory errors
+    // all handled, so just the successes remain
     assert(model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
            model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
            model_presolve_status_ == HighsPresolveStatus::kReduced ||
@@ -1896,7 +1919,20 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
-  if (new_solution) invalidateUserSolverData();
+  if (new_solution) {
+    invalidateUserSolverData();
+  } else {
+    // Solution is rejected, so give a logging message and error
+    // return
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "setSolution: User solution is rejected due to mismatch between "
+        "size of col_value and row_dual vectors (%d, %d) and number "
+        "of columns and rows in the model (%d, %d)\n",
+        int(solution.col_value.size()), int(solution.row_dual.size()),
+        int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+    return_status = HighsStatus::kError;
+  }
 
   if (new_primal_solution) {
     solution_.col_value = solution.col_value;
@@ -1906,8 +1942,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateRowValues(model_.lp_, solution_),
-          return_status, "calculateRowValues");
+          options_.log_options, calculateRowValuesQuad(model_.lp_, solution_),
+          return_status, "calculateRowValuesQuad");
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.value_valid = true;
@@ -1920,7 +1956,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Matrix must be column-wise
       model_.lp_.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateColDuals(model_.lp_, solution_),
+          options_.log_options, calculateColDualsQuad(model_.lp_, solution_),
           return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
@@ -2043,6 +2079,17 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
                 : basis.col_status[iCol];
       basis_.alien = false;
     } else {
+      // Check whether a new basis can be defined
+      if (!isBasisRightSize(model_.lp_, basis)) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "setBasis: User basis is rejected due to mismatch between "
+            "size of column and row status vectors (%d, %d) and number "
+            "of columns and rows in the model (%d, %d)\n",
+            int(basis_.col_status.size()), int(basis_.row_status.size()),
+            int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+        return HighsStatus::kError;
+      }
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
@@ -2255,10 +2302,13 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
                                          const HighsVarType* integrality) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Interval supplied to Highs::changeColsIntegrality is out of range\n");
+  const HighsInt create_error =
+      create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (create_error) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Interval [%d, %d) supplied to Highs::changeColsIntegrality "
+                 "is out of range [0, %d)\n",
+                 int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
   HighsStatus call_status =
@@ -2270,10 +2320,44 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
   return returnFromHighs(return_status);
 }
 
+static HighsStatus analyseSetCreateError(HighsLogOptions log_options,
+                                         const std::string method,
+                                         const HighsInt create_error,
+                                         const bool ordered,
+                                         const HighsInt num_set_entries,
+                                         const HighsInt dimension) {
+  if (create_error == kIndexCollectionCreateIllegalSetSize) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Set supplied to Highs::%s has illegal size of %d\n",
+                 method.c_str(), int(num_set_entries));
+  } else if (create_error == kIndexCollectionCreateIllegalSetOrder) {
+    if (ordered) {
+      // Creating an index_collection data structure for the set
+      // includes a test that the indices increase strictly. If this
+      // is not the case then, since an increasing set was created
+      // locally, it must contain duplicate entries. return with an
+      // error
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Set supplied to Highs::%s contains duplicate entries\n",
+                   method.c_str());
+    } else {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Set supplied to Highs::%s not ordered\n", method.c_str());
+    }
+  } else if (create_error < 0) {
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "Set supplied to Highs::%s has entry %d out of range [0, %d)\n",
+        method.c_str(), int(-1 - create_error), int(dimension));
+  }
+  assert(create_error != kIndexCollectionCreateIllegalSetDimension);
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
                                          const HighsInt* set,
                                          const HighsVarType* integrality) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   clearPresolve();
   // Ensure that the set and data are in ascending order
   std::vector<HighsVarType> local_integrality{integrality,
@@ -2282,18 +2366,12 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   sortSetData(num_set_entries, local_set, integrality,
               local_integrality.data());
   HighsIndexCollection index_collection;
-  const bool create_ok = create(index_collection, num_set_entries,
-                                local_set.data(), model_.lp_.num_col_);
-  if (!create_ok) {
-    // Creating an index_collection data structure for the set
-    // includes a test that the indices increase strictly. If this is
-    // not the case then, since an increasing set was created locally,
-    // it must contain duplicate entries. return with an error
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Set supplied to Highs::changeColsIntegrality contains "
-                 "duplicate entries\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error = create(index_collection, num_set_entries,
+                                       local_set.data(), model_.lp_.num_col_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "changeColsIntegrality",
+                                 create_error, true, num_set_entries,
+                                 model_.lp_.num_col_);
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, local_integrality.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2307,7 +2385,9 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
                                          const HighsVarType* integrality) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_col_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
+  assert(!create_error);
+  (void)create_error;
   HighsStatus call_status =
       changeIntegralityInterface(index_collection, integrality);
   HighsStatus return_status = HighsStatus::kOk;
@@ -2325,10 +2405,13 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
                                   const HighsInt to_col, const double* cost) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Interval supplied to Highs::changeColsCost is out of range\n");
+  const HighsInt create_error =
+      create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (create_error) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Interval [%d, %d) supplied to Highs::changeColsCost is out "
+                 "of range [0, %d)\n",
+                 int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
   HighsStatus call_status = changeCostsInterface(index_collection, cost);
@@ -2341,7 +2424,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
 
 HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
                                   const HighsInt* set, const double* cost) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeColsCost since
   // values are sorted with set
   if (doubleUserDataNotNull(options_.log_options, cost, "column costs"))
@@ -2353,18 +2436,12 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   sortSetData(num_set_entries, local_set, cost, NULL, NULL, local_cost.data(),
               NULL, NULL);
   HighsIndexCollection index_collection;
-  const bool create_ok = create(index_collection, num_set_entries,
-                                local_set.data(), model_.lp_.num_col_);
-  if (!create_ok) {
-    // Creating an index_collection data structure for the set
-    // includes a test that the indices increase strictly. If this is
-    // not the case then, since an increasing set was created locally,
-    // it must contain duplicate entries. return with an error
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Set supplied to Highs::changeColsCost contains duplicate entries\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error = create(index_collection, num_set_entries,
+                                       local_set.data(), model_.lp_.num_col_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "changeColsCost",
+                                 create_error, true, num_set_entries,
+                                 model_.lp_.num_col_);
   HighsStatus call_status =
       changeCostsInterface(index_collection, local_cost.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2377,7 +2454,9 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
 HighsStatus Highs::changeColsCost(const HighsInt* mask, const double* cost) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_col_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
+  assert(!create_error);
+  (void)create_error;
   HighsStatus call_status = changeCostsInterface(index_collection, cost);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(options_.log_options, call_status,
@@ -2396,10 +2475,13 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Interval supplied to Highs::changeColsBounds is out of range\n");
+  const HighsInt create_error =
+      create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (create_error) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Interval [%d, %d) supplied to Highs::changeColsBounds is out "
+                 "of range [0, %d)\n",
+                 int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
   HighsStatus call_status =
@@ -2414,7 +2496,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
 HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeColsBounds since
   // values are sorted with set
   bool null_data = false;
@@ -2433,18 +2515,12 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   sortSetData(num_set_entries, local_set, lower, upper, NULL,
               local_lower.data(), local_upper.data(), NULL);
   HighsIndexCollection index_collection;
-  const bool create_ok = create(index_collection, num_set_entries,
-                                local_set.data(), model_.lp_.num_col_);
-  if (!create_ok) {
-    // Creating an index_collection data structure for the set
-    // includes a test that the indices increase strictly. If this is
-    // not the case then, since an increasing set was created locally,
-    // it must contain duplicate entries. return with an error
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Set supplied to Highs::changeColsBounds contains duplicate entries\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error = create(index_collection, num_set_entries,
+                                       local_set.data(), model_.lp_.num_col_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "changeColsBounds",
+                                 create_error, true, num_set_entries,
+                                 model_.lp_.num_col_);
   HighsStatus call_status = changeColBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2458,7 +2534,9 @@ HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_col_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
+  assert(!create_error);
+  (void)create_error;
   HighsStatus call_status =
       changeColBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
@@ -2478,10 +2556,13 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Interval supplied to Highs::changeRowsBounds is out of range\n");
+  const HighsInt create_error =
+      create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (create_error) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Interval [%d, %d) supplied to Highs::changeRowsBounds is out "
+                 "of range [0, %d)\n",
+                 int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
   }
   HighsStatus call_status =
@@ -2496,7 +2577,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
 HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeRowsBounds since
   // values are sorted with set
   bool null_data = false;
@@ -2515,18 +2596,12 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   sortSetData(num_set_entries, local_set, lower, upper, NULL,
               local_lower.data(), local_upper.data(), NULL);
   HighsIndexCollection index_collection;
-  const bool create_ok = create(index_collection, num_set_entries,
-                                local_set.data(), model_.lp_.num_row_);
-  if (!create_ok) {
-    // Creating an index_collection data structure for the set
-    // includes a test that the indices increase strictly. If this is
-    // not the case then, since an increasing set was created locally,
-    // it must contain duplicate entries. return with an error
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Set supplied to Highs::changeRowsBounds contains duplicate entries\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error = create(index_collection, num_set_entries,
+                                       local_set.data(), model_.lp_.num_row_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "changeRowsBounds",
+                                 create_error, true, num_set_entries,
+                                 model_.lp_.num_row_);
   HighsStatus call_status = changeRowBoundsInterface(
       index_collection, local_lower.data(), local_upper.data());
   HighsStatus return_status = HighsStatus::kOk;
@@ -2540,7 +2615,9 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_row_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
+  assert(!create_error);
+  (void)create_error;
   HighsStatus call_status =
       changeRowBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
@@ -2600,9 +2677,13 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
     return HighsStatus::kOk;
   }
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+  const HighsInt create_error =
+      create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval supplied to Highs::getCols is out of range\n");
+                 "Interval [%d, %d) supplied to Highs::getCols is out of range "
+                 "[0, %d)\n",
+                 int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
@@ -2614,18 +2695,18 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
-  if (num_set_entries <= 0) {
+  if (num_set_entries == 0) {
     // Empty interval
     num_col = 0;
     num_nz = 0;
     return HighsStatus::kOk;
   }
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Set supplied to Highs::getCols not ordered\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error =
+      create(index_collection, num_set_entries, set, model_.lp_.num_col_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "getCols", create_error,
+                                 false, num_set_entries, model_.lp_.num_col_);
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2636,7 +2717,9 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_col_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
+  assert(!create_error);
+  (void)create_error;
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2714,9 +2797,13 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
     return HighsStatus::kOk;
   }
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
+  const HighsInt create_error =
+      create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval supplied to Highs::getRows is out of range\n");
+                 "Interval [%d, %d) supplied to Highs::getRows is out of range "
+                 "[0, %d)\n",
+                 int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
   }
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
@@ -2728,17 +2815,17 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
-  if (num_set_entries <= 0) {
+  if (num_set_entries == 0) {
     num_row = 0;
     num_nz = 0;
     return HighsStatus::kOk;
   }
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Set supplied to Highs::getRows is not ordered\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error =
+      create(index_collection, num_set_entries, set, model_.lp_.num_row_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "getRows", create_error,
+                                 false, num_set_entries, model_.lp_.num_row_);
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2748,7 +2835,9 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
                            HighsInt* start, HighsInt* index, double* value) {
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_row_);
+  const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
+  assert(!create_error);
+  (void)create_error;
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
   return returnFromHighs(HighsStatus::kOk);
@@ -2822,9 +2911,13 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+  const HighsInt create_error =
+      create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval supplied to Highs::deleteCols is out of range\n");
+                 "Interval [%d, %d) supplied to Highs::deleteCols is out of "
+                 "range [0, %d)\n",
+                 int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
   }
   deleteColsInterface(index_collection);
@@ -2833,14 +2926,15 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
 
 HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
                               const HighsInt* set) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Set supplied to Highs::deleteCols is not ordered\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error =
+      create(index_collection, num_set_entries, set, model_.lp_.num_col_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "deleteCols",
+                                 create_error, false, num_set_entries,
+                                 model_.lp_.num_col_);
   deleteColsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
 }
@@ -2849,7 +2943,9 @@ HighsStatus Highs::deleteCols(HighsInt* mask) {
   clearPresolve();
   const HighsInt original_num_col = model_.lp_.num_col_;
   HighsIndexCollection index_collection;
-  create(index_collection, mask, original_num_col);
+  const bool create_error = create(index_collection, mask, original_num_col);
+  assert(!create_error);
+  (void)create_error;
   deleteColsInterface(index_collection);
   for (HighsInt iCol = 0; iCol < original_num_col; iCol++)
     mask[iCol] = index_collection.mask_[iCol];
@@ -2859,9 +2955,13 @@ HighsStatus Highs::deleteCols(HighsInt* mask) {
 HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
+  const HighsInt create_error =
+      create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval supplied to Highs::deleteRows is out of range\n");
+                 "Interval [%d, %d) supplied to Highs::deleteRows is out of "
+                 "range [0, %d)\n",
+                 int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
   }
   deleteRowsInterface(index_collection);
@@ -2870,14 +2970,15 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
 
 HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
                               const HighsInt* set) {
-  if (num_set_entries <= 0) return HighsStatus::kOk;
+  if (num_set_entries == 0) return HighsStatus::kOk;
   clearPresolve();
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Set supplied to Highs::deleteRows is not ordered\n");
-    return HighsStatus::kError;
-  }
+  const HighsInt create_error =
+      create(index_collection, num_set_entries, set, model_.lp_.num_row_);
+  if (create_error)
+    return analyseSetCreateError(options_.log_options, "deleteRows",
+                                 create_error, false, num_set_entries,
+                                 model_.lp_.num_row_);
   deleteRowsInterface(index_collection);
   return returnFromHighs(HighsStatus::kOk);
 }
@@ -2886,7 +2987,9 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
   clearPresolve();
   const HighsInt original_num_row = model_.lp_.num_row_;
   HighsIndexCollection index_collection;
-  create(index_collection, mask, original_num_row);
+  const bool create_error = create(index_collection, mask, original_num_row);
+  assert(!create_error);
+  (void)create_error;
   deleteRowsInterface(index_collection);
   for (HighsInt iRow = 0; iRow < original_num_row; iRow++)
     mask[iRow] = index_collection.mask_[iRow];
@@ -2925,7 +3028,8 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
       model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReduced ||
       model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
-      model_presolve_status_ == HighsPresolveStatus::kTimeout;
+      model_presolve_status_ == HighsPresolveStatus::kTimeout ||
+      model_presolve_status_ == HighsPresolveStatus::kOutOfMemory;
   if (!can_run_postsolve) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Cannot run postsolve with presolve status: %s\n",
@@ -3006,10 +3110,8 @@ std::string Highs::presolveStatusToString(
       return "Reduced to empty";
     case HighsPresolveStatus::kTimeout:
       return "Timeout";
-    case HighsPresolveStatus::kNullError:
-      return "Null error";
-    case HighsPresolveStatus::kOptionsError:
-      return "Options error";
+    case HighsPresolveStatus::kOutOfMemory:
+      return "Memory allocation error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
@@ -3339,11 +3441,11 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(model_.lp_.a_matrix_.isColwise());
-  if (hessian.dim_ != lp.num_col_) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Hessian dimension = %" HIGHSINT_FORMAT
-                " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
-                hessian.dim_, lp.num_col_);
+  if (hessian.dim_ > lp.num_col_) {
+    highsLogDev(
+        options_.log_options, HighsLogType::kError,
+        "Hessian dimension = %d is incompatible with matrix dimension = %d\n",
+        int(hessian.dim_), int(lp.num_col_));
     model_status_ = HighsModelStatus::kModelError;
     solution_.value_valid = false;
     solution_.dual_valid = false;
@@ -3353,6 +3455,7 @@ HighsStatus Highs::callSolveQp() {
   // Run the QP solver
   Instance instance(lp.num_col_, lp.num_row_);
 
+  instance.sense = HighsInt(lp.sense_);
   instance.num_con = lp.num_row_;
   instance.num_var = lp.num_col_;
 
@@ -3393,97 +3496,76 @@ HighsStatus Highs::callSolveQp() {
 
   settings.reportingfequency = 100;
 
-  settings.endofiterationevent.subscribe([this](Statistics& stats) {
-    int rep = stats.iteration.size() - 1;
-
+  // Setting qp_update_limit = 10 leads to error with lpHighs3
+  const HighsInt qp_update_limit = 1000;  // 1000; // default
+  if (qp_update_limit != settings.reinvertfrequency) {
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT "\n",
-                 stats.iteration[rep], stats.time[rep], stats.objval[rep],
-                 stats.nullspacedimension[rep]);
+                 "Changing QP reinversion frequency from %d to %d\n",
+                 int(settings.reinvertfrequency), int(qp_update_limit));
+    settings.reinvertfrequency = qp_update_limit;
+  }
+
+  settings.iteration_limit = options_.qp_iteration_limit;
+  settings.nullspace_limit = options_.qp_nullspace_limit;
+
+  // Define the QP model status logging function
+  settings.qp_model_status_log.subscribe(
+      [this](QpModelStatus& qp_model_status) {
+        if (qp_model_status == QpModelStatus::kUndetermined ||
+            qp_model_status == QpModelStatus::kLargeNullspace ||
+            qp_model_status == QpModelStatus::kError ||
+            qp_model_status == QpModelStatus::kNotset)
+          highsLogUser(options_.log_options, HighsLogType::kInfo,
+                       "QP solver model status: %s\n",
+                       qpModelStatusToString(qp_model_status).c_str());
+      });
+
+  // Define the QP solver iteration logging function
+  settings.iteration_log.subscribe([this](Statistics& stats) {
+    int rep = stats.iteration.size() - 1;
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "%11d  %15.8g           %6d %9.2fs\n",
+                 int(stats.iteration[rep]), stats.objval[rep],
+                 int(stats.nullspacedimension[rep]), stats.time[rep]);
   });
 
-  settings.timelimit = options_.time_limit;
-  settings.iterationlimit = options_.simplex_iteration_limit;
+  // Define the QP nullspace limit logging function
+  settings.nullspace_limit_log.subscribe([this](HighsInt& nullspace_limit) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "QP solver has exceeded nullspace limit of %d\n",
+                 int(nullspace_limit));
+  });
+
+  settings.time_limit = options_.time_limit;
   settings.lambda_zero_threshold = options_.dual_feasibility_tolerance;
+
+  switch (options_.simplex_primal_edge_weight_strategy) {
+    case 0:
+      settings.pricing = PricingStrategy::DantzigWolfe;
+      break;
+    case 1:
+      settings.pricing = PricingStrategy::Devex;
+      break;
+    case 2:
+      settings.pricing = PricingStrategy::SteepestEdge;
+      break;
+    default:
+      settings.pricing = PricingStrategy::Devex;
+  }
 
   // print header for QP solver output
   highsLogUser(options_.log_options, HighsLogType::kInfo,
-               "Iteration, Runtime, ObjVal, NullspaceDim\n");
+               "  Iteration        Objective     NullspaceDim\n");
 
-  QpModelStatus qp_model_status = QpModelStatus::INDETERMINED;
+  QpAsmStatus status = solveqp(instance, settings, stats, model_status_, basis_,
+                               solution_, timer_);
+  // QP solver can fail, so should return something other than QpAsmStatus::kOk
+  if (status == QpAsmStatus::kError) return HighsStatus::kError;
 
-  QpSolution qp_solution(instance);
-
-  solveqp(instance, settings, stats, qp_model_status, qp_solution, timer_);
-
-  HighsStatus call_status = HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(options_.log_options, call_status,
-                                      return_status, "QpSolver");
-  if (return_status == HighsStatus::kError) return return_status;
-  model_status_ = qp_model_status == QpModelStatus::OPTIMAL
-                      ? HighsModelStatus::kOptimal
-                  : qp_model_status == QpModelStatus::UNBOUNDED
-                      ? HighsModelStatus::kUnbounded
-                  : qp_model_status == QpModelStatus::INFEASIBLE
-                      ? HighsModelStatus::kInfeasible
-                  : qp_model_status == QpModelStatus::ITERATIONLIMIT
-                      ? HighsModelStatus::kIterationLimit
-                  : qp_model_status == QpModelStatus::LARGE_NULLSPACE
-                      ? HighsModelStatus::kSolveError
-                  : qp_model_status == QpModelStatus::TIMELIMIT
-                      ? HighsModelStatus::kTimeLimit
-                      : HighsModelStatus::kNotset;
-  // extract variable values
-  solution_.col_value.resize(lp.num_col_);
-  solution_.col_dual.resize(lp.num_col_);
-  const double objective_multiplier = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    solution_.col_value[iCol] = qp_solution.primal.value[iCol];
-    solution_.col_dual[iCol] =
-        objective_multiplier * qp_solution.dualvar.value[iCol];
-  }
-  // extract constraint activity
-  solution_.row_value.resize(lp.num_row_);
-  solution_.row_dual.resize(lp.num_row_);
-  // Negate the vector and Hessian
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    solution_.row_value[iRow] = qp_solution.rowactivity.value[iRow];
-    solution_.row_dual[iRow] =
-        objective_multiplier * qp_solution.dualcon.value[iRow];
-  }
-  solution_.value_valid = true;
-  solution_.dual_valid = true;
-
-  // extract basis status
-  basis_.col_status.resize(lp.num_col_);
-  basis_.row_status.resize(lp.num_row_);
-
-  for (HighsInt i = 0; i < lp.num_col_; i++) {
-    if (qp_solution.status_var[i] == BasisStatus::ActiveAtLower) {
-      basis_.col_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_var[i] == BasisStatus::ActiveAtUpper) {
-      basis_.col_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_var[i] == BasisStatus::InactiveInBasis) {
-      basis_.col_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.col_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-
-  for (HighsInt i = 0; i < lp.num_row_; i++) {
-    if (qp_solution.status_con[i] == BasisStatus::ActiveAtLower) {
-      basis_.row_status[i] = HighsBasisStatus::kLower;
-    } else if (qp_solution.status_con[i] == BasisStatus::ActiveAtUpper) {
-      basis_.row_status[i] = HighsBasisStatus::kUpper;
-    } else if (qp_solution.status_con[i] == BasisStatus::InactiveInBasis) {
-      basis_.row_status[i] = HighsBasisStatus::kNonbasic;
-    } else {
-      basis_.row_status[i] = HighsBasisStatus::kBasic;
-    }
-  }
-  basis_.valid = true;
-  basis_.alien = false;
+  assert(status == QpAsmStatus::kOk || status == QpAsmStatus::kWarning);
+  HighsStatus return_status = status == QpAsmStatus::kWarning
+                                  ? HighsStatus::kWarning
+                                  : HighsStatus::kOk;
 
   // Get the objective and any KKT failures
   info_.objective_function_value = model_.objectiveValue(solution_.col_value);
@@ -3937,6 +4019,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
     case HighsModelStatus::kPresolveError:
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
+    case HighsModelStatus::kMemoryLimit:
       // Don't clear the model status!
       //      invalidateUserSolverData();
       invalidateInfo();
@@ -4020,6 +4103,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
     case HighsModelStatus::kModelEmpty:
+    case HighsModelStatus::kMemoryLimit:
       // No info, primal solution or basis
       assert(have_info == false);
       assert(have_primal_solution == false);

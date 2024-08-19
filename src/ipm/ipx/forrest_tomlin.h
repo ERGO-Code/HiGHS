@@ -11,7 +11,7 @@ namespace ipx {
 
 // Generic implementation of the Forrest-Tomlin update [1] that can be used with
 // any LU factorization. The implementation does not exploit hypersparsity,
-// which exludes its use for such problems. For non-hypersparse problems the
+// which excludes its use for such problems. For non-hypersparse problems the
 // implementation is better suited than BASICLU, however, because it stores L
 // and U in compressed form with permuted indices; hence solving triangular
 // systems with a dense rhs/lhs accesses memory contiguously. BASICLU could not

@@ -183,17 +183,17 @@ void HighsMipSolverData::finishSymmetryDetection(
                  "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Found %" HIGHSINT_FORMAT " generators\n\n",
+                 "Found %" HIGHSINT_FORMAT " generator(s)\n\n",
                  symmetries.numGenerators);
 
   } else {
     if (symmetries.numPerms != 0) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Found %" HIGHSINT_FORMAT " generators and %" HIGHSINT_FORMAT
-                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                   " columns\n\n",
-                   symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-                   (HighsInt)symmetries.columnToOrbitope.size());
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+          "Found %" HIGHSINT_FORMAT " generator(s) and %" HIGHSINT_FORMAT
+          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
+          symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
+          (HighsInt)symmetries.columnToOrbitope.size());
     } else {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Found %" HIGHSINT_FORMAT
@@ -400,9 +400,13 @@ void HighsMipSolverData::runPresolve(const HighsInt presolve_reduction_limit) {
 
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-  presolve.setInput(mipsolver, presolve_reduction_limit);
-  mipsolver.modelstatus_ = presolve.run(postSolveStack);
-  presolve_status = presolve.getPresolveStatus();
+  if (!presolve.okSetInput(mipsolver, presolve_reduction_limit)) {
+    mipsolver.modelstatus_ = HighsModelStatus::kMemoryLimit;
+    presolve_status = HighsPresolveStatus::kOutOfMemory;
+  } else {
+    mipsolver.modelstatus_ = presolve.run(postSolveStack);
+    presolve_status = presolve.getPresolveStatus();
+  }
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
 #ifdef HIGHS_DEBUGSOL
@@ -592,7 +596,17 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
         break;
       case HighsVarType::kInteger:
-        if (domain.isFixed(i)) continue;
+        if (domain.isFixed(i)) {
+          if (std::abs(domain.col_lower_[i] -
+                       std::floor(domain.col_lower_[i] + 0.5)) > feastol) {
+            // integer variable is fixed to a fractional value -> infeasible
+            mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+            lower_bound = kHighsInf;
+            pruned_treeweight = 1.0;
+            return;
+          }
+          continue;
+        }
         integer_cols.push_back(i);
         integral_cols.push_back(i);
         maxTreeSizeLog2 += (HighsInt)std::ceil(
@@ -1908,16 +1922,6 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.submip) return;
   if (non_improving) return;
 
-  /*
-  printf(
-      "%7s dimension(%d, %d) "
-      "%4simproving solution: numImprovingSols = %4d; Limits (%11.4g, "
-      "%11.4g); Objective = %11.4g\n",
-      mipsolver.submip ? "Sub-MIP" : "MIP    ", mipsolver.model_->num_col_,
-      mipsolver.model_->num_row_, non_improving ? "non-" : "",
-      int(numImprovingSols), new_upper_limit, upper_limit,
-      mipsolver.solution_objective_);
-  */
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();

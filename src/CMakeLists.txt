@@ -7,10 +7,20 @@ include(sources)
 set(sources ${highs_sources} ${cupdlp_sources} ${ipx_sources} ${basiclu_sources})
 set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers})
 
+# Configure the config windows version file
+if(MSVC)
+  string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
+  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
+  set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
+else()
+  set(win_version_file)
+endif()
+
 # Outdated CMake approach: update in progress
 if(NOT FAST_BUILD)
 
-  add_library(libhighs ${sources} ${headers})
+  add_library(libhighs ${sources} ${headers} ${win_version_file})
   target_include_directories(libhighs PRIVATE ${include_dirs})
 
   if(${BUILD_SHARED_LIBS})
@@ -32,6 +42,7 @@ if(NOT FAST_BUILD)
   # on UNIX system the 'lib' prefix is automatically added
   set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
+    PDB_NAME "libhighs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
   if(ZLIB AND ZLIB_FOUND)
@@ -129,9 +140,11 @@ else()
   endif()
 
   set_target_properties(highs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
   if(APPLE)
-    set_target_properties(highs PROPERTIES
-      INSTALL_RPATH "@loader_path")
+      set_target_properties(highs PROPERTIES INSTALL_RPATH "@loader_path")
+  elseif (UNIX)
+      set_target_properties(highs PROPERTIES INSTALL_RPATH "$ORIGIN")
   endif()
 
   target_include_directories(highs PUBLIC
@@ -163,16 +176,65 @@ else()
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
-  target_sources(highs PRIVATE ${sources} ${headers})
+  target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
   target_include_directories(highs PRIVATE ${include_dirs})
+
+  if(MSVC)
+    list(APPEND highs_compile_opts
+      "/bigobj" # Allow big object
+      "/DNOMINMAX"
+      "/DWIN32_LEAN_AND_MEAN=1"
+      "/D_CRT_SECURE_NO_WARNINGS"
+      "/D_CRT_SECURE_NO_DEPRECATE"
+      "/MP" # Build with multiple processes
+      "/Zc:preprocessor" # Enable preprocessor conformance mode
+      "/fp:precise"
+      )
+    if (CMAKE_BUILD_TYPE STREQUAL Release)
+      list(APPEND highs_compile_opts
+        "/DNDEBUG")
+    endif()
+    # MSVC warning suppressions
+    list(APPEND highs_compile_opts
+      "/wd4005" # 'macro-redefinition'
+      "/wd4018" # 'expression' : signed/unsigned mismatch
+      "/wd4065" # switch statement contains 'default' but no 'case' labels
+      "/wd4068" # 'unknown pragma'
+      "/wd4101" # 'identifier' : unreferenced local variable
+      "/wd4146" # unary minus operator applied to unsigned type, result still unsigned
+      "/wd4200" # nonstandard extension used : zero-sized array in struct/union
+      "/wd4244" # 'conversion' conversion from 'type1' to 'type2', possible loss of data
+      "/wd4251" # 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'
+      "/wd4267" # 'var' : conversion from 'size_t' to 'type', possible loss of data
+      "/wd4305" # 'identifier' : truncation from 'type1' to 'type2'
+      "/wd4307" # 'operator' : integral constant overflow
+      "/wd4309" # 'conversion' : truncation of constant value
+      "/wd4334" # 'operator' : result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+      "/wd4355" # 'this' : used in base member initializer list
+      "/wd4477" # 'fwprintf' : format string '%s' requires an argument of type 'wchar_t *'
+      "/wd4506" # no definition for inline function 'function'
+      "/wd4715" # function' : not all control paths return a value
+      "/wd4800" # 'type' : forcing value to bool 'true' or 'false' (performance warning)
+      "/wd4996" # The compiler encountered a deprecated declaration.
+      )
+    target_compile_options(highs PRIVATE ${highs_compile_opts})
+  # else()
+  #   list(APPEND highs_compile_opts "-fwrapv")
+  endif()
+
 
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs ZLIB::ZLIB)
-    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(ZLIB)")
+    set(CONF_DEPS 
+      "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)\nfind_dependency(ZLIB)")
+    set(CONF_DEPENDENCIES ${CONF_DEPS})
+  else() 
+    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)")
   endif()
+    
 
   # # on UNIX system the 'lib' prefix is automatically added
   # set_target_properties(highs PROPERTIES
@@ -198,18 +260,8 @@ else()
   endforeach()
   install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
 
-  # Configure the config windows version file
-  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
-    "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
-  if(MSVC)
-    set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
-  else()
-    set(win_version_file)
-  endif()
-
   # target_compile_options(highs PRIVATE "-Wall")
   # target_compile_options(highs PRIVATE "-Wunused")
-  target_sources(highs PRIVATE ${win_version_file})
   
   if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
@@ -240,6 +292,46 @@ else()
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
   install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+
+  if (BUILD_DOTNET)
+  
+      # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
+      if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+        set(DOTNET_PLATFORM arm64)
+      else()
+        set(DOTNET_PLATFORM x64)
+      endif()
+
+      if(APPLE)
+        set(DOTNET_RID osx-${DOTNET_PLATFORM})
+      elseif(UNIX)
+        set(DOTNET_RID linux-${DOTNET_PLATFORM})
+      elseif(WIN32)
+        set(DOTNET_RID win-${DOTNET_PLATFORM})
+      else()
+        message(FATAL_ERROR "Unsupported system !")
+      endif()
+      message(STATUS ".Net RID: ${DOTNET_RID}")
+
+      set(DOTNET_PROJECT Highs.Native)
+      set(DOTNET_PROJECT_DIR ${PROJECT_BINARY_DIR}/dotnet/${DOTNET_PROJECT})
+      file(MAKE_DIRECTORY ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native)
+
+      if (APPLE)
+        set(TARGET_FILE_NAME "highs.dylib")
+      elseif(UNIX)
+        set(TARGET_FILE_NAME "highs.so")
+      elseif(WIN32)
+        set(TARGET_FILE_NAME "highs.dll")
+      endif()
+
+      add_custom_command(TARGET highs POST_BUILD 
+        COMMAND "${CMAKE_COMMAND}" -E copy 
+          "$<TARGET_FILE:highs>"
+        ${DOTNET_PROJECT_DIR}/runtimes/${DOTNET_RID}/native/${TARGET_FILE_NAME}
+        COMMENT "Copying to output directory")
+  endif()
 
 endif()
 
@@ -275,6 +367,7 @@ if(CSHARP_FOUND)
   set(csharpsources
     interfaces/highs_csharp_api.cs)
   add_library(HighsCsharp SHARED interfaces/highs_csharp_api.cs)
+  add_library(${PROJECT_NAMESPACE}::HighsCsharp ALIAS HighsCsharp)
   target_compile_options(HighsCsharp PUBLIC "/unsafe")
   add_executable(csharpexample ../examples/call_highs_from_csharp.cs)
   target_compile_options(csharpexample PUBLIC "/unsafe")

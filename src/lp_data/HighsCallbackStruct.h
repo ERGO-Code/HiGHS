@@ -20,6 +20,10 @@
 extern "C" {
 #endif
 
+/**
+ * Struct to handle callback output data
+ *
+ */
 typedef struct {
   int log_type;  // cast of HighsLogType
   double running_time;

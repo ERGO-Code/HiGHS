@@ -14,29 +14,29 @@ class DantzigPricing : public Pricing {
   Basis& basis;
   ReducedCosts& redcosts;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
-    auto activeconstraintidx = basis.getactive();
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
+    auto active_constraint_index = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
-    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < active_constraint_index.size(); i++) {
       HighsInt indexinbasis =
-          constraintindexinbasisfactor[activeconstraintidx[i]];
+          constraintindexinbasisfactor[active_constraint_index[i]];
       if (indexinbasis == -1) {
         printf("error\n");
       }
       assert(indexinbasis != -1);
 
-      if (basis.getstatus(activeconstraintidx[i]) ==
-              BasisStatus::ActiveAtLower &&
+      if (basis.getstatus(active_constraint_index[i]) ==
+              BasisStatus::kActiveAtLower &&
           -lambda.value[indexinbasis] > maxabslambda) {
-        minidx = activeconstraintidx[i];
+        minidx = active_constraint_index[i];
         maxabslambda = -lambda.value[indexinbasis];
-      } else if (basis.getstatus(activeconstraintidx[i]) ==
-                     BasisStatus::ActiveAtUpper &&
+      } else if (basis.getstatus(active_constraint_index[i]) ==
+                     BasisStatus::kActiveAtUpper &&
                  lambda.value[indexinbasis] > maxabslambda) {
-        minidx = activeconstraintidx[i];
+        minidx = active_constraint_index[i];
         maxabslambda = lambda.value[indexinbasis];
       } else {
         // TODO
@@ -54,12 +54,16 @@ class DantzigPricing : public Pricing {
   DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
       : runtime(rt), basis(bas), redcosts(rc){};
 
-  HighsInt price(const Vector& x, const Vector& gradient) {
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
     return minidx;
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void recompute() {
+    // do nothing
+  }
+
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     // does nothing
   }

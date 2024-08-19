@@ -187,19 +187,21 @@ class HPresolve {
   bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
                    HighsInt row, HighsInt col);
 
+  void reinsertEquation(HighsInt row);
+
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 #endif
 
   HighsInt findNonzero(HighsInt row, HighsInt col);
 
-  void fromCSC(const std::vector<double>& Aval,
-               const std::vector<HighsInt>& Aindex,
-               const std::vector<HighsInt>& Astart);
+  bool okFromCSC(const std::vector<double>& Aval,
+                 const std::vector<HighsInt>& Aindex,
+                 const std::vector<HighsInt>& Astart);
 
-  void fromCSR(const std::vector<double>& ARval,
-               const std::vector<HighsInt>& ARindex,
-               const std::vector<HighsInt>& ARstart);
+  bool okFromCSR(const std::vector<double>& ARval,
+                 const std::vector<HighsInt>& ARindex,
+                 const std::vector<HighsInt>& ARstart);
 
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
@@ -270,13 +272,13 @@ class HPresolve {
 
  public:
   // for LP presolve
-  void setInput(HighsLp& model_, const HighsOptions& options_,
-                const HighsInt presolve_reduction_limit,
-                HighsTimer* timer = nullptr);
+  bool okSetInput(HighsLp& model_, const HighsOptions& options_,
+                  const HighsInt presolve_reduction_limit,
+                  HighsTimer* timer = nullptr);
 
   // for MIP presolve
-  void setInput(HighsMipSolver& mipsolver,
-                const HighsInt presolve_reduction_limit);
+  bool okSetInput(HighsMipSolver& mipsolver,
+                  const HighsInt presolve_reduction_limit);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;

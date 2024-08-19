@@ -105,6 +105,35 @@ struct InvertibleRepresentation {
  */
 class HFactor {
  public:
+  HFactor()
+      : build_realTick(0.0),
+        build_synthetic_tick(0.0),
+        rank_deficiency(0),
+        basis_matrix_num_el(0),
+        invert_num_el(0),
+        kernel_dim(0),
+        kernel_num_el(0),
+        num_row(0),
+        num_col(0),
+        num_basic(0),
+        a_matrix_valid(false),
+        a_start(nullptr),
+        a_index(nullptr),
+        a_value(nullptr),
+        basic_index(nullptr),
+        pivot_threshold(0.0),
+        pivot_tolerance(0.0),
+        highs_debug_level(0),
+        time_limit_(0.0),
+        use_original_HFactor_logic(false),
+        debug_report_(false),
+        basis_matrix_limit_size(0),
+        update_method(0),
+        build_timer_(nullptr),
+        nwork(0),
+        u_merit_x(0),
+        u_total_x(0){};
+
   /**
    * @brief Copy problem size and pointers of constraint matrix, and set
    * up space for INVERT
@@ -304,10 +333,10 @@ class HFactor {
   RefactorInfo refactor_info_;
 
   // Properties of data held in HFactor.h
-  HighsInt basis_matrix_num_el = 0;
-  HighsInt invert_num_el = 0;
-  HighsInt kernel_dim = 0;
-  HighsInt kernel_num_el = 0;
+  HighsInt basis_matrix_num_el;
+  HighsInt invert_num_el;
+  HighsInt kernel_dim;
+  HighsInt kernel_num_el;
 
   /**
    * Data of the factor
@@ -339,7 +368,7 @@ class HFactor {
   HighsLogOptions log_options;
 
   bool use_original_HFactor_logic;
-  bool debug_report_ = false;
+  bool debug_report_;
   HighsInt basis_matrix_limit_size;
   HighsInt update_method;
 

@@ -16,15 +16,15 @@ class DevexPricing : public Pricing {
 
   std::vector<double> weights;
 
-  HighsInt chooseconstrainttodrop(const Vector& lambda) {
-    auto activeconstraintidx = basis.getactive();
+  HighsInt chooseconstrainttodrop(const QpVector& lambda) {
+    auto active_constraint_index = basis.getactive();
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
     double maxabslambda = 0.0;
-    for (size_t i = 0; i < activeconstraintidx.size(); i++) {
+    for (size_t i = 0; i < active_constraint_index.size(); i++) {
       HighsInt indexinbasis =
-          constraintindexinbasisfactor[activeconstraintidx[i]];
+          constraintindexinbasisfactor[active_constraint_index[i]];
       if (indexinbasis == -1) {
         printf("error\n");
       }
@@ -34,15 +34,15 @@ class DevexPricing : public Pricing {
                    weights[indexinbasis];
       if (val > maxabslambda && fabs(lambda.value[indexinbasis]) >
                                     runtime.settings.lambda_zero_threshold) {
-        if (basis.getstatus(activeconstraintidx[i]) ==
-                BasisStatus::ActiveAtLower &&
+        if (basis.getstatus(active_constraint_index[i]) ==
+                BasisStatus::kActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxabslambda = val;
-        } else if (basis.getstatus(activeconstraintidx[i]) ==
-                       BasisStatus::ActiveAtUpper &&
+        } else if (basis.getstatus(active_constraint_index[i]) ==
+                       BasisStatus::kActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
-          minidx = activeconstraintidx[i];
+          minidx = active_constraint_index[i];
           maxabslambda = val;
         } else {
           // TODO
@@ -67,13 +67,17 @@ class DevexPricing : public Pricing {
   // dual values updated as:
   // c_N^T  += alpha_D * a_p^T (pivotal row)
   // alpha_D = -c_q / a_pq
-  HighsInt price(const Vector& x, const Vector& gradient) {
-    Vector& lambda = redcosts.getReducedCosts();
+  HighsInt price(const QpVector& x, const QpVector& gradient) {
+    QpVector& lambda = redcosts.getReducedCosts();
     HighsInt minidx = chooseconstrainttodrop(lambda);
     return minidx;
   }
 
-  void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
+  void recompute() {
+    // do nothing
+  }
+
+  void update_weights(const QpVector& aq, const QpVector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
     double weight_p = weights[rowindex_p];
@@ -85,7 +89,7 @@ class DevexPricing : public Pricing {
                       (aq.value[rowindex_p] * aq.value[rowindex_p]) * weight_p *
                       weight_p;
       }
-      if (weights[i] > 10E6) {
+      if (weights[i] > 1e7) {
         weights[i] = 1.0;
       }
     }

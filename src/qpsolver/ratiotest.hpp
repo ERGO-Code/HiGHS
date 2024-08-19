@@ -11,8 +11,8 @@ struct RatiotestResult {
   bool nowactiveatlower;
 };
 
-RatiotestResult ratiotest(Runtime& runtime, const Vector& p,
-                          const Vector& rowmove, double alphastart);
+RatiotestResult ratiotest(Runtime& runtime, const QpVector& p,
+                          const QpVector& rowmove, double alphastart);
 
 Instance ratiotest_relax_instance(Runtime& runtime);
 

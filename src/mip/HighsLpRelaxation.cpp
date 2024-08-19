@@ -1317,14 +1317,28 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           std::vector<double> roundsol = sol.col_value;
 
           for (const std::pair<HighsInt, double>& fracint : fractionalints) {
+            // get column index
             HighsInt col = fracint.first;
-
+            // round based on locks and sign of objective coefficient
             if (mipsolver.mipdata_->uplocks[col] == 0 &&
                 (mipsolver.colCost(col) < 0 ||
-                 mipsolver.mipdata_->downlocks[col] != 0))
-              roundsol[col] = std::ceil(fracint.second);
-            else
-              roundsol[col] = std::floor(fracint.second);
+                 mipsolver.mipdata_->downlocks[col] != 0)) {
+              // round up
+              roundsol[col] = std::min(
+                  std::ceil(fracint.second - mipsolver.mipdata_->feastol),
+                  lpsolver.getLp().col_upper_[col] == kHighsInf
+                      ? kHighsInf
+                      : std::floor(lpsolver.getLp().col_upper_[col] +
+                                   mipsolver.mipdata_->feastol));
+            } else {
+              // round down
+              roundsol[col] = std::max(
+                  std::floor(fracint.second + mipsolver.mipdata_->feastol),
+                  lpsolver.getLp().col_lower_[col] == -kHighsInf
+                      ? -kHighsInf
+                      : std::ceil(lpsolver.getLp().col_lower_[col] -
+                                  mipsolver.mipdata_->feastol));
+            }
           }
 
           const auto& cliquesubst =

@@ -338,6 +338,10 @@ struct HighsOptionsStruct {
   HighsInt pdlp_e_restart_method;
   double pdlp_d_gap_tol;
 
+  // Options for QP solver
+  HighsInt qp_iteration_limit;
+  HighsInt qp_nullspace_limit;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -420,6 +424,128 @@ struct HighsOptionsStruct {
   // Logging callback identifiers
   HighsLogOptions log_options;
   virtual ~HighsOptionsStruct() {}
+
+  HighsOptionsStruct()
+      : presolve(""),
+        solver(""),
+        parallel(""),
+        run_crossover(""),
+        time_limit(0.0),
+        solution_file(""),
+        write_model_file(""),
+        random_seed(0),
+        ranging(""),
+        infinite_cost(0.0),
+        infinite_bound(0.0),
+        small_matrix_value(0.0),
+        large_matrix_value(0.0),
+        primal_feasibility_tolerance(0.0),
+        dual_feasibility_tolerance(0.0),
+        ipm_optimality_tolerance(0.0),
+        objective_bound(0.0),
+        objective_target(0.0),
+        threads(0),
+        user_bound_scale(0),
+        user_cost_scale(0),
+        highs_debug_level(0),
+        highs_analysis_level(0),
+        simplex_strategy(0),
+        simplex_scale_strategy(0),
+        simplex_crash_strategy(0),
+        simplex_dual_edge_weight_strategy(0),
+        simplex_primal_edge_weight_strategy(0),
+        simplex_iteration_limit(0),
+        simplex_update_limit(0),
+        simplex_min_concurrency(0),
+        simplex_max_concurrency(0),
+        log_file(""),
+        write_model_to_file(false),
+        write_solution_to_file(false),
+        write_solution_style(0),
+        glpsol_cost_row_location(0),
+        output_flag(false),
+        log_to_console(false),
+        ipm_iteration_limit(0),
+        pdlp_native_termination(false),
+        pdlp_scaling(false),
+        pdlp_iteration_limit(0),
+        pdlp_e_restart_method(0),
+        pdlp_d_gap_tol(0.0),
+        qp_iteration_limit(0),
+        qp_nullspace_limit(0),
+        log_dev_level(0),
+        log_githash(false),
+        solve_relaxation(false),
+        allow_unbounded_or_infeasible(false),
+        use_implied_bounds_from_presolve(false),
+        lp_presolve_requires_basis_postsolve(false),
+        mps_parser_type_free(false),
+        keep_n_rows(0),
+        cost_scale_factor(0),
+        allowed_matrix_scale_factor(0),
+        allowed_cost_scale_factor(0),
+        ipx_dualize_strategy(0),
+        simplex_dualize_strategy(0),
+        simplex_permute_strategy(0),
+        max_dual_simplex_cleanup_level(0),
+        max_dual_simplex_phase1_cleanup_level(0),
+        simplex_price_strategy(0),
+        simplex_unscaled_solution_strategy(0),
+        presolve_reduction_limit(0),
+        restart_presolve_reduction_limit(0),
+        presolve_substitution_maxfillin(0),
+        presolve_rule_off(0),
+        presolve_rule_logging(false),
+        simplex_initial_condition_check(false),
+        no_unnecessary_rebuild_refactor(false),
+        simplex_initial_condition_tolerance(0.0),
+        rebuild_refactor_solution_error_tolerance(0.0),
+        dual_steepest_edge_weight_error_tolerance(0.0),
+        dual_steepest_edge_weight_log_error_threshold(0.0),
+        dual_simplex_cost_perturbation_multiplier(0.0),
+        primal_simplex_bound_perturbation_multiplier(0.0),
+        dual_simplex_pivot_growth_tolerance(0.0),
+        presolve_pivot_threshold(0.0),
+        factor_pivot_threshold(0.0),
+        factor_pivot_tolerance(0.0),
+        start_crossover_tolerance(0.0),
+        less_infeasible_DSE_check(false),
+        less_infeasible_DSE_choose_row(false),
+        use_original_HFactor_logic(false),
+        run_centring(false),
+        max_centring_steps(0),
+        centring_ratio_tolerance(0.0),
+        icrash(false),
+        icrash_dualize(false),
+        icrash_strategy(""),
+        icrash_starting_weight(0.0),
+        icrash_iterations(0),
+        icrash_approx_iter(0),
+        icrash_exact(false),
+        icrash_breakpoints(false),
+        mip_detect_symmetry(false),
+        mip_allow_restart(false),
+        mip_max_nodes(0),
+        mip_max_stall_nodes(0),
+        mip_max_leaves(0),
+        mip_max_improving_sols(0),
+        mip_lp_age_limit(0),
+        mip_pool_age_limit(0),
+        mip_pool_soft_limit(0),
+        mip_pscost_minreliable(0),
+        mip_min_cliquetable_entries_for_parallelism(0),
+        mip_report_level(0),
+        mip_feasibility_tolerance(0.0),
+        mip_rel_gap(0.0),
+        mip_abs_gap(0.0),
+        mip_heuristic_effort(0.0),
+        mip_min_logging_interval(0.0),
+#ifdef HIGHS_DEBUGSOL
+        mip_debug_solution_file(""),
+#endif
+        mip_improving_solution_save(false),
+        mip_improving_solution_report_sparse(false),
+        mip_improving_solution_file(""){};
 };
 
 // For now, but later change so HiGHS properties are string based so that new
@@ -813,7 +939,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(
         "mip_improving_solution_file",
         "File for reporting improving MIP solutions: not reported for an empty "
-        "string \"\"",
+        "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
@@ -932,6 +1058,16 @@ class HighsOptions : public HighsOptionsStruct {
         "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
         &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
     records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "qp_iteration_limit", "Iteration limit for QP solver", advanced,
+        &qp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("qp_nullspace_limit",
+                                     "Nullspace limit for QP solver", advanced,
+                                     &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    records.push_back(record_int);
 
     // Fix the number of user settable options
     num_user_settable_options_ = static_cast<HighsInt>(records.size());

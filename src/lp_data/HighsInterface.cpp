@@ -16,6 +16,7 @@
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "model/HighsHessianUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
@@ -213,6 +214,10 @@ HighsStatus Highs::addColsInterface(
 
   // Determine any implications for simplex data
   ekk_instance_.addCols(lp, local_a_matrix);
+
+  // Extend any Hessian with zeros on the diagonal
+  if (this->model_.hessian_.dim_)
+    completeHessian(lp.num_col_, this->model_.hessian_);
   return return_status;
 }
 
@@ -361,7 +366,8 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   // any columns have been removed, and if there is mask to be updated
   HighsInt original_num_col = lp.num_col_;
 
-  deleteLpCols(lp, index_collection);
+  lp.deleteCols(index_collection);
+  model_.hessian_.deleteCols(index_collection);
   assert(lp.num_col_ <= original_num_col);
   if (lp.num_col_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -406,7 +412,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   // any rows have been removed, and if there is mask to be updated
   HighsInt original_num_row = lp.num_row_;
 
-  deleteLpRows(lp, index_collection);
+  lp.deleteRows(index_collection);
   assert(lp.num_row_ <= original_num_row);
   if (lp.num_row_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -2192,7 +2198,7 @@ void Highs::formIllConditioningLp0(HighsLp& ill_conditioning_lp,
     ill_conditioning_matrix.value_.push_back(1.0);
     ill_conditioning_matrix.start_.push_back(
         HighsInt(ill_conditioning_matrix.index_.size()));
-    // Subracting x_- with cost 1
+    // Subtracting x_- with cost 1
     ill_conditioning_lp.col_cost_.push_back(1);
     ill_conditioning_lp.col_lower_.push_back(0);
     ill_conditioning_lp.col_upper_.push_back(kHighsInf);
@@ -2306,7 +2312,7 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   }
   assert(ill_conditioning_lp.num_col_ == incumbent_num_row);
   if (constraint) {
-    // Add the identiy matrix for constraint y - u + w = 0
+    // Add the identity matrix for constraint y - u + w = 0
     for (HighsInt iRow = 0; iRow < incumbent_num_row; iRow++) {
       ill_conditioning_matrix.index_.push_back(iRow);
       ill_conditioning_matrix.value_.push_back(1.0);

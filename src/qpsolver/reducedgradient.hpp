@@ -3,13 +3,24 @@
 
 #include "qpsolver/basis.hpp"
 #include "qpsolver/runtime.hpp"
-#include "qpsolver/vector.hpp"
+#include "qpsolver/qpvector.hpp"
 
 class ReducedGradient {
-  Vector rg;
+  QpVector rg;
   bool uptodate = false;
   Gradient& gradient;
   Basis& basis;
+
+ public:
+  ReducedGradient(Runtime& rt, Basis& bas, Gradient& grad)
+      : rg(rt.instance.num_var), gradient(grad), basis(bas) {}
+
+  QpVector& get() {
+    if (!uptodate) {
+      recompute();
+    }
+    return rg;
+  }
 
   void recompute() {
     rg.dim = basis.getinactive().size();
@@ -17,22 +28,11 @@ class ReducedGradient {
     uptodate = true;
   }
 
- public:
-  ReducedGradient(Runtime& rt, Basis& bas, Gradient& grad)
-      : rg(rt.instance.num_var), gradient(grad), basis(bas) {}
-
-  Vector& get() {
-    if (!uptodate) {
-      recompute();
-    }
-    return rg;
-  }
-
-  void reduce(const Vector& buffer_d, const HighsInt maxabsd) {
+  void reduce(const QpVector& buffer_d, const HighsInt maxabsd) {
     if (!uptodate) {
       return;
     }
-    // Vector r(rg.dim-1);
+    // QpVector r(rg.dim-1);
     // for (HighsInt col=0; col<nrr.maxabsd; col++) {
     //    r.index[col] = col;
     //    r.value[col] = -nrr.d[col] / nrr.d[nrr.maxabsd];
@@ -57,7 +57,7 @@ class ReducedGradient {
     uptodate = true;
   }
 
-  void expand(const Vector& yp) {
+  void expand(const QpVector& yp) {
     if (!uptodate) {
       return;
     }

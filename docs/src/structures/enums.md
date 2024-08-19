@@ -73,6 +73,8 @@ This defines the status of the model after a call to `run`
  * `kTimeLimit`: The run time limit has been reached
  * `kIterationLimit`: The iteration limit has been reached
  * `kSolutionLimit`: The MIP solver has reached the limit on the number of LPs solved
+ * `kInterrupt`: The solver has been interrupted by the user
+ * `kMemoryLimit`: The solver has been unable to allocate sufficient memory
  * `kUnknown`: The model status is unknown
 
 ## HighsBasisStatus

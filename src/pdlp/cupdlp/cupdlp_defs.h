@@ -154,7 +154,7 @@ struct CUPDLP_CSC_MATRIX {
   cupdlp_int *colMatIdx;
   cupdlp_float *colMatElem;
 
-  // Used to aviod implementing NormInf on cuda
+  // Used to avoid implementing NormInf on cuda
   cupdlp_float MatElemNormInf;
 #ifndef CUPDLP_CPU
   // Pointers to GPU vectors
@@ -338,9 +338,9 @@ struct CUPDLP_STEPSIZE {
   cupdlp_float dSumPrimalStep;
   cupdlp_float dSumDualStep;
   // Stepsize ratio,
-  //  β = dBeta = dDualStep / dPrimalStep,
-  //    in the paper, primal weight is the ω:
-  //    ω = √β
+  //  \beta = dBeta = dDualStep / dPrimalStep,
+  //    in the paper, primal weight is the \omega:
+  //    \omega = \sqrt\beta
   cupdlp_float dBeta;
   cupdlp_float dTheta;  // Used in Malitsky-Pock stepsize
   cupdlp_int nStepSizeIter;

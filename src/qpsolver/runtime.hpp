@@ -13,21 +13,22 @@ struct Runtime {
   Instance scaled;
   Instance perturbed;
   Settings settings;
-  Statistics statistics;
+  Statistics& statistics;
 
-  Vector primal;
-  Vector rowactivity;
-  Vector dualvar;
-  Vector dualcon;
-  QpModelStatus status = QpModelStatus::INDETERMINED;
+  QpVector primal;
+  QpVector rowactivity;
+  QpVector dualvar;
+  QpVector dualcon;
+  QpModelStatus status = QpModelStatus::kUndetermined;
 
   std::vector<BasisStatus> status_var;
   std::vector<BasisStatus> status_con;
 
-  Runtime(Instance& inst)
+  Runtime(Instance& inst, Statistics& stats)
       : instance(inst),
-        primal(Vector(instance.num_var)),
-        rowactivity(Vector(instance.num_con)),
+        statistics(stats),
+        primal(QpVector(instance.num_var)),
+        rowactivity(QpVector(instance.num_con)),
         dualvar(instance.num_var),
         dualcon(instance.num_con),
         status_var(instance.num_var),

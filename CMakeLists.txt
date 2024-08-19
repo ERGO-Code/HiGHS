@@ -2,7 +2,9 @@
 # means, adding the subdirectories for all CMake projects in this tree, and
 # finding external libraries and turning them into imported targets.
 
-cmake_minimum_required(VERSION 3.15)
+# Require CMake 3.15+ (matching scikit-build-core) Use new versions of all
+# policies up to CMake 3.27
+cmake_minimum_required(VERSION 3.15...3.27)
 
 # set preference for clang compiler and intel compiler over gcc and other compilers
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
@@ -40,22 +42,23 @@ option(FAST_BUILD "Fast build: " ON)
 option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
+option(BUILD_TESTING "Build Tests" ON)
+
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
 message(STATUS "Build CSharp: ${CSHARP}")
+
 if (FORTRAN OR CSHARP)
   set(BUILD_SHARED_LIBS ON)
 endif()
 
 option(PYTHON_BUILD_SETUP "Build Python interface from setup.py" OFF)
 message(STATUS "Build Python: ${PYTHON_BUILD_SETUP}")
-if (PYTHON_BUILD_SETUP) 
+if (PYTHON_BUILD_SETUP)
   set(BUILD_CXX OFF)
   set(BUILD_TESTING OFF)
 endif()
-
-option(BUILD_TESTING "Build Tests" ON)
 
 include(CMakeDependentOption)
 
@@ -64,7 +67,7 @@ message(STATUS "Build all tests: ${ALL_TESTS}")
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
-if (PYTHON_BUILD_SETUP) 
+if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
@@ -72,7 +75,6 @@ endif()
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
 if (BUILD_CXX)
-
   # Default Build Type to be Release
   get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if(isMultiConfig)
@@ -119,10 +121,13 @@ if (BUILD_CXX)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
     # for multi-config builds (e.g. msvc)
     foreach(OUTPUTCONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
-      string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
-      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      string(TOLOWER ${OUTPUTCONFIG} OUTPUTCONFIG)
+      set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}/${OUTPUTCONFIG})
+      set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}/${OUTPUTCONFIG})
+      set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}/${OUTPUTCONFIG})
+      # set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      # set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
+      # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/${CMAKE_INSTALL_BINDIR})
     endforeach()
   endif()
 
@@ -166,22 +171,61 @@ if (BUILD_CXX)
   check_type_size("int *" SIZEOF_INT_P LANGUAGE CXX)
   message(STATUS "Found int * size: ${SIZEOF_INT_P}")
   cmake_pop_check_state()
-
-  if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-    message(STATUS "IPO / LTO as requested by user: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
-  elseif(LINUX AND (NOT MSVC) AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT ipo_supported OUTPUT error)
-
-    if(ipo_supported)
-      message(STATUS "IPO / LTO enabled")
-      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-      message(STATUS "IPO / LTO not supported: <${error}>")
+ 
+  # Use current CMAKE_C_FLAGS and CMAKE_CXX_FLAGS when checking for IPO support,
+  # instead of defaults: https://cmake.org/cmake/help/latest/policy/CMP0138.html
+  if(MSVC AND BUILD_SHARED_LIBS)
+    # MSVC does support LTO, but WINDOWS_EXPORT_ALL_SYMBOLS does not work if
+    # LTO is enabled.
+    set(ipo_supported NO)
+    message(STATUS "IPO / LTO not supported on MSVC when building a shared library")
+  elseif(MINGW AND NOT CLANG)
+    # MinGW supports LTO, but it causes tests to fail at runtime like this:
+    #
+    #   Mingw-w64 runtime failure:
+    #   32 bit pseudo relocation at 00007FF779C9D070 out of range, targeting 00007FFAAC101400, yielding the value 000000033246438C.
+    #
+    # TODO Figure out and fix the root cause of that, then remove this section.
+    set(ipo_supported NO)
+    message(STATUS "IPO / LTO not currently supported building HiGHS on MinGW")
+  else()
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL  "3.24.0") 
+      cmake_policy(SET CMP0138 NEW)
     endif()
+
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT check_ipo_support_output)
+    message(STATUS "IPO / LTO supported by compiler: ${ipo_supported}")
   endif()
 
-endif() 
+  if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    # The user explicitly requested IPO. If it's not supported, CMake *should*
+    # produce an error: https://cmake.org/cmake/help/latest/policy/CMP0069.html
+    # However, we can give a more helpful error message ourselves.
+    message(STATUS "IPO / LTO: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION} as requested by user")
+    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION AND NOT ipo_supported)
+      message(SEND_ERROR
+              "IPO / LTO was requested through CMAKE_INTERPROCEDURAL_OPTIMIZATION, "
+              "but it is not supported by the compiler. The check failed with this output:\n"
+              "${check_ipo_support_output}")
+    endif()
+  elseif(NOT ipo_supported OR (APPLE AND FORTRAN))
+    message(STATUS "IPO / LTO: disabled because it is not supported")
+  elseif(NOT BUILD_SHARED_LIBS)
+    # For a static library, we can't be sure whether the final linking will
+    # happen with IPO enabled, so we err on the side of caution. A better
+    # approach would be to request "fat LTO" in this case (for gcc/clang), to
+    # make the static library usable whether or not LTO is enabled at link
+    # time. Unfortunately CMake makes that impossible:
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/23136
+    message(STATUS
+            "IPO / LTO: disabled by default when building a static library; "
+            "set CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON to enable")
+  else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    message(STATUS "IPO / LTO: enabled")
+  endif()
+endif()
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
@@ -219,43 +263,22 @@ endif()
 
 set(CMAKE_MACOSX_RPATH ON)
 
-# use, i.e. don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
+if (BUILD_DOTNET)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+else()
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
 
-# if(BUILD_PYTHON_SETUP OR FORTRAN OR CSHARP)
-#   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-# endif()
-
-include(CheckCXXCompilerFlag)
 if(NOT FAST_BUILD)
-
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-
-  # Function to set compiler flags on and off easily.
-  function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-      check_cxx_compiler_flag("${flag}" flag_supported)
-      if(flag_supported)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-      endif()
-      unset(flag_supported CACHE)
-    endif()
-  endfunction()
-
-  # usage: turn pedantic on for even more warnings.
-  enable_cxx_compiler_flag_if_supported("-Wall")
-  enable_cxx_compiler_flag_if_supported("-Wextra")
-  enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
-  enable_cxx_compiler_flag_if_supported("-Wno-format-truncation")
-  enable_cxx_compiler_flag_if_supported("-pedantic")
 endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
@@ -291,9 +314,9 @@ endif()
 
 # If Visual Studio targets are being built.
 if(MSVC)
-  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/W0>")
+  # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/W0>")
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820>")
-  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
+  # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 
@@ -335,17 +358,6 @@ if(NOT FAST_BUILD OR CSHARP)
   endif(CMAKE_CSharp_COMPILER)
 endif()
 
-check_cxx_compiler_flag("-fno-omit-frame-pointer" NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
-if(NO_OMIT_FRAME_POINTER_FLAG_SUPPORTED)
-  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer")
-else()
-  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
-endif()
-
 # uncomment for memory debugging
 # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 # set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
@@ -353,7 +365,7 @@ endif()
 # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
 
 # if zlib is found, then we can enable reading zlib-compressed input
-if(ZLIB)
+if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
@@ -376,8 +388,9 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-string(TIMESTAMP TODAY "%Y-%m-%d")
-message(STATUS "Compilation date: " ${TODAY})
+# Deprecate
+# string(TIMESTAMP TODAY "%Y-%m-%d")
+# message(STATUS "Compilation date: " ${TODAY})
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
@@ -455,7 +468,7 @@ if(NOT FAST_BUILD)
         COMMENT "Resetting code coverage counters to zero.")
     endif()
   endif()
- 
+
   include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
@@ -496,7 +509,7 @@ if(NOT FAST_BUILD)
 
 else(FAST_BUILD)
   message(STATUS "FAST_BUILD set to on.")
-  
+
   option(BUILD_EXAMPLES "Build examples" ON)
   message(STATUS "Build examples: ${BUILD_EXAMPLES}")
 
@@ -504,9 +517,13 @@ else(FAST_BUILD)
   message(STATUS "Build C++ example: ${BUILD_CXX_EXAMPLE}")
   CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build CSharp example" ON "BUILD_EXAMPLES;CSHARP" OFF)
   message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
+  CMAKE_DEPENDENT_OPTION(BUILD_DOTNET "Build dotnet package" OFF "BUILD_EXAMPLES;CSHARP" OFF)
+  message(STATUS "Build dotnet package: ${BUILD_DOTNET}")
+
+  # CMAKE_DEPENDENT_OPTION(BUILD_CSHARP_EXAMPLE "Build Python example" ON "BUILD_EXAMPLES;PYTHON" OFF)
+  # message(STATUS "Build CSharp example: ${BUILD_CSHARP_EXAMPLE}")
 
   include(cpp-highs)
-  include(python-highs)
 
   if(BUILD_CXX)
     add_subdirectory(app)
@@ -514,10 +531,16 @@ else(FAST_BUILD)
       enable_testing()
       add_subdirectory(check)
     endif()
-    include(c-highs)
     # Add tests in examples/tests
     add_subdirectory(examples)
   endif()
+
+  include(python-highs)
+
+  option(USE_DOTNET_STD_21 "Use .Net Standard 2.1 support" ON)
+  message(STATUS ".Net: Use .Net Framework 2.1 support: ${USE_DOTNET_STD_21}")
+
+  include(dotnet)
 
   if(EXP)
     add_executable(doctest)

@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## solver
-- Solver option: "simplex", "choose" or "ipm". If "simplex"/"ipm" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
+- Solver option: "simplex", "choose", "ipm" or "pdlp". If "simplex"/"ipm"/"pdlp" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
 - Type: string
 - Default: "choose"
 
@@ -32,25 +32,25 @@
 - Default: "off"
 
 ## infinite\_cost
-- Limit on cost coefficient: values larger than this will be treated as infinite
+- Limit on |cost coefficient|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20
 
 ## infinite\_bound
-- Limit on |constraint bound|: values larger than this will be treated as infinite
+- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20
 
 ## small\_matrix\_value
-- Lower limit on |matrix entries|: values smaller than this will be treated as zero
+- Lower limit on |matrix entries|: values less than or equal to this will be treated as zero
 - Type: double
 - Range: [1e-12, inf]
 - Default: 1e-09
 
 ## large\_matrix\_value
-- Upper limit on |matrix entries|: values larger than this will be treated as infinite
+- Upper limit on |matrix entries|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1, inf]
 - Default: 1e+15
@@ -95,6 +95,18 @@
 - Number of threads used by HiGHS (0: automatic)
 - Type: integer
 - Range: {0, 2147483647}
+- Default: 0
+
+## user\_bound\_scale
+- Exponent of power-of-two bound scaling for model
+- Type: integer
+- Range: {-2147483647, 2147483647}
+- Default: 0
+
+## user\_cost\_scale
+- Exponent of power-of-two cost scaling for model
+- Type: integer
+- Range: {-2147483647, 2147483647}
 - Default: 0
 
 ## simplex\_strategy
@@ -191,6 +203,11 @@
 - Type: boolean
 - Default: "true"
 
+## mip\_allow\_restart
+- Whether MIP restart is permitted
+- Type: boolean
+- Default: "true"
+
 ## mip\_max\_nodes
 - MIP solver max number of nodes
 - Type: integer
@@ -284,9 +301,55 @@
 - Range: [0, inf]
 - Default: 1e-06
 
+## mip\_min\_logging\_interval
+- MIP minimum logging interval
+- Type: double
+- Range: [0, inf]
+- Default: 5
+
 ## ipm\_iteration\_limit
 - Iteration limit for IPM solver
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
+
+## pdlp\_native\_termination
+- Use native termination for PDLP solver: Default = false
+- Type: boolean
+- Default: "false"
+
+## pdlp\_scaling
+- Scaling option for PDLP solver: Default = true
+- Type: boolean
+- Default: "true"
+
+## pdlp\_iteration\_limit
+- Iteration limit for PDLP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 2147483647
+
+## pdlp\_e\_restart\_method
+- Restart mode for PDLP solver: 0 => none; 1 => GPU (default); 2 => CPU 
+- Type: integer
+- Range: {0, 2}
+- Default: 1
+
+## pdlp\_d\_gap\_tol
+- Duality gap tolerance for PDLP solver: Default = 1e-4
+- Type: double
+- Range: [1e-12, inf]
+- Default: 0.0001
+
+## qp\_iteration\_limit
+- Iteration limit for QP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 2147483647
+
+## qp\_nullspace\_limit
+- Nullspace limit for QP solver
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 4000
 
