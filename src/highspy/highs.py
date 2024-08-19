@@ -36,6 +36,13 @@ from ._core import (
 from itertools import groupby
 from operator import itemgetter
 from decimal import Decimal
+from threading import Thread
+
+
+class _ThreadingResult:
+    def __init__(self):
+        self.out = None
+
 
 class Highs(_Highs):
     """HiGHS solver interface"""
@@ -51,10 +58,20 @@ class Highs(_Highs):
     # Silence logging
     def silent(self):
         super().setOptionValue("output_flag", False)
+
+    def _run(self, res):
+        res.out = super().run()
+
+    def run(self):
+        return self.solve()
     
     # solve
     def solve(self):
-        return super().run()
+        res = _ThreadingResult()
+        t = Thread(target=self._run, args=(res,))
+        t.start()
+        t.join()
+        return res.out
 
     # reset the objective and sense, then solve
     def minimize(self, obj=None):
