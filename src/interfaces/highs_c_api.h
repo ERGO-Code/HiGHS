@@ -544,8 +544,9 @@ HighsInt Highs_passModel(void* highs, const HighsInt num_col,
  *                  and `q_value`.The Hessian matrix is provided to HiGHS as the
  *                  lower triangular component in compressed sparse column form.
  *                  The sparse matrix consists of three arrays, `start`,
- * `index`, and `value`. `start` is an array of length [num_col] containing the
- * starting index of each column in `index`.
+ *                  `index`, and `value`. `start` is an array of length
+ *                  [num_col] containing the starting index of each column in
+ *                  `index`.
  * @param index     An array of length [num_nz] with indices of matrix entries.
  * @param value     An array of length [num_nz] with values of matrix entries.
  *
