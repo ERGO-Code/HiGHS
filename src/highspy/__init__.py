@@ -14,6 +14,8 @@ from ._core import \
     HighsInfoType, \
     HighsStatus, \
     HighsLogType, \
+    IisStrategy, \
+    IisBoundStatus, \
     HighsSparseMatrix, \
     HighsLp, \
     HighsHessian, \
@@ -21,6 +23,7 @@ from ._core import \
     HighsInfo, \
     HighsOptions, \
     _Highs, \
+    HighsIis, \
     HighsSolution, \
     HighsObjectiveSolution, \
     HighsBasis, \
@@ -111,6 +114,8 @@ __all__ = ["__doc__",
            "HighsInfoType",
            "HighsStatus",
            "HighsLogType",
+           "IisStrategy",
+           "IisBoundStatus",
            "HighsSparseMatrix",
            "HighsLp",
            "HighsHessian",
@@ -119,6 +124,7 @@ __all__ = ["__doc__",
            "HighsOptions",
            "_Highs",
            "Highs",
+           "HighsIis",
            "HighsSolution",
            "HighsObjectiveSolution",
            "HighsBasis",
