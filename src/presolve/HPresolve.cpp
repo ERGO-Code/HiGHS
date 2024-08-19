@@ -1185,6 +1185,8 @@ HPresolve::Result HPresolve::dominatedColumns(
               ++numFixedCols;
               if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
                 // Handle unboundedness
+                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+                return Result::kDualInfeasible;
               }
               HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
               break;
@@ -1196,6 +1198,8 @@ HPresolve::Result HPresolve::dominatedColumns(
               ++numFixedCols;
               if (fixColToLowerOrUnbounded(postsolve_stack, j)) {
                 // Handle unboundedness
+                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+                return Result::kDualInfeasible;
               }
               HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
               break;
@@ -1229,6 +1233,8 @@ HPresolve::Result HPresolve::dominatedColumns(
               ++numFixedCols;
               if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
                 // Handle unboundedness
+                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+                return Result::kDualInfeasible;
               }
               HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
               break;
@@ -1240,6 +1246,8 @@ HPresolve::Result HPresolve::dominatedColumns(
               ++numFixedCols;
               if (fixColToUpperOrUnbounded(postsolve_stack, j)) {
                 // Handle unboundedness
+                presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+                return Result::kDualInfeasible;
               }
               HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
               break;
@@ -1281,6 +1289,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           if (fixColToLowerOrUnbounded(postsolve_stack, k)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         } else if (model->col_upper_[k] != kHighsInf &&
@@ -1296,6 +1306,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           if (fixColToUpperOrUnbounded(postsolve_stack, k)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         }
@@ -1327,6 +1339,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           if (fixColToUpperOrUnbounded(postsolve_stack, k)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         } else if (model->col_lower_[k] != -kHighsInf &&
@@ -1342,6 +1356,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           if (fixColToLowerOrUnbounded(postsolve_stack, k)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
         }
@@ -2855,6 +2871,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
     if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
       // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
     }
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
@@ -2866,6 +2884,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
     if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
       // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
     }
     analysis_.logging_on_ = logging_on;
     if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
@@ -2878,6 +2898,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
       if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
@@ -2919,6 +2941,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
       if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
       if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       analysis_.logging_on_ = logging_on;
       if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
@@ -3370,12 +3394,18 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                       primal_feastol) {
                     if (fixColToLowerOrUnbounded(postsolve_stack, x1)) {
                       // Handle unboundedness
+                      presolve_status_ =
+                          HighsPresolveStatus::kUnboundedOrInfeasible;
+                      return Result::kDualInfeasible;
                     }
                   } else {
                     assert(std::abs(model->col_upper_[x1] - fixVal) <=
                            primal_feastol);
                     if (fixColToUpperOrUnbounded(postsolve_stack, x1)) {
                       // Handle unboundedness
+                      presolve_status_ =
+                          HighsPresolveStatus::kUnboundedOrInfeasible;
+                      return Result::kDualInfeasible;
                     }
                   }
                   rowpositions.erase(rowpositions.begin() + x1Cand);
@@ -3893,16 +3923,22 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postsolve_stack,
   if (model->col_cost_[col] > 0) {
     if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
       // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
     }
   } else if (model->col_cost_[col] < 0 ||
              std::abs(model->col_upper_[col]) <
                  std::abs(model->col_lower_[col])) {
     if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
       // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
     }
   } else if (model->col_lower_[col] != -kHighsInf) {
     if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
       // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
     }
   } else {
     fixColToZero(postsolve_stack, col);
@@ -3951,6 +3987,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     else {
       if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
     }
@@ -3963,6 +4001,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     else {
       if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
     }
@@ -3974,6 +4014,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     if (model->col_upper_[col] != kHighsInf) {
       if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
@@ -4002,6 +4044,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
     if (model->col_lower_[col] != -kHighsInf) {
       if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
         // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
       }
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       return checkLimits(postsolve_stack);
@@ -5833,6 +5877,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
           if (fixColToLowerOrUnbounded(postsolve_stack, duplicateCol)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           break;
         case kDominanceDuplicateColToUpper:
@@ -5843,6 +5889,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
           if (fixColToUpperOrUnbounded(postsolve_stack, duplicateCol)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           break;
         case kDominanceColToLower:
@@ -5853,6 +5901,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
           if (fixColToLowerOrUnbounded(postsolve_stack, col)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           break;
         case kDominanceColToUpper:
@@ -5863,6 +5913,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           }
           if (fixColToUpperOrUnbounded(postsolve_stack, col)) {
             // Handle unboundedness
+            presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+            return Result::kDualInfeasible;
           }
           break;
         case kMergeParallelCols:
