@@ -121,9 +121,10 @@ HighsCallbackFunctionType userInterruptCallback =
           REQUIRE(local_callback_data == kUserCallbackNoData);
         }
         if (callback_type == kCallbackLogging) {
-          if (dev_run)
-            printf("userInterruptCallback(type %2d; data %2d): %s",
-                   callback_type, local_callback_data, message.c_str());
+          if (dev_run) printf("Callback: %s", message.c_str());
+          //            printf("userInterruptCallback(type %2d; data %2d): %s",
+          //                   callback_type, local_callback_data,
+          //                   message.c_str());
         } else if (callback_type == kCallbackSimplexInterrupt) {
           if (dev_run)
             printf(
@@ -190,12 +191,13 @@ std::function<void(int, const std::string&, const HighsCallbackDataOut*,
       if (dev_run)
         printf(
             "userDataCallback: Node count = %" PRId64
+            "; LP total iterations = %" PRId64
             "; Time = %6.2f; "
             "Bounds (%11.4g, %11.4g); Gap = %11.4g; Objective = %11.4g: %s\n",
-            data_out->mip_node_count, data_out->running_time,
-            data_out->mip_dual_bound, data_out->mip_primal_bound,
-            data_out->mip_gap, data_out->objective_function_value,
-            message.c_str());
+            data_out->mip_node_count, data_out->mip_total_lp_iterations,
+            data_out->running_time, data_out->mip_dual_bound,
+            data_out->mip_primal_bound, data_out->mip_gap,
+            data_out->objective_function_value, message.c_str());
     };
 
 TEST_CASE("my-callback-logging", "[highs-callback]") {
@@ -262,6 +264,21 @@ TEST_CASE("highs-callback-logging", "[highs-callback]") {
   highs.startCallback(kCallbackLogging);
   highs.readModel(filename);
   highs.run();
+}
+
+TEST_CASE("highs-callback-solution-basis-logging", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  int user_callback_data = kUserCallbackData;
+  void* p_user_callback_data =
+      reinterpret_cast<void*>(static_cast<intptr_t>(user_callback_data));
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  highs.run();
+  highs.setCallback(userInterruptCallback, p_user_callback_data);
+  highs.startCallback(kCallbackLogging);
+  if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+  if (dev_run) highs.writeBasis("");
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {

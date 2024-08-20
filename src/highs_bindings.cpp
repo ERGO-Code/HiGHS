@@ -285,6 +285,24 @@ HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<Hig
     return h->deleteRows(num_set_entries, indices.data());
 }
 
+
+HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
+  return h->setSolution(solution);
+}
+
+HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
+				    py::array_t<HighsInt> index,
+				    py::array_t<double> value) {
+  py::buffer_info index_info = index.request();
+  py::buffer_info value_info = value.request();
+
+  HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
+  double* value_ptr = static_cast<double*>(value_info.ptr);
+
+  return h->setSolution(num_entries, index_ptr, value_ptr);
+}
+
+
 HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
   return h->setBasis(basis);
 }
@@ -662,6 +680,20 @@ PYBIND11_MODULE(_core, m) {
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError);
       // .export_values();
+  py::enum_<IisStrategy>(m, "IisStrategy")
+      .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
+      .value("kIisStrategyFromLpRowPriority", IisStrategy::kIisStrategyFromLpRowPriority)
+      .value("kIisStrategyFromLpColPriority", IisStrategy::kIisStrategyFromLpColPriority)
+      .value("kIisStrategyMax", IisStrategy::kIisStrategyMax);
+      // .export_values();
+  py::enum_<IisBoundStatus>(m, "IisBoundStatus")
+      .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
+      .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
+      .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
+      .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
+      .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
+      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed);
+      // .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -852,6 +884,37 @@ PYBIND11_MODULE(_core, m) {
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &highs_run)
+      .def("feasibilityRelaxation", 
+     [](Highs& self, double global_lower_penalty, double global_upper_penalty, double global_rhs_penalty,
+        py::object local_lower_penalty, py::object local_upper_penalty, py::object local_rhs_penalty) {
+         std::vector<double> llp, lup, lrp;
+         const double* llp_ptr = nullptr;
+         const double* lup_ptr = nullptr;
+         const double* lrp_ptr = nullptr;
+
+         if (!local_lower_penalty.is_none()) {
+             llp = local_lower_penalty.cast<std::vector<double>>();
+             llp_ptr = llp.data();
+         }
+         if (!local_upper_penalty.is_none()) {
+             lup = local_upper_penalty.cast<std::vector<double>>();
+             lup_ptr = lup.data();
+         }
+         if (!local_rhs_penalty.is_none()) {
+             lrp = local_rhs_penalty.cast<std::vector<double>>();
+             lrp_ptr = lrp.data();
+         }
+
+         return self.feasibilityRelaxation(global_lower_penalty, global_upper_penalty, global_rhs_penalty,
+                                           llp_ptr, lup_ptr, lrp_ptr);
+     },
+     py::arg("global_lower_penalty"),
+     py::arg("global_upper_penalty"),
+     py::arg("global_rhs_penalty"),
+     py::arg("local_lower_penalty") = py::none(),
+     py::arg("local_upper_penalty") = py::none(),
+     py::arg("local_rhs_penalty") = py::none())
+      .def("getIis", &Highs::getIis)
       .def("presolve", &Highs::presolve)
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
@@ -944,7 +1007,8 @@ PYBIND11_MODULE(_core, m) {
       .def("deleteCols", &highs_deleteCols)
       .def("deleteVars", &highs_deleteCols) // alias
       .def("deleteRows", &highs_deleteRows)
-      .def("setSolution", &Highs::setSolution)
+      .def("setSolution", &highs_setSolution)
+      .def("setSolution", &highs_setSparseSolution)
       .def("setBasis", &highs_setBasis)
       .def("setBasis", &highs_setLogicalBasis)
       .def("modelStatusToString", &Highs::modelStatusToString)
@@ -965,6 +1029,17 @@ PYBIND11_MODULE(_core, m) {
                                    &Highs::startCallback))
       .def("stopCallbackInt", static_cast<HighsStatus (Highs::*)(const int)>(
                                   &Highs::stopCallback));
+
+  py::class_<HighsIis>(m, "HighsIis")
+    .def(py::init<>())
+    .def("invalidate", &HighsIis::invalidate)
+    .def_readwrite("valid", &HighsIis::valid_)
+    .def_readwrite("strategy", &HighsIis::strategy_)
+    .def_readwrite("col_index", &HighsIis::col_index_)
+    .def_readwrite("row_index", &HighsIis::row_index_)
+    .def_readwrite("col_bound", &HighsIis::col_bound_)
+    .def_readwrite("row_bound", &HighsIis::row_bound_)
+    .def_readwrite("info", &HighsIis::info_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution")
       .def(py::init<>())
@@ -1003,6 +1078,10 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("col_bound_dn", &HighsRanging::col_bound_dn)
       .def_readwrite("row_bound_up", &HighsRanging::row_bound_up)
       .def_readwrite("row_bound_dn", &HighsRanging::row_bound_dn);
+  py::class_<HighsIisInfo>(m, "HighsIisInfo")
+    .def(py::init<>())
+    .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
+    .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;

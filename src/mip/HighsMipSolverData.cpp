@@ -1870,6 +1870,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     return true;
   }
 
+  //  const double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  //  printf("checkLimits: time = %g\n", time);
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
@@ -1941,9 +1943,11 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   }
   FILE* file = mipsolver.improving_solution_file_;
   if (file) {
-    writeLpObjective(file, *(mipsolver.orig_model_), mipsolver.solution_);
+    writeLpObjective(file, mipsolver.options_mip_->log_options,
+                     *(mipsolver.orig_model_), mipsolver.solution_);
     writePrimalSolution(
-        file, *(mipsolver.orig_model_), mipsolver.solution_,
+        file, mipsolver.options_mip_->log_options, *(mipsolver.orig_model_),
+        mipsolver.solution_,
         mipsolver.options_mip_->mip_improving_solution_report_sparse);
   }
 }
@@ -1999,6 +2003,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
+  mipsolver.callback_->data_out.mip_total_lp_iterations =
+      mipsolver.mipdata_->total_lp_iterations;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
   // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,

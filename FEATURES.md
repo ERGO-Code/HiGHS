@@ -1,22 +1,18 @@
 ## Build changes
 
-The python wrapper highspy is now available for aarch64 on manylinux
-This allows highs to be run through Python on AWS arm64 
-
-Bug fix for fortran on macOS
-
 ## Code changes
 
-The accessor function Highs_getCallbackDataOutItem in the C API means
-that `pdlp_iteration_count` can be moved back to where it was inserted
-into the `HighsCallbackDataOut` struct in v1.7.0, which broke the C
-API. This fixes #1812
+Added `int64_t mip_total_lp_iterations` to `HighsCallbackDataOut` and modified accessor function
 
-Some duplicate code has been eliminated from the MIP solver, and
-modifications made to eliminate compiler warnings
+`Highs::writeSolution` and `Highs::writeBasis` now being done via `HighsIO` logging, so can be redirected to logging callback.
 
-Declaration of the (deprecated) method `char* highsCompilationDate()`
-has been corrected
+Introduced `const double kHighsUndefined` as value of undefined values in a user solution. It's equal to `kHighsInf`
 
-Fixed bug when describing integrality status during the human-readable solution write
+Added `Highs::setSolution(const HighsInt num_entries, const HighsInt* index, const double* value);` to allow a sparse primal solution to be defined. When a MIP is solved to do this, the value of (new) option `mip_max_start_nodes` is used for `mip_max_nodes` to avoid excessive cost
+
+Added options `write_presolved_model_to_file` and `write_presolved_model_file` so that presolved model can be written via a command line option
+
+Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possibly weighted) sum of (allowable) infeasibilities in an LP/MIP.
+
+
 

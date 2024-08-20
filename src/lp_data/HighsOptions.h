@@ -276,6 +276,7 @@ const string kSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
 const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
+const string kWritePresolvedModelFileString = "write_presolved_model_file";
 const string kReadSolutionFileString = "read_solution_file";
 
 // String for HiGHS log file option
@@ -320,9 +321,11 @@ struct HighsOptionsStruct {
 
   std::string log_file;
   bool write_model_to_file;
+  bool write_presolved_model_to_file;
   bool write_solution_to_file;
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
+  std::string write_presolved_model_file;
 
   // Control of HiGHS log
   bool output_flag;
@@ -341,6 +344,9 @@ struct HighsOptionsStruct {
   // Options for QP solver
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
+
+  // Options for IIS calculation
+  HighsInt iis_strategy;
 
   // Advanced options
   HighsInt log_dev_level;
@@ -401,6 +407,7 @@ struct HighsOptionsStruct {
   bool mip_allow_restart;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
+  HighsInt mip_max_start_nodes;
   HighsInt mip_max_leaves;
   HighsInt mip_max_improving_sols;
   HighsInt mip_lp_age_limit;
@@ -433,6 +440,7 @@ struct HighsOptionsStruct {
         time_limit(0.0),
         solution_file(""),
         write_model_file(""),
+        write_presolved_model_file(""),
         random_seed(0),
         ranging(""),
         infinite_cost(0.0),
@@ -460,6 +468,7 @@ struct HighsOptionsStruct {
         simplex_max_concurrency(0),
         log_file(""),
         write_model_to_file(false),
+        write_presolved_model_to_file(false),
         write_solution_to_file(false),
         write_solution_style(0),
         glpsol_cost_row_location(0),
@@ -527,6 +536,7 @@ struct HighsOptionsStruct {
         mip_allow_restart(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
+        mip_max_start_nodes(0),
         mip_max_leaves(0),
         mip_max_improving_sols(0),
         mip_lp_age_limit(0),
@@ -896,6 +906,16 @@ class HighsOptions : public HighsOptionsStruct {
                              advanced, &write_model_to_file, false);
     records.push_back(record_bool);
 
+    record_string = new OptionRecordString(
+        kWritePresolvedModelFileString, "Write presolved model file", advanced,
+        &write_presolved_model_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_bool = new OptionRecordBool(
+        "write_presolved_model_to_file", "Write the presolved model to a file",
+        advanced, &write_presolved_model_to_file, false);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool(
         "mip_detect_symmetry", "Whether MIP symmetry should be detected",
         advanced, &mip_detect_symmetry, true);
@@ -916,6 +936,13 @@ class HighsOptions : public HighsOptionsStruct {
         "MIP solver max number of nodes where estimate is above cutoff bound",
         advanced, &mip_max_stall_nodes, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_start_nodes",
+        "MIP solver max number of nodes when completing a partial MIP start",
+        advanced, &mip_max_start_nodes, 0, 500, kHighsIInf);
+    records.push_back(record_int);
+
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
         "mip_debug_solution_file",
@@ -944,7 +971,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
-        "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
+        "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
@@ -1067,6 +1094,22 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("qp_nullspace_limit",
                                      "Nullspace limit for QP solver", advanced,
                                      &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "iis_strategy",
+        "Strategy for IIS calculation: "
+        //        "Use LP and p"
+        "Prioritise rows (default) / "
+        //        "Use LP and p"
+        "Prioritise columns"
+        //        "Use unbounded dual ray and prioritise low number of rows
+        //        (default) / " "Use ray and prioritise low numbers of columns "
+        " (0/1"
+        //        "/2/3)",
+        ")",
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
+        kIisStrategyMax);
     records.push_back(record_int);
 
     // Fix the number of user settable options
