@@ -281,7 +281,7 @@ class HighsCliqueTable {
                        const std::vector<double>& sol, HighsCutPool& cutpool,
                        double feastol);
 
-  std::vector<std::vector<CliqueVar>> HighsCliqueTable::computeMaximalCliques(
+  std::vector<std::vector<CliqueVar>> computeMaximalCliques(
       std::vector<CliqueVar>& vars, double feastol);
 
   void cleanupFixed(HighsDomain& globaldom);

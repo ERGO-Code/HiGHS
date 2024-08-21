@@ -1792,7 +1792,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 }
 
 std::vector<std::vector<HighsCliqueTable::CliqueVar>>
-HighsCliqueTable::computeMaximalCliques(std::vector<CliqueVar>& vars, double feastol) {
+HighsCliqueTable::computeMaximalCliques(std::vector<CliqueVar>& vars,
+                                        double feastol) {
   // return if there are no variables
   if (vars.empty())
     return std::vector<std::vector<HighsCliqueTable::CliqueVar>>{};
