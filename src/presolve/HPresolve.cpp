@@ -1595,7 +1595,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
     // lifting for probing
-    if (numDeletedRows == 0 && numDeletedCols == 0) liftingForProbing();
+    if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0)
+      liftingForProbing();
     // clear lifting opportunities
     liftingOpportunities.clear();
     implications.storeLiftingOpportunity = nullptr;
@@ -1614,7 +1615,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
 void HPresolve::liftingForProbing() {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
-  HighsImplications& implications = mipsolver->mipdata_->implications;
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // consider lifting opportunities
@@ -1622,58 +1622,70 @@ void HPresolve::liftingForProbing() {
     // get row index and skip deleted rows
     HighsInt row = elm.first;
     if (rowDeleted[row]) continue;
-    // get lifting opportunities for row and store them in a vector
+
+    // get lifting opportunities for row
     auto& htree = elm.second;
-    std::vector<std::pair<HighsInt, double>> liftopps;
+
+    // count number of elements in the hash tree
+    size_t numelms = 0;
+    htree.for_each([&](HighsInt, double) { numelms++; });
+
+    // vector to hold best clique
+    std::vector<HighsCliqueTable::CliqueVar> bestclique;
+    double bestscore = -kHighsInf;
+
+    // store lifting opportunities in a vector
+    std::vector<HighsCliqueTable::CliqueVar> candidates;
+    candidates.reserve(numelms);
+    std::map<HighsInt, double> coefficients;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
-      if (!colDeleted[col] && !domain.isFixed(col) &&
-          findNonzero(row, col) == -1)
-        liftopps.push_back(std::make_pair(bincol, value));
-    });
-    // sort according to absolute values of coefficients
-    pdqsort(liftopps.begin(), liftopps.end(),
-            [&liftopps](const std::pair<HighsInt, double>& a,
-                        const std::pair<HighsInt, double>& b) {
-              double aabs = std::abs(a.second);
-              double babs = std::abs(b.second);
-              if (aabs > babs) return true;
-              if (aabs < babs) return false;
-              return std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(a.first) << 32) +
-                                                liftopps.size()),
-                         a.first) >
-                     std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(b.first) << 32) +
-                                                liftopps.size()),
-                         b.first);
-            });
-    // find a clique greedily
-    std::vector<std::pair<HighsCliqueTable::CliqueVar, double>> clique;
-    clique.reserve(liftopps.size());
-    for (const std::pair<HighsInt, double>& opp : liftopps) {
-      HighsInt bincol = std::abs(opp.first);
-      HighsInt direction = opp.first < 0 ? 0 : 1;
-      // check if candidate can be added to existing clique
-      bool addToClique = true;
-      HighsCliqueTable::CliqueVar candidate{bincol, direction};
-      for (const auto& clvar : clique) {
-        addToClique = cliquetable.haveCommonClique(clvar.first, candidate);
-        if (!addToClique) break;
+      if (!colDeleted[col] && !domain.isFixed(col)) {
+        HighsCliqueTable::CliqueVar cliquevar{col, bincol < 0 ? 0 : 1};
+        candidates.push_back(cliquevar);
+        coefficients[bincol] = value;
+        // initialize best clique with largest absolute coefficient
+        if (std::fabs(value) > bestscore) {
+          bestscore = std::fabs(value);
+          bestclique = {cliquevar};
+        }
       }
-      if (addToClique) {
-        // add candidate
-        clique.emplace_back(candidate, opp.second);
+    });
+
+    // skip row if there are no candidates
+    if (candidates.empty()) continue;
+
+    // compute cliques
+    std::vector<std::vector<HighsCliqueTable::CliqueVar>> cliques =
+        cliquetable.computeMaximalCliques(candidates, primal_feastol);
+
+    // lambda to get coefficient given a clique variable
+    auto getcoefficient = [&](const HighsCliqueTable::CliqueVar& cliquevar) {
+      return coefficients[cliquevar.col * (cliquevar.val != 0 ? 1 : -1)];
+    };
+
+    // identify clique with highest score
+    for (const auto& clique : cliques) {
+      double score = 0;
+      for (const auto& cliquevar : clique) {
+        score += std::fabs(getcoefficient(cliquevar));
+      }
+      if (score > bestscore) {
+        bestscore = score;
+        bestclique = clique;
       }
     }
+
     // update matrix
     HighsCDouble update = 0.0;
-    for (const auto& var : clique) {
+    for (const auto& cliquevar : bestclique) {
       // add non-zero to matrix
-      addToMatrix(row, var.first.col, var.second);
+      double coeff = getcoefficient(cliquevar);
+      addToMatrix(row, cliquevar.col, coeff);
       // compute term to update left-hand / right-hand side
-      if (var.first.val == 0) update += var.second;
+      if (cliquevar.val == 0) update += coeff;
     }
+
     // update left-hand / right-hand sides
     if (model->row_lower_[row] != -kHighsInf)
       model->row_lower_[row] += static_cast<double>(update);

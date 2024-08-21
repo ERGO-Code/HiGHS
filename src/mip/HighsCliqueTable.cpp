@@ -1792,31 +1792,32 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 }
 
 std::vector<std::vector<HighsCliqueTable::CliqueVar>>
-HighsCliqueTable::separateCliques(const std::vector<double>& sol,
-                                  const HighsDomain& globaldom,
-                                  double feastol) {
-  exit(0);
-#if 0
+HighsCliqueTable::computeMaximalCliques(std::vector<CliqueVar>& vars, double feastol) {
+  // return if there are no variables
+  if (vars.empty())
+    return std::vector<std::vector<HighsCliqueTable::CliqueVar>>{};
+
+  // find max column index in clique variables
+  size_t maxcolindex = 0;
+  for (const auto& var : vars)
+    maxcolindex = std::max(static_cast<size_t>(var.col), maxcolindex);
+
+  // Set up data
+  std::vector<double> sol;
+  sol.resize(maxcolindex + 1);
   BronKerboschData data(sol);
+  for (const auto& var : vars)
+    if (var.val) sol[var.col] = 1;
   data.feastol = feastol;
 
-  HighsInt numcols = globaldom.col_lower_.size();
-  assert(int(numcliquesvar.size()) == 2 * numcols);
-  for (HighsInt i = 0; i != numcols; ++i) {
-    if (colsubstituted[i]) continue;
-
-    if (numcliquesvar[CliqueVar(i, 0).index()] != 0 &&
-        CliqueVar(i, 0).weight(sol) > feastol)
-      data.P.emplace_back(i, 0);
-    if (numcliquesvar[CliqueVar(i, 1).index()] != 0 &&
-        CliqueVar(i, 1).weight(sol) > feastol)
-      data.P.emplace_back(i, 1);
+  for (const auto& var : vars) {
+    if (colsubstituted[var.col] || colDeleted[var.col]) continue;
+    if (numCliques(var) != 0) data.P.emplace_back(var);
   }
 
   bronKerboschRecurse(data, data.P.size(), nullptr, 0);
 
   return std::move(data.cliques);
-#endif
 }
 
 void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
