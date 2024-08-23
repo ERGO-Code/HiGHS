@@ -1598,7 +1598,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // lifting for probing
     auto modelHasContVars = [&]() {
       size_t num_cols = 0, num_cont_cols = 0;
-      for (auto& col : colsize) {
+      for (size_t col = 0; col < colsize.size(); col++) {
         if (colDeleted[col]) continue;
         num_cols++;
         if (model->integrality_[col] == HighsVarType::kContinuous)
