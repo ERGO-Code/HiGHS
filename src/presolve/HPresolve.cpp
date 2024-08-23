@@ -1594,8 +1594,24 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
+    // lambda to check if model has enough continuous variables to perform
     // lifting for probing
-    if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0)
+    auto modelHasContVars = [&]() {
+      size_t num_cols = 0, num_cont_cols = 0;
+      for (auto& col : colsize) {
+        if (colDeleted[col]) continue;
+        num_cols++;
+        if (model->integrality_[col] == HighsVarType::kContinuous)
+          num_cont_cols++;
+      }
+      return 20 * num_cont_cols >= num_cols;
+    };
+
+    // lifting for probing (only performed when probing did not modify the
+    // problem so far and at least 5 percent of the variables in the problem are
+    // continuous)
+    if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
+        modelHasContVars())
       liftingForProbing();
     // clear lifting opportunities
     liftingOpportunities.clear();
