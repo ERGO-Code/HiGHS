@@ -62,12 +62,18 @@ def plot_highs_log(
 ):
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
+    best_bound_colour = "blue"
+    best_solution_colour = "green"
+    in_queue_colour = "red"
+    explored_colour = "purple"
+    gap_colour = "orange"
+
     # Plot Objective Bounds
-    ax1.plot(time_values, best_bound_values, label="Best Bound", color="blue")
-    ax1.plot(time_values, best_sol_values, label="Best Solution", color="green")
+    ax1.plot(time_values, best_bound_values, label="Best Bound", color=best_bound_colour)
+    ax1.plot(time_values, best_sol_values, label="Best Solution", color=best_solution_colour)
     ax1.set_xlabel("Time (seconds)")
-    ax1.set_ylabel("Objective Bounds", color="blue", labelpad=15)
-    ax1.tick_params(axis="y", labelcolor="blue")
+    ax1.set_ylabel("Objective Bounds", color=best_bound_colour, labelpad=15)
+    ax1.tick_params(axis="y", labelcolor=best_bound_colour)
 
     # Limit y-axis to the range between min and max of the non-NaN values
     valid_gap_index = next(i for i, gap in enumerate(gap_values) if not np.isnan(gap))
@@ -78,26 +84,26 @@ def plot_highs_log(
 
     # Add second y-axis for InQueue values
     ax2 = ax1.twinx()
-    ax2.plot(time_values, in_queue_values, label="InQueue", color="red")
-#    ax2.set_ylabel("InQueue", color="red", loc="top", labelpad=12)
+    ax2.plot(time_values, in_queue_values, label="InQueue", color=in_queue_colour)
+#    ax2.set_ylabel("InQueue", color=in_queue_colour, loc="top", labelpad=12)
     ax2.yaxis.label.set_rotation(0)
-    ax2.tick_params(axis="y", labelcolor="red")
+    ax2.tick_params(axis="y", labelcolor=in_queue_colour)
 
     # Add third y-axis for Explored % values (scaled)
     ax3 = ax1.twinx()
     ax3.spines["right"].set_position(("outward", 50))
-    ax3.plot(time_values, expl_values, label="Explored %", color="purple")
-#    ax3.set_ylabel("Expl.%", color="purple", loc="top", labelpad=10)
+    ax3.plot(time_values, expl_values, label="Explored %", color=explored_colour)
+#    ax3.set_ylabel("Expl.%", color=explored_colour, loc="top", labelpad=10)
     ax3.yaxis.label.set_rotation(0)
-    ax3.tick_params(axis="y", labelcolor="purple")
+    ax3.tick_params(axis="y", labelcolor=explored_colour)
 
     # Add fourth y-axis for Gap % values (scaled)
     ax4 = ax1.twinx()
     ax4.spines["right"].set_position(("outward", 90))
-    ax4.plot(time_values, gap_values, label="Gap %", color="orange")
-#    ax4.set_ylabel("Gap.%", color="orange", loc="top", labelpad=22)
+    ax4.plot(time_values, gap_values, label="Gap %", color=gap_colour, linestyle="--", linewidth=0.5)
+#    ax4.set_ylabel("Gap.%", color=gap_colour, loc="top", labelpad=22)
     ax4.yaxis.label.set_rotation(0)
-    ax4.tick_params(axis="y", labelcolor="orange")
+    ax4.tick_params(axis="y", labelcolor=gap_colour)
 
     # Plot vertical hash lines where Best Solution changes
     for i in range(1, len(best_sol_values)):
