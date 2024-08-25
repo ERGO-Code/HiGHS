@@ -66,7 +66,7 @@ def plot_highs_log(
     ax1.plot(time_values, best_bound_values, label="Best Bound", color="blue")
     ax1.plot(time_values, best_sol_values, label="Best Solution", color="green")
     ax1.set_xlabel("Time (seconds)")
-    ax1.set_ylabel("Objective Bounds", color="blue")
+    ax1.set_ylabel("Objective Bounds", color="blue", labelpad=15)
     ax1.tick_params(axis="y", labelcolor="blue")
 
     # Limit y-axis to the range between min and max of the non-NaN values
@@ -79,61 +79,39 @@ def plot_highs_log(
     # Add second y-axis for InQueue values
     ax2 = ax1.twinx()
     ax2.plot(time_values, in_queue_values, label="InQueue", color="red")
-    #ax2.set_ylabel("InQueue", color="red")
+#    ax2.set_ylabel("InQueue", color="red", loc="top", labelpad=12)
+    ax2.yaxis.label.set_rotation(0)
     ax2.tick_params(axis="y", labelcolor="red")
 
     # Add third y-axis for Explored % values (scaled)
     ax3 = ax1.twinx()
-    ax3.spines["right"].set_position(("outward", 30))
+    ax3.spines["right"].set_position(("outward", 50))
     ax3.plot(time_values, expl_values, label="Explored %", color="purple")
-    #ax3.set_ylabel("Expl.%", color="purple")
+#    ax3.set_ylabel("Expl.%", color="purple", loc="top", labelpad=10)
+    ax3.yaxis.label.set_rotation(0)
     ax3.tick_params(axis="y", labelcolor="purple")
 
     # Add fourth y-axis for Gap % values (scaled)
     ax4 = ax1.twinx()
-    ax4.spines["right"].set_position(("outward", 60))
-    ax4.plot(time_values, gap_values, label="Gap %", color="orange")#, linestyle="--")#, linewidth=0.5)
-    #ax4.set_ylabel("Relative gap.%", color="orange")
+    ax4.spines["right"].set_position(("outward", 90))
+    ax4.plot(time_values, gap_values, label="Gap %", color="orange")
+#    ax4.set_ylabel("Gap.%", color="orange", loc="top", labelpad=22)
+    ax4.yaxis.label.set_rotation(0)
     ax4.tick_params(axis="y", labelcolor="orange")
-
-    # Determine the interval for labeling Gap%
-    #interval = max(1, len(time_values) // 10)  # Adjust interval for more labels
-
-    # Add Gap% as text labels above the time axis, matching the color with Best Solution line
-    #for i, (t, gap) in enumerate(zip(time_values, gap_values)):
-    #if i % interval == 0:  # Label at defined intervals
-    #ax1.text(
-    #t,
-    #ax1.get_ylim()[0],
-    #f"{gap:.2f}%",
-    #color="green",
-    #ha="center",
-    #va="bottom",
-    #fontsize=10,
-    #)
-
-    # Add a Gap% label to indicate what the text values represent
-    #ax1.text(
-    #0.48,
-    #0.05,
-    #"Gap%",
-    #color="green",
-    #ha="left",
-    #va="center",
-    #transform=ax1.transAxes,
-    #fontsize=8,
-    #)
 
     # Plot vertical hash lines where Best Solution changes
     for i in range(1, len(best_sol_values)):
         if best_sol_values[i] != best_sol_values[i - 1]:  # Change detected
             ax1.axvline(x=time_values[i], color="grey", linestyle="--", linewidth=0.5)
 
+    # Shift plot area left to make room on the right for the three y-axis labels.
+    fig.subplots_adjust(left=0.08, right=0.85)
+
     # Set up legend
-    fig.legend(loc="lower left")
+    fig.legend(loc="lower center", ncols=5)
 
     # Show plot
-    plt.title("HiGHS MIP Log Analysis")
+    plt.title("HiGHS MIP Log Analysis", pad=20)
     plt.show()
 
 
