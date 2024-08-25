@@ -1199,7 +1199,7 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
-void HighsMipSolverData::printDisplayLine(char first) {
+void HighsMipSolverData::printDisplayLine(char source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1214,10 +1214,11 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (first == ' ' &&
+  if (source == ' ' &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
+  char use_source = source != 'Z' ? source : ' ';
 
   if (num_disp_lines % 20 == 0) {
     highsLogUser(
@@ -1284,7 +1285,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap_string.data(),
         cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
         conflictPool.getNumConflicts(), print_lp_iters.data(), time);
@@ -1305,7 +1306,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);

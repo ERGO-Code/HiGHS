@@ -14,5 +14,8 @@ Added options `write_presolved_model_to_file` and `write_presolved_model_file` s
 
 Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possibly weighted) sum of (allowable) infeasibilities in an LP/MIP.
 
+Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise progress of the MIP solver.
+
+
 
 

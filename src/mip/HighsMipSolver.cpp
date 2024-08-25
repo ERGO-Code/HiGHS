@@ -29,6 +29,8 @@
 
 using std::fabs;
 
+const bool report_mip_timing = false;
+
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                                const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
@@ -115,7 +117,7 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
                  timer_.read(timer_.solve_clock));
@@ -138,12 +140,12 @@ void HighsMipSolver::run() {
     return;
   }
 
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
                  timer_.read(timer_.solve_clock));
   mipdata_->runSetup();
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
                  timer_.read(timer_.solve_clock));
@@ -154,13 +156,13 @@ restart:
       cleanupSolve();
       return;
     }
-    if (!submip)
+    if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
           timer_.read(timer_.solve_clock));
     mipdata_->evaluateRootNode();
-    if (!submip)
+    if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - completed mipdata_->evaluateRootNode()\n",
@@ -174,6 +176,10 @@ restart:
     mipdata_->cutpool.performAging();
   }
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
+    if (!submip)
+      printf(
+          "HighsMipSolver::run() mipdata_->nodequeue.empty() || "
+          "mipdata_->checkLimits()\n");
     cleanupSolve();
     return;
   }
@@ -524,6 +530,7 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
+  mipdata_->printDisplayLine('Z');
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
