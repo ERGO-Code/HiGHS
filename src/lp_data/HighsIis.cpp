@@ -248,12 +248,32 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   HighsInt iX = -1;
   bool drop_lower = false;
 
+  HighsInt num_run_call = 0;
+  const HighsInt check_run_call = kHighsIInf;
+
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
     HighsIisInfo iis_info;
     iis_info.simplex_time = -highs.getRunTime();
     iis_info.simplex_iterations = -info.simplex_iteration_count;
+    bool output_flag;
+    highs.getOptionValue("output_flag", output_flag);
+    HighsInt log_dev_level;
+    highs.getOptionValue("log_dev_level", log_dev_level);
+    
+    num_run_call++;
+    if (num_run_call >= check_run_call) {
+      highs.setOptionValue("output_flag", true);
+      highs.setOptionValue("log_dev_level", 2);
+    }
     run_status = highs.run();
+    highs.setOptionValue("output_flag", output_flag);
+    highs.setOptionValue("log_dev_level", log_dev_level);
+    if (run_status != HighsStatus::kOk) {
+      printf("HighsIis::compute  highs.run() %d returns status %s\n",
+	     int(num_run_call),
+	     highsStatusToString(run_status).c_str());
+    }
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;
     HighsModelStatus model_status = highs.getModelStatus();
@@ -262,7 +282,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       printf("\nHighsIis::compute %s deletion for %d and %s bound\n",
              row_deletion ? "Row" : "Col", int(iX),
              drop_lower ? "Lower" : "Upper");
-      bool output_flag;
       highs.getOptionValue("output_flag", output_flag);
       highs.setOptionValue("output_flag", true);
       HighsInt simplex_strategy;
