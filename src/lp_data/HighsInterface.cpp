@@ -1782,8 +1782,6 @@ HighsStatus Highs::elasticityFilter(
   HighsInt evar_ix = lp.num_col_;
   HighsStatus run_status;
   const bool write_model = false;
-  HighsInt col_ecol_offset;
-  HighsInt row_ecol_offset;
   // Take copies of the original model dimensions and column data
   // vectors, as they will be modified in forming the e-LP
   const HighsInt original_num_col = lp.num_col_;
@@ -1823,12 +1821,12 @@ HighsStatus Highs::elasticityFilter(
   const bool has_elastic_rows = has_local_rhs_penalty || has_global_elastic_rhs;
   assert(has_elastic_columns || has_elastic_rows);
 
+  const HighsInt col_ecol_offset = lp.num_col_;
   if (has_elastic_columns) {
     // Accumulate bounds to be used for columns
     std::vector<double> col_lower;
     std::vector<double> col_upper;
     // When defining names, need to know the column number
-    HighsInt previous_num_col = lp.num_col_;
     const bool has_col_names = lp.col_names_.size() > 0;
     erow_start.push_back(0);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -1930,7 +1928,7 @@ HighsStatus Highs::elasticityFilter(
     assert(run_status == HighsStatus::kOk);
     if (has_col_names) {
       for (HighsInt iCol = 0; iCol < num_new_col; iCol++)
-        this->passColName(previous_num_col + iCol, ecol_name[iCol]);
+        this->passColName(col_ecol_offset + iCol, ecol_name[iCol]);
       for (HighsInt iRow = 0; iRow < num_new_row; iRow++)
         this->passRowName(original_num_row + iRow, erow_name[iRow]);
     }
@@ -1946,11 +1944,10 @@ HighsStatus Highs::elasticityFilter(
       this->setOptionValue("output_flag", output_flag);
     }
   }
+  const HighsInt row_ecol_offset = lp.num_col_;
   if (has_elastic_rows) {
     // Add the columns corresponding to the e_L and e_U variables for
     // the constraints
-    HighsInt previous_num_col = lp.num_col_;
-    row_ecol_offset = previous_num_col;
     ecol_name.clear();
     ecol_cost.clear();
     std::vector<HighsInt> ecol_start;
@@ -2011,7 +2008,7 @@ HighsStatus Highs::elasticityFilter(
     assert(run_status == HighsStatus::kOk);
     if (has_row_names) {
       for (HighsInt iCol = 0; iCol < num_new_col; iCol++)
-        this->passColName(previous_num_col + iCol, ecol_name[iCol]);
+        this->passColName(row_ecol_offset + iCol, ecol_name[iCol]);
     }
 
     if (write_model) {
