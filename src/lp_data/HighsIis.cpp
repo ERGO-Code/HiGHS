@@ -260,7 +260,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     highs.getOptionValue("output_flag", output_flag);
     HighsInt log_dev_level;
     highs.getOptionValue("log_dev_level", log_dev_level);
-    
+
     num_run_call++;
     if (num_run_call >= check_run_call) {
       highs.setOptionValue("output_flag", true);
@@ -271,8 +271,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     highs.setOptionValue("log_dev_level", log_dev_level);
     if (run_status != HighsStatus::kOk) {
       printf("HighsIis::compute  highs.run() %d returns status %s\n",
-	     int(num_run_call),
-	     highsStatusToString(run_status).c_str());
+             int(num_run_call), highsStatusToString(run_status).c_str());
     }
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;

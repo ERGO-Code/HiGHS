@@ -2058,49 +2058,61 @@ HighsStatus Highs::elasticityFilter(
   // Now fix e-variables that are positive and re-solve until e-LP is infeasible
   HighsInt loop_k = 0;
   bool feasible_model = false;
+  // Use strict zero solution value rather than within tolerance since
+  // cplex2 is almost feasible, and only requires an elastic variable
+  // value of 8.87022e-10 to be feasible.
+  const double use_primal_tolerance = 0;
   for (;;) {
     if (kIisDevReport)
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
+    // An elastic variable can be fixed at zero, but have positive
+    // value (within the tolerance) if basic, so allowing it to be
+    // re-fixed can cause an infinite loop. Happens with cplex2 when
+    // fixed elastic variable is basic at 8.87022e-10
     HighsInt num_fixed = 0;
     if (has_elastic_columns) {
       for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
-        HighsInt iCol = col_of_ecol[eCol];
-        if (solution.col_value[col_ecol_offset + eCol] >
-            this->options_.primal_feasibility_tolerance) {
+        const HighsInt iCol = col_ecol_offset + eCol;
+        if (lp.col_upper_[iCol] == 0) continue;
+        const HighsInt original_col = col_of_ecol[eCol];
+        if (solution.col_value[iCol] > use_primal_tolerance) {
           if (kIisDevReport)
             printf(
                 "E-col %2d (column %2d) corresponds to column %2d with bound "
                 "%g "
                 "and has solution value %g\n",
-                int(eCol), int(col_ecol_offset + eCol), int(iCol),
-                bound_of_col_of_ecol[eCol],
-                solution.col_value[col_ecol_offset + eCol]);
-          this->changeColBounds(col_ecol_offset + eCol, 0, 0);
+                int(eCol), int(iCol), int(original_col),
+                bound_of_col_of_ecol[eCol], solution.col_value[iCol]);
+          this->changeColBounds(iCol, 0, 0);
           num_fixed++;
         }
       }
     }
     if (has_elastic_rows) {
       for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
-        HighsInt iRow = row_of_ecol[eCol];
-        if (solution.col_value[row_ecol_offset + eCol] >
-            this->options_.primal_feasibility_tolerance) {
+        const HighsInt iCol = row_ecol_offset + eCol;
+        if (lp.col_upper_[iCol] == 0) continue;
+        const HighsInt original_row = row_of_ecol[eCol];
+        if (solution.col_value[iCol] > use_primal_tolerance) {
           if (kIisDevReport)
             printf(
                 "E-row %2d (column %2d) corresponds to    row %2d with bound "
                 "%g "
                 "and has solution value %g\n",
-                int(eCol), int(row_ecol_offset + eCol), int(iRow),
-                bound_of_row_of_ecol[eCol],
-                solution.col_value[row_ecol_offset + eCol]);
-          this->changeColBounds(row_ecol_offset + eCol, 0, 0);
+                int(eCol), int(iCol), int(original_row),
+                bound_of_row_of_ecol[eCol], solution.col_value[iCol]);
+          this->changeColBounds(iCol, 0, 0);
           num_fixed++;
         }
       }
     }
     if (num_fixed == 0) {
-      // No elastic variables were positive, so problem is feasible
-      feasible_model = true;
+      // No new elastic variables were fixed, so break. If this was
+      // the first pass, then the original problem is feasible. If the
+      // original problem is feasible, its model status cannot be set
+      // so, according to the truth of feasible_model, this will be
+      // done in elasticityFilterReturn.
+      feasible_model = loop_k == 0;
       break;
     }
     HighsStatus run_status = solveLp();
@@ -2120,29 +2132,31 @@ HighsStatus Highs::elasticityFilter(
   HighsInt num_enforced_row_ecol = 0;
   if (has_elastic_columns) {
     for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
-      HighsInt iCol = col_of_ecol[eCol];
-      if (lp.col_upper_[col_ecol_offset + eCol] == 0) {
+      const HighsInt original_col = col_of_ecol[eCol];
+      const HighsInt iCol = col_ecol_offset + eCol;
+      if (lp.col_upper_[iCol] == 0) {
         num_enforced_col_ecol++;
         printf(
             "Col e-col %2d (column %2d) corresponds to column %2d with bound "
             "%g "
             "and is enforced\n",
-            int(eCol), int(col_ecol_offset + eCol), int(iCol),
+            int(eCol), int(iCol), int(original_col),
             bound_of_col_of_ecol[eCol]);
       }
     }
   }
   if (has_elastic_rows) {
     for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
-      HighsInt iRow = row_of_ecol[eCol];
-      if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
+      const HighsInt original_row = row_of_ecol[eCol];
+      const HighsInt iCol = row_ecol_offset + eCol;
+      if (lp.col_upper_[iCol] == 0) {
         num_enforced_row_ecol++;
-        infeasible_row_subset.push_back(iRow);
+        infeasible_row_subset.push_back(original_row);
         if (kIisDevReport)
           printf(
               "Row e-col %2d (column %2d) corresponds to    row %2d with bound "
               "%g and is enforced\n",
-              int(eCol), int(row_ecol_offset + eCol), int(iRow),
+              int(eCol), int(iCol), int(original_row),
               bound_of_row_of_ecol[eCol]);
       }
     }
