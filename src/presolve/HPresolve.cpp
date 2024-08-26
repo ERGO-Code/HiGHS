@@ -1717,13 +1717,15 @@ void HPresolve::liftingForProbing() {
   }
 
   // sort according to score
-  pdqsort(liftingtable.begin(), liftingtable.end(),
-          [&](const auto& opp1, const auto& opp2) {
-            double score1 = std::get<2>(opp1);
-            double score2 = std::get<2>(opp2);
-            return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
-                                     : score1 > score2);
-          });
+  pdqsort(
+      liftingtable.begin(), liftingtable.end(),
+      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp1,
+          const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp2) {
+        double score1 = std::get<2>(opp1);
+        double score2 = std::get<2>(opp2);
+        return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
+                                 : score1 > score2);
+      });
 
   // perform actual lifting
   const size_t maxfillin = 10;
