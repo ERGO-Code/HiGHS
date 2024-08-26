@@ -1728,7 +1728,9 @@ void HPresolve::liftingForProbing() {
       });
 
   // perform actual lifting
-  const size_t maxfillin = 10;
+  size_t fillin = 0;
+  const size_t maxfillin = std::max(10 * liftingtable.size(),
+                                    static_cast<size_t>(numNonzeros()) / 100);
   for (const auto& lifting : liftingtable) {
     // get clique
     HighsInt row = std::get<0>(lifting);
@@ -1736,7 +1738,6 @@ void HPresolve::liftingForProbing() {
 
     // update matrix
     HighsCDouble update = 0.0;
-    size_t fillin = 0;
     for (const auto& elm : bestclique) {
       // get data
       const auto& cliquevar = std::get<0>(elm);
