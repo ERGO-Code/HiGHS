@@ -1687,23 +1687,27 @@ void HPresolve::liftingForProbing() {
     }
 
     // compute cliques
-    std::vector<std::vector<HighsCliqueTable::CliqueVar>> cliques =
+    auto cliques =
         cliquetable.computeMaximalCliques(candidates, primal_feastol);
 
     // identify clique with highest score
+    const double weight = 0.5;
     for (const auto& clique : cliques) {
-      double score = 0;
+      double coefsum = 0;
+      size_t fillin = 0;
       for (const auto& cliquevar : clique) {
-        score += std::fabs(coefficients[cliquevar].first);
+        coefsum += std::fabs(coefficients[cliquevar].first);
+        if (coefficients[cliquevar].second) fillin++;
       }
+      double score = weight * coefsum +
+                     (1 - weight) * static_cast<double>(clique.size() - fillin);
       if (score > bestscore) {
         bestscore = score;
         bestclique.clear();
         bestclique.reserve(clique.size());
         for (const auto& cliquevar : clique) {
-          bestclique.emplace_back(cliquevar,
-                                  std::get<0>(coefficients[cliquevar]),
-                                  std::get<1>(coefficients[cliquevar]));
+          bestclique.emplace_back(cliquevar, coefficients[cliquevar].first,
+                                  coefficients[cliquevar].second);
         }
       }
     }
@@ -1713,21 +1717,16 @@ void HPresolve::liftingForProbing() {
   }
 
   // sort according to score
-  pdqsort(
-      liftingtable.begin(), liftingtable.end(),
-      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp1,
-          const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp2) {
-        double score1 = std::get<2>(opp1);
-        double score2 = std::get<2>(opp2);
-        return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
-                                 : score1 > score2);
-      });
-
-  // counters
-  size_t modifiednzs = 0;
-  size_t newnzs = 0;
+  pdqsort(liftingtable.begin(), liftingtable.end(),
+          [&](const auto& opp1, const auto& opp2) {
+            double score1 = std::get<2>(opp1);
+            double score2 = std::get<2>(opp2);
+            return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
+                                     : score1 > score2);
+          });
 
   // perform actual lifting
+  const size_t maxfillin = 10;
   for (const auto& lifting : liftingtable) {
     // get clique
     HighsInt row = std::get<0>(lifting);
@@ -1735,16 +1734,16 @@ void HPresolve::liftingForProbing() {
 
     // update matrix
     HighsCDouble update = 0.0;
+    size_t fillin = 0;
     for (const auto& elm : bestclique) {
       // get data
       const auto& cliquevar = std::get<0>(elm);
       const double& coeff = std::get<1>(elm);
       const bool& isnew = std::get<2>(elm);
-      // count number of modified and new non-zeros
-      if (isnew)
-        newnzs++;
-      else
-        modifiednzs++;
+      // count fill-in
+      if (isnew) fillin++;
+      // check against max. fill-in
+      if (fillin > maxfillin) break;
       // add non-zero to matrix
       addToMatrix(row, cliquevar.col, coeff);
       // compute term to update left-hand / right-hand side
