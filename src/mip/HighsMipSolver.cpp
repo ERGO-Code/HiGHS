@@ -176,10 +176,6 @@ restart:
     mipdata_->cutpool.performAging();
   }
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
-    if (!submip)
-      printf(
-          "HighsMipSolver::run() mipdata_->nodequeue.empty() || "
-          "mipdata_->checkLimits()\n");
     cleanupSolve();
     return;
   }
