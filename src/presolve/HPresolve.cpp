@@ -1633,70 +1633,119 @@ void HPresolve::liftingForProbing() {
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
+  // collect best lifting opportunity for each row in a vector
+  typedef std::tuple<HighsCliqueTable::CliqueVar, double, bool> liftingdata;
+  std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double>>
+      liftingtable;
+  liftingtable.reserve(liftingOpportunities.size());
+
   // consider lifting opportunities
   for (const auto& elm : liftingOpportunities) {
     // get row index and skip deleted rows
     HighsInt row = elm.first;
     if (rowDeleted[row]) continue;
 
-    // get lifting opportunities for row
-    auto& htree = elm.second;
+    // do not add non-zeros to dense rows
+    if (rowsize[row] >
+        std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20))
+      continue;
 
-    // count number of elements in the hash tree
-    size_t numelms = 0;
-    htree.for_each([&](HighsInt, double) { numelms++; });
-
-    // vector to hold best clique
-    std::vector<HighsCliqueTable::CliqueVar> bestclique;
-    double bestscore = -kHighsInf;
-
-    // store lifting opportunities in a vector
-    std::vector<HighsCliqueTable::CliqueVar> candidates;
-    candidates.reserve(numelms);
-    std::map<HighsInt, double> coefficients;
+    // store clique variables and coefficients in a map
+    auto comp = [](const HighsCliqueTable::CliqueVar& c1,
+                   const HighsCliqueTable::CliqueVar& c2) {
+      return c1.col < c2.col || (c1.col == c2.col && c1.val < c2.val);
+    };
+    std::map<HighsCliqueTable::CliqueVar, std::pair<double, bool>,
+             decltype(comp)>
+        coefficients(comp);
+    const auto& htree = elm.second;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
-      if (!colDeleted[col] && !domain.isFixed(col)) {
-        HighsCliqueTable::CliqueVar cliquevar{col, bincol < 0 ? 0 : 1};
-        candidates.push_back(cliquevar);
-        coefficients[bincol] = value;
-        // initialize best clique with largest absolute coefficient
-        if (std::fabs(value) > bestscore) {
-          bestscore = std::fabs(value);
-          bestclique = {cliquevar};
-        }
-      }
+      if (!colDeleted[col] && !domain.isFixed(col))
+        coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
+            value, findNonzero(row, col) == -1};
     });
 
-    // skip row if there are no candidates
-    if (candidates.empty()) continue;
+    // skip row if map is empty
+    if (coefficients.empty()) continue;
+
+    // vector to hold best clique
+    std::vector<liftingdata> bestclique;
+    double bestscore = -kHighsInf;
+
+    // store candidates in a vector
+    std::vector<HighsCliqueTable::CliqueVar> candidates;
+    candidates.resize(coefficients.size());
+    for (const auto& elm : coefficients) {
+      candidates.push_back(elm.first);
+      // initialize best clique
+      if (std::fabs(elm.second.first) > bestscore) {
+        bestscore = std::fabs(elm.second.first);
+        bestclique = {
+            std::make_tuple(elm.first, elm.second.first, elm.second.second)};
+      }
+    }
 
     // compute cliques
     std::vector<std::vector<HighsCliqueTable::CliqueVar>> cliques =
         cliquetable.computeMaximalCliques(candidates, primal_feastol);
 
-    // lambda to get coefficient given a clique variable
-    auto getcoefficient = [&](const HighsCliqueTable::CliqueVar& cliquevar) {
-      return coefficients[cliquevar.col * (cliquevar.val != 0 ? 1 : -1)];
-    };
-
     // identify clique with highest score
     for (const auto& clique : cliques) {
       double score = 0;
       for (const auto& cliquevar : clique) {
-        score += std::fabs(getcoefficient(cliquevar));
+        score += std::fabs(coefficients[cliquevar].first);
       }
       if (score > bestscore) {
         bestscore = score;
-        bestclique = clique;
+        bestclique.clear();
+        bestclique.reserve(clique.size());
+        for (const auto& cliquevar : clique) {
+          bestclique.emplace_back(cliquevar,
+                                  std::get<0>(coefficients[cliquevar]),
+                                  std::get<1>(coefficients[cliquevar]));
+        }
       }
     }
 
+    // store best clique
+    liftingtable.emplace_back(row, bestclique, bestscore);
+  }
+
+  // sort according to score
+  pdqsort(
+      liftingtable.begin(), liftingtable.end(),
+      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp1,
+          const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp2) {
+        double score1 = std::get<2>(opp1);
+        double score2 = std::get<2>(opp2);
+        return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
+                                 : score1 > score2);
+      });
+
+  // counters
+  size_t modifiednzs = 0;
+  size_t newnzs = 0;
+
+  // perform actual lifting
+  for (const auto& lifting : liftingtable) {
+    // get clique
+    HighsInt row = std::get<0>(lifting);
+    const auto& bestclique = std::get<1>(lifting);
+
     // update matrix
     HighsCDouble update = 0.0;
-    for (const auto& cliquevar : bestclique) {
+    for (const auto& elm : bestclique) {
+      // get data
+      const auto& cliquevar = std::get<0>(elm);
+      const double& coeff = std::get<1>(elm);
+      const bool& isnew = std::get<2>(elm);
+      // count number of modified and new non-zeros
+      if (isnew)
+        newnzs++;
+      else
+        modifiednzs++;
       // add non-zero to matrix
-      double coeff = getcoefficient(cliquevar);
       addToMatrix(row, cliquevar.col, coeff);
       // compute term to update left-hand / right-hand side
       if (cliquevar.val == 0) update += coeff;
