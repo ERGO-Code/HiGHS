@@ -1675,7 +1675,7 @@ void HPresolve::liftingForProbing() {
 
     // store candidates in a vector
     std::vector<HighsCliqueTable::CliqueVar> candidates;
-    candidates.resize(coefficients.size());
+    candidates.reserve(coefficients.size());
     for (const auto& elm : coefficients) {
       candidates.push_back(elm.first);
       // initialize best clique
