@@ -211,7 +211,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     this->col_index_[iCol] = from_col[this->col_index_[iCol]];
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
     this->row_index_[iRow] = from_row[this->row_index_[iRow]];
-  if (kIisDevReport) this->report("On exit", lp);
+  if (kIisDevReportVerbose) this->report("On exit", lp);
   return HighsStatus::kOk;
 }
 
@@ -226,7 +226,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  highs.setOptionValue("output_flag", kIisDevReport);
+  highs.setOptionValue("output_flag", kIisDevReportVerbose);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
   const HighsBasis& incumbent_basis = highs.getBasis();
@@ -249,7 +249,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   bool drop_lower = false;
 
   HighsInt num_run_call = 0;
-  const HighsInt check_run_call = 153;//kHighsIInf;
+  const HighsInt check_run_call = 154;//kHighsIInf;
 
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
@@ -401,7 +401,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       // Record whether the upper bound has been dropped due to the lower bound
       // being kept
       if (check_type == type && check_ix == iX) {
-	printf("CheckType %s, index %d, num_run_call = %d\n", check_type.c_str(), int(check_ix), int(num_run_call));
+	printf("CheckType %s, index %d, will be num_run_call = %d\n", check_type.c_str(), int(check_ix), int(num_run_call+1));
       }
       if (lower > -kHighsInf) {
         // Drop the lower bound temporarily
@@ -517,7 +517,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
-    if (kIisDevReport) this->report("End of deletion", incumbent_lp);
+    if (kIisDevReportVerbose) this->report("End of deletion", incumbent_lp);
     if (row_deletion) {
       // Mark empty columns as dropped
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -539,9 +539,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         }
       }
     }
-    if (kIisDevReport) this->report("End of pass 1", incumbent_lp);
+    if (kIisDevReportVerbose) this->report("End of pass 1", incumbent_lp);
   }
-  if (kIisDevReport) this->report("End of pass 2", incumbent_lp);
+  if (kIisDevReportVerbose) this->report("End of pass 2", incumbent_lp);
   HighsInt iss_num_col = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (this->col_bound_[iCol] != kIisBoundStatusDropped) {

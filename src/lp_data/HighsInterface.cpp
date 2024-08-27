@@ -1821,13 +1821,15 @@ HighsStatus Highs::elasticityFilter(
   const bool has_elastic_rows = has_local_rhs_penalty || has_global_elastic_rhs;
   assert(has_elastic_columns || has_elastic_rows);
 
+  const bool has_col_names = lp.col_names_.size() > 0;
+  const bool has_row_names = lp.row_names_.size() > 0;
+
   const HighsInt col_ecol_offset = lp.num_col_;
   if (has_elastic_columns) {
     // Accumulate bounds to be used for columns
     std::vector<double> col_lower;
     std::vector<double> col_upper;
     // When defining names, need to know the column number
-    const bool has_col_names = lp.col_names_.size() > 0;
     erow_start.push_back(0);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       const double lower = lp.col_lower_[iCol];
@@ -1901,7 +1903,7 @@ HighsStatus Highs::elasticityFilter(
     HighsInt num_new_col = col_of_ecol.size();
     HighsInt num_new_row = erow_start.size() - 1;
     HighsInt num_new_nz = erow_start[num_new_row];
-    if (kIisDevReport)
+    if (kIisDevReportBrief)
       printf(
           "Elasticity filter: For columns there are %d variables and %d "
           "constraints\n",
@@ -1954,7 +1956,6 @@ HighsStatus Highs::elasticityFilter(
     std::vector<HighsInt> ecol_index;
     std::vector<double> ecol_value;
     ecol_start.push_back(0);
-    const bool has_row_names = lp.row_names_.size() > 0;
     for (HighsInt iRow = 0; iRow < original_num_row; iRow++) {
       // Get the penalty for violating the bounds on this row
       const double penalty =
@@ -2044,7 +2045,7 @@ HighsStatus Highs::elasticityFilter(
                                   original_num_row, original_col_cost,
                                   original_col_lower, original_col_upper,
                                   original_integrality);
-  if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
+  if (kIisDevReportVerbose) this->writeSolution("", kSolutionStylePretty);
   // Model status should be optimal, unless model is unbounded
   assert(this->model_status_ == HighsModelStatus::kOptimal ||
          this->model_status_ == HighsModelStatus::kUnbounded);
@@ -2063,7 +2064,7 @@ HighsStatus Highs::elasticityFilter(
   // value of 8.87022e-10 to be feasible.
   const double use_primal_tolerance = 0;
   for (;;) {
-    if (kIisDevReport)
+    if (kIisDevReportBrief)
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     // An elastic variable can be fixed at zero, but have positive
     // value (within the tolerance) if basic, so allowing it to be
@@ -2076,7 +2077,7 @@ HighsStatus Highs::elasticityFilter(
         if (lp.col_upper_[iCol] == 0) continue;
         const HighsInt original_col = col_of_ecol[eCol];
         if (solution.col_value[iCol] > use_primal_tolerance) {
-          if (kIisDevReport)
+          if (kIisDevReportBrief)
             printf(
                 "E-col %2d (column %2d) corresponds to column %2d with bound "
                 "%g "
@@ -2094,7 +2095,7 @@ HighsStatus Highs::elasticityFilter(
         if (lp.col_upper_[iCol] == 0) continue;
         const HighsInt original_row = row_of_ecol[eCol];
         if (solution.col_value[iCol] > use_primal_tolerance) {
-          if (kIisDevReport)
+          if (kIisDevReportBrief)
             printf(
                 "E-row %2d (column %2d) corresponds to    row %2d with bound "
                 "%g "
@@ -2121,7 +2122,7 @@ HighsStatus Highs::elasticityFilter(
                                     original_num_col, original_num_row,
                                     original_col_cost, original_col_lower,
                                     original_col_upper, original_integrality);
-    if (kIisDevReport) this->writeSolution("", kSolutionStylePretty);
+    if (kIisDevReportVerbose) this->writeSolution("", kSolutionStylePretty);
     HighsModelStatus model_status = this->getModelStatus();
     if (model_status == HighsModelStatus::kInfeasible) break;
     loop_k++;
@@ -2137,26 +2138,32 @@ HighsStatus Highs::elasticityFilter(
       if (lp.col_upper_[iCol] == 0) {
         num_enforced_col_ecol++;
         printf(
-            "Col e-col %2d (column %2d) corresponds to column %2d with bound "
-            "%g "
+            "Col e-col %4d (column %4d) corresponds to column %4d (%8s) with bound "
+            "%11.4g "
             "and is enforced\n",
             int(eCol), int(iCol), int(original_col),
+	    has_col_names ? lp.col_names_[original_col].c_str(): "",
             bound_of_col_of_ecol[eCol]);
       }
     }
   }
   if (has_elastic_rows) {
+    std::vector<bool> in_infeasible_row_subset;
+    in_infeasible_row_subset.assign(original_num_row, false);
     for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
       const HighsInt original_row = row_of_ecol[eCol];
+      assert(original_row < original_num_row);
       const HighsInt iCol = row_ecol_offset + eCol;
       if (lp.col_upper_[iCol] == 0) {
+	assert(!in_infeasible_row_subset[original_row]);
         num_enforced_row_ecol++;
         infeasible_row_subset.push_back(original_row);
-        if (kIisDevReport)
+        if (kIisDevReportBrief)
           printf(
-              "Row e-col %2d (column %2d) corresponds to    row %2d with bound "
-              "%g and is enforced\n",
+              "Row e-col %4d (column %4d) corresponds to    row %4d (%8s) with bound %11.4g "
+	      "and is enforced\n",
               int(eCol), int(iCol), int(original_row),
+	      has_row_names ? lp.row_names_[original_row].c_str(): "",
               bound_of_row_of_ecol[eCol]);
       }
     }
@@ -2170,7 +2177,7 @@ HighsStatus Highs::elasticityFilter(
       "rows\n",
       int(loop_k), int(num_enforced_col_ecol), int(num_enforced_row_ecol));
 
-  if (kIisDevReport)
+  if (kIisDevReportBrief)
     printf(
         "\nElasticity filter after %d passes enforces bounds on %d cols and %d "
         "rows\n",
