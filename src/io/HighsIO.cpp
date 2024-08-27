@@ -33,7 +33,8 @@ void highsLogHeader(const HighsLogOptions& log_options,
 
 std::array<char, 32> highsDoubleToString(const double val,
                                          const double tolerance) {
-  std::array<char, 32> printString = {};
+  decltype(highsDoubleToString(std::declval<double>(),
+                               std::declval<double>())) printString = {};
   double l =
       std::abs(val) == kHighsInf
           ? 1.0

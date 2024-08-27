@@ -1143,8 +1143,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 }
 
 static std::array<char, 22> convertToPrintString(int64_t val) {
+  decltype(convertToPrintString(std::declval<int64_t>())) printString = {};
   double l = std::log10(std::max(1.0, double(val)));
-  std::array<char, 22> printString = {};
   switch (int(l)) {
     case 0:
     case 1:
@@ -1170,7 +1170,8 @@ static std::array<char, 22> convertToPrintString(int64_t val) {
 
 static std::array<char, 22> convertToPrintString(double val,
                                                  const char* trailingStr = "") {
-  std::array<char, 22> printString = {};
+  decltype(convertToPrintString(std::declval<double>(),
+                                std::declval<char*>())) printString = {};
   double l = std::abs(val) == kHighsInf
                  ? 0.0
                  : std::log10(std::max(1e-6, std::abs(val)));
@@ -1244,11 +1245,9 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   ++num_disp_lines;
 
-  std::array<char, 22> print_nodes = convertToPrintString(num_nodes);
-  std::array<char, 22> queue_nodes =
-      convertToPrintString(nodequeue.numActiveNodes());
-  std::array<char, 22> print_leaves =
-      convertToPrintString(num_leaves - num_leaves_before_run);
+  auto print_nodes = convertToPrintString(num_nodes);
+  auto queue_nodes = convertToPrintString(nodequeue.numActiveNodes());
+  auto print_leaves = convertToPrintString(num_leaves - num_leaves_before_run);
 
   double explored = 100 * double(pruned_treeweight);
 
@@ -1258,8 +1257,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
   double ub = kHighsInf;
   double gap = kHighsInf;
 
-  std::array<char, 22> print_lp_iters =
-      convertToPrintString(total_lp_iterations);
+  auto print_lp_iters = convertToPrintString(total_lp_iterations);
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
 
@@ -1284,7 +1282,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
@@ -1305,7 +1303,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
