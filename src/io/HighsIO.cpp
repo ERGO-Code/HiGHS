@@ -33,7 +33,7 @@ void highsLogHeader(const HighsLogOptions& log_options,
 
 std::array<char, 32> highsDoubleToString(const double val,
                                          const double tolerance) {
-  std::array<char, 32> printString;
+  std::array<char, 32> printString = {};
   double l =
       std::abs(val) == kHighsInf
           ? 1.0
@@ -41,55 +41,55 @@ std::array<char, 32> highsDoubleToString(const double val,
              std::log10(std::max(tolerance, std::abs(val)) / (tolerance)));
   switch (int(l)) {
     case 0:
-      std::snprintf(printString.data(), 32, "%c", '0');
+      std::snprintf(printString.data(), printString.size(), "%c", '0');
       break;
     case 1:
-      std::snprintf(printString.data(), 32, "%.1g", val);
+      std::snprintf(printString.data(), printString.size(), "%.1g", val);
       break;
     case 2:
-      std::snprintf(printString.data(), 32, "%.2g", val);
+      std::snprintf(printString.data(), printString.size(), "%.2g", val);
       break;
     case 3:
-      std::snprintf(printString.data(), 32, "%.3g", val);
+      std::snprintf(printString.data(), printString.size(), "%.3g", val);
       break;
     case 4:
-      std::snprintf(printString.data(), 32, "%.4g", val);
+      std::snprintf(printString.data(), printString.size(), "%.4g", val);
       break;
     case 5:
-      std::snprintf(printString.data(), 32, "%.5g", val);
+      std::snprintf(printString.data(), printString.size(), "%.5g", val);
       break;
     case 6:
-      std::snprintf(printString.data(), 32, "%.6g", val);
+      std::snprintf(printString.data(), printString.size(), "%.6g", val);
       break;
     case 7:
-      std::snprintf(printString.data(), 32, "%.7g", val);
+      std::snprintf(printString.data(), printString.size(), "%.7g", val);
       break;
     case 8:
-      std::snprintf(printString.data(), 32, "%.8g", val);
+      std::snprintf(printString.data(), printString.size(), "%.8g", val);
       break;
     case 9:
-      std::snprintf(printString.data(), 32, "%.9g", val);
+      std::snprintf(printString.data(), printString.size(), "%.9g", val);
       break;
     case 10:
-      std::snprintf(printString.data(), 32, "%.10g", val);
+      std::snprintf(printString.data(), printString.size(), "%.10g", val);
       break;
     case 11:
-      std::snprintf(printString.data(), 32, "%.11g", val);
+      std::snprintf(printString.data(), printString.size(), "%.11g", val);
       break;
     case 12:
-      std::snprintf(printString.data(), 32, "%.12g", val);
+      std::snprintf(printString.data(), printString.size(), "%.12g", val);
       break;
     case 13:
-      std::snprintf(printString.data(), 32, "%.13g", val);
+      std::snprintf(printString.data(), printString.size(), "%.13g", val);
       break;
     case 14:
-      std::snprintf(printString.data(), 32, "%.14g", val);
+      std::snprintf(printString.data(), printString.size(), "%.14g", val);
       break;
     case 15:
-      std::snprintf(printString.data(), 32, "%.15g", val);
+      std::snprintf(printString.data(), printString.size(), "%.15g", val);
       break;
     default:
-      std::snprintf(printString.data(), 32, "%.16g", val);
+      std::snprintf(printString.data(), printString.size(), "%.16g", val);
   }
 
   return printString;
@@ -131,7 +131,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
     }
   } else {
     int len = 0;
-    char msgbuffer[kIoBufferSize];
+    char msgbuffer[kIoBufferSize] = {};
     if (prefix)
       len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
                      HighsLogTypeTag[(int)type]);
@@ -199,7 +199,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     }
   } else {
     int len;
-    char msgbuffer[kIoBufferSize];
+    char msgbuffer[kIoBufferSize] = {};
     len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
     if (len >= (int)sizeof(msgbuffer)) {
       // Output was truncated: for now just ensure string is null-terminated
@@ -261,7 +261,7 @@ std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
   int len;
-  char msgbuffer[kIoBufferSize];
+  char msgbuffer[kIoBufferSize] = {};
   len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
 
   if (len >= (int)sizeof(msgbuffer)) {

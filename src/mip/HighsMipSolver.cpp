@@ -587,7 +587,7 @@ void HighsMipSolver::cleanupSolve() {
   else
     gap_ = kHighsInf;
 
-  std::array<char, 128> gapString;
+  std::array<char, 128> gapString = {};
 
   if (gap_ == kHighsInf)
     std::strcpy(gapString.data(), "inf");
