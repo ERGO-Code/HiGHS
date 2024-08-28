@@ -19,6 +19,12 @@ public enum HighsMatrixFormat
     kRowwise
 }
 
+public enum HessianFormat
+{
+    kTriangular = 1,
+    kSquare
+}
+
 public enum HighsBasisStatus
 {
     kLower = 0,
@@ -101,6 +107,27 @@ public class HighsModel
         this.a_format = a_format;
         this.sense = sense;
         this.highs_integrality = highs_integrality;
+    }
+}
+
+public class HighsHessian
+{
+    public HessianFormat q_format;
+    public int[] qstart;
+    public int[] qindex;
+    public double[] qvalue;
+
+    public HighsHessian()
+    {
+
+    }
+
+    public HighsHessian(int[] qstart, int[] qindex, double[] qvalue, HessianFormat q_format = HessianFormat.kTriangular)
+    {
+        this.qstart = qstart;
+        this.qindex = qindex;
+        this.qvalue = qvalue;
+        this.q_format = q_format;
     }
 }
 
@@ -235,6 +262,16 @@ public class HighsLpSolver : IDisposable
         int[] aindex,
         double[] avalue,
         int[] highs_integrality);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_passHessian(
+        IntPtr highs,
+        int dim,
+        int numnz,
+        int q_format,
+        int[] qstart,
+        int[] qindex,
+        double[] qvalue);
 
     [DllImport(highslibname)]
     private static extern int Highs_setOptionValue(IntPtr highs, string option, string value);
