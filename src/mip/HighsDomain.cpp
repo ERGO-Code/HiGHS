@@ -180,7 +180,7 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
   }
   switch (numWatched) {
     case 0: {
-      std::pair<HighsInt, HighsInt> latestActive[2];
+      std::array<std::pair<HighsInt, HighsInt>, 2> latestActive;
       HighsInt numActive = 0;
       for (HighsInt i = start; i != end; ++i) {
         HighsInt pos = conflictEntries[i].boundtype == HighsBoundType::kLower
@@ -306,7 +306,7 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
 
   WatchedLiteral* watched = watchedLiterals_.data() + 2 * conflict;
 
-  HighsInt inactive[2];
+  std::array<HighsInt, 2> inactive;
   HighsInt numInactive = 0;
   for (HighsInt i = start; i != end; ++i) {
     if (domain->isActive(entries[i])) continue;

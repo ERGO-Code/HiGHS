@@ -113,8 +113,8 @@ class HighsHashTree {
     // to do a linear scan and key comparisons at all
     Occupation occupation;
     int size;
-    uint64_t hashes[capacity() + 1];
-    Entry entries[capacity()];
+    std::array<uint64_t, capacity() + 1> hashes;
+    std::array<Entry, capacity()> entries;
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
 
