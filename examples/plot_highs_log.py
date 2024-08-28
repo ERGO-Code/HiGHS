@@ -1,6 +1,7 @@
 import re
 import matplotlib.pyplot as plt
 import numpy as np
+import math as math
 
 
 def parse_highs_log(log_file_path):
@@ -107,7 +108,8 @@ def plot_highs_log(
 
     # Plot vertical hash lines where Best Solution changes
     for i in range(1, len(best_sol_values)):
-        if best_sol_values[i] != best_sol_values[i - 1]:  # Change detected
+        # Print if change detected and not NaN
+        if (best_sol_values[i] != best_sol_values[i - 1]) and not(math.isnan(best_sol_values[i])):
             ax1.axvline(x=time_values[i], color="grey", linestyle="--", linewidth=0.5)
 
     # Shift plot area left to make room on the right for the three y-axis labels.
