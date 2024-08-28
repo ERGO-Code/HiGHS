@@ -6,6 +6,7 @@ using Highs;
 
 class Program {
    static void Main(string[] args) {
+       // Test with an LP
       double[] cc = {1, -2};
       double[] cl = {0, 0};
       double[] cu = {10, 10};
@@ -43,5 +44,13 @@ class Program {
       for (int i=0; i<sol.colvalue.Length; i++) {
          Console.WriteLine("x" + i + " = " + sol.colvalue[i] + " is " + bas.colbasisstatus[i]);
       }
+       // Add a Hessian
+      int dim = 2;
+      int[] qstart = {0, 2};
+      int[] qindex = {0, 1, 1};
+      double[] qvalue = {2, -1, 2};
+      HessianFormat q_format = HessianFormat.kTriangular;
+     
+      
    }
 }

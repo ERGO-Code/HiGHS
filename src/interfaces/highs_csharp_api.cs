@@ -113,6 +113,7 @@ public class HighsModel
 public class HighsHessian
 {
     public HessianFormat q_format;
+    public int dim;
     public int[] qstart;
     public int[] qindex;
     public double[] qvalue;
@@ -122,8 +123,9 @@ public class HighsHessian
 
     }
 
-    public HighsHessian(int[] qstart, int[] qindex, double[] qvalue, HessianFormat q_format = HessianFormat.kTriangular)
+    public HighsHessian(int dim, int[] qstart, int[] qindex, double[] qvalue, HessianFormat q_format = HessianFormat.kTriangular)
     {
+        this.dim = dim;
         this.qstart = qstart;
         this.qindex = qindex;
         this.qvalue = qvalue;
@@ -719,6 +721,18 @@ public class HighsLpSolver : IDisposable
             model.aindex,
             model.avalue,
             model.highs_integrality);
+    }
+
+    public HighsStatus passHessian(HighsHessian hessian)
+    {
+        return (HighsStatus)HighsLpSolver.Highs_passHessian(
+            this.highs,
+            hessian.dim,
+            hessian.qvalue.Length,
+            (int)hessian.q_format,
+            hessian.qstart,
+            hessian.qindex,
+            hessian.qvalue);
     }
 
     public HighsStatus setOptionValue(string option, string value)
