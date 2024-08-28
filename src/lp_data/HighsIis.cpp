@@ -249,7 +249,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   bool drop_lower = false;
 
   HighsInt num_run_call = 0;
-  const HighsInt check_run_call = 154;//kHighsIInf;
+  const HighsInt check_run_call = 154;  // kHighsIInf;
 
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
@@ -258,10 +258,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     iis_info.simplex_iterations = -info.simplex_iteration_count;
     bool output_flag;
     HighsInt log_dev_level;
-     HighsInt highs_analysis_level;
-   highs.getOptionValue("output_flag", output_flag);
+    HighsInt highs_analysis_level;
+    highs.getOptionValue("output_flag", output_flag);
     highs.getOptionValue("log_dev_level", log_dev_level);
-   highs.getOptionValue("highs_analysis_level", highs_analysis_level);
+    highs.getOptionValue("highs_analysis_level", highs_analysis_level);
 
     num_run_call++;
     if (num_run_call == check_run_call) {
@@ -401,7 +401,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       // Record whether the upper bound has been dropped due to the lower bound
       // being kept
       if (check_type == type && check_ix == iX) {
-	printf("CheckType %s, index %d, will be num_run_call = %d\n", check_type.c_str(), int(check_ix), int(num_run_call+1));
+        printf("CheckType %s, index %d, will be num_run_call = %d\n",
+               check_type.c_str(), int(check_ix), int(num_run_call + 1));
       }
       if (lower > -kHighsInf) {
         // Drop the lower bound temporarily

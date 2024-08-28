@@ -2138,11 +2138,12 @@ HighsStatus Highs::elasticityFilter(
       if (lp.col_upper_[iCol] == 0) {
         num_enforced_col_ecol++;
         printf(
-            "Col e-col %4d (column %4d) corresponds to column %4d (%8s) with bound "
+            "Col e-col %4d (column %4d) corresponds to column %4d (%8s) with "
+            "bound "
             "%11.4g "
             "and is enforced\n",
             int(eCol), int(iCol), int(original_col),
-	    has_col_names ? lp.col_names_[original_col].c_str(): "",
+            has_col_names ? lp.col_names_[original_col].c_str() : "",
             bound_of_col_of_ecol[eCol]);
       }
     }
@@ -2155,15 +2156,16 @@ HighsStatus Highs::elasticityFilter(
       assert(original_row < original_num_row);
       const HighsInt iCol = row_ecol_offset + eCol;
       if (lp.col_upper_[iCol] == 0) {
-	assert(!in_infeasible_row_subset[original_row]);
+        assert(!in_infeasible_row_subset[original_row]);
         num_enforced_row_ecol++;
         infeasible_row_subset.push_back(original_row);
         if (kIisDevReportBrief)
           printf(
-              "Row e-col %4d (column %4d) corresponds to    row %4d (%8s) with bound %11.4g "
-	      "and is enforced\n",
+              "Row e-col %4d (column %4d) corresponds to    row %4d (%8s) with "
+              "bound %11.4g "
+              "and is enforced\n",
               int(eCol), int(iCol), int(original_row),
-	      has_row_names ? lp.row_names_[original_row].c_str(): "",
+              has_row_names ? lp.row_names_[original_row].c_str() : "",
               bound_of_row_of_ecol[eCol]);
       }
     }
