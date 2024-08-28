@@ -36,6 +36,9 @@ class Program {
       Console.WriteLine("Status: " + status);
       Console.WriteLine("Modelstatus: " + modelStatus);
    
+      for (int i=0; i<sol.colvalue.Length; i++) {
+         Console.WriteLine("Activity for col " + i + " = " + sol.colvalue[i]);
+      }
       for (int i=0; i<sol.rowvalue.Length; i++) {
          Console.WriteLine("Activity for row " + i + " = " + sol.rowvalue[i]);
       }
@@ -54,7 +57,27 @@ class Program {
       int[] qindex = {0, 1, 1};
       double[] qvalue = {2, -1, 2};
       HessianFormat q_format = HessianFormat.kTriangular;
-     
+      HighsHessian hessian = new HighsHessian(dim, qstart, qindex, qvalue, q_format);
+      status = solver.passHessian(hessian);
+      status = solver.run();
+      sol = solver.getSolution();
+      modelStatus = solver.GetModelStatus();
+      
+      Console.WriteLine("Status: " + status);
+      Console.WriteLine("Modelstatus: " + modelStatus);
+   
+      for (int i=0; i<sol.colvalue.Length; i++) {
+         Console.WriteLine("Activity for col " + i + " = " + sol.colvalue[i]);
+      }
+      for (int i=0; i<sol.rowvalue.Length; i++) {
+         Console.WriteLine("Activity for row " + i + " = " + sol.rowvalue[i]);
+      }
+      for (int i=0; i<sol.coldual.Length; i++) {
+         Console.WriteLine("Reduced cost x[" + i + "] = " + sol.coldual[i]);
+      }
+      for (int i=0; i<sol.rowdual.Length; i++) {
+         Console.WriteLine("Dual value for row " + i + " = " + sol.rowdual[i]);
+      }
       
    }
 }
