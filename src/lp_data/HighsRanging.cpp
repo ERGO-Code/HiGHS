@@ -631,8 +631,8 @@ void writeRangingFile(FILE* file, const HighsLp& lp,
   std::array<char, 32> dn_value;
   std::array<char, 32> up_value;
 
-  std::array<char, 32> objective = highsDoubleToString(
-      objective_function_value, kRangingValueToStringTolerance);
+  auto objective = highsDoubleToString(objective_function_value,
+                                       kRangingValueToStringTolerance);
   fprintf(file, "Objective %s\n", objective.data());
   if (pretty) {
     fprintf(file,

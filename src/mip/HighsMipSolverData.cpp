@@ -1143,8 +1143,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 }
 
 static std::array<char, 22> convertToPrintString(int64_t val) {
+  decltype(convertToPrintString(std::declval<int64_t>())) printString = {};
   double l = std::log10(std::max(1.0, double(val)));
-  std::array<char, 22> printString;
   switch (int(l)) {
     case 0:
     case 1:
@@ -1152,15 +1152,17 @@ static std::array<char, 22> convertToPrintString(int64_t val) {
     case 3:
     case 4:
     case 5:
-      std::snprintf(printString.data(), 22, "%" PRId64, val);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64, val);
       break;
     case 6:
     case 7:
     case 8:
-      std::snprintf(printString.data(), 22, "%" PRId64 "k", val / 1000);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64 "k",
+                    val / 1000);
       break;
     default:
-      std::snprintf(printString.data(), 22, "%" PRId64 "m", val / 1000000);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64 "m",
+                    val / 1000000);
   }
 
   return printString;
@@ -1168,7 +1170,8 @@ static std::array<char, 22> convertToPrintString(int64_t val) {
 
 static std::array<char, 22> convertToPrintString(double val,
                                                  const char* trailingStr = "") {
-  std::array<char, 22> printString;
+  decltype(convertToPrintString(std::declval<double>(),
+                                std::declval<char*>())) printString = {};
   double l = std::abs(val) == kHighsInf
                  ? 0.0
                  : std::log10(std::max(1e-6, std::abs(val)));
@@ -1177,23 +1180,28 @@ static std::array<char, 22> convertToPrintString(double val,
     case 1:
     case 2:
     case 3:
-      std::snprintf(printString.data(), 22, "%.10g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.10g%s", val,
+                    trailingStr);
       break;
     case 4:
-      std::snprintf(printString.data(), 22, "%.11g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.11g%s", val,
+                    trailingStr);
       break;
     case 5:
-      std::snprintf(printString.data(), 22, "%.12g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.12g%s", val,
+                    trailingStr);
       break;
     case 6:
     case 7:
     case 8:
     case 9:
     case 10:
-      std::snprintf(printString.data(), 22, "%.13g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.13g%s", val,
+                    trailingStr);
       break;
     default:
-      std::snprintf(printString.data(), 22, "%.9g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.9g%s", val,
+                    trailingStr);
   }
 
   return printString;
@@ -1237,11 +1245,9 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   ++num_disp_lines;
 
-  std::array<char, 22> print_nodes = convertToPrintString(num_nodes);
-  std::array<char, 22> queue_nodes =
-      convertToPrintString(nodequeue.numActiveNodes());
-  std::array<char, 22> print_leaves =
-      convertToPrintString(num_leaves - num_leaves_before_run);
+  auto print_nodes = convertToPrintString(num_nodes);
+  auto queue_nodes = convertToPrintString(nodequeue.numActiveNodes());
+  auto print_leaves = convertToPrintString(num_leaves - num_leaves_before_run);
 
   double explored = 100 * double(pruned_treeweight);
 
@@ -1251,8 +1257,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
   double ub = kHighsInf;
   double gap = kHighsInf;
 
-  std::array<char, 22> print_lp_iters =
-      convertToPrintString(total_lp_iterations);
+  auto print_lp_iters = convertToPrintString(total_lp_iterations);
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
 
@@ -1263,7 +1268,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
     else
       gap = 100. * (ub - lb) / fabs(ub);
 
-    std::array<char, 22> gap_string;
+    std::array<char, 22> gap_string = {};
     if (gap >= 9999.)
       std::strcpy(gap_string.data(), "Large");
     else
@@ -1277,7 +1282,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
@@ -1298,7 +1303,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(

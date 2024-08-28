@@ -216,7 +216,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  char stringbuffer[LP_MAX_LINE_LENGTH + 1];
+  char stringbuffer[LP_MAX_LINE_LENGTH + 1] = {};
   HighsInt tokenlength =
       vsnprintf(stringbuffer, sizeof stringbuffer, format, argptr);
   va_end(argptr);
