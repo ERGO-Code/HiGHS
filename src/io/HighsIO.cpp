@@ -207,21 +207,22 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       if (flush_streams) fflush(stdout);
     }
   } else {
-    int len;
-    char msgbuffer[kIoBufferSize] = {};
-    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-    if (len >= (int)sizeof(msgbuffer)) {
+    std::array<char, kIoBufferSize> msgbuffer = {};
+    int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+    // assert that there are no encoding errors
+    assert(len >= 0);
+    if (static_cast<size_t>(len) >= msgbuffer.size()) {
       // Output was truncated: for now just ensure string is null-terminated
-      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+      msgbuffer[msgbuffer.size() - 1] = '\0';
     }
     if (log_options_.user_log_callback) {
-      log_options_.user_log_callback(type, msgbuffer,
+      log_options_.user_log_callback(type, msgbuffer.data(),
                                      log_options_.user_log_callback_data);
     } else if (log_options_.user_callback_active) {
       assert(log_options_.user_callback);
       HighsCallbackDataOut data_out;
       data_out.log_type = int(type);
-      log_options_.user_callback(kCallbackLogging, msgbuffer, &data_out,
+      log_options_.user_callback(kCallbackLogging, msgbuffer.data(), &data_out,
                                  nullptr, log_options_.user_callback_data);
     }
   }
@@ -269,16 +270,17 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  int len;
-  char msgbuffer[kIoBufferSize] = {};
-  len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+  std::array<char, kIoBufferSize> msgbuffer = {};
+  int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+  // assert that there are no encoding errors
+  assert(len >= 0);
 
-  if (len >= (int)sizeof(msgbuffer)) {
+  if (static_cast<size_t>(len) >= msgbuffer.size()) {
     // Output was truncated: for now just ensure string is null-terminated
-    msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    msgbuffer[msgbuffer.size() - 1] = '\0';
   }
   va_end(argptr);
-  return std::string(msgbuffer);
+  return std::string(msgbuffer.data());
 }
 
 const std::string highsBoolToString(const bool b, const HighsInt field_width) {
