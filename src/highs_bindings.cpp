@@ -12,6 +12,12 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
+// arrays are assumed to be contiguous c-style arrays of correct type
+// * c_style forces the array to be stored in C-style contiguous order
+// * forcecast converts the array to the correct type if needed
+template<typename T>
+using dense_array_t = py::array_t<T, py::array::c_style | py::array::forcecast>;
+
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
 }
@@ -20,13 +26,13 @@ HighsStatus highs_passModelPointers(
     Highs* h, const HighsInt num_col, const HighsInt num_row,
     const HighsInt num_nz, const HighsInt q_num_nz, const HighsInt a_format,
     const HighsInt q_format, const HighsInt sense, const double offset,
-    const py::array_t<double> col_cost, const py::array_t<double> col_lower,
-    const py::array_t<double> col_upper, const py::array_t<double> row_lower,
-    const py::array_t<double> row_upper, const py::array_t<HighsInt> a_start,
-    const py::array_t<HighsInt> a_index, const py::array_t<double> a_value,
-    const py::array_t<HighsInt> q_start, const py::array_t<HighsInt> q_index,
-    const py::array_t<double> q_value,
-    const py::array_t<HighsInt> integrality) {
+    const dense_array_t<double> col_cost, const dense_array_t<double> col_lower,
+    const dense_array_t<double> col_upper, const dense_array_t<double> row_lower,
+    const dense_array_t<double> row_upper, const dense_array_t<HighsInt> a_start,
+    const dense_array_t<HighsInt> a_index, const dense_array_t<double> a_value,
+    const dense_array_t<HighsInt> q_start, const dense_array_t<HighsInt> q_index,
+    const dense_array_t<double> q_value,
+    const dense_array_t<HighsInt> integrality) {
   py::buffer_info col_cost_info = col_cost.request();
   py::buffer_info col_lower_info = col_lower.request();
   py::buffer_info col_upper_info = col_upper.request();
@@ -68,12 +74,12 @@ HighsStatus highs_passLp(Highs* h, HighsLp& lp) { return h->passModel(lp); }
 HighsStatus highs_passLpPointers(
     Highs* h, const HighsInt num_col, const HighsInt num_row,
     const HighsInt num_nz, const HighsInt a_format, const HighsInt sense,
-    const double offset, const py::array_t<double> col_cost,
-    const py::array_t<double> col_lower, const py::array_t<double> col_upper,
-    const py::array_t<double> row_lower, const py::array_t<double> row_upper,
-    const py::array_t<HighsInt> a_start, const py::array_t<HighsInt> a_index,
-    const py::array_t<double> a_value,
-    const py::array_t<HighsInt> integrality) {
+    const double offset, const dense_array_t<double> col_cost,
+    const dense_array_t<double> col_lower, const dense_array_t<double> col_upper,
+    const dense_array_t<double> row_lower, const dense_array_t<double> row_upper,
+    const dense_array_t<HighsInt> a_start, const dense_array_t<HighsInt> a_index,
+    const dense_array_t<double> a_value,
+    const dense_array_t<HighsInt> integrality) {
   py::buffer_info col_cost_info = col_cost.request();
   py::buffer_info col_lower_info = col_lower.request();
   py::buffer_info col_upper_info = col_upper.request();
@@ -110,9 +116,9 @@ HighsStatus highs_passHessian(Highs* h, HighsHessian& hessian) {
 HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                                       const HighsInt num_nz,
                                       const HighsInt format,
-                                      const py::array_t<HighsInt> q_start,
-                                      const py::array_t<HighsInt> q_index,
-                                      const py::array_t<double> q_value) {
+                                      const dense_array_t<HighsInt> q_start,
+                                      const dense_array_t<HighsInt> q_index,
+                                      const dense_array_t<double> q_value) {
   py::buffer_info q_start_info = q_start.request();
   py::buffer_info q_index_info = q_index.request();
   py::buffer_info q_value_info = q_value.request();
@@ -150,8 +156,8 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
 }
 
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
-                         HighsInt num_new_nz, py::array_t<HighsInt> indices,
-                         py::array_t<double> values) {
+                         HighsInt num_new_nz, dense_array_t<HighsInt> indices,
+                         dense_array_t<double> values) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
 
@@ -161,11 +167,11 @@ HighsStatus highs_addRow(Highs* h, double lower, double upper,
   return h->addRow(lower, upper, num_new_nz, indices_ptr, values_ptr);
 }
 
-HighsStatus highs_addRows(Highs* h, HighsInt num_row, py::array_t<double> lower,
-                          py::array_t<double> upper, HighsInt num_new_nz,
-                          py::array_t<HighsInt> starts,
-                          py::array_t<HighsInt> indices,
-                          py::array_t<double> values) {
+HighsStatus highs_addRows(Highs* h, HighsInt num_row, dense_array_t<double> lower,
+                          dense_array_t<double> upper, HighsInt num_new_nz,
+                          dense_array_t<HighsInt> starts,
+                          dense_array_t<HighsInt> indices,
+                          dense_array_t<double> values) {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
   py::buffer_info starts_info = starts.request();
@@ -183,8 +189,8 @@ HighsStatus highs_addRows(Highs* h, HighsInt num_row, py::array_t<double> lower,
 }
 
 HighsStatus highs_addCol(Highs* h, double cost, double lower, double upper,
-                         HighsInt num_new_nz, py::array_t<HighsInt> indices,
-                         py::array_t<double> values) {
+                         HighsInt num_new_nz, dense_array_t<HighsInt> indices,
+                         dense_array_t<double> values) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info values_info = values.request();
 
@@ -194,11 +200,11 @@ HighsStatus highs_addCol(Highs* h, double cost, double lower, double upper,
   return h->addCol(cost, lower, upper, num_new_nz, indices_ptr, values_ptr);
 }
 
-HighsStatus highs_addCols(Highs* h, HighsInt num_col, py::array_t<double> cost,
-                          py::array_t<double> lower, py::array_t<double> upper,
-                          HighsInt num_new_nz, py::array_t<HighsInt> starts,
-                          py::array_t<HighsInt> indices,
-                          py::array_t<double> values) {
+HighsStatus highs_addCols(Highs* h, HighsInt num_col, dense_array_t<double> cost,
+                          dense_array_t<double> lower, dense_array_t<double> upper,
+                          HighsInt num_new_nz, dense_array_t<HighsInt> starts,
+                          dense_array_t<HighsInt> indices,
+                          dense_array_t<double> values) {
   py::buffer_info cost_info = cost.request();
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -222,8 +228,8 @@ HighsStatus highs_addVar(Highs* h, double lower, double upper) {
 }
 
 HighsStatus highs_addVars(Highs* h, HighsInt num_vars,
-                          py::array_t<double> lower,
-                          py::array_t<double> upper) {
+                          dense_array_t<double> lower,
+                          dense_array_t<double> upper) {
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
 
@@ -234,8 +240,8 @@ HighsStatus highs_addVars(Highs* h, HighsInt num_vars,
 }
 
 HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
-                                 py::array_t<HighsInt> indices,
-                                 py::array_t<double> cost) {
+                                 dense_array_t<HighsInt> indices,
+                                 dense_array_t<double> cost) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info cost_info = cost.request();
 
@@ -246,9 +252,9 @@ HighsStatus highs_changeColsCost(Highs* h, HighsInt num_set_entries,
 }
 
 HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
-                                   py::array_t<HighsInt> indices,
-                                   py::array_t<double> lower,
-                                   py::array_t<double> upper) {
+                                   dense_array_t<HighsInt> indices,
+                                   dense_array_t<double> lower,
+                                   dense_array_t<double> upper) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info lower_info = lower.request();
   py::buffer_info upper_info = upper.request();
@@ -262,8 +268,8 @@ HighsStatus highs_changeColsBounds(Highs* h, HighsInt num_set_entries,
 }
 
 HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
-                                        py::array_t<HighsInt> indices,
-                                        py::array_t<HighsVarType> integrality) {
+                                        dense_array_t<HighsInt> indices,
+                                        dense_array_t<HighsVarType> integrality) {
   py::buffer_info indices_info = indices.request();
   py::buffer_info integrality_info = integrality.request();
 
@@ -291,8 +297,8 @@ HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
 }
 
 HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
-				    py::array_t<HighsInt> index,
-				    py::array_t<double> value) {
+				    dense_array_t<HighsInt> index,
+				    dense_array_t<double> value) {
   py::buffer_info index_info = index.request();
   py::buffer_info value_info = value.request();
 
@@ -402,7 +408,7 @@ std::tuple<HighsStatus, double, double, double, HighsInt> highs_getCol(
   return std::make_tuple(status, cost, lower, upper, get_num_nz);
 }
 
-std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>>
+std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<double>>
 highs_getColEntries(Highs* h, HighsInt col) {
   double cost, lower, upper;
   HighsInt get_num_col;
@@ -433,7 +439,7 @@ std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h,
   return std::make_tuple(status, lower, upper, get_num_nz);
 }
 
-std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<double>>
+std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<double>>
 highs_getRowEntries(Highs* h, HighsInt row) {
   double cost, lower, upper;
   HighsInt get_num_row;
@@ -452,10 +458,10 @@ highs_getRowEntries(Highs* h, HighsInt row) {
   return std::make_tuple(status, py::cast(index), py::cast(value));
 }
 
-std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>,
-           py::array_t<double>, HighsInt>
+std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
+           dense_array_t<double>, HighsInt>
 highs_getCols(Highs* h, HighsInt num_set_entries,
-              py::array_t<HighsInt> indices) {
+              dense_array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -475,10 +481,10 @@ highs_getCols(Highs* h, HighsInt num_set_entries,
                          py::cast(upper), get_num_nz);
 }
 
-std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>,
-           py::array_t<double>>
+std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<HighsInt>,
+           dense_array_t<double>>
 highs_getColsEntries(Highs* h, HighsInt num_set_entries,
-                     py::array_t<HighsInt> indices) {
+                     dense_array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -501,10 +507,10 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                          py::cast(value));
 }
 
-std::tuple<HighsStatus, HighsInt, py::array_t<double>, py::array_t<double>,
+std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
            HighsInt>
 highs_getRows(Highs* h, HighsInt num_set_entries,
-              py::array_t<HighsInt> indices) {
+              dense_array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -522,10 +528,10 @@ highs_getRows(Highs* h, HighsInt num_set_entries,
                          get_num_nz);
 }
 
-std::tuple<HighsStatus, py::array_t<HighsInt>, py::array_t<HighsInt>,
-           py::array_t<double>>
+std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<HighsInt>,
+           dense_array_t<double>>
 highs_getRowsEntries(Highs* h, HighsInt num_set_entries,
-                     py::array_t<HighsInt> indices) {
+                     dense_array_t<HighsInt> indices) {
   py::buffer_info indices_info = indices.request();
   HighsInt* indices_ptr = static_cast<HighsInt*>(indices_info.ptr);
   // Make sure that the vectors are not empty
@@ -1268,7 +1274,7 @@ PYBIND11_MODULE(_core, m) {
             // length as an input data parameter
             return py::array(3, self.mip_solution);
           },
-          [](HighsCallbackDataOut& self, py::array_t<double> new_mip_solution) {
+          [](HighsCallbackDataOut& self, dense_array_t<double> new_mip_solution) {
                       self.mip_solution = new_mip_solution.mutable_data();
           });
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
