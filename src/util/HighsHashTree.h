@@ -113,7 +113,7 @@ class HighsHashTree {
     // to do a linear scan and key comparisons at all
     Occupation occupation;
     int size;
-    uint64_t hashes[capacity() + 1];
+    std::array<uint64_t, capacity() + 1> hashes;
     Entry entries[capacity()];
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
@@ -121,8 +121,10 @@ class HighsHashTree {
     template <int kOtherSize>
     InnerLeaf(InnerLeaf<kOtherSize>&& other) {
       assert(other.size <= capacity());
-      memcpy((void*)this, (void*)&other,
-             (char*)&other.hashes[other.size + 1] - (char*)&other);
+      occupation = other.occupation;
+      size = other.size;
+      std::copy(other.hashes.cbegin(),
+                std::next(other.hashes.cbegin(), size + 1), hashes.begin());
       std::move(&other.entries[0], &other.entries[size], &entries[0]);
     }
 
