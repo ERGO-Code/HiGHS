@@ -114,7 +114,7 @@ class HighsHashTree {
     Occupation occupation;
     int size;
     std::array<uint64_t, capacity() + 1> hashes;
-    Entry entries[capacity()];
+    std::array<Entry, capacity()> entries;
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
 
@@ -125,7 +125,8 @@ class HighsHashTree {
       size = other.size;
       std::copy(other.hashes.cbegin(),
                 std::next(other.hashes.cbegin(), size + 1), hashes.begin());
-      std::move(&other.entries[0], &other.entries[size], &entries[0]);
+      std::move(other.entries.begin(), std::next(other.entries.begin(), size),
+                entries.begin());
     }
 
     int get_num_entries() const { return size; }
@@ -192,7 +193,9 @@ class HighsHashTree {
 
       --size;
       if (pos < size) {
-        std::move(&entries[pos + 1], &entries[size + 1], &entries[pos]);
+        std::move(std::next(entries.begin(), pos + 1),
+                  std::next(entries.begin(), size + 1),
+                  std::next(entries.begin(), pos));
         memmove(&hashes[pos], &hashes[pos + 1],
                 sizeof(hashes[0]) * (size - pos));
         if (get_first_chunk16(hashes[startPos]) != hashChunk)
@@ -256,7 +259,9 @@ class HighsHashTree {
 
     void move_backward(const int& first, const int& last) {
       // move elements backwards
-      std::move_backward(&entries[first], &entries[last], &entries[last + 1]);
+      std::move_backward(std::next(entries.begin(), first),
+                         std::next(entries.begin(), last),
+                         std::next(entries.begin(), last + 1));
       memmove(&hashes[first + 1], &hashes[first],
               sizeof(hashes[0]) * (last - first));
     }
