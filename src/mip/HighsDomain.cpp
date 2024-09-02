@@ -276,7 +276,7 @@ void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
     HighsInt conflict = i >> 1;
 
     const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
-    HighsInt numInactiveDelta =
+    uint8_t numInactiveDelta =
         (domchg.boundval < newbound) - (domchg.boundval < oldbound);
     if (numInactiveDelta != 0) {
       conflictFlag_[conflict] += numInactiveDelta;
