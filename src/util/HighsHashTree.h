@@ -121,8 +121,10 @@ class HighsHashTree {
     template <int kOtherSize>
     InnerLeaf(InnerLeaf<kOtherSize>&& other) {
       assert(other.size <= capacity());
-      memcpy((void*)this, (void*)&other,
-             (char*)&other.hashes[other.size + 1] - (char*)&other);
+      occupation = other.occupation;
+      size = other.size;
+      std::copy(other.hashes.cbegin(),
+                std::next(other.hashes.cbegin(), size + 1), hashes.begin());
       std::move(other.entries.begin(), std::next(other.entries.begin(), size),
                 entries.begin());
     }
