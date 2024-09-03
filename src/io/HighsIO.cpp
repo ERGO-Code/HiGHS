@@ -138,7 +138,7 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                        HighsLogTypeTag[(int)type]);
       // assert that there are no encoding errors
       assert(l >= 0);
-      len += static_cast<size_t>(l);
+      len = static_cast<size_t>(l);
     }
     if (len < msgbuffer.size()) {
       int l = vsnprintf(msgbuffer.data() + len, msgbuffer.size() - len, format,
@@ -146,10 +146,6 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       // assert that there are no encoding errors
       assert(l >= 0);
       len += static_cast<size_t>(l);
-    }
-    if (len >= msgbuffer.size()) {
-      // Output was truncated: for now just ensure string is null-terminated
-      msgbuffer[msgbuffer.size() - 1] = '\0';
     }
     if (log_options_.user_log_callback) {
       log_options_.user_log_callback(type, msgbuffer.data(),
@@ -211,10 +207,6 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
     int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
     // assert that there are no encoding errors
     assert(len >= 0);
-    if (static_cast<size_t>(len) >= msgbuffer.size()) {
-      // Output was truncated: for now just ensure string is null-terminated
-      msgbuffer[msgbuffer.size() - 1] = '\0';
-    }
     if (log_options_.user_log_callback) {
       log_options_.user_log_callback(type, msgbuffer.data(),
                                      log_options_.user_log_callback_data);
@@ -274,11 +266,6 @@ std::string highsFormatToString(const char* format, ...) {
   int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
   // assert that there are no encoding errors
   assert(len >= 0);
-
-  if (static_cast<size_t>(len) >= msgbuffer.size()) {
-    // Output was truncated: for now just ensure string is null-terminated
-    msgbuffer[msgbuffer.size() - 1] = '\0';
-  }
   va_end(argptr);
   return std::string(msgbuffer.data());
 }

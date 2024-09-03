@@ -220,8 +220,7 @@ void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   HighsInt tokenlength =
       vsnprintf(stringbuffer.data(), stringbuffer.size(), format, argptr);
   va_end(argptr);
-  if (static_cast<size_t>(this->linelength + tokenlength) + 1 >=
-      stringbuffer.size()) {
+  if (this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
     fprintf(file, "\n");
     fprintf(file, "%s", stringbuffer.data());
     this->linelength = tokenlength;
