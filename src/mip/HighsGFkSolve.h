@@ -317,7 +317,7 @@ class HighsGFkSolve {
 
     // check if a solution exists by scanning the linearly dependent rows for
     // nonzero right hand sides
-    bool hasSolution[kNumRhs];
+    std::array<bool, kNumRhs> hasSolution;
     HighsInt numRhsWithSolution = 0;
     for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex) {
       hasSolution[rhsIndex] = true;
@@ -341,7 +341,7 @@ class HighsGFkSolve {
     // now iterate a subset of the basic solutions.
     // When a column leaves the basis we do not allow it to enter again so that
     // we iterate at most one solution for each nonbasic column
-    std::vector<SolutionEntry> solution[kNumRhs];
+    std::array<std::vector<SolutionEntry>, kNumRhs> solution;
     for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex)
       if (hasSolution[rhsIndex]) solution[rhsIndex].reserve(numCol);
 
@@ -384,7 +384,7 @@ class HighsGFkSolve {
       for (HighsInt i = numFactorRows - 1; i >= 0; --i) {
         HighsInt row = factorRowPerm[i];
 
-        unsigned int solval[kNumRhs];
+        std::array<unsigned int, kNumRhs> solval;
 
         for (int rhsIndex = 0; rhsIndex < kNumRhs; ++rhsIndex) {
           if (!hasSolution[rhsIndex]) continue;

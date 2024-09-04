@@ -131,27 +131,31 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       if (flush_streams) fflush(stdout);
     }
   } else {
-    int len = 0;
-    char msgbuffer[kIoBufferSize] = {};
-    if (prefix)
-      len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
-                     HighsLogTypeTag[(int)type]);
-    if (len < (int)sizeof(msgbuffer))
-      len +=
-          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-    if (len >= (int)sizeof(msgbuffer)) {
-      // Output was truncated: for now just ensure string is null-terminated
-      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    size_t len = 0;
+    std::array<char, kIoBufferSize> msgbuffer = {};
+    if (prefix) {
+      int l = snprintf(msgbuffer.data(), msgbuffer.size(), "%-9s",
+                       HighsLogTypeTag[(int)type]);
+      // assert that there are no encoding errors
+      assert(l >= 0);
+      len = static_cast<size_t>(l);
+    }
+    if (len < msgbuffer.size()) {
+      int l = vsnprintf(msgbuffer.data() + len, msgbuffer.size() - len, format,
+                        argptr);
+      // assert that there are no encoding errors
+      assert(l >= 0);
+      len += static_cast<size_t>(l);
     }
     if (log_options_.user_log_callback) {
-      log_options_.user_log_callback(type, msgbuffer,
+      log_options_.user_log_callback(type, msgbuffer.data(),
                                      log_options_.user_log_callback_data);
     }
     if (log_options_.user_callback_active) {
       assert(log_options_.user_callback);
       HighsCallbackDataOut data_out;
       data_out.log_type = int(type);
-      log_options_.user_callback(kCallbackLogging, msgbuffer, &data_out,
+      log_options_.user_callback(kCallbackLogging, msgbuffer.data(), &data_out,
                                  nullptr, log_options_.user_callback_data);
     }
   }
@@ -199,21 +203,18 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       if (flush_streams) fflush(stdout);
     }
   } else {
-    int len;
-    char msgbuffer[kIoBufferSize] = {};
-    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-    if (len >= (int)sizeof(msgbuffer)) {
-      // Output was truncated: for now just ensure string is null-terminated
-      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-    }
+    std::array<char, kIoBufferSize> msgbuffer = {};
+    int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+    // assert that there are no encoding errors
+    assert(len >= 0);
     if (log_options_.user_log_callback) {
-      log_options_.user_log_callback(type, msgbuffer,
+      log_options_.user_log_callback(type, msgbuffer.data(),
                                      log_options_.user_log_callback_data);
     } else if (log_options_.user_callback_active) {
       assert(log_options_.user_callback);
       HighsCallbackDataOut data_out;
       data_out.log_type = int(type);
-      log_options_.user_callback(kCallbackLogging, msgbuffer, &data_out,
+      log_options_.user_callback(kCallbackLogging, msgbuffer.data(), &data_out,
                                  nullptr, log_options_.user_callback_data);
     }
   }
@@ -261,16 +262,12 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  int len;
-  char msgbuffer[kIoBufferSize] = {};
-  len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-
-  if (len >= (int)sizeof(msgbuffer)) {
-    // Output was truncated: for now just ensure string is null-terminated
-    msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-  }
+  std::array<char, kIoBufferSize> msgbuffer = {};
+  int len = vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
+  // assert that there are no encoding errors
+  assert(len >= 0);
   va_end(argptr);
-  return std::string(msgbuffer);
+  return std::string(msgbuffer.data());
 }
 
 const std::string highsBoolToString(const bool b, const HighsInt field_width) {
