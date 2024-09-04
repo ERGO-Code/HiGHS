@@ -261,8 +261,8 @@ void checkComplementarySlackness(const State& state,
         if (fabs(state.colDual[i]) > tol &&
             fabs(state.colValue[i] - state.colUpper[i]) > tol) {
           if (dev_print)
-            std::cout << "Comp. slackness fail: "
-                      << "l[" << i << "]=" << state.colLower[i] << ", x[" << i
+            std::cout << "Comp. slackness fail: " << "l[" << i
+                      << "]=" << state.colLower[i] << ", x[" << i
                       << "]=" << state.colValue[i] << ", z[" << i
                       << "]=" << state.colDual[i] << std::endl;
           infeas = fabs(state.colDual[i]);
