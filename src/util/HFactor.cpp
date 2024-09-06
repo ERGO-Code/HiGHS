@@ -211,6 +211,7 @@ void HFactor::setupGeneral(
   num_row = num_row_;
   num_col = num_col_;
   num_basic = num_basic_;
+  inv_num_row = 1.0/num_row;
   this->a_matrix_valid = true;
   a_start = a_start_;
   a_index = a_index_;
@@ -1543,7 +1544,7 @@ void HFactor::ftranL(HVector& rhs, const double expected_density,
   }
 
   // Determine style of solve
-  double current_density = 1.0 * rhs.count / num_row;
+  double current_density = 1.0 * rhs.count * inv_num_row;
   const bool sparse_solve = rhs.count < 0 || current_density > kHyperCancel ||
                             expected_density > kHyperFtranL;
   if (sparse_solve) {
@@ -1591,7 +1592,7 @@ void HFactor::btranL(HVector& rhs, const double expected_density,
   factor_timer.start(FactorBtranLower, factor_timer_clock_pointer);
 
   // Determine style of solve
-  const double current_density = 1.0 * rhs.count / num_row;
+  const double current_density = 1.0 * rhs.count * inv_num_row;
   const bool sparse_solve = rhs.count < 0 || current_density > kHyperCancel ||
                             expected_density > kHyperBtranL;
   if (sparse_solve) {
@@ -1666,7 +1667,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
   // The regular part
   //
   // Determine style of solve
-  const double current_density = 1.0 * rhs.count / num_row;
+  const double current_density = 1.0 * rhs.count * inv_num_row;
   const bool sparse_solve = rhs.count < 0 || current_density > kHyperCancel ||
                             expected_density > kHyperFtranU;
   if (sparse_solve) {
@@ -1720,7 +1721,7 @@ void HFactor::ftranU(HVector& rhs, const double expected_density,
         rhs_synthetic_tick * 15 + (u_pivot_count - num_row) * 10;
     factor_timer.stop(use_clock, factor_timer_clock_pointer);
     if (report_ftran_upper_sparse) {
-      const double final_density = 1.0 * rhs.count / num_row;
+      const double final_density = 1.0 * rhs.count * inv_num_row;
       printf(
           "FactorFtranUpperSps: expected_density = %10.4g; current_density = "
           "%10.4g; final_density = %10.4g\n",
@@ -1773,7 +1774,7 @@ void HFactor::btranU(HVector& rhs, const double expected_density,
   // The regular part
   //
   // Determine style of solve
-  const double current_density = 1.0 * rhs.count / num_row;
+  const double current_density = 1.0 * rhs.count * inv_num_row;
   const bool sparse_solve = rhs.count < 0 || current_density > kHyperCancel ||
                             expected_density > kHyperBtranU;
   if (sparse_solve) {
