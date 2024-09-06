@@ -347,7 +347,7 @@ class HFactor {
   HighsInt num_row;
   HighsInt num_col;
   HighsInt num_basic;
-  double inv_num_row; // 1.0/num_row
+  double inv_num_row;  // 1.0/num_row
 
  private:
   bool a_matrix_valid;

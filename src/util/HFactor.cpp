@@ -211,7 +211,7 @@ void HFactor::setupGeneral(
   num_row = num_row_;
   num_col = num_col_;
   num_basic = num_basic_;
-  inv_num_row = 1.0/num_row;
+  inv_num_row = 1.0 / num_row;
   this->a_matrix_valid = true;
   a_start = a_start_;
   a_index = a_index_;

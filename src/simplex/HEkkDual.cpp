@@ -2003,7 +2003,8 @@ void HEkkDual::updateFtranBFRT() {
   if (time_updateFtranBFRT) {
     analysis->simplexTimerStop(FtranBfrtClock);
   }
-  const double local_col_BFRT_density = (double)col_BFRT.count * inv_solver_num_row;
+  const double local_col_BFRT_density =
+      (double)col_BFRT.count * inv_solver_num_row;
   ekk_instance_.updateOperationResultDensity(
       local_col_BFRT_density, ekk_instance_.info_.col_BFRT_density);
 }

@@ -388,7 +388,7 @@ class HEkkDual {
   HighsInt solver_num_row;
   HighsInt solver_num_col;
   HighsInt solver_num_tot;
-  double inv_solver_num_row; // 1.0 / solver_num_row
+  double inv_solver_num_row;  // 1.0 / solver_num_row
 
   const HighsSparseMatrix* a_matrix;
   const HSimplexNla* simplex_nla;
