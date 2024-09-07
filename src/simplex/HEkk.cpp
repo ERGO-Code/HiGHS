@@ -2126,6 +2126,7 @@ void HEkk::updateDualSteepestEdgeWeights(
 
   const double col_aq_scale = simplex_nla_.variableScaleFactor(variable_in);
   const double col_ap_scale = simplex_nla_.basicColScaleFactor(row_out);
+  const double inv_col_ap_scale = 1.0 / col_ap_scale;
 
   const bool DSE_check = false;
   HVector alt_dual_steepest_edge_column;
@@ -2165,7 +2166,7 @@ void HEkk::updateDualSteepestEdgeWeights(
     HighsInt DSE_array_count = 0;
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       const double dual_steepest_edge_array_value =
-          dual_steepest_edge_array[iRow] / col_ap_scale;
+          dual_steepest_edge_array[iRow] * inv_col_ap_scale;
       if (dual_steepest_edge_array_value) DSE_array_count++;
       if (std::abs(dual_steepest_edge_array_value) >
               dse_column_value_tolerance ||
@@ -2194,7 +2195,7 @@ void HEkk::updateDualSteepestEdgeWeights(
              (int)alt_dual_steepest_edge_column.count, (int)DSE_array_count);
       for (HighsInt iRow = 0; iRow < num_row; iRow++) {
         const double dual_steepest_edge_array_value =
-            dual_steepest_edge_array[iRow] / col_ap_scale;
+            dual_steepest_edge_array[iRow] * inv_col_ap_scale;
         if (alt_dual_steepest_edge_column.array[iRow] != 0 &&
             dual_steepest_edge_array_value != 0) {
           const double dse_column_error =
@@ -2236,7 +2237,7 @@ void HEkk::updateDualSteepestEdgeWeights(
       double basic_col_scale = simplex_nla_.basicColScaleFactor(iRow);
       aa_iRow /= basic_col_scale;
       aa_iRow *= col_aq_scale;
-      dual_steepest_edge_array_value /= col_ap_scale;
+      dual_steepest_edge_array_value *= inv_col_ap_scale;
     }
     if (DSE_check) {
       const double pivotal_column_error =
