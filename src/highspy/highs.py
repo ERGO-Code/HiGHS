@@ -36,6 +36,13 @@ from collections.abc import Mapping
 from itertools import groupby, product
 from operator import itemgetter
 from decimal import Decimal
+from threading import Thread
+
+
+class _ThreadingResult:
+    def __init__(self):
+        self.out = None
+
 
 class Highs(_Highs):
     """HiGHS solver interface"""
@@ -47,6 +54,12 @@ class Highs(_Highs):
     def silent(self):
         """Disables solver output to the console."""
         super().setOptionValue("output_flag", False)
+
+    def _run(self, res):
+        res.out = super().run()
+
+    def run(self):
+        return self.solve()
     
     # solve
     def solve(self):
@@ -55,11 +68,15 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status.
         """
-        return super().run()
+        res = _ThreadingResult()
+        t = Thread(target=self._run, args=(res,))
+        t.start()
+        t.join()
+        return res.out
 
     def optimize(self):
         """Alias for the solve method."""
-        return super().run()
+        return self.solve()
 
     # reset the objective and sense, then solve
     def minimize(self, obj=None):
@@ -91,7 +108,7 @@ class Highs(_Highs):
             super().changeObjectiveOffset(obj.constant)
 
         super().changeObjectiveSense(ObjSense.kMinimize)
-        return super().run()
+        return self.solve()
 
     # reset the objective and sense, then solve
     def maximize(self, obj=None):
@@ -123,7 +140,7 @@ class Highs(_Highs):
             super().changeObjectiveOffset(obj.constant)
 
         super().changeObjectiveSense(ObjSense.kMaximize)
-        return super().run()
+        return self.solve()
 
     def internal_get_value(self, var_index_collection, col_value):
         """Internal method to get the value of a variable in the solution. Could be value or dual."""

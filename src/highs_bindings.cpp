@@ -577,6 +577,15 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 
+HighsStatus highs_run(Highs* h)
+{
+  py::gil_scoped_release release;
+  HighsStatus status = h->run();
+  py::gil_scoped_acquire();
+  return status;
+}
+
+
 PYBIND11_MODULE(_core, m) {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
@@ -874,7 +883,7 @@ PYBIND11_MODULE(_core, m) {
       .def("writeBasis", &Highs::writeBasis)
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
-      .def("run", &Highs::run)
+      .def("run", &highs_run)
       .def("feasibilityRelaxation", 
      [](Highs& self, double global_lower_penalty, double global_upper_penalty, double global_rhs_penalty,
         py::object local_lower_penalty, py::object local_upper_penalty, py::object local_rhs_penalty) {
