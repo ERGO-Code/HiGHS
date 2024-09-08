@@ -534,6 +534,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   assert(row_upper.size() == 0);
   while (getline(file, strline)) {
     if (is_empty(strline) || strline[0] == '*') continue;
+    printf("HMpsFF::parseRows before rtrim: strline = \"%s\"\n", strline.c_str());
+    mpsCommentTrim(strline);
+    printf("HMpsFF::parseRows  after rtrim: strline = \"%s\"\n", strline.c_str());
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
@@ -588,7 +591,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     }
 
     std::string rowname = first_word(strline, start + 1);
+    printf("HMpsFF::parseRows rowname = \"%s\"; strline = \"%s\"\n", rowname.c_str(), strline.c_str());
     size_t rowname_end = first_word_end(strline, start + 1);
+    printf("HMpsFF::parseRows rowname_end = %d\n", int(rowname_end));
 
     // Detect if file is in fixed format.
     if (!is_end(strline, rowname_end)) {
