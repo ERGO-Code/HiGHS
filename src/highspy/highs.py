@@ -594,18 +594,18 @@ class Highs(_Highs):
 
                 for c,n in zip(range(initial_rows, self.numConstrs), names):
                     super().passRowName(int(c), str(n))
-            starts.append(nnz)
+
         except Exception as e:
             # rollback model if error - remove any constraints that were added
             status = super().deleteRows(self.numConstrs - initial_rows, np.arange(initial_rows, self.numConstrs, dtype=np.int32))
-        cons = [highs_cons(self.numConstrs - new_rows + n, self) for n in range(new_rows)] 
+
             if status != HighsStatus.kOk:
                 raise Exception("Failed to rollback model after failure.  Model might be in a undeterminate state.")
             else:
                 raise e
-            names = name or [f"{name_prefix}{n}" for n in range(new_rows)]
+
         return cons
-        return cons
+
     def __addRow(self, expr, idx):
         """
         Internal method to add a constraint to the model.
@@ -616,7 +616,6 @@ class Highs(_Highs):
             return highs_cons(idx, self)
         else:
             raise Exception("Constraint bounds must be set via comparison (>=,==,<=).")
-
 
     def expr(self, optional=None):
         """Creates a new highs_linear_expression object.
@@ -680,34 +679,34 @@ class Highs(_Highs):
         index = int(cons_or_index)
 
         # Delete the variable from the model if it exists
-           status = super().deleteRows(1, [index])
-           super().deleteRows(1, [index])
+        if index < self.numConstrs:
+            status = super().deleteRows(1, [index])
 
-           if status != HighsStatus.kOk:
-               raise Exception("Failed to delete constraint from the model.")
+            if status != HighsStatus.kOk:
+                raise Exception("Failed to delete constraint from the model.")
 
-        # Update the indices of constraints in the provided collections
-        for collection in args:
-            if isinstance(collection, dict):
-                # Update indices in a dictionary of constraints
-                for key, con in collection.items():
-                    if con.index > index:
-                        con.index -= 1
-                    elif con.index == index:
-                        con.index = -1
+            # Update the indices of constraints in the provided collections
+            for collection in args:
+                if isinstance(collection, dict):
+                    # Update indices in a dictionary of constraints
+                    for key, con in collection.items():
+                        if con.index > index:
+                            con.index -= 1
+                        elif con.index == index:
+                            con.index = -1
 
-            elif hasattr(collection, '__iter__'):
-                # Update indices in an iterable of constraints
-                for con in collection:
-                    if con.index > index:
-                        con.index -= 1
-                    elif con.index == index:
-                        con.index = -1
-            # If the collection is a single highs_cons object, check and update if necessary
-            elif isinstance(collection, highs_cons) and collection.index > index:
-                collection.index -= 1
-            elif isinstance(collection, highs_cons) and collection.index == index:
-                collection.index = -1
+                elif hasattr(collection, '__iter__'):
+                    # Update indices in an iterable of constraints
+                    for con in collection:
+                        if con.index > index:
+                            con.index -= 1
+                        elif con.index == index:
+                            con.index = -1
+                # If the collection is a single highs_cons object, check and update if necessary
+                elif isinstance(collection, highs_cons) and collection.index > index:
+                    collection.index -= 1
+                elif isinstance(collection, highs_cons) and collection.index == index:
+                    collection.index = -1
 
     def setMinimize(self):
         """
@@ -720,6 +719,7 @@ class Highs(_Highs):
         Sets the objective sense of the model to maximization.
         """
         super().changeObjectiveSense(ObjSense.kMaximize)
+
     def setInteger(self, var_or_collection):
         """Sets a variable/collection to integer.
 
@@ -731,10 +731,6 @@ class Highs(_Highs):
             super().changeColsIntegrality(len(idx), idx, np.full(len(idx), HighsVarType.kInteger, dtype=np.int32))
         else:
             super().changeColIntegrality(int(var_or_collection), HighsVarType.kInteger)
-
-    def setContinuous(self, var_or_collection):
-        """Sets a variable/collection to continuous.
-        """Sets a variable's type to integer.
 
     def setContinuous(self, var_or_collection):
         """Sets a variable/collection to continuous.
@@ -754,14 +750,8 @@ class Highs(_Highs):
         
         Args:
             items: A collection of highs_linear_expressions or highs_vars to be summed.
+        """
         expr = highs_linear_expression(initial)
-
-        for v in items:
-            expr += v
-
-        return expr
-
-        super().changeColIntegrality(var.index, HighsVarType.kContinuous)
 
         for v in items:
             expr += v
@@ -804,18 +794,11 @@ class highs_var(object):
     def __hash__(self):
         return int(self.index)
 
+    def __neg__(self):
         expr = highs_linear_expression(self)
         expr *= -1.0
         return expr
     
-        return highs_linear_expression(self) <= other
-
-    def __eq__(self, other):
-        return highs_linear_expression(self) == other
-    
-    def __ge__(self, other):
-        return highs_linear_expression(self) >= other
-
     def __add__(self, other):
         expr = highs_linear_expression(self)
         expr += other
@@ -834,37 +817,7 @@ class highs_var(object):
     def __rmul__(self, other):
         expr = highs_linear_expression(self)
         expr *= other
-        expr = highs_linear_expression(self)
-        expr -= other
         return expr
-
-    # self <= other
-    def __le__(self, other):
-        if isinstance(other, highs_linear_expression):
-            return other.__ge__(self)
-        else:
-            return highs_linear_expression(self).__le__(other)
-
-    # self == other
-    def __eq__(self, other):
-        if isinstance(other, highs_linear_expression):
-            return other.__eq__(self)
-        else:
-            return highs_linear_expression(self).__eq__(other)
-
-    # self != other
-    def __ne__(self, other):
-        if other == None:
-            return True
-        else:
-            raise Exception('Invalid comparison.')
-
-    # self >= other
-    def __ge__(self, other):
-        if isinstance(other, highs_linear_expression):
-            return other.__le__(self)
-        else:
-            return highs_linear_expression(self).__ge__(other)
 
     def __rsub__(self, other):
         expr = highs_linear_expression(other)
@@ -872,7 +825,9 @@ class highs_var(object):
         return expr
 
     def __sub__(self, other):
-        return highs_linear_expression(self) - other
+        expr = highs_linear_expression(self)
+        expr -= other
+        return expr
 
     # self <= other
     def __le__(self, other):
@@ -1005,7 +960,15 @@ class highs_linear_expression(object):
             self.vals = list(other.vals)
             self.constant = other.constant
             self.bounds = list(other.bounds) if other.bounds != None else None
-            self.constant = other
+
+        elif isinstance(other, highs_var):
+            self.vars = [other.index]
+            self.vals = [1.0]
+        
+        elif isinstance(other, (int, float, Decimal)):
+            self.vars = []
+            self.vals = []
+            self.constant = float(other)
 
         else:
             raise Exception('Invalid type for highs_linear_expression')
@@ -1062,7 +1025,7 @@ class highs_linear_expression(object):
             return True
         else:
             raise Exception('Invalid comparison.')
-            self.vals = [1.0]
+
     # self == other
     def __eq__(self, other):
         if self.bounds != None:
@@ -1074,7 +1037,7 @@ class highs_linear_expression(object):
             copy.bounds = [float(other) - (self.constant or 0.0), float(other) - (self.constant or 0.0)]
             copy.constant = None
             return copy
-            if self.LHS != -kHighsInf and self.RHS != kHighsInf and len(other.vars) > 0 or other.LHS != -kHighsInf:
+
         # self == other
         elif isinstance(other, highs_linear_expression):
             if other.bounds != None:
@@ -1095,15 +1058,6 @@ class highs_linear_expression(object):
             return copy
 
         # self == x
-                raise Exception('Cannot construct constraint with variables as bounds.')
-
-            # move variables from other to self
-            self.vars.extend(other.vars)
-            self.vals.extend([-1.0 * v for v in other.vals])
-            self.constant -= other.constant
-            self.RHS = 0
-            return self
-
         elif isinstance(other, highs_var):
             copy = highs_linear_expression()
 
