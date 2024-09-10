@@ -5,7 +5,7 @@
 HiGHS has implementations of the three main solution techniques for
 LP. HiGHS will choose the most appropriate technique for a given
 problem, but this can be over-ridden by setting the option
-[__solver__](solver).
+[__solver__](@ref option-solver).
 
 ### Simplex
 
@@ -19,7 +19,7 @@ J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
 2018 [DOI:
 10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
 
-The option [__simplex\_strategy__](simplex\_strategy) determines whether the primal solver or one of hte parallel solvers is to be used. 
+The option [__simplex\_strategy__](@ref option-simplex_strategy) determines whether the primal solver or one of hte parallel solvers is to be used. 
 
 ### Interior point
 

@@ -39,7 +39,7 @@ Get started by following [Install HiGHS](@ref).
 
 ## Overview
 
-The standalone [Executable](@ref) allows models to be solved from
+The standalone [executable](@ref executable) allows models to be solved from
 [MPS](https://en.wikipedia.org/wiki/MPS_(format)) or (CPLEX)
 [LP](https://web.mit.edu/lpsolve/doc/CPLEX-format.htm) files, with full control
 of the HiGHS run-time options, and the solution can be written to files in human
