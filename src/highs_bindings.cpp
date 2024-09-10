@@ -582,15 +582,25 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
   return std::make_tuple(status, row);
 }
 
-
-HighsStatus highs_run(Highs* h)
-{
-  py::gil_scoped_release release;
-  HighsStatus status = h->run();
-  py::gil_scoped_acquire();
-  return status;
+// Wrap the setCallback function. Pass a lambda wrapper around the python
+// function that acquires the GIL and appropriately handle user data passed to
+// the callback
+HighsStatus highs_setCallback(
+    Highs* h,
+    std::function<void(int, const std::string&, const HighsCallbackDataOut*,
+                       HighsCallbackDataIn*, py::handle)>
+        fn,
+    py::handle data) {
+  return h->setCallback(
+      [fn, data](int callbackType, const std::string& msg,
+                 const HighsCallbackDataOut* dataOut,
+                 HighsCallbackDataIn* dataIn, void* d) {
+        py::gil_scoped_acquire acquire;
+        return fn(callbackType, msg, dataOut, dataIn,
+                  py::handle(reinterpret_cast<PyObject*>(d)));
+      },
+      data.ptr());
 }
-
 
 PYBIND11_MODULE(_core, m) {
   // enum classes
@@ -889,7 +899,7 @@ PYBIND11_MODULE(_core, m) {
       .def("writeBasis", &Highs::writeBasis)
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
-      .def("run", &highs_run)
+      .def("run", &Highs::run, py::call_guard<py::gil_scoped_release>())
       .def("feasibilityRelaxation", 
      [](Highs& self, double global_lower_penalty, double global_upper_penalty, double global_rhs_penalty,
         py::object local_lower_penalty, py::object local_upper_penalty, py::object local_rhs_penalty) {
@@ -1021,10 +1031,7 @@ PYBIND11_MODULE(_core, m) {
       .def("solutionStatusToString", &Highs::solutionStatusToString)
       .def("basisStatusToString", &Highs::basisStatusToString)
       .def("basisValidityToString", &Highs::basisValidityToString)
-      .def(
-          "setCallback",
-          static_cast<HighsStatus (Highs::*)(HighsCallbackFunctionType, void*)>(
-              &Highs::setCallback))
+      .def("setCallback", &highs_setCallback)
       .def("startCallback",
            static_cast<HighsStatus (Highs::*)(const HighsCallbackType)>(
                &Highs::startCallback))

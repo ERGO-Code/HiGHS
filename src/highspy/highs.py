@@ -38,11 +38,6 @@ from decimal import Decimal
 from threading import Thread, local
 import numpy as np
 
-class _ThreadingResult:
-    def __init__(self):
-        self.out = None
-
-
 class Highs(_Highs):
     """
     HiGHS solver interface
@@ -56,13 +51,6 @@ class Highs(_Highs):
         Disables solver output to the console.
         """
         super().setOptionValue("output_flag", not turn_off_output)
-
-    def _run(self, res):
-        res.out = super().run()
-
-    def run(self):
-        return self.solve()
-    
    
     # solve
     def solve(self):
@@ -71,11 +59,7 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status.
         """
-        res = _ThreadingResult()
-        t = Thread(target=self._run, args=(res,))
-        t.start()
-        t.join()
-        return res.out
+        return super().run()
 
     def optimize(self):
         """
