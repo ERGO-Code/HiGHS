@@ -54,23 +54,12 @@ calls. These can be studied via the [C++ header file](https://github.com/ERGO-Co
 
 The C interface cannot make use of the C++ structures and enums, and its methods are documented [explicitly](@ref c-api).
 
-## Solution algorithms
+## Solvers
 
-For LPs, HiGHS has implementations of both the revised simplex and interior
-point methods. MIPs are solved by branch-and-cut, and QPs by active set.
-
-For LP, the novel features of the dual simplex solver are described in
-_Parallelizing the dual revised simplex method_, Q. Huangfu and
-J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
-2018 [DOI:
-10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5). For
-the interior point solver, the reference is _Implementation of an
-interior point method with basis preconditioning_, Mathematical
-Programming Computation, 12, 603-635, 2020. [DOI:
-10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8). There
-are no specific references to the techniques used in the MIP or QP
-solvers.
-
+For LPs, HiGHS has implementations of the revised simplex method,
+interior point method, and PDLP first order method. MIPs are solved by
+branch-and-cut, and QPs by active set. More information on the HiGHS
+solvers is [available](@ref solvers).
 
 ## Citing HiGHS
 
