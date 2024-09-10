@@ -136,7 +136,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // and duality gap that are within the tolerances supplied by
       // HiGHS, the HiGHS primal and dual feasibility tolerances may
       // not be satisfied since they are absolute, and in PDLP they
-      // are relative. Note that, even when only one PDLP row activit
+      // are relative. Note that, even when only one PDLP row activity
       // fails to satisfy the absolute tolerance, the absolute norm
       // measure reported by PDLP will not necessarily be the same as
       // with HiGHS, since PDLP uses the 2-norm, and HiGHS the

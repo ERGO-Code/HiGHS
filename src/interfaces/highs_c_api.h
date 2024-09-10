@@ -18,7 +18,7 @@
 // Highs_mipCall or Highs_qpCall, and these methods return the
 // appropriate solution information
 //
-// For sophisticated applications, where esoteric solutiuon
+// For sophisticated applications, where esoteric solution
 // information is needed, or if a sequence of modified models need to
 // be solved, use the Highs_create method to generate a pointer to an
 // instance of the C++ Highs class, and then use any of a large number
