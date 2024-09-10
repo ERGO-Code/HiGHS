@@ -1499,7 +1499,6 @@ class highs_linear_expression(object):
 
         return copy
 
-@staticmethod
 def qsum(items, initial=None):
     """Performs a faster sum for highs_linear_expressions.
         
