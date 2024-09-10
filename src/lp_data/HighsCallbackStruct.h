@@ -37,6 +37,7 @@ typedef struct {
   double mip_dual_bound;
   double mip_gap;
   double* mip_solution;
+  HighsInt mip_solution_size;
   HighsInt cutpool_num_col;
   HighsInt cutpool_num_cut;
   HighsInt cutpool_num_nz;
