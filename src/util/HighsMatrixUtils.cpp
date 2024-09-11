@@ -234,13 +234,18 @@ HighsStatus assessMatrix(
       error_found = true;
       assert(num_small_values == 0);
     }
-    highsLogUser(log_options, HighsLogType::kWarning,
-                 "%s matrix packed vector contains %" HIGHSINT_FORMAT
-                 " |values| in [%g, %g] "
-                 "less than or equal to %g: ignored\n",
-                 matrix_name.c_str(), num_small_values, min_small_value,
-                 max_small_value, small_matrix_value);
-    warning_found = true;
+    // If explicit zeros are ignored, then no model information is
+    // lost, so only report and return a warning if small nonzeros are
+    // ignored
+    if (max_small_value > 0) {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s matrix packed vector contains %" HIGHSINT_FORMAT
+                   " |values| in [%g, %g] "
+                   "less than or equal to %g: ignored\n",
+                   matrix_name.c_str(), num_small_values, min_small_value,
+                   max_small_value, small_matrix_value);
+      warning_found = true;
+    }
   }
   matrix_start[num_vec] = num_new_nz;
   HighsStatus return_status = HighsStatus::kOk;
