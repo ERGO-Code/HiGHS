@@ -173,8 +173,7 @@ bool HPresolve::okSetInput(HighsMipSolver& mipsolver,
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
   for (const HighsSliceNonzero& nz : getRowVector(row)) {
-    double val = nz.value() * scale;
-    if (std::abs(val - std::round(val)) > options->small_matrix_value)
+    if (fractionality(nz.value() * scale) > options->small_matrix_value)
       return false;
   }
 
@@ -252,9 +251,8 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
       double scale = 1.0 / nz.value();
       if (!rowCoefficientsIntegral(nz.index(), scale)) continue;
 
-      double rhs = model->row_lower_[nz.index()] * scale;
-
-      if (std::abs(rhs - std::round(rhs)) > primal_feastol) {
+      if (fractionality(model->row_lower_[nz.index()] * scale) >
+          primal_feastol) {
         // todo infeasible
       }
 
@@ -323,9 +321,9 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
       // if there is an equation the dual detection does not need to be tried
       runDualDetection = false;
       double scale = 1.0 / nz.value();
-      double rhs = model->row_lower_[nz.index()] * scale;
 
-      if (std::abs(rhs - std::round(rhs)) > primal_feastol) {
+      if (fractionality(model->row_lower_[nz.index()] * scale) >
+          primal_feastol) {
         continue;
       }
 
@@ -338,24 +336,20 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   if (!runDualDetection) return false;
 
   if ((model->col_lower_[col] != -kHighsInf &&
-       std::abs(std::round(model->col_lower_[col]) - model->col_lower_[col]) >
-           options->small_matrix_value) ||
+       fractionality(model->col_lower_[col]) > options->small_matrix_value) ||
       (model->col_upper_[col] != -kHighsInf &&
-       std::abs(std::round(model->col_upper_[col]) - model->col_upper_[col]) >
-           options->small_matrix_value))
+       fractionality(model->col_upper_[col]) > options->small_matrix_value))
     return false;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
-    if (model->row_upper_[nz.index()] != kHighsInf) {
-      double rhs = model->row_upper_[nz.index()];
-      if (std::abs(rhs - std::round(rhs)) > primal_feastol) return false;
-    }
+    if (model->row_upper_[nz.index()] != kHighsInf &&
+        fractionality(model->row_upper_[nz.index()]) > primal_feastol)
+      return false;
 
-    if (model->row_lower_[nz.index()] != -kHighsInf) {
-      double rhs = model->row_lower_[nz.index()];
-      if (std::abs(rhs - std::round(rhs)) > primal_feastol) return false;
-    }
+    if (model->row_lower_[nz.index()] != -kHighsInf &&
+        fractionality(model->row_lower_[nz.index()]) > primal_feastol)
+      return false;
 
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
   }
@@ -3305,7 +3299,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
           if (intScale != 0.0 && intScale <= 1e3) {
             double rhs = rowUpper * intScale;
-            if (std::abs(rhs - std::round(rhs)) > primal_feastol)
+            if (fractionality(rhs) > primal_feastol)
               return Result::kPrimalInfeasible;
 
             rhs = std::round(rhs);
@@ -3341,8 +3335,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               HighsInt x1Pos = rowpositions[x1Cand];
               HighsInt x1 = Acol[x1Pos];
               double rhs2 = rhs / static_cast<double>(d);
-              if (std::abs(std::round(rhs2) - rhs2) <=
-                  mipsolver->mipdata_->epsilon) {
+              if (fractionality(rhs2) <= mipsolver->mipdata_->epsilon) {
                 // the right hand side is integral, so we can substitute
                 // x1 = d * z
 
@@ -5723,10 +5716,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         }
 
         double scaleCand = colMax[duplicateCol].first / colMax[col].first;
-        colScale = std::round(scaleCand);
-        assert(std::abs(colScale) >= 1.0);
-        if (std::abs(colScale - scaleCand) > options->small_matrix_value)
+        if (fractionality(scaleCand, &colScale) > options->small_matrix_value)
           continue;
+        assert(std::abs(colScale) >= 1.0);
 
         // if the scale is larger than 1, duplicate column cannot compensate for
         // all values of scaled col due to integrality as the scaled column
