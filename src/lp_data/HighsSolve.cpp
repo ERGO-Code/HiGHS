@@ -126,8 +126,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                          "Inconsistent solution returned from solver\n");
             return HighsStatus::kError;
           }
-        }  // options.run_crossover == kHighsOnString
-      }  // unwelcome_ipx_status
+        }
+        // options.run_crossover == kHighsOnString
+      }
+      // unwelcome_ipx_status
     } else {
       // PDLP has been used, so check whether claim of optimality
       // satisfies the HiGHS criteria
