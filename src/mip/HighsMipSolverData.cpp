@@ -523,13 +523,10 @@ void HighsMipSolverData::runSetup() {
     HighsInt end = ARstart_[i + 1];
     bool integral = true;
     for (HighsInt j = start; j != end; ++j) {
-      if (integral) {
-        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::kContinuous)
-          integral = false;
-        else if (fractionality(ARvalue_[j]) > epsilon) {
-          integral = false;
-        }
-      }
+      integral =
+          integral &&
+          mipsolver.variableType(ARindex_[j]) != HighsVarType::kContinuous &&
+          fractionality(ARvalue_[j]) <= epsilon;
 
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
     }
