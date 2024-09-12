@@ -77,7 +77,7 @@ class HVectorBase {
   vector<Real> packValue;      //!< Packed values
 
   /**
-   * @brief Copy from another HVector structure to this instanc
+   * @brief Copy from another HVector structure to this instance
    */
   template <typename FromReal>
   void copy(const HVectorBase<FromReal>*
