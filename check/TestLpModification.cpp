@@ -1937,3 +1937,20 @@ TEST_CASE("modify-empty-model", "[highs_data]") {
   REQUIRE(highs.changeColBounds(0, 1, 1) == HighsStatus::kError);
   REQUIRE(highs.changeRowBounds(0, 1, 1) == HighsStatus::kError);
 }
+
+TEST_CASE("zero-matrix-entries", "[highs_data]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {5, 8};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 0, 0, 1};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+}
