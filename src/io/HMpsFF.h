@@ -126,7 +126,6 @@ class HMpsFF {
   HighsInt fillMatrix(const HighsLogOptions& log_options);
   HighsInt fillHessian(const HighsLogOptions& log_options);
 
-  const bool kAnyFirstNonBlankAsStarImpliesComment = false;
   /// how to treat variables that appear in COLUMNS section first
   /// assume them to be binary as in the original IBM interpretation
   /// or integer with default bounds
