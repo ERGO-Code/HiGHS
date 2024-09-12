@@ -218,10 +218,12 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
   } else {
     // Remove any trailing comment
     const size_t p = strline.find_first_of(mps_comment_chars);
-    printf("In rTrimAt, First of \"%s\" in \"%s\" is %zu\n", mps_comment_chars.c_str(), strline.c_str(), p);
-    // If a comment character has been found, then erase from it to
-    // the end of the line
-    if (p <= strline.length()) strline.erase(p);
+    if (p <= strline.length()) {
+    // A comment character has been found, so erase from it to the end
+    // of the line and check whether the line is now empty
+      strline.erase(p);
+      skip = is_empty(strline);
+    }
   }
   return true;
 }
@@ -541,7 +543,6 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
-  bool skip;
   bool hasobj = false;
   // Assign a default objective name
   objective_name = "Objective";
@@ -549,9 +550,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   assert(num_row == 0);
   assert(row_lower.size() == 0);
   assert(row_upper.size() == 0);
+  bool skip;
   while (getMpsLine(file, strline, skip)) {
     if (skip) continue;
-    printf("HMpsFF::parseRows: strline = \"%s\"\n", strline.c_str());
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
