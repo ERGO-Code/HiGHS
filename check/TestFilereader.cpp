@@ -351,7 +351,7 @@ TEST_CASE("filereader-comment", "[highs_filereader]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/comment.mps";
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   double objective_value = highs.getInfo().objective_function_value;

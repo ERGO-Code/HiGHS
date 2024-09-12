@@ -190,6 +190,7 @@ class HMpsFF {
 
   mutable std::string section_args;
 
+  bool timeout();
   bool getMpsLine(std::istream& file, std::string& strline, bool& skip);
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,

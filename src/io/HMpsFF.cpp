@@ -210,6 +210,10 @@ HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
   return 0;
 }
 
+bool HMpsFF::timeout() {
+  return time_limit > 0 && getWallTime() - start_time > time_limit;
+}
+
 bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
   skip = false;
   if (!getline(file, strline)) return false;
@@ -223,7 +227,10 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
       // of the line and check whether the line is now empty
       strline.erase(p);
       skip = is_empty(strline);
+      if (skip) return true;
     }
+    strline = trim(strline);
+    skip = is_empty(strline);
   }
   return true;
 }
@@ -468,8 +475,9 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
   std::string strline, word;
   bool skip;
   if (getMpsLine(file, strline, skip)) {
-    strline = trim(strline);
-    if (strline.empty()) return HMpsFF::Parsekey::kComment;
+    if (skip) return HMpsFF::Parsekey::kComment;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
+
     size_t s, e;
     HMpsFF::Parsekey key = checkFirstWord(strline, s, e, word);
     if (key == HMpsFF::Parsekey::kName) {
@@ -517,6 +525,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
   bool skip;
   while (getMpsLine(file, strline, skip)) {
     if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t start = 0;
     size_t end = 0;
@@ -555,9 +564,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   bool skip;
   while (getMpsLine(file, strline, skip)) {
     if (skip) continue;
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     bool isobj = false;
     bool isFreeRow = false;
@@ -693,16 +700,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     HMpsFF::Parsekey key = checkFirstWord(strline, start, end, word);
 
@@ -996,16 +995,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin = 0;
     size_t end = 0;
@@ -1158,16 +1149,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin = 0;
     size_t end = 0;
@@ -1433,16 +1416,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin, end;
     std::string word;
@@ -1582,16 +1557,8 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin = 0;
     size_t end = 0;
@@ -1706,6 +1673,9 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
     // read lines until start of new section
     bool skip;
     while (getMpsLine(file, strline, skip)) {
+      if (skip) continue;
+      if (timeout()) return HMpsFF::Parsekey::kTimeout;
+
       size_t begin = 0;
       size_t end = 0;
       HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
@@ -1730,16 +1700,8 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin = 0;
     size_t end = 0;
@@ -1880,16 +1842,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(const HighsLogOptions& log_options,
   std::string strline;
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin;
     std::string colname;
@@ -1919,16 +1873,8 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(const HighsLogOptions& log_options,
 
   bool skip;
   while (getMpsLine(file, strline, skip)) {
-    double current = getWallTime();
-    if (time_limit > 0 && current - start_time > time_limit)
-      return HMpsFF::Parsekey::kTimeout;
-
-    if (strline.size() > 0) {
-      // Just look for comment character in column 1
-      if (strline[0] == '*') continue;
-    }
-    trim(strline);
-    if (strline.size() == 0) continue;
+    if (skip) continue;
+    if (timeout()) return HMpsFF::Parsekey::kTimeout;
 
     size_t begin, end;
     std::string word;
