@@ -126,12 +126,3 @@ std::string first_word(std::string& str, size_t start) {
   assert(next_word_start != std::string::npos);
   return str.substr(next_word_start, next_word_end - next_word_start);
 }
-
-std::string& mpsCommentTrim(std::string& str) {
-  const size_t p = str.find_first_of(mps_comment_chars);
-  printf("In rTrimAt, First of \"%s\" in \"%s\" is %zu\n", mps_comment_chars.c_str(), str.c_str(), p);
-  if (p > str.length()) return str;
-  str.erase(p);
-  return str;
-}
-

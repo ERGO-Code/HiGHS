@@ -28,7 +28,6 @@ void strTrim(char* str);
 void tolower(std::string& str);
 
 const std::string default_non_chars = "\t\n\v\f\r ";
-const std::string mps_comment_chars = "*$";
 std::string& ltrim(std::string& str, const std::string& chars = default_non_chars);
 std::string& rtrim(std::string& str, const std::string& chars = default_non_chars);
 std::string& trim(std::string& str, const std::string& chars = default_non_chars);
@@ -41,7 +40,5 @@ bool is_end(std::string& str, size_t end, const std::string& chars = default_non
 // copy and also using function below. or do it properly with iterators.
 std::string first_word(std::string& str, size_t start);
 size_t first_word_end(std::string& str, size_t start);
-
-std::string& mpsCommentTrim(std::string& str);
 
 #endif

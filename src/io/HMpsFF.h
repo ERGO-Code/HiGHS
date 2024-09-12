@@ -38,6 +38,8 @@
 
 using Triplet = std::tuple<HighsInt, HighsInt, double>;
 
+const std::string mps_comment_chars = "*$";
+
 enum class FreeFormatParserReturnCode {
   kSuccess,
   kParserError,
@@ -188,6 +190,8 @@ class HMpsFF {
   std::unordered_map<std::string, int> colname2idx;
 
   mutable std::string section_args;
+
+  bool getMpsLine(std::istream& file, std::string& strline, bool& skip);
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);

@@ -210,6 +210,22 @@ HighsInt HMpsFF::fillHessian(const HighsLogOptions& log_options) {
   return 0;
 }
 
+bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
+  skip = false;
+  if (!getline(file, strline)) return false;
+  if (is_empty(strline) || strline[0] == '*') {
+    skip = true;
+  } else {
+    // Remove any trailing comment
+    const size_t p = strline.find_first_of(mps_comment_chars);
+    printf("In rTrimAt, First of \"%s\" in \"%s\" is %zu\n", mps_comment_chars.c_str(), strline.c_str(), p);
+    // If a comment character has been found, then erase from it to
+    // the end of the line
+    if (p <= strline.length()) strline.erase(p);
+  }
+  return true;
+}
+
 FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
   HMpsFF::Parsekey keyword = HMpsFF::Parsekey::kNone;
@@ -525,6 +541,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
                                    std::istream& file) {
   std::string strline, word;
+  bool skip;
   bool hasobj = false;
   // Assign a default objective name
   objective_name = "Objective";
@@ -532,11 +549,9 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   assert(num_row == 0);
   assert(row_lower.size() == 0);
   assert(row_upper.size() == 0);
-  while (getline(file, strline)) {
-    if (is_empty(strline) || strline[0] == '*') continue;
-    printf("HMpsFF::parseRows before rtrim: strline = \"%s\"\n", strline.c_str());
-    mpsCommentTrim(strline);
-    printf("HMpsFF::parseRows  after rtrim: strline = \"%s\"\n", strline.c_str());
+  while (getMpsLine(file, strline, skip)) {
+    if (skip) continue;
+    printf("HMpsFF::parseRows: strline = \"%s\"\n", strline.c_str());
     double current = getWallTime();
     if (time_limit > 0 && current - start_time > time_limit)
       return HMpsFF::Parsekey::kTimeout;
