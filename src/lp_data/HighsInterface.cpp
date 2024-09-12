@@ -1712,7 +1712,7 @@ HighsStatus Highs::elasticityFilterReturn(
 
   if (return_status == HighsStatus::kOk) {
     // Solution is invalidated by deleting rows and columns, but
-    // primal values are correct. Have to recompute row acivities,
+    // primal values are correct. Have to recompute row activities,
     // though
     this->model_.lp_.a_matrix_.productQuad(this->solution_.row_value,
                                            this->solution_.col_value);
@@ -1842,7 +1842,7 @@ HighsStatus Highs::elasticityFilter(
       const double lower_penalty = has_local_lower_penalty
                                        ? local_lower_penalty[iCol]
                                        : global_lower_penalty;
-      // Negative lower penalty and infininte upper bound implies that the
+      // Negative lower penalty and infinite upper bound implies that the
       // bounds cannot be violated
       if (lower_penalty < 0 && upper >= kHighsInf) continue;
 
@@ -1850,7 +1850,7 @@ HighsStatus Highs::elasticityFilter(
       const double upper_penalty = has_local_upper_penalty
                                        ? local_upper_penalty[iCol]
                                        : global_upper_penalty;
-      // Infininte upper bound and negative lower penalty implies that the
+      // Infinite upper bound and negative lower penalty implies that the
       // bounds cannot be violated
       if (lower <= -kHighsInf && upper_penalty < 0) continue;
       erow_lower.push_back(lower);
