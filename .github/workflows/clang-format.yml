@@ -8,9 +8,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: DoozyX/clang-format-lint-action@v0.14
+    - uses: DoozyX/clang-format-lint-action@v0.18
       with:
-        source: 'app/ src/Highs.h ./src/lp_data ./src/mip ./src/model ./src/simplex ./src/presolve  ./src/simplex ./src/util ./src/test'
+        # source: 'app/ src/Highs.h ./src/lp_data ./src/mip ./src/model ./src/simplex ./src/presolve  ./src/simplex ./src/util ./src/test'
         #./src/test ./interfaces'
-        extensions: 'h,cpp,c'
-        clangFormatVersion: 14
+        source: '.'
+        extensions: 'h,hpp,cpp,cc,c'
+        clangFormatVersion: 18
