@@ -13,5 +13,6 @@ jobs:
         # source: 'app/ src/Highs.h ./src/lp_data ./src/mip ./src/model ./src/simplex ./src/presolve  ./src/simplex ./src/util ./src/test'
         #./src/test ./interfaces'
         source: '.'
+        exclude: 'extern/pdqsort extern/zstr'
         extensions: 'h,hpp,cpp,cc,c'
         clangFormatVersion: 18
