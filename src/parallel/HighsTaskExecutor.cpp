@@ -21,7 +21,18 @@ thread_local HighsTaskExecutor::ExecutorHandle
     HighsTaskExecutor::globalExecutorHandle{};
 #endif
 
-HighsTaskExecutor::ExecutorHandle::~ExecutorHandle() {
-  if (ptr && this == ptr->mainWorkerHandle.load(std::memory_order_relaxed))
-    HighsTaskExecutor::shutdown();
+void HighsTaskExecutor::ExecutorHandle::dispose() {
+  if (ptr != nullptr) {
+    // check to see if we are the main worker and if so, shut down the executor
+    if (std::this_thread::get_id() == ptr->mainWorkerId.load()) {
+      ptr->stopWorkerThreads(false);
+    }
+
+    // check to see if we are the last handle and if so, delete the executor
+    if (--ptr->referenceCount == 0) {
+      cache_aligned::Deleter<HighsTaskExecutor>()(ptr);
+    }
+
+    ptr = nullptr;
+  }
 }
