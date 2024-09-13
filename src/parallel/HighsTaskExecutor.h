@@ -85,31 +85,23 @@ class HighsTaskExecutor {
     return nullptr;
   }
 
-  void run_worker(int workerId) {
-    // spin until the global executor pointer is set up
-    ExecutorHandle* executor;
-    // Following yields warning C4706: assignment within conditional
-    // expression when building libhighs on Windows (/W4):
-    //
-    //    while (!(executor = mainWorkerHandle.load(std::memory_order_acquire)))
-    //      HighsSpinMutex::yieldProcessor();
-    while (true) {
-      executor = mainWorkerHandle.load(std::memory_order_acquire);
-      if (executor != nullptr) break;
-      HighsSpinMutex::yieldProcessor();
-    }
+  static void run_worker(
+      int workerId,
+      ExecutorHandle* executor,
+      highs::cache_aligned::shared_ptr<HighsTaskExecutor> ref) {
+
     // now acquire a reference count of the global executor
     threadLocalExecutorHandle() = *executor;
-    HighsSplitDeque* localDeque = workerDeques[workerId].get();
+    HighsSplitDeque* localDeque = ref->workerDeques[workerId].get();
     threadLocalWorkerDeque() = localDeque;
-    HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
+    HighsTask* currentTask = ref->workerBunk->waitForNewTask(localDeque);
     while (currentTask != nullptr) {
       localDeque->runStolenTask(currentTask);
 
-      currentTask = random_steal_loop(localDeque);
+      currentTask = ref->random_steal_loop(localDeque);
       if (currentTask != nullptr) continue;
 
-      currentTask = workerBunk->waitForNewTask(localDeque);
+      currentTask = ref->workerBunk->waitForNewTask(localDeque);
     }
   }
 
@@ -124,8 +116,12 @@ class HighsTaskExecutor {
           workerBunk, workerDeques.data(), i, numThreads);
 
     threadLocalWorkerDeque() = workerDeques[0].get();
-    for (int i = 1; i < numThreads; ++i)
-      std::thread([&](int id) { run_worker(id); }, i).detach();
+  }
+
+  void init(ExecutorHandle* executor) {
+    for (int i = 1, numThreads = workerDeques.size(); i < numThreads; ++i) {
+      std::thread(&HighsTaskExecutor::run_worker, i, executor, executor->ptr).detach();
+    }
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
@@ -143,16 +139,13 @@ class HighsTaskExecutor {
           cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
       executorHandle.ptr->mainWorkerHandle.store(&executorHandle,
                                                  std::memory_order_release);
+      executorHandle.ptr->init(&executorHandle);
     }
   }
 
   static void shutdown(bool blocking = false) {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr) {
-      // first spin until every worker has acquired its executor reference
-      while (executorHandle.ptr.use_count() !=
-             (long)executorHandle.ptr->workerDeques.size())
-        HighsSpinMutex::yieldProcessor();
       // set the active flag to false first with release ordering
       executorHandle.ptr->mainWorkerHandle.store(nullptr,
                                                  std::memory_order_release);
