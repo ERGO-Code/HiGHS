@@ -89,7 +89,6 @@ class HighsTaskExecutor {
   }
 
   static void run_worker(int workerId, HighsTaskExecutor* ptr) {
-
     threadLocalExecutorHandle().ptr = ptr;
 
     // check if main thread has shutdown before thread has started
