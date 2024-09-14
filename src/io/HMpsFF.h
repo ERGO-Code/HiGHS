@@ -38,6 +38,8 @@
 
 using Triplet = std::tuple<HighsInt, HighsInt, double>;
 
+const std::string mps_comment_chars = "*$";
+
 enum class FreeFormatParserReturnCode {
   kSuccess,
   kParserError,
@@ -124,7 +126,6 @@ class HMpsFF {
   HighsInt fillMatrix(const HighsLogOptions& log_options);
   HighsInt fillHessian(const HighsLogOptions& log_options);
 
-  const bool kAnyFirstNonBlankAsStarImpliesComment = false;
   /// how to treat variables that appear in COLUMNS section first
   /// assume them to be binary as in the original IBM interpretation
   /// or integer with default bounds
@@ -188,6 +189,9 @@ class HMpsFF {
   std::unordered_map<std::string, int> colname2idx;
 
   mutable std::string section_args;
+
+  bool timeout();
+  bool getMpsLine(std::istream& file, std::string& strline, bool& skip);
 
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);

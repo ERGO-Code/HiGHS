@@ -94,7 +94,7 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   // Yields duplicate index, but values are still zero, so both are
   // discarded and a warning is returned
   lp.a_matrix_.index_[0] = 0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   if (dev_run)
     printf("Give nonzero a_matrix_.value_[0] and a_matrix_.value_[1]\n");

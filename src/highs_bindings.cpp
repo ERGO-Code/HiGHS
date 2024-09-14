@@ -277,22 +277,22 @@ HighsStatus highs_changeColsIntegrality(Highs* h, HighsInt num_set_entries,
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                              std::vector<HighsInt>& indices) {
+                             std::vector<HighsInt>& indices) {
   return h->deleteCols(num_set_entries, indices.data());
 }
 
-HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries, std::vector<HighsInt>& indices) {
-    return h->deleteRows(num_set_entries, indices.data());
+HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
+                             std::vector<HighsInt>& indices) {
+  return h->deleteRows(num_set_entries, indices.data());
 }
-
 
 HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
   return h->setSolution(solution);
 }
 
 HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
-				    py::array_t<HighsInt> index,
-				    py::array_t<double> value) {
+                                    py::array_t<HighsInt> index,
+                                    py::array_t<double> value) {
   py::buffer_info index_info = index.request();
   py::buffer_info value_info = value.request();
 
@@ -302,14 +302,11 @@ HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
   return h->setSolution(num_entries, index_ptr, value_ptr);
 }
 
-
 HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
   return h->setBasis(basis);
 }
 
-HighsStatus highs_setLogicalBasis(Highs* h) {
-  return h->setBasis();
-}
+HighsStatus highs_setLogicalBasis(Highs* h) { return h->setBasis(); }
 
 std::tuple<HighsStatus, py::object> highs_getOptionValue(
     Highs* h, const std::string& option) {
@@ -576,31 +573,28 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
   return std::make_tuple(status, row);
 }
 
-
-HighsStatus highs_run(Highs* h)
-{
+HighsStatus highs_run(Highs* h) {
   py::gil_scoped_release release;
   HighsStatus status = h->run();
   py::gil_scoped_acquire();
   return status;
 }
 
-
 PYBIND11_MODULE(_core, m) {
   // enum classes
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
       .value("kMaximize", ObjSense::kMaximize);
-      // // .export_values();
+  // // .export_values();
   py::enum_<MatrixFormat>(m, "MatrixFormat")
       .value("kColwise", MatrixFormat::kColwise)
       .value("kRowwise", MatrixFormat::kRowwise)
       .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
-      // // .export_values();
+  // // .export_values();
   py::enum_<HessianFormat>(m, "HessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
       .value("kSquare", HessianFormat::kSquare);
-      // .export_values();
+  // .export_values();
   py::enum_<SolutionStatus>(m, "SolutionStatus")
       .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
       .value("kSolutionStatusInfeasible",
@@ -631,7 +625,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
       .value("kInterrupt", HighsModelStatus::kInterrupt)
       .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)
@@ -643,49 +637,51 @@ PYBIND11_MODULE(_core, m) {
       .value("kTimeout", HighsPresolveStatus::kTimeout)
       .value("kNullError", HighsPresolveStatus::kNullError)
       .value("kOptionsError", HighsPresolveStatus::kOptionsError);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
       .value("kLower", HighsBasisStatus::kLower)
       .value("kBasic", HighsBasisStatus::kBasic)
       .value("kUpper", HighsBasisStatus::kUpper)
       .value("kZero", HighsBasisStatus::kZero)
       .value("kNonbasic", HighsBasisStatus::kNonbasic);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsVarType>(m, "HighsVarType")
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
       .value("kSemiInteger", HighsVarType::kSemiInteger);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsOptionType>(m, "HighsOptionType")
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
       .value("kDouble", HighsOptionType::kDouble)
       .value("kString", HighsOptionType::kString);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsInfoType>(m, "HighsInfoType")
       .value("kInt64", HighsInfoType::kInt64)
       .value("kInt", HighsInfoType::kInt)
       .value("kDouble", HighsInfoType::kDouble);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsStatus>(m, "HighsStatus")
       .value("kError", HighsStatus::kError)
       .value("kOk", HighsStatus::kOk)
       .value("kWarning", HighsStatus::kWarning);
-      // .export_values();
+  // .export_values();
   py::enum_<HighsLogType>(m, "HighsLogType")
       .value("kInfo", HighsLogType::kInfo)
       .value("kDetailed", HighsLogType::kDetailed)
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError);
-      // .export_values();
+  // .export_values();
   py::enum_<IisStrategy>(m, "IisStrategy")
       .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
-      .value("kIisStrategyFromLpRowPriority", IisStrategy::kIisStrategyFromLpRowPriority)
-      .value("kIisStrategyFromLpColPriority", IisStrategy::kIisStrategyFromLpColPriority)
+      .value("kIisStrategyFromLpRowPriority",
+             IisStrategy::kIisStrategyFromLpRowPriority)
+      .value("kIisStrategyFromLpColPriority",
+             IisStrategy::kIisStrategyFromLpColPriority)
       .value("kIisStrategyMax", IisStrategy::kIisStrategyMax);
-      // .export_values();
+  // .export_values();
   py::enum_<IisBoundStatus>(m, "IisBoundStatus")
       .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
       .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
@@ -693,7 +689,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
       .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
       .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed);
-      // .export_values();
+  // .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -884,36 +880,39 @@ PYBIND11_MODULE(_core, m) {
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &highs_run)
-      .def("feasibilityRelaxation", 
-     [](Highs& self, double global_lower_penalty, double global_upper_penalty, double global_rhs_penalty,
-        py::object local_lower_penalty, py::object local_upper_penalty, py::object local_rhs_penalty) {
-         std::vector<double> llp, lup, lrp;
-         const double* llp_ptr = nullptr;
-         const double* lup_ptr = nullptr;
-         const double* lrp_ptr = nullptr;
+      .def(
+          "feasibilityRelaxation",
+          [](Highs& self, double global_lower_penalty,
+             double global_upper_penalty, double global_rhs_penalty,
+             py::object local_lower_penalty, py::object local_upper_penalty,
+             py::object local_rhs_penalty) {
+            std::vector<double> llp, lup, lrp;
+            const double* llp_ptr = nullptr;
+            const double* lup_ptr = nullptr;
+            const double* lrp_ptr = nullptr;
 
-         if (!local_lower_penalty.is_none()) {
-             llp = local_lower_penalty.cast<std::vector<double>>();
-             llp_ptr = llp.data();
-         }
-         if (!local_upper_penalty.is_none()) {
-             lup = local_upper_penalty.cast<std::vector<double>>();
-             lup_ptr = lup.data();
-         }
-         if (!local_rhs_penalty.is_none()) {
-             lrp = local_rhs_penalty.cast<std::vector<double>>();
-             lrp_ptr = lrp.data();
-         }
+            if (!local_lower_penalty.is_none()) {
+              llp = local_lower_penalty.cast<std::vector<double>>();
+              llp_ptr = llp.data();
+            }
+            if (!local_upper_penalty.is_none()) {
+              lup = local_upper_penalty.cast<std::vector<double>>();
+              lup_ptr = lup.data();
+            }
+            if (!local_rhs_penalty.is_none()) {
+              lrp = local_rhs_penalty.cast<std::vector<double>>();
+              lrp_ptr = lrp.data();
+            }
 
-         return self.feasibilityRelaxation(global_lower_penalty, global_upper_penalty, global_rhs_penalty,
-                                           llp_ptr, lup_ptr, lrp_ptr);
-     },
-     py::arg("global_lower_penalty"),
-     py::arg("global_upper_penalty"),
-     py::arg("global_rhs_penalty"),
-     py::arg("local_lower_penalty") = py::none(),
-     py::arg("local_upper_penalty") = py::none(),
-     py::arg("local_rhs_penalty") = py::none())
+            return self.feasibilityRelaxation(
+                global_lower_penalty, global_upper_penalty, global_rhs_penalty,
+                llp_ptr, lup_ptr, lrp_ptr);
+          },
+          py::arg("global_lower_penalty"), py::arg("global_upper_penalty"),
+          py::arg("global_rhs_penalty"),
+          py::arg("local_lower_penalty") = py::none(),
+          py::arg("local_upper_penalty") = py::none(),
+          py::arg("local_rhs_penalty") = py::none())
       .def("getIis", &Highs::getIis)
       .def("presolve", &Highs::presolve)
       .def("writeSolution", &highs_writeSolution)
@@ -1005,7 +1004,7 @@ PYBIND11_MODULE(_core, m) {
       .def("changeColsBounds", &highs_changeColsBounds)
       .def("changeColsIntegrality", &highs_changeColsIntegrality)
       .def("deleteCols", &highs_deleteCols)
-      .def("deleteVars", &highs_deleteCols) // alias
+      .def("deleteVars", &highs_deleteCols)  // alias
       .def("deleteRows", &highs_deleteRows)
       .def("setSolution", &highs_setSolution)
       .def("setSolution", &highs_setSparseSolution)
@@ -1031,15 +1030,15 @@ PYBIND11_MODULE(_core, m) {
                                   &Highs::stopCallback));
 
   py::class_<HighsIis>(m, "HighsIis")
-    .def(py::init<>())
-    .def("invalidate", &HighsIis::invalidate)
-    .def_readwrite("valid", &HighsIis::valid_)
-    .def_readwrite("strategy", &HighsIis::strategy_)
-    .def_readwrite("col_index", &HighsIis::col_index_)
-    .def_readwrite("row_index", &HighsIis::row_index_)
-    .def_readwrite("col_bound", &HighsIis::col_bound_)
-    .def_readwrite("row_bound", &HighsIis::row_bound_)
-    .def_readwrite("info", &HighsIis::info_);
+      .def(py::init<>())
+      .def("invalidate", &HighsIis::invalidate)
+      .def_readwrite("valid", &HighsIis::valid_)
+      .def_readwrite("strategy", &HighsIis::strategy_)
+      .def_readwrite("col_index", &HighsIis::col_index_)
+      .def_readwrite("row_index", &HighsIis::row_index_)
+      .def_readwrite("col_bound", &HighsIis::col_bound_)
+      .def_readwrite("row_bound", &HighsIis::row_bound_)
+      .def_readwrite("info", &HighsIis::info_);
   // structs
   py::class_<HighsSolution>(m, "HighsSolution")
       .def(py::init<>())
@@ -1079,9 +1078,9 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("row_bound_up", &HighsRanging::row_bound_up)
       .def_readwrite("row_bound_dn", &HighsRanging::row_bound_dn);
   py::class_<HighsIisInfo>(m, "HighsIisInfo")
-    .def(py::init<>())
-    .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
-    .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
+      .def(py::init<>())
+      .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
+      .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;
@@ -1237,9 +1236,10 @@ PYBIND11_MODULE(_core, m) {
              HighsCallbackType::kCallbackMipImprovingSolution)
       .value("kCallbackMipLogging", HighsCallbackType::kCallbackMipLogging)
       .value("kCallbackMipInterrupt", HighsCallbackType::kCallbackMipInterrupt)
-      .value("kCallbackMipGetCutPool", HighsCallbackType::kCallbackMipGetCutPool)
+      .value("kCallbackMipGetCutPool",
+             HighsCallbackType::kCallbackMipGetCutPool)
       .value("kCallbackMipDefineLazyConstraints",
-	     HighsCallbackType::kCallbackMipDefineLazyConstraints)
+             HighsCallbackType::kCallbackMipDefineLazyConstraints)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
@@ -1269,7 +1269,7 @@ PYBIND11_MODULE(_core, m) {
             return py::array(3, self.mip_solution);
           },
           [](HighsCallbackDataOut& self, py::array_t<double> new_mip_solution) {
-                      self.mip_solution = new_mip_solution.mutable_data();
+            self.mip_solution = new_mip_solution.mutable_data();
           });
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn")
       .def(py::init<>())

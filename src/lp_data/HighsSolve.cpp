@@ -127,7 +127,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             return HighsStatus::kError;
           }
         }  // options.run_crossover == kHighsOnString
-      }    // unwelcome_ipx_status
+      }  // unwelcome_ipx_status
     } else {
       // PDLP has been used, so check whether claim of optimality
       // satisfies the HiGHS criteria
