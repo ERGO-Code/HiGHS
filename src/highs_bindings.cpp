@@ -657,11 +657,11 @@ PYBIND11_MODULE(_core, m) {
   py::enum_<ObjSense>(m, "HighsObjSense")
       .value("kMinimize", ObjSense::kMinimize)
       .value("kMaximize", ObjSense::kMaximize);
-  py::enum_<MatrixFormat>(m, "MatrixFormat")
+  py::enum_<MatrixFormat>(m, "HighsMatrixFormat")
       .value("kColwise", MatrixFormat::kColwise)
       .value("kRowwise", MatrixFormat::kRowwise)
       .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
-  py::enum_<HessianFormat>(m, "HessianFormat")
+  py::enum_<HessianFormat>(m, "HighsHessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
       .value("kSquare", HessianFormat::kSquare);
   py::enum_<HighsModelStatus>(m, "HighsModelStatus", py::module_local())
@@ -726,20 +726,18 @@ PYBIND11_MODULE(_core, m) {
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError);
-  py::enum_<IisStrategy>(m, "IisStrategy")
-      .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
-      .value("kIisStrategyFromLpRowPriority",
-             IisStrategy::kIisStrategyFromLpRowPriority)
-      .value("kIisStrategyFromLpColPriority",
-             IisStrategy::kIisStrategyFromLpColPriority)
-      .value("kIisStrategyMax", IisStrategy::kIisStrategyMax);
-  py::enum_<IisBoundStatus>(m, "IisBoundStatus")
-      .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
-      .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
-      .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
-      .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
-      .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
-      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed);
+  py::enum_<IisStrategy>(m, "HighsIisStrategy")
+      .value("kMin", IisStrategy::kIisStrategyMin)
+      .value("kFromLpRowPriority", IisStrategy::kIisStrategyFromLpRowPriority)
+      .value("kFromLpColPriority", IisStrategy::kIisStrategyFromLpColPriority)
+      .value("kMax", IisStrategy::kIisStrategyMax);
+  py::enum_<IisBoundStatus>(m, "HighsIisBoundStatus")
+      .value("kDropped", IisBoundStatus::kIisBoundStatusDropped)
+      .value("kNull", IisBoundStatus::kIisBoundStatusNull)
+      .value("kFree", IisBoundStatus::kIisBoundStatusFree)
+      .value("kLower", IisBoundStatus::kIisBoundStatusLower)
+      .value("kUpper", IisBoundStatus::kIisBoundStatusUpper)
+      .value("kBoxed", IisBoundStatus::kIisBoundStatusBoxed);
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix", py::module_local())
       .def(py::init<>())
@@ -1144,19 +1142,16 @@ PYBIND11_MODULE(_core, m) {
   py::module_ simpc =
       m.def_submodule("simplex_constants", "Submodule for simplex constants");
 
-  py::enum_<SimplexStrategy>(simplex_constants, "SimplexStrategy", py::module_local())
-      .value("kSimplexStrategyMin", SimplexStrategy::kSimplexStrategyMin)
-      .value("kSimplexStrategyChoose", SimplexStrategy::kSimplexStrategyChoose)
-      .value("kSimplexStrategyDual", SimplexStrategy::kSimplexStrategyDual)
-      .value("kSimplexStrategyDualPlain",
-             SimplexStrategy::kSimplexStrategyDualPlain)
-      .value("kSimplexStrategyDualTasks",
-             SimplexStrategy::kSimplexStrategyDualTasks)
-      .value("kSimplexStrategyDualMulti",
-             SimplexStrategy::kSimplexStrategyDualMulti)
-      .value("kSimplexStrategyPrimal", SimplexStrategy::kSimplexStrategyPrimal)
-      .value("kSimplexStrategyMax", SimplexStrategy::kSimplexStrategyMax)
-      .value("kSimplexStrategyNum", SimplexStrategy::kSimplexStrategyNum)
+  py::enum_<SimplexStrategy>(simpc, "HighsSimplexStrategy")
+      .value("kMin", SimplexStrategy::kSimplexStrategyMin)
+      .value("kChoose", SimplexStrategy::kSimplexStrategyChoose)
+      .value("kDual", SimplexStrategy::kSimplexStrategyDual)
+      .value("kDualPlain", SimplexStrategy::kSimplexStrategyDualPlain)
+      .value("kDualTasks", SimplexStrategy::kSimplexStrategyDualTasks)
+      .value("kDualMulti", SimplexStrategy::kSimplexStrategyDualMulti)
+      .value("kPrimal", SimplexStrategy::kSimplexStrategyPrimal)
+      .value("kMax", SimplexStrategy::kSimplexStrategyMax)
+      .value("kNum", SimplexStrategy::kSimplexStrategyNum)
       .export_values();  // needed since it isn't an enum class
   py::enum_<SimplexCrashStrategy>(simpc, "HighsSimplexCrashStrategy")
       .value("kMin", SimplexCrashStrategy::kSimplexCrashStrategyMin)
