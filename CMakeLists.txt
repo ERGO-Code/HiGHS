@@ -71,6 +71,8 @@ if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
+option(DEBUG_MEMORY "DEBUG_MEMORY" OFF)
+
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
@@ -358,12 +360,6 @@ if(NOT FAST_BUILD OR CSHARP)
   endif(CMAKE_CSharp_COMPILER)
 endif()
 
-# uncomment for memory debugging
-# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-
 # if zlib is found, then we can enable reading zlib-compressed input
 if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
@@ -393,6 +389,33 @@ message(STATUS "Git hash: " ${GITHASH})
 # message(STATUS "Compilation date: " ${TODAY})
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+if (DEBUG_MEMORY)
+  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+  # set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
+
+  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined -fno-optimize-sibling-calls ")
+  # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined -fno-optimize-sibling-calls ")
+
+  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined")
+  # set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address,undefined")
+
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=thread,undefined -O0 -g")
+  set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=thread,undefined -O0 -g")
+
+  #-fsanitize=memory -fPIE -pie
+
+
+  # # AddressSanitize
+  # set(CMAKE_C_FLAGS_ASAN
+  #     "-fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
+  #     CACHE STRING "Flags used by the C compiler during AddressSanitizer builds."
+  #     FORCE)
+  # set(CMAKE_CXX_FLAGS_ASAN
+  #     "-fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
+  #     CACHE STRING "Flags used by the C++ compiler during AddressSanitizer builds."
+  #     FORCE)
+endif()
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
