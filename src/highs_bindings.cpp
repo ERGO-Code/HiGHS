@@ -463,7 +463,7 @@ highs_getColEntries(Highs* h, HighsInt col) {
 
 std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h,
                                                                HighsInt row) {
-  double cost, lower, upper;
+  double lower, upper;
   HighsInt get_num_row;
   HighsInt get_num_nz;
   HighsInt row_ = static_cast<HighsInt>(row);
@@ -474,7 +474,6 @@ std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h,
 
 std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<double>>
 highs_getRowEntries(Highs* h, HighsInt row) {
-  double cost, lower, upper;
   HighsInt get_num_row;
   HighsInt get_num_nz;
   HighsInt row_ = static_cast<HighsInt>(row);
