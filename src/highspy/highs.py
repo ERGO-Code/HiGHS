@@ -6,13 +6,16 @@ from itertools import product
 from threading import Thread, local, RLock, Lock
 from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union
 
-from ._core import (
-    ObjSense,
+from highspy._core import (
+    # enum classes
+    HighsObjSense,
     HighsVarType,
     HighsStatus,
+    # classes
     cb,  # type: ignore
-    _Highs,  # type: ignore
+    _Highs,
     readonly_ptr_wrapper_double,
+    # constants
     kHighsInf,
 )
 
@@ -210,7 +213,7 @@ class Highs(_Highs):
             super().changeColsCost(len(idxs), idxs, vals)
             super().changeObjectiveOffset(expr.constant or 0.0)
 
-        super().changeObjectiveSense(ObjSense.kMinimize)
+        super().changeObjectiveSense(HighsObjSense.kMinimize)
         return self.solve()
 
     # reset the objective and sense, then solve
@@ -246,7 +249,7 @@ class Highs(_Highs):
             super().changeColsCost(len(idxs), idxs, vals)
             super().changeObjectiveOffset(expr.constant or 0.0)
 
-        super().changeObjectiveSense(ObjSense.kMaximize)
+        super().changeObjectiveSense(HighsObjSense.kMaximize)
         return self.solve()
 
     @staticmethod
@@ -1127,16 +1130,12 @@ class Highs(_Highs):
                     collection.index = -1
 
     def setMinimize(self):
-        """
-        Sets the objective sense of the model to minimization.
-        """
-        super().changeObjectiveSense(ObjSense.kMinimize)
+        """Sets the objective sense of the model to minimization."""
+        super().changeObjectiveSense(HighsObjSense.kMinimize)
 
     def setMaximize(self):
-        """
-        Sets the objective sense of the model to maximization.
-        """
-        super().changeObjectiveSense(ObjSense.kMaximize)
+        """Sets the objective sense of the model to maximization."""
+        super().changeObjectiveSense(HighsObjSense.kMaximize)
 
     def setInteger(self, var_or_collection: Union[highs_var, int, Iterable[Union[highs_var, int]]]):
         """
