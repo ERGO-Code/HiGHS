@@ -26,3 +26,6 @@ option('with_tests',
 option('with_pybind11',
        type : 'boolean',
        value : false)
+option('do_install',
+       type : 'boolean',
+       value : true)
