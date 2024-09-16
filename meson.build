@@ -25,6 +25,7 @@ _args += cppc.get_supported_arguments([
   '-Wno-unused-variable',
   '-Wno-unused-but-set-variable',
   '-Wno-unused-label',
+  '-Wno-sign-compare',
 ])
 
 if cppc.get_id() == 'msvc'
