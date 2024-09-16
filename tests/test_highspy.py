@@ -1,11 +1,10 @@
 import tempfile
 import unittest
-
-from highspy.highs import highs_linear_expression, qsum
 import highspy
+from highspy.highs import highs_linear_expression, qsum
 import numpy as np
 from sys import platform
-
+import signal
 
 class TestHighsPy(unittest.TestCase):
     def assertEqualExpr(self, expr, vars, vals, constant=None, bounds=None):
@@ -1259,8 +1258,147 @@ class TestHighsPy(unittest.TestCase):
             expr += x
         self.assertEqualExpr(expr, X, [1]*10)
 
+    def test_user_interrupts(self):
+        N = 8
+        h = highspy.Highs()
+        h.silent()
 
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
 
+        h.addConstrs(h.qsum(x[i,:]) == 1 for i in range(N))    # each row has exactly one queen
+        h.addConstrs(h.qsum(x[:,j]) == 1 for j in range(N))    # each col has exactly one queen
+
+        h.addConstrs(h.qsum(x.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen
+        h.addConstrs(h.qsum(y.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each 'reverse' diagonal has at most one queen
+
+        h.HandleUserInterrupt = True
+        t = h.startSolve()
+        self.assertRaises(Exception, lambda: h.startSolve())
+        h.cancelSolve()
+        h.wait()
+
+        h = self.get_basic_model()
+        h.HandleKeyboardInterrupt = True
+        self.assertEqual(h.HandleKeyboardInterrupt, True)
+        self.assertEqual(h.HandleUserInterrupt, True)
+
+        h.solve()
+        h.minimize()
+        h.maximize()
+        h.minimize()
+
+        h.joinSolve(h.startSolve())
+        h.joinSolve(h.startSolve(), 0)
+
+        # replace wait function with Ctrl+C signal
+        highspy.highs.Highs.wait = lambda self, t: signal.raise_signal(signal.SIGINT)
+        h.HandleKeyboardInterrupt = False
+
+        self.assertEqual(h.HandleKeyboardInterrupt, False)
+        self.assertEqual(h.HandleUserInterrupt, False)
+
+        h.joinSolve(h.startSolve(), 0)
+        h.startSolve()
+        h.joinSolve(None, 0)
+
+        with self.assertRaises(SystemExit):
+            h.startSolve()
+            h.joinSolve(None, 5)
+            unittest.main(exit=False)
+
+    def test_callbacks(self):
+        N = 8
+        h = highspy.Highs()
+        h.silent(False)
+
+        x = h.addBinaries(N, N)
+        y = np.fliplr(x)
+
+        h.addConstrs(h.qsum(x[i,:]) == 1 for i in range(N))    # each row has exactly one queen
+        h.addConstrs(h.qsum(x[:,j]) == 1 for j in range(N))    # each col has exactly one queen
+
+        h.addConstrs(h.qsum(x.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen
+        h.addConstrs(h.qsum(y.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each 'reverse' diagonal has at most one queen
+
+        do_nothing = lambda e: None
+        
+        check_callback = []
+        chk_callback = lambda e: check_callback.append(e)
+
+        # check callback is added and called
+        h.cbLogging += chk_callback
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+        h.solve()
+        self.assertNotEqual(len(check_callback), 0)
+        check_callback.clear()
+
+        # check callback is removed and not called
+        h.cbLogging -= chk_callback
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
+        h.solve()
+        self.assertEqual(len(check_callback), 0)
+        check_callback.clear()
+
+        h.disableCallbacks()
+        self.assertRaises(Exception, lambda: h.cbLogging.subscribe(do_nothing))
+        h.enableCallbacks()
+
+        h.cbLogging += chk_callback
+        h.cbSimplexInterrupt += do_nothing
+        h.cbIpmInterrupt += do_nothing
+        h.cbMipSolution += do_nothing
+        h.cbMipImprovingSolution += do_nothing
+        h.cbMipLogging += do_nothing
+        h.cbMipInterrupt += do_nothing
+        h.cbMipGetCutPool += do_nothing
+        h.cbMipDefineLazyConstraints += do_nothing
+
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+
+        # check callback is disabled and not called
+        h.disableCallbacks()        
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+        h.solve()
+        self.assertEqual(len(check_callback), 0)
+        check_callback.clear()
+
+        # check callback is enabled and called
+        h.enableCallbacks()
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+        h.solve()
+        self.assertNotEqual(len(check_callback), 0)
+        check_callback.clear()
+
+        h.cbLogging -= chk_callback
+        h.cbSimplexInterrupt -= do_nothing
+        h.cbIpmInterrupt -= do_nothing
+        h.cbMipSolution -= do_nothing
+        h.cbMipImprovingSolution -= do_nothing
+        h.cbMipLogging -= do_nothing
+        h.cbMipInterrupt -= do_nothing
+        h.cbMipGetCutPool -= do_nothing
+        h.cbMipDefineLazyConstraints -= do_nothing
+
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
+        h.cbLogging.subscribe(do_nothing)
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+        h.cbLogging.unsubscribe(do_nothing)
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
+        h.cbLogging.unsubscribe(do_nothing)  # does not throw error if not exists
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
+
+        h.cbLogging.subscribe(do_nothing, 'test')
+        self.assertEqual(len(h.cbLogging.callbacks), 1)
+        h.cbLogging.unsubscribe_by_data('test')
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
+
+        h.cbLogging += do_nothing
+        h.cbLogging += do_nothing
+        h.cbLogging += do_nothing
+        self.assertEqual(len(h.cbLogging.callbacks), 3)
+        h.cbLogging.clear()
+        self.assertEqual(len(h.cbLogging.callbacks), 0)
 
 
 class TestHighsLinearExpressionPy(unittest.TestCase):

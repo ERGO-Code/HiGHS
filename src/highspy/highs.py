@@ -13,6 +13,7 @@ from ._core import (
     HighsInfoType,
     HighsStatus,
     HighsLogType,
+    cb,
     # classes
     HighsSparseMatrix,
     HighsLp,
@@ -29,13 +30,13 @@ from ._core import (
     HighsRanging,
     # constants
     kHighsInf,
-    kHighsIInf,
+    kHighsIInf
 )
 
 from collections.abc import Mapping
 from itertools import product
 from decimal import Decimal
-from threading import Thread, local
+from threading import Thread, local, RLock, Lock
 import numpy as np
 
 class Highs(_Highs):
@@ -44,6 +45,16 @@ class Highs(_Highs):
     """
     def __init__(self):
         super().__init__()
+
+        self.__handle_keyboard_interrupt = False
+        self.__handle_user_interrupt = False
+        self.__solver_should_stop = False
+        self.__solver_stopped = RLock()
+        self.__solver_started = Lock()
+        self.__solver_status = None
+
+        self.callbacks = [HighsCallback(cb.HighsCallbackType(_), self) for _ in range(int(cb.HighsCallbackType.kCallbackMax) + 1)]
+        self.enableCallbacks()
 
     # Silence logging
     def silent(self, turn_off_output=True):
@@ -59,7 +70,120 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status.
         """
-        return super().run()
+        if self.HandleKeyboardInterrupt == False:
+            return super().run()
+        else:
+            return self.joinSolve(self.startSolve())
+
+    def startSolve(self):
+        """
+        Starts the solver in a separate thread.  Useful for handling KeyboardInterrupts.
+        Do not attempt to modify the model while the solver is running.
+
+        Returns:
+            A Thread object representing the solver thread.
+        """
+        if self.is_solver_running() == False:
+            self.__solver_started.acquire()
+            self.__solver_should_stop = False
+            self.__solver_status = None
+
+            t = Thread(target=Highs.__solve, args=(self,), daemon=True)
+            t.start()
+
+            # wait for solver thread to start to avoid synchronization issues
+            try:
+                self.__solver_started.acquire(True)
+            finally:
+                self.__solver_started.release()
+                return t
+        else:
+            raise Exception("Solver is already running.")
+
+    def is_solver_running(self):
+        is_running = True
+        try:
+            # try to acquire lock, if we can't, solver is already running
+            is_running = not self.__solver_stopped.acquire(False)
+            return is_running
+        finally:
+            if is_running == False:
+                self.__solver_stopped.release()
+
+    # internal solve method for use with threads
+    # will set the status of the solver when finished and release the shared lock
+    def __solve(self):
+        try:
+            self.__solver_stopped.acquire(True)
+            self.__solver_started.release()  # allow main thread to continue
+            self.__solver_status = super().run()
+
+            # avoid potential deadlock in Windows
+            # can remove once HiGHS is updated to handle this internally
+            _Highs.resetGlobalScheduler(False)
+        finally:
+            self.__solver_stopped.release()
+
+    def joinSolve(self, solver_thread=None, interrupt_limit=5):
+        """
+        Waits for the solver to finish. If solver_thread is provided, it will handle KeyboardInterrupts.
+
+        Args:
+            solver_thread: A Thread object representing the solver thread (optional).
+            interrupt_limit: The number of times to allow KeyboardInterrupt before forcing termination (optional).
+
+        Returns:
+            A HighsStatus object containing the solve status.
+        """
+        if solver_thread is not None and interrupt_limit <= 0:
+            result = (False, None)
+
+            try:
+                while result[0] == False:
+                    result = self.wait(0.1)
+                return result[1]
+
+            except KeyboardInterrupt:
+                print('KeyboardInterrupt: Waiting for HiGHS to finish...')
+                self.cancelSolve()
+
+        elif interrupt_limit > 0:
+            result = (False, None)
+
+            for count in range(interrupt_limit):
+                try:
+                    while result[0] == False:
+                        result = self.wait(0.1)
+                    return result[1]
+
+                except KeyboardInterrupt:
+                    print(f'Ctrl-C pressed {count+1} times: Waiting for HiGHS to finish. ({interrupt_limit} times to force termination)')
+                    self.cancelSolve()
+    
+            # if we reach this point, we should force termination
+            print("Forcing termination...")
+            exit(1)
+
+        try:
+            # wait for shared lock, i.e., solver to finish
+            self.__solver_stopped.acquire(True)
+        except KeyboardInterrupt:
+            pass  # ignore additional KeyboardInterrupt here
+        finally:
+            self.__solver_stopped.release()
+            
+        return self.__solver_status
+
+    def wait(self, timeout=-1.0):
+        result = False, None
+
+        try:
+            result = self.__solver_stopped.acquire(True, timeout=timeout), self.__solver_status
+            return result
+        finally:
+            if result[0] == True:
+                self.__solver_status = None  # reset status
+                self.__solver_stopped.release()
 
     def optimize(self):
         """
@@ -131,7 +255,8 @@ class Highs(_Highs):
         super().changeObjectiveSense(ObjSense.kMaximize)
         return self.solve()
 
-    def internal_get_value(self, array_values, index_collection):
+    @staticmethod
+    def internal_get_value(array_values, index_collection):
         """
         Internal method to get the value of an index from an array of values. Could be value or dual, variable or constraint.
         """
@@ -142,10 +267,10 @@ class Highs(_Highs):
             return index_collection.evaluate(array_values)
 
         elif isinstance(index_collection, Mapping):
-            return {k: self.internal_get_value(array_values, v) for k,v in index_collection.items()}
+            return {k: Highs.internal_get_value(array_values, v) for k,v in index_collection.items()}
 
         else:
-            return np.asarray([self.internal_get_value(array_values, v) for v in index_collection])
+            return np.asarray([Highs.internal_get_value(array_values, v) for v in index_collection])
 
     def val(self, var):
         """Gets the value of a variable/index or expression in the solution.
@@ -156,7 +281,7 @@ class Highs(_Highs):
         Returns:
             The value of the variable in the solution.
         """
-        return self.internal_get_value(super().getSolution().col_value, var)
+        return Highs.internal_get_value(super().getSolution().col_value, var)
 
     def vals(self, vars):
         """Gets the values of multiple variables in the solution.
@@ -167,7 +292,7 @@ class Highs(_Highs):
         Returns:
             If vars is a Mapping, returns a dict where keys are the same keys from the input vars and values are the solution values of the corresponding variables. If vars is an iterable, returns a list of solution values for the variables.
         """
-        return self.internal_get_value(super().getSolution().col_value, vars)
+        return Highs.internal_get_value(super().getSolution().col_value, vars)
 
     def variableName(self, var):
         """Retrieves the name of a specific variable.
@@ -253,7 +378,7 @@ class Highs(_Highs):
         Returns:
             The dual value of the specified variable in the solution.
         """
-        return self.internal_get_value(super().getSolution().col_dual, var)
+        return Highs.internal_get_value(super().getSolution().col_dual, var)
 
     def variableDuals(self, vars):
         """Retrieves the dual values of multiple variables in the solution.
@@ -264,7 +389,7 @@ class Highs(_Highs):
         Returns:
             If vars is a Mapping, returns a dict where keys are the same keys from the input vars and values are the dual values of the corresponding variables. If vars is an iterable, returns a list of dual values for the variables.
         """
-        return self.internal_get_value(super().getSolution().col_dual, vars)
+        return Highs.internal_get_value(super().getSolution().col_dual, vars)
 
 
     def allVariableDuals(self):
@@ -284,7 +409,7 @@ class Highs(_Highs):
         Returns:
             The value of the specified constraint in the solution.
         """
-        return self.internal_get_value(super().getSolution().row_value, con)
+        return Highs.internal_get_value(super().getSolution().row_value, con)
 
     def constrValues(self, cons):
         """Retrieves the values of multiple constraints in the solution.
@@ -295,7 +420,7 @@ class Highs(_Highs):
         Returns:
             If cons is a Mapping, returns a dict where keys are the same keys from the input cons and values are the solution values of the corresponding constraints. If cons is an iterable, returns a list of solution values for the constraints.
         """
-        return self.internal_get_value(super().getSolution().row_value, cons)
+        return Highs.internal_get_value(super().getSolution().row_value, cons)
 
     def allConstrValues(self):
         """Retrieves the values of all constraints in the solution.
@@ -314,7 +439,7 @@ class Highs(_Highs):
         Returns:
             The dual value of the specified constraint in the solution.
         """
-        return self.internal_get_value(super().getSolution().row_dual, con)
+        return Highs.internal_get_value(super().getSolution().row_dual, con)
     
     def constrDuals(self, cons):
         """Retrieves the dual values of multiple constraints in the solution.
@@ -325,7 +450,7 @@ class Highs(_Highs):
         Returns:
             If cons is a Mapping, returns a dict where keys are the same keys from the input cons and values are the dual values of the corresponding constraints. If cons is an iterable, returns a list of dual values for the constraints.
         """
-        return self.internal_get_value(super().getSolution().row_dual, cons)
+        return Highs.internal_get_value(super().getSolution().row_dual, cons)
 
     def allConstrDuals(self):
         """Retrieves the dual values of all constraints in the solution.
@@ -741,6 +866,253 @@ class Highs(_Highs):
             expr += v
 
         return expr
+
+    ##
+    ## Callback support, with optional user interrupt handling
+    ##
+    @staticmethod
+    def __internal_callback(callback_type, message, data_out, data_in, user_callback_data):
+        user_callback_data.callbacks[int(callback_type)].fire(message, data_out, data_in)
+
+    def enableCallbacks(self):
+        """
+        Enables callbacks, restarting them if they were previously enabled.
+        """
+        super().setCallback(Highs.__internal_callback, self)
+
+        # restart callbacks if any exist
+        for cb in self.callbacks:
+            if len(cb.callbacks) > 0:
+                self.startCallback(cb.callback_type)
+
+    def disableCallbacks(self):
+        """
+        Disables all callbacks.
+        """
+        status = super().setCallback(None, None) # this will also stop all callbacks
+
+        if status != HighsStatus.kOk:
+            raise Exception("Failed to disable callbacks.")
+
+    def cancelSolve(self):
+        """
+        If HandleUserInterrupt is enabled, this method will signal the solver to stop.
+        """
+        self.__solver_should_stop = True
+    
+    @property
+    def HandleKeyboardInterrupt(self):
+        """
+        Get/Set whether the solver should handle KeyboardInterrupt (i.e., cancel solve on Ctrl+C). Also enables/disables HandleUserInterrupt.
+        """
+        return self.__handle_keyboard_interrupt
+
+    @HandleKeyboardInterrupt.setter
+    def HandleKeyboardInterrupt(self, value):
+        self.__handle_keyboard_interrupt = value
+        self.HandleUserInterrupt = value
+
+    @property
+    def HandleUserInterrupt(self):
+        """
+        Get/Set whether the solver should handle user interrupts (i.e., cancel solve on user request)
+        """
+        return self.__handle_user_interrupt
+
+    @HandleUserInterrupt.setter
+    def HandleUserInterrupt(self, value):
+        self.__handle_user_interrupt = value
+        
+        if value == True:
+            self.cbSimplexInterrupt += self.__user_interrupt_event
+            self.cbIpmInterrupt += self.__user_interrupt_event
+            self.cbMipInterrupt += self.__user_interrupt_event
+        else:
+            self.cbSimplexInterrupt -= self.__user_interrupt_event
+            self.cbIpmInterrupt -= self.__user_interrupt_event
+            self.cbMipInterrupt -= self.__user_interrupt_event
+
+    def __user_interrupt_event(self, e):
+        if self.__solver_should_stop and e.data_in != None:
+            e.data_in.user_interrupt = True
+
+    @property
+    def cbLogging(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackLogging)]
+
+    @property
+    def cbSimplexInterrupt(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackSimplexInterrupt)]
+
+    @property
+    def cbIpmInterrupt(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackIpmInterrupt)]
+
+    @property
+    def cbMipSolution(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipSolution)]
+
+    @property
+    def cbMipImprovingSolution(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipImprovingSolution)]
+
+    @property
+    def cbMipLogging(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipLogging)]
+
+    @property
+    def cbMipInterrupt(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipInterrupt)]
+                              
+    @property
+    def cbMipGetCutPool(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipGetCutPool)]
+
+    @property
+    def cbMipDefineLazyConstraints(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipDefineLazyConstraints)]
+    
+    # callback setters are required for +=/-= syntax
+    # e.g., h.cbLogging += my_callback
+    @cbLogging.setter
+    def cbLogging(self, value):
+        pass
+
+    @cbSimplexInterrupt.setter
+    def cbSimplexInterrupt(self, value):
+        pass
+
+    @cbIpmInterrupt.setter
+    def cbIpmInterrupt(self, value):
+        pass
+
+    @cbMipSolution.setter
+    def cbMipSolution(self, value):
+        pass
+
+    @cbMipImprovingSolution.setter
+    def cbMipImprovingSolution(self, value):
+        pass
+
+    @cbMipLogging.setter
+    def cbMipLogging(self, value):
+        pass
+
+    @cbMipInterrupt.setter
+    def cbMipInterrupt(self, value):
+        pass
+                              
+    @cbMipGetCutPool.setter
+    def cbMipGetCutPool(self, value):
+        pass
+
+    @cbMipDefineLazyConstraints.setter
+    def cbMipDefineLazyConstraints(self, value):
+        pass
+
+##
+## Callback support
+## 
+class HighsCallbackEvent(object):
+    __slots__ = ['message', 'data_out', 'data_in', 'user_data']
+
+    def __init__(self, message, data_out, data_in, user_data):
+        self.message = message
+        self.data_out = data_out
+        self.data_in = data_in
+        self.user_data = user_data
+
+    def val(self, var):
+        """
+        Gets the value(s) of a variable/index or expression in the callback solution.
+        """
+        return Highs.internal_get_value(self.data_out.mip_solution, var)
+
+class HighsCallback(object):
+    __slots__ = ['callbacks', 'user_callback_data', 'highs', 'callback_type']
+
+    def __init__(self, callback_type, highs):
+        self.callbacks = []
+        self.user_callback_data = []
+        self.callback_type = callback_type
+        self.highs = highs
+
+    def subscribe(self, callback, user_data=None):
+        """
+        Subscribes a callback to the event.
+
+        Args:
+            callback: The callback function to be executed.
+            user_data: Optional user data to be passed to the callback.
+        """
+        if len(self.callbacks) == 0:
+            status = self.highs.startCallback(self.callback_type)
+
+            if status != HighsStatus.kOk:
+                raise Exception("Failed to start callback.")
+
+        self.callbacks.append(callback)
+        self.user_callback_data.append(user_data)
+
+    def unsubscribe(self, callback):
+        """
+        Unsubscribes a callback from the event.
+
+        Args:
+            callback: The callback function to be removed.
+        """
+        try:
+            idx = self.callbacks.index(callback)
+            del self.callbacks[idx]
+            del self.user_callback_data[idx]
+
+            if len(self.callbacks) == 0:
+                self.highs.stopCallback(self.callback_type)
+
+        except ValueError:
+            pass
+
+    def unsubscribe_by_data(self, user_data):
+        """
+        Unsubscribes a callback by user data.
+
+        Args:
+            user_data: The user data corresponding to the callback(s) to be removed.
+        """
+        idx = reversed([i for i,ud in enumerate(self.user_callback_data) if ud == user_data])
+
+        for i in idx:
+            del self.callbacks[i]
+            del self.user_callback_data[i]
+
+        if len(self.callbacks) == 0:
+            self.highs.stopCallback(self.callback_type)
+
+    def __iadd__(self, callback):
+        self.subscribe(callback)
+        return self
+
+    def __isub__(self, callback):
+        self.unsubscribe(callback)
+        return self
+
+    def clear(self):
+        """
+        Unsubscribes all callbacks from the event.
+        """
+        self.callbacks = []
+        self.user_callback_data = []
+        self.highs.stopCallback(self.callback_type)
+
+    def fire(self, message, data_out, data_in):
+        """
+        Fires the event, executing all subscribed callbacks.
+        """
+        e = HighsCallbackEvent(message, data_out, data_in, None)
+
+        for fn,user_data in zip(self.callbacks, self.user_callback_data):
+            e.user_data = user_data
+            fn(e)
 
 
 ## The following classes keep track of variables
@@ -1406,9 +1778,7 @@ class highs_linear_expression(object):
     # We essentially want to "rewrite" this as '(lb <= expr) <= ub', while keeping the expr instance immutable.
     # As a slight hack, we can use a shared (thread local) object to keep track of the chain.
     #
-    # Whenever we perform an inequality, we first check if the current expression ('self') is part of a chain. 
-    # If it is, we copy the inner '__chain' expression rather than 'self'.
-    # 
+    # Whenever we perform an inequality, we first check if the current expression is part of a chain. 
     # This inner '__chain' is set by __bool__(lb <= expr) and is reset after the inequality is evaluated.
     #
     # Two potential issues:
