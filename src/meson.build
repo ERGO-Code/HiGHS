@@ -277,10 +277,10 @@ _srcs = [
 
 highslib_srcs = [
   highs_conf_file,
-  _srcs,
-  _cupdlp_srcs,
-  _basiclu_srcs,
-  _ipx_srcs
+  files(_srcs),
+  files(_cupdlp_srcs),
+  files(_basiclu_srcs),
+  files(_ipx_srcs),
 ]
 
 
@@ -340,6 +340,13 @@ highs_dep = declare_dependency(link_with: highslib,
                                include_directories: _incdirs,
                                )
 
+highspy_cpp = files([
+  'highs_bindings.cpp'
+])
+highsoptions_cpp = files([
+  'highs_options.cpp'
+])
+
 if get_option('with_pybind11')
   _deps += highs_dep
   py = import('python').find_installation(pure: false)
@@ -351,13 +358,6 @@ if get_option('with_pybind11')
     dependency('pybind11')
   ]
   _deps += pyb11_dep
-
-  highspy_cpp = files([
-    'highs_bindings.cpp'
-  ])
-  highsoptions_cpp = files([
-    'highs_options.cpp'
-  ])
 
   py.extension_module(
     '_core',
