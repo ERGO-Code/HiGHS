@@ -15,6 +15,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsUtils.h"
 
 namespace presolve {
 
@@ -728,8 +729,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   } else if (duplicateColIntegral) {
     // Doesn't set basis.col_status[duplicateCol], so assume no basis
     assert(!basis.valid);
-    double roundVal = std::round(solution.col_value[duplicateCol]);
-    if (std::abs(roundVal - solution.col_value[duplicateCol]) >
+    if (fractionality(solution.col_value[duplicateCol]) >
         options.mip_feasibility_tolerance) {
       solution.col_value[duplicateCol] =
           std::floor(solution.col_value[duplicateCol]);
@@ -905,10 +905,12 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
   const double scale = colScale;
   const bool x_int = colIntegral;
   const bool y_int = duplicateColIntegral;
-  const double x_lo = x_int ? std::ceil(colLower) : colLower;
-  const double x_up = x_int ? std::floor(colUpper) : colUpper;
-  const double y_lo = y_int ? std::ceil(duplicateColLower) : duplicateColLower;
-  const double y_up = y_int ? std::floor(duplicateColUpper) : duplicateColUpper;
+  const double x_lo = x_int ? std::ceil(colLower - tolerance) : colLower;
+  const double x_up = x_int ? std::floor(colUpper + tolerance) : colUpper;
+  const double y_lo =
+      y_int ? std::ceil(duplicateColLower - tolerance) : duplicateColLower;
+  const double y_up =
+      y_int ? std::floor(duplicateColUpper + tolerance) : duplicateColUpper;
   const double x_len = x_up - x_lo;
   const double y_len = y_up - y_lo;
   std::string newline = "\n";
@@ -925,9 +927,7 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
   if (x_int) {
     if (y_int) {
       // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
-      double int_scale = std::floor(scale + 0.5);
-      bool scale_is_int = std::fabs(int_scale - scale) <= tolerance;
-      if (!scale_is_int) {
+      if (fractionality(scale) > tolerance) {
         if (debug_report)
           printf(
               "%sDuplicateColumn::checkMerge: scale must be integer, but is "
@@ -1010,14 +1010,12 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   //=============================================================================================
 
   auto isInteger = [&](const double v) {
-    double int_v = std::floor(v + 0.5);
-    return std::fabs(int_v - v) <= mip_feasibility_tolerance;
+    return (fractionality(v) <= mip_feasibility_tolerance);
   };
 
   auto isFeasible = [&](const double l, const double v, const double u) {
-    if (v < l - primal_feasibility_tolerance) return false;
-    if (v > u + primal_feasibility_tolerance) return false;
-    return true;
+    return v >= l - primal_feasibility_tolerance &&
+           v <= u + primal_feasibility_tolerance;
   };
   const double merge_value = col_value[col];
   const double value_max = 1000;
@@ -1027,10 +1025,16 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   const bool y_int = duplicateColIntegral;
   const int x_ix = col;
   const int y_ix = duplicateCol;
-  const double x_lo = x_int ? std::ceil(colLower) : colLower;
-  const double x_up = x_int ? std::floor(colUpper) : colUpper;
-  const double y_lo = y_int ? std::ceil(duplicateColLower) : duplicateColLower;
-  const double y_up = y_int ? std::floor(duplicateColUpper) : duplicateColUpper;
+  const double x_lo =
+      x_int ? std::ceil(colLower - mip_feasibility_tolerance) : colLower;
+  const double x_up =
+      x_int ? std::floor(colUpper + mip_feasibility_tolerance) : colUpper;
+  const double y_lo =
+      y_int ? std::ceil(duplicateColLower - mip_feasibility_tolerance)
+            : duplicateColLower;
+  const double y_up =
+      y_int ? std::floor(duplicateColUpper + mip_feasibility_tolerance)
+            : duplicateColUpper;
   if (kAllowDeveloperAssert) assert(scale);
   double x_v = merge_value;
   double y_v;

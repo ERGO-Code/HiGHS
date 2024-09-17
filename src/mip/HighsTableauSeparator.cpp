@@ -65,25 +65,23 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<FractionalInteger> fractionalBasisvars;
   fractionalBasisvars.reserve(numRow);
   for (HighsInt i = 0; i < numRow; ++i) {
-    double fractionality;
+    double my_fractionality;
     if (basisinds[i] >= numCol) {
       HighsInt row = basisinds[i] - numCol;
 
       if (!lpRelaxation.isRowIntegral(row)) continue;
 
-      double solval = lpSolution.row_value[row];
-      fractionality = std::fabs(std::round(solval) - solval);
+      my_fractionality = fractionality(lpSolution.row_value[row]);
     } else {
       HighsInt col = basisinds[i];
       if (mip.variableType(col) == HighsVarType::kContinuous) continue;
 
-      double solval = lpSolution.col_value[col];
-      fractionality = std::fabs(std::round(solval) - solval);
+      my_fractionality = fractionality(lpSolution.col_value[col]);
     }
 
-    if (fractionality < 1000 * mip.mipdata_->feastol) continue;
+    if (my_fractionality < 1000 * mip.mipdata_->feastol) continue;
 
-    fractionalBasisvars.emplace_back(i, fractionality);
+    fractionalBasisvars.emplace_back(i, my_fractionality);
   }
 
   if (fractionalBasisvars.empty()) return;

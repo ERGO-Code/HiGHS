@@ -1078,7 +1078,7 @@ bool HighsSymmetryDetection::distinguishVertex(HighsInt targetCell) {
 
 void HighsSymmetryDetection::backtrack(HighsInt backtrackStackNewEnd,
                                        HighsInt backtrackStackEnd) {
-  // we assume that we always backtrack from a leave node, i.e. a discrete
+  // we assume that we always backtrack from a leaf node, i.e. a discrete
   // partition therefore we do not need to remember the values of the hash
   // contributions as it is the indentity for each position and all new cells
   // are on the cell creation stack.
@@ -1805,7 +1805,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           // than the current best leave, because its prefix length is smaller
           // than the best leaves and it would have been already pruned if
           // it's certificate value was larger unless it is equal to the first
-          // leave nodes certificate value which is caught by the first case
+          // leaf nodes certificate value which is caught by the first case
           // of the if condition. Hence, having a lexicographically smaller
           // certificate value than the best leave is the only way to get
           // here.

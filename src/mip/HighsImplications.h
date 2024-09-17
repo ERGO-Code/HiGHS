@@ -109,6 +109,7 @@ class HighsImplications {
               double vlbconstant);
 
   void columnTransformed(HighsInt col, double scale, double constant) {
+    // Update variable bounds affected by transformation
     if (scale < 0) std::swap(vubs[col], vlbs[col]);
 
     auto transformVbd = [&](HighsInt, VarBound& vbd) {
@@ -119,6 +120,15 @@ class HighsImplications {
 
     vlbs[col].for_each(transformVbd);
     vubs[col].for_each(transformVbd);
+
+    // Update substitutions affected by transformation
+    for (auto& substitution : substitutions) {
+      if (substitution.substcol == col) {
+        substitution.offset -= constant;
+        substitution.offset /= scale;
+        substitution.scale /= scale;
+      }
+    }
   }
 
   std::pair<HighsInt, VarBound> getBestVub(HighsInt col,

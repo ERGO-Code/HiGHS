@@ -215,7 +215,7 @@ struct HighsMipSolverData {
 
   const std::vector<double>& getSolution() const;
 
-  void printDisplayLine(char first = ' ');
+  void printDisplayLine(char source = ' ');
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {

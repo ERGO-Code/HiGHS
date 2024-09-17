@@ -1613,6 +1613,9 @@ void changeLpIntegrality(HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.integrality_[col] = new_integrality[usr_col];
   }
+  // If integrality_ contains only HighsVarType::kContinuous then
+  // clear it
+  if (!lp.isMip()) lp.integrality_.clear();
 }
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
@@ -2302,8 +2305,7 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   }
   integer_infeasibility = 0;
   if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-    double nearest_integer = std::floor(primal + 0.5);
-    integer_infeasibility = std::fabs(primal - nearest_integer);
+    integer_infeasibility = fractionality(primal);
   }
   if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
                                 type == HighsVarType::kSemiInteger)) {
