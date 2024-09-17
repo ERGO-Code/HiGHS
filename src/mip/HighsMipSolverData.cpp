@@ -27,7 +27,7 @@ bool HighsMipSolverData::checkSolution(
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
+        fractionality(solution[i]) > feastol)
       return false;
   }
 
@@ -57,7 +57,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
+        fractionality(solution[i]) > feastol)
       return false;
 
     obj += mipsolver.colCost(i) * solution[i];
@@ -523,14 +523,10 @@ void HighsMipSolverData::runSetup() {
     HighsInt end = ARstart_[i + 1];
     bool integral = true;
     for (HighsInt j = start; j != end; ++j) {
-      if (integral) {
-        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::kContinuous)
-          integral = false;
-        else {
-          double intval = std::floor(ARvalue_[j] + 0.5);
-          if (std::abs(ARvalue_[j] - intval) > epsilon) integral = false;
-        }
-      }
+      integral =
+          integral &&
+          mipsolver.variableType(ARindex_[j]) != HighsVarType::kContinuous &&
+          fractionality(ARvalue_[j]) <= epsilon;
 
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
     }
@@ -597,8 +593,7 @@ void HighsMipSolverData::runSetup() {
         break;
       case HighsVarType::kInteger:
         if (domain.isFixed(i)) {
-          if (std::abs(domain.col_lower_[i] -
-                       std::floor(domain.col_lower_[i] + 0.5)) > feastol) {
+          if (fractionality(domain.col_lower_[i]) > feastol) {
             // integer variable is fixed to a fractional value -> infeasible
             mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
             lower_bound = kHighsInf;
@@ -729,8 +724,7 @@ try_again:
         mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
-      double intval = std::floor(value + 0.5);
-      double integrality_infeasibility = std::fabs(intval - value);
+      double integrality_infeasibility = fractionality(value);
       if (integrality_infeasibility >
           mipsolver.options_mip_->mip_feasibility_tolerance) {
         if (debug_report)

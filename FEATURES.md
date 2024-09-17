@@ -16,6 +16,13 @@ Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possi
 
 Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise progress of the MIP solver.
 
+Added minimal documentation of solvers and how simplex variants can be run
+
+Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return HighsStatus::kOk (since internal matrix is exact)
+
+
+
+
 
 
 

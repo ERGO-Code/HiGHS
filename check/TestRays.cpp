@@ -303,6 +303,8 @@ void testUnboundedMpsLp(const std::string model,
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kUnbounded;
+  // gas11 contains small nonzero matrix entries, so readModel yield
+  // HighsStatus::kWarning
   require_status = model == "gas11" ? HighsStatus::kWarning : HighsStatus::kOk;
   REQUIRE(highs.readModel(model_file) == require_status);
   REQUIRE(highs.changeObjectiveSense(sense) == HighsStatus::kOk);

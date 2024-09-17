@@ -3,12 +3,12 @@
 The options that control HiGHS are of four types: `boolean`, `integer`, `double`
 and `string`. Their values can be specified:
 
- * via the command line when running the [Executable](@ref)
+ * via the command line when running the [Executable](@ref executable)
  * via method calls when running HiGHS in an application.
 
 ## Options file
 
-When running the [Executable](@ref) via the command line, some options values
+When running the [Executable](@ref executable) via the command line, some options values
 can be set explicitly in the command, and all options can be set by means of an
 options file.
 

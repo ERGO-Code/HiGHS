@@ -27,14 +27,18 @@ void strTrim(char* str);
 
 void tolower(std::string& str);
 
-const std::string non_chars = "\t\n\v\f\r ";
-std::string& ltrim(std::string& str, const std::string& chars = non_chars);
-std::string& rtrim(std::string& str, const std::string& chars = non_chars);
-std::string& trim(std::string& str, const std::string& chars = non_chars);
+const std::string default_non_chars = "\t\n\v\f\r ";
+std::string& ltrim(std::string& str,
+                   const std::string& chars = default_non_chars);
+std::string& rtrim(std::string& str,
+                   const std::string& chars = default_non_chars);
+std::string& trim(std::string& str,
+                  const std::string& chars = default_non_chars);
 
-bool is_empty(std::string& str, const std::string& chars = non_chars);
-bool is_empty(char c, const std::string& chars = non_chars);
-bool is_end(std::string& str, size_t end, const std::string& chars = non_chars);
+bool is_empty(std::string& str, const std::string& chars = default_non_chars);
+bool is_empty(char c, const std::string& chars = default_non_chars);
+bool is_end(std::string& str, size_t end,
+            const std::string& chars = default_non_chars);
 
 // todo: replace with pair of references rather than string ret value to avoid
 // copy and also using function below. or do it properly with iterators.
