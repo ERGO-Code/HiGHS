@@ -1947,6 +1947,10 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getKappa(double& kappa) {
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
   // Determine whether a new solution will be defined. If so,

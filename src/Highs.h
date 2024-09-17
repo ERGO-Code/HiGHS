@@ -604,6 +604,11 @@ class Highs {
                                HighsInt* col_indices = nullptr);
 
   /**
+   * @brief Get the condition number of the current basis matrix
+   */
+  HighsStatus getKappa(double& kappa);
+
+  /**
    * @brief Get the number of columns in the incumbent model
    */
   HighsInt getNumCol() const { return model_.lp_.num_col_; }

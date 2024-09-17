@@ -564,3 +564,33 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs.run();
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
+
+TEST_CASE("Kappa", "[highs_basis_solves]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
+  // filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  // filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
+
+  Highs highs;
+  //highs.setOptionValue("output_flag", dev_run);
+
+ // Read the LP given by filename
+  highs.readModel(filename);
+
+  double kappa;
+  REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
+
+  highs.run();
+  
+  REQUIRE(highs.getKappa(kappa) == HighsStatus::kOk);
+
+  highs.clearModel();
+  
+  filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  
+  highs.run();
+  
+  REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
+
+}
