@@ -394,53 +394,54 @@ message(STATUS "Git hash: " ${GITHASH})
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 if (DEBUG_MEMORY STREQUAL "Address")
-  # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} 
-  #     -fsanitize=thread,undefined 
-  #     -fno-omit-frame-pointer 
-  #     -fsanitize-address-use-after-scope")
-  # set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} 
-  #     -fsanitize=thread,undefined 
-  #     -fno-omit-frame-pointer 
-  #     -fsanitize-address-use-after-scope")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
 
-  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} 
-  #     -fsanitize=address,undefined 
-  #     -fno-omit-frame-pointer 
-  #     -fno-optimize-sibling-calls ")
-  # set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} 
-  #     -fsanitize=address,undefined 
-  #     -fno-omit-frame-pointer 
-  #     -fno-optimize-sibling-calls ")
-
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined ")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined")
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer")
 
-  # set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=thread,undefined -O0 -g")
-  # set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=thread,undefined -O0 -g")
-
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread,undefined -fno-omit-frame-pointer ")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=thread,undefined -fno-omit-frame-pointer ")
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer ")
 
 elseif (DEBUG_MEMORY STREQUAL "Leak")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer")
 
-  # # AddressSanitize
-  # set(CMAKE_C_FLAGS_ASAN
-  #     "-fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
-  #     CACHE STRING "Flags used by the C compiler during AddressSanitizer builds."
-  #     FORCE)
-  # set(CMAKE_CXX_FLAGS_ASAN
-  #     "-fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -g -O1"
-  #     CACHE STRING "Flags used by the C++ compiler during AddressSanitizer builds."
-  #     FORCE)
-
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak ")
-
-endif()
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer ")
 endif()
 
 if(NOT FAST_BUILD)
