@@ -123,7 +123,7 @@ class HighsTaskExecutor {
     assert(numThreads > 0);
 
     // mainWorkerId.store(std::this_thread::get_id());
-    isMainThread = true;
+    // isMainThread = true;
 
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
@@ -177,6 +177,7 @@ class HighsTaskExecutor {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr == nullptr) {
       executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor))) HighsTaskExecutor(numThreads);
+      executorHandle.ptr->isMainThread = true;
     }
   }
 
