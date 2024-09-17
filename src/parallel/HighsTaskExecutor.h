@@ -54,7 +54,11 @@ class HighsTaskExecutor {
 #endif
 
   std::atomic<int> referenceCount;
-  std::atomic<std::thread::id> mainWorkerId;
+  // std::atomic<std::thread::id> mainWorkerId;
+
+  // std::atomic<bool> isMainThread = false;
+  bool isMainThread = false;
+
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   std::vector<std::thread> workerThreads;
@@ -92,7 +96,11 @@ class HighsTaskExecutor {
     threadLocalExecutorHandle().ptr = ptr;
 
     // check if main thread has shutdown before thread has started
-    if (ptr->mainWorkerId.load() != std::thread::id()) {
+    // if (ptr->mainWorkerId.load() != std::thread::id()) {
+
+    // ???
+    if (!(ptr->isMainThread)) {
+
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
       threadLocalWorkerDeque() = localDeque;
 
@@ -113,7 +121,10 @@ class HighsTaskExecutor {
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
-    mainWorkerId.store(std::this_thread::get_id());
+
+    // mainWorkerId.store(std::this_thread::get_id());
+    isMainThread = true;
+
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
     for (int i = 0; i < numThreads; ++i)
@@ -131,8 +142,9 @@ class HighsTaskExecutor {
   }
 
   void stopWorkerThreads(bool blocking = false) {
-    auto id = mainWorkerId.exchange(std::thread::id());
-    if (id == std::thread::id()) return;  // already been called
+    // auto id = mainWorkerId.exchange(std::thread::id());
+    // if (id == std::thread::id()) return;  // already been called
+    // ??? 
 
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
@@ -140,7 +152,8 @@ class HighsTaskExecutor {
     }
 
     // only block if called on main thread, otherwise deadlock may occur
-    if (blocking && std::this_thread::get_id() == id) {
+    // if (blocking && std::this_thread::get_id() == id) {
+    if (blocking && isMainThread) {
       for (auto& workerThread : workerThreads) {
         workerThread.join();
       }

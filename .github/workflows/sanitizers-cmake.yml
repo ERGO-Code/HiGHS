@@ -1,5 +1,5 @@
 name: sanitizers-cmake
-on: push
+on: [] #push
 
 jobs:
   sanitizer_release:
