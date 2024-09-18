@@ -163,7 +163,7 @@ class HighsTaskExecutor {
     } 
     else {
       for (auto& workerThread : workerThreads) {
-        workerThread.detach();
+        // workerThread.detach();
       }
     }
   }

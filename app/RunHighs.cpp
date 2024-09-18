@@ -14,6 +14,7 @@
 #include "Highs.h"
 // #include "io/HighsIO.h"
 #include "lp_data/HighsRuntimeOptions.h"
+#include "parallel/HighsParallel.h"
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
@@ -96,6 +97,8 @@ int main(int argc, char** argv) {
     if (write_model_status == HighsStatus::kError)
       return (int)write_model_status;  // todo: change to write model error
   }
+  HighsTaskExecutor::shutdown(true);
+  
   return (int)run_status;
 }
 
