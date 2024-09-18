@@ -1630,7 +1630,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         if (model->integrality_[col] == HighsVarType::kContinuous)
           num_cont_cols++;
       }
-      return 20 * num_cont_cols >= num_cols;
+      return 50 * num_cont_cols >= num_cols;
     };
 
     // lifting for probing (only performed when probing did not modify the
