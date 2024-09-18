@@ -1725,8 +1725,10 @@ void HPresolve::liftingForProbing() {
         coefsum += std::fabs(coefficients[cliquevar].first);
         if (coefficients[cliquevar].second) fillin++;
       }
-      double score = weight * coefsum +
-                     (1 - weight) * static_cast<double>(clique.size() - fillin);
+      double score =
+          weight * coefsum + (1 - weight) *
+                                 static_cast<double>(clique.size() - fillin) /
+                                 static_cast<double>(clique.size());
       if (score > bestscore) {
         bestscore = score;
         bestclique.clear();
