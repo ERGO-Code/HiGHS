@@ -1622,7 +1622,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
     // lambda to check if model has enough continuous variables to perform
     // lifting for probing
-    auto modelHasContVars = [&]() {
+    auto modelHasEnoughContVars = [&]() {
       size_t num_cols = 0, num_cont_cols = 0;
       for (size_t col = 0; col < colsize.size(); col++) {
         if (colDeleted[col]) continue;
@@ -1637,7 +1637,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // problem so far and at least 5 percent of the variables in the problem are
     // continuous)
     if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
-        modelHasContVars())
+        modelHasEnoughContVars())
       liftingForProbing();
     // clear lifting opportunities
     liftingOpportunities.clear();
