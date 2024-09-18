@@ -1685,11 +1685,14 @@ void HPresolve::liftingForProbing() {
              decltype(comp)>
         coefficients(comp);
     const auto& htree = elm.second;
+    HighsCDouble coefsum = 0;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
-      if (!colDeleted[col] && !domain.isFixed(col))
+      if (!colDeleted[col] && !domain.isFixed(col)) {
+        coefsum += std::fabs(value);
         coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
             value, findNonzero(row, col) == -1};
+      }
     });
 
     // skip row if map is empty
@@ -1699,14 +1702,26 @@ void HPresolve::liftingForProbing() {
     std::vector<liftingdata> bestclique;
     double bestscore = -kHighsInf;
 
+    // lambda for computing score
+    auto computeScore = [&](HighsCDouble sum, size_t numelms,
+                            size_t numfillin) {
+      const double weight = 0.5;
+      return weight * static_cast<double>(sum / coefsum) +
+             (1 - weight) * static_cast<double>(numelms - numfillin) /
+                 static_cast<double>(numelms);
+    };
+
     // store candidates in a vector
     std::vector<HighsCliqueTable::CliqueVar> candidates;
     candidates.reserve(coefficients.size());
     for (const auto& elm : coefficients) {
       candidates.push_back(elm.first);
       // initialize best clique
-      if (std::fabs(elm.second.first) > bestscore) {
-        bestscore = std::fabs(elm.second.first);
+      double score =
+          computeScore(HighsCDouble{std::fabs(elm.second.first)}, size_t{1},
+                       elm.second.second ? size_t{1} : size_t{0});
+      if (score > bestscore) {
+        bestscore = score;
         bestclique = {
             std::make_tuple(elm.first, elm.second.first, elm.second.second)};
       }
@@ -1719,16 +1734,13 @@ void HPresolve::liftingForProbing() {
     // identify clique with highest score
     const double weight = 0.5;
     for (const auto& clique : cliques) {
-      double coefsum = 0;
+      HighsCDouble coefsumclique = 0;
       size_t fillin = 0;
       for (const auto& cliquevar : clique) {
-        coefsum += std::fabs(coefficients[cliquevar].first);
+        coefsumclique += std::fabs(coefficients[cliquevar].first);
         if (coefficients[cliquevar].second) fillin++;
       }
-      double score =
-          weight * coefsum + (1 - weight) *
-                                 static_cast<double>(clique.size() - fillin) /
-                                 static_cast<double>(clique.size());
+      double score = computeScore(coefsumclique, clique.size(), fillin);
       if (score > bestscore) {
         bestscore = score;
         bestclique.clear();
