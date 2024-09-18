@@ -20,7 +20,7 @@ has a variant allowing concurrent processing. This variant is used
 when the
 [parallel](@ref)
 option is set "on", by specifying `--parallel` when running the
-[executable](@ref Executable) via
+[executable](@ref executable) via
 the command line, or by setting it via a library call in an
 application.
 

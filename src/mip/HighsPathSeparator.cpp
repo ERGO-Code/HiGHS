@@ -174,7 +174,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   HighsInt currentPath[maxPathLen];
   std::vector<std::pair<std::vector<HighsInt>, std::vector<double>>>
       aggregatedPath;
-  double scales[2];
+  std::array<double, 2> scales;
   for (HighsInt i = 0; i != lp.num_row_; ++i) {
     switch (rowtype[i]) {
       case RowType::kUnusuable:

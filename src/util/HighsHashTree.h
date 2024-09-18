@@ -113,17 +113,20 @@ class HighsHashTree {
     // to do a linear scan and key comparisons at all
     Occupation occupation;
     int size;
-    uint64_t hashes[capacity() + 1];
-    Entry entries[capacity()];
+    std::array<uint64_t, capacity() + 1> hashes;
+    std::array<Entry, capacity()> entries;
 
     InnerLeaf() : occupation(0), size(0) { hashes[0] = 0; }
 
     template <int kOtherSize>
     InnerLeaf(InnerLeaf<kOtherSize>&& other) {
       assert(other.size <= capacity());
-      memcpy((void*)this, (void*)&other,
-             (char*)&other.hashes[other.size + 1] - (char*)&other);
-      std::move(&other.entries[0], &other.entries[size], &entries[0]);
+      occupation = other.occupation;
+      size = other.size;
+      std::copy(other.hashes.cbegin(),
+                std::next(other.hashes.cbegin(), size + 1), hashes.begin());
+      std::move(other.entries.begin(), std::next(other.entries.begin(), size),
+                entries.begin());
     }
 
     int get_num_entries() const { return size; }
@@ -190,7 +193,9 @@ class HighsHashTree {
 
       --size;
       if (pos < size) {
-        std::move(&entries[pos + 1], &entries[size + 1], &entries[pos]);
+        std::move(std::next(entries.begin(), pos + 1),
+                  std::next(entries.begin(), size + 1),
+                  std::next(entries.begin(), pos));
         memmove(&hashes[pos], &hashes[pos + 1],
                 sizeof(hashes[0]) * (size - pos));
         if (get_first_chunk16(hashes[startPos]) != hashChunk)
@@ -254,7 +259,9 @@ class HighsHashTree {
 
     void move_backward(const int& first, const int& last) {
       // move elements backwards
-      std::move_backward(&entries[first], &entries[last], &entries[last + 1]);
+      std::move_backward(std::next(entries.begin(), first),
+                         std::next(entries.begin(), last),
+                         std::next(entries.begin(), last + 1));
       memmove(&hashes[first + 1], &hashes[first],
               sizeof(hashes[0]) * (last - first));
     }
@@ -836,7 +843,7 @@ class HighsHashTree {
                 hash, hashPos + 1, entry);
           } else {
             // there are many collisions, determine the exact sizes first
-            uint8_t sizes[InnerLeaf<4>::capacity() + 1] = {};
+            std::array<uint8_t, InnerLeaf<4>::capacity() + 1> sizes = {};
             sizes[occupation.num_set_until(hashChunk) - 1] += 1;
             for (int i = 0; i < leaf->size; ++i) {
               int pos =

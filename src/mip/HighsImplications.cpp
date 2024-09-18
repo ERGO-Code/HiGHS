@@ -89,7 +89,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   pdqsort(implics.begin(), binstart);
 
-  HighsCliqueTable::CliqueVar clique[2];
+  std::array<HighsCliqueTable::CliqueVar, 2> clique;
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
   for (auto i = binstart; i != implics.end(); ++i) {
@@ -98,7 +98,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     else
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
-    cliquetable.addClique(mipsolver, clique, 2);
+    cliquetable.addClique(mipsolver, clique.data(), 2);
     if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   }
 
@@ -529,8 +529,8 @@ void HighsImplications::separateImpliedBounds(
     HighsCutPool& cutpool, double feastol) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
 
-  HighsInt inds[2];
-  double vals[2];
+  std::array<HighsInt, 2> inds;
+  std::array<double, 2> vals;
   double rhs;
 
   HighsInt numboundchgs = 0;
@@ -596,7 +596,8 @@ void HighsImplications::separateImpliedBounds(
       if (infeas) {
         vals[0] = 1.0;
         inds[0] = col;
-        cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
+        cutpool.addCut(mipsolver, inds.data(), vals.data(), 1, 0.0, false, true,
+                       false);
         continue;
       }
 
@@ -631,7 +632,7 @@ void HighsImplications::separateImpliedBounds(
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+          cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
                          false, false, false);
@@ -647,7 +648,8 @@ void HighsImplications::separateImpliedBounds(
       if (infeas) {
         vals[0] = -1.0;
         inds[0] = col;
-        cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
+        cutpool.addCut(mipsolver, inds.data(), vals.data(), 1, -1.0, false,
+                       true, false);
         continue;
       }
 
@@ -681,7 +683,7 @@ void HighsImplications::separateImpliedBounds(
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-          cutpool.addCut(mipsolver, inds, vals, 2, rhs,
+          cutpool.addCut(mipsolver, inds.data(), vals.data(), 2, rhs,
                          mipsolver.variableType(implics[i].column) !=
                              HighsVarType::kContinuous,
                          false, false, false);

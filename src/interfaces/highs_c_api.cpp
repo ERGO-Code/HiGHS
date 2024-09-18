@@ -1344,6 +1344,19 @@ HighsInt Highs_getRanging(
   return status;
 }
 
+HighsInt Highs_feasibilityRelaxation(void* highs,
+                                     const double global_lower_penalty,
+                                     const double global_upper_penalty,
+                                     const double global_rhs_penalty,
+                                     const double* local_lower_penalty,
+                                     const double* local_upper_penalty,
+                                     const double* local_rhs_penalty) {
+  return (HighsInt)((Highs*)highs)
+      ->feasibilityRelaxation(global_lower_penalty, global_upper_penalty,
+                              global_rhs_penalty, local_lower_penalty,
+                              local_upper_penalty, local_rhs_penalty);
+}
+
 void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
 }
