@@ -1948,7 +1948,13 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 }
 
 HighsStatus Highs::getKappa(double& kappa) {
-  return HighsStatus::kError;
+  printf("Highs::getKappa basis_.valid = %d, ekk_instance_.status_.has_invert = %d\n",
+	 int(basis_.valid),
+	 int(ekk_instance_.status_.has_invert));
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisInverseRow");
+  kappa = ekk_instance_.computeBasisCondition();
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {

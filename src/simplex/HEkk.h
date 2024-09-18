@@ -134,6 +134,7 @@ class HEkk {
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
+  double computeBasisCondition();
 
   HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
@@ -333,7 +334,6 @@ class HEkk {
   HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
-  double computeBasisCondition();
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 
