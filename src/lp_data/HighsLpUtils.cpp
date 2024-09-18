@@ -2305,8 +2305,7 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
   }
   integer_infeasibility = 0;
   if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-    double nearest_integer = std::floor(primal + 0.5);
-    integer_infeasibility = std::fabs(primal - nearest_integer);
+    integer_infeasibility = fractionality(primal);
   }
   if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
                                 type == HighsVarType::kSemiInteger)) {

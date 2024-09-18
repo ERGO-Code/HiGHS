@@ -15,6 +15,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsUtils.h"
 
 namespace presolve {
 
@@ -728,8 +729,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   } else if (duplicateColIntegral) {
     // Doesn't set basis.col_status[duplicateCol], so assume no basis
     assert(!basis.valid);
-    double roundVal = std::round(solution.col_value[duplicateCol]);
-    if (std::abs(roundVal - solution.col_value[duplicateCol]) >
+    if (fractionality(solution.col_value[duplicateCol]) >
         options.mip_feasibility_tolerance) {
       solution.col_value[duplicateCol] =
           std::floor(solution.col_value[duplicateCol]);
@@ -927,9 +927,7 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
   if (x_int) {
     if (y_int) {
       // Scale must be integer and not exceed (x_u-x_l)+1 in magnitude
-      double int_scale = std::floor(scale + 0.5);
-      bool scale_is_int = std::fabs(int_scale - scale) <= tolerance;
-      if (!scale_is_int) {
+      if (fractionality(scale) > tolerance) {
         if (debug_report)
           printf(
               "%sDuplicateColumn::checkMerge: scale must be integer, but is "
@@ -1012,8 +1010,7 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   //=============================================================================================
 
   auto isInteger = [&](const double v) {
-    double int_v = std::floor(v + 0.5);
-    return std::fabs(int_v - v) <= mip_feasibility_tolerance;
+    return (fractionality(v) <= mip_feasibility_tolerance);
   };
 
   auto isFeasible = [&](const double l, const double v, const double u) {

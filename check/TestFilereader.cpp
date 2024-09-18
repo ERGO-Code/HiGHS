@@ -343,3 +343,17 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
 }
+
+TEST_CASE("filereader-comment", "[highs_filereader]") {
+  // Check that comments - either whole line with * in first column,
+  // or rest of line following */$ are handled correctly
+  const double optimal_objective_value = -4;
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/comment.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  double objective_value = highs.getInfo().objective_function_value;
+  REQUIRE(objective_value == optimal_objective_value);
+}

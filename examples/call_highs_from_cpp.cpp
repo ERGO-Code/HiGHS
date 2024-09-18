@@ -49,8 +49,9 @@
 //
 // * q_start[0] must be zero
 //
-#include "Highs.h"
 #include <cassert>
+
+#include "Highs.h"
 
 using std::cout;
 using std::endl;
@@ -94,7 +95,7 @@ int main() {
   //
   // Pass the model to HiGHS
   return_status = highs.passModel(model);
-  assert(return_status==HighsStatus::kOk);
+  assert(return_status == HighsStatus::kOk);
   // If a user passes a model with entries in
   // model.lp_.a_matrix_.value_ less than (the option)
   // small_matrix_value in magnitude, they will be ignored. A logging
@@ -106,19 +107,21 @@ int main() {
   //
   // Solve the model
   return_status = highs.run();
-  assert(return_status==HighsStatus::kOk);
+  assert(return_status == HighsStatus::kOk);
   //
   // Get the model status
   const HighsModelStatus& model_status = highs.getModelStatus();
-  assert(model_status==HighsModelStatus::kOptimal);
+  assert(model_status == HighsModelStatus::kOptimal);
   cout << "Model status: " << highs.modelStatusToString(model_status) << endl;
   //
   // Get the solution information
   const HighsInfo& info = highs.getInfo();
   cout << "Simplex iteration count: " << info.simplex_iteration_count << endl;
   cout << "Objective function value: " << info.objective_function_value << endl;
-  cout << "Primal  solution status: " << highs.solutionStatusToString(info.primal_solution_status) << endl;
-  cout << "Dual    solution status: " << highs.solutionStatusToString(info.dual_solution_status) << endl;
+  cout << "Primal  solution status: "
+       << highs.solutionStatusToString(info.primal_solution_status) << endl;
+  cout << "Dual    solution status: "
+       << highs.solutionStatusToString(info.dual_solution_status) << endl;
   cout << "Basis: " << highs.basisValidityToString(info.basis_validity) << endl;
   const bool has_values = info.primal_solution_status;
   const bool has_duals = info.dual_solution_status;
@@ -129,39 +132,43 @@ int main() {
   const HighsBasis& basis = highs.getBasis();
   //
   // Report the primal and solution values and basis
-  for (int col=0; col < lp.num_col_; col++) {
+  for (int col = 0; col < lp.num_col_; col++) {
     cout << "Column " << col;
     if (has_values) cout << "; value = " << solution.col_value[col];
     if (has_duals) cout << "; dual = " << solution.col_dual[col];
-    if (has_basis) cout << "; status: " << highs.basisStatusToString(basis.col_status[col]);
+    if (has_basis)
+      cout << "; status: " << highs.basisStatusToString(basis.col_status[col]);
     cout << endl;
   }
-  for (int row=0; row < lp.num_row_; row++) {
+  for (int row = 0; row < lp.num_row_; row++) {
     cout << "Row    " << row;
     if (has_values) cout << "; value = " << solution.row_value[row];
     if (has_duals) cout << "; dual = " << solution.row_dual[row];
-    if (has_basis) cout << "; status: " << highs.basisStatusToString(basis.row_status[row]);
+    if (has_basis)
+      cout << "; status: " << highs.basisStatusToString(basis.row_status[row]);
     cout << endl;
   }
 
   // Now indicate that all the variables must take integer values
   model.lp_.integrality_.resize(lp.num_col_);
-  for (int col=0; col < lp.num_col_; col++)
+  for (int col = 0; col < lp.num_col_; col++)
     model.lp_.integrality_[col] = HighsVarType::kInteger;
 
   highs.passModel(model);
   // Solve the model
   return_status = highs.run();
-  assert(return_status==HighsStatus::kOk);
+  assert(return_status == HighsStatus::kOk);
   // Report the primal solution values
-  for (int col=0; col < lp.num_col_; col++) {
+  for (int col = 0; col < lp.num_col_; col++) {
     cout << "Column " << col;
-    if (info.primal_solution_status) cout << "; value = " << solution.col_value[col];
+    if (info.primal_solution_status)
+      cout << "; value = " << solution.col_value[col];
     cout << endl;
   }
-  for (int row=0; row < lp.num_row_; row++) {
+  for (int row = 0; row < lp.num_row_; row++) {
     cout << "Row    " << row;
-    if (info.primal_solution_status) cout << "; value = " << solution.row_value[row];
+    if (info.primal_solution_status)
+      cout << "; value = " << solution.row_value[row];
     cout << endl;
   }
 
