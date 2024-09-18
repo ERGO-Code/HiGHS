@@ -1732,7 +1732,6 @@ void HPresolve::liftingForProbing() {
         cliquetable.computeMaximalCliques(candidates, primal_feastol);
 
     // identify clique with highest score
-    const double weight = 0.5;
     for (const auto& clique : cliques) {
       HighsCDouble coefsumclique = 0;
       size_t fillin = 0;
