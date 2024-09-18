@@ -56,8 +56,8 @@ class HighsTaskExecutor {
   std::atomic<int> referenceCount;
   // std::atomic<std::thread::id> mainWorkerId;
 
-  // std::atomic<bool> isMainThread = false;
-  bool isMainThread = false;
+  std::atomic<bool> isMainThread;
+  // bool isMainThread = false;
 
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
