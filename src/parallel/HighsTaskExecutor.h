@@ -13,6 +13,8 @@
 #ifndef HIGHS_TASKEXECUTOR_H_
 #define HIGHS_TASKEXECUTOR_H_
 
+#include <iostream>
+
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
@@ -31,6 +33,7 @@ class HighsTaskExecutor {
   using cache_aligned = highs::cache_aligned;
   struct ExecutorHandle {
     HighsTaskExecutor* ptr{nullptr};
+    bool isMain{false};
 
     void dispose();
     ~ExecutorHandle() { dispose(); }
@@ -54,10 +57,6 @@ class HighsTaskExecutor {
 #endif
 
   std::atomic<int> referenceCount;
-  // std::atomic<std::thread::id> mainWorkerId;
-
-  std::atomic<bool> isMainThread;
-  // bool isMainThread = false;
 
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
@@ -93,13 +92,14 @@ class HighsTaskExecutor {
   }
 
   static void run_worker(int workerId, HighsTaskExecutor* ptr) {
-    threadLocalExecutorHandle().ptr = ptr;
+    auto &executorHandle = threadLocalExecutorHandle();
+    executorHandle.ptr = ptr;
 
     // check if main thread has shutdown before thread has started
     // if (ptr->mainWorkerId.load() != std::thread::id()) {
 
     // ???
-    if (!(ptr->isMainThread)) {
+    if (!(executorHandle.isMain)) {
 
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
       threadLocalWorkerDeque() = localDeque;
@@ -113,6 +113,8 @@ class HighsTaskExecutor {
 
         currentTask = ptr->workerBunk->waitForNewTask(localDeque);
       }
+    } else {
+      std::cout << " WHAT NO"<< std::endl;
     }
 
     threadLocalExecutorHandle().dispose();
@@ -153,7 +155,8 @@ class HighsTaskExecutor {
 
     // only block if called on main thread, otherwise deadlock may occur
     // if (blocking && std::this_thread::get_id() == id) {
-    if (blocking && isMainThread) {
+    // threadLocalExecutorHandle();
+    if (blocking && threadLocalExecutorHandle().isMain) {
       for (auto& workerThread : workerThreads) {
         workerThread.join();
       }
@@ -177,7 +180,7 @@ class HighsTaskExecutor {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr == nullptr) {
       executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor))) HighsTaskExecutor(numThreads);
-      executorHandle.ptr->isMainThread = true;
+      executorHandle.isMain = true;
     }
   }
 

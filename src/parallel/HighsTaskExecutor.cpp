@@ -25,7 +25,7 @@ void HighsTaskExecutor::ExecutorHandle::dispose() {
   if (ptr != nullptr) {
     // check to see if we are the main worker and if so, shut down the executor
     // if (std::this_thread::get_id() == ptr->mainWorkerId.load()) {
-    if (ptr->isMainThread) {
+    if (isMain) {
       ptr->stopWorkerThreads(false);
     }
 
