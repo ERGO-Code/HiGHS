@@ -378,11 +378,15 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 find_program(GIT git)
 
 if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
-  execute_process(
-    COMMAND ${GIT} describe --always --dirty
+    execute_process(
+    COMMAND ${GIT} status
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR} OUTPUT_QUIET)
+
+    execute_process(
+    COMMAND ${GIT} describe --always
     WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
     OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+  # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
 else()
   set(GITHASH "n/a")
 endif()
