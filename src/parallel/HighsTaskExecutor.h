@@ -13,8 +13,6 @@
 #ifndef HIGHS_TASKEXECUTOR_H_
 #define HIGHS_TASKEXECUTOR_H_
 
-#include <iostream>
-
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
@@ -97,8 +95,6 @@ class HighsTaskExecutor {
 
     // check if main thread has shutdown before thread has started
     // if (ptr->mainWorkerId.load() != std::thread::id()) {
-
-    // ???
     if (!(executorHandle.isMain)) {
 
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
@@ -113,9 +109,7 @@ class HighsTaskExecutor {
 
         currentTask = ptr->workerBunk->waitForNewTask(localDeque);
       }
-    } else {
-      std::cout << " WHAT NO"<< std::endl;
-    }
+      }
 
     threadLocalExecutorHandle().dispose();
   }
@@ -123,9 +117,6 @@ class HighsTaskExecutor {
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
-
-    // mainWorkerId.store(std::this_thread::get_id());
-    // isMainThread = true;
 
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();

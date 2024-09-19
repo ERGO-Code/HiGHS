@@ -25,9 +25,6 @@ project(HIGHS VERSION ${VERSION} LANGUAGES CXX C)
 set(PROJECT_NAMESPACE highs)
 message(STATUS "${PROJECT_NAME} version: ${PROJECT_VERSION}")
 
-set(CMAKE_CXX_FLAGS "-g -O0")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -74,10 +71,10 @@ if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
-# option(DEBUG_MEMORY "DEBUG_MEMORY" OFF)
 # Address | Thread | Leak 
 # Linux atm
-# Only Debug atm
+# Only Debug is theted atm 
+# See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 
 # emscripten
