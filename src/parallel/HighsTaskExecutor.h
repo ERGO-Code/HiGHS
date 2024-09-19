@@ -163,7 +163,7 @@ class HighsTaskExecutor {
     } 
     else {
       for (auto& workerThread : workerThreads) {
-        // do not detach if shutdown() will be called from executable 
+        // do not detach if shutdown() will be called from the driver code
         // after we are done with the highs library
         //workerThread.detach();
         workerThread.detach();
