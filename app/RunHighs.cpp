@@ -16,7 +16,7 @@
 #include "lp_data/HighsRuntimeOptions.h"
 
 // uncomment if we will be shutting down task executor from exe
-// #include "parallel/HighsParallel.h"
+#include "parallel/HighsParallel.h"
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
 
   // Shut down task executor: wip 
   // Will be added as an option, as we should not detach in lib if this is used
-  // HighsTaskExecutor::shutdown(true);
+  HighsTaskExecutor::shutdown(true);
   
   return (int)run_status;
 }

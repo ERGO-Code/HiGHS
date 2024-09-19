@@ -32,6 +32,7 @@ class HighsTaskExecutor {
   struct ExecutorHandle {
     HighsTaskExecutor* ptr{nullptr};
     bool isMain{false};
+    bool isStopped{false};
 
     void dispose();
     ~ExecutorHandle() { dispose(); }
@@ -137,8 +138,10 @@ class HighsTaskExecutor {
   void stopWorkerThreads(bool blocking = false) {
     // auto id = mainWorkerId.exchange(std::thread::id());
     // if (id == std::thread::id()) return;  // already been called
-    // does this happen?
-
+    auto &executorHandle = threadLocalExecutorHandle();
+    if(executorHandle.isStopped)
+      return;
+    
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
       workerDeque->injectTaskAndNotify(nullptr);
@@ -147,19 +150,19 @@ class HighsTaskExecutor {
     // only block if called on main thread, otherwise deadlock may occur
     // if (blocking && std::this_thread::get_id() == id) {
     // threadLocalExecutorHandle();
-    if (blocking && threadLocalExecutorHandle().isMain) {
+    if (blocking && executorHandle.isStopped) {
       for (auto& workerThread : workerThreads) {
         workerThread.join();
       }
     } 
     else {
       for (auto& workerThread : workerThreads) {
-        // do not detach if shutdown() will be called from the driver code
-        // after we are done with the highs library
-        //workerThread.detach();
         workerThread.detach();
       }
     }
+
+    if (executorHandle.isMain)
+      executorHandle.isStopped = true;
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
