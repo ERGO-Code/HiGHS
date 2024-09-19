@@ -352,7 +352,7 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
             highsInsertMdEscapes(info.name).c_str(),
             highsInsertMdEscapes(info.description).c_str());
   } else {
-    fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n",
+    fprintf(file, "\n# %s\n# [type: double]\n%s = %17.10g\n",
             info.description.c_str(), info.name.c_str(), *info.value);
   }
 }

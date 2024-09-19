@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return int(run_status);
 
-  // highs.writeInfo("Info.md");
+  highs.writeInfo("");
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file || options.solution_file != "")
