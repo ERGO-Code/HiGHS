@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     if (write_model_status == HighsStatus::kError)
       return (int)write_model_status;  // todo: change to write model error
   }
-  HighsTaskExecutor::shutdown(true);
+  // HighsTaskExecutor::shutdown(true);
   
   return (int)run_status;
 }
