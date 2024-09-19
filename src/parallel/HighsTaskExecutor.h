@@ -137,7 +137,7 @@ class HighsTaskExecutor {
   void stopWorkerThreads(bool blocking = false) {
     // auto id = mainWorkerId.exchange(std::thread::id());
     // if (id == std::thread::id()) return;  // already been called
-    // ??? 
+    // does this happen?
 
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
