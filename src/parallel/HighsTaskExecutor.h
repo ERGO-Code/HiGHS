@@ -91,13 +91,12 @@ class HighsTaskExecutor {
   }
 
   static void run_worker(int workerId, HighsTaskExecutor* ptr) {
-    auto &executorHandle = threadLocalExecutorHandle();
+    auto& executorHandle = threadLocalExecutorHandle();
     executorHandle.ptr = ptr;
 
     // check if main thread has shutdown before thread has started
     // if (ptr->mainWorkerId.load() != std::thread::id()) {
     if (!(executorHandle.isMain)) {
-
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
       threadLocalWorkerDeque() = localDeque;
 
@@ -110,7 +109,7 @@ class HighsTaskExecutor {
 
         currentTask = ptr->workerBunk->waitForNewTask(localDeque);
       }
-      }
+    }
 
     threadLocalExecutorHandle().dispose();
   }
@@ -138,10 +137,9 @@ class HighsTaskExecutor {
   void stopWorkerThreads(bool blocking = false) {
     // auto id = mainWorkerId.exchange(std::thread::id());
     // if (id == std::thread::id()) return;  // already been called
-    auto &executorHandle = threadLocalExecutorHandle();
-    if(executorHandle.isStopped)
-      return;
-    
+    auto& executorHandle = threadLocalExecutorHandle();
+    if (executorHandle.isStopped) return;
+
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
       workerDeque->injectTaskAndNotify(nullptr);
@@ -154,15 +152,13 @@ class HighsTaskExecutor {
       for (auto& workerThread : workerThreads) {
         workerThread.join();
       }
-    } 
-    else {
+    } else {
       for (auto& workerThread : workerThreads) {
         workerThread.detach();
       }
     }
 
-    if (executorHandle.isMain)
-      executorHandle.isStopped = true;
+    if (executorHandle.isMain) executorHandle.isStopped = true;
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
@@ -176,7 +172,8 @@ class HighsTaskExecutor {
   static void initialize(int numThreads) {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr == nullptr) {
-      executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor))) HighsTaskExecutor(numThreads);
+      executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor)))
+          HighsTaskExecutor(numThreads);
       executorHandle.isMain = true;
     }
   }
