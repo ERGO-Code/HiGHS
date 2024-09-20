@@ -3634,9 +3634,9 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
-double HEkk::computeBasisCondition() {
-  HighsInt solver_num_row = lp_.num_row_;
-  HighsInt solver_num_col = lp_.num_col_;
+double HEkk::computeBasisCondition(const HighsLp& lp) {
+  HighsInt solver_num_row = lp.num_row_;
+  HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
@@ -3644,8 +3644,8 @@ double HEkk::computeBasisCondition() {
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  const HighsInt* Astart = lp_.a_matrix_.start_.data();
-  const double* Avalue = lp_.a_matrix_.value_.data();
+  const HighsInt* Astart = lp.a_matrix_.start_.data();
+  const double* Avalue = lp.a_matrix_.value_.data();
   // Compute the Hager condition number estimate for the basis matrix
   const double expected_density = 1;
   bs_cond_x.resize(solver_num_row);

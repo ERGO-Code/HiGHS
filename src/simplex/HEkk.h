@@ -134,7 +134,8 @@ class HEkk {
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
-  double computeBasisCondition();
+  double computeBasisCondition(const HighsLp& lp);
+  double computeBasisCondition() { return computeBasisCondition(this->lp_); }
 
   HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
