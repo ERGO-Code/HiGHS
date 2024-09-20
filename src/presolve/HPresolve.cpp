@@ -4254,12 +4254,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz = Avalue.size() - freeslots.size();
+        // Only read the run time if it's to be printed
+        const double run_time =
+            options->output_flag ? this->timer->read(run_clock) : 0;
 #ifndef NDEBUG
-        std::string time_str =
-            " " + std::to_string(this->timer->read(run_clock)) + "s";
+        std::string time_str = " " + std::to_string(run_time) + "s";
 #else
-        std::string time_str =
-            " " + std::to_string(int(this->timer->read(run_clock))) + "s";
+        std::string time_str = " " + std::to_string(int(run_time)) + "s";
 #endif
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -4487,7 +4488,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   if ((numreductions & 1023u) == 0) {
     assert(timer);
     assert(run_clock >= 0);
-    if (timer->read(run_clock) >= options->time_limit) {
+    if (options->time_limit < kHighsInf &&
+        timer->read(run_clock) >= options->time_limit) {
       return Result::kStopped;
     }
   }

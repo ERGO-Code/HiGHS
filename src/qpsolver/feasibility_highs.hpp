@@ -61,8 +61,11 @@ static void computeStartingPointHighs(Instance& instance,
 
     highs.setOptionValue("presolve", "on");
 
-    highs.setOptionValue("time_limit", settings.time_limit -
-			 timer.readRunHighsClock());
+    const double use_time_limit = settings.time_limit < kHighsInf ?
+      settings.time_limit - timer.readRunHighsClock() :
+      kHighsInf;
+	     
+    highs.setOptionValue("time_limit", use_time_limit);
 
     HighsLp lp;
     lp.a_matrix_.index_ = instance.A.mat.index;
