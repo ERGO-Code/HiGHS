@@ -1383,6 +1383,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   assert(HighsInt(result.size) == this->num_col_);
   assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {
+    double inv_num_col = 1.0 / this->num_col_;
     for (HighsInt ix = next_index; ix < column.count; ix++) {
       HighsInt iRow = column.index[ix];
       // Determine whether p_end_ or the next start_ ends the loop
@@ -1394,7 +1395,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       }
       // Possibly switch to standard row-wise price
       HighsInt row_num_nz = to_iEl - this->start_[iRow];
-      double local_density = (1.0 * result.count) / this->num_col_;
+      double local_density = (1.0 * result.count) * inv_num_col;
       bool switch_to_dense = result.count + row_num_nz >= this->num_col_ ||
                              local_density > switch_density;
       if (switch_to_dense) break;
