@@ -38,6 +38,23 @@ if(EXISTS "${LOC_PATH}")
 endif()
 option(FAST_BUILD "Fast build: " ON)
 
+find_program(GIT git)
+
+if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
+    execute_process(
+    COMMAND ${GIT} status
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR} OUTPUT_QUIET)
+
+    execute_process(
+    COMMAND ${GIT} describe --always
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
+    OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+else()
+  set(GITHASH "n/a")
+endif()
+
+message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
@@ -375,18 +392,6 @@ set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
-find_program(GIT git)
-
-if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
-  execute_process(
-    COMMAND ${GIT} describe --always --dirty
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
-    OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
-else()
-  set(GITHASH "n/a")
-endif()
-message(STATUS "Git hash: " ${GITHASH})
 
 # Deprecate
 # string(TIMESTAMP TODAY "%Y-%m-%d")
