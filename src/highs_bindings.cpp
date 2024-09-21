@@ -314,13 +314,17 @@ HighsStatus highs_changeColsIntegrality(
 
 // Same as deleteVars
 HighsStatus highs_deleteCols(Highs* h, HighsInt num_set_entries,
-                             std::vector<HighsInt>& indices) {
-  return h->deleteCols(num_set_entries, indices.data());
+                             dense_array_t<HighsInt> indices) {
+  py::buffer_info index_info = indices.request();
+  HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
+  return h->deleteCols(num_set_entries, index_ptr);
 }
 
 HighsStatus highs_deleteRows(Highs* h, HighsInt num_set_entries,
-                             std::vector<HighsInt>& indices) {
-  return h->deleteRows(num_set_entries, indices.data());
+                             dense_array_t<HighsInt> indices) {
+  py::buffer_info index_info = indices.request();
+  HighsInt* index_ptr = reinterpret_cast<HighsInt*>(index_info.ptr);
+  return h->deleteRows(num_set_entries, index_ptr);
 }
 
 HighsStatus highs_setSolution(Highs* h, HighsSolution& solution) {
@@ -748,6 +752,8 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("p_end_", &HighsSparseMatrix::p_end_)
       .def_readwrite("index_", &HighsSparseMatrix::index_)
       .def_readwrite("value_", &HighsSparseMatrix::value_);
+  py::class_<HighsLpMods>(m, "HighsLpMods");
+  py::class_<HighsScale>(m, "HighsScale");
   py::class_<HighsLp>(m, "HighsLp")
       .def(py::init<>())
       .def_readwrite("num_col_", &HighsLp::num_col_)
@@ -928,7 +934,7 @@ PYBIND11_MODULE(_core, m) {
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run, py::call_guard<py::gil_scoped_release>())
-      .def("resetGlobalScheduler", &Highs::resetGlobalScheduler)
+      .def_static("resetGlobalScheduler", &Highs::resetGlobalScheduler)
       .def(
           "feasibilityRelaxation",
           [](Highs& self, double global_lower_penalty,

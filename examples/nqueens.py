@@ -13,12 +13,12 @@ h.silent()
 
 x = h.addBinaries(N, N)
 
-h.addConstrs(h.qsum(x[i,:]) == 1 for i in range(N))    # each row has exactly one queen
-h.addConstrs(h.qsum(x[:,j]) == 1 for j in range(N))    # each col has exactly one queen
+h.addConstrs(x.sum(axis=0) == 1)    # each row has exactly one queen
+h.addConstrs(x.sum(axis=1) == 1)    # each col has exactly one queen
 
 y = np.fliplr(x)
-h.addConstrs(h.qsum(x.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen
-h.addConstrs(h.qsum(y.diagonal(k)) <= 1 for k in range(-N + 1, N))   # each 'reverse' diagonal has at most one queen
+h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen
+h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))   # each 'reverse' diagonal has at most one queen
 
 h.solve()
 sol = h.vals(x)
