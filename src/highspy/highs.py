@@ -4,7 +4,6 @@ from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
 from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast
-from types import EllipsisType
 
 from ._core import (
     ObjSense,
@@ -1502,7 +1501,7 @@ class HighspyArray(np.ndarray[Any, np.dtype[np.object_]]):
     ) -> HighspyArray: ...
 
     @overload
-    def __getitem__(self, key: (None | slice | type[EllipsisType] | SupportsIndex | tuple[None | slice | type[EllipsisType] | SupportsIndex, ...])) -> HighspyArray: ...
+    def __getitem__(self, key: (None | slice | SupportsIndex | tuple[None | slice | SupportsIndex, ...])) -> HighspyArray: ...
 
     @overload
     def __getitem__(self, key: Any) -> HighspyArray: ...  # type: ignore
