@@ -81,13 +81,13 @@ write_basic_package_version_file(
   "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config-version.cmake"
   COMPATIBILITY SameMajorVersion)
 
-# add_cxx_test()
+# highs_cxx_test()
 # CMake function to generate and build C++ test.
 # Parameters:
 #  the C++ filename
 # e.g.:
-# add_cxx_test(foo.cc)
-function(add_cxx_test FILE_NAME)
+# highs_cxx_test(foo.cc)
+function(highs_cxx_test FILE_NAME)
   message(STATUS "Configuring test ${FILE_NAME}: ...")
   get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
@@ -114,13 +114,13 @@ endfunction()
 # set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 # set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
 
-# add_c_test()
+# highs_c_test()
 # CMake function to generate and build C++ test.
 # Parameters:
 #  the C filename
 # e.g.:
-# add_c_test(foo.c)
-function(add_c_test FILE_NAME)
+# highs_c_test(foo.c)
+function(highs_c_test FILE_NAME)
   message(STATUS "Configuring test ${FILE_NAME}: ...")
   get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
