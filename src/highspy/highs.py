@@ -3,17 +3,18 @@ import numpy as np
 from numbers import Integral
 from itertools import product
 from threading import Thread, local, RLock, Lock
-from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast
+from typing import Optional, Any, overload, Callable, Sequence, Mapping, Iterable, SupportsIndex, cast, Union
 
 from ._core import (
     ObjSense,
     HighsVarType,
     HighsStatus,
-    cb, # type: ignore
+    cb,  # type: ignore
     _Highs,  # type: ignore
     readonly_ptr_wrapper_double,
     kHighsInf,
 )
+
 
 class Highs(_Highs):
     """
@@ -171,7 +172,7 @@ class Highs(_Highs):
         return self.solve()
 
     # reset the objective and sense, then solve
-    def minimize(self, obj: Optional[highs_var | highs_linear_expression] = None):
+    def minimize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
         """
         Solves a minimization of the objective and optionally updates the costs.
 
@@ -207,7 +208,7 @@ class Highs(_Highs):
         return self.solve()
 
     # reset the objective and sense, then solve
-    def maximize(self, obj: Optional[highs_var | highs_linear_expression] = None):
+    def maximize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
         """
         Solves a maximization of the objective and optionally updates the costs.
 
@@ -244,15 +245,11 @@ class Highs(_Highs):
 
     @staticmethod
     def internal_get_value(
-        array_values: Sequence[float] | np.ndarray[Any, np.dtype[np.float64]] | readonly_ptr_wrapper_double,
-        index_collection: Integral
-        | highs_var
-        | highs_cons
-        | highs_linear_expression
-        | Mapping[Any, Any]
-        | Sequence[Any]
-        | np.ndarray[Any, np.dtype[Any]],
-    ) -> float | bool | Mapping[Any, Any] | np.ndarray[Any, np.dtype[np.float64]]:
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]], readonly_ptr_wrapper_double],
+        index_collection: Union[
+            Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]
+        ],
+    ) -> Union[float, bool, Mapping[Any, Any], np.ndarray[Any, np.dtype[np.float64]]]:
         """
         Internal method to get the value of an index from an array of values. Could be value or dual, variable or constraint.
         """
@@ -269,20 +266,20 @@ class Highs(_Highs):
             return np.asarray([Highs.internal_get_value(array_values, v) for v in index_collection])
 
     @overload
-    def val(self, var: Integral | highs_var | highs_cons) -> float: ...
+    def val(self, var: Union[Integral, highs_var, highs_cons]) -> float: ...
 
     @overload
-    def val(self, var: highs_linear_expression) -> float | bool: ...
+    def val(self, var: highs_linear_expression) -> Union[float, bool]: ...
 
     @overload
     def val(self, var: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
 
     @overload
-    def val(self, var: Sequence[Any] | np.ndarray[Any, np.dtype[Any]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+    def val(self, var: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
 
     def val(
         self,
-        var: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | Sequence[Any] | np.ndarray[Any, np.dtype[Any]],
+        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Gets the value of a variable/index or expression in the solution.
@@ -296,20 +293,20 @@ class Highs(_Highs):
         return Highs.internal_get_value(super().getSolution().col_value, var)
 
     @overload
-    def vals(self, idxs: Integral | highs_var | highs_cons) -> float: ...
+    def vals(self, idxs: Union[Integral, highs_var, highs_cons]) -> float: ...
 
     @overload
-    def vals(self, idxs: highs_linear_expression) -> float | bool: ...
+    def vals(self, idxs: highs_linear_expression) -> Union[float, bool]: ...
 
     @overload
     def vals(self, idxs: Mapping[Any, Any]) -> Mapping[Any, Any]: ...
 
     @overload
-    def vals(self, idxs: Sequence[Any] | np.ndarray[Any, np.dtype[Any]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
+    def vals(self, idxs: Union[Sequence[Any], np.ndarray[Any, np.dtype[Any]]]) -> np.ndarray[Any, np.dtype[np.float64]]: ...
 
     def vals(
         self,
-        idxs: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | Sequence[Any] | np.ndarray[Any, np.dtype[Any]],
+        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Gets the values of multiple variables in the solution.
@@ -322,7 +319,7 @@ class Highs(_Highs):
         """
         return Highs.internal_get_value(super().getSolution().col_value, idxs)
 
-    def variableName(self, var: Integral | highs_var):
+    def variableName(self, var: Union[Integral, highs_var]):
         """
         Retrieves the name of a specific variable.
 
@@ -342,12 +339,12 @@ class Highs(_Highs):
         return name
 
     @overload
-    def variableNames(self, idxs: Mapping[Any, highs_var | Integral]) -> dict[Any, str]: ...
+    def variableNames(self, idxs: Mapping[Any, Union[highs_var, Integral]]) -> dict[Any, str]: ...
 
     @overload
-    def variableNames(self, idxs: Iterable[highs_var | Integral]) -> list[str]: ...
+    def variableNames(self, idxs: Iterable[Union[highs_var, Integral]]) -> list[str]: ...
 
-    def variableNames(self, idxs: Iterable[highs_var | Integral]):
+    def variableNames(self, idxs: Iterable[Union[highs_var, Integral]]):
         """
         Retrieves the names of multiple variables.
 
@@ -362,7 +359,7 @@ class Highs(_Highs):
             If idxs is an iterable, returns a list of names for the specified variables.
         """
         if isinstance(idxs, Mapping):
-            convert: Mapping[Any, highs_var | Integral] = idxs
+            convert: Mapping[Any, Union[highs_var, Integral]] = idxs
             return {key: self.variableName(v) for key, v in convert.items()}
         else:
             return [self.variableName(v) for v in idxs]
@@ -378,7 +375,7 @@ class Highs(_Highs):
 
     def variableValue(
         self,
-        var: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the value of a specific variable in the solution.
@@ -393,7 +390,7 @@ class Highs(_Highs):
 
     def variableValues(
         self,
-        idxs: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the values of multiple variables in the solution.
@@ -417,7 +414,7 @@ class Highs(_Highs):
 
     def variableDual(
         self,
-        var: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        var: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the dual value of a specific variable/index or expression in the solution.
@@ -432,7 +429,7 @@ class Highs(_Highs):
 
     def variableDuals(
         self,
-        idxs: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        idxs: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the dual values of multiple variables in the solution.
@@ -456,7 +453,7 @@ class Highs(_Highs):
 
     def constrValue(
         self,
-        con: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        con: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the value of a specific constraint in the solution.
@@ -471,7 +468,7 @@ class Highs(_Highs):
 
     def constrValues(
         self,
-        cons: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        cons: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the values of multiple constraints in the solution.
@@ -495,7 +492,7 @@ class Highs(_Highs):
 
     def constrDual(
         self,
-        con: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        con: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the dual value of a specific constraint in the solution.
@@ -510,7 +507,7 @@ class Highs(_Highs):
 
     def constrDuals(
         self,
-        cons: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        cons: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Retrieves the dual values of multiple constraints in the solution.
@@ -572,35 +569,35 @@ class Highs(_Highs):
     def addVariables(
         self,
         *nvars: int,
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addVariables(
         self,
         *nvars: Mapping[Any, Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addVariables(
         self,
         *nvars: Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> dict[Any, highs_var] | HighspyArray: ...
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
 
     @overload
     def addVariables(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> Optional[dict[Any, highs_var] | HighspyArray]: ...
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addVariables(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> Optional[dict[Any, highs_var] | HighspyArray]:
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]:
         """
         Adds multiple variables to the model.
 
@@ -634,23 +631,23 @@ class Highs(_Highs):
 
         # parameter can be scalar, array, or mapping lookup (i.e., dictionary, custom class, etc.)
         # scalar: repeat for all N, array: use as is, lookup: convert to array using indices
-        def ensure_real(x: Any | Mapping[Any, Any] | Sequence[Any]):
-            if isinstance(x, float | int):
+        def ensure_real(x: Union[Any, Mapping[Any, Any], Sequence[Any]]):
+            if isinstance(x, Union[float, int]):
                 return np.full(N, x, dtype=np.float64)
 
             elif isinstance(x, Mapping):
                 mt: Mapping[Any, Any] = x
 
-                if all(isinstance(v, float | int) for v in mt.values()):
-                    m: Mapping[Any, float | int] = x
+                if all(isinstance(v, Union[float, int]) for v in mt.values()):
+                    m: Mapping[Any, Union[float, int]] = x
                     return np.fromiter((m[i] for i in indices), np.float64)
 
-            elif isinstance(x, Sequence) and len(x) == N and all(isinstance(v, float | int) for v in x):
+            elif isinstance(x, Sequence) and len(x) == N and all(isinstance(v, Union[float, int]) for v in x):
                 return np.asarray(x, dtype=np.float64)
 
             raise Exception("Invalid parameter.")
 
-        def ensure_HighsVarType(x: Any | Mapping[Any, Any] | Sequence[Any]):
+        def ensure_HighsVarType(x: Union[Any, Mapping[Any, Any], Sequence[Any]]):
             if x == HighsVarType.kContinuous:
                 return None
 
@@ -736,34 +733,34 @@ class Highs(_Highs):
     def addIntegrals(
         self,
         *nvars: int,
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addIntegrals(
         self,
         *nvars: Mapping[Any, Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addIntegrals(
         self,
         *nvars: Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> dict[Any, highs_var] | HighspyArray: ...
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
 
     @overload
     def addIntegrals(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> Optional[dict[Any, highs_var] | HighspyArray]: ...
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addIntegrals(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ):
         """
         Alias for the addVariables method, for integer variables.
@@ -775,34 +772,34 @@ class Highs(_Highs):
     def addBinaries(
         self,
         *nvars: int,
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> HighspyArray: ...
 
     @overload
     def addBinaries(
         self,
         *nvars: Mapping[Any, Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ) -> dict[Any, highs_var]: ...
 
     @overload
     def addBinaries(
         self,
         *nvars: Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> dict[Any, highs_var] | HighspyArray: ...
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Union[dict[Any, highs_var], HighspyArray]: ...
 
     @overload
     def addBinaries(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
-    ) -> Optional[dict[Any, highs_var] | HighspyArray]: ...
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
+    ) -> Optional[Union[dict[Any, highs_var], HighspyArray]]: ...
 
     def addBinaries(
         self,
-        *nvars: int | Mapping[Any, Any] | Sequence[Any],
-        **kwargs: Any | HighsVarType | Mapping[Any, Any] | Sequence[Any],
+        *nvars: Union[int, Mapping[Any, Any], Sequence[Any]],
+        **kwargs: Union[Any, HighsVarType, Mapping[Any, Any], Sequence[Any]],
     ):
         """
         Alias for the addVariables method, for binary variables.
@@ -827,8 +824,8 @@ class Highs(_Highs):
 
     def deleteVariable(
         self,
-        var_or_index: Integral | highs_var,
-        *args: Mapping[Any, highs_var] | Iterable[highs_var] | highs_var,
+        var_or_index: Union[Integral, highs_var],
+        *args: Union[Mapping[Any, highs_var], Iterable[highs_var], highs_var],
     ):
         """
         Deletes a variable from the model and updates the indices of subsequent variables in provided collections.
@@ -934,27 +931,27 @@ class Highs(_Highs):
     def addConstrs(
         self,
         *args: highs_linear_expression,
-        **kwargs: Optional[str | Sequence[str]],
+        **kwargs: Optional[Union[str, Sequence[str]]],
     ) -> list[highs_cons]: ...
 
     @overload
     def addConstrs(
         self,
         *args: Mapping[Any, highs_linear_expression],
-        **kwargs: Optional[str | Sequence[str]],
+        **kwargs: Optional[Union[str, Sequence[str]]],
     ) -> dict[Any, highs_cons]: ...
 
     @overload
     def addConstrs(
         self,
         *args: Iterable[highs_linear_expression],
-        **kwargs: Optional[str | Sequence[str]],
+        **kwargs: Optional[Union[str, Sequence[str]]],
     ) -> list[highs_cons]: ...
 
     def addConstrs(
         self,
-        *args: highs_linear_expression | Iterable[highs_linear_expression],
-        **kwargs: Optional[str | Sequence[str]],
+        *args: Union[highs_linear_expression, Iterable[highs_linear_expression]],
+        **kwargs: Optional[Union[str, Sequence[str]]],
     ):
         """
         Adds multiple constraints to the model.
@@ -1018,7 +1015,7 @@ class Highs(_Highs):
 
     def expr(
         self,
-        optional: Optional[float | int | highs_var | highs_linear_expression] = None,
+        optional: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
     ):
         """
         Creates a new highs_linear_expression object.
@@ -1028,7 +1025,7 @@ class Highs(_Highs):
         """
         return highs_linear_expression(optional)
 
-    def getExpr(self, cons: Integral | highs_cons):
+    def getExpr(self, cons: Union[Integral, highs_cons]):
         """
         Retrieves the highs_linear_expression of a constraint.
 
@@ -1054,7 +1051,7 @@ class Highs(_Highs):
         expr.vals = list(val)
         return expr
 
-    def chgCoeff(self, cons: highs_cons | Integral, var: highs_var | Integral, val: float):
+    def chgCoeff(self, cons: Union[highs_cons, Integral], var: Union[highs_var, Integral], val: float):
         """
         Changes the coefficient of a variable in a constraint.
 
@@ -1076,8 +1073,8 @@ class Highs(_Highs):
 
     def removeConstr(
         self,
-        cons_or_index: highs_cons | Integral,
-        *args: Mapping[Any, highs_cons] | Sequence[highs_cons] | highs_cons,
+        cons_or_index: Union[highs_cons, Integral],
+        *args: Union[Mapping[Any, highs_cons], Sequence[highs_cons], highs_cons],
     ):
         """
         Removes a constraint from the model and updates the indices of subsequent constraints in provided collections.
@@ -1135,7 +1132,7 @@ class Highs(_Highs):
         """
         super().changeObjectiveSense(ObjSense.kMaximize)
 
-    def setInteger(self, var_or_collection: highs_var | int | Iterable[highs_var | int]):
+    def setInteger(self, var_or_collection: Union[highs_var, int, Iterable[Union[highs_var, int]]]):
         """
         Sets a variable/collection to integer.
 
@@ -1148,7 +1145,7 @@ class Highs(_Highs):
         else:
             super().changeColIntegrality(int(var_or_collection), HighsVarType.kInteger)
 
-    def setContinuous(self, var_or_collection: highs_var | int | Iterable[highs_var | int]):
+    def setContinuous(self, var_or_collection: Union[highs_var, int, Iterable[Union[highs_var, int]]]):
         """
         Sets a variable/collection to continuous.
 
@@ -1167,8 +1164,8 @@ class Highs(_Highs):
 
     @staticmethod
     def qsum(
-        items: Iterable[highs_var | highs_linear_expression] | np.ndarray[Any, np.dtype[np.object_]],
-        initial: Optional[float | int | highs_var | highs_linear_expression] = None,
+        items: Union[Iterable[Union[highs_var, highs_linear_expression]], np.ndarray[Any, np.dtype[np.object_]]],
+        initial: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
     ):
         """
         Performs a faster sum for highs_linear_expressions.
@@ -1181,7 +1178,7 @@ class Highs(_Highs):
         if isinstance(items, np.ndarray):
             X: np.ndarray[Any, np.dtype[np.object_]] = items
             for v in X.flat:
-                expr += cast(highs_var | highs_linear_expression, v)
+                expr += cast(Union[highs_var, highs_linear_expression], v)
         else:
             for v in items:
                 expr += v
@@ -1367,7 +1364,7 @@ class HighsCallbackEvent(object):
 
     def val(
         self,
-        var_expr: Integral | highs_var | highs_cons | highs_linear_expression | Mapping[Any, Any] | np.ndarray[Any, np.dtype[Any]],
+        var_expr: Union[Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], np.ndarray[Any, np.dtype[Any]]],
     ):
         """
         Gets the value(s) of a variable/index or expression in the callback solution.
@@ -1490,23 +1487,25 @@ class HighspyArray(np.ndarray[Any, np.dtype[np.object_]]):
         self.highs = getattr(obj, "highs", None)
 
     @overload
-    def __getitem__(self, key: SupportsIndex | tuple[SupportsIndex, ...]) -> highs_linear_expression: ...  # type: ignore
+    def __getitem__(self, key: Union[SupportsIndex, tuple[SupportsIndex, ...]]) -> highs_linear_expression: ...  # type: ignore
 
     @overload
     def __getitem__(
         self,
-        key: np.ndarray[Any, np.dtype[np.integer[Any]]]
-        | np.ndarray[Any, np.dtype[np.bool_]]
-        | tuple[np.ndarray[Any, np.dtype[np.integer[Any]]] | np.ndarray[Any, np.dtype[np.bool_]], ...],
+        key: Union[
+            np.ndarray[Any, np.dtype[np.integer[Any]]],
+            np.ndarray[Any, np.dtype[np.bool_]],
+            tuple[Union[np.ndarray[Any, np.dtype[np.integer[Any]]], np.ndarray[Any, np.dtype[np.bool_]]], ...],
+        ],
     ) -> HighspyArray: ...
 
     @overload
-    def __getitem__(self, key: (None | slice | SupportsIndex | tuple[None | slice | SupportsIndex, ...])) -> HighspyArray: ...
+    def __getitem__(self, key: Union[None, slice, SupportsIndex, tuple[Union[None, slice, SupportsIndex], ...]]) -> HighspyArray: ...
 
     @overload
     def __getitem__(self, key: Any) -> HighspyArray: ...  # type: ignore
 
-    def __getitem__(self, key: Any) -> HighspyArray | highs_linear_expression:  # type: ignore
+    def __getitem__(self, key: Any) -> Union[HighspyArray, highs_linear_expression]:  # type: ignore
         return super(HighspyArray, self).__getitem__(key)  # type: ignore
 
     def __ge__(self, other: Any) -> HighspyArray:  # type: ignore
@@ -1524,15 +1523,14 @@ class HighspyArray(np.ndarray[Any, np.dtype[np.object_]]):
     @overload
     def sum(self, axis: Any, dtype: Optional[Any] = None, out: HighspyArray = ...) -> HighspyArray: ...
 
-    def sum( # type: ignore
+    def sum(  # type: ignore
         self,
         axis: Optional[int] = None,
         dtype: Optional[Any] = None,
         out: Optional[np.ndarray[Any, np.dtype[np.object_]]] = None,
         **unused_kwargs: Any,
-    ) -> HighspyArray | highs_linear_expression:
+    ) -> Union[HighspyArray, highs_linear_expression]:
         if self.highs is not None:
-
             if axis is not None:
                 return HighspyArray(np.apply_along_axis(self.highs.qsum, axis, self, initial=unused_kwargs.get("initial", None)), self.highs)
             else:
@@ -1576,38 +1574,38 @@ class highs_var(object):
         expr.vals = [-1.0]
         return expr
 
-    def __add__(self, other: float | int | highs_var | highs_linear_expression):
+    def __add__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(self)
         expr += other
         return expr
 
-    def __radd__(self, other: float | int | highs_var | highs_linear_expression):
+    def __radd__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(self)
         expr += other
         return expr
 
-    def __mul__(self, other: float | int | highs_var | highs_linear_expression):
+    def __mul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(self)
         expr *= other
         return expr
 
-    def __rmul__(self, other: float | int | highs_var | highs_linear_expression):
+    def __rmul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(self)
         expr *= other
         return expr
 
-    def __rsub__(self, other: float | int | highs_var | highs_linear_expression):
+    def __rsub__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(other)
         expr -= self
         return expr
 
-    def __sub__(self, other: float | int | highs_var | highs_linear_expression):
+    def __sub__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         expr = highs_linear_expression(self)
         expr -= other
         return expr
 
     # self <= other
-    def __le__(self, other: float | int | highs_var | highs_linear_expression):
+    def __le__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if isinstance(other, highs_linear_expression):
             return other.__ge__(self)
         else:
@@ -1628,7 +1626,7 @@ class highs_var(object):
             raise Exception("Invalid comparison.")
 
     # self >= other
-    def __ge__(self, other: float | int | highs_var | highs_linear_expression):
+    def __ge__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if isinstance(other, highs_linear_expression):
             return other.__le__(self)
         else:
@@ -1731,7 +1729,7 @@ class highs_linear_expression(object):
     def __init__(self, other: None = None) -> None: ...
 
     @overload
-    def __init__(self, other: float | int) -> None: ...
+    def __init__(self, other: Union[float, int]) -> None: ...
 
     @overload
     def __init__(self, other: highs_var) -> None: ...
@@ -1741,7 +1739,7 @@ class highs_linear_expression(object):
 
     def __init__(
         self,
-        other: Optional[float | int | highs_var | highs_linear_expression] = None,
+        other: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
     ):
         self.constant: Optional[float] = None  # constant is only valid when bounds are None
         self.bounds: Optional[tuple[float, float]] = None  # bounds are only valid when constant is None
@@ -1783,8 +1781,8 @@ class highs_linear_expression(object):
 
     def evaluate(
         self,
-        values: Sequence[float] | np.ndarray[Any, np.dtype[np.float64]] | readonly_ptr_wrapper_double,
-    ) -> float | bool:
+        values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]], readonly_ptr_wrapper_double],
+    ) -> Union[float, bool]:
         """
         Evaluates the linear expression given a solution array (values).
         """
@@ -1827,7 +1825,7 @@ class highs_linear_expression(object):
             raise Exception("Bounds have already been set.")
 
         # self == c
-        elif isinstance(other, float | int):
+        elif isinstance(other, Union[float, int]):
             copy = highs_linear_expression(self)
             copy.bounds = (
                 float(other) - (self.constant or 0.0),
@@ -1878,7 +1876,7 @@ class highs_linear_expression(object):
 
         # support expr == [lb, ub] --> lb <= expr <= ub
         elif hasattr(other, "__getitem__") and hasattr(other, "__len__") and len(other) == 2:
-            if not (isinstance(other[0], float | int) and isinstance(other[1], float | int)):
+            if not (isinstance(other[0], Union[float, int]) and isinstance(other[1], Union[float, int])):
                 raise Exception("Provided bounds were not valid numbers.")
 
             copy = highs_linear_expression(self)
@@ -1893,7 +1891,7 @@ class highs_linear_expression(object):
             raise Exception("Unknown comparison.")
 
     # self <= other
-    def __le__(self, other: float | int | highs_var | highs_linear_expression):
+    def __le__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if self.bounds is not None:
             raise Exception("Bounds have already been set.")
 
@@ -1914,7 +1912,7 @@ class highs_linear_expression(object):
         self.__reset_chain(self, other, None)
 
         # self <= c
-        if isinstance(other, float | int):
+        if isinstance(other, Union[float, int]):
             copy = highs_linear_expression(self)
             copy.bounds = (-kHighsInf, float(other) - (copy.constant or 0.0))
             copy.constant = None
@@ -1961,7 +1959,7 @@ class highs_linear_expression(object):
             return copy
 
     # other <= self
-    def __ge__(self, other: float | int | highs_var | highs_linear_expression):
+    def __ge__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if self.bounds is not None:
             raise Exception("Bounds have already been set.")
 
@@ -1982,7 +1980,7 @@ class highs_linear_expression(object):
         self.__reset_chain(None, other, self)
 
         # c <= self
-        if isinstance(other, float | int):
+        if isinstance(other, Union[float, int]):
             copy = highs_linear_expression(self)
             copy.bounds = (float(other) - (self.constant or 0.0), kHighsInf)
             copy.constant = None
@@ -2028,11 +2026,11 @@ class highs_linear_expression(object):
 
             return copy
 
-    def __radd__(self, other: float | int | highs_var | highs_linear_expression):
+    def __radd__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         return self + other
 
     # (LHS <= self <= RHS) + (LHS <= other <= RHS)
-    def __add__(self, other: float | int | highs_var | highs_linear_expression):
+    def __add__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         copy = highs_linear_expression(self)
         copy += other
         return copy
@@ -2048,21 +2046,21 @@ class highs_linear_expression(object):
 
         return copy
 
-    def __rmul__(self, other: float | int | highs_var | highs_linear_expression):
+    def __rmul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         return self * other
 
-    def __mul__(self, other: float | int | highs_var | highs_linear_expression):
+    def __mul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         copy = highs_linear_expression(self)
         copy *= other
         return copy
 
     # other - self
-    def __rsub__(self, other: float | int | highs_var | highs_linear_expression):
+    def __rsub__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         copy = highs_linear_expression(other)
         copy -= self
         return copy
 
-    def __sub__(self, other: float | int | highs_var | highs_linear_expression):
+    def __sub__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         copy = highs_linear_expression(self)
         copy -= other
         return copy
@@ -2107,7 +2105,7 @@ class highs_linear_expression(object):
     ##
 
     # (LHS <= self <= RHS) += (LHS <= other <= RHS)
-    def __iadd__(self, other: float | int | highs_var | highs_linear_expression):
+    def __iadd__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if isinstance(other, highs_var):
             self.idxs.append(other.index)
             self.vals.append(1.0)
@@ -2142,7 +2140,7 @@ class highs_linear_expression(object):
             self.constant = float(other) + (self.constant or 0.0)
             return self
 
-    def __isub__(self, other: float | int | highs_var | highs_linear_expression):
+    def __isub__(self, other: Union[float, int, highs_var, highs_linear_expression]):
         if isinstance(other, highs_var):
             self.idxs.append(other.index)
             self.vals.append(-1.0)
@@ -2177,8 +2175,8 @@ class highs_linear_expression(object):
             self.constant = (self.constant or 0.0) - float(other)
             return self
 
-    def __imul__(self, other: float | int | highs_var | highs_linear_expression):
-        if isinstance(other, float | int):
+    def __imul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
+        if isinstance(other, Union[float, int]):
             scale = float(other)
 
         # other is a constant expression, so treat as a scalar
@@ -2351,8 +2349,8 @@ class highs_linear_expression(object):
 
 
 def qsum(
-    items: Iterable[highs_var | highs_linear_expression],
-    initial: Optional[float | int | highs_var | highs_linear_expression] = None,
+    items: Iterable[Union[highs_var, highs_linear_expression]],
+    initial: Optional[Union[float, int, highs_var, highs_linear_expression]] = None,
 ):
     """
     Performs a faster sum for highs_linear_expressions.
