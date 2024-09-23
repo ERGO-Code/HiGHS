@@ -41,6 +41,17 @@ bool okReserve(std::vector<T>& use_vector, HighsInt dimension) {
   return true;
 }
 
+template <typename T, typename T2>
+bool okReserve(std::unordered_map<T, T2>& use_map, HighsInt dimension) {
+  try {
+    use_map.reserve(dimension);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::okReserve fails with %s\n", e.what());
+    return false;
+  }
+  return true;
+}
+
 template <typename T>
 bool okAssign(std::vector<T>& use_vector, HighsInt dimension, T value = T{}) {
   try {

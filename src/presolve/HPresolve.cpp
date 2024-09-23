@@ -124,6 +124,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
+  if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -857,6 +858,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsizeImplInt.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
+  liftingOpportunities.reserve(model->num_row_);
 
   numDeletedRows = 0;
   postsolve_stack.compressIndexMaps(newRowIndex, newColIndex);
@@ -1598,7 +1600,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         val = 1.0;
       addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
       // modifications to row invalidate lifting opportunities
-      liftingOpportunities.erase(cliqueextension.first);
+      liftingOpportunities[cliqueextension.first].clear();
     }
     extensionvars.clear();
 
