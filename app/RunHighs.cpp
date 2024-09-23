@@ -100,8 +100,7 @@ int main(int argc, char** argv) {
       return (int)write_model_status;  // todo: change to write model error
   }
 
-  // Shut down task executor: wip
-  // Will be added as an option, as we should not detach in lib if this is used
+  // Shut down task executor: optional and wip
   // HighsTaskExecutor::shutdown(true);
 
   return (int)run_status;

@@ -32,7 +32,6 @@ class HighsTaskExecutor {
   struct ExecutorHandle {
     HighsTaskExecutor* ptr{nullptr};
     bool isMain{false};
-    bool isStopped{false};
 
     void dispose();
     ~ExecutorHandle() { dispose(); }
@@ -60,6 +59,8 @@ class HighsTaskExecutor {
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   std::vector<std::thread> workerThreads;
+
+  std::atomic<bool> hasStopped{false};
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -94,9 +95,7 @@ class HighsTaskExecutor {
     auto& executorHandle = threadLocalExecutorHandle();
     executorHandle.ptr = ptr;
 
-    // check if main thread has shutdown before thread has started
-    // if (ptr->mainWorkerId.load() != std::thread::id()) {
-    if (!(executorHandle.isMain)) {
+    if (!hasStopped) {
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
       threadLocalWorkerDeque() = localDeque;
 
@@ -111,7 +110,7 @@ class HighsTaskExecutor {
       }
     }
 
-    threadLocalExecutorHandle().dispose();
+    executorHandle.dispose();
   }
 
  public:
@@ -131,14 +130,14 @@ class HighsTaskExecutor {
     for (int i = 1, numThreads = workerDeques.size(); i < numThreads; ++i) {
       workerThreads.emplace_back(
           std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
-    }
+     }
   }
 
   void stopWorkerThreads(bool blocking = false) {
-    // auto id = mainWorkerId.exchange(std::thread::id());
-    // if (id == std::thread::id()) return;  // already been called
+    // Check if stop has been called already.
     auto& executorHandle = threadLocalExecutorHandle();
-    if (executorHandle.isStopped) return;
+    if (executorHandle.ptr == nullptr || hasStopped.exchange(true)) 
+      return;
 
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
@@ -146,9 +145,7 @@ class HighsTaskExecutor {
     }
 
     // only block if called on main thread, otherwise deadlock may occur
-    // if (blocking && std::this_thread::get_id() == id) {
-    // threadLocalExecutorHandle();
-    if (blocking && executorHandle.isStopped) {
+    if (blocking && executorHandle.isMain) {
       for (auto& workerThread : workerThreads) {
         workerThread.join();
       }
@@ -158,7 +155,6 @@ class HighsTaskExecutor {
       }
     }
 
-    if (executorHandle.isMain) executorHandle.isStopped = true;
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
@@ -172,9 +168,9 @@ class HighsTaskExecutor {
   static void initialize(int numThreads) {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr == nullptr) {
+      executorHandle.isMain = true;
       executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor)))
           HighsTaskExecutor(numThreads);
-      executorHandle.isMain = true;
     }
   }
 
