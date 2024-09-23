@@ -632,17 +632,17 @@ class Highs(_Highs):
         # parameter can be scalar, array, or mapping lookup (i.e., dictionary, custom class, etc.)
         # scalar: repeat for all N, array: use as is, lookup: convert to array using indices
         def ensure_real(x: Union[Any, Mapping[Any, Any], Sequence[Any]]):
-            if isinstance(x, Union[float, int]):
+            if isinstance(x, (float, int)):
                 return np.full(N, x, dtype=np.float64)
 
             elif isinstance(x, Mapping):
                 mt: Mapping[Any, Any] = x
 
-                if all(isinstance(v, Union[float, int]) for v in mt.values()):
+                if all(isinstance(v, (float, int)) for v in mt.values()):
                     m: Mapping[Any, Union[float, int]] = x
                     return np.fromiter((m[i] for i in indices), np.float64)
 
-            elif isinstance(x, Sequence) and len(x) == N and all(isinstance(v, Union[float, int]) for v in x):
+            elif isinstance(x, Sequence) and len(x) == N and all(isinstance(v, (float, int)) for v in x):
                 return np.asarray(x, dtype=np.float64)
 
             raise Exception("Invalid parameter.")
@@ -1825,7 +1825,7 @@ class highs_linear_expression(object):
             raise Exception("Bounds have already been set.")
 
         # self == c
-        elif isinstance(other, Union[float, int]):
+        elif isinstance(other, (float, int)):
             copy = highs_linear_expression(self)
             copy.bounds = (
                 float(other) - (self.constant or 0.0),
@@ -1876,7 +1876,7 @@ class highs_linear_expression(object):
 
         # support expr == [lb, ub] --> lb <= expr <= ub
         elif hasattr(other, "__getitem__") and hasattr(other, "__len__") and len(other) == 2:
-            if not (isinstance(other[0], Union[float, int]) and isinstance(other[1], Union[float, int])):
+            if not (isinstance(other[0], (float, int)) and isinstance(other[1], (float, int))):
                 raise Exception("Provided bounds were not valid numbers.")
 
             copy = highs_linear_expression(self)
@@ -1912,7 +1912,7 @@ class highs_linear_expression(object):
         self.__reset_chain(self, other, None)
 
         # self <= c
-        if isinstance(other, Union[float, int]):
+        if isinstance(other, (float, int)):
             copy = highs_linear_expression(self)
             copy.bounds = (-kHighsInf, float(other) - (copy.constant or 0.0))
             copy.constant = None
@@ -1980,7 +1980,7 @@ class highs_linear_expression(object):
         self.__reset_chain(None, other, self)
 
         # c <= self
-        if isinstance(other, Union[float, int]):
+        if isinstance(other, (float, int)):
             copy = highs_linear_expression(self)
             copy.bounds = (float(other) - (self.constant or 0.0), kHighsInf)
             copy.constant = None
@@ -2176,7 +2176,7 @@ class highs_linear_expression(object):
             return self
 
     def __imul__(self, other: Union[float, int, highs_var, highs_linear_expression]):
-        if isinstance(other, Union[float, int]):
+        if isinstance(other, (float, int)):
             scale = float(other)
 
         # other is a constant expression, so treat as a scalar
