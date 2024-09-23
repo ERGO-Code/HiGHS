@@ -24,6 +24,8 @@
 
 #include "util/HighsInt.h"
 
+const bool kNoClockCalls = false;
+
 /**
  * @brief Clock record structure
  */
@@ -311,9 +313,12 @@ class HighsTimer {
    */
   double getWallTime() {
     using namespace std::chrono;
-    return duration_cast<duration<double> >(
-               wall_clock::now().time_since_epoch())
-        .count();
+    const double wall_time = kNoClockCalls
+                                 ? 0
+                                 : duration_cast<duration<double> >(
+                                       wall_clock::now().time_since_epoch())
+                                       .count();
+    return wall_time;
   }
 
   virtual ~HighsTimer() = default;
