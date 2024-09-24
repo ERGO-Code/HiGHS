@@ -118,3 +118,16 @@ TEST_CASE("highs-names", "[highs_names]") {
 
   std::remove(solution_file.c_str());
 }
+
+TEST_CASE("highs-names", "[model_names]") {
+
+  Highs highs;
+  const HighsLp& lp = highs.getLp();
+
+  std::string name = lp.model_name_;
+  REQUIRE(name == "");
+  
+  highs.passModelName("new_name");
+  std::string name = lp.model_name_;
+  REQUIRE(name == "new_name");
+}
