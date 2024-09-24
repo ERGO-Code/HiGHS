@@ -55,12 +55,12 @@ class HighsTaskExecutor {
 #endif
 
   std::atomic<int> referenceCount;
+  std::atomic<bool> hasStopped{false};
 
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   std::vector<std::thread> workerThreads;
 
-  std::atomic<bool> hasStopped{false};
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -95,7 +95,7 @@ class HighsTaskExecutor {
     auto& executorHandle = threadLocalExecutorHandle();
     executorHandle.ptr = ptr;
 
-    if (!hasStopped) {
+    if (!ptr->hasStopped) {
       HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
       threadLocalWorkerDeque() = localDeque;
 
