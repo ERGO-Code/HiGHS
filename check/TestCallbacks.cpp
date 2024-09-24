@@ -296,6 +296,25 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs-callback]") {
           adlittle_simplex_iteration_limit);
 }
 
+TEST_CASE("highs-callback-primal-simplex-interrupt", "[highs-callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  Highs highs;
+  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setCallback(userInterruptCallback);
+  highs.startCallback(kCallbackSimplexInterrupt);
+  highs.readModel(filename);
+  highs.setOptionValue("simplex_strategy", 4);
+  HighsStatus status = highs.run();
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().simplex_iteration_count >
+          adlittle_simplex_iteration_limit);
+  //
+  //  REQUIRE(highs.getInfo().primal_solution_status ==
+  //  kSolutionStatusFeasible);
+}
+
 TEST_CASE("highs-callback-ipm-interrupt", "[highs-callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -323,6 +342,8 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs-callback]") {
   REQUIRE(status == HighsStatus::kWarning);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
+  REQUIRE(highs.getInfo().primal_solution_status == kSolutionStatusFeasible);
+  REQUIRE(highs.getSolution().value_valid);
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
@@ -336,6 +357,8 @@ TEST_CASE("highs-callback-mip-improving", "[highs-callback]") {
   highs.startCallback(kCallbackMipImprovingSolution);
   highs.readModel(filename);
   highs.run();
+  REQUIRE(highs.getInfo().primal_solution_status == kSolutionStatusFeasible);
+  REQUIRE(highs.getSolution().value_valid);
 }
 
 TEST_CASE("highs-callback-mip-data", "[highs-callback]") {
