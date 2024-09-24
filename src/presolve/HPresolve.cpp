@@ -1482,14 +1482,21 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                  10 * numNonzeros());
     HighsInt numFail = 0;
 
+    // Collect up to 10 lifting opportunities per row
+    size_t maxNumLiftOpps = std::max(
+        size_t{100000}, size_t{10} * static_cast<size_t>(model->num_row_));
+
     // store lifting opportunities
+    size_t numLiftOpps = 0;
     implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
                                                double val) {
       // find lifting opportunities for row
       auto& htree = liftingOpportunities[row];
       // add element
       auto insertresult = htree.insert_or_get(col, val);
-      if (!insertresult.second) {
+      if (insertresult.second) {
+        numLiftOpps++;
+      } else {
         double& currentval = *insertresult.first;
         currentval = val;
       }
@@ -1561,6 +1568,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       ++numProbed;
       numProbes[i] += 1;
+
+      // Stop collecting lifting opportunities if maximum is reached
+      if (numLiftOpps >= maxNumLiftOpps)
+        implications.storeLiftingOpportunity = nullptr;
 
       // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
       // "\n", nprobed,
