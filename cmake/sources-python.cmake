@@ -330,6 +330,7 @@ set(highs_headers_python
     src/mip/HighsMipAnalysis.h
     src/mip/HighsMipSolver.h
     src/mip/HighsMipSolverData.h
+    src/mip/HighsMipTimer.h
     src/mip/HighsModkSeparator.h
     src/mip/HighsNodeQueue.h
     src/mip/HighsObjectiveFunction.h
