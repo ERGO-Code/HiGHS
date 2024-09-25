@@ -219,6 +219,7 @@ _srcs = [
     'lp_data/HighsSolve.cpp',
     'lp_data/HighsStatus.cpp',
     'lp_data/HighsOptions.cpp',
+    'mip/HighsMipAnalysis.cpp',
     'mip/HighsMipSolver.cpp',
     'mip/HighsMipSolverData.cpp',
     'mip/HighsDomain.cpp',

@@ -208,6 +208,7 @@ set(highs_sources_python
     src/mip/HighsImplications.cpp
     src/mip/HighsLpAggregator.cpp
     src/mip/HighsLpRelaxation.cpp
+    src/mip/HighsMipAnalysis.cpp
     src/mip/HighsMipSolver.cpp
     src/mip/HighsMipSolverData.cpp
     src/mip/HighsModkSeparator.cpp
@@ -326,6 +327,7 @@ set(highs_headers_python
     src/mip/HighsImplications.h
     src/mip/HighsLpAggregator.h
     src/mip/HighsLpRelaxation.h
+    src/mip/HighsMipAnalysis.h
     src/mip/HighsMipSolver.h
     src/mip/HighsMipSolverData.h
     src/mip/HighsModkSeparator.h
