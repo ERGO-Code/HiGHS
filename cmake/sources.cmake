@@ -334,7 +334,6 @@ set(highs_headers
     mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
-    mip/HighsMipTimer.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
     mip/HighsObjectiveFunction.h
@@ -347,6 +346,7 @@ set(highs_headers
     mip/HighsSeparator.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    mip/MipTimer.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h

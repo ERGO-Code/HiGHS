@@ -44,6 +44,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
+
   if (solution.value_valid) {
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
@@ -108,6 +109,14 @@ void HighsMipSolver::run() {
   // Start the solve_clock for the timer that is local to the HighsMipSolver
   // instance
   timer_.start(timer_.solve_clock);
+
+  if (submip) {
+    analysis_.analyse_mip_time = false;
+  } else {
+    analysis_.timer_ = &this->timer_;
+    analysis_.setup(*orig_model_, *options_mip_);
+  }
+
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
     improving_solution_file_ =

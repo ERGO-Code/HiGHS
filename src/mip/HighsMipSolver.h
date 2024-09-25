@@ -14,6 +14,7 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
+#include "mip/HighsMipAnalysis.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -51,6 +52,8 @@ class HighsMipSolver {
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
+
+  HighsMipAnalysis analysis_;
 
   void run();
 

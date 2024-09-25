@@ -330,7 +330,6 @@ set(highs_headers_python
     src/mip/HighsMipAnalysis.h
     src/mip/HighsMipSolver.h
     src/mip/HighsMipSolverData.h
-    src/mip/HighsMipTimer.h
     src/mip/HighsModkSeparator.h
     src/mip/HighsNodeQueue.h
     src/mip/HighsObjectiveFunction.h
@@ -343,6 +342,7 @@ set(highs_headers_python
     src/mip/HighsSeparator.h
     src/mip/HighsTableauSeparator.h
     src/mip/HighsTransformedLp.h
+    src/mip/MipTimer.h
     src/model/HighsHessian.h
     src/model/HighsHessianUtils.h
     src/model/HighsModel.h

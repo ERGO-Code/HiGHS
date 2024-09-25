@@ -222,7 +222,6 @@ _srcs = [
     'mip/HighsMipAnalysis.cpp',
     'mip/HighsMipSolver.cpp',
     'mip/HighsMipSolverData.cpp',
-    'mip/HighsMipTimer.cpp',
     'mip/HighsDomain.cpp',
     'mip/HighsDynamicRowMatrix.cpp',
     'mip/HighsLpRelaxation.cpp',
