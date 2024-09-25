@@ -45,7 +45,6 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       pscostinit(nullptr),
       clqtableinit(nullptr),
       implicinit(nullptr) {
-
   if (solution.value_valid) {
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert

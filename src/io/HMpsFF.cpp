@@ -225,11 +225,11 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
       // Remove any trailing comment
       const size_t p = strline.find_first_of(mps_comment_chars);
       if (p <= strline.length()) {
-	// A comment character has been found, so erase from it to the end
-	// of the line and check whether the line is now empty
-	strline.erase(p);
-	skip = is_empty(strline);
-	if (skip) return true;
+        // A comment character has been found, so erase from it to the end
+        // of the line and check whether the line is now empty
+        strline.erase(p);
+        skip = is_empty(strline);
+        if (skip) return true;
       }
     }
     strline = trim(strline);
