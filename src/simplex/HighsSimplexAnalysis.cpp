@@ -15,12 +15,10 @@
 // #include <cstdio>
 #include <iomanip>
 
-#include "HConfig.h"
 #include "parallel/HighsParallel.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
 #include "util/FactorTimer.h"
-#include "util/HFactor.h"
 
 void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
