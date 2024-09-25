@@ -106,9 +106,9 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
-  // Start the solve_clock for the timer that is local to the HighsMipSolver
+  // Start the total_clock for the timer that is local to the HighsMipSolver
   // instance
-  timer_.start(timer_.solve_clock);
+  timer_.start(timer_.total_clock);
 
   if (submip) {
     analysis_.analyse_mip_time = false;
@@ -129,10 +129,10 @@ void HighsMipSolver::run() {
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
-                 timer_.read(timer_.solve_clock));
+                 timer_.read(timer_.total_clock));
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
-      timer_.read(timer_.solve_clock) >= options_mip_->time_limit)
+      timer_.read(timer_.total_clock) >= options_mip_->time_limit)
     modelstatus_ = HighsModelStatus::kTimeLimit;
 
   if (modelstatus_ != HighsModelStatus::kNotset) {
@@ -149,15 +149,17 @@ void HighsMipSolver::run() {
     return;
   }
 
+  timer_.start(timer_.solve_clock);
+
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
-                 timer_.read(timer_.solve_clock));
+                 timer_.read(timer_.total_clock));
   mipdata_->runSetup();
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
-                 timer_.read(timer_.solve_clock));
+                 timer_.read(timer_.total_clock));
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -169,13 +171,13 @@ restart:
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
-          timer_.read(timer_.solve_clock));
+          timer_.read(timer_.total_clock));
     mipdata_->evaluateRootNode();
     if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - completed mipdata_->evaluateRootNode()\n",
-          timer_.read(timer_.solve_clock));
+          timer_.read(timer_.total_clock));
     // age 5 times to remove stored but never violated cuts after root
     // separation
     mipdata_->cutpool.performAging();
@@ -536,6 +538,7 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine('Z');
+  timer_.stop(timer_.solve_clock);
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
@@ -577,9 +580,9 @@ void HighsMipSolver::cleanupSolve() {
   }
 
   timer_.stop(timer_.postsolve_clock);
-  timer_.stop(timer_.solve_clock);
+  timer_.stop(timer_.total_clock);
   analysis_.mipTimerStop(kMipClockTotal);
-  analysis_.reportMipTimer();
+  //  analysis_.reportMipTimer();
 
   std::string solutionstatus = "-";
 
@@ -649,14 +652,16 @@ void HighsMipSolver::cleanupSolve() {
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Timing            %.2f (total)\n"
                "                    %.2f (presolve)\n"
+               "                    %.2f (solve)\n"
                "                    %.2f (postsolve)\n"
                "  Nodes             %llu\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               timer_.read(timer_.solve_clock),
+               timer_.read(timer_.total_clock),
                timer_.read(timer_.presolve_clock),
+               timer_.read(timer_.solve_clock),
                timer_.read(timer_.postsolve_clock),
                (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_lp_iterations,
@@ -669,10 +674,6 @@ void HighsMipSolver::cleanupSolve() {
 
 // Only called in Highs::runPresolve
 void HighsMipSolver::runPresolve(const HighsInt presolve_reduction_limit) {
-  // Start the solve_clock for the timer that is local to the HighsMipSolver
-  // instance
-  assert(!timer_.running(timer_.solve_clock));
-  timer_.start(timer_.solve_clock);
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve(presolve_reduction_limit);

@@ -43,13 +43,14 @@ class HighsTimer {
  public:
   HighsTimer() {
     num_clock = 0;
-    HighsInt i_clock = clock_def("Run HiGHS", "RnH");
+    HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
     run_highs_clock = i_clock;
+    total_clock = run_highs_clock;
 
-    presolve_clock = clock_def("Presolve", "Pre");
-    solve_clock = clock_def("Solve", "Slv");
-    postsolve_clock = clock_def("Postsolve", "Pst");
+    presolve_clock = clock_def("Presolve");
+    solve_clock = clock_def("Solve");
+    postsolve_clock = clock_def("Postsolve");
   }
 
   /**
@@ -334,7 +335,10 @@ class HighsTimer {
   std::vector<std::string> clock_ch3_names;
   // The index of the RunHighsClock - should always be 0
   HighsInt run_highs_clock;
-  // Fundamental Highs clocks
+  // Synonym for run_highs_clock that makes more sense when (as in MIP
+  // solver) there is an independent timer
+  HighsInt total_clock;
+  // Fundamental clocks
   HighsInt presolve_clock;
   HighsInt solve_clock;
   HighsInt postsolve_clock;

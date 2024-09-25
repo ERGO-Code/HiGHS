@@ -4273,12 +4273,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // running, and when presolve is called before the LP solver, the
     // HighsClock is running. So have to set run_clock accordingly.
     assert(this->timer);
-    if (this->timer->runningRunHighsClock()) {
-      run_clock = timer->run_highs_clock;
-    } else {
-      assert(this->timer->running(timer->solve_clock));
-      run_clock = timer->solve_clock;
-    }
+    assert(this->timer->runningRunHighsClock());
+    if (this->timer->runningRunHighsClock()) run_clock = timer->run_highs_clock;
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 

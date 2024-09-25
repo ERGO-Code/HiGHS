@@ -159,7 +159,7 @@ void HighsMipSolverData::startSymmetryDetection(
       double startTime = mipsolver.timer_.getWallTime();
       // highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
       //              "(%4.1fs) Starting symmetry detection\n",
-      //              mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+      //              mipsolver.timer_.read(mipsolver.timer_.total_clock));
       symData->symDetection.run(symData->symmetries);
       symData->detectionTime = mipsolver.timer_.getWallTime() - startTime;
     });
@@ -1215,7 +1215,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
   bool output_flag = *mipsolver.options_mip_->log_options.output_flag;
   if (!output_flag) return;
 
-  double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
   if (source == ' ' &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
@@ -1870,9 +1870,9 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     return true;
   }
 
-  //  const double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  //  const double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
   //  printf("checkLimits: time = %g\n", time);
-  if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
+  if (mipsolver.timer_.read(mipsolver.timer_.total_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
@@ -1999,7 +1999,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   double mip_rel_gap;
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
   mipsolver.callback_->data_out.running_time =
-      mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+      mipsolver.timer_.read(mipsolver.timer_.total_clock);
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
