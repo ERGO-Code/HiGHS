@@ -858,7 +858,6 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   rowsizeImplInt.resize(model->num_row_);
   if (have_row_names) model->row_names_.resize(model->num_row_);
   changedRowFlag.resize(model->num_row_);
-  liftingOpportunities.reserve(model->num_row_);
 
   numDeletedRows = 0;
   postsolve_stack.compressIndexMaps(newRowIndex, newColIndex);
