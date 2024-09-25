@@ -21,6 +21,7 @@
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "mip/MipTimer.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveComponent.h"
@@ -116,6 +117,7 @@ void HighsMipSolver::run() {
     analysis_.timer_ = &this->timer_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
+  analysis_.mipTimerStart(kMipClockTotal);
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -577,6 +579,9 @@ void HighsMipSolver::cleanupSolve() {
 
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
+  analysis_.mipTimerStop(kMipClockTotal);
+  analysis_.reportMipTimer();
+
   std::string solutionstatus = "-";
 
   if (havesolution) {
