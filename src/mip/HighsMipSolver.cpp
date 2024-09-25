@@ -667,6 +667,7 @@ void HighsMipSolver::cleanupSolve() {
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }
 
+// Only called in Highs::runPresolve
 void HighsMipSolver::runPresolve(const HighsInt presolve_reduction_limit) {
   // Start the solve_clock for the timer that is local to the HighsMipSolver
   // instance
