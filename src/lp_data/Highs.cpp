@@ -1947,7 +1947,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::getKappa(double& kappa, const bool exact, const bool report) {
+HighsStatus Highs::getKappa(double& kappa, const bool exact,
+                            const bool report) {
   printf(
       "Highs::getKappa basis_.valid = %d, ekk_instance_.status_.has_invert = "
       "%d\n",

@@ -608,7 +608,8 @@ class Highs {
    * possibly computing it exactly and reporting the error in the
    * approximate condition number
    */
-  HighsStatus getKappa(double& kappa, const bool exact = false, const bool report = false);
+  HighsStatus getKappa(double& kappa, const bool exact = false,
+                       const bool report = false);
 
   /**
    * @brief Get the number of columns in the incumbent model

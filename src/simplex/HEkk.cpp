@@ -3635,7 +3635,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
-double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact, const bool report) {
+double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
+                                   const bool report) {
   HighsInt solver_num_row = lp.num_row_;
   HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;
@@ -3659,8 +3660,8 @@ double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact, const bo
       simplex_nla_.ftran(row_ep, 0.1);
       assert(row_ep.count <= solver_num_row);
       double c_norm = 0.0;
-      for (HighsInt iX = 0; iX < row_ep.count; iX++) 
-	c_norm += std::fabs(row_ep.array[row_ep.index[iX]]);
+      for (HighsInt iX = 0; iX < row_ep.count; iX++)
+        c_norm += std::fabs(row_ep.array[row_ep.index[iX]]);
       exact_norm_Binv = std::max(c_norm, exact_norm_Binv);
     }
   }
@@ -3747,10 +3748,16 @@ double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact, const bo
   }
   double cond_B = norm_Binv * norm_B;
   double exact_cond_B = exact_norm_Binv * norm_B;
-  if (exact && report) {
-    highsLogUser(options_->log_options, HighsLogType::kInfo,
-		 "model,||B||_1,approx ||B^{-1}||_1,approx_kappa,||B^{-1}||_1,kappa = ,%s,%g,%g,%g,%g,%g\n",
-		 lp.model_name_.c_str(), norm_B, norm_Binv, cond_B, exact_norm_Binv, exact_cond_B);
+  if (exact) {
+    assert(exact_norm_Binv > 0);
+    if (report)
+      highsLogUser(
+          options_->log_options, HighsLogType::kInfo,
+          "HEkk::computeBasisCondition: grep_kappa model,||B||_1,approx "
+          "||B^{-1}||_1,approx_kappa,||B^{-1}||_1,kappa = ,%s,%g,%g,%g,%g,%g\n",
+          lp.model_name_.c_str(), norm_B, norm_Binv, cond_B, exact_norm_Binv,
+          exact_cond_B);
+    return exact_cond_B;
   }
   return cond_B;
 }
