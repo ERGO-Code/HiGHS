@@ -1780,8 +1780,10 @@ void HPresolve::liftingForProbing() {
 
   // perform actual lifting
   size_t fillin = 0;
-  const size_t maxfillin = std::max(10 * liftingtable.size(),
-                                    static_cast<size_t>(numNonzeros()) / 100);
+  // const size_t maxfillin = std::max(10 * liftingtable.size(),
+  //                                   static_cast<size_t>(numNonzeros()) /
+  //                                   100);
+  const size_t maxfillin = std::numeric_limits<size_t>::max();
   for (const auto& lifting : liftingtable) {
     // get clique
     HighsInt row = std::get<0>(lifting);
