@@ -116,7 +116,7 @@ void HighsMipSolver::run() {
     analysis_.timer_ = &this->timer_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
-  analysis_.mipTimerStart(kMipClockTotal);
+  //  analysis_.mipTimerStart(kMipClockTotal);
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -581,8 +581,7 @@ void HighsMipSolver::cleanupSolve() {
 
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.total_clock);
-  analysis_.mipTimerStop(kMipClockTotal);
-  //  analysis_.reportMipTimer();
+  analysis_.reportMipTimer();
 
   std::string solutionstatus = "-";
 
@@ -649,25 +648,24 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
-  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Timing            %.2f (total)\n"
-               "                    %.2f (presolve)\n"
-               "                    %.2f (solve)\n"
-               "                    %.2f (postsolve)\n"
-               "  Nodes             %llu\n"
-               "  LP iterations     %llu (total)\n"
-               "                    %llu (strong br.)\n"
-               "                    %llu (separation)\n"
-               "                    %llu (heuristics)\n",
-               timer_.read(timer_.total_clock),
-               timer_.read(timer_.presolve_clock),
-               timer_.read(timer_.solve_clock),
-               timer_.read(timer_.postsolve_clock),
-               (long long unsigned)mipdata_->num_nodes,
-               (long long unsigned)mipdata_->total_lp_iterations,
-               (long long unsigned)mipdata_->sb_lp_iterations,
-               (long long unsigned)mipdata_->sepa_lp_iterations,
-               (long long unsigned)mipdata_->heuristic_lp_iterations);
+  highsLogUser(
+      options_mip_->log_options, HighsLogType::kInfo,
+      "  Timing            %.2f (total)\n"
+      "                    %.2f (presolve)\n"
+      "                    %.2f (solve)\n"
+      "                    %.2f (postsolve)\n"
+      "  Nodes             %llu\n"
+      "  LP iterations     %llu (total)\n"
+      "                    %llu (strong br.)\n"
+      "                    %llu (separation)\n"
+      "                    %llu (heuristics)\n",
+      timer_.read(timer_.total_clock), timer_.read(timer_.presolve_clock),
+      timer_.read(timer_.solve_clock), timer_.read(timer_.postsolve_clock),
+      (long long unsigned)mipdata_->num_nodes,
+      (long long unsigned)mipdata_->total_lp_iterations,
+      (long long unsigned)mipdata_->sb_lp_iterations,
+      (long long unsigned)mipdata_->sepa_lp_iterations,
+      (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }

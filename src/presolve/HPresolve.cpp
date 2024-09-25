@@ -4256,10 +4256,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numNonz = Avalue.size() - freeslots.size();
 #ifndef NDEBUG
         std::string time_str =
-            " " + std::to_string(this->timer->read(run_clock)) + "s";
+            " " + std::to_string(this->timer->readRunHighsClock()) + "s";
 #else
         std::string time_str =
-            " " + std::to_string(int(this->timer->read(run_clock))) + "s";
+            " " + std::to_string(int(this->timer->readRunHighsClock())) + "s";
 #endif
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -4268,13 +4268,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
-    // Need to check for time-out in checkLimits. However, when
-    // presolve is called from the MIP solver timer->solve_clock is
-    // running, and when presolve is called before the LP solver, the
-    // HighsClock is running. So have to set run_clock accordingly.
+    // Need to check for time-out in checkLimits, so make sure that
+    // the timer is well defined, and that its total time clock is
+    // running
     assert(this->timer);
     assert(this->timer->runningRunHighsClock());
-    if (this->timer->runningRunHighsClock()) run_clock = timer->run_highs_clock;
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
@@ -4482,10 +4480,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) {
     assert(timer);
-    assert(run_clock >= 0);
-    if (timer->read(run_clock) >= options->time_limit) {
+    if (timer->readRunHighsClock() >= options->time_limit)
       return Result::kStopped;
-    }
   }
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
