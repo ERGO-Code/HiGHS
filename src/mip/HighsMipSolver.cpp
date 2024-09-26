@@ -242,10 +242,16 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+	analysis_.mipTimerStart(kMipClockEvaluateNode);
+	const HighsSearch::NodeResult evaluate_node_result = search.evaluateNode();
+	analysis_.mipTimerStop(kMipClockEvaluateNode);
+        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal)
           break;
 
-        if (search.currentNodePruned()) {
+	analysis_.mipTimerStart(kMipClockCurrentNodePruned);
+	const bool current_node_pruned = search.currentNodePruned();
+	analysis_.mipTimerStop(kMipClockCurrentNodePruned);
+        if (current_node_pruned) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {

@@ -25,6 +25,8 @@ enum iClockMip {
   kMipClockRunSetup,
   kMipClockEvaluateRootNode,
   kMipClockPerformAging,
+  kMipClockEvaluateNode,
+  kMipClockCurrentNodePruned,
   kNumMipClock  //!< Number of MIP clocks
 };
 
@@ -43,6 +45,8 @@ class MipTimer {
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
     clock[kMipClockEvaluateRootNode] = timer_pointer->clock_def("Evaluate root node");
     clock[kMipClockPerformAging] = timer_pointer->clock_def("Perform aging");
+    clock[kMipClockEvaluateNode] = timer_pointer->clock_def("Evaluate node");
+    clock[kMipClockCurrentNodePruned] = timer_pointer->clock_def("Current node pruned");
     //    clock[] = timer_pointer->clock_def("");
   }
 
@@ -79,7 +83,9 @@ class MipTimer {
       kMipClockRunPresolve,
       kMipClockRunSetup,
       kMipClockEvaluateRootNode,
-      kMipClockPerformAging};
+      kMipClockPerformAging,
+      kMipClockEvaluateNode,
+      kMipClockCurrentNodePruned};
     reportMipClockList("MipLevel1", mip_clock_list, mip_timer_clock);
   };
 };
