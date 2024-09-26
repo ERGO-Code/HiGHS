@@ -22,6 +22,10 @@ Methods receiving matrix data where only small values are explicit zeros (so rem
 
 Now multiplying by pre-computed reciprocals rather than performing divisions in loops in simplex solver: LP performance improvement ~2.5%
 
+Added documentation on the use of presolve when solving an incumbent model, and clarifying the use of the method `Highs::presolve`.
+
+
+
 
 
 

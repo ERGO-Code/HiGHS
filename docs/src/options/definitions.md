@@ -1,6 +1,6 @@
 # [List of options](@id option-definitions)
 
-## presolve
+## [presolve](@id option-presolve)
 - Presolve option: "off", "choose" or "on"
 - Type: string
 - Default: "choose"
