@@ -243,6 +243,7 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
     ss << "\n";
     highsFprintfString(file, log_options, ss.str());
   }
+  fflush(file);
 }
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,

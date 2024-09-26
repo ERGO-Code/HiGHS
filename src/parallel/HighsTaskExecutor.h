@@ -30,9 +30,11 @@ class HighsTaskExecutor {
  public:
   using cache_aligned = highs::cache_aligned;
   struct ExecutorHandle {
-    cache_aligned::shared_ptr<HighsTaskExecutor> ptr{nullptr};
+    HighsTaskExecutor* ptr{nullptr};
+    bool isMain{false};
 
-    ~ExecutorHandle();
+    void dispose();
+    ~ExecutorHandle() { dispose(); }
   };
 
  private:
@@ -52,9 +54,13 @@ class HighsTaskExecutor {
   }
 #endif
 
-  std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
+  std::atomic<int> referenceCount;
+  std::atomic<bool> hasStopped{false};
+
   cache_aligned::shared_ptr<HighsSplitDeque::WorkerBunk> workerBunk;
-  std::atomic<ExecutorHandle*> mainWorkerHandle;
+  std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
+  std::vector<std::thread> workerThreads;
+
 
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
     const int numWorkers = workerDeques.size();
@@ -85,38 +91,32 @@ class HighsTaskExecutor {
     return nullptr;
   }
 
-  void run_worker(int workerId) {
-    // spin until the global executor pointer is set up
-    ExecutorHandle* executor;
-    // Following yields warning C4706: assignment within conditional
-    // expression when building libhighs on Windows (/W4):
-    //
-    //    while (!(executor = mainWorkerHandle.load(std::memory_order_acquire)))
-    //      HighsSpinMutex::yieldProcessor();
-    while (true) {
-      executor = mainWorkerHandle.load(std::memory_order_acquire);
-      if (executor != nullptr) break;
-      HighsSpinMutex::yieldProcessor();
-    }
-    // now acquire a reference count of the global executor
-    threadLocalExecutorHandle() = *executor;
-    HighsSplitDeque* localDeque = workerDeques[workerId].get();
-    threadLocalWorkerDeque() = localDeque;
-    HighsTask* currentTask = workerBunk->waitForNewTask(localDeque);
-    while (currentTask != nullptr) {
-      localDeque->runStolenTask(currentTask);
+  static void run_worker(int workerId, HighsTaskExecutor* ptr) {
+    auto& executorHandle = threadLocalExecutorHandle();
+    executorHandle.ptr = ptr;
 
-      currentTask = random_steal_loop(localDeque);
-      if (currentTask != nullptr) continue;
+    if (!ptr->hasStopped) {
+      HighsSplitDeque* localDeque = ptr->workerDeques[workerId].get();
+      threadLocalWorkerDeque() = localDeque;
 
-      currentTask = workerBunk->waitForNewTask(localDeque);
+      HighsTask* currentTask = ptr->workerBunk->waitForNewTask(localDeque);
+      while (currentTask != nullptr) {
+        localDeque->runStolenTask(currentTask);
+
+        currentTask = ptr->random_steal_loop(localDeque);
+        if (currentTask != nullptr) continue;
+
+        currentTask = ptr->workerBunk->waitForNewTask(localDeque);
+      }
     }
+
+    executorHandle.dispose();
   }
 
  public:
   HighsTaskExecutor(int numThreads) {
     assert(numThreads > 0);
-    mainWorkerHandle.store(nullptr, std::memory_order_relaxed);
+
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
     for (int i = 0; i < numThreads; ++i)
@@ -124,8 +124,37 @@ class HighsTaskExecutor {
           workerBunk, workerDeques.data(), i, numThreads);
 
     threadLocalWorkerDeque() = workerDeques[0].get();
-    for (int i = 1; i < numThreads; ++i)
-      std::thread([&](int id) { run_worker(id); }, i).detach();
+    workerThreads.reserve(numThreads - 1);
+    referenceCount.store(numThreads);
+
+    for (int i = 1, numThreads = workerDeques.size(); i < numThreads; ++i) {
+      workerThreads.emplace_back(
+          std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
+     }
+  }
+
+  void stopWorkerThreads(bool blocking = false) {
+    // Check if stop has been called already.
+    auto& executorHandle = threadLocalExecutorHandle();
+    if (executorHandle.ptr == nullptr || hasStopped.exchange(true)) 
+      return;
+
+    // now inject the null task as termination signal to every worker
+    for (auto& workerDeque : workerDeques) {
+      workerDeque->injectTaskAndNotify(nullptr);
+    }
+
+    // only block if called on main thread, otherwise deadlock may occur
+    if (blocking && executorHandle.isMain) {
+      for (auto& workerThread : workerThreads) {
+        workerThread.join();
+      }
+    } else {
+      for (auto& workerThread : workerThreads) {
+        workerThread.detach();
+      }
+    }
+
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
@@ -138,34 +167,21 @@ class HighsTaskExecutor {
 
   static void initialize(int numThreads) {
     auto& executorHandle = threadLocalExecutorHandle();
-    if (!executorHandle.ptr) {
-      executorHandle.ptr =
-          cache_aligned::make_shared<HighsTaskExecutor>(numThreads);
-      executorHandle.ptr->mainWorkerHandle.store(&executorHandle,
-                                                 std::memory_order_release);
+    if (executorHandle.ptr == nullptr) {
+      executorHandle.isMain = true;
+      executorHandle.ptr = new (cache_aligned::alloc(sizeof(HighsTaskExecutor)))
+          HighsTaskExecutor(numThreads);
     }
   }
 
+  // can be called on main or worker threads
+  // blocking ignored unless called on main thread
   static void shutdown(bool blocking = false) {
     auto& executorHandle = threadLocalExecutorHandle();
-    if (executorHandle.ptr) {
-      // first spin until every worker has acquired its executor reference
-      while (executorHandle.ptr.use_count() !=
-             (long)executorHandle.ptr->workerDeques.size())
-        HighsSpinMutex::yieldProcessor();
-      // set the active flag to false first with release ordering
-      executorHandle.ptr->mainWorkerHandle.store(nullptr,
-                                                 std::memory_order_release);
-      // now inject the null task as termination signal to every worker
-      for (auto& workerDeque : executorHandle.ptr->workerDeques)
-        workerDeque->injectTaskAndNotify(nullptr);
-      // finally release the global executor reference
-      if (blocking) {
-        while (executorHandle.ptr.use_count() != 1)
-          HighsSpinMutex::yieldProcessor();
-      }
 
-      executorHandle.ptr.reset();
+    if (executorHandle.ptr != nullptr) {
+      executorHandle.ptr->stopWorkerThreads(blocking);
+      executorHandle.dispose();
     }
   }
 
