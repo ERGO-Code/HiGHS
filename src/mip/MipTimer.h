@@ -26,7 +26,13 @@ enum iClockMip {
   kMipClockEvaluateRootNode,
   kMipClockPerformAging,
   kMipClockEvaluateNode,
-  kMipClockCurrentNodePruned,
+  kMipClockRandomizedRounding,
+  kMipClockRens,
+  kMipClockRins,
+  kMipClockBacktrackPlunge,
+  kMipClockOpenNodesToQueue,
+  kMipClockDomainPropgate,
+  kMipClockPruneInfeasibleNodes,
   kNumMipClock  //!< Number of MIP clocks
 };
 
@@ -46,7 +52,13 @@ class MipTimer {
     clock[kMipClockEvaluateRootNode] = timer_pointer->clock_def("Evaluate root node");
     clock[kMipClockPerformAging] = timer_pointer->clock_def("Perform aging");
     clock[kMipClockEvaluateNode] = timer_pointer->clock_def("Evaluate node");
-    clock[kMipClockCurrentNodePruned] = timer_pointer->clock_def("Current node pruned");
+    clock[kMipClockRandomizedRounding] = timer_pointer->clock_def("Randomized rounding");
+    clock[kMipClockRens] = timer_pointer->clock_def("RENS");
+    clock[kMipClockRins] = timer_pointer->clock_def("RINS");
+    clock[kMipClockBacktrackPlunge] = timer_pointer->clock_def("Backtrack plunge");
+    clock[kMipClockOpenNodesToQueue] = timer_pointer->clock_def("Open nodes to queue");
+    clock[kMipClockDomainPropgate] = timer_pointer->clock_def("Domain propagate");
+    clock[kMipClockPruneInfeasibleNodes] = timer_pointer->clock_def("Prune infeasible nodes");
     //    clock[] = timer_pointer->clock_def("");
   }
 
@@ -85,7 +97,14 @@ class MipTimer {
       kMipClockEvaluateRootNode,
       kMipClockPerformAging,
       kMipClockEvaluateNode,
-      kMipClockCurrentNodePruned};
+      kMipClockRandomizedRounding,
+      kMipClockRens,
+      kMipClockRins,
+      kMipClockBacktrackPlunge,
+      kMipClockOpenNodesToQueue,
+      kMipClockDomainPropgate,
+      kMipClockPruneInfeasibleNodes
+    };
     reportMipClockList("MipLevel1", mip_clock_list, mip_timer_clock);
   };
 };

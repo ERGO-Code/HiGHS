@@ -242,29 +242,37 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+
 	analysis_.mipTimerStart(kMipClockEvaluateNode);
 	const HighsSearch::NodeResult evaluate_node_result = search.evaluateNode();
 	analysis_.mipTimerStop(kMipClockEvaluateNode);
+
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal)
           break;
 
-	analysis_.mipTimerStart(kMipClockCurrentNodePruned);
-	const bool current_node_pruned = search.currentNodePruned();
-	analysis_.mipTimerStop(kMipClockCurrentNodePruned);
-        if (current_node_pruned) {
+        if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
-          if (mipdata_->incumbent.empty())
+	  
+          if (mipdata_->incumbent.empty()) {
+	    analysis_.mipTimerStart(kMipClockRandomizedRounding);
             mipdata_->heuristics.randomizedRounding(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
+	    analysis_.mipTimerStop(kMipClockRandomizedRounding);
+	  }
 
-          if (mipdata_->incumbent.empty())
+          if (mipdata_->incumbent.empty()) {
+	    analysis_.mipTimerStart(kMipClockRens);
             mipdata_->heuristics.RENS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-          else
+	    analysis_.mipTimerStop(kMipClockRens);
+	  } else {
+	    analysis_.mipTimerStart(kMipClockRins);
             mipdata_->heuristics.RINS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
+	    analysis_.mipTimerStop(kMipClockRins);
+	  }
 
           mipdata_->heuristics.flushStatistics();
         }
@@ -290,19 +298,28 @@ restart:
       HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
       if (numPlungeNodes >= 100) break;
 
-      if (!search.backtrackPlunge(mipdata_->nodequeue)) break;
+      analysis_.mipTimerStart(kMipClockBacktrackPlunge);
+      const bool backtrack_plunge = search.backtrackPlunge(mipdata_->nodequeue);
+      analysis_.mipTimerStop(kMipClockBacktrackPlunge);
+      if (!backtrack_plunge) break;
 
       assert(search.hasNode());
 
       if (mipdata_->conflictPool.getNumConflicts() >
-          options_mip_->mip_pool_soft_limit)
+          options_mip_->mip_pool_soft_limit) {
+	analysis_.mipTimerStart(kMipClockPerformAging);
         mipdata_->conflictPool.performAging();
+	analysis_.mipTimerStop(kMipClockPerformAging);
+      }
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
       // printf("continue plunging due to good estimate\n");
     }
+    analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
     search.openNodesToQueue(mipdata_->nodequeue);
+    analysis_.mipTimerStop(kMipClockOpenNodesToQueue);
+
     search.flushStatistics();
 
     if (limit_reached) {
@@ -316,9 +333,14 @@ restart:
     assert(!search.hasNode());
 
     // propagate the global domain
+    analysis_.mipTimerStart(kMipClockDomainPropgate);
     mipdata_->domain.propagate();
+    analysis_.mipTimerStart(kMipClockDomainPropgate);
+
+    analysis_.mipTimerStart(kMipClockPruneInfeasibleNodes);
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
         mipdata_->domain, mipdata_->feastol);
+    analysis_.mipTimerStart(kMipClockPruneInfeasibleNodes);
 
     // if global propagation detected infeasibility, stop here
     if (mipdata_->domain.infeasible()) {
