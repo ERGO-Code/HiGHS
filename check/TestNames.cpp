@@ -119,7 +119,7 @@ TEST_CASE("highs-names", "[highs_names]") {
   std::remove(solution_file.c_str());
 }
 
-TEST_CASE("highs-names", "[model_names]") {
+TEST_CASE("highs-model-name", "[model_names]") {
 
   Highs highs;
   const HighsLp& lp = highs.getLp();
