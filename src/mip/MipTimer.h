@@ -63,7 +63,7 @@ class MipTimer {
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
     clock[kMipClockEvaluateRootNode] = timer_pointer->clock_def("Evaluate root node");
     clock[kMipClockPerformAging0] = timer_pointer->clock_def("Perform aging 0");
-    clock[kMipClockSearch] = timer_pointer->clock_def("MIP search");
+    clock[kMipClockSearch] = timer_pointer->clock_def("Search");
     // kMipClockPostsolve
 
     // Search - Should correspond to kMipClockSearch
