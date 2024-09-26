@@ -128,6 +128,6 @@ TEST_CASE("highs-names", "[model_names]") {
   REQUIRE(name == "");
   
   highs.passModelName("new_name");
-  std::string name = lp.model_name_;
+  name = lp.model_name_;
   REQUIRE(name == "new_name");
 }
