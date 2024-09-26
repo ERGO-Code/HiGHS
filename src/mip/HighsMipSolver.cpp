@@ -116,7 +116,6 @@ void HighsMipSolver::run() {
     analysis_.timer_ = &this->timer_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
-  //  analysis_.mipTimerStart(kMipClockTotal);
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -124,8 +123,12 @@ void HighsMipSolver::run() {
         fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
+  analysis_.mipTimerStop(kMipClockInit);
+  analysis_.mipTimerStart(kMipClockRunPresolve);
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
+  analysis_.mipTimerStop(kMipClockRunPresolve);
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
@@ -155,7 +158,9 @@ void HighsMipSolver::run() {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
                  timer_.read(timer_.total_clock));
+  analysis_.mipTimerStart(kMipClockRunSetup);
   mipdata_->runSetup();
+  analysis_.mipTimerStop(kMipClockRunSetup);
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
@@ -172,7 +177,9 @@ restart:
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
           timer_.read(timer_.total_clock));
+    analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
+    analysis_.mipTimerStop(kMipClockEvaluateRootNode);
     if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
@@ -180,11 +187,13 @@ restart:
           timer_.read(timer_.total_clock));
     // age 5 times to remove stored but never violated cuts after root
     // separation
+    analysis_.mipTimerStart(kMipClockPerformAging);
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
+    analysis_.mipTimerStop(kMipClockPerformAging);
   }
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
     cleanupSolve();
@@ -213,7 +222,9 @@ restart:
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
   while (search.hasNode()) {
+    analysis_.mipTimerStart(kMipClockPerformAging);
     mipdata_->conflictPool.performAging();
+    analysis_.mipTimerStop(kMipClockPerformAging);
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
@@ -229,6 +240,7 @@ restart:
     bool limit_reached = false;
     bool considerHeuristics = true;
     while (true) {
+      // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
         if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
           break;

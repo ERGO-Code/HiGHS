@@ -20,6 +20,11 @@ enum iClockMip {
   kMipClockPresolve,
   kMipClockSolve,
   kMipClockPostsolve,
+  kMipClockInit,
+  kMipClockRunPresolve,
+  kMipClockRunSetup,
+  kMipClockEvaluateRootNode,
+  kMipClockPerformAging,
   kNumMipClock  //!< Number of MIP clocks
 };
 
@@ -33,7 +38,12 @@ class MipTimer {
     clock[kMipClockPresolve] = timer_pointer->presolve_clock;
     clock[kMipClockSolve] = timer_pointer->solve_clock;
     clock[kMipClockPostsolve] = timer_pointer->postsolve_clock;
-    //    clock[kMipClockTotal] = timer_pointer->clock_def("MIP total");
+    clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
+    clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
+    clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
+    clock[kMipClockEvaluateRootNode] = timer_pointer->clock_def("Evaluate root node");
+    clock[kMipClockPerformAging] = timer_pointer->clock_def("Perform aging");
+    //    clock[] = timer_pointer->clock_def("");
   }
 
   bool reportMipClockList(const char* grepStamp,
@@ -61,6 +71,16 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPresolve, kMipClockSolve, kMipClockPostsolve};
     reportMipClockList("MipCore", mip_clock_list, mip_timer_clock);
+  };
+
+  void reportMipLevel1Clock(const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{
+      kMipClockInit,
+      kMipClockRunPresolve,
+      kMipClockRunSetup,
+      kMipClockEvaluateRootNode,
+      kMipClockPerformAging};
+    reportMipClockList("MipLevel1", mip_clock_list, mip_timer_clock);
   };
 };
 
