@@ -17,6 +17,8 @@
 
 #include "mip/MipTimer.h"
 
+const HighsInt check_clock = 9;
+
 void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
   setupMipTime(options);
 }
@@ -37,7 +39,9 @@ void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock
                                      // , const HighsInt thread_id
 ) {
   if (!analyse_mip_time) return;
-  // assert(analyse_mip_time);
+  if (mip_clock == check_clock) {
+    printf("Starting clock %d\n", int(check_clock));
+  }
   mip_clocks.timer_pointer_->start(mip_clocks.clock_[mip_clock]);
 }
 
@@ -45,7 +49,9 @@ void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock
                                     // , const HighsInt thread_id
 ) {
   if (!analyse_mip_time) return;
-  // assert(analyse_mip_time);
+  if (mip_clock == check_clock) {
+    printf("Stopping clock %d\n", int(check_clock));
+  }
   mip_clocks.timer_pointer_->stop(mip_clocks.clock_[mip_clock]);
 }
 
@@ -55,4 +61,7 @@ void HighsMipAnalysis::reportMipTimer() {
   MipTimer mip_timer;
   mip_timer.reportMipCoreClock(mip_clocks);
   mip_timer.reportMipLevel1Clock(mip_clocks);
+  mip_timer.reportMipSearchClock(mip_clocks);
+  mip_timer.reportMipDiveClock(mip_clocks);
+  mip_timer.reportMipPrimalHeuristicsClock(mip_clocks);
 }

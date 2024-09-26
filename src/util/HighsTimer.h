@@ -266,7 +266,7 @@ class HighsTimer {
     non_null_report = true;
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("%s-time  Operation                       :    Time     ( Total",
+    printf("\n%s-time  Operation                       :    Time     ( Total",
            grep_stamp);
     if (ideal_sum_time > 0) printf(";  Ideal");
     printf(";  Local):    Calls  Time/Call\n");

@@ -187,13 +187,13 @@ restart:
           timer_.read(timer_.total_clock));
     // age 5 times to remove stored but never violated cuts after root
     // separation
-    analysis_.mipTimerStart(kMipClockPerformAging);
+    analysis_.mipTimerStart(kMipClockPerformAging0);
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
-    analysis_.mipTimerStop(kMipClockPerformAging);
+    analysis_.mipTimerStop(kMipClockPerformAging0);
   }
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
     cleanupSolve();
@@ -221,10 +221,11 @@ restart:
   double treeweightLastCheck = 0.0;
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
+  analysis_.mipTimerStart(kMipClockSearch);
   while (search.hasNode()) {
-    analysis_.mipTimerStart(kMipClockPerformAging);
+    analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
-    analysis_.mipTimerStop(kMipClockPerformAging);
+    analysis_.mipTimerStop(kMipClockPerformAging1);
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
@@ -239,6 +240,7 @@ restart:
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
     bool considerHeuristics = true;
+    analysis_.mipTimerStart(kMipClockDive);
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
@@ -255,6 +257,7 @@ restart:
           search.flushStatistics();
         } else {
 	  
+	  analysis_.mipTimerStart(kMipClockPrimalHeuristics);
           if (mipdata_->incumbent.empty()) {
 	    analysis_.mipTimerStart(kMipClockRandomizedRounding);
             mipdata_->heuristics.randomizedRounding(
@@ -275,6 +278,7 @@ restart:
 	  }
 
           mipdata_->heuristics.flushStatistics();
+	  analysis_.mipTimerStop(kMipClockPrimalHeuristics);
         }
       }
 
@@ -307,15 +311,17 @@ restart:
 
       if (mipdata_->conflictPool.getNumConflicts() >
           options_mip_->mip_pool_soft_limit) {
-	analysis_.mipTimerStart(kMipClockPerformAging);
+	analysis_.mipTimerStart(kMipClockPerformAging2);
         mipdata_->conflictPool.performAging();
-	analysis_.mipTimerStop(kMipClockPerformAging);
+	analysis_.mipTimerStop(kMipClockPerformAging2);
       }
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
       // printf("continue plunging due to good estimate\n");
-    }
+    } // while (true)
+    analysis_.mipTimerStop(kMipClockDive);
+
     analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
     search.openNodesToQueue(mipdata_->nodequeue);
     analysis_.mipTimerStop(kMipClockOpenNodesToQueue);
@@ -335,12 +341,12 @@ restart:
     // propagate the global domain
     analysis_.mipTimerStart(kMipClockDomainPropgate);
     mipdata_->domain.propagate();
-    analysis_.mipTimerStart(kMipClockDomainPropgate);
+    analysis_.mipTimerStop(kMipClockDomainPropgate);
 
     analysis_.mipTimerStart(kMipClockPruneInfeasibleNodes);
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
         mipdata_->domain, mipdata_->feastol);
-    analysis_.mipTimerStart(kMipClockPruneInfeasibleNodes);
+    analysis_.mipTimerStop(kMipClockPruneInfeasibleNodes);
 
     // if global propagation detected infeasibility, stop here
     if (mipdata_->domain.infeasible()) {
@@ -445,9 +451,10 @@ restart:
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                      "\nRestarting search from the root node\n");
         mipdata_->performRestart();
+	analysis_.mipTimerStop(kMipClockSearch);
         goto restart;
       }
-    }
+    } // if (!submip && mipdata_->num_nodes >= nextCheck))
 
     // remove the iteration limit when installing a new node
     // mipdata_->lp.setIterationLimit();
@@ -568,10 +575,11 @@ restart:
       }
 
       break;
-    }
+    } // while(!mipdata_->nodequeue.empty())
 
     if (limit_reached) break;
-  }
+  } // while(search.hasNode())
+  analysis_.mipTimerStop(kMipClockSearch);
 
   cleanupSolve();
 }
