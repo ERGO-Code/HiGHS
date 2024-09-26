@@ -1,4 +1,5 @@
 from __future__ import annotations
+import sys
 import numpy as np
 from numbers import Integral
 from itertools import product
@@ -15,6 +16,11 @@ from ._core import (
     kHighsInf,
 )
 
+# backwards typing support information for HighspyArray
+if sys.version_info >= (3, 9):
+    ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
+else:
+    ndarray_object_type = np.ndarray
 
 class Highs(_Highs):
     """
@@ -1471,7 +1477,7 @@ class HighsCallback(object):
             fn(e)
 
 
-class HighspyArray(np.ndarray[Any, np.dtype[np.object_]]):
+class HighspyArray(ndarray_object_type):
     """
     A numpy array wrapper for highs_var/highs_linear_expression objects.
 
