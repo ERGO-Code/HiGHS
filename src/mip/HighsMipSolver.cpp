@@ -538,7 +538,9 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine('Z');
-  timer_.stop(timer_.solve_clock);
+  // Stop the solve clock - which won't be running if presolve
+  // determines the model status
+  if (timer_.running(timer_.solve_clock)) timer_.stop(timer_.solve_clock);
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
