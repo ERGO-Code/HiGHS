@@ -583,7 +583,6 @@ void HighsMipSolver::cleanupSolve() {
 
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.total_clock);
-  analysis_.reportMipTimer();
 
   std::string solutionstatus = "-";
 
@@ -668,6 +667,8 @@ void HighsMipSolver::cleanupSolve() {
       (long long unsigned)mipdata_->sb_lp_iterations,
       (long long unsigned)mipdata_->sepa_lp_iterations,
       (long long unsigned)mipdata_->heuristic_lp_iterations);
+
+  analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }

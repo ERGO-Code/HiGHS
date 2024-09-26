@@ -86,11 +86,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelSolverTime = 8,
   kHighsAnalysisLevelNlaData = 16,
   kHighsAnalysisLevelNlaTime = 32,
+  kHighsAnalysisLevelMipData = 64,
+  kHighsAnalysisLevelMipTime = 128,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
-      kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime
+      kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
 };
 
 enum class HighsVarType : uint8_t {
