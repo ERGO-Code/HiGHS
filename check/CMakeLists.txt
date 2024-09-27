@@ -1,5 +1,10 @@
 include(CTest)
 
+if (BUILD_EXTRA_UNIT_TESTS)
+    add_subdirectory(highs-unit-tests)
+endif()
+
+
 if (FORTRAN)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_executable(fortrantest TestFortranAPI.f90)
@@ -87,6 +92,11 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
+
+  if (BUILD_EXTRA_UNIT_TESTS)
+      set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
+  endif()
+
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
