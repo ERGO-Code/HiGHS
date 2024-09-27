@@ -5,7 +5,7 @@
 - Type: string
 - Default: "choose"
 
-## solver
+## [solver](@id option-solver)
 - Solver option: "simplex", "choose", "ipm" or "pdlp". If "simplex"/"ipm"/"pdlp" is chosen then, for a MIP (QP) the integrality constraint (quadratic term) will be ignored
 - Type: string
 - Default: "choose"
@@ -109,7 +109,7 @@
 - Range: {-2147483647, 2147483647}
 - Default: 0
 
-## simplex\_strategy
+## [simplex\_strategy](@id option-simplex_strategy)
 - Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (PAMI); 3 => Dual (SIP); 4 => Primal
 - Type: integer
 - Range: {0, 4}

@@ -345,6 +345,9 @@ struct HighsOptionsStruct {
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
 
+  // Options for IIS calculation
+  HighsInt iis_strategy;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -437,7 +440,6 @@ struct HighsOptionsStruct {
         time_limit(0.0),
         solution_file(""),
         write_model_file(""),
-        write_presolved_model_file(""),
         random_seed(0),
         ranging(""),
         infinite_cost(0.0),
@@ -469,6 +471,7 @@ struct HighsOptionsStruct {
         write_solution_to_file(false),
         write_solution_style(0),
         glpsol_cost_row_location(0),
+        write_presolved_model_file(""),
         output_flag(false),
         log_to_console(false),
         ipm_iteration_limit(0),
@@ -552,7 +555,7 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        mip_improving_solution_file(""){};
+        mip_improving_solution_file("") {};
 };
 
 // For now, but later change so HiGHS properties are string based so that new
@@ -1091,6 +1094,22 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("qp_nullspace_limit",
                                      "Nullspace limit for QP solver", advanced,
                                      &qp_nullspace_limit, 0, 4000, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "iis_strategy",
+        "Strategy for IIS calculation: "
+        //        "Use LP and p"
+        "Prioritise rows (default) / "
+        //        "Use LP and p"
+        "Prioritise columns"
+        //        "Use unbounded dual ray and prioritise low number of rows
+        //        (default) / " "Use ray and prioritise low numbers of columns "
+        " (0/1"
+        //        "/2/3)",
+        ")",
+        advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
+        kIisStrategyMax);
     records.push_back(record_int);
 
     // Fix the number of user settable options

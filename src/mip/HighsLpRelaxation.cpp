@@ -1224,9 +1224,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           double val = std::max(
               std::min(sol.col_value[i], lpsolver.getLp().col_upper_[i]),
               lpsolver.getLp().col_lower_[i]);
-          double intval = std::floor(val + 0.5);
 
-          if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
+          if (fractionality(val) > mipsolver.mipdata_->feastol) {
             HighsInt col = i;
             if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
                 mipsolver.mipdata_->downlocks[col] != 0)

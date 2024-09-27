@@ -78,21 +78,21 @@ FilereaderRetcode readMps(
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Opened file  OK\n");
   // Input buffer
   const HighsInt lmax = 128;
-  char line[lmax];
-  char flag[2] = {0, 0};
-  double data[3];
+  std::array<char, lmax> line;
+  std::array<char, 2> flag = {0, 0};
+  std::array<double, 3> data;
 
   HighsInt num_alien_entries = 0;
   HighsVarType integerCol = HighsVarType::kContinuous;
 
   // Load NAME
-  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  load_mpsLine(file, integerCol, lmax, line.data(), flag.data(), data.data());
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read NAME    OK\n");
   // Load OBJSENSE or ROWS
-  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  load_mpsLine(file, integerCol, lmax, line.data(), flag.data(), data.data());
   if (flag[0] == 'O') {
     // Found OBJSENSE
-    load_mpsLine(file, integerCol, lmax, line, flag, data);
+    load_mpsLine(file, integerCol, lmax, line.data(), flag.data(), data.data());
     std::string sense(&line[2], &line[2] + 3);
     // the sense must be "MAX" or "MIN"
     if (sense.compare("MAX") == 0) {
@@ -105,7 +105,7 @@ FilereaderRetcode readMps(
     highsLogDev(log_options, HighsLogType::kInfo,
                 "readMPS: Read OBJSENSE OK\n");
     // Load ROWS
-    load_mpsLine(file, integerCol, lmax, line, flag, data);
+    load_mpsLine(file, integerCol, lmax, line.data(), flag.data(), data.data());
   }
 
   row_names.clear();
@@ -113,7 +113,8 @@ FilereaderRetcode readMps(
   vector<char> rowType;
   map<double, int> rowIndex;
   double objName = 0;
-  while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+  while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                      data.data())) {
     if (flag[0] == 'N' &&
         (objName == 0 || keep_n_rows == kKeepNRowsDeleteRows)) {
       // N-row: take the first as the objective and possibly ignore any others
@@ -149,7 +150,8 @@ FilereaderRetcode readMps(
   // line - field 5 non-empty. save_flag1 is used to deduce whether
   // the row name and value are from fields 5 and 6, or 3 and 4
   HighsInt save_flag1 = 0;
-  while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+  while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                      data.data())) {
     HighsInt iRow = rowIndex[data[2]] - 1;
     std::string name = "";
     if (iRow >= 0) name = row_names[iRow];
@@ -218,7 +220,8 @@ FilereaderRetcode readMps(
   num_alien_entries = 0;
   vector<double> RHS(numRow, 0);
   save_flag1 = 0;
-  while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+  while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                      data.data())) {
     if (data[2] != objName) {
       HighsInt iRow = rowIndex[data[2]] - 1;
       if (iRow >= 0) {
@@ -268,7 +271,8 @@ FilereaderRetcode readMps(
   rowUpper.resize(numRow);
   if (flag[0] == 'R') {
     save_flag1 = 0;
-    while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+    while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                        data.data())) {
       HighsInt iRow = rowIndex[data[2]] - 1;
       if (iRow >= 0) {
         if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
@@ -338,7 +342,8 @@ FilereaderRetcode readMps(
   colLower.assign(numCol, 0);
   colUpper.assign(numCol, kHighsInf);
   if (flag[0] == 'B') {
-    while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+    while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                        data.data())) {
       // Find the column index associated with the name "data[2]". If
       // the name is in colIndex then the value stored is the true
       // column index plus one. Otherwise 0 will be returned.
@@ -389,7 +394,8 @@ FilereaderRetcode readMps(
     HighsInt previous_col = -1;
     bool has_diagonal = false;
     Qstart.clear();
-    while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+    while (load_mpsLine(file, integerCol, lmax, line.data(), flag.data(),
+                        data.data())) {
       HighsInt iCol0 = colIndex[data[1]] - 1;
       std::string name0 = "";
       if (iCol0 >= 0) name0 = col_names[iCol0];

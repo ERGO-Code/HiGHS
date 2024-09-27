@@ -2,8 +2,9 @@
 *                                                                       *
 *    This file is part of the HiGHS linear optimization suite           *
 *                                                                       *
-*    Written and engineered 2008-2023 by Julian Hall, Ivet Galabova,    *
+*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    *
 *    Leona Gottwald and Michael Feldmeier                               *
+*                                                                       *
 *    Available as open-source under the MIT License                     *
 *                                                                       *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *=#
@@ -61,6 +62,8 @@ Documenter.makedocs(
                 "structures/classes/index.md",
                 "structures/classes/HighsSparseMatrix.md",
                 "structures/classes/HighsLp.md",
+                "structures/classes/HighsHessian.md",
+                "structures/classes/HighsModel.md",
                 "structures/classes/HighsSolution.md",
                 "structures/classes/HighsBasis.md",
                 "structures/classes/HighsInfo.md",
@@ -88,6 +91,7 @@ Documenter.makedocs(
             "options/definitions.md"
         ],
         "Parallel" => "parallel.md",
+        "Solvers" => "solvers.md",
         "Terminology" => "terminology.md",
     ],
 )

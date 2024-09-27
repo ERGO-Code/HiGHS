@@ -29,6 +29,8 @@
 
 using std::fabs;
 
+const bool report_mip_timing = false;
+
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                                const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
@@ -61,9 +63,8 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       obj += orig_model_->col_cost_[i] * value;
 
       if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
-        double intval = std::floor(value + 0.5);
         integrality_violation_ =
-            std::max(fabs(intval - value), integrality_violation_);
+            std::max(fractionality(value), integrality_violation_);
       }
 
       const double lower = orig_model_->col_lower_[i];
@@ -115,7 +116,7 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
                  timer_.read(timer_.solve_clock));
@@ -138,12 +139,12 @@ void HighsMipSolver::run() {
     return;
   }
 
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
                  timer_.read(timer_.solve_clock));
   mipdata_->runSetup();
-  if (!submip)
+  if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
                  timer_.read(timer_.solve_clock));
@@ -154,13 +155,13 @@ restart:
       cleanupSolve();
       return;
     }
-    if (!submip)
+    if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
           timer_.read(timer_.solve_clock));
     mipdata_->evaluateRootNode();
-    if (!submip)
+    if (report_mip_timing & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
           "MIP-Timing: After %6.4fs - completed mipdata_->evaluateRootNode()\n",
@@ -524,6 +525,7 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
+  mipdata_->printDisplayLine('Z');
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
@@ -584,14 +586,13 @@ void HighsMipSolver::cleanupSolve() {
   else
     gap_ = kHighsInf;
 
-  std::array<char, 128> gapString;
+  std::array<char, 128> gapString = {};
 
   if (gap_ == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
     double printTol = std::max(std::min(1e-2, 1e-1 * gap_), 1e-6);
-    std::array<char, 32> gapValString =
-        highsDoubleToString(100.0 * gap_, printTol);
+    auto gapValString = highsDoubleToString(100.0 * gap_, printTol);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
@@ -606,8 +607,7 @@ void HighsMipSolver::cleanupSolve() {
                     gapValString.data());
     else if (gapTol != kHighsInf) {
       printTol = std::max(std::min(1e-2, 1e-1 * gapTol), 1e-6);
-      std::array<char, 32> gapTolString =
-          highsDoubleToString(100.0 * gapTol, printTol);
+      auto gapTolString = highsDoubleToString(100.0 * gapTol, printTol);
       std::snprintf(gapString.data(), gapString.size(),
                     "%s%% (tolerance: %s%%)", gapValString.data(),
                     gapTolString.data());

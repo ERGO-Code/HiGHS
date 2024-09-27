@@ -25,6 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +45,9 @@ wheel.packages = ["src/highspy"]
 # gitignore syntax.
 sdist.include = [
   "src/highspy/highs.py",
+  "src/highspy/__init__.py",
+  "src/highspy/__init__.pyi",
+  "src/highspy/_core/*.pyi",
   "tests/test_highspy.py",
   "Version.txt",
   "LICENSE",
@@ -186,7 +190,6 @@ xfail_strict = true
 log_cli_level = "INFO"
 filterwarnings = ["error"]
 testpaths = ["tests"]
-
 
 [tool.cibuildwheel]
 build = "*"

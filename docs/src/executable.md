@@ -1,4 +1,4 @@
-# Executable
+# [Executable](@id executable)
 
 For convenience, the executable is assumed to be `bin/highs`.
 

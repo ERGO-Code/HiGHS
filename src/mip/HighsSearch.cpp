@@ -48,8 +48,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
     if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::kInteger)
       continue;
 
-    double intval = std::floor(sol[i] + 0.5);
-    if (std::abs(sol[i] - intval) > mipsolver.mipdata_->feastol) {
+    if (fractionality(sol[i]) > mipsolver.mipdata_->feastol) {
       integerfeasible = false;
     }
   }
