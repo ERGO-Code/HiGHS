@@ -1672,7 +1672,7 @@ void HPresolve::liftingForProbing() {
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // collect best lifting opportunity for each row in a vector
-  typedef std::tuple<HighsCliqueTable::CliqueVar, double, bool> liftingdata;
+  typedef std::tuple<HighsCliqueTable::CliqueVar, double, HighsInt> liftingdata;
   std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double>>
       liftingtable;
   liftingtable.reserve(liftingOpportunities.size());
@@ -1688,22 +1688,31 @@ void HPresolve::liftingForProbing() {
         std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20))
       continue;
 
+    // lambda for computing coefficient difference
+    auto computeCoeffDiff = [&](double newvalue, HighsInt nzpos) {
+      return abs(HighsCDouble{newvalue} -
+                 (nzpos == -1 ? 0 : HighsCDouble{Avalue[nzpos]}));
+    };
+
     // store clique variables and coefficients in a map
     auto comp = [](const HighsCliqueTable::CliqueVar& c1,
                    const HighsCliqueTable::CliqueVar& c2) {
       return c1.col < c2.col || (c1.col == c2.col && c1.val < c2.val);
     };
-    std::map<HighsCliqueTable::CliqueVar, std::pair<double, bool>,
+    std::map<HighsCliqueTable::CliqueVar, std::pair<double, HighsInt>,
              decltype(comp)>
         coefficients(comp);
+
+    // iterate over elements in hash tree
     const auto& htree = elm.second;
     HighsCDouble coefsum = 0;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
       if (!colDeleted[col] && !domain.isFixed(col)) {
-        coefsum += std::fabs(value);
+        HighsInt nzpos = findNonzero(row, col);
+        coefsum += computeCoeffDiff(value, nzpos);
         coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
-            value, findNonzero(row, col) == -1};
+            value, nzpos};
       }
     });
 
@@ -1729,9 +1738,9 @@ void HPresolve::liftingForProbing() {
     for (const auto& elm : coefficients) {
       candidates.push_back(elm.first);
       // initialize best clique
-      double score =
-          computeScore(HighsCDouble{std::fabs(elm.second.first)}, size_t{1},
-                       elm.second.second ? size_t{1} : size_t{0});
+      double score = computeScore(
+          computeCoeffDiff(elm.second.first, elm.second.second), size_t{1},
+          elm.second.second == -1 ? size_t{1} : size_t{0});
       if (score > bestscore) {
         bestscore = score;
         bestclique = {
@@ -1748,8 +1757,9 @@ void HPresolve::liftingForProbing() {
       HighsCDouble coefsumclique = 0;
       size_t fillin = 0;
       for (const auto& cliquevar : clique) {
-        coefsumclique += std::fabs(coefficients[cliquevar].first);
-        if (coefficients[cliquevar].second) fillin++;
+        coefsumclique += computeCoeffDiff(coefficients[cliquevar].first,
+                                          coefficients[cliquevar].second);
+        if (coefficients[cliquevar].second == -1) fillin++;
       }
       double score = computeScore(coefsumclique, clique.size(), fillin);
       if (score > bestscore) {
@@ -1795,9 +1805,9 @@ void HPresolve::liftingForProbing() {
       // get data
       const auto& cliquevar = std::get<0>(elm);
       const double& coeff = std::get<1>(elm);
-      const bool& isnew = std::get<2>(elm);
+      const HighsInt& pos = std::get<2>(elm);
       // count fill-in
-      if (isnew) fillin++;
+      if (pos == -1) fillin++;
       // check against max. fill-in
       if (fillin > maxfillin) break;
       // add non-zero to matrix
