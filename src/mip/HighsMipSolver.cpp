@@ -106,16 +106,13 @@ HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
+
+  analysis_.timer_ = &this->timer_;
+  analysis_.setup(*orig_model_, *options_mip_);
+  if (submip) analysis_.analyse_mip_time = false;
   // Start the total_clock for the timer that is local to the HighsMipSolver
   // instance
   timer_.start(timer_.total_clock);
-
-  if (submip) {
-    analysis_.analyse_mip_time = false;
-  } else {
-    analysis_.timer_ = &this->timer_;
-    analysis_.setup(*orig_model_, *options_mip_);
-  }
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -123,12 +120,14 @@ void HighsMipSolver::run() {
         fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
   mipdata_->init();
   analysis_.mipTimerStop(kMipClockInit);
   analysis_.mipTimerStart(kMipClockRunPresolve);
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
+  analysis_.mipTimerStop(kMipClockPresolve);
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
@@ -152,7 +151,7 @@ void HighsMipSolver::run() {
     return;
   }
 
-  timer_.start(timer_.solve_clock);
+  analysis_.mipTimerStart(kMipClockSolve);
 
   if (report_mip_timing & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
@@ -593,8 +592,8 @@ void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine('Z');
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
-  if (timer_.running(timer_.solve_clock)) timer_.stop(timer_.solve_clock);
-  timer_.start(timer_.postsolve_clock);
+  if (analysis_.mipTimerRunning(kMipClockSolve)) analysis_.mipTimerStop(kMipClockSolve);
+  analysis_.mipTimerStart(kMipClockPostsolve);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
   if (havesolution)
@@ -634,7 +633,7 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::kInfeasible;
   }
 
-  timer_.stop(timer_.postsolve_clock);
+  analysis_.mipTimerStop(kMipClockPostsolve);
   timer_.stop(timer_.total_clock);
 
   std::string solutionstatus = "-";
@@ -713,8 +712,8 @@ void HighsMipSolver::cleanupSolve() {
       "                    %llu (strong br.)\n"
       "                    %llu (separation)\n"
       "                    %llu (heuristics)\n",
-      timer_.read(timer_.total_clock), timer_.read(timer_.presolve_clock),
-      timer_.read(timer_.solve_clock), timer_.read(timer_.postsolve_clock),
+      timer_.read(timer_.total_clock), analysis_.mipTimerRead(kMipClockPresolve),
+      analysis_.mipTimerRead(kMipClockSolve), analysis_.mipTimerRead(kMipClockPostsolve),
       (long long unsigned)mipdata_->num_nodes,
       (long long unsigned)mipdata_->total_lp_iterations,
       (long long unsigned)mipdata_->sb_lp_iterations,

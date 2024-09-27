@@ -17,6 +17,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
+#include "mip/MipTimer.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"

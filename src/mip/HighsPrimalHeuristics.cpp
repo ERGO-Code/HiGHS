@@ -21,6 +21,7 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/MipTimer.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 

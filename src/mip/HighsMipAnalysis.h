@@ -33,6 +33,12 @@ class HighsMipAnalysis {
   void mipTimerStop(const HighsInt mip_clock
                     //		    , const HighsInt thread_id = 0
   );
+  bool mipTimerRunning(const HighsInt mip_clock
+                    //		    , const HighsInt thread_id = 0
+  );
+  double mipTimerRead(const HighsInt mip_clock
+                    //		    , const HighsInt thread_id = 0
+  );
   void reportMipTimer();
 
   HighsTimerClock mip_clocks;
