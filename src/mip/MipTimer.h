@@ -47,7 +47,7 @@ enum iClockMip {
   kNumMipClock  //!< Number of MIP clocks
 };
 
-const double tolerance_percent_report = 1;
+const double tolerance_percent_report = -1;
 
 class MipTimer {
  public:

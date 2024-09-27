@@ -17,7 +17,7 @@
 
 #include "mip/MipTimer.h"
 
-const HighsInt check_clock = -9;
+const HighsInt check_mip_clock = 1;
 
 void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
   setupMipTime(options);
@@ -39,8 +39,9 @@ void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock
                                      // , const HighsInt thread_id
 ) {
   if (!analyse_mip_time) return;
-  if (mip_clock == check_clock) {
-    printf("Starting clock %d\n", int(check_clock));
+  if (mip_clock == check_mip_clock) {
+    std::string clock_name = mip_clocks.timer_pointer_->clock_names[check_mip_clock];
+    printf("MipTimer: starting clock %d: %s\n", int(check_mip_clock), clock_name.c_str());
   }
   mip_clocks.timer_pointer_->start(mip_clocks.clock_[mip_clock]);
 }
@@ -49,8 +50,9 @@ void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock
                                     // , const HighsInt thread_id
 ) {
   if (!analyse_mip_time) return;
-  if (mip_clock == check_clock) {
-    printf("Stopping clock %d\n", int(check_clock));
+  if (mip_clock == check_mip_clock) {
+    std::string clock_name = mip_clocks.timer_pointer_->clock_names[check_mip_clock];
+    printf("MipTimer: stopping clock %d: %s\n", int(check_mip_clock), clock_name.c_str());
   }
   mip_clocks.timer_pointer_->stop(mip_clocks.clock_[mip_clock]);
 }

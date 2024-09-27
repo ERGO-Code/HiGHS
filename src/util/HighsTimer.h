@@ -24,6 +24,8 @@
 
 #include "util/HighsInt.h"
 
+const HighsInt check_clock = 1;
+
 /**
  * @brief Clock record structure
  */
@@ -137,6 +139,10 @@ class HighsTimer {
     assert(clock_start[i_clock] > 0);
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
+    if (i_clock == check_clock) {
+      std::string clock_name = this->clock_names[check_clock];
+      printf("HighsTimer: starting clock %d: %s\n", int(check_clock), clock_name.c_str());
+    }
     clock_start[i_clock] = -getWallTime();
   }
 
@@ -156,6 +162,10 @@ class HighsTimer {
     clock_num_call[i_clock]++;
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
+    if (i_clock == check_clock) {
+      std::string clock_name = this->clock_names[check_clock];
+      printf("HighsTimer: stopping clock %d: %s\n", int(check_clock), clock_name.c_str());
+    }
     clock_start[i_clock] = wall_time;
   }
 
