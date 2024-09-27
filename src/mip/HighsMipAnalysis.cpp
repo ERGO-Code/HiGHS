@@ -66,7 +66,7 @@ void HighsMipAnalysis::mipTimerStop(const HighsInt mip_clock
 bool HighsMipAnalysis::mipTimerRunning(const HighsInt mip_clock
                                        // , const HighsInt thread_id
 ) {
-  if (!analyse_mip_time) return;
+  if (!analyse_mip_time) return false;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->running(highs_timer_clock);
 }
@@ -74,7 +74,7 @@ bool HighsMipAnalysis::mipTimerRunning(const HighsInt mip_clock
 double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
                                       // , const HighsInt thread_id
 ) {
-  if (!analyse_mip_time) return;
+  if (!analyse_mip_time) return 0;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->read(highs_timer_clock);
 }
