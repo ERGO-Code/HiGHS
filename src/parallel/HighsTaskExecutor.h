@@ -165,7 +165,7 @@ class HighsTaskExecutor {
     return threadLocalWorkerDeque()->getNumWorkers();
   }
 
-  static void ilatestnitialize(int numThreads) {
+  static void initialize(int numThreads) {
     auto& executorHandle = threadLocalExecutorHandle();
     if (executorHandle.ptr == nullptr) {
       executorHandle.isMain = true;
