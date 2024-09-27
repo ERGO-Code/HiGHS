@@ -33,6 +33,9 @@ enum iClockMip {
   kMipClockOpenNodesToQueue,
   kMipClockDomainPropgate,
   kMipClockPruneInfeasibleNodes,
+  kMipClockUpdateLocalDomain,
+  kMipClockNodeSearch,
+  //  kMipClock@,
   // Dive
   kMipClockEvaluateNode,
   kMipClockPrimalHeuristics,
@@ -79,6 +82,10 @@ class MipTimer {
         timer_pointer->clock_def("Domain propagate");
     clock[kMipClockPruneInfeasibleNodes] =
         timer_pointer->clock_def("Prune infeasible nodes");
+    clock[kMipClockUpdateLocalDomain] =
+        timer_pointer->clock_def("Update local domain");
+    clock[kMipClockNodeSearch] = timer_pointer->clock_def("Node search");
+    //    clock[kMipClock@] = timer_pointer->clock_def("@");
 
     // Dive - Should correspond to kMipClockDive
     clock[kMipClockEvaluateNode] = timer_pointer->clock_def("Evaluate node");
@@ -140,7 +147,10 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1, kMipClockDive, kMipClockOpenNodesToQueue,
-        kMipClockDomainPropgate, kMipClockPruneInfeasibleNodes};
+        kMipClockDomainPropgate, kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
+	kMipClockNodeSearch,
+	//	kMipClock@
+    };
     reportMipClockList("MipSrch", mip_clock_list, mip_timer_clock,
                        kMipClockSearch, tolerance_percent_report);
   };

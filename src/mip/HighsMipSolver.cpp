@@ -368,6 +368,7 @@ restart:
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
+      analysis_.mipTimerStart(kMipClockUpdateLocalDomain);
       highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
                   "added %" HIGHSINT_FORMAT " global bound changes\n",
                   (HighsInt)mipdata_->domain.getChangedCols().size());
@@ -380,6 +381,7 @@ restart:
 
       mipdata_->domain.clearChangedCols();
       mipdata_->removeFixedIndices();
+      analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
     }
 
     if (!submip && mipdata_->num_nodes >= nextCheck) {
@@ -464,6 +466,8 @@ restart:
     // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
+    analysis_.mipTimerStart(kMipClockNodeSearch);
+    
     while (!mipdata_->nodequeue.empty()) {
       // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
       // (HighsInt)nodequeue.size());
@@ -580,6 +584,7 @@ restart:
 
       break;
     }  // while(!mipdata_->nodequeue.empty())
+    analysis_.mipTimerStop(kMipClockNodeSearch);
 
     if (limit_reached) break;
   }  // while(search.hasNode())
