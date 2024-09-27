@@ -246,41 +246,39 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+        analysis_.mipTimerStart(kMipClockEvaluateNode);
+        const HighsSearch::NodeResult evaluate_node_result =
+            search.evaluateNode();
+        analysis_.mipTimerStop(kMipClockEvaluateNode);
 
-	analysis_.mipTimerStart(kMipClockEvaluateNode);
-	const HighsSearch::NodeResult evaluate_node_result = search.evaluateNode();
-	analysis_.mipTimerStop(kMipClockEvaluateNode);
-
-        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal)
-          break;
+        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
-	  
-	  analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+          analysis_.mipTimerStart(kMipClockPrimalHeuristics);
           if (mipdata_->incumbent.empty()) {
-	    analysis_.mipTimerStart(kMipClockRandomizedRounding);
+            analysis_.mipTimerStart(kMipClockRandomizedRounding);
             mipdata_->heuristics.randomizedRounding(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-	    analysis_.mipTimerStop(kMipClockRandomizedRounding);
-	  }
+            analysis_.mipTimerStop(kMipClockRandomizedRounding);
+          }
 
           if (mipdata_->incumbent.empty()) {
-	    analysis_.mipTimerStart(kMipClockRens);
+            analysis_.mipTimerStart(kMipClockRens);
             mipdata_->heuristics.RENS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-	    analysis_.mipTimerStop(kMipClockRens);
-	  } else {
-	    analysis_.mipTimerStart(kMipClockRins);
+            analysis_.mipTimerStop(kMipClockRens);
+          } else {
+            analysis_.mipTimerStart(kMipClockRins);
             mipdata_->heuristics.RINS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-	    analysis_.mipTimerStop(kMipClockRins);
-	  }
+            analysis_.mipTimerStop(kMipClockRins);
+          }
 
           mipdata_->heuristics.flushStatistics();
-	  analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+          analysis_.mipTimerStop(kMipClockPrimalHeuristics);
         }
       }
 
@@ -289,10 +287,9 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-
-	analysis_.mipTimerStart(kMipClockTheDive);
-	const HighsSearch::NodeResult search_dive_result = search.dive();
-	analysis_.mipTimerStop(kMipClockTheDive);
+        analysis_.mipTimerStart(kMipClockTheDive);
+        const HighsSearch::NodeResult search_dive_result = search.dive();
+        analysis_.mipTimerStop(kMipClockTheDive);
 
         if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
 
@@ -318,15 +315,15 @@ restart:
 
       if (mipdata_->conflictPool.getNumConflicts() >
           options_mip_->mip_pool_soft_limit) {
-	analysis_.mipTimerStart(kMipClockPerformAging2);
+        analysis_.mipTimerStart(kMipClockPerformAging2);
         mipdata_->conflictPool.performAging();
-	analysis_.mipTimerStop(kMipClockPerformAging2);
+        analysis_.mipTimerStop(kMipClockPerformAging2);
       }
 
       search.flushStatistics();
       mipdata_->printDisplayLine();
       // printf("continue plunging due to good estimate\n");
-    } // while (true)
+    }  // while (true)
     analysis_.mipTimerStop(kMipClockDive);
 
     analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
@@ -458,10 +455,10 @@ restart:
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                      "\nRestarting search from the root node\n");
         mipdata_->performRestart();
-	analysis_.mipTimerStop(kMipClockSearch);
+        analysis_.mipTimerStop(kMipClockSearch);
         goto restart;
       }
-    } // if (!submip && mipdata_->num_nodes >= nextCheck))
+    }  // if (!submip && mipdata_->num_nodes >= nextCheck))
 
     // remove the iteration limit when installing a new node
     // mipdata_->lp.setIterationLimit();
@@ -582,10 +579,10 @@ restart:
       }
 
       break;
-    } // while(!mipdata_->nodequeue.empty())
+    }  // while(!mipdata_->nodequeue.empty())
 
     if (limit_reached) break;
-  } // while(search.hasNode())
+  }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
   cleanupSolve();
@@ -595,7 +592,8 @@ void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine('Z');
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
-  if (analysis_.mipTimerRunning(kMipClockSolve)) analysis_.mipTimerStop(kMipClockSolve);
+  if (analysis_.mipTimerRunning(kMipClockSolve))
+    analysis_.mipTimerStop(kMipClockSolve);
   analysis_.mipTimerStart(kMipClockPostsolve);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
@@ -704,24 +702,25 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
-  highsLogUser(
-      options_mip_->log_options, HighsLogType::kInfo,
-      "  Timing            %.2f (total)\n"
-      "                    %.2f (presolve)\n"
-      "                    %.2f (solve)\n"
-      "                    %.2f (postsolve)\n"
-      "  Nodes             %llu\n"
-      "  LP iterations     %llu (total)\n"
-      "                    %llu (strong br.)\n"
-      "                    %llu (separation)\n"
-      "                    %llu (heuristics)\n",
-      timer_.read(timer_.total_clock), analysis_.mipTimerRead(kMipClockPresolve),
-      analysis_.mipTimerRead(kMipClockSolve), analysis_.mipTimerRead(kMipClockPostsolve),
-      (long long unsigned)mipdata_->num_nodes,
-      (long long unsigned)mipdata_->total_lp_iterations,
-      (long long unsigned)mipdata_->sb_lp_iterations,
-      (long long unsigned)mipdata_->sepa_lp_iterations,
-      (long long unsigned)mipdata_->heuristic_lp_iterations);
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "  Timing            %.2f (total)\n"
+               "                    %.2f (presolve)\n"
+               "                    %.2f (solve)\n"
+               "                    %.2f (postsolve)\n"
+               "  Nodes             %llu\n"
+               "  LP iterations     %llu (total)\n"
+               "                    %llu (strong br.)\n"
+               "                    %llu (separation)\n"
+               "                    %llu (heuristics)\n",
+               timer_.read(timer_.total_clock),
+               analysis_.mipTimerRead(kMipClockPresolve),
+               analysis_.mipTimerRead(kMipClockSolve),
+               analysis_.mipTimerRead(kMipClockPostsolve),
+               (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->total_lp_iterations,
+               (long long unsigned)mipdata_->sb_lp_iterations,
+               (long long unsigned)mipdata_->sepa_lp_iterations,
+               (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   analysis_.reportMipTimer();
 

@@ -141,7 +141,8 @@ class HighsTimer {
     // the clock's been started when it's next stopped
     if (i_clock == check_clock) {
       std::string clock_name = this->clock_names[check_clock];
-      printf("HighsTimer: starting clock %d: %s\n", int(check_clock), clock_name.c_str());
+      printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
+             clock_name.c_str());
     }
     clock_start[i_clock] = -getWallTime();
   }
@@ -164,7 +165,8 @@ class HighsTimer {
     // stopped when it's next started
     if (i_clock == check_clock) {
       std::string clock_name = this->clock_names[check_clock];
-      printf("HighsTimer: stopping clock %d: %s\n", int(check_clock), clock_name.c_str());
+      printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
+             clock_name.c_str());
     }
     clock_start[i_clock] = wall_time;
   }
