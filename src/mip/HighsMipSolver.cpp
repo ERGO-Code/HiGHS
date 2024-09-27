@@ -107,9 +107,12 @@ HighsMipSolver::~HighsMipSolver() = default;
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::kNotset;
 
-  analysis_.timer_ = &this->timer_;
-  analysis_.setup(*orig_model_, *options_mip_);
-  if (submip) analysis_.analyse_mip_time = false;
+  if (submip) {
+    analysis_.analyse_mip_time = false;
+  } else {
+    analysis_.timer_ = &this->timer_;
+    analysis_.setup(*orig_model_, *options_mip_);
+  }
   // Start the total_clock for the timer that is local to the HighsMipSolver
   // instance
   timer_.start(timer_.total_clock);

@@ -24,7 +24,7 @@
 
 #include "util/HighsInt.h"
 
-const HighsInt check_clock = 4;
+const HighsInt check_clock = -4;
 
 /**
  * @brief Clock record structure

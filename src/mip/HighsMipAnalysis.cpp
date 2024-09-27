@@ -17,7 +17,7 @@
 
 #include "mip/MipTimer.h"
 
-const HighsInt check_mip_clock = 4;
+const HighsInt check_mip_clock = -4;
 
 void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
   setupMipTime(options);
@@ -25,14 +25,14 @@ void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
 
 void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
-  //  assert(analyse_mip_time);
-  //  if (analyse_mip_time) {
+  assert(analyse_mip_time);
+  if (analyse_mip_time) {
     HighsTimerClock clock;
     clock.timer_pointer_ = timer_;
     MipTimer mip_timer;
     mip_timer.initialiseMipClocks(clock);
     mip_clocks = clock;
-    //  }
+  }
 }
 
 void HighsMipAnalysis::mipTimerStart(const HighsInt mip_clock
