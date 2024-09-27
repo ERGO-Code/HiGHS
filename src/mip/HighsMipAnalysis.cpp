@@ -17,7 +17,7 @@
 
 #include "mip/MipTimer.h"
 
-const HighsInt check_clock = 9;
+const HighsInt check_clock = -9;
 
 void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
   setupMipTime(options);

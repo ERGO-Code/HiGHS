@@ -36,6 +36,7 @@ enum iClockMip {
   // Dive
   kMipClockEvaluateNode,
   kMipClockPrimalHeuristics,
+  kMipClockTheDive,
   kMipClockBacktrackPlunge,
   kMipClockPerformAging2,
   // Primal heuristics
@@ -45,6 +46,8 @@ enum iClockMip {
 
   kNumMipClock  //!< Number of MIP clocks
 };
+
+const double tolerance_percent_report = 1;
 
 class MipTimer {
  public:
@@ -76,6 +79,7 @@ class MipTimer {
     // Dive - Should correspond to kMipClockDive
     clock[kMipClockEvaluateNode] = timer_pointer->clock_def("Evaluate node");
     clock[kMipClockPrimalHeuristics]  = timer_pointer->clock_def("Primal heuristics");
+    clock[kMipClockTheDive]  = timer_pointer->clock_def("The dive");
     clock[kMipClockBacktrackPlunge] = timer_pointer->clock_def("Backtrack plunge");
     clock[kMipClockPerformAging2] = timer_pointer->clock_def("Perform aging 2");
 
@@ -126,7 +130,7 @@ class MipTimer {
       kMipClockSearch,
       kMipClockPostsolve
     };
-    reportMipClockList("MipLvl1", mip_clock_list, mip_timer_clock);
+    reportMipClockList("MipLvl1", mip_clock_list, mip_timer_clock, kMipClockTotal, tolerance_percent_report);
   };
 
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
@@ -137,17 +141,18 @@ class MipTimer {
       kMipClockDomainPropgate,
       kMipClockPruneInfeasibleNodes
     };
-    reportMipClockList("MipSrch", mip_clock_list, mip_timer_clock, kMipClockSearch);
+    reportMipClockList("MipSrch", mip_clock_list, mip_timer_clock, kMipClockSearch, tolerance_percent_report);
   };
 
   void reportMipDiveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
       kMipClockEvaluateNode,
       kMipClockPrimalHeuristics,
+      kMipClockTheDive,
       kMipClockBacktrackPlunge,
       kMipClockPerformAging2
     };
-    reportMipClockList("MipDive", mip_clock_list, mip_timer_clock, kMipClockDive);
+    reportMipClockList("MipDive", mip_clock_list, mip_timer_clock, kMipClockDive, tolerance_percent_report);
   };
 
   void reportMipPrimalHeuristicsClock(const HighsTimerClock& mip_timer_clock) {
@@ -156,7 +161,7 @@ class MipTimer {
       kMipClockRens,
       kMipClockRins
     };
-    reportMipClockList("MipPrimalHeuristics", mip_clock_list, mip_timer_clock, kMipClockPrimalHeuristics);
+    reportMipClockList("MipPrimalHeuristics", mip_clock_list, mip_timer_clock, kMipClockPrimalHeuristics, tolerance_percent_report);
   };
 
 };

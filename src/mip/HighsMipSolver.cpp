@@ -287,7 +287,12 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-        if (search.dive() == HighsSearch::NodeResult::kSubOptimal) break;
+
+	analysis_.mipTimerStart(kMipClockTheDive);
+	const HighsSearch::NodeResult search_dive_result = search.dive();
+	analysis_.mipTimerStop(kMipClockTheDive);
+
+        if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;
 
