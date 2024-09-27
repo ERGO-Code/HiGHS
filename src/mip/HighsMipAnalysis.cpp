@@ -20,6 +20,7 @@
 const HighsInt check_mip_clock = -4;
 
 void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
+  model_name = lp.model_name_;
   setupMipTime(options);
 }
 
@@ -88,4 +89,5 @@ void HighsMipAnalysis::reportMipTimer() {
   mip_timer.reportMipSearchClock(mip_clocks);
   mip_timer.reportMipDiveClock(mip_clocks);
   mip_timer.reportMipPrimalHeuristicsClock(mip_clocks);
+  mip_timer.csvMipClock(this->model_name, mip_clocks);
 }

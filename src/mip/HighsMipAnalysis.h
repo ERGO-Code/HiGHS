@@ -41,6 +41,7 @@ class HighsMipAnalysis {
   );
   void reportMipTimer();
 
+  std::string model_name;
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;
 };

@@ -50,7 +50,7 @@ enum iClockMip {
   kNumMipClock  //!< Number of MIP clocks
 };
 
-const double tolerance_percent_report = -1;
+const double tolerance_percent_report = 0.1;
 
 class MipTimer {
  public:
@@ -126,6 +126,34 @@ class MipTimer {
         grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
   };
 
+  void csvMipClockList(const std::string model_name, 
+		       const std::vector<HighsInt> mip_clock_list,
+		       const HighsTimerClock& mip_timer_clock,
+		       const HighsInt kMipClockIdeal = kMipClockTotal) {
+    HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
+    const double ideal_sum_time = timer_pointer->clock_time[clock[kMipClockIdeal]];
+    if (ideal_sum_time < 1e-2) return;
+    printf("grep_csvMIP,model,ideal");
+    const HighsInt num_clock = mip_clock_list.size();
+    for (HighsInt iX = 0; iX < num_clock; iX++) {
+      HighsInt iclock = clock[mip_clock_list[iX]];
+      printf(",%s", timer_pointer->clock_names[iclock].c_str());
+    }
+    printf(",Unaccounted time, Unaccounted \%%\n");
+    double sum_time = 0;
+    printf("grep_csvMIP,%s,%g", model_name.c_str(), ideal_sum_time);
+    for (HighsInt iX = 0; iX < num_clock; iX++) {
+      HighsInt iclock = clock[mip_clock_list[iX]];
+      double time = timer_pointer->read(iclock);
+      sum_time += time;
+      printf(",%11.2g", time);
+    }
+    const double unaccounted_time = ideal_sum_time - sum_time;
+    printf(",%11.2g,%11.2g", unaccounted_time, 1e2*unaccounted_time/ideal_sum_time);
+    printf("\n");
+  }
+
   void reportMipCoreClock(const HighsTimerClock& mip_timer_clock) {
     //    const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     const std::vector<HighsInt> mip_clock_list{
@@ -168,6 +196,12 @@ class MipTimer {
                                                kMipClockRens, kMipClockRins};
     reportMipClockList("MipPrimalHeuristics", mip_clock_list, mip_timer_clock,
                        kMipClockPrimalHeuristics, tolerance_percent_report);
+  };
+
+  void csvMipClock(const std::string model_name, const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{kMipClockEvaluateRootNode,
+                                               kMipClockPrimalHeuristics, kMipClockTheDive};
+    csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal);
   };
 };
 
