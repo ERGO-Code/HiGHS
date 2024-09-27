@@ -994,7 +994,7 @@ void Highs::setNonbasicStatusInterface(
         double lower = lp.col_lower_[iCol];
         double upper = lp.col_upper_[iCol];
         HighsBasisStatus status = highs_basis.col_status[iCol];
-        HighsInt move = kIllegalMoveValue;
+        int8_t move = kIllegalMoveValue;
         if (lower == upper) {
           if (status == HighsBasisStatus::kNonbasic)
             status = HighsBasisStatus::kLower;
@@ -1045,7 +1045,7 @@ void Highs::setNonbasicStatusInterface(
         double lower = lp.row_lower_[iRow];
         double upper = lp.row_upper_[iRow];
         HighsBasisStatus status = highs_basis.row_status[iRow];
-        HighsInt move = kIllegalMoveValue;
+        int8_t move = kIllegalMoveValue;
         if (lower == upper) {
           if (status == HighsBasisStatus::kNonbasic)
             status = HighsBasisStatus::kLower;
@@ -1128,7 +1128,7 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
     double lower = lp.col_lower_[iCol];
     double upper = lp.col_upper_[iCol];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       status = HighsBasisStatus::kLower;
@@ -1386,7 +1386,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
     const double lower = lp.col_lower_[iCol];
     const double upper = lp.col_upper_[iCol];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       status = HighsBasisStatus::kLower;
@@ -1428,7 +1428,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
     const double lower = lp.row_lower_[iRow];
     const double upper = lp.row_upper_[iRow];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       status = HighsBasisStatus::kLower;
@@ -2063,7 +2063,7 @@ HighsStatus Highs::elasticityFilter(
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     HighsInt num_fixed = 0;
     if (has_elastic_columns) {
-      for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+      for (size_t eCol = 0; eCol < col_of_ecol.size(); eCol++) {
         HighsInt iCol = col_of_ecol[eCol];
         if (solution.col_value[col_ecol_offset + eCol] >
             this->options_.primal_feasibility_tolerance) {
@@ -2081,7 +2081,7 @@ HighsStatus Highs::elasticityFilter(
       }
     }
     if (has_elastic_rows) {
-      for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+      for (size_t eCol = 0; eCol < row_of_ecol.size(); eCol++) {
         HighsInt iRow = row_of_ecol[eCol];
         if (solution.col_value[row_ecol_offset + eCol] >
             this->options_.primal_feasibility_tolerance) {
@@ -2119,7 +2119,7 @@ HighsStatus Highs::elasticityFilter(
   HighsInt num_enforced_col_ecol = 0;
   HighsInt num_enforced_row_ecol = 0;
   if (has_elastic_columns) {
-    for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+    for (size_t eCol = 0; eCol < col_of_ecol.size(); eCol++) {
       HighsInt iCol = col_of_ecol[eCol];
       if (lp.col_upper_[col_ecol_offset + eCol] == 0) {
         num_enforced_col_ecol++;
@@ -2133,7 +2133,7 @@ HighsStatus Highs::elasticityFilter(
     }
   }
   if (has_elastic_rows) {
-    for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+    for (size_t eCol = 0; eCol < row_of_ecol.size(); eCol++) {
       HighsInt iRow = row_of_ecol[eCol];
       if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
         num_enforced_row_ecol++;
