@@ -11,17 +11,17 @@ N = 8
 h = highspy.Highs()
 h.silent()
 
-x = np.reshape(h.addBinaries(N*N), (N, N))
+x = h.addBinaries(N, N)
 
-h.addConstrs(sum(x[i,:]) == 1 for i in range(N))    # each row has exactly one queen
-h.addConstrs(sum(x[:,j]) == 1 for j in range(N))    # each col has exactly one queen
+h.addConstrs(x.sum(axis=0) == 1)    # each row has exactly one queen
+h.addConstrs(x.sum(axis=1) == 1)    # each col has exactly one queen
 
 y = np.fliplr(x)
 h.addConstrs(x.diagonal(k).sum() <= 1 for k in range(-N + 1, N))   # each diagonal has at most one queen
 h.addConstrs(y.diagonal(k).sum() <= 1 for k in range(-N + 1, N))   # each 'reverse' diagonal has at most one queen
 
 h.solve()
-sol = np.array(h.vals(x))
+sol = h.vals(x)
 
 print('Queens:')
 
