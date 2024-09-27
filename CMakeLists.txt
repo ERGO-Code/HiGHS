@@ -43,6 +43,7 @@ option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_TESTING "Build Tests" ON)
+option(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" ON)
 
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
