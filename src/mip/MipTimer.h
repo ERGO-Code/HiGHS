@@ -55,10 +55,10 @@ class MipTimer {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     clock.resize(kNumMipClock);
-    clock[kMipClockTotal] = timer_pointer->total_clock;
-    clock[kMipClockPresolve] = timer_pointer->presolve_clock;
-    clock[kMipClockSolve] = timer_pointer->solve_clock;
-    clock[kMipClockPostsolve] = timer_pointer->postsolve_clock;
+    clock[kMipClockTotal] = timer_pointer->clock_def("MIP total");
+    clock[kMipClockPresolve] = timer_pointer->clock_def("MIP presolve");
+    clock[kMipClockSolve] = timer_pointer->clock_def("MIP solve");
+    clock[kMipClockPostsolve] = timer_pointer->clock_def("MIP postsolve");
 
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
@@ -117,7 +117,7 @@ class MipTimer {
     //    const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPresolve, kMipClockSolve, kMipClockPostsolve};
-    reportMipClockList("MipCore", mip_clock_list, mip_timer_clock);
+    reportMipClockList("MipCore", mip_clock_list, mip_timer_clock, kMipClockTotal);
   };
 
   void reportMipLevel1Clock(const HighsTimerClock& mip_timer_clock) {
