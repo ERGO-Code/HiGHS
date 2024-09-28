@@ -83,7 +83,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 void HighsMipSolverData::startAnalyticCenterComputation(
     const highs::parallel::TaskGroup& taskGroup) {
   taskGroup.spawn([&]() {
-    // first check if the analytic center computation should be cancelled, e.g.
+    // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
@@ -1455,9 +1455,9 @@ restart:
     mipsolver.analysis_.mipTimerStop(kMipClockStartSymmetryDetection);
   }
   if (!analyticCenterComputed) {
-    mipsolver.analysis_.mipTimerStart(kMipClockStartAnalyticCenterComputation);
+    mipsolver.analysis_.mipTimerStart(kMipClockStartAnalyticCentreComputation);
     startAnalyticCenterComputation(tg);
-    mipsolver.analysis_.mipTimerStop(kMipClockStartAnalyticCenterComputation);
+    mipsolver.analysis_.mipTimerStop(kMipClockStartAnalyticCentreComputation);
   }
 
   // lp.getLpSolver().setOptionValue(
@@ -1623,7 +1623,9 @@ restart:
 	mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
 	return;
       }
+      mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
       status = evaluateRootLp();
+      mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
       if (status == HighsLpRelaxation::Status::kInfeasible) {
 	mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
 	return;
@@ -1680,7 +1682,9 @@ restart:
   mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
 
   lp.setIterationLimit();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   rootlpsol = lp.getLpSolver().getSolution().col_value;
@@ -1689,8 +1693,15 @@ restart:
 
   if (!analyticCenterComputed) {
     if (checkLimits()) return;
+
+    mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
     finishAnalyticCenterComputation(tg);
+    mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
+
+    mipsolver.analysis_.mipTimerStart(kMipClockCentralRounding);
     heuristics.centralRounding();
+    mipsolver.analysis_.mipTimerStop(kMipClockCentralRounding);
+
     heuristics.flushStatistics();
 
     // if there are new global bound changes we reevaluate the LP and do one
@@ -1701,7 +1712,10 @@ restart:
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      if (rootSeparationRound(sepa, ncuts, status)) return;
+      mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound);
+      const bool root_separation_round_result = rootSeparationRound(sepa, ncuts, status);
+      mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound);
+      if (root_separation_round_result) return;
       ++nseparounds;
       printDisplayLine();
     }
