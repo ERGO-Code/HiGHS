@@ -1696,7 +1696,7 @@ restart:
 
     mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
     finishAnalyticCenterComputation(tg);
-    mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
+    mipsolver.analysis_.mipTimerStop(kMipClockFinishAnalyticCentreComputation);
 
     mipsolver.analysis_.mipTimerStart(kMipClockCentralRounding);
     heuristics.centralRounding();
