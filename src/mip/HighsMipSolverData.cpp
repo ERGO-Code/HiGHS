@@ -1449,8 +1449,16 @@ void HighsMipSolverData::evaluateRootNode() {
   std::unique_ptr<SymmetryDetectionData> symData;
   highs::parallel::TaskGroup tg;
 restart:
-  if (detectSymmetries) startSymmetryDetection(tg, symData);
-  if (!analyticCenterComputed) startAnalyticCenterComputation(tg);
+  if (detectSymmetries) {
+    mipsolver.analysis_.mipTimerStart(kMipClockStartSymmetryDetection);
+    startSymmetryDetection(tg, symData);
+    mipsolver.analysis_.mipTimerStop(kMipClockStartSymmetryDetection);
+  }
+  if (!analyticCenterComputed) {
+    mipsolver.analysis_.mipTimerStart(kMipClockStartAnalyticCenterComputation);
+    startAnalyticCenterComputation(tg);
+    mipsolver.analysis_.mipTimerStop(kMipClockStartAnalyticCenterComputation);
+  }
 
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
@@ -1473,7 +1481,10 @@ restart:
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
+
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
   HighsLpRelaxation::Status status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
@@ -1514,7 +1525,9 @@ restart:
     }
 #endif
     lp.addCuts(cutset);
+    mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
     status = evaluateRootLp();
+    mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
     lp.removeObsoleteRows();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   }
@@ -1524,10 +1537,14 @@ restart:
   // make sure first line after solving root LP is printed
   last_disptime = -kHighsInf;
 
+  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
   heuristics.randomizedRounding(firstlpsol);
+  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding1);
   heuristics.flushStatistics();
 
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   rootlpsolobj = firstlpsolobj;
@@ -1541,7 +1558,9 @@ restart:
                    "\n%.1f%% inactive integer columns, restarting\n",
                    fixingRate);
       tg.taskWait();
+      mipsolver.analysis_.mipTimerStart(kMipClockPerformRestart);
       performRestart();
+      mipsolver.analysis_.mipTimerStop(kMipClockPerformRestart);
       ++numRestartsRoot;
       if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
@@ -1550,6 +1569,7 @@ restart:
   }
 
   // begin separation
+  mipsolver.analysis_.mipTimerStart(kMipClockSeparation);
   std::vector<double> avgdirection;
   std::vector<double> curdirection;
   avgdirection.resize(mipsolver.numCol());
@@ -1565,7 +1585,10 @@ restart:
          stall < 3) {
     printDisplayLine();
 
-    if (checkLimits()) return;
+    if (checkLimits()) {
+      mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
+      return;
+    }
 
     if (nseparounds == maxSepaRounds) break;
 
@@ -1583,16 +1606,28 @@ restart:
     ++nseparounds;
 
     HighsInt ncuts;
-    if (rootSeparationRound(sepa, ncuts, status)) return;
+    if (rootSeparationRound(sepa, ncuts, status)) {
+      mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
+      return;
+    }
     if (nseparounds >= 5 && !mipsolver.submip && !analyticCenterComputed) {
-      if (checkLimits()) return;
+      if (checkLimits()) {
+	mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
+	return;
+      }
       finishAnalyticCenterComputation(tg);
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
-      if (checkLimits()) return;
+      if (checkLimits()) {
+	mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
+	return;
+      }
       status = evaluateRootLp();
-      if (status == HighsLpRelaxation::Status::kInfeasible) return;
+      if (status == HighsLpRelaxation::Status::kInfeasible) {
+	mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
+	return;
+      }
     }
 
     HighsCDouble sqrnorm = 0.0;
@@ -1642,6 +1677,7 @@ restart:
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
   }
+  mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
 
   lp.setIterationLimit();
   status = evaluateRootLp();

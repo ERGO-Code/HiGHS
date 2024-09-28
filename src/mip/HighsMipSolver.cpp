@@ -259,10 +259,10 @@ restart:
         } else {
           analysis_.mipTimerStart(kMipClockPrimalHeuristics);
           if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockRandomizedRounding);
+            analysis_.mipTimerStart(kMipClockRandomizedRounding0);
             mipdata_->heuristics.randomizedRounding(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRandomizedRounding);
+            analysis_.mipTimerStop(kMipClockRandomizedRounding0);
           }
 
           if (mipdata_->incumbent.empty()) {
