@@ -142,7 +142,7 @@ class MipTimer {
     }
     printf(",Unaccounted time, Unaccounted \%%\n");
     double sum_time = 0;
-    printf("grep_csvMIP,%s,%g", model_name.c_str(), ideal_sum_time);
+    printf("grep_csvMIP,%s,%11.2g", model_name.c_str(), ideal_sum_time);
     for (HighsInt iX = 0; iX < num_clock; iX++) {
       HighsInt iclock = clock[mip_clock_list[iX]];
       double time = timer_pointer->read(iclock);
@@ -199,7 +199,7 @@ class MipTimer {
   };
 
   void csvMipClock(const std::string model_name, const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{kMipClockEvaluateRootNode,
+    const std::vector<HighsInt> mip_clock_list{kMipClockRunPresolve, kMipClockEvaluateRootNode,
                                                kMipClockPrimalHeuristics, kMipClockTheDive};
     csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal);
   };
