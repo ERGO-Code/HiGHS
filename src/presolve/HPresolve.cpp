@@ -1726,7 +1726,7 @@ void HPresolve::liftingForProbing() {
     // lambda for computing score
     auto computeScore = [&](HighsCDouble sum, size_t numelms,
                             size_t numfillin) {
-      const double weight = 0.9;
+      const double weight = 0.1;
       return weight * static_cast<double>(sum / coefsum) +
              (1 - weight) * static_cast<double>(numelms - numfillin) /
                  static_cast<double>(numelms);
