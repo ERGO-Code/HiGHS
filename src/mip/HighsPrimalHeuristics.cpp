@@ -142,7 +142,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.pscostinit = &pscostinit;
   submipsolver.clqtableinit = &mipsolver.mipdata_->cliquetable;
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
+
+  submipsolver.analysis_.mipTimerStart(kMipClockSolveSubMip);
   submipsolver.run();
+  submipsolver.analysis_.mipTimerStop(kMipClockSolveSubMip);
+
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();

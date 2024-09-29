@@ -29,16 +29,16 @@ class HighsMipAnalysis {
   void setupMipTime(const HighsOptions& options);
   void mipTimerStart(const HighsInt mip_clock
                      //		     , const HighsInt thread_id = 0
-  );
+  ) const;
   void mipTimerStop(const HighsInt mip_clock
                     //		    , const HighsInt thread_id = 0
-  );
+  ) const;
   bool mipTimerRunning(const HighsInt mip_clock
                        //		    , const HighsInt thread_id = 0
-  );
+  ) const;
   double mipTimerRead(const HighsInt mip_clock
                       //		    , const HighsInt thread_id = 0
-  );
+  ) const;
   void reportMipTimer();
 
   std::string model_name;

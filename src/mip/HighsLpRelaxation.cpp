@@ -548,7 +548,11 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    mipsolver.analysis_.mipTimerStart(kMipClockBasisSolveLp);
+    mipsolver.analysis_.mipTimerStart(kMipClockSimplexSolveLp);
     lpsolver.run();
+    mipsolver.analysis_.mipTimerStop(kMipClockSimplexSolveLp);
+    mipsolver.analysis_.mipTimerStop(kMipClockBasisSolveLp);
   }
 }
 
@@ -1048,7 +1052,26 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
                         mipsolver.timer_.read(mipsolver.timer_.total_clock));
   // lpsolver.setOptionValue("output_flag", true);
+  const bool valid_basis = lpsolver.getBasis().valid;
+  const HighsInt mip_clock = valid_basis ? kMipClockBasisSolveLp : kMipClockNoBasisSolveLp;
+  const bool dev_report = false;
+  if (dev_report && !mipsolver.submip) {
+    if (valid_basis) {
+      printf("Solving LP (%7d, %7d) with    a valid basis\n",
+	     int(lpsolver.getNumCol()),
+	     int(lpsolver.getNumRow()));
+    } else {
+      printf("Solving LP (%7d, %7d) without a valid basis\n",
+	     int(lpsolver.getNumCol()),
+	     int(lpsolver.getNumRow()));
+    }
+  }
+
+  mipsolver.analysis_.mipTimerStart(mip_clock);
+  mipsolver.analysis_.mipTimerStart(kMipClockSimplexSolveLp);
   HighsStatus callstatus = lpsolver.run();
+  mipsolver.analysis_.mipTimerStop(kMipClockSimplexSolveLp);
+  mipsolver.analysis_.mipTimerStop(mip_clock);
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
@@ -1176,7 +1199,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
+	mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
         ipm.run();
+	mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }
