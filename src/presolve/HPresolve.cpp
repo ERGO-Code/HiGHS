@@ -1672,7 +1672,7 @@ void HPresolve::liftingForProbing() {
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // collect best lifting opportunity for each row in a vector
-  typedef std::tuple<HighsCliqueTable::CliqueVar, double, HighsInt> liftingdata;
+  typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingdata;
   std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double, double>>
       liftingtable;
   liftingtable.reserve(liftingOpportunities.size());
@@ -1732,8 +1732,7 @@ void HPresolve::liftingForProbing() {
       if (score > bestscore) {
         bestscore = score;
         bestnfill = elm.second.second == -1 ? 1 : 0;
-        bestclique = {
-            std::make_tuple(elm.first, elm.second.first, elm.second.second)};
+        bestclique = {std::make_pair(elm.first, elm.second.first)};
       }
     }
 
@@ -1756,8 +1755,7 @@ void HPresolve::liftingForProbing() {
         bestclique.clear();
         bestclique.reserve(clique.size());
         for (const auto& cliquevar : clique) {
-          bestclique.emplace_back(cliquevar, coefficients[cliquevar].first,
-                                  coefficients[cliquevar].second);
+          bestclique.emplace_back(cliquevar, coefficients[cliquevar].first);
         }
       }
     }
@@ -1794,15 +1792,19 @@ void HPresolve::liftingForProbing() {
       });
 
   // perform actual lifting
-  size_t fillin = 0;
+  size_t nfill = 0;
   // const size_t maxfillin = std::max(10 * liftingtable.size(),
   //                                   static_cast<size_t>(numNonzeros()) /
   //                                   100);
-  const size_t maxfillin = std::numeric_limits<size_t>::max();
+  const size_t maxnfill = std::numeric_limits<size_t>::max();
   for (const auto& lifting : liftingtable) {
     // get clique
     HighsInt row = std::get<0>(lifting);
     const auto& bestclique = std::get<1>(lifting);
+
+    // check against max. fill-in
+    nfill += static_cast<size_t>(std::get<3>(lifting));
+    if (nfill > maxnfill) break;
 
     // update matrix
     HighsCDouble update = 0.0;
@@ -1810,11 +1812,6 @@ void HPresolve::liftingForProbing() {
       // get data
       const auto& cliquevar = std::get<0>(elm);
       const double& coeff = std::get<1>(elm);
-      const HighsInt& pos = std::get<2>(elm);
-      // count fill-in
-      if (pos == -1) fillin++;
-      // check against max. fill-in
-      if (fillin > maxfillin) break;
       // add non-zero to matrix
       addToMatrix(row, cliquevar.col, coeff);
       // compute term to update left-hand / right-hand side
