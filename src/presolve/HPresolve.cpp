@@ -1673,9 +1673,12 @@ void HPresolve::liftingForProbing() {
 
   // collect best lifting opportunity for each row in a vector
   typedef std::tuple<HighsCliqueTable::CliqueVar, double, HighsInt> liftingdata;
-  std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double>>
+  std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double, double>>
       liftingtable;
   liftingtable.reserve(liftingOpportunities.size());
+
+  // remember overall best score
+  double bestscoretotal = -kHighsInf;
 
   // consider lifting opportunities
   for (const auto& elm : liftingOpportunities) {
@@ -1690,8 +1693,7 @@ void HPresolve::liftingForProbing() {
 
     // lambda for computing coefficient difference
     auto computeCoeffDiff = [&](double newvalue, HighsInt nzpos) {
-      return abs(HighsCDouble{newvalue} -
-                 (nzpos == -1 ? 0 : HighsCDouble{Avalue[nzpos]}));
+      return std::fabs(newvalue - (nzpos == -1 ? 0 : Avalue[nzpos]));
     };
 
     // store clique variables and coefficients in a map
@@ -1705,15 +1707,11 @@ void HPresolve::liftingForProbing() {
 
     // iterate over elements in hash tree
     const auto& htree = elm.second;
-    HighsCDouble coefsum = 0;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
-      if (!colDeleted[col] && !domain.isFixed(col)) {
-        HighsInt nzpos = findNonzero(row, col);
-        coefsum += computeCoeffDiff(value, nzpos);
+      if (!colDeleted[col] && !domain.isFixed(col))
         coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
-            value, nzpos};
-      }
+            value, findNonzero(row, col)};
     });
 
     // skip row if map is empty
@@ -1722,15 +1720,7 @@ void HPresolve::liftingForProbing() {
     // vector to hold best clique
     std::vector<liftingdata> bestclique;
     double bestscore = -kHighsInf;
-
-    // lambda for computing score
-    auto computeScore = [&](HighsCDouble sum, size_t numelms,
-                            size_t numfillin) {
-      const double weight = 0.1;
-      return weight * static_cast<double>(sum / coefsum) +
-             (1 - weight) * static_cast<double>(numelms - numfillin) /
-                 static_cast<double>(numelms);
-    };
+    HighsInt bestnfill = 0;
 
     // store candidates in a vector
     std::vector<HighsCliqueTable::CliqueVar> candidates;
@@ -1738,11 +1728,10 @@ void HPresolve::liftingForProbing() {
     for (const auto& elm : coefficients) {
       candidates.push_back(elm.first);
       // initialize best clique
-      double score = computeScore(
-          computeCoeffDiff(elm.second.first, elm.second.second), size_t{1},
-          elm.second.second == -1 ? size_t{1} : size_t{0});
+      double score = computeCoeffDiff(elm.second.first, elm.second.second);
       if (score > bestscore) {
         bestscore = score;
+        bestnfill = elm.second.second == -1 ? 1 : 0;
         bestclique = {
             std::make_tuple(elm.first, elm.second.first, elm.second.second)};
       }
@@ -1754,16 +1743,16 @@ void HPresolve::liftingForProbing() {
 
     // identify clique with highest score
     for (const auto& clique : cliques) {
-      HighsCDouble coefsumclique = 0;
-      size_t fillin = 0;
+      HighsCDouble score = 0;
+      HighsInt nfill = 0;
       for (const auto& cliquevar : clique) {
-        coefsumclique += computeCoeffDiff(coefficients[cliquevar].first,
-                                          coefficients[cliquevar].second);
-        if (coefficients[cliquevar].second == -1) fillin++;
+        score += computeCoeffDiff(coefficients[cliquevar].first,
+                                  coefficients[cliquevar].second);
+        if (coefficients[cliquevar].second == -1) nfill++;
       }
-      double score = computeScore(coefsumclique, clique.size(), fillin);
       if (score > bestscore) {
-        bestscore = score;
+        bestscore = static_cast<double>(score);
+        bestnfill = nfill;
         bestclique.clear();
         bestclique.reserve(clique.size());
         for (const auto& cliquevar : clique) {
@@ -1774,16 +1763,32 @@ void HPresolve::liftingForProbing() {
     }
 
     // store best clique
-    liftingtable.emplace_back(row, bestclique, bestscore);
+    liftingtable.emplace_back(row, bestclique, bestscore, bestnfill);
+    bestscoretotal = std::max(bestscoretotal, bestscore);
   }
+
+  // lambda for computing score
+  auto computeOverallScore = [&](double score, HighsInt numelms,
+                                 HighsInt numfillin) {
+    const double weight = 0.5;
+    return weight * (score / bestscoretotal) +
+           (1 - weight) * static_cast<double>(numelms - numfillin) /
+               static_cast<double>(numelms);
+  };
 
   // sort according to score
   pdqsort(
       liftingtable.begin(), liftingtable.end(),
-      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp1,
-          const std::tuple<HighsInt, std::vector<liftingdata>, double>& opp2) {
-        double score1 = std::get<2>(opp1);
-        double score2 = std::get<2>(opp2);
+      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double, double>&
+              opp1,
+          const std::tuple<HighsInt, std::vector<liftingdata>, double, double>&
+              opp2) {
+        double score1 = computeOverallScore(
+            std::get<2>(opp1), static_cast<HighsInt>(std::get<1>(opp1).size()),
+            std::get<3>(opp1));
+        double score2 = computeOverallScore(
+            std::get<2>(opp2), static_cast<HighsInt>(std::get<1>(opp2).size()),
+            std::get<3>(opp2));
         return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
                                  : score1 > score2);
       });
