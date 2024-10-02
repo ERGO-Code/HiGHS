@@ -346,6 +346,16 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
       vec_clear(w->buffer);
     }
 
+    if (w->buffer2 != NULL) {
+      // CUPDLP_FREE_VEC(w->buffer);
+      free(w->buffer2);
+    }
+
+    if (w->buffer3) {
+      // CUPDLP_FREE_VEC(w->buffer);
+      free(w->buffer3);
+    }
+
     if (problem) {
       // problem_clear(problem);
       problem = cupdlp_NULL;
