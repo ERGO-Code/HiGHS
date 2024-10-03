@@ -39,6 +39,7 @@ class HighsMipAnalysis {
   double mipTimerRead(const HighsInt mip_clock
                       //		    , const HighsInt thread_id = 0
   ) const;
+  void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
 
   std::string model_name;

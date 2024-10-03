@@ -549,9 +549,9 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     mipsolver.analysis_.mipTimerStart(kMipClockBasisSolveLp);
-    mipsolver.analysis_.mipTimerStart(kMipClockSimplexSolveLp);
+    mipsolver.analysis_.mipTimerStart(kMipClockSimplexBasisSolveLp);
     lpsolver.run();
-    mipsolver.analysis_.mipTimerStop(kMipClockSimplexSolveLp);
+    mipsolver.analysis_.mipTimerStop(kMipClockSimplexBasisSolveLp);
     mipsolver.analysis_.mipTimerStop(kMipClockBasisSolveLp);
   }
 }
@@ -1053,7 +1053,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                         mipsolver.timer_.read(mipsolver.timer_.total_clock));
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
-  const HighsInt mip_clock = valid_basis ? kMipClockBasisSolveLp : kMipClockNoBasisSolveLp;
+  const HighsInt lp_solve_clock = valid_basis ? kMipClockBasisSolveLp : kMipClockNoBasisSolveLp;
+  const HighsInt simplex_solve_clock = valid_basis ? kMipClockSimplexBasisSolveLp : kMipClockSimplexNoBasisSolveLp;
   const bool dev_report = false;
   if (dev_report && !mipsolver.submip) {
     if (valid_basis) {
@@ -1067,11 +1068,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     }
   }
 
-  mipsolver.analysis_.mipTimerStart(mip_clock);
-  mipsolver.analysis_.mipTimerStart(kMipClockSimplexSolveLp);
+  mipsolver.analysis_.mipTimerStart(lp_solve_clock);
+  mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
-  mipsolver.analysis_.mipTimerStop(kMipClockSimplexSolveLp);
-  mipsolver.analysis_.mipTimerStop(mip_clock);
+  mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
+  mipsolver.analysis_.mipTimerStop(lp_solve_clock);
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);

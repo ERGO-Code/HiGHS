@@ -60,7 +60,8 @@ enum iClockMip {
   kMipClockBasisSolveLp,
   kMipClockNoBasisSolveLp,
 
-  kMipClockSimplexSolveLp,
+  kMipClockSimplexBasisSolveLp,
+  kMipClockSimplexNoBasisSolveLp,
   kMipClockIpmSolveLp,
 
   kMipClockSolveSubMip,
@@ -136,7 +137,8 @@ class MipTimer {
     clock[kMipClockNoBasisSolveLp] = timer_pointer->clock_def("Solve LP: no basis");
     clock[kMipClockBasisSolveLp] = timer_pointer->clock_def("Solve LP: basis");
 
-    clock[kMipClockSimplexSolveLp] = timer_pointer->clock_def("Solve LP: simplex");
+    clock[kMipClockSimplexBasisSolveLp] = timer_pointer->clock_def("Solve LP: simplex basis");
+    clock[kMipClockSimplexNoBasisSolveLp] = timer_pointer->clock_def("Solve LP: simplex no basis");
     clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
 
     clock[kMipClockSolveSubMip] = timer_pointer->clock_def("Solve sub-MIP");
@@ -168,29 +170,34 @@ class MipTimer {
   void csvMipClockList(const std::string model_name, 
 		       const std::vector<HighsInt> mip_clock_list,
 		       const HighsTimerClock& mip_timer_clock,
-		       const HighsInt kMipClockIdeal = kMipClockTotal) {
+		       const HighsInt kMipClockIdeal,
+		       const bool header,
+		       const bool end_line) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     const std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     const double ideal_sum_time = timer_pointer->clock_time[clock[kMipClockIdeal]];
     if (ideal_sum_time < 1e-2) return;
-    printf("grep_csvMIP,model,ideal");
     const HighsInt num_clock = mip_clock_list.size();
-    for (HighsInt iX = 0; iX < num_clock; iX++) {
-      HighsInt iclock = clock[mip_clock_list[iX]];
-      printf(",%s", timer_pointer->clock_names[iclock].c_str());
+    if (header) {
+      printf("grep_csvMIP,model,ideal");
+      for (HighsInt iX = 0; iX < num_clock; iX++) {
+	HighsInt iclock = clock[mip_clock_list[iX]];
+	printf(",%s", timer_pointer->clock_names[iclock].c_str());
+      }
+      printf(",Unaccounted");
+      if (end_line) printf("\n");
+      return;
     }
-    printf(",Unaccounted time, Unaccounted \%%\n");
     double sum_time = 0;
-    printf("grep_csvMIP,%s,%11.2g", model_name.c_str(), ideal_sum_time);
+    printf("grep_csvMIP,%s,%11.4g", model_name.c_str(), ideal_sum_time);
     for (HighsInt iX = 0; iX < num_clock; iX++) {
       HighsInt iclock = clock[mip_clock_list[iX]];
       double time = timer_pointer->read(iclock);
       sum_time += time;
-      printf(",%11.2g", time);
+      printf(",%11.4g", time);
     }
-    const double unaccounted_time = ideal_sum_time - sum_time;
-    printf(",%11.2g,%11.2g", unaccounted_time, 1e2*unaccounted_time/ideal_sum_time);
-    printf("\n");
+    printf(",%11.4g", ideal_sum_time - sum_time);
+    if (end_line) printf("\n");
   }
 
   void reportMipCoreClock(const HighsTimerClock& mip_timer_clock) {
@@ -251,19 +258,10 @@ class MipTimer {
                        kMipClockEvaluateRootNode);//, tolerance_percent_report);
   };
 
-  void reportMipAuxClock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{kMipClockNoBasisSolveLp,
-					       kMipClockBasisSolveLp,
-					       kMipClockSimplexSolveLp,
-					       kMipClockIpmSolveLp,
-					       kMipClockSolveSubMip};
-    reportMipClockList("MipAux", mip_clock_list, mip_timer_clock);//, tolerance_percent_report);
-  };
-
-  void csvMipClock(const std::string model_name, const HighsTimerClock& mip_timer_clock) {
+  void csvMipClock(const std::string model_name, const HighsTimerClock& mip_timer_clock, const bool header, const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{kMipClockRunPresolve, kMipClockEvaluateRootNode,
                                                kMipClockPrimalHeuristics, kMipClockTheDive};
-    csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal);
+    csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal, header, end_line);
   };
 };
 

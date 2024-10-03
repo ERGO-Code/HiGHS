@@ -80,6 +80,48 @@ double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
   return mip_clocks.timer_pointer_->read(highs_timer_clock);
 }
 
+void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
+  if (header) {
+    printf(",#simplex, #IPM, simplex/total time, IPM/total time, #No basis solve, simplex/#Basis solve, simplex/#No basis solve\n");
+    return;
+  }
+  if (!analyse_mip_time) return;
+  double total_time = mip_clocks.timer_pointer_->read(0);
+  if (total_time < 0.01) return;
+  HighsInt no_basis_solve_iclock = mip_clocks.clock_[kMipClockNoBasisSolveLp];
+  HighsInt basis_solve_iclock = mip_clocks.clock_[kMipClockBasisSolveLp];
+  HighsInt simplex_basis_solve_iclock = mip_clocks.clock_[kMipClockSimplexBasisSolveLp];
+  HighsInt simplex_no_basis_solve_iclock = mip_clocks.clock_[kMipClockSimplexNoBasisSolveLp];
+  HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpmSolveLp];
+  HighsInt num_no_basis_solve = mip_clocks.timer_pointer_->clock_num_call[no_basis_solve_iclock];
+  HighsInt num_basis_solve = mip_clocks.timer_pointer_->clock_num_call[basis_solve_iclock];
+  HighsInt num_simplex_basis_solve = mip_clocks.timer_pointer_->clock_num_call[simplex_basis_solve_iclock];
+  HighsInt num_simplex_no_basis_solve = mip_clocks.timer_pointer_->clock_num_call[simplex_no_basis_solve_iclock];
+  HighsInt num_ipm_solve = mip_clocks.timer_pointer_->clock_num_call[ipm_solve_iclock];
+  HighsInt num_simplex_solve = num_simplex_basis_solve + num_simplex_no_basis_solve;
+  assert(num_no_basis_solve+num_basis_solve == num_simplex_solve);
+  double simplex_basis_solve_time = mip_clocks.timer_pointer_->read(simplex_basis_solve_iclock);
+  double simplex_no_basis_solve_time = mip_clocks.timer_pointer_->read(simplex_no_basis_solve_iclock);
+  double simplex_solve_time = simplex_basis_solve_time + simplex_no_basis_solve_time;
+  double ipm_solve_time = mip_clocks.timer_pointer_->read(ipm_solve_iclock);
+  double frac_simplex_solve_time = simplex_solve_time/total_time;
+  double frac_ipm_solve_time = ipm_solve_time/total_time;
+  double average_simplex_basis_solve_time = num_basis_solve>0 ? simplex_basis_solve_time/int(num_basis_solve) : 0.0;
+  double average_simplex_no_basis_solve_time = num_no_basis_solve>0 ? simplex_no_basis_solve_time/int(num_no_basis_solve) : 0.0;
+  printf(",%d,%d,%11.4g,%11.4g,%d,%11.4g,%11.4g\n",
+	 int(num_simplex_solve), int(num_ipm_solve), 
+	 frac_simplex_solve_time, frac_ipm_solve_time, int(num_no_basis_solve),
+	 average_simplex_basis_solve_time,
+	 average_simplex_no_basis_solve_time);
+  printf("LP solver analysis: %d LP with %d simplex (%11.4g CPU), %d IPM (%11.4g CPU) and %d solved without basis; average simplex solve time (basis/no_basis) = (%11.4g, %11.4g)\n",
+	 int(num_simplex_solve+num_ipm_solve),
+	 int(num_simplex_solve), simplex_solve_time,
+	 int(num_ipm_solve), ipm_solve_time,
+	 int(num_no_basis_solve),
+	 average_simplex_basis_solve_time,
+	 average_simplex_no_basis_solve_time);
+};
+
 void HighsMipAnalysis::reportMipTimer() {
   if (!analyse_mip_time) return;
   //  assert(analyse_mip_time);
@@ -90,6 +132,9 @@ void HighsMipAnalysis::reportMipTimer() {
   mip_timer.reportMipDiveClock(mip_clocks);
   mip_timer.reportMipPrimalHeuristicsClock(mip_clocks);
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
-  mip_timer.reportMipAuxClock(mip_clocks);
-  mip_timer.csvMipClock(this->model_name, mip_clocks);
+
+  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
+  reportMipSolveLpClock(true);
+  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
+  reportMipSolveLpClock(false);
 }
