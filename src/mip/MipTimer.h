@@ -56,6 +56,7 @@ enum iClockMip {
   kMipClockFinishAnalyticCentreComputation,
   kMipClockCentralRounding,
   kMipClockRootSeparationRound,
+  kMipClockSolveSubMipRootReducedCost,
 
   kMipClockBasisSolveLp,
   kMipClockNoBasisSolveLp,
@@ -64,7 +65,8 @@ enum iClockMip {
   kMipClockSimplexNoBasisSolveLp,
   kMipClockIpmSolveLp,
 
-  kMipClockSolveSubMip,
+  kMipClockSolveSubMipRENS,
+  kMipClockSolveSubMipRINS,
 
   kNumMipClock  //!< Number of MIP clocks
 };
@@ -132,6 +134,7 @@ class MipTimer {
     clock[kMipClockFinishAnalyticCentreComputation] = timer_pointer->clock_def("Analytic centre - finish");
     clock[kMipClockCentralRounding] = timer_pointer->clock_def("Central rounding");
     clock[kMipClockRootSeparationRound] = timer_pointer->clock_def("Root separation round");
+    clock[kMipClockSolveSubMipRootReducedCost] = timer_pointer->clock_def("Solve sub-MIP: root reduced cost");
 
     // Evaluate root LP
     clock[kMipClockNoBasisSolveLp] = timer_pointer->clock_def("Solve LP: no basis");
@@ -141,7 +144,9 @@ class MipTimer {
     clock[kMipClockSimplexNoBasisSolveLp] = timer_pointer->clock_def("Solve LP: simplex no basis");
     clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
 
-    clock[kMipClockSolveSubMip] = timer_pointer->clock_def("Solve sub-MIP");
+    // Primal heuristic sub-MIP clocks
+    clock[kMipClockSolveSubMipRENS] = timer_pointer->clock_def("Solve sub-MIP: RENS");
+    clock[kMipClockSolveSubMipRINS] = timer_pointer->clock_def("Solve sub-MIP: RINS");
 
   //    clock[] = timer_pointer->clock_def("");
   }
@@ -253,7 +258,8 @@ class MipTimer {
 					       kMipClockSeparation,
 					       kMipClockFinishAnalyticCentreComputation,
 					       kMipClockCentralRounding,
-					       kMipClockRootSeparationRound};
+					       kMipClockRootSeparationRound,
+					       kMipClockSolveSubMipRootReducedCost};
     reportMipClockList("MipEvaluateRootNode", mip_clock_list, mip_timer_clock,
                        kMipClockEvaluateRootNode);//, tolerance_percent_report);
   };
