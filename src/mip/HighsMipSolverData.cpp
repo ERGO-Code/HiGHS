@@ -89,7 +89,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", kHighsOffString);
     ipm.setOptionValue("presolve", "off");
-    ipm.setOptionValue("output_flag", false);
+    //    ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
@@ -811,11 +811,9 @@ try_again:
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mipsolver.options_mip_->mip_feasibility_tolerance);
     tmpSolver.passModel(std::move(fixedModel));
-    mipsolver.analysis_.mipTimerStart(kMipClockNoBasisSolveLp);
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
     tmpSolver.run();
     mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
-    mipsolver.analysis_.mipTimerStop(kMipClockNoBasisSolveLp);
 
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
       solution = tmpSolver.getSolution();
