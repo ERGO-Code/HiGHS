@@ -51,6 +51,7 @@ enum iClockMip {
   kMipClockStartSymmetryDetection,
   kMipClockStartAnalyticCentreComputation,
   kMipClockEvaluateRootLp,
+  kMipClockSeparateLpCuts,
   kMipClockRandomizedRounding1,
   kMipClockPerformRestart,
   kMipClockSeparation,
@@ -58,6 +59,12 @@ enum iClockMip {
   kMipClockCentralRounding,
   kMipClockRootSeparationRound,
   kMipClockSolveSubMipRootReducedCost,
+
+  // Separation
+  kMipClockSeparationRootSeparationRound,
+  kMipClockSeparationFinishAnalyticCentreComputation,
+  kMipClockSeparationCentralRounding,
+  kMipClockSeparationEvaluateRootLp,
 
   kMipClockSimplexBasisSolveLp,
   kMipClockSimplexNoBasisSolveLp,
@@ -128,16 +135,22 @@ class MipTimer {
 
     // Evaluate root node
     clock[kMipClockStartSymmetryDetection] = timer_pointer->clock_def("Start symmetry detection");
-    clock[kMipClockStartAnalyticCentreComputation] = timer_pointer->clock_def("Analytic centre - start");
-    clock[kMipClockEvaluateRootLp] =
-        timer_pointer->clock_def("Evaluate root LP");
+    clock[kMipClockStartAnalyticCentreComputation] = timer_pointer->clock_def("A-centre - start");
+    clock[kMipClockEvaluateRootLp] = timer_pointer->clock_def("Evaluate root LP");
+    clock[kMipClockSeparateLpCuts] = timer_pointer->clock_def("Separate LP cuts");
     clock[kMipClockRandomizedRounding1] = timer_pointer->clock_def("Randomized rounding 1");
     clock[kMipClockPerformRestart] = timer_pointer->clock_def("Perform restart");
     clock[kMipClockSeparation] = timer_pointer->clock_def("Separation");
-    clock[kMipClockFinishAnalyticCentreComputation] = timer_pointer->clock_def("Analytic centre - finish");
+    clock[kMipClockFinishAnalyticCentreComputation] = timer_pointer->clock_def("A-centre - finish");
     clock[kMipClockCentralRounding] = timer_pointer->clock_def("Central rounding");
     clock[kMipClockRootSeparationRound] = timer_pointer->clock_def("Root separation round");
     clock[kMipClockSolveSubMipRootReducedCost] = timer_pointer->clock_def("Solve sub-MIP: root reduced cost");
+
+    // Separation
+    clock[kMipClockSeparationRootSeparationRound] = timer_pointer->clock_def("Root separation round - s.");
+    clock[kMipClockSeparationFinishAnalyticCentreComputation] = timer_pointer->clock_def("A-centre - finish - s.");
+    clock[kMipClockSeparationCentralRounding] = timer_pointer->clock_def("Central rounding - s.");
+    clock[kMipClockSeparationEvaluateRootLp] = timer_pointer->clock_def("Evaluate root LP - s.");
 
     // Evaluate LPs
     clock[kMipClockSimplexBasisSolveLp] = timer_pointer->clock_def("Solve LP - simplex basis");
@@ -149,6 +162,7 @@ class MipTimer {
     clock[kMipClockSolveSubMipRINS] = timer_pointer->clock_def("Solve sub-MIP - RINS");
 
      clock[kMipClockProbingImplications] = timer_pointer->clock_def("Probing - implications");
+  //    clock[] = timer_pointer->clock_def("");
   //    clock[] = timer_pointer->clock_def("");
   }
 
@@ -268,6 +282,7 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{kMipClockStartSymmetryDetection,
 					       kMipClockStartAnalyticCentreComputation,
 					       kMipClockEvaluateRootLp,
+					       kMipClockSeparateLpCuts,
 					       kMipClockRandomizedRounding1,
 					       kMipClockPerformRestart,
 					       kMipClockSeparation,
@@ -278,6 +293,16 @@ class MipTimer {
     reportMipClockList("MipEvaluateRootNode", mip_clock_list, mip_timer_clock,
                        kMipClockEvaluateRootNode);//, tolerance_percent_report);
   };
+
+  void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{kMipClockSeparationRootSeparationRound,
+					       kMipClockSeparationFinishAnalyticCentreComputation,
+					       kMipClockSeparationCentralRounding,
+					       kMipClockSeparationEvaluateRootLp};
+    reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
+                       kMipClockSeparation);//, tolerance_percent_report);
+  };
+
 
   void csvMipClock(const std::string model_name, const HighsTimerClock& mip_timer_clock, const bool header, const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{kMipClockRunPresolve, kMipClockEvaluateRootNode,

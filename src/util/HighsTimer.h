@@ -130,7 +130,7 @@ class HighsTimer {
   /**
    * @brief Start a clock
    */
-  void start(HighsInt i_clock  //!< Index of the clock to be started
+  void start(const HighsInt i_clock = 0 //!< Index of the clock to be started
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -150,7 +150,7 @@ class HighsTimer {
   /**
    * @brief Stop a clock
    */
-  void stop(HighsInt i_clock  //!< Index of the clock to be stopped
+  void stop(const HighsInt i_clock = 0 //!< Index of the clock to be stopped
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -174,7 +174,7 @@ class HighsTimer {
   /**
    * @brief Read the time of a clock
    */
-  double read(HighsInt i_clock  //!< Index of the clock to be read
+  double read(const HighsInt i_clock = 0  //!< Index of the clock to be read
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -193,7 +193,7 @@ class HighsTimer {
   /**
    * @brief Return whether a clock is running
    */
-  bool running(HighsInt i_clock  //!< Index of the clock to be read
+  bool running(const HighsInt i_clock = 0  //!< Index of the clock to be read
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);

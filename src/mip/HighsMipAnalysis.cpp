@@ -82,7 +82,7 @@ double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
 
 void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
   if (header) {
-    printf(",#simplex, #IPM, simplex/total time, IPM/total time, #No basis solve, simplex/#Basis solve, simplex/#No basis solve\n");
+    printf(",simplex time,IPM time,#simplex,#IPM,simplex/total time,IPM/total time,#No basis solve,simplex/#Basis solve,simplex/#No basis solve\n");
     return;
   }
   if (!analyse_mip_time) return;
@@ -106,12 +106,13 @@ void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
   double frac_ipm_solve_time = ipm_solve_time/total_time;
   double average_simplex_basis_solve_time = num_simplex_basis_solve>0 ? simplex_basis_solve_time/int(num_simplex_basis_solve) : 0.0;
   double average_simplex_no_basis_solve_time = num_simplex_no_basis_solve>0 ? simplex_no_basis_solve_time/int(num_simplex_no_basis_solve) : 0.0;
-  printf(",%d,%d,%11.4g,%11.4g,%d,%11.4g,%11.4g\n",
+  printf(",%11.2g,%11.2g,%d,%d,%11.2g,%11.2g,%d,%11.2g,%11.2g\n",
+	 simplex_solve_time, ipm_solve_time,
 	 int(num_simplex_solve), int(num_ipm_solve), 
 	 frac_simplex_solve_time, frac_ipm_solve_time, int(num_simplex_no_basis_solve),
 	 average_simplex_basis_solve_time,
 	 average_simplex_no_basis_solve_time);
-  printf("LP solver analysis: %d LP with %d simplex (%11.4g CPU), %d IPM (%11.4g CPU) and %d solved without basis; average simplex solve time (basis/no_basis) = (%11.4g, %11.4g)\n",
+  printf("LP solver analysis: %d LP with %d simplex (%11.2g CPU), %d IPM (%11.2g CPU) and %d solved without basis; average simplex solve time (basis/no_basis) = (%11.2g, %11.2g)\n",
 	 int(num_simplex_solve+num_ipm_solve),
 	 int(num_simplex_solve), simplex_solve_time,
 	 int(num_ipm_solve), ipm_solve_time,
@@ -132,7 +133,7 @@ void HighsMipAnalysis::reportMipTimer() {
   mip_timer.reportMipDiveClock(mip_clocks);
   mip_timer.reportMipPrimalHeuristicsClock(mip_clocks);
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
-
+  mip_timer.reportMipSeparationClock(mip_clocks);
   mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
   reportMipSolveLpClock(true);
   mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);

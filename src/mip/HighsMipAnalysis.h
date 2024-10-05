@@ -27,16 +27,16 @@ class HighsMipAnalysis {
   void setup(const HighsLp& lp, const HighsOptions& options);
 
   void setupMipTime(const HighsOptions& options);
-  void mipTimerStart(const HighsInt mip_clock
+  void mipTimerStart(const HighsInt mip_clock = 0
                      //		     , const HighsInt thread_id = 0
   ) const;
-  void mipTimerStop(const HighsInt mip_clock
+  void mipTimerStop(const HighsInt mip_clock = 0
                     //		    , const HighsInt thread_id = 0
   ) const;
-  bool mipTimerRunning(const HighsInt mip_clock
+  bool mipTimerRunning(const HighsInt mip_clock = 0
                        //		    , const HighsInt thread_id = 0
   ) const;
-  double mipTimerRead(const HighsInt mip_clock
+  double mipTimerRead(const HighsInt mip_clock = 0
                       //		    , const HighsInt thread_id = 0
   ) const;
   void reportMipSolveLpClock(const bool header);

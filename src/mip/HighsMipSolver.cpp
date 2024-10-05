@@ -30,8 +30,6 @@
 
 using std::fabs;
 
-const bool report_mip_timing = false;
-
 HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                                const HighsOptions& options, const HighsLp& lp,
                                const HighsSolution& solution, bool submip)
@@ -131,10 +129,10 @@ void HighsMipSolver::run() {
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
-  if (report_mip_timing & !submip)
+  if (analysis_.analyse_mip_time & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: After %6.4fs - completed mipdata_->runPresolve\n",
-                 timer_.read(timer_.total_clock));
+                 "MIP-Timing: %11.2g - completed presolve\n",
+                 timer_.read());
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
       timer_.read(timer_.total_clock) >= options_mip_->time_limit)
@@ -156,16 +154,16 @@ void HighsMipSolver::run() {
 
   analysis_.mipTimerStart(kMipClockSolve);
 
-  if (report_mip_timing & !submip)
+  if (analysis_.analyse_mip_time & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: After %6.4fs - reached   mipdata_->runSetup()\n",
-                 timer_.read(timer_.total_clock));
+                 "MIP-Timing: %11.2g - starting  setup\n",
+                 timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
   mipdata_->runSetup();
   analysis_.mipTimerStop(kMipClockRunSetup);
-  if (report_mip_timing & !submip)
+  if (analysis_.analyse_mip_time & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: After %6.4fs - completed mipdata_->runSetup()\n",
+                 "MIP-Timing: %11.2g - completed setup\n",
                  timer_.read(timer_.total_clock));
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
@@ -174,18 +172,18 @@ restart:
       cleanupSolve();
       return;
     }
-    if (report_mip_timing & !submip)
+    if (analysis_.analyse_mip_time & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
-          "MIP-Timing: After %6.4fs - reached   mipdata_->evaluateRootNode()\n",
+          "MIP-Timing: %11.2g - starting evaluate root node\n",
           timer_.read(timer_.total_clock));
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
-    if (report_mip_timing & !submip)
+    if (analysis_.analyse_mip_time & !submip)
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,
-          "MIP-Timing: After %6.4fs - completed mipdata_->evaluateRootNode()\n",
+          "MIP-Timing: %11.2g - completed evaluate root node\n",
           timer_.read(timer_.total_clock));
     // age 5 times to remove stored but never violated cuts after root
     // separation
