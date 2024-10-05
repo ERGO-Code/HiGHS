@@ -96,6 +96,12 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
+    //    if (!mipsolver.submip) {
+    //      const std::string file_name = mipsolver.model_->model_name_ + "_ipm.mps";
+    //      printf("Calling ipm.writeModel(%s)\n", file_name.c_str()); fflush(stdout);
+    //      ipm.writeModel(file_name);
+    //    }
+
     mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
