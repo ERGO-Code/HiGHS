@@ -82,43 +82,62 @@ double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
 
 void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
   if (header) {
-    printf(",simplex time,IPM time,#simplex,#IPM,simplex/total time,IPM/total time,#No basis solve,simplex/#Basis solve,simplex/#No basis solve\n");
+    printf(
+        ",simplex time,IPM time,#simplex,#IPM,simplex/total time,IPM/total "
+        "time,#No basis solve,simplex/#Basis solve,simplex/#No basis solve\n");
     return;
   }
   if (!analyse_mip_time) return;
   double total_time = mip_clocks.timer_pointer_->read(0);
   if (total_time < 0.01) return;
-  HighsInt simplex_basis_solve_iclock = mip_clocks.clock_[kMipClockSimplexBasisSolveLp];
-  HighsInt simplex_no_basis_solve_iclock = mip_clocks.clock_[kMipClockSimplexNoBasisSolveLp];
+  HighsInt simplex_basis_solve_iclock =
+      mip_clocks.clock_[kMipClockSimplexBasisSolveLp];
+  HighsInt simplex_no_basis_solve_iclock =
+      mip_clocks.clock_[kMipClockSimplexNoBasisSolveLp];
   HighsInt ipm_solve_iclock = mip_clocks.clock_[kMipClockIpmSolveLp];
-  //  HighsInt num_no_basis_solve = mip_clocks.timer_pointer_->clock_num_call[no_basis_solve_iclock];
-  //  HighsInt num_basis_solve = mip_clocks.timer_pointer_->clock_num_call[basis_solve_iclock];
-  HighsInt num_simplex_basis_solve = mip_clocks.timer_pointer_->clock_num_call[simplex_basis_solve_iclock];
-  HighsInt num_simplex_no_basis_solve = mip_clocks.timer_pointer_->clock_num_call[simplex_no_basis_solve_iclock];
-  HighsInt num_ipm_solve = mip_clocks.timer_pointer_->clock_num_call[ipm_solve_iclock];
-  HighsInt num_simplex_solve = num_simplex_basis_solve + num_simplex_no_basis_solve;
+  //  HighsInt num_no_basis_solve =
+  //  mip_clocks.timer_pointer_->clock_num_call[no_basis_solve_iclock]; HighsInt
+  //  num_basis_solve =
+  //  mip_clocks.timer_pointer_->clock_num_call[basis_solve_iclock];
+  HighsInt num_simplex_basis_solve =
+      mip_clocks.timer_pointer_->clock_num_call[simplex_basis_solve_iclock];
+  HighsInt num_simplex_no_basis_solve =
+      mip_clocks.timer_pointer_->clock_num_call[simplex_no_basis_solve_iclock];
+  HighsInt num_ipm_solve =
+      mip_clocks.timer_pointer_->clock_num_call[ipm_solve_iclock];
+  HighsInt num_simplex_solve =
+      num_simplex_basis_solve + num_simplex_no_basis_solve;
   //  assert(num_no_basis_solve+num_basis_solve == num_simplex_solve);
-  double simplex_basis_solve_time = mip_clocks.timer_pointer_->read(simplex_basis_solve_iclock);
-  double simplex_no_basis_solve_time = mip_clocks.timer_pointer_->read(simplex_no_basis_solve_iclock);
-  double simplex_solve_time = simplex_basis_solve_time + simplex_no_basis_solve_time;
+  double simplex_basis_solve_time =
+      mip_clocks.timer_pointer_->read(simplex_basis_solve_iclock);
+  double simplex_no_basis_solve_time =
+      mip_clocks.timer_pointer_->read(simplex_no_basis_solve_iclock);
+  double simplex_solve_time =
+      simplex_basis_solve_time + simplex_no_basis_solve_time;
   double ipm_solve_time = mip_clocks.timer_pointer_->read(ipm_solve_iclock);
-  double frac_simplex_solve_time = simplex_solve_time/total_time;
-  double frac_ipm_solve_time = ipm_solve_time/total_time;
-  double average_simplex_basis_solve_time = num_simplex_basis_solve>0 ? simplex_basis_solve_time/int(num_simplex_basis_solve) : 0.0;
-  double average_simplex_no_basis_solve_time = num_simplex_no_basis_solve>0 ? simplex_no_basis_solve_time/int(num_simplex_no_basis_solve) : 0.0;
+  double frac_simplex_solve_time = simplex_solve_time / total_time;
+  double frac_ipm_solve_time = ipm_solve_time / total_time;
+  double average_simplex_basis_solve_time =
+      num_simplex_basis_solve > 0
+          ? simplex_basis_solve_time / int(num_simplex_basis_solve)
+          : 0.0;
+  double average_simplex_no_basis_solve_time =
+      num_simplex_no_basis_solve > 0
+          ? simplex_no_basis_solve_time / int(num_simplex_no_basis_solve)
+          : 0.0;
   printf(",%11.2g,%11.2g,%d,%d,%11.2g,%11.2g,%d,%11.2g,%11.2g\n",
-	 simplex_solve_time, ipm_solve_time,
-	 int(num_simplex_solve), int(num_ipm_solve), 
-	 frac_simplex_solve_time, frac_ipm_solve_time, int(num_simplex_no_basis_solve),
-	 average_simplex_basis_solve_time,
-	 average_simplex_no_basis_solve_time);
-  printf("LP solver analysis: %d LP with %d simplex (%11.2g CPU), %d IPM (%11.2g CPU) and %d solved without basis; average simplex solve time (basis/no_basis) = (%11.2g, %11.2g)\n",
-	 int(num_simplex_solve+num_ipm_solve),
-	 int(num_simplex_solve), simplex_solve_time,
-	 int(num_ipm_solve), ipm_solve_time,
-	 int(num_simplex_no_basis_solve),
-	 average_simplex_basis_solve_time,
-	 average_simplex_no_basis_solve_time);
+         simplex_solve_time, ipm_solve_time, int(num_simplex_solve),
+         int(num_ipm_solve), frac_simplex_solve_time, frac_ipm_solve_time,
+         int(num_simplex_no_basis_solve), average_simplex_basis_solve_time,
+         average_simplex_no_basis_solve_time);
+  printf(
+      "LP solver analysis: %d LP with %d simplex (%11.2g CPU), %d IPM (%11.2g "
+      "CPU) and %d solved without basis; average simplex solve time "
+      "(basis/no_basis) = (%11.2g, %11.2g)\n",
+      int(num_simplex_solve + num_ipm_solve), int(num_simplex_solve),
+      simplex_solve_time, int(num_ipm_solve), ipm_solve_time,
+      int(num_simplex_no_basis_solve), average_simplex_basis_solve_time,
+      average_simplex_no_basis_solve_time);
 };
 
 void HighsMipAnalysis::reportMipTimer() {

@@ -39,7 +39,7 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-#define HPRESOLVE_CHECKED_CALL(presolveCall)			       \
+#define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
   do {                                                                 \
     HPresolve::Result __result = presolveCall;                         \
     if (__result != presolve::HPresolve::Result::kOk) return __result; \
@@ -1437,8 +1437,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       mipsolver->mipdata_->upper_limit = tmpLimit;
 
       if (domain.infeasible()) {
-      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
-      return Result::kPrimalInfeasible;
+        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        return Result::kPrimalInfeasible;
       }
     }
 
@@ -1451,8 +1451,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
   cliquetable.cleanupFixed(domain);
   if (domain.infeasible()) {
-      mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
-      return Result::kPrimalInfeasible;
+    mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+    return Result::kPrimalInfeasible;
   }
 
   // store binary variables in vector with their number of implications on
@@ -1568,7 +1568,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       // "\n", nprobed,
       //       cliquetable.numCliques());
       if (domain.infeasible()) {
-	mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
+        mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
         return Result::kPrimalInfeasible;
       }
     }

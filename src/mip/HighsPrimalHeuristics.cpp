@@ -517,11 +517,11 @@ retry:
   heurlp.removeObsoleteRows(false);
   mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
   const bool solve_sub_mip_return =
-    solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-		localdom.col_lower_, localdom.col_upper_,
-		500,  // std::max(50, int(0.05 *
-		// (mipsolver.mipdata_->num_leaves))),
-		200 + mipsolver.mipdata_->num_nodes / 20, 12);
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
@@ -808,11 +808,11 @@ retry:
   heurlp.removeObsoleteRows(false);
   mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
   const bool solve_sub_mip_return =
-    solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-		localdom.col_lower_, localdom.col_upper_,
-		500,  // std::max(50, int(0.05 *
-		// (mipsolver.mipdata_->num_leaves))),
-		200 + mipsolver.mipdata_->num_nodes / 20, 12);
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();

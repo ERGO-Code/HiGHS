@@ -1051,17 +1051,17 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                         mipsolver.timer_.read(mipsolver.timer_.total_clock));
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
-  const HighsInt simplex_solve_clock = valid_basis ? kMipClockSimplexBasisSolveLp : kMipClockSimplexNoBasisSolveLp;
+  const HighsInt simplex_solve_clock = valid_basis
+                                           ? kMipClockSimplexBasisSolveLp
+                                           : kMipClockSimplexNoBasisSolveLp;
   const bool dev_report = false;
   if (dev_report && !mipsolver.submip) {
     if (valid_basis) {
       printf("Solving LP (%7d, %7d) with    a valid basis\n",
-	     int(lpsolver.getNumCol()),
-	     int(lpsolver.getNumRow()));
+             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
     } else {
       printf("Solving LP (%7d, %7d) without a valid basis\n",
-	     int(lpsolver.getNumCol()),
-	     int(lpsolver.getNumRow()));
+             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
     }
   }
 
@@ -1195,9 +1195,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
-	mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+        mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
         ipm.run();
-	mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
+        mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }
