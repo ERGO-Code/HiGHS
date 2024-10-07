@@ -618,6 +618,16 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::passModelName(const std::string& name) {
+  if (int(name.length()) <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define empty model names\n");
+    return HighsStatus::kError;
+  }
+  this->model_.lp_.model_name_ = name;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;

@@ -161,6 +161,11 @@ class Highs {
   HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
+   * @brief Pass a model name to the incumbent model
+   */
+  HighsStatus passModelName(const std::string& name);
+
+  /**
    * @brief Read in a model
    */
   HighsStatus readModel(const std::string& filename);

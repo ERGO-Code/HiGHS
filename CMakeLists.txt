@@ -38,6 +38,23 @@ if(EXISTS "${LOC_PATH}")
 endif()
 option(FAST_BUILD "Fast build: " ON)
 
+find_program(GIT git)
+
+if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
+    execute_process(
+    COMMAND ${GIT} status
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR} OUTPUT_QUIET)
+
+    execute_process(
+    COMMAND ${GIT} describe --always
+    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
+    OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+else()
+  set(GITHASH "n/a")
+endif()
+
+message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
@@ -70,6 +87,12 @@ message(STATUS "ZLIB: ${ZLIB}")
 if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
+
+# Address | Thread | Leak 
+# Linux atm
+# Only Debug is theted atm 
+# See below for RelWithDeb info, todo test wip
+set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
@@ -358,12 +381,6 @@ if(NOT FAST_BUILD OR CSHARP)
   endif(CMAKE_CSharp_COMPILER)
 endif()
 
-# uncomment for memory debugging
-# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=undefined")
-
 # if zlib is found, then we can enable reading zlib-compressed input
 if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
@@ -375,24 +392,62 @@ set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
-find_program(GIT git)
-
-if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
-  execute_process(
-    COMMAND ${GIT} describe --always --dirty
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
-    OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
-else()
-  set(GITHASH "n/a")
-endif()
-message(STATUS "Git hash: " ${GITHASH})
 
 # Deprecate
 # string(TIMESTAMP TODAY "%Y-%m-%d")
 # message(STATUS "Compilation date: " ${TODAY})
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+if (DEBUG_MEMORY STREQUAL "Address")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
+
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
+
+elseif (DEBUG_MEMORY STREQUAL "Thread")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer")
+
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=thread,undefined \
+      -fno-omit-frame-pointer ")
+
+elseif (DEBUG_MEMORY STREQUAL "Leak")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer")
+
+  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
+      -fsanitize=leak,undefined \
+      -fno-omit-frame-pointer ")
+endif()
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
