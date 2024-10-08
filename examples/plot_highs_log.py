@@ -101,7 +101,7 @@ def plot_highs_log(
     # Add fourth y-axis for Gap % values (scaled)
     ax4 = ax1.twinx()
     ax4.spines["right"].set_position(("outward", 90))
-    ax4.plot(time_values, gap_values, label="Gap %", color=gap_colour, linestyle="--", linewidth=0.5)
+    ax4.plot(time_values, gap_values, label="Gap %", color=gap_colour, linestyle="--", linewidth=1)
 #    ax4.set_ylabel("Gap.%", color=gap_colour, loc="top", labelpad=22)
     ax4.yaxis.label.set_rotation(0)
     ax4.tick_params(axis="y", labelcolor=gap_colour)
