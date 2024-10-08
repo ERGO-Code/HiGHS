@@ -357,6 +357,40 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   return true;
 }
 
+bool HPresolve::convertImpliedInteger(HighsInt col, HighsInt row,
+                                      bool skipInputChecks) {
+  // return if column was deleted
+  if (colDeleted[col]) return false;
+
+  // return if column is not continuous or cannot be converted to an implied
+  // integer
+  if (!skipInputChecks &&
+      (model->integrality_[col] != HighsVarType::kContinuous ||
+       !isImpliedInteger(col)))
+    return false;
+
+  // convert to implied integer
+  model->integrality_[col] = HighsVarType::kImplicitInteger;
+
+  if (row != -1) {
+    // use row index supplied by caller (e.g. singleton)
+    ++rowsizeImplInt[row];
+  } else {
+    // iterate over rows
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+      ++rowsizeImplInt[nonzero.index()];
+  }
+
+  // round bounds
+  double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+  double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
+
+  // use tighter bounds
+  if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
+  if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+  return true;
+}
+
 void HPresolve::link(HighsInt pos) {
   Anext[pos] = colhead[Acol[pos]];
   Aprev[pos] = -1;
@@ -2969,17 +3003,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  if (mipsolver != nullptr &&
-      model->integrality_[col] == HighsVarType::kContinuous &&
-      isImpliedInteger(col)) {
-    model->integrality_[col] = HighsVarType::kImplicitInteger;
-    ++rowsizeImplInt[row];
-    double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-    double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-    if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-    if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-  }
+  if (mipsolver != nullptr) convertImpliedInteger(col, row);
 
   updateColImpliedBounds(row, col, colCoef);
 
@@ -3274,20 +3298,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //     "= %g * z\n",
               //     scale);
               transformColumn(postsolve_stack, continuousCol, scale, 0.0);
-              model->integrality_[continuousCol] =
-                  HighsVarType::kImplicitInteger;
-              for (const HighsSliceNonzero& nonzero :
-                   getColumnVector(continuousCol))
-                ++rowsizeImplInt[nonzero.index()];
-              double ceilLower =
-                  std::ceil(model->col_lower_[continuousCol] - primal_feastol);
-              double floorUpper =
-                  std::floor(model->col_upper_[continuousCol] + primal_feastol);
 
-              if (ceilLower > model->col_lower_[continuousCol])
-                changeColLower(continuousCol, ceilLower);
-              if (floorUpper < model->col_upper_[continuousCol])
-                changeColUpper(continuousCol, floorUpper);
+              convertImpliedInteger(continuousCol, -1, true);
 
               if (intScale != 1.0) scaleStoredRow(row, intScale, true);
             }
@@ -4111,17 +4123,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     }
 
-    if (model->integrality_[col] == HighsVarType::kContinuous &&
-        isImpliedInteger(col)) {
-      model->integrality_[col] = HighsVarType::kImplicitInteger;
-      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-        ++rowsizeImplInt[nonzero.index()];
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-    }
+    convertImpliedInteger(col);
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -5491,23 +5493,8 @@ HighsInt HPresolve::strengthenInequalities() {
 HighsInt HPresolve::detectImpliedIntegers() {
   HighsInt numImplInt = 0;
 
-  for (HighsInt col = 0; col != model->num_col_; ++col) {
-    if (colDeleted[col]) continue;
-    if (model->integrality_[col] == HighsVarType::kContinuous &&
-        isImpliedInteger(col)) {
-      ++numImplInt;
-      model->integrality_[col] = HighsVarType::kImplicitInteger;
-
-      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-        ++rowsizeImplInt[nonzero.index()];
-
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-    }
-  }
+  for (HighsInt col = 0; col != model->num_col_; ++col)
+    if (convertImpliedInteger(col)) ++numImplInt;
 
   return numImplInt;
 }
@@ -6030,16 +6017,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (colUpperSource[col] != -1) changeImplColUpper(col, kHighsInf, -1);
 
-          // if an implicit integer and an integer column where merge, check if
+          // if an implicit integer and an integer column were merged, check if
           // merged continuous column is implicit integer after merge
           if (rowsizeIntReduction &&
               model->integrality_[duplicateCol] ==
                   HighsVarType::kImplicitInteger &&
-              isImpliedInteger(col)) {
-            model->integrality_[col] = HighsVarType::kImplicitInteger;
-            for (const HighsSliceNonzero& nonz : getColumnVector(col))
-              ++rowsizeImplInt[nonz.index()];
-          }
+              isImpliedInteger(col))
+            convertImpliedInteger(col, -1, true);
 
           break;
       }
