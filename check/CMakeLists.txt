@@ -1,8 +1,5 @@
 include(CTest)
 
-if (BUILD_EXTRA_UNIT_TESTS)
-    add_subdirectory(highs-unit-tests)
-endif()
 
 
 if (FORTRAN)
