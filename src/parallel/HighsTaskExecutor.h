@@ -61,9 +61,8 @@ class HighsTaskExecutor {
   std::vector<cache_aligned::unique_ptr<HighsSplitDeque>> workerDeques;
   std::vector<std::thread> workerThreads;
 
-
   HighsTask* random_steal_loop(HighsSplitDeque* localDeque) {
-    const int numWorkers = workerDeques.size();
+    const int numWorkers = static_cast<int>(workerDeques.size());
 
     int numTries = 16 * (numWorkers - 1);
 
@@ -127,17 +126,17 @@ class HighsTaskExecutor {
     workerThreads.reserve(numThreads - 1);
     referenceCount.store(numThreads);
 
-    for (int i = 1, numThreads = workerDeques.size(); i < numThreads; ++i) {
+    for (int i = 1, numThreads = static_cast<int>(workerDeques.size());
+         i < numThreads; ++i) {
       workerThreads.emplace_back(
           std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
-     }
+    }
   }
 
   void stopWorkerThreads(bool blocking = false) {
     // Check if stop has been called already.
     auto& executorHandle = threadLocalExecutorHandle();
-    if (executorHandle.ptr == nullptr || hasStopped.exchange(true)) 
-      return;
+    if (executorHandle.ptr == nullptr || hasStopped.exchange(true)) return;
 
     // now inject the null task as termination signal to every worker
     for (auto& workerDeque : workerDeques) {
@@ -154,7 +153,6 @@ class HighsTaskExecutor {
         workerThread.detach();
       }
     }
-
   }
 
   static HighsSplitDeque* getThisWorkerDeque() {
