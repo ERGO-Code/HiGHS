@@ -60,7 +60,7 @@ option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_TESTING "Build Tests" ON)
-option(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" ON)
+
 
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
@@ -82,6 +82,12 @@ include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
 message(STATUS "Build all tests: ${ALL_TESTS}")
+
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF "BUILD_TESTING;BUILD_CXX;ALL_TESTS" OFF)
+if (BUILD_EXTRA_UNIT_TESTS)
+  message(STATUS "Build extra unit tests: ON")
+endif()
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
@@ -585,7 +591,6 @@ else(FAST_BUILD)
     add_subdirectory(app)
     if(BUILD_TESTING)
       enable_testing()
-
       add_subdirectory(check)
     endif()
     # Add tests in examples/tests
