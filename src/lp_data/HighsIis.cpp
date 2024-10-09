@@ -211,7 +211,7 @@ HighsStatus HighsIis::getData(const HighsLp& lp, const HighsOptions& options,
     this->col_index_[iCol] = from_col[this->col_index_[iCol]];
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_index_.size()); iRow++)
     this->row_index_[iRow] = from_row[this->row_index_[iRow]];
-  if (kIisDevReport) this->report("On exit", lp);
+  if (kIisDevReportVerbose) this->report("On exit", lp);
   return HighsStatus::kOk;
 }
 
@@ -226,7 +226,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) this->addRow(iRow);
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  highs.setOptionValue("output_flag", kIisDevReport);
+  highs.setOptionValue("output_flag", kIisDevReportVerbose);
   highs.setOptionValue("presolve", kHighsOffString);
   const HighsLp& incumbent_lp = highs.getLp();
   const HighsBasis& incumbent_basis = highs.getBasis();
@@ -248,12 +248,36 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
   HighsInt iX = -1;
   bool drop_lower = false;
 
+  HighsInt num_run_call = 0;
+  const HighsInt check_run_call = 154;  // kHighsIInf;
+
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
     HighsIisInfo iis_info;
     iis_info.simplex_time = -highs.getRunTime();
     iis_info.simplex_iterations = -info.simplex_iteration_count;
+    bool output_flag;
+    HighsInt log_dev_level;
+    HighsInt highs_analysis_level;
+    highs.getOptionValue("output_flag", output_flag);
+    highs.getOptionValue("log_dev_level", log_dev_level);
+    highs.getOptionValue("highs_analysis_level", highs_analysis_level);
+
+    num_run_call++;
+    if (num_run_call == check_run_call) {
+      highs.setOptionValue("output_flag", true);
+      highs.setOptionValue("log_dev_level", 3);
+      highs.setOptionValue("highs_analysis_level", 4);
+      highs.writeModel("form.mps");
+    }
     run_status = highs.run();
+    highs.setOptionValue("output_flag", output_flag);
+    highs.setOptionValue("log_dev_level", log_dev_level);
+    highs.setOptionValue("highs_analysis_level", highs_analysis_level);
+    if (run_status != HighsStatus::kOk) {
+      printf("HighsIis::compute  highs.run() %d returns status %s\n",
+             int(num_run_call), highsStatusToString(run_status).c_str());
+    }
     assert(run_status == HighsStatus::kOk);
     if (run_status != HighsStatus::kOk) return run_status;
     HighsModelStatus model_status = highs.getModelStatus();
@@ -262,7 +286,6 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       printf("\nHighsIis::compute %s deletion for %d and %s bound\n",
              row_deletion ? "Row" : "Col", int(iX),
              drop_lower ? "Lower" : "Upper");
-      bool output_flag;
       highs.getOptionValue("output_flag", output_flag);
       highs.setOptionValue("output_flag", true);
       HighsInt simplex_strategy;
@@ -360,6 +383,8 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
 
   // Pass twice: rows before columns, or columns before rows, according to
   // row_priority
+  std::string check_type = "Col";
+  HighsInt check_ix = 81;
   for (HighsInt k = 0; k < 2; k++) {
     row_deletion = (row_priority && k == 0) || (!row_priority && k == 1);
     std::string type = row_deletion ? "Row" : "Col";
@@ -375,6 +400,10 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
       double upper = row_deletion ? lp.row_upper_[iX] : lp.col_upper_[iX];
       // Record whether the upper bound has been dropped due to the lower bound
       // being kept
+      if (check_type == type && check_ix == iX) {
+        printf("CheckType %s, index %d, will be num_run_call = %d\n",
+               check_type.c_str(), int(check_ix), int(num_run_call + 1));
+      }
       if (lower > -kHighsInf) {
         // Drop the lower bound temporarily
         bool drop_lower = true;
@@ -489,7 +518,7 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
     }
     if (k == 1) continue;
     // End of first pass: look to simplify second pass
-    if (kIisDevReport) this->report("End of deletion", incumbent_lp);
+    if (kIisDevReportVerbose) this->report("End of deletion", incumbent_lp);
     if (row_deletion) {
       // Mark empty columns as dropped
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
@@ -511,9 +540,9 @@ HighsStatus HighsIis::compute(const HighsLp& lp, const HighsOptions& options,
         }
       }
     }
-    if (kIisDevReport) this->report("End of pass 1", incumbent_lp);
+    if (kIisDevReportVerbose) this->report("End of pass 1", incumbent_lp);
   }
-  if (kIisDevReport) this->report("End of pass 2", incumbent_lp);
+  if (kIisDevReportVerbose) this->report("End of pass 2", incumbent_lp);
   HighsInt iss_num_col = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (this->col_bound_[iCol] != kIisBoundStatusDropped) {
