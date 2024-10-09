@@ -582,6 +582,16 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name);
 
 /**
+ * Pass the name of the model.
+ *
+ * @param highs A pointer to the Highs instance.
+ * @param name  The name of the model.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_passModelName(const void* highs, const char* name);
+
+/**
  * Read the option values from file.
  *
  * @param highs     A pointer to the Highs instance.
