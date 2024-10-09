@@ -89,7 +89,9 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   add_executable(unit_tests ${TEST_SOURCES})
 
   if (BUILD_EXTRA_UNIT_TESTS)
-      set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
+        list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/highs-unit-tests")
+        include(extra-tests)
+        set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
   endif()
 
   if (UNIX)

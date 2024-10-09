@@ -61,7 +61,6 @@ message(STATUS "Build C++ library: ${BUILD_CXX}")
 
 option(BUILD_TESTING "Build Tests" ON)
 
-
 option(FORTRAN "Build Fortran interface" OFF)
 message(STATUS "Build Fortran: ${FORTRAN}")
 option(CSHARP "Build CSharp interface" OFF)
@@ -82,7 +81,6 @@ include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
 message(STATUS "Build all tests: ${ALL_TESTS}")
-
 
 CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF "BUILD_TESTING;BUILD_CXX;ALL_TESTS" OFF)
 if (BUILD_EXTRA_UNIT_TESTS)
