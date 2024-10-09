@@ -4968,8 +4968,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
 bool HPresolve::fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
                                          HighsInt col) {
   double fixval = model->col_lower_[col];
-  bool unbounded = fixval == -kHighsInf;
-  if (unbounded) return true;
+  if (fixval == -kHighsInf) return true;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
@@ -5012,8 +5011,7 @@ bool HPresolve::fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
 bool HPresolve::fixColToUpperOrUnbounded(HighsPostsolveStack& postsolve_stack,
                                          HighsInt col) {
   double fixval = model->col_upper_[col];
-  bool unbounded = fixval == kHighsInf;
-  if (unbounded) return true;
+  if (fixval == kHighsInf) return true;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
