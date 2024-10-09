@@ -19,6 +19,8 @@
 
 namespace free_format_parser {
 
+const bool kNoClockCalls = false;
+
 FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
     HighsModel& model) {
@@ -517,8 +519,12 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
 
 double getWallTime() {
   using namespace std::chrono;
-  return duration_cast<duration<double> >(wall_clock::now().time_since_epoch())
-      .count();
+  const double wall_time = kNoClockCalls
+                               ? 0
+                               : duration_cast<duration<double> >(
+                                     wall_clock::now().time_since_epoch())
+                                     .count();
+  return wall_time;
 }
 
 HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,

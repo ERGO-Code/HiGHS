@@ -3458,7 +3458,8 @@ bool HEkk::bailout() {
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
-  } else if (timer_->readRunHighsClock() > options_->time_limit) {
+  } else if (options_->time_limit < kHighsInf &&
+             timer_->readRunHighsClock() > options_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {

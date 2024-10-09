@@ -333,6 +333,7 @@ void HighsSimplexAnalysis::iterationReport() {
   iterationReport(false);
 }
 
+// Called externally - from HEkkPrimal/Dual::reportRebuild
 void HighsSimplexAnalysis::invertReport() {
   if (*log_options.log_dev_level) {
     const bool header = (num_invert_report_since_last_header < 0) ||
@@ -373,6 +374,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   if (!header) num_invert_report_since_last_header++;
 }
 
+// Called externally - from HEkk::returnFromSolve
 void HighsSimplexAnalysis::userInvertReport(const bool force) {
   if (last_user_log_time < 0) {
     const bool header = true;
