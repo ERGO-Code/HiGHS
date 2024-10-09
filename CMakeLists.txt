@@ -586,10 +586,6 @@ else(FAST_BUILD)
     if(BUILD_TESTING)
       enable_testing()
 
-      if (BUILD_EXTRA_UNIT_TESTS)
-        add_subdirectory(highs-unit-tests)
-      endif()
-  
       add_subdirectory(check)
     endif()
     # Add tests in examples/tests

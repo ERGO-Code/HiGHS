@@ -1,7 +1,5 @@
 include(CTest)
 
-
-
 if (FORTRAN)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_executable(fortrantest TestFortranAPI.f90)
