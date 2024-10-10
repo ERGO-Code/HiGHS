@@ -3458,7 +3458,8 @@ bool HEkk::bailout() {
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
-  } else if (timer_->readRunHighsClock() > options_->time_limit) {
+  } else if (options_->time_limit < kHighsInf &&
+             timer_->readRunHighsClock() > options_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
@@ -3635,9 +3636,10 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
-double HEkk::computeBasisCondition() {
-  HighsInt solver_num_row = lp_.num_row_;
-  HighsInt solver_num_col = lp_.num_col_;
+double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
+                                   const bool report) {
+  HighsInt solver_num_row = lp.num_row_;
+  HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
@@ -3645,8 +3647,25 @@ double HEkk::computeBasisCondition() {
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  const HighsInt* Astart = lp_.a_matrix_.start_.data();
-  const double* Avalue = lp_.a_matrix_.value_.data();
+  const HighsInt* Astart = lp.a_matrix_.start_.data();
+  const double* Avalue = lp.a_matrix_.value_.data();
+  double exact_norm_Binv = 0;
+  if (exact) {
+    // Compute the exact norm of B^{-1}
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
+      row_ep.clear();
+      row_ep.index[row_ep.count] = r_n;
+      row_ep.array[r_n] = 1.0;
+      row_ep.count++;
+      row_ep.packFlag = false;
+      simplex_nla_.ftran(row_ep, 0.1);
+      assert(row_ep.count <= solver_num_row);
+      double c_norm = 0.0;
+      for (HighsInt iX = 0; iX < row_ep.count; iX++)
+        c_norm += std::fabs(row_ep.array[row_ep.index[iX]]);
+      exact_norm_Binv = std::max(c_norm, exact_norm_Binv);
+    }
+  }
   // Compute the Hager condition number estimate for the basis matrix
   const double expected_density = 1;
   bs_cond_x.resize(solver_num_row);
@@ -3729,6 +3748,18 @@ double HEkk::computeBasisCondition() {
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
+  double exact_cond_B = exact_norm_Binv * norm_B;
+  if (exact) {
+    assert(exact_norm_Binv > 0);
+    if (report)
+      highsLogUser(
+          options_->log_options, HighsLogType::kInfo,
+          "HEkk::computeBasisCondition: grep_kappa model,||B||_1,approx "
+          "||B^{-1}||_1,approx_kappa,||B^{-1}||_1,kappa = ,%s,%g,%g,%g,%g,%g\n",
+          lp.model_name_.c_str(), norm_B, norm_Binv, cond_B, exact_norm_Binv,
+          exact_cond_B);
+    return exact_cond_B;
+  }
   return cond_B;
 }
 
