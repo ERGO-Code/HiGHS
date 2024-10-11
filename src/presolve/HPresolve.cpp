@@ -542,7 +542,8 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
           implRowDualUpper[row] - 1000 * options->dual_feasibility_tolerance)
         changeImplRowDualUpper(row, impliedBound, col);
     } else {
-      if (impliedBound > implRowDualLower[row] + 1000 * options->dual_feasibility_tolerance)
+      if (impliedBound >
+          implRowDualLower[row] + 1000 * options->dual_feasibility_tolerance)
         changeImplRowDualLower(row, impliedBound, col);
     }
   };
