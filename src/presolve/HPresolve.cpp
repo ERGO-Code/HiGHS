@@ -358,6 +358,40 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   return true;
 }
 
+bool HPresolve::convertImpliedInteger(HighsInt col, HighsInt row,
+                                      bool skipInputChecks) {
+  // return if column was deleted
+  if (colDeleted[col]) return false;
+
+  // return if column is not continuous or cannot be converted to an implied
+  // integer
+  if (!skipInputChecks &&
+      (model->integrality_[col] != HighsVarType::kContinuous ||
+       !isImpliedInteger(col)))
+    return false;
+
+  // convert to implied integer
+  model->integrality_[col] = HighsVarType::kImplicitInteger;
+
+  if (row != -1) {
+    // use row index supplied by caller (e.g. singleton)
+    ++rowsizeImplInt[row];
+  } else {
+    // iterate over rows
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+      ++rowsizeImplInt[nonzero.index()];
+  }
+
+  // round bounds
+  double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
+  double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
+
+  // use tighter bounds
+  if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
+  if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+  return true;
+}
+
 void HPresolve::link(HighsInt pos) {
   Anext[pos] = colhead[Acol[pos]];
   Aprev[pos] = -1;
@@ -2989,17 +3023,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
     return checkLimits(postsolve_stack);
   }
 
-  if (mipsolver != nullptr &&
-      model->integrality_[col] == HighsVarType::kContinuous &&
-      isImpliedInteger(col)) {
-    model->integrality_[col] = HighsVarType::kImplicitInteger;
-    ++rowsizeImplInt[row];
-    double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-    double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-    if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-    if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-  }
+  if (mipsolver != nullptr) convertImpliedInteger(col, row);
 
   updateColImpliedBounds(row, col, colCoef);
 
@@ -3294,20 +3318,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               //     "= %g * z\n",
               //     scale);
               transformColumn(postsolve_stack, continuousCol, scale, 0.0);
-              model->integrality_[continuousCol] =
-                  HighsVarType::kImplicitInteger;
-              for (const HighsSliceNonzero& nonzero :
-                   getColumnVector(continuousCol))
-                ++rowsizeImplInt[nonzero.index()];
-              double ceilLower =
-                  std::ceil(model->col_lower_[continuousCol] - primal_feastol);
-              double floorUpper =
-                  std::floor(model->col_upper_[continuousCol] + primal_feastol);
 
-              if (ceilLower > model->col_lower_[continuousCol])
-                changeColLower(continuousCol, ceilLower);
-              if (floorUpper < model->col_upper_[continuousCol])
-                changeColUpper(continuousCol, floorUpper);
+              convertImpliedInteger(continuousCol, -1, true);
 
               if (intScale != 1.0) scaleStoredRow(row, intScale, true);
             }
@@ -3732,6 +3744,83 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   // printf("implied bounds without tightenings: [%g,%g]\n", baseiRLower,
   //        baseiRUpper);
 
+  auto checkForcingRow = [&](HighsInt row, HighsInt direction, double rowSide,
+                             HighsPostsolveStack::RowType rowType) {
+    // store row
+    storeRow(row);
+    auto rowVector = getStoredRow();
+
+    HighsInt nfixings = 0;
+    for (const HighsSliceNonzero& nonzero : rowVector) {
+      if (direction * nonzero.value() > 0) {
+        if (model->col_upper_[nonzero.index()] <= implColUpper[nonzero.index()])
+          ++nfixings;
+      } else {
+        if (model->col_lower_[nonzero.index()] >= implColLower[nonzero.index()])
+          ++nfixings;
+      }
+    }
+
+    if (nfixings != rowsize[row]) return Result::kOk;
+
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingRow);
+    postsolve_stack.forcingRow(row, rowVector, rowSide, rowType);
+    // already mark the row as deleted, since otherwise it would be
+    // registered as changed/singleton in the process of fixing and
+    // removing the contained columns
+    markRowDeleted(row);
+    for (const HighsSliceNonzero& nonzero : rowVector) {
+      if (direction * nonzero.value() > 0) {
+        if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous &&
+            fractionality(model->col_upper_[nonzero.index()]) >
+                mipsolver->options_mip_->mip_feasibility_tolerance) {
+          // If a non-continuous variable is fixed at a fractional
+          // value then the problem is infeasible
+          return Result::kPrimalInfeasible;
+        }
+        // the upper bound of the column is as tight as the implied upper
+        // bound or comes from this row, which means it is not used in the
+        // rows implied bounds. Therefore we can fix the variable at its
+        // upper bound.
+        postsolve_stack.fixedColAtUpper(nonzero.index(),
+                                        model->col_upper_[nonzero.index()],
+                                        model->col_cost_[nonzero.index()],
+                                        getColumnVector(nonzero.index()));
+        if (model->col_lower_[nonzero.index()] <
+            model->col_upper_[nonzero.index()])
+          changeColLower(nonzero.index(), model->col_upper_[nonzero.index()]);
+        removeFixedCol(nonzero.index());
+      } else {
+        if (model->integrality_[nonzero.index()] != HighsVarType::kContinuous &&
+            fractionality(model->col_lower_[nonzero.index()]) >
+                mipsolver->options_mip_->mip_feasibility_tolerance) {
+          // If a non-continuous variable is fixed at a fractional
+          // value then the problem is infeasible
+          return Result::kPrimalInfeasible;
+        }
+        postsolve_stack.fixedColAtLower(nonzero.index(),
+                                        model->col_lower_[nonzero.index()],
+                                        model->col_cost_[nonzero.index()],
+                                        getColumnVector(nonzero.index()));
+        if (model->col_upper_[nonzero.index()] >
+            model->col_lower_[nonzero.index()])
+          changeColUpper(nonzero.index(), model->col_lower_[nonzero.index()]);
+        removeFixedCol(nonzero.index());
+      }
+    }
+    // now the row might be empty, but not necessarily because the implied
+    // column bounds might be implied by other rows in which case we
+    // cannot fix the column
+    postsolve_stack.redundantRow(row);
+    // Row removal accounted for above
+
+    // if there are any new row singletons, also remove them immediately
+    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleForcingRow);
+    return checkLimits(postsolve_stack);
+  };
+
   if (analysis_.allow_rule_[kPresolveRuleForcingRow]) {
     // Allow rule to consider forcing rows
     if (impliedRowUpper <=  // check for forcing row on the row lower bound
@@ -3745,151 +3834,15 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       // in reverse, it will first restore the column primal and dual values
       // as the dual values are required to find the proper dual multiplier for
       // the row and the column that we put in the basis.
-      storeRow(row);
-      auto rowVector = getStoredRow();
-
-      HighsInt nfixings = 0;
-      for (const HighsSliceNonzero& nonzero : rowVector) {
-        if (nonzero.value() > 0) {
-          if (model->col_upper_[nonzero.index()] <=
-              implColUpper[nonzero.index()])
-            ++nfixings;
-        } else {
-          if (model->col_lower_[nonzero.index()] >=
-              implColLower[nonzero.index()])
-            ++nfixings;
-        }
-      }
-
-      if (nfixings == rowsize[row]) {
-        if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingRow);
-        postsolve_stack.forcingRow(row, rowVector, model->row_lower_[row],
+      Result res = checkForcingRow(row, HighsInt{1}, model->row_lower_[row],
                                    HighsPostsolveStack::RowType::kGeq);
-        // already mark the row as deleted, since otherwise it would be
-        // registered as changed/singleton in the process of fixing and removing
-        // the contained columns
-        markRowDeleted(row);
-        for (const HighsSliceNonzero& nonzero : rowVector) {
-          if (nonzero.value() > 0) {
-            // the upper bound of the column is as tight as the implied upper
-            // bound or comes from this row, which means it is not used in the
-            // rows implied bounds. Therefore we can fix the variable at its
-            // upper bound.
-            postsolve_stack.fixedColAtUpper(nonzero.index(),
-                                            model->col_upper_[nonzero.index()],
-                                            model->col_cost_[nonzero.index()],
-                                            getColumnVector(nonzero.index()));
-            if (model->col_lower_[nonzero.index()] <
-                model->col_upper_[nonzero.index()])
-              changeColLower(nonzero.index(),
-                             model->col_upper_[nonzero.index()]);
-            removeFixedCol(nonzero.index());
-          } else {
-            postsolve_stack.fixedColAtLower(nonzero.index(),
-                                            model->col_lower_[nonzero.index()],
-                                            model->col_cost_[nonzero.index()],
-                                            getColumnVector(nonzero.index()));
-            if (model->col_upper_[nonzero.index()] >
-                model->col_lower_[nonzero.index()])
-              changeColUpper(nonzero.index(),
-                             model->col_lower_[nonzero.index()]);
-            removeFixedCol(nonzero.index());
-          }
-        }
-        // now the row might be empty, but not necessarily because the implied
-        // column bounds might be implied by other rows in which case we cannot
-        // fix the column
-        postsolve_stack.redundantRow(row);
-        // Row removal accounted for above
+      if (rowDeleted[row]) return res;
 
-        // if there are any new row singletons, also remove them immediately
-        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        analysis_.logging_on_ = logging_on;
-        if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleForcingRow);
-        return checkLimits(postsolve_stack);
-      }
     } else if (impliedRowLower >= model->row_upper_[row] - primal_feastol) {
       // forcing row in the other direction
-      storeRow(row);
-      auto rowVector = getStoredRow();
-
-      HighsInt nfixings = 0;
-      for (const HighsSliceNonzero& nonzero : rowVector) {
-        if (nonzero.value() < 0) {
-          if (model->col_upper_[nonzero.index()] <=
-              implColUpper[nonzero.index()])
-            ++nfixings;
-        } else {
-          if (model->col_lower_[nonzero.index()] >=
-              implColLower[nonzero.index()])
-            ++nfixings;
-        }
-      }
-      if (nfixings == rowsize[row]) {
-        if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingRow);
-        postsolve_stack.forcingRow(row, rowVector, model->row_upper_[row],
+      Result res = checkForcingRow(row, HighsInt{-1}, model->row_upper_[row],
                                    HighsPostsolveStack::RowType::kLeq);
-        markRowDeleted(row);
-        for (const HighsSliceNonzero& nonzero : rowVector) {
-          if (nonzero.value() < 0) {
-            if (model->integrality_[nonzero.index()] !=
-                HighsVarType::kContinuous) {
-              // If a non-continuous variable is fixed at a fractional
-              // value then the problem is infeasible
-              const double upper = model->col_upper_[nonzero.index()];
-              const double fraction = upper - std::floor(upper);
-              assert(fraction >= 0);
-              const bool non_fractional =
-                  fraction <=
-                  mipsolver->options_mip_->mip_feasibility_tolerance;
-              //	      assert(non_fractional);
-              if (!non_fractional) return Result::kPrimalInfeasible;
-            }
-            postsolve_stack.fixedColAtUpper(nonzero.index(),
-                                            model->col_upper_[nonzero.index()],
-                                            model->col_cost_[nonzero.index()],
-                                            getColumnVector(nonzero.index()));
-            if (model->col_lower_[nonzero.index()] <
-                model->col_upper_[nonzero.index()])
-              changeColLower(nonzero.index(),
-                             model->col_upper_[nonzero.index()]);
-
-            removeFixedCol(nonzero.index());
-          } else {
-            if (model->integrality_[nonzero.index()] !=
-                HighsVarType::kContinuous) {
-              // If a non-continuous variable is fixed at a fractional
-              // value then the problem is infeasible
-              const double lower = model->col_lower_[nonzero.index()];
-              const double fraction = std::ceil(lower) - lower;
-              assert(fraction >= 0);
-              const bool non_fractional =
-                  fraction <=
-                  mipsolver->options_mip_->mip_feasibility_tolerance;
-              //	      assert(non_fractional);
-              if (!non_fractional) return Result::kPrimalInfeasible;
-            }
-            postsolve_stack.fixedColAtLower(nonzero.index(),
-                                            model->col_lower_[nonzero.index()],
-                                            model->col_cost_[nonzero.index()],
-                                            getColumnVector(nonzero.index()));
-            if (model->col_upper_[nonzero.index()] >
-                model->col_lower_[nonzero.index()])
-              changeColUpper(nonzero.index(),
-                             model->col_lower_[nonzero.index()]);
-
-            removeFixedCol(nonzero.index());
-          }
-        }
-        postsolve_stack.redundantRow(row);
-        // Row removal accounted for above
-
-        // if there are any new row singletons, also remove them immediately
-        HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
-        analysis_.logging_on_ = logging_on;
-        if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleForcingRow);
-        return checkLimits(postsolve_stack);
-      }
+      if (rowDeleted[row]) return res;
     }
   }
 
@@ -4131,17 +4084,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
       }
     }
 
-    if (model->integrality_[col] == HighsVarType::kContinuous &&
-        isImpliedInteger(col)) {
-      model->integrality_[col] = HighsVarType::kImplicitInteger;
-      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-        ++rowsizeImplInt[nonzero.index()];
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-    }
+    convertImpliedInteger(col);
 
     // shift integral variables to have a lower bound of zero
     if (model->integrality_[col] != HighsVarType::kContinuous &&
@@ -4274,12 +4217,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numCol = model->num_col_ - numDeletedCols;
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz = Avalue.size() - freeslots.size();
+        // Only read the run time if it's to be printed
+        const double run_time =
+            options->output_flag ? this->timer->read() : 0;
 #ifndef NDEBUG
-        std::string time_str =
-            " " + std::to_string(this->timer->readRunHighsClock()) + "s";
+        std::string time_str = " " + std::to_string(run_time) + "s";
 #else
-        std::string time_str =
-            " " + std::to_string(int(this->timer->readRunHighsClock())) + "s";
+        std::string time_str = " " + std::to_string(int(run_time)) + "s";
 #endif
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -4500,7 +4444,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
 
   if ((numreductions & 1023u) == 0) {
     assert(timer);
-    if (timer->readRunHighsClock() >= options->time_limit)
+    if (options->time_limit < kHighsInf &&
+        timer->readRunHighsClock() >= options->time_limit)
       return Result::kStopped;
   }
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
@@ -5037,8 +4982,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
 bool HPresolve::fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
                                          HighsInt col) {
   double fixval = model->col_lower_[col];
-  bool unbounded = fixval == -kHighsInf;
-  if (unbounded) return true;
+  if (fixval == -kHighsInf) return true;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
@@ -5081,8 +5025,7 @@ bool HPresolve::fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
 bool HPresolve::fixColToUpperOrUnbounded(HighsPostsolveStack& postsolve_stack,
                                          HighsInt col) {
   double fixval = model->col_upper_[col];
-  bool unbounded = fixval == kHighsInf;
-  if (unbounded) return true;
+  if (fixval == kHighsInf) return true;
 
   const bool logging_on = analysis_.logging_on_;
   if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleFixedCol);
@@ -5503,23 +5446,8 @@ HighsInt HPresolve::strengthenInequalities() {
 HighsInt HPresolve::detectImpliedIntegers() {
   HighsInt numImplInt = 0;
 
-  for (HighsInt col = 0; col != model->num_col_; ++col) {
-    if (colDeleted[col]) continue;
-    if (model->integrality_[col] == HighsVarType::kContinuous &&
-        isImpliedInteger(col)) {
-      ++numImplInt;
-      model->integrality_[col] = HighsVarType::kImplicitInteger;
-
-      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-        ++rowsizeImplInt[nonzero.index()];
-
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
-    }
-  }
+  for (HighsInt col = 0; col != model->num_col_; ++col)
+    if (convertImpliedInteger(col)) ++numImplInt;
 
   return numImplInt;
 }
@@ -6042,16 +5970,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (colUpperSource[col] != -1) changeImplColUpper(col, kHighsInf, -1);
 
-          // if an implicit integer and an integer column where merge, check if
+          // if an implicit integer and an integer column were merged, check if
           // merged continuous column is implicit integer after merge
           if (rowsizeIntReduction &&
               model->integrality_[duplicateCol] ==
                   HighsVarType::kImplicitInteger &&
-              isImpliedInteger(col)) {
-            model->integrality_[col] = HighsVarType::kImplicitInteger;
-            for (const HighsSliceNonzero& nonz : getColumnVector(col))
-              ++rowsizeImplInt[nonz.index()];
-          }
+              isImpliedInteger(col))
+            convertImpliedInteger(col, -1, true);
 
           break;
       }

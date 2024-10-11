@@ -618,6 +618,16 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::passModelName(const std::string& name) {
+  if (int(name.length()) <= 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define empty model names\n");
+    return HighsStatus::kError;
+  }
+  this->model_.lp_.model_name_ = name;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::readModel(const std::string& filename) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
@@ -1944,6 +1954,18 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
        el < lp.a_matrix_.start_[col + 1]; el++)
     rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
   basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getKappa(double& kappa, const bool exact,
+                            const bool report) {
+  printf(
+      "Highs::getKappa basis_.valid = %d, ekk_instance_.status_.has_invert = "
+      "%d\n",
+      int(basis_.valid), int(ekk_instance_.status_.has_invert));
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisInverseRow");
+  kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
   return HighsStatus::kOk;
 }
 
@@ -4340,7 +4362,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
   const bool solved_as_mip = !options_.solver.compare(kHighsChooseString) &&
                              model_.isMip() && !options_.solve_relaxation;
   if (!solved_as_mip) reportSolvedLpQpStats();
-
   return returnFromHighs(return_status);
 }
 

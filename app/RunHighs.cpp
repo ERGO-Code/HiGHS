@@ -15,6 +15,9 @@
 // #include "io/HighsIO.h"
 #include "lp_data/HighsRuntimeOptions.h"
 
+// uncomment if we will be shutting down task executor from exe
+// #include "parallel/HighsParallel.h"
+
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
                              const HighsModel& model);
@@ -96,6 +99,10 @@ int main(int argc, char** argv) {
     if (write_model_status == HighsStatus::kError)
       return (int)write_model_status;  // todo: change to write model error
   }
+
+  // Shut down task executor: optional and wip
+  // HighsTaskExecutor::shutdown(true);
+
   return (int)run_status;
 }
 

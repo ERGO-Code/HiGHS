@@ -1983,7 +1983,8 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
 
   //  const double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
   //  printf("checkLimits: time = %g\n", time);
-  if (mipsolver.timer_.read(mipsolver.timer_.total_clock) >=
+  if (options.time_limit < kHighsInf &&
+      mipsolver.timer_.read(mipsolver.timer_.total_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,

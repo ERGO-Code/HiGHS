@@ -161,6 +161,11 @@ class Highs {
   HighsStatus passRowName(const HighsInt row, const std::string& name);
 
   /**
+   * @brief Pass a model name to the incumbent model
+   */
+  HighsStatus passModelName(const std::string& name);
+
+  /**
    * @brief Read in a model
    */
   HighsStatus readModel(const std::string& filename);
@@ -604,6 +609,14 @@ class Highs {
   HighsStatus getReducedColumn(const HighsInt col, double* col_vector,
                                HighsInt* col_num_nz = nullptr,
                                HighsInt* col_indices = nullptr);
+
+  /**
+   * @brief Get the condition number of the current basis matrix,
+   * possibly computing it exactly and reporting the error in the
+   * approximate condition number
+   */
+  HighsStatus getKappa(double& kappa, const bool exact = false,
+                       const bool report = false);
 
   /**
    * @brief Get the number of columns in the incumbent model

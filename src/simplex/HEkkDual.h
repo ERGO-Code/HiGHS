@@ -486,7 +486,7 @@ class HEkkDual {
    * @brief Multiple minor iteration data
    */
   struct MFinish {
-    HighsInt move_in;
+    int8_t move_in;
     double shiftOut;
     std::vector<HighsInt> flipList;
 
