@@ -402,6 +402,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   HighsStatus return_status;
   std::string solution_file;
   HighsModelStatus status = HighsModelStatus::kNotset;
+  if (dev_run) printf("\nSolving model %s from scratch\n", model.c_str());
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
@@ -409,6 +410,9 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   REQUIRE(status == require_model_status);
 
   solution_file = model + ".sol";
+  if (dev_run)
+    printf("Writing solution in style %d to %s\n", int(write_solution_style),
+           solution_file.c_str());
   if (dev_run) return_status = highs.writeSolution("", write_solution_style);
   return_status = highs.writeSolution(solution_file, write_solution_style);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -418,6 +422,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
 
   // primalDualInfeasible1Lp has no values in the solution file so,
   // after it's read, HiGHS::solution.value_valid is false
+  if (dev_run) printf("Reading solution from %s\n", solution_file.c_str());
   return_status = highs.readSolution(solution_file);
   if (value_valid) {
     REQUIRE(return_status == HighsStatus::kOk);
@@ -431,7 +436,14 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   } else {
     REQUIRE(return_status == HighsStatus::kError);
   }
-  std::remove(solution_file.c_str());
+  if (dev_run) printf("Solving model from solution read from file\n");
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+
+  status = highs.getModelStatus();
+  REQUIRE(status == require_model_status);
+
+  //  std::remove(solution_file.c_str());
 }
 
 void runSetLpSolution(const std::string model) {

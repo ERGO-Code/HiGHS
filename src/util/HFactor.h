@@ -132,7 +132,7 @@ class HFactor {
         build_timer_(nullptr),
         nwork(0),
         u_merit_x(0),
-        u_total_x(0) {};
+        u_total_x(0){};
 
   /**
    * @brief Copy problem size and pointers of constraint matrix, and set
