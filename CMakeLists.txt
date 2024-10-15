@@ -82,9 +82,14 @@ include(CMakeDependentOption)
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
 message(STATUS "Build all tests: ${ALL_TESTS}")
 
-CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF "BUILD_TESTING;BUILD_CXX;ALL_TESTS" OFF)
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF "ALL_TESTS" OFF)
 if (BUILD_EXTRA_UNIT_TESTS)
   message(STATUS "Build extra unit tests: ON")
+endif()
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_PROBLEM_SET "Build extra instance tests" OFF "BUILD_TESTING" OFF)
+if (BUILD_EXTRA_PROBLEM_SET)
+  message(STATUS "Build extra instance tests: ON")
 endif()
 
 option(ZLIB "ZLIB" ON)
