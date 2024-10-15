@@ -19,6 +19,8 @@
 
 namespace free_format_parser {
 
+const bool kNoClockCalls = false;
+
 FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
     HighsModel& model) {
@@ -225,11 +227,11 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
       // Remove any trailing comment
       const size_t p = strline.find_first_of(mps_comment_chars);
       if (p <= strline.length()) {
-	// A comment character has been found, so erase from it to the end
-	// of the line and check whether the line is now empty
-	strline.erase(p);
-	skip = is_empty(strline);
-	if (skip) return true;
+        // A comment character has been found, so erase from it to the end
+        // of the line and check whether the line is now empty
+        strline.erase(p);
+        skip = is_empty(strline);
+        if (skip) return true;
       }
     }
     strline = trim(strline);
@@ -517,8 +519,12 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
 
 double getWallTime() {
   using namespace std::chrono;
-  return duration_cast<duration<double> >(wall_clock::now().time_since_epoch())
-      .count();
+  const double wall_time = kNoClockCalls
+                               ? 0
+                               : duration_cast<duration<double> >(
+                                     wall_clock::now().time_since_epoch())
+                                     .count();
+  return wall_time;
 }
 
 HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,

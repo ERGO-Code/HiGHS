@@ -1957,6 +1957,18 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getKappa(double& kappa, const bool exact,
+                            const bool report) {
+  printf(
+      "Highs::getKappa basis_.valid = %d, ekk_instance_.status_.has_invert = "
+      "%d\n",
+      int(basis_.valid), int(ekk_instance_.status_.has_invert));
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisInverseRow");
+  kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
   // Determine whether a new solution will be defined. If so,
@@ -4346,7 +4358,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
   const bool solved_as_mip = !options_.solver.compare(kHighsChooseString) &&
                              model_.isMip() && !options_.solve_relaxation;
   if (!solved_as_mip) reportSolvedLpQpStats();
-
   return returnFromHighs(return_status);
 }
 
