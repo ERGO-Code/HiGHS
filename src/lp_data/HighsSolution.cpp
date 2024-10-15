@@ -282,7 +282,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         relative_primal_infeasibility, dual_infeasibility, value_residual);
     if (!status_value_ok)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "getKktFailures: %s %d status-value error: [%23.18g; %23.18g; %23.18g] has "
+                   "getKktFailures: %s %d status-value error: [%23.18g; "
+                   "%23.18g; %23.18g] has "
                    "residual %g\n",
                    iVar < lp.num_col_ ? "Column" : "Row   ",
                    iVar < lp.num_col_ ? int(iVar) : int(iVar - lp.num_col_),
@@ -539,14 +540,12 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
     // bounds - for debugging QP basis errors
     if (*status_pointer == HighsBasisStatus::kLower) {
       if (std::fabs(lower) / primal_feasibility_tolerance < 1e-16)
-	status_value_ok =
-	  value >= lower - primal_feasibility_tolerance &&
-	  value <= lower + primal_feasibility_tolerance;
+        status_value_ok = value >= lower - primal_feasibility_tolerance &&
+                          value <= lower + primal_feasibility_tolerance;
     } else if (*status_pointer == HighsBasisStatus::kUpper) {
       if (std::fabs(upper) / primal_feasibility_tolerance < 1e-16)
-	status_value_ok =
-	  value >= upper - primal_feasibility_tolerance &&
-	  value <= upper + primal_feasibility_tolerance;
+        status_value_ok = value >= upper - primal_feasibility_tolerance &&
+                          value <= upper + primal_feasibility_tolerance;
     }
   }
   if (at_a_bound) {
@@ -1390,7 +1389,7 @@ void correctResiduals(HighsLpSolverObject& solver_object) {
   lp.a_matrix_.productQuad(check_row_value, solution.col_value);
   if (have_dual_solution) {
     lp.a_matrix_.productTransposeQuad(check_col_dual, solution.row_dual);
-    for (HighsInt iCol=0; iCol < lp.num_col_; iCol++) 
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       check_col_dual[iCol] -= lp.col_cost_[iCol];
   }
   double norm_primal_residual = 0;
@@ -1408,14 +1407,14 @@ void correctResiduals(HighsLpSolverObject& solver_object) {
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     double primal_residual = check_row_value[iRow] - solution.row_value[iRow];
     double abs_primal_residual = std::fabs(primal_residual);
-    //    printf("correctResiduals: Row %d; check_row_value = %11.4g; row_value = %11.4g; primal_residual = %11.4g\n",
-    //	   int(iRow), check_row_value[iRow], solution.row_value[iRow], abs_primal_residual);
     if (abs_primal_residual > use_primal_residual_tolerance) {
       solution.row_value[iRow] += primal_residual;
-      double check_primal_residual = std::fabs(check_row_value[iRow] - solution.row_value[iRow]);
+      double check_primal_residual =
+          std::fabs(check_row_value[iRow] - solution.row_value[iRow]);
       assert(check_primal_residual < 1e-10);
       num_primal_correction++;
-      max_primal_correction = std::max(abs_primal_residual, max_primal_correction);
+      max_primal_correction =
+          std::max(abs_primal_residual, max_primal_correction);
       sum_primal_correction += abs_primal_residual;
     }
     norm_primal_residual = std::max(abs_primal_residual, norm_primal_residual);
@@ -1424,31 +1423,24 @@ void correctResiduals(HighsLpSolverObject& solver_object) {
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       double dual_residual = check_col_dual[iCol] + solution.col_dual[iCol];
       double abs_dual_residual = std::fabs(dual_residual);
-      //      printf("correctResiduals: Col %d; check_col_dual = %11.4g; col_dual = %11.4g; col_cost_ = %11.4g; dual_residual = %11.4g\n",
-      //	     int(iCol), check_col_dual[iCol], solution.col_dual[iCol], lp.col_cost_[iCol], abs_dual_residual);
       if (abs_dual_residual > use_dual_residual_tolerance) {
-	solution.col_dual[iCol] -= dual_residual;
-	double check_dual_residual = std::fabs(check_col_dual[iCol] + solution.col_dual[iCol]);
-	const bool ok_dual_correction = check_dual_residual < 1e-10;
-	//	if (!ok_dual_correction) {
-	//	  printf("correctResiduals: Col %d; check_col_dual = %11.4g; col_dual = %11.4g; check_dual_residual = %g\n",
-	//		 int(iCol), check_col_dual[iCol], solution.col_dual[iCol], check_dual_residual);
-	//	}
-	assert(ok_dual_correction);
-	num_dual_correction++;
-	max_dual_correction = std::max(abs_dual_residual, max_dual_correction);
-	sum_dual_correction += abs_dual_residual;
+        solution.col_dual[iCol] -= dual_residual;
+        num_dual_correction++;
+        max_dual_correction = std::max(abs_dual_residual, max_dual_correction);
+        sum_dual_correction += abs_dual_residual;
       }
       norm_dual_residual = std::max(abs_dual_residual, norm_dual_residual);
     }
   }
 
   if (num_primal_correction > 0 || num_dual_correction > 0)
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-		 "LP solver yields |primal_residual| = %g; |dual_residual| = %g with num / max / sum primal (%d / %g / %g) and dual (%d / %g / %g) corrections\n",
-		 norm_primal_residual, norm_dual_residual,
-		 int(num_primal_correction), max_primal_correction, sum_primal_correction,
-		 int(num_dual_correction), max_dual_correction, sum_dual_correction);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "LP solver residuals: primal = %g; dual = %g yield num/max/sum primal "
+        "(%d/%g/%g) and dual (%d/%g/%g) corrections\n",
+        norm_primal_residual, norm_dual_residual, int(num_primal_correction),
+        max_primal_correction, sum_primal_correction, int(num_dual_correction),
+        max_dual_correction, sum_dual_correction);
 }
 
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {

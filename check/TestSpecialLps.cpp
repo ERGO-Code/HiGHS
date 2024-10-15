@@ -3,7 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,

@@ -85,9 +85,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
     if (solver_object.model_status_ == HighsModelStatus::kOptimal &&
-	solver_object.highs_info_.num_primal_infeasibilities > 0 ||
-	solver_object.highs_info_.num_dual_infeasibilities)
-      solver_object.model_status_ = HighsModelStatus::kUnknown;      
+        (solver_object.highs_info_.num_primal_infeasibilities > 0 ||
+         solver_object.highs_info_.num_dual_infeasibilities))
+      solver_object.model_status_ = HighsModelStatus::kUnknown;
     if (options.solver == kIpmString || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpIpx
