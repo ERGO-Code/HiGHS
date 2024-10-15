@@ -72,10 +72,11 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                           return_status, "solveLpCupdlp");
     }
     if (return_status == HighsStatus::kError) return return_status;
-    // IPM (and PDLP?) can claim optimality with large primal and/or
-    // dual residual errors, so correct any residual errors that
-    // exceed the tolerance
-    correctResiduals(solver_object);
+    if (solver_object.model_status_ == HighsModelStatus::kOptimal)
+      // IPM (and PDLP?) can claim optimality with large primal and/or
+      // dual residual errors, so correct any residual errors that
+      // exceed the tolerance
+      correctResiduals(solver_object);
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
     // Get the objective and any KKT failures

@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;

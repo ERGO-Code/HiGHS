@@ -3,7 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-3;
 
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
