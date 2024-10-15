@@ -123,6 +123,8 @@ HighsStatus formSimplexLpBasisAndFactor(
 
 void accommodateAlienBasis(HighsLpSolverObject& solver_object);
 
+void correctResiduals(HighsLpSolverObject& solver_object);
+
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);
@@ -133,5 +135,6 @@ bool isPrimalSolutionRightSize(const HighsLp& lp,
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
+
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

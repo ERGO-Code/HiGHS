@@ -439,9 +439,9 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(error < 1e-10);
 }
 
-TEST_CASE("blending-lp", "[highs_lp_solver]") {
+TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 2;
@@ -458,12 +458,14 @@ TEST_CASE("blending-lp", "[highs_lp_solver]") {
   highs.setOptionValue("presolve", kHighsOffString);
   highs.run();
   HighsInfo info = highs.getInfo();
-  printf("Num primal infeasibilities = %d\n",
-         int(info.num_primal_infeasibilities));
-  printf("Max primal infeasibilities = %g\n", info.max_primal_infeasibility);
-  printf("Sum primal infeasibilities = %g\n", info.sum_primal_infeasibilities);
-  printf("Num   dual infeasibilities = %d\n",
-         int(info.num_dual_infeasibilities));
-  printf("Max   dual infeasibilities = %g\n", info.max_dual_infeasibility);
-  printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  if (dev_run) {
+    printf("Num primal infeasibilities = %d\n",
+	   int(info.num_primal_infeasibilities));
+    printf("Max primal infeasibility   = %g\n", info.max_primal_infeasibility);
+    printf("Sum primal infeasibilities = %g\n", info.sum_primal_infeasibilities);
+    printf("Num   dual infeasibilities = %d\n",
+	   int(info.num_dual_infeasibilities));
+    printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
+    printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  }
 }
