@@ -17,6 +17,7 @@ jobs:
         run: git clone https://github.com/galabovaa/highs-unit-tests.git
 
       - name: Create symlink
+        shell: bash
         working-directory: $GITHUB_WORKSPACE/check
         run: mklink /d highs-unit-tests ${{runner.workspace}}/highs-unit-tests
 
