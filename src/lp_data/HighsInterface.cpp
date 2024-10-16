@@ -1485,6 +1485,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
+  if (lp.isMip()) {
+    highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have dual ray for a MIP\n");
+    return HighsStatus::kError;
+  }
   const bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
@@ -1502,7 +1506,21 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
 	return return_status;
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo, "Solving LP to try to compute dual ray\n");
+      // Save the column costs and any Hessian
+      std::vector<double> col_cost = lp.col_cost_;
+      HighsHessian hessian = model_.hessian_;
+      std::string presolve;
+      this->getOptionValue("presolve", presolve);
+      // Zero the costs and Hessian
+      lp.col_cost_.assign(lp.num_col_, 0);
+      model_.hessian_.clear();
+      this->setOptionValue("presolve", kHighsOffString);
+      HighsStatus call_status = this->run();
       assert(111==555);
+      this->setOptionValue("presolve", presolve);
+      model_.hessian_ = hessian;
+      lp.col_cost_ = col_cost;
+      this->clearSolver();
     }
     if (has_dual_ray) {
       if (ekk_instance_.dual_ray_.size()) {
@@ -1537,6 +1555,10 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the primal ray is vacuous
   if (num_row == 0) return return_status;
+  if (lp.isMip()) {
+    highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have primal ray for a MIP\n");
+    return HighsStatus::kError;
+  }
   const bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
