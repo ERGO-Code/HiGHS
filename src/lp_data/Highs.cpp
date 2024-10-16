@@ -1660,6 +1660,11 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getDualUnboundednessDirection(bool& has_dual_unboundedness_direction,
+						 double* dual_unboundedness_direction_value) {
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
   // Can't get a ray without an INVERT, but absence is only an error
@@ -1668,6 +1673,11 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   if (!ekk_instance_.status_.has_invert)
     return lpInvertRequirementError("getPrimalRay");
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
+}
+
+HighsStatus Highs::getPrimalUnboundednessDirection(bool& has_primal_unboundedness_direction,
+						   double* primal_unboundedness_direction_value) {
+return HighsStatus::kError;
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
@@ -1727,6 +1737,11 @@ HighsStatus Highs::getIis(HighsIis& iis) {
                           return_status, "getIisInterface");
   iis = this->iis_;
   return return_status;
+}
+
+HighsStatus Highs::getDualObjectiveValue(double& dual_objective_function_value) {
+  dual_objective_function_value = 0;
+  return HighsStatus::kError;
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }

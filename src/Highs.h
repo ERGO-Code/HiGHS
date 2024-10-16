@@ -494,11 +494,27 @@ class Highs {
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
+   * @brief Indicate whether a dual unboundedness direction exists,
+   * and gets it if it does and dual_unboundedness_direction is not
+   * nullptr
+   */
+  HighsStatus getDualUnboundednessDirection(bool& has_dual_unboundedness_direction,
+					    double* dual_unboundedness_direction_value = nullptr);
+
+  /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = nullptr);
+
+  /**
+   * @brief Indicate whether a primal unboundedness direction exists,
+   * and gets it if it does and primal_unboundedness_direction is not
+   * nullptr
+   */
+  HighsStatus getPrimalUnboundednessDirection(bool& has_primal_unboundedness_direction,
+					      double* primal_unboundedness_direction_value = nullptr);
 
   /**
    * @brief Get the ranging information for the current LP
@@ -530,9 +546,14 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
-   * @brief Get the current model objective value
+   * @brief Get the current model objective function value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
+
+  /**
+   * @brief Try to get the current dual objective function value
+   */
+  HighsStatus getDualObjectiveValue(double& dual_objective_function_value);
 
   /**
    * Methods for operations with the invertible representation of the
