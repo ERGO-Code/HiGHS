@@ -498,8 +498,9 @@ class Highs {
    * and gets it if it does and dual_unboundedness_direction is not
    * nullptr
    */
-  HighsStatus getDualUnboundednessDirection(bool& has_dual_unboundedness_direction,
-					    double* dual_unboundedness_direction_value = nullptr);
+  HighsStatus getDualUnboundednessDirection(
+      bool& has_dual_unboundedness_direction,
+      double* dual_unboundedness_direction_value = nullptr);
 
   /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
@@ -513,8 +514,9 @@ class Highs {
    * and gets it if it does and primal_unboundedness_direction is not
    * nullptr
    */
-  HighsStatus getPrimalUnboundednessDirection(bool& has_primal_unboundedness_direction,
-					      double* primal_unboundedness_direction_value = nullptr);
+  HighsStatus getPrimalUnboundednessDirection(
+      bool& has_primal_unboundedness_direction,
+      double* primal_unboundedness_direction_value = nullptr);
 
   /**
    * @brief Get the ranging information for the current LP
