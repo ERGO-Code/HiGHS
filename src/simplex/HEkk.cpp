@@ -146,6 +146,9 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
+  this->primal_ray_.clear();
+  this->dual_ray_.clear();
+
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
 

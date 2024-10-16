@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-14;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -245,6 +245,7 @@ void testInfeasibleMpsLp(const std::string model,
   // Check that there is no primal ray
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == false);
+  // Now test with presolve on, and forcing ray calculation if possible
 }
 
 void testInfeasibleMpsMip(const std::string model) {
@@ -486,7 +487,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
-  highs.setOptionValue("presolve", "off");
+  highs.setOptionValue("presolve", kHighsOffString);
   highs.run();
   if (dev_run)
     printf("Solved 464a without presolve: status = %s\n",
@@ -496,6 +497,23 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
   REQUIRE(has_ray == true);
   vector<double> ray_value;
+  ray_value.assign(2, NAN);
+  highs.getPrimalRay(has_ray, ray_value.data());
+  checkPrimalRayValue(highs, ray_value);
+  REQUIRE(has_ray);
+  REQUIRE(ray_value[0] == ray_value[1]);
+  REQUIRE(ray_value[0] > 0);
+  // Now repeat with presolve
+  highs.setOptionValue("presolve", kHighsOnString);
+  highs.clearSolver();
+  highs.run();
+  if (dev_run)
+    printf("Solved 464a with presolve: status = %s\n",
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+  has_ray = false;
+  REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
+  REQUIRE(has_ray == true);
   ray_value.assign(2, NAN);
   highs.getPrimalRay(has_ray, ray_value.data());
   checkPrimalRayValue(highs, ray_value);
