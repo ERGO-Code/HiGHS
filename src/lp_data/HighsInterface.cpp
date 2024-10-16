@@ -1485,13 +1485,13 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  const bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
   if (dual_ray_value != NULL) {
      // User wants a dual ray whatever
-    if (!has_dual_ray) {
-      // No dual ray is known
+    if (!has_dual_ray || !has_invert) {
+      // No dual ray is known, or no INVERT to compute it
       //
       // No point in trying to get a dual ray if the model status is
       // optimal
@@ -1537,13 +1537,13 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the primal ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  const bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
   if (primal_ray_value != NULL) {
     // User wants a primal ray whatever
-    if (!has_primal_ray) {
-      // No primal ray is known
+    if (!has_primal_ray || !has_invert) {
+      // No primal ray is known, or no INVERT to compute it
       //
       // No point in trying to get a primal ray if the model status is
       // optimal
