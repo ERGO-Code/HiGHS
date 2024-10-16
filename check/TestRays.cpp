@@ -341,6 +341,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   bool has_dual_ray;
   bool has_primal_ray;
   vector<double> dual_ray_value;
+  vector<double> dual_unboundedness_direction_value;
   vector<double> primal_ray_value;
   const bool test_scipLpi3Lp = true;
   const bool test_other = false;
@@ -398,7 +399,16 @@ TEST_CASE("Rays", "[highs_test_rays]") {
       // Check that there is no primal ray
       REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
       REQUIRE(has_primal_ray == false);
-      
+      highs.clearSolver();
+
+      // Now check dual unboundedness direction
+      dual_unboundedness_direction_value.resize(lp.num_col_);
+      bool has_dual_unboundedness_direction;
+      REQUIRE(highs.getDualUnboundednessDirection(has_dual_unboundedness_direction,
+						  dual_unboundedness_direction_value.data()) ==
+	      HighsStatus::kOk);
+      REQUIRE(has_dual_unboundedness_direction);
+    
       presolve_status = "on";
       presolve_off = false;
       REQUIRE(highs.setOptionValue("presolve", kHighsOnString) == HighsStatus::kOk);

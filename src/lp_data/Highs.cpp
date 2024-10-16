@@ -1659,7 +1659,19 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
 HighsStatus Highs::getDualUnboundednessDirection(
     bool& has_dual_unboundedness_direction,
     double* dual_unboundedness_direction_value) {
-  return HighsStatus::kError;
+  if (dual_unboundedness_direction_value) {
+    std::vector<double> dual_ray_value(this->model_.lp_.num_row_);
+    HighsStatus status = getDualRay(has_dual_unboundedness_direction, dual_ray_value.data());
+    if (status != HighsStatus::kOk || !has_dual_unboundedness_direction)
+      return HighsStatus::kError;
+    std::vector<double> dual_ray_direction;
+    this->model_.lp_.a_matrix_.productTransposeQuad(dual_ray_direction, dual_ray_value);
+    for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
+      dual_unboundedness_direction_value[iCol] = dual_ray_direction[iCol];    
+  } else {
+    return getDualRay(has_dual_unboundedness_direction, nullptr);
+  }   
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,

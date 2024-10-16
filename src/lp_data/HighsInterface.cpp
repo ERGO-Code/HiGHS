@@ -1536,6 +1536,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     printf("Highs::getDualRayInterface Midway   has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
 	   ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
     if (has_dual_ray) {
+      assert(this->model_status_ == HighsModelStatus::kInfeasible);
       if (ekk_instance_.dual_ray_.size()) {
 	// Dual ray is already computed
 	highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1573,9 +1574,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->setOptionValue("presolve", presolve);
     model_.hessian_ = hessian;
     lp.col_cost_ = col_cost;
-    printf("Highs::getDualRayInterface Before invalidateModelStatusSolutionAndInfo has_dual_ray = %d\n", ekk_instance_.status_.has_dual_ray);
-    this->invalidateModelStatusSolutionAndInfo();
-    printf("Highs::getDualRayInterface After  invalidateModelStatusSolutionAndInfo has_dual_ray = %d\n", ekk_instance_.status_.has_dual_ray);
+    assert(this->model_status_ == HighsModelStatus::kInfeasible);
+    //    this->invalidateModelStatusSolutionAndInfo();
   }
   printf("Highs::getDualRayInterface On exit  has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
 	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
@@ -1594,7 +1594,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have primal ray for a MIP\n");
     return HighsStatus::kError;
   }
-  const bool has_invert = ekk_instance_.status_.has_invert;
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
   if (primal_ray_value != NULL) {
