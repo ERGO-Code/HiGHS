@@ -39,28 +39,17 @@ void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
   REQUIRE(!ray_error);
 }
 
-void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
+void checkDualUnboundednessDirection(Highs& highs, const vector<double>& dual_unboundedness_direction_value) {
   const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
-  double ray_error_norm = 0;
+  double dual_unboundedness_direction_error_norm = 0;
   const vector<double>& colLower = lp.col_lower_;
   const vector<double>& colUpper = lp.col_upper_;
-  const vector<double>& rowLower = lp.row_lower_;
-  const vector<double>& rowUpper = lp.row_upper_;
+  //  const vector<double>& rowLower = lp.row_lower_;
+  //  const vector<double>& rowUpper = lp.row_upper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
-  const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
-  vector<double> tableau_row;
-  tableau_row.assign(numCol, 0.0);
-  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    if (col_status[iCol] == HighsBasisStatus::kBasic) continue;
-    // Get the tableau row entry for this nonbasic column
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      tableau_row[iCol] +=
-          dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
-  }
-
+  //  const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     // Nothing to check if basic or fixed (so value can be anything)
     if (col_status[iCol] == HighsBasisStatus::kBasic ||
@@ -68,36 +57,63 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       continue;
     if (col_status[iCol] == HighsBasisStatus::kLower) {
       // At lower bound so value should be non-positive
-      if (tableau_row[iCol] > 0) {
-        ray_error_norm += fabs(tableau_row[iCol]);
-        if (tableau_row[iCol] > zero_ray_value_tolerance && dev_run)
+      if (dual_unboundedness_direction_value[iCol] > 0) {
+        dual_unboundedness_direction_error_norm += fabs(dual_unboundedness_direction_value[iCol]);
+        if (dual_unboundedness_direction_value[iCol] > zero_ray_value_tolerance && dev_run)
           printf("Col %3" HIGHSINT_FORMAT
                  " is at lower bound so dual step should be "
                  "non-positive, and is %g\n",
-                 iCol, tableau_row[iCol]);
+                 iCol, dual_unboundedness_direction_value[iCol]);
       }
     } else if (col_status[iCol] == HighsBasisStatus::kUpper) {
       // At upper bound so value should be non-negative
-      if (tableau_row[iCol] < 0) {
-        ray_error_norm += fabs(tableau_row[iCol]);
-        if (tableau_row[iCol] < -zero_ray_value_tolerance && dev_run)
+      if (dual_unboundedness_direction_value[iCol] < 0) {
+        dual_unboundedness_direction_error_norm += fabs(dual_unboundedness_direction_value[iCol]);
+        if (dual_unboundedness_direction_value[iCol] < -zero_ray_value_tolerance && dev_run)
           printf("Col %3" HIGHSINT_FORMAT
                  " is at upper bound so dual step should be "
                  "non-negative, and is %g\n",
-                 iCol, tableau_row[iCol]);
+                 iCol, dual_unboundedness_direction_value[iCol]);
       }
     } else {
       // Free so value should be zero
       assert(col_status[iCol] == HighsBasisStatus::kZero);
-      if (fabs(tableau_row[iCol]) > 0) {
-        ray_error_norm += fabs(tableau_row[iCol]);
-        if (fabs(tableau_row[iCol]) > zero_ray_value_tolerance && dev_run)
+      if (fabs(dual_unboundedness_direction_value[iCol]) > 0) {
+        dual_unboundedness_direction_error_norm += fabs(dual_unboundedness_direction_value[iCol]);
+        if (fabs(dual_unboundedness_direction_value[iCol]) > zero_ray_value_tolerance && dev_run)
           printf("Col %3" HIGHSINT_FORMAT
                  " is free so dual step should be zero, and is %g\n",
-                 iCol, tableau_row[iCol]);
+                 iCol, dual_unboundedness_direction_value[iCol]);
       }
     }
   }
+  if (dev_run)
+    printf("checkDualUnboundednessDirection: dual_unboundedness_direction_error_norm = %g\n", dual_unboundedness_direction_error_norm);
+  REQUIRE(dual_unboundedness_direction_error_norm < 1e-6);
+}
+
+void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
+  const HighsLp& lp = highs.getLp();
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  double ray_error_norm = 0;
+  //  const vector<double>& colLower = lp.col_lower_;
+  //  const vector<double>& colUpper = lp.col_upper_;
+    const vector<double>& rowLower = lp.row_lower_;
+    const vector<double>& rowUpper = lp.row_upper_;
+  const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
+    const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
+  vector<double> dual_unboundedness_direction_value;
+  dual_unboundedness_direction_value.assign(numCol, 0.0);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    if (col_status[iCol] == HighsBasisStatus::kBasic) continue;
+    // Get the tableau row entry for this nonbasic column
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      dual_unboundedness_direction_value[iCol] +=
+          dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
+  }
+  checkDualUnboundednessDirection(highs, dual_unboundedness_direction_value);
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (row_status[iRow] == HighsBasisStatus::kBasic ||
         rowLower[iRow] == rowUpper[iRow])
@@ -408,7 +424,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
 						  dual_unboundedness_direction_value.data()) ==
 	      HighsStatus::kOk);
       REQUIRE(has_dual_unboundedness_direction);
-    
+
+      checkDualUnboundednessDirection(highs, dual_unboundedness_direction_value);
       presolve_status = "on";
       presolve_off = false;
       REQUIRE(highs.setOptionValue("presolve", kHighsOnString) == HighsStatus::kOk);
