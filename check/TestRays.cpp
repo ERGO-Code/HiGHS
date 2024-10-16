@@ -360,31 +360,41 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
     for (HighsInt k = 0; k < num_pass; k++) {
       // Loop twice, without and with presolve
+      if (dev_run)
+	printf("\nSolved %s with presolve %s\n", lp.model_name_.c_str(),
+	       presolve_status.c_str());
+      
       REQUIRE(highs.setBasis() == HighsStatus::kOk);
       REQUIRE(highs.run() == HighsStatus::kOk);
-      
-      if (dev_run)
-	printf("\nSolved %s with presolve %s: status = %s\n", lp.model_name_.c_str(),
-	       presolve_status.c_str(),
+      if (dev_run) printf("Model status = %s\n", 
 	       highs.modelStatusToString(highs.getModelStatus()).c_str());
-      
+   
       REQUIRE(highs.getModelStatus() == require_model_status);
       
-      // Check that there is a dual ray
-      dual_ray_value.resize(lp.num_row_);
-      REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
-      REQUIRE(has_dual_ray == presolve_off);
-      // Get the dual ray
-      REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
-	      HighsStatus::kOk);
-      vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
-      if (dev_run) {
-	printf("Dual ray:\nRow    computed    expected\n");
-	for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-	  printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
-		 dual_ray_value[iRow], expected_dual_ray[iRow]);
+      // Get the dual ray twice, to check that, second time, it's
+      // copied from ekk_instance_.dual_ray_
+      for (HighsInt p = 0; p < num_pass; p++) {
+	printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+	// Check that there is a dual ray
+	dual_ray_value.resize(lp.num_row_);
+	REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
+	// There is a dual ray iff this is the second pass or presolve is off 
+	bool require_dual_ray = p == 1 || presolve_off;
+	REQUIRE(has_dual_ray == require_dual_ray);
+
+	// Get the dual ray
+	REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+		HighsStatus::kOk);
+	vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
+	if (dev_run) {
+	  printf("Dual ray:\nRow    computed    expected\n");
+	  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+	    printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
+		   dual_ray_value[iRow], expected_dual_ray[iRow]);
+	}
+	checkDualRayValue(highs, dual_ray_value);
       }
-      checkDualRayValue(highs, dual_ray_value);
+
       // Check that there is no primal ray
       REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
       REQUIRE(has_primal_ray == false);

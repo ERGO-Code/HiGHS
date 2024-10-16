@@ -1489,7 +1489,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have dual ray for a MIP\n");
     return HighsStatus::kError;
   }
-  const bool has_invert = ekk_instance_.status_.has_invert;
+  printf("Highs::getDualRayInterface On entry has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
+	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
 
@@ -1528,7 +1530,11 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.status_.has_dual_ray;
+      has_invert = ekk_instance_.status_.has_invert;
+      assert(has_invert);
     }
+    printf("Highs::getDualRayInterface Midway   has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
+	   ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
     if (has_dual_ray) {
       if (ekk_instance_.dual_ray_.size()) {
 	// Dual ray is already computed
@@ -1546,10 +1552,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
 	  rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
 	  HighsInt* dual_ray_num_nz = 0;
 	  basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
-	// Now save the dual ray itself
-	ekk_instance_.dual_ray_.resize(num_row);
-	for (HighsInt iRow = 0; iRow < num_row; iRow++)
-	  ekk_instance_.dual_ray_[iRow] = dual_ray_value[iRow];
+	  // Now save the dual ray itself
+	  ekk_instance_.dual_ray_.resize(num_row);
+	  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+	    ekk_instance_.dual_ray_[iRow] = dual_ray_value[iRow];
       } else {
 	assert(!has_invert);
 	// Dual ray is known but cannot be calculated
@@ -1567,8 +1573,12 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->setOptionValue("presolve", presolve);
     model_.hessian_ = hessian;
     lp.col_cost_ = col_cost;
-    this->clearSolver();
+    printf("Highs::getDualRayInterface Before invalidateModelStatusSolutionAndInfo has_dual_ray = %d\n", ekk_instance_.status_.has_dual_ray);
+    this->invalidateModelStatusSolutionAndInfo();
+    printf("Highs::getDualRayInterface After  invalidateModelStatusSolutionAndInfo has_dual_ray = %d\n", ekk_instance_.status_.has_dual_ray);
   }
+  printf("Highs::getDualRayInterface On exit  has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
+	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
   return return_status;
 }
 
