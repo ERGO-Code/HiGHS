@@ -555,7 +555,9 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        mip_improving_solution_file("") {};
+	// clang-format off
+	mip_improving_solution_file("") {};
+  // clang-format on
 };
 
 // For now, but later change so HiGHS properties are string based so that new

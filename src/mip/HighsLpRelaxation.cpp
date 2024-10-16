@@ -1046,7 +1046,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue(
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
                         mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-  // lpsolver.setOptionValue("output_flag", true);
+  const bool solver_logging = false;
+  const bool detailed_simplex_logging = false;
+  if (solver_logging) lpsolver.setOptionValue("output_flag", true);
+  if (detailed_simplex_logging) {
+    lpsolver.setOptionValue("output_flag", true);
+    lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+    lpsolver.setOptionValue("highs_analysis_level",
+                            kHighsAnalysisLevelSolverRuntimeData);
+  }
   HighsStatus callstatus = lpsolver.run();
 
   const HighsInfo& info = lpsolver.getInfo();
@@ -1135,7 +1143,17 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     }
     case HighsModelStatus::kUnbounded:
-      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
+      // If unboundedness is detected in the presolved LP, then
+      // postsolve cannot be run, so there is no basis. Returning
+      // Status::kError as a result yielded #1962, where the root node
+      // is unbounded.
+      if (info.basis_validity == kBasisValidityInvalid) {
+        highsLogUser(mipsolver.options_mip_->log_options,
+                     HighsLogType::kWarning,
+                     "HighsLpRelaxation::run LP is unbounded with no basis, "
+                     "but not returning Status::kError\n");
+        //	return Status::kError;
+      }
 
       if (info.primal_solution_status == kSolutionStatusFeasible)
         mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
