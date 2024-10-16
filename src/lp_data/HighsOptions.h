@@ -555,7 +555,7 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-	// clang-format off
+        // clang-format off
 	mip_improving_solution_file("") {};
   // clang-format on
 };
