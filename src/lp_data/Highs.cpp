@@ -1664,10 +1664,10 @@ HighsStatus Highs::getDualUnboundednessDirection(
     HighsStatus status = getDualRay(has_dual_unboundedness_direction, dual_ray_value.data());
     if (status != HighsStatus::kOk || !has_dual_unboundedness_direction)
       return HighsStatus::kError;
-    std::vector<double> dual_ray_direction;
-    this->model_.lp_.a_matrix_.productTransposeQuad(dual_ray_direction, dual_ray_value);
+    std::vector<double> dual_unboundedness_direction;
+    this->model_.lp_.a_matrix_.productTransposeQuad(dual_unboundedness_direction, dual_ray_value);
     for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
-      dual_unboundedness_direction_value[iCol] = dual_ray_direction[iCol];    
+      dual_unboundedness_direction_value[iCol] = dual_unboundedness_direction[iCol];    
   } else {
     return getDualRay(has_dual_unboundedness_direction, nullptr);
   }   
@@ -1683,7 +1683,19 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 HighsStatus Highs::getPrimalUnboundednessDirection(
     bool& has_primal_unboundedness_direction,
     double* primal_unboundedness_direction_value) {
-  return HighsStatus::kError;
+  if (primal_unboundedness_direction_value) {
+    std::vector<double> primal_ray_value(this->model_.lp_.num_col_);
+    HighsStatus status = getPrimalRay(has_primal_unboundedness_direction, primal_ray_value.data());
+    if (status != HighsStatus::kOk || !has_primal_unboundedness_direction)
+      return HighsStatus::kError;
+    std::vector<double> primal_unboundedness_direction;
+    this->model_.lp_.a_matrix_.productTransposeQuad(primal_unboundedness_direction, primal_ray_value);
+    for (HighsInt iRow = 0; iRow < this->model_.lp_.num_row_; iRow++)
+      primal_unboundedness_direction_value[iRow] = primal_unboundedness_direction[iRow];    
+  } else {
+    return getPrimalRay(has_primal_unboundedness_direction, nullptr);
+  }   
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
