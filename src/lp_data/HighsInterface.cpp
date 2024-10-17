@@ -1485,8 +1485,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
-  printf("Highs::getDualRayInterface On entry has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
-	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
@@ -1532,8 +1530,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       has_invert = ekk_instance_.status_.has_invert;
       assert(has_invert);
     }
-    printf("Highs::getDualRayInterface Midway   has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
-	   ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
     if (has_dual_ray) {
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
       if (ekk_instance_.dual_ray_.size()) {
@@ -1577,8 +1573,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     assert(this->model_status_ == HighsModelStatus::kInfeasible);
     //    this->invalidateModelStatusSolutionAndInfo();
   }
-  printf("Highs::getDualRayInterface On exit  has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
-	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
   return return_status;
 }
 

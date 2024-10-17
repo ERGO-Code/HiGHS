@@ -1360,12 +1360,12 @@ HighsStatus Highs::run() {
         return returnFromRun(return_status, undo_mods);
       }
       case HighsPresolveStatus::kUnboundedOrInfeasible: {
+	highsLogUser(log_options, HighsLogType::kInfo,
+		     "Problem status detected on presolve: %s\n",
+		     modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible).c_str());
         if (options_.allow_unbounded_or_infeasible) {
           setHighsModelStatusAndClearSolutionAndBasis(
               HighsModelStatus::kUnboundedOrInfeasible);
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Problem status detected on presolve: %s\n",
-                       modelStatusToString(model_status_).c_str());
           return returnFromRun(return_status, undo_mods);
         }
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS

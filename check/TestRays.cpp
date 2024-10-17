@@ -360,7 +360,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> dual_unboundedness_direction_value;
   vector<double> primal_ray_value;
   const bool test_scipLpi3Lp = true;
-  const bool test_other = false;
+  const bool test_other = true;
   const bool test_scipLpi2Lp = test_other;
   const bool test_issue272Lp = test_other;
   const bool test_primalDualInfeasible1Lp = test_other;
