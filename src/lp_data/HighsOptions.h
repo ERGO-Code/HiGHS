@@ -238,10 +238,10 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 HighsStatus writeOptionsToFile(
     FILE* file, const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
-    const HighsFileType file_type = HighsFileType::kOther);
+    const HighsFileType file_type = HighsFileType::kFull);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_deviations = true,
-                   const HighsFileType file_type = HighsFileType::kOther);
+                   const bool report_only_deviations = false,
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportOption(FILE* file, const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
@@ -559,7 +559,7 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        mip_improving_solution_file("") {};
+        mip_improving_solution_file(""){};
 };
 
 // For now, but later change so HiGHS properties are string based so that new

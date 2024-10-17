@@ -4146,7 +4146,7 @@ void Highs::setBasisValidity() {
 HighsStatus Highs::openWriteFile(const string filename,
                                  const string method_name, FILE*& file,
                                  HighsFileType& file_type) const {
-  file_type = HighsFileType::kNone;
+  file_type = HighsFileType::kFull;
   if (filename == "") {
     // Empty file name: use stdout
     file = stdout;

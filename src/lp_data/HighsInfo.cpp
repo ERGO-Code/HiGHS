@@ -250,11 +250,15 @@ InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
   return InfoStatus::kOk;
 }
 
+HighsStatus writeInfoToFile(FILE* file, const bool valid, const HighsInfo& info,
+                            const HighsFileType file_type) {
+  return writeInfoToFile(file, valid, info.records, file_type);
+}
+
 HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const HighsFileType file_type) {
-  const bool md_file = file_type == HighsFileType::kMd;
-  const bool documentation_file = md_file;
+  const bool documentation_file = file_type == HighsFileType::kMd;
   if (!documentation_file && !valid) return HighsStatus::kWarning;
   if (documentation_file || valid) reportInfo(file, info_records, file_type);
   return HighsStatus::kOk;
@@ -277,39 +281,43 @@ void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
 
 void reportInfo(FILE* file, const InfoRecordInt64& info,
                 const HighsFileType file_type) {
-  const bool md_file = file_type == HighsFileType::kMd;
-  if (md_file) {
+  if (file_type == HighsFileType::kMd) {
     fprintf(file, "## %s\n- %s\n- Type: long integer\n\n",
             highsInsertMdEscapes(info.name).c_str(),
             highsInsertMdEscapes(info.description).c_str());
-  } else {
+  } else if (file_type == HighsFileType::kFull) {
     fprintf(file, "\n# %s\n# [type: int64_t]\n%s = %" PRId64 "\n",
             info.description.c_str(), info.name.c_str(), *info.value);
+  } else {
+    fprintf(file, "%s = %" PRId64 "\n", info.name.c_str(), *info.value);
   }
 }
 
 void reportInfo(FILE* file, const InfoRecordInt& info,
                 const HighsFileType file_type) {
-  const bool md_file = file_type == HighsFileType::kMd;
-  if (md_file) {
+  if (file_type == HighsFileType::kMd) {
     fprintf(file, "## %s\n- %s\n- Type: integer\n\n",
             highsInsertMdEscapes(info.name).c_str(),
             highsInsertMdEscapes(info.description).c_str());
-  } else {
+  } else if (file_type == HighsFileType::kFull) {
     fprintf(file, "\n# %s\n# [type: HighsInt]\n%s = %" HIGHSINT_FORMAT "\n",
             info.description.c_str(), info.name.c_str(), *info.value);
+  } else {
+    fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
+            *info.value);
   }
 }
 
 void reportInfo(FILE* file, const InfoRecordDouble& info,
                 const HighsFileType file_type) {
-  const bool md_file = file_type == HighsFileType::kMd;
-  if (md_file) {
+  if (file_type == HighsFileType::kMd) {
     fprintf(file, "## %s\n- %s\n- Type: double\n\n",
             highsInsertMdEscapes(info.name).c_str(),
             highsInsertMdEscapes(info.description).c_str());
-  } else {
+  } else if (file_type == HighsFileType::kFull) {
     fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n",
             info.description.c_str(), info.name.c_str(), *info.value);
+  } else {
+    fprintf(file, "%s = %g\n", info.name.c_str(), *info.value);
   }
 }
