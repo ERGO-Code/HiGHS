@@ -367,6 +367,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   const HighsInt num_pass = 2;
 
   //  special_lps.issue285Lp(lp, require_model_status);
+
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
   std::string presolve_status = "off";
   bool presolve_off = true;
@@ -378,7 +379,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     for (HighsInt k = 0; k < num_pass; k++) {
       // Loop twice, without and with presolve
       if (dev_run)
-	printf("\nSolved %s with presolve %s\n", lp.model_name_.c_str(),
+	printf("\nSolving %s with presolve %s\n", lp.model_name_.c_str(),
 	       presolve_status.c_str());
       
       REQUIRE(highs.setBasis() == HighsStatus::kOk);
@@ -456,13 +457,15 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
     REQUIRE(highs.setBasis() == HighsStatus::kOk);
     if (dev_run) highs.setOptionValue("log_dev_level", 1);
+   if (dev_run)
+      printf("\nSolving %s with presolve %s\n", lp.model_name_.c_str(),
+	       presolve_status.c_str());
     REQUIRE(highs.run() == HighsStatus::kOk);
-    if (dev_run)
-      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
-    
+     
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
     REQUIRE(highs.getModelStatus() == require_model_status);
+      if (dev_run) printf("Model status = %s\n", 
+	       highs.modelStatusToString(highs.getModelStatus()).c_str());
     
     // Check that there is no dual ray
     REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
@@ -491,10 +494,12 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     special_lps.primalDualInfeasible1Lp(lp, require_model_status);
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
     REQUIRE(highs.setBasis() == HighsStatus::kOk);
+   if (dev_run)
+      printf("\nSolving %s with presolve %s\n", lp.model_name_.c_str(),
+	       presolve_status.c_str());
     REQUIRE(highs.run() == HighsStatus::kOk);
-    if (dev_run)
-      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+      if (dev_run) printf("Model status = %s\n", 
+	       highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == require_model_status);
     // Check that there is no dual ray
     REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
@@ -543,47 +548,89 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   //         x - y == 0
   //
   // which has a primal ray: [d, d], for all d > 0.
+  bool has_dual_ray;
+  bool has_primal_ray;
+  vector<double> dual_ray_value;
+  vector<double> primal_ray_value;
+  vector<double> primal_unboundedness_direction_value;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  double inf = highs.getInfinity();
-  highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
-  highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
+  highs.addCol(-1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
+  highs.addCol(-1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
-  highs.setOptionValue("presolve", kHighsOffString);
-  highs.run();
-  if (dev_run)
-    printf("Solved 464a without presolve: status = %s\n",
-           highs.modelStatusToString(highs.getModelStatus()).c_str());
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
-  bool has_ray = false;
-  REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
-  REQUIRE(has_ray == true);
-  vector<double> ray_value;
-  ray_value.assign(2, NAN);
-  highs.getPrimalRay(has_ray, ray_value.data());
-  checkPrimalRayValue(highs, ray_value);
-  REQUIRE(has_ray);
-  REQUIRE(ray_value[0] == ray_value[1]);
-  REQUIRE(ray_value[0] > 0);
-  // Now repeat with presolve
-  highs.setOptionValue("presolve", kHighsOnString);
-  highs.clearSolver();
-  highs.run();
-  if (dev_run)
-    printf("Solved 464a with presolve: status = %s\n",
-           highs.modelStatusToString(highs.getModelStatus()).c_str());
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
-  has_ray = false;
-  REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
-  REQUIRE(has_ray == true);
-  ray_value.assign(2, NAN);
-  highs.getPrimalRay(has_ray, ray_value.data());
-  checkPrimalRayValue(highs, ray_value);
-  REQUIRE(has_ray);
-  REQUIRE(ray_value[0] == ray_value[1]);
-  REQUIRE(ray_value[0] > 0);
+  highs.passModelName("464a");
+  const HighsLp& lp = highs.getLp();
+
+  const HighsInt num_pass = 2;
+
+  const bool allow_unbounded_or_infeasible = true;
+  REQUIRE(highs.setOptionValue("allow_unbounded_or_infeasible", allow_unbounded_or_infeasible) == HighsStatus::kOk);
+
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
+  std::string presolve_status = "off";
+  bool presolve_off = true;
+  HighsModelStatus require_model_status = allow_unbounded_or_infeasible ?
+    HighsModelStatus::kUnboundedOrInfeasible :
+    HighsModelStatus::kUnbounded;
+
+  for (HighsInt k = 0; k < num_pass; k++) {
+    // Loop twice, without and with presolve
+    if (dev_run)
+      printf("\nSolving %s with presolve %s\n", lp.model_name_.c_str(),
+	     presolve_status.c_str());
+    
+    REQUIRE(highs.setBasis() == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    if (dev_run) printf("Model status = %s\n", 
+			highs.modelStatusToString(highs.getModelStatus()).c_str());
+    
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    // Get the primal ray twice, to check that, second time, it's
+    // copied from ekk_instance_.primal_ray_
+    for (HighsInt p = 0; p < num_pass; p++) {
+      printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+      // Check that there is a primal ray
+      primal_ray_value.resize(lp.num_col_);
+      REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+      // There should be a known primal ray if this is the second pass
+      // - not on first pass with allow_unbounded_or_infeasible true,
+      // since presolve/simplex yield model status
+      // HighsModelStatus::kUnboundedOrInfeasible
+      bool require_primal_ray = p == 1 || !allow_unbounded_or_infeasible;
+      REQUIRE(has_primal_ray == require_primal_ray);
+
+      // Get the primal ray
+      REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+	      HighsStatus::kOk);
+      //      primal_ray_value.assign(2, NAN);
+      highs.getPrimalRay(has_primal_ray, primal_ray_value.data());
+      REQUIRE(has_primal_ray);
+      REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
+      REQUIRE(primal_ray_value[0] > 0);
+      checkPrimalRayValue(highs, primal_ray_value);
+    }
+    
+      // Check that there is no dual ray
+      REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
+      REQUIRE(has_dual_ray == false);
+      highs.clearSolver();
+
+      //      // Now check primal unboundedness direction
+      //      primal_unboundedness_direction_value.resize(lp.num_col_);
+      //      bool has_primal_unboundedness_direction;
+      //      REQUIRE(highs.getPrimalUnboundednessDirection(has_primal_unboundedness_direction,
+      //						  primal_unboundedness_direction_value.data()) ==
+      //	      HighsStatus::kOk);
+      //      REQUIRE(has_primal_unboundedness_direction);
+      //
+      //      checkPrimalUnboundednessDirection(highs, primal_unboundedness_direction_value);
+      presolve_status = "on";
+      presolve_off = false;
+      REQUIRE(highs.setOptionValue("presolve", kHighsOnString) == HighsStatus::kOk);
+      highs.clearSolver();
+  }
 }
 
 TEST_CASE("Rays-464b", "[highs_test_rays]") {
@@ -593,34 +640,92 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   //         x,  y >= 0
   //
   // which has a primal ray: [d, d], for all d > 0.
+  bool has_dual_ray;
+  bool has_primal_ray;
+  vector<double> dual_ray_value;
+  vector<double> primal_ray_value;
+  vector<double> primal_unboundedness_direction_value;
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  double inf = highs.getInfinity();
-  highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
-  highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  highs.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
-  //  highs.setOptionValue("presolve", "off");
-  highs.run();
-  if (dev_run)
-    printf("Solved 464b without presolve: status = %s\n",
-           highs.modelStatusToString(highs.getModelStatus()).c_str());
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
-  bool has_ray = false;
-  REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
-  REQUIRE(has_ray == true);
-  vector<double> ray_value;
-  ray_value.assign(2, NAN);
-  highs.getPrimalRay(has_ray, ray_value.data());
-  checkPrimalRayValue(highs, ray_value);
-  REQUIRE(has_ray);
-  REQUIRE(ray_value[0] == ray_value[1]);
-  REQUIRE(ray_value[0] > 0);
+  highs.passModelName("464b");
+  const HighsLp& lp = highs.getLp();
+
+  const HighsInt num_pass = 2;
+
+  const bool allow_unbounded_or_infeasible = false;
+  REQUIRE(highs.setOptionValue("allow_unbounded_or_infeasible", allow_unbounded_or_infeasible) == HighsStatus::kOk);
+
+  REQUIRE(highs.setOptionValue("presolve", kHighsOffString) == HighsStatus::kOk);
+  std::string presolve_status = "off";
+  bool presolve_off = true;
+  HighsModelStatus require_model_status = allow_unbounded_or_infeasible ?
+    HighsModelStatus::kUnboundedOrInfeasible :
+    HighsModelStatus::kUnbounded;
+
+  for (HighsInt k = 0; k < num_pass; k++) {
+    // Loop twice, without and with presolve
+    if (dev_run)
+      printf("\nSolving %s with presolve %s\n", lp.model_name_.c_str(),
+	     presolve_status.c_str());
+    
+    REQUIRE(highs.setBasis() == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    if (dev_run) printf("Model status = %s\n", 
+			highs.modelStatusToString(highs.getModelStatus()).c_str());
+    
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    // Get the primal ray twice, to check that, second time, it's
+    // copied from ekk_instance_.primal_ray_
+    for (HighsInt p = 0; p < num_pass; p++) {
+      printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+      // Check that there is a primal ray
+      primal_ray_value.resize(lp.num_col_);
+      REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+      // There should be a known primal ray if this is the second pass
+      // - but also on first pass with allow_unbounded_or_infeasible
+      // false, since presolve/simplex yield model status
+      // HighsModelStatus::kUnbounded
+      bool require_primal_ray = p == 1 || !allow_unbounded_or_infeasible;
+      REQUIRE(has_primal_ray == require_primal_ray);
+
+      // Get the primal ray
+      REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+	      HighsStatus::kOk);
+      //      primal_ray_value.assign(2, NAN);
+      highs.getPrimalRay(has_primal_ray, primal_ray_value.data());
+      REQUIRE(has_primal_ray);
+      REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
+      REQUIRE(primal_ray_value[0] > 0);
+      checkPrimalRayValue(highs, primal_ray_value);
+    }
+    
+      // Check that there is no dual ray
+      REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
+      REQUIRE(has_dual_ray == false);
+      highs.clearSolver();
+
+      //      // Now check primal unboundedness direction
+      //      primal_unboundedness_direction_value.resize(lp.num_col_);
+      //      bool has_primal_unboundedness_direction;
+      //      REQUIRE(highs.getPrimalUnboundednessDirection(has_primal_unboundedness_direction,
+      //						  primal_unboundedness_direction_value.data()) ==
+      //	      HighsStatus::kOk);
+      //      REQUIRE(has_primal_unboundedness_direction);
+      //
+      //      checkPrimalUnboundednessDirection(highs, primal_unboundedness_direction_value);
+      presolve_status = "on";
+      presolve_off = false;
+      REQUIRE(highs.setOptionValue("presolve", kHighsOnString) == HighsStatus::kOk);
+      highs.clearSolver();
+  }
 }
 
-/*
-  TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
+TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   HighsModel model;
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
@@ -640,18 +745,19 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   hessian.index_ = {0, 1};
   hessian.value_ = {1, 1};
   Highs highs;
-  //highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   highs.run();
-  //  if (dev_run)
-  printf("Solved infeasible QP: status = %s\n",
+  if (dev_run)
+    printf("Solved infeasible QP: status = %s\n",
   highs.modelStatusToString(highs.getModelStatus()).c_str());
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   bool has_ray = false;
   REQUIRE(highs.getDualRay(has_ray) == HighsStatus::kOk);
-  REQUIRE(has_ray == true);
+  REQUIRE(has_ray == false);
   std::vector<double> ray_value;
   ray_value.assign(2, NAN);
-  highs.getDualRay(has_ray, ray_value.data());
-  }
-*/
+  REQUIRE(highs.getDualRay(has_ray, ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(has_ray);
+  
+}
