@@ -2448,7 +2448,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsIntegrality "
+                 "Interval [%d, %d] supplied to Highs::changeColsIntegrality "
                  "is out of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2555,7 +2555,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsCost is out "
+                 "Interval [%d, %d] supplied to Highs::changeColsCost is out "
                  "of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2625,7 +2625,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsBounds is out "
+                 "Interval [%d, %d] supplied to Highs::changeColsBounds is out "
                  "of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2706,7 +2706,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeRowsBounds is out "
+                 "Interval [%d, %d] supplied to Highs::changeRowsBounds is out "
                  "of range [0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
@@ -2827,7 +2827,7 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::getCols is out of range "
+                 "Interval [%d, %d] supplied to Highs::getCols is out of range "
                  "[0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2948,7 +2948,7 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::getRows is out of range "
+                 "Interval [%d, %d] supplied to Highs::getRows is out of range "
                  "[0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
@@ -3063,7 +3063,7 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::deleteCols is out of "
+                 "Interval [%d, %d] supplied to Highs::deleteCols is out of "
                  "range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -3107,7 +3107,7 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::deleteRows is out of "
+                 "Interval [%d, %d] supplied to Highs::deleteRows is out of "
                  "range [0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;

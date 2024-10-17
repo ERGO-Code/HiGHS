@@ -1494,9 +1494,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   // recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
-  std::vector<HighsVarType> integrality;
+  bool solve_relaxation;
   std::string presolve;
-  bool recover_local_mods = false;
+  bool solve_feasibility_problem = false;
+  const bool is_qp = model_.isQp();
 
   if (dual_ray_value != NULL) {
      // User wants a dual ray whatever
@@ -1516,16 +1517,23 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       // Save the column costs, integrality, any Hessian and the
       // presolve setting
       col_cost = lp.col_cost_;
-      integrality = lp.integrality_;
-      hessian = model_.hessian_;
+      if (is_qp) hessian = model_.hessian_;
       this->getOptionValue("presolve", presolve);
-      recover_local_mods = true;
+      this->getOptionValue("solve_relaxation", solve_relaxation);
+      solve_feasibility_problem = true;
       // Zero the costs, integrality and Hessian
-      lp.col_cost_.assign(lp.num_col_, 0);
-      lp.integrality_.clear();
-      model_.hessian_.clear();
+      std::vector<double> zero_costs;
+      zero_costs.assign(lp.num_col_, 0);
+      HighsStatus status = this->changeColsCost(0, lp.num_col_-1, zero_costs.data());
+      assert(status == HighsStatus::kOk);
+      if (is_qp) {
+	HighsHessian zero_hessian;
+	this->passHessian(zero_hessian);
+      }
       this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
       HighsStatus call_status = this->run();
+      this->writeSolution("", kSolutionStylePretty);
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.status_.has_dual_ray;
       has_invert = ekk_instance_.status_.has_invert;
@@ -1566,12 +1574,21 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       return_status = HighsStatus::kWarning;
     }
   }
-  if (recover_local_mods) {
-    this->setOptionValue("presolve", presolve);
-    lp.col_cost_ = col_cost;
-    lp.integrality_ = integrality;
-    model_.hessian_ = hessian;
+  if (solve_feasibility_problem) {
+    // Feasibility problem has been solved, so any dual information has been lost. 
+    this->writeInfo("");
     assert(this->model_status_ == HighsModelStatus::kInfeasible);
+    HighsStatus status = this->changeColsCost(0, lp.num_col_-1, col_cost.data());
+    assert(status == HighsStatus::kOk);
+    if (is_qp) this->passHessian(hessian);
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
+    this->model_status_ = HighsModelStatus::kInfeasible;
+    printf("\nAfter recovering objective\n");
+    this->writeInfo("");
+    fflush(stdout);
+    assert(this->info_.num_primal_infeasibilities > 0);
+    assert(this->info_.num_dual_infeasibilities < 0);
   }
   return return_status;
 }
@@ -1602,7 +1619,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   std::vector<HighsVarType> integrality;
   std::string presolve;
   bool allow_unbounded_or_infeasible;
-  bool recover_local_mods = false;
+  bool solve_feasibility_problem = false;
 
   if (primal_ray_value != NULL) {
     // User wants a primal ray whatever
@@ -1625,11 +1642,11 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       integrality = lp.integrality_;
       this->getOptionValue("allow_unbounded_or_infeasible", allow_unbounded_or_infeasible);
       this->getOptionValue("presolve", presolve);
-      recover_local_mods = true;
-      lp.col_lower_.assign(lp.num_col_, -kHighsInf);
-      lp.col_upper_.assign(lp.num_col_, kHighsInf);
-      lp.row_lower_.assign(lp.num_row_, -kHighsInf);
-      lp.row_upper_.assign(lp.num_row_, kHighsInf);
+      solve_feasibility_problem = true;
+//      lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+//      lp.col_upper_.assign(lp.num_col_, kHighsInf);
+//      lp.row_lower_.assign(lp.num_row_, -kHighsInf);
+//      lp.row_upper_.assign(lp.num_row_, kHighsInf);
       lp.integrality_.clear();
       this->setOptionValue("allow_unbounded_or_infeasible", false);
       this->setOptionValue("presolve", kHighsOffString);
@@ -1684,7 +1701,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 	ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
     }
   }
-  if (recover_local_mods) {
+  if (solve_feasibility_problem) {
     lp.col_lower_ = col_lower;
     lp.col_upper_ = col_upper;
     lp.row_lower_ = row_lower;

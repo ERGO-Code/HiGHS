@@ -7,6 +7,17 @@
 const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-14;
 
+void reportRay(std::string message, HighsInt dim, double* computed, double* expected) {
+  printf("%s    computed", message.c_str());
+  if (expected) printf("    expected");
+  printf("\n");
+  for (HighsInt iX = 0; iX < dim; iX++) {    
+    printf("%3" HIGHSINT_FORMAT " %11.4g", iX, computed[iX]);  
+    if (expected) printf(" %11.4g", expected[iX]);  
+    printf("\n");
+  }
+}
+
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
                        const vector<double>& expected_ray_value) {
   bool ray_error = false;
@@ -360,7 +371,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> dual_unboundedness_direction_value;
   vector<double> primal_ray_value;
   const bool test_scipLpi3Lp = true;
-  const bool test_other = true;
+  const bool test_other = false;
   const bool test_scipLpi2Lp = test_other;
   const bool test_issue272Lp = test_other;
   const bool test_primalDualInfeasible1Lp = test_other;
@@ -404,12 +415,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
 	REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
 		HighsStatus::kOk);
 	vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
-	if (dev_run) {
-	  printf("Dual ray:\nRow    computed    expected\n");
-	  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-	    printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
-		   dual_ray_value[iRow], expected_dual_ray[iRow]);
-	}
+	checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray);
+	if (dev_run) reportRay("Dual ray:\nRow", lp.num_row_, dual_ray_value.data(), expected_dual_ray.data());
 	checkDualRayValue(highs, dual_ray_value);
       }
 
@@ -478,12 +485,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
 	    HighsStatus::kOk);
     vector<double> expected_primal_ray = {0.5, -1};
-    if (dev_run) {
-      printf("Primal ray:\nRow    computed    expected\n");
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-	printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
-	       primal_ray_value[iRow], expected_primal_ray[iRow]);
-    }
+    if (dev_run) reportRay("Primal ray:\nCol", lp.num_col_, primal_ray_value.data(), expected_primal_ray.data());
     checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray);
     checkPrimalRayValue(highs, primal_ray_value);
   }
@@ -606,6 +608,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
 	      HighsStatus::kOk);
       //      primal_ray_value.assign(2, NAN);
       highs.getPrimalRay(has_primal_ray, primal_ray_value.data());
+      if (dev_run) reportRay("Primal ray:\nCol", lp.num_col_, primal_ray_value.data(), nullptr);
       REQUIRE(has_primal_ray);
       REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
       REQUIRE(primal_ray_value[0] > 0);
@@ -698,6 +701,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
 	      HighsStatus::kOk);
       //      primal_ray_value.assign(2, NAN);
       highs.getPrimalRay(has_primal_ray, primal_ray_value.data());
+      if (dev_run) reportRay("Primal ray:\nCol", lp.num_col_, primal_ray_value.data(), nullptr);
       REQUIRE(has_primal_ray);
       REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
       REQUIRE(primal_ray_value[0] > 0);
