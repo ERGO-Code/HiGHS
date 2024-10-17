@@ -1345,9 +1345,8 @@ class Highs {
 
   HighsStatus resetHighsOptions();
 
-  HighsStatus writeHighsOptions(
-      const std::string& filename,  //!< The filename
-      const bool report_only_non_default_values = true);
+  HighsStatus writeHighsOptions(const std::string& filename,  //!< The filename
+                                const bool report_only_deviations = true);
 
   HighsInt getSimplexIterationCount() {
     deprecationMessage("getSimplexIterationCount", "None");
