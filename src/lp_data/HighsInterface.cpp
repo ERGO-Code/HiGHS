@@ -1626,10 +1626,10 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->getOptionValue("allow_unbounded_or_infeasible", allow_unbounded_or_infeasible);
       this->getOptionValue("presolve", presolve);
       recover_local_mods = true;
-//      lp.col_lower_.assign(lp.num_col_, -kHighsInf);
-//      lp.col_upper_.assign(lp.num_col_, kHighsInf);
-//      lp.row_lower_.assign(lp.num_row_, -kHighsInf);
-//      lp.row_upper_.assign(lp.num_row_, kHighsInf);
+      lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+      lp.col_upper_.assign(lp.num_col_, kHighsInf);
+      lp.row_lower_.assign(lp.num_row_, -kHighsInf);
+      lp.row_upper_.assign(lp.num_row_, kHighsInf);
       lp.integrality_.clear();
       this->setOptionValue("allow_unbounded_or_infeasible", false);
       this->setOptionValue("presolve", kHighsOffString);
