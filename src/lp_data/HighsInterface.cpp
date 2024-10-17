@@ -1485,10 +1485,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
-  if (lp.isMip()) {
-    highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have dual ray for a MIP\n");
-    return HighsStatus::kError;
-  }
   printf("Highs::getDualRayInterface On entry has_dual_ray = %d; dual_ray_row = %d; dual_ray_size = %d\n",
 	 ekk_instance_.status_.has_dual_ray, ekk_instance_.info_.dual_ray_row_, int(ekk_instance_.dual_ray_.size()));
   bool has_invert = ekk_instance_.status_.has_invert;
@@ -1498,6 +1494,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   // Declare identifiers to save column costs, any Hessian and the
   // presolve setting, and a flag to know when they should be
   // recovered
+  std::vector<HighsVarType> integrality;
   std::vector<double> col_cost;
   HighsHessian hessian;
   std::string presolve;
@@ -1520,11 +1517,13 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
 		   "Solving LP to try to compute dual ray\n");
       // Save the column costs and any Hessian
       col_cost = lp.col_cost_;
+      integrality = lp.integrality_;
       hessian = model_.hessian_;
       this->getOptionValue("presolve", presolve);
       recover_local_mods = true;
       // Zero the costs and Hessian
       lp.col_cost_.assign(lp.num_col_, 0);
+      lp.integrality_.clear();
       model_.hessian_.clear();
       this->setOptionValue("presolve", kHighsOffString);
       HighsStatus call_status = this->run();
@@ -1572,8 +1571,9 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   }
   if (recover_local_mods) {
     this->setOptionValue("presolve", presolve);
-    model_.hessian_ = hessian;
     lp.col_cost_ = col_cost;
+    lp.integrality_ = integrality;
+    model_.hessian_ = hessian;
     assert(this->model_status_ == HighsModelStatus::kInfeasible);
     //    this->invalidateModelStatusSolutionAndInfo();
   }
@@ -1590,10 +1590,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the primal ray is vacuous
   if (num_row == 0) return return_status;
-  if (lp.isMip()) {
-    highsLogUser(options_.log_options, HighsLogType::kError, "Cannot have primal ray for a MIP\n");
-    return HighsStatus::kError;
-  }
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
