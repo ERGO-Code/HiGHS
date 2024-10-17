@@ -216,16 +216,16 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  char stringbuffer[LP_MAX_LINE_LENGTH + 1];
+  std::array<char, LP_MAX_LINE_LENGTH + 1> stringbuffer = {};
   HighsInt tokenlength =
-      vsnprintf(stringbuffer, sizeof stringbuffer, format, argptr);
+      vsnprintf(stringbuffer.data(), stringbuffer.size(), format, argptr);
   va_end(argptr);
   if (this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
     fprintf(file, "\n");
-    fprintf(file, "%s", stringbuffer);
+    fprintf(file, "%s", stringbuffer.data());
     this->linelength = tokenlength;
   } else {
-    fprintf(file, "%s", stringbuffer);
+    fprintf(file, "%s", stringbuffer.data());
     this->linelength += tokenlength;
   }
 }

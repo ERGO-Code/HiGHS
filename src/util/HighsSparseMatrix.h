@@ -95,6 +95,9 @@ class HighsSparseMatrix {
   void productQuad(vector<double>& result, const vector<double>& x,
                    const HighsInt debug_report = kDebugReportOff) const;
   void productTransposeQuad(
+      vector<double>& result_value, const vector<double>& x,
+      const HighsInt debug_report = kDebugReportOff) const;
+  void productTransposeQuad(
       vector<double>& result_value, vector<HighsInt>& result_index,
       const HVector& x, const HighsInt debug_report = kDebugReportOff) const;
   // Methods for PRICE, including the creation and updating of the

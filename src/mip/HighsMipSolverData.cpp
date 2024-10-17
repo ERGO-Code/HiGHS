@@ -27,7 +27,7 @@ bool HighsMipSolverData::checkSolution(
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
+        fractionality(solution[i]) > feastol)
       return false;
   }
 
@@ -57,7 +57,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
-        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
+        fractionality(solution[i]) > feastol)
       return false;
 
     obj += mipsolver.colCost(i) * solution[i];
@@ -523,14 +523,10 @@ void HighsMipSolverData::runSetup() {
     HighsInt end = ARstart_[i + 1];
     bool integral = true;
     for (HighsInt j = start; j != end; ++j) {
-      if (integral) {
-        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::kContinuous)
-          integral = false;
-        else {
-          double intval = std::floor(ARvalue_[j] + 0.5);
-          if (std::abs(ARvalue_[j] - intval) > epsilon) integral = false;
-        }
-      }
+      integral =
+          integral &&
+          mipsolver.variableType(ARindex_[j]) != HighsVarType::kContinuous &&
+          fractionality(ARvalue_[j]) <= epsilon;
 
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
     }
@@ -597,8 +593,7 @@ void HighsMipSolverData::runSetup() {
         break;
       case HighsVarType::kInteger:
         if (domain.isFixed(i)) {
-          if (std::abs(domain.col_lower_[i] -
-                       std::floor(domain.col_lower_[i] + 0.5)) > feastol) {
+          if (fractionality(domain.col_lower_[i]) > feastol) {
             // integer variable is fixed to a fractional value -> infeasible
             mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
             lower_bound = kHighsInf;
@@ -729,8 +724,7 @@ try_again:
         mipsolver.orig_model_->col_cost_[i] * value;
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
-      double intval = std::floor(value + 0.5);
-      double integrality_infeasibility = std::fabs(intval - value);
+      double integrality_infeasibility = fractionality(value);
       if (integrality_infeasibility >
           mipsolver.options_mip_->mip_feasibility_tolerance) {
         if (debug_report)
@@ -1143,8 +1137,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 }
 
 static std::array<char, 22> convertToPrintString(int64_t val) {
+  decltype(convertToPrintString(std::declval<int64_t>())) printString = {};
   double l = std::log10(std::max(1.0, double(val)));
-  std::array<char, 22> printString;
   switch (int(l)) {
     case 0:
     case 1:
@@ -1152,15 +1146,17 @@ static std::array<char, 22> convertToPrintString(int64_t val) {
     case 3:
     case 4:
     case 5:
-      std::snprintf(printString.data(), 22, "%" PRId64, val);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64, val);
       break;
     case 6:
     case 7:
     case 8:
-      std::snprintf(printString.data(), 22, "%" PRId64 "k", val / 1000);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64 "k",
+                    val / 1000);
       break;
     default:
-      std::snprintf(printString.data(), 22, "%" PRId64 "m", val / 1000000);
+      std::snprintf(printString.data(), printString.size(), "%" PRId64 "m",
+                    val / 1000000);
   }
 
   return printString;
@@ -1168,7 +1164,8 @@ static std::array<char, 22> convertToPrintString(int64_t val) {
 
 static std::array<char, 22> convertToPrintString(double val,
                                                  const char* trailingStr = "") {
-  std::array<char, 22> printString;
+  decltype(convertToPrintString(std::declval<double>(),
+                                std::declval<char*>())) printString = {};
   double l = std::abs(val) == kHighsInf
                  ? 0.0
                  : std::log10(std::max(1e-6, std::abs(val)));
@@ -1177,29 +1174,34 @@ static std::array<char, 22> convertToPrintString(double val,
     case 1:
     case 2:
     case 3:
-      std::snprintf(printString.data(), 22, "%.10g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.10g%s", val,
+                    trailingStr);
       break;
     case 4:
-      std::snprintf(printString.data(), 22, "%.11g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.11g%s", val,
+                    trailingStr);
       break;
     case 5:
-      std::snprintf(printString.data(), 22, "%.12g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.12g%s", val,
+                    trailingStr);
       break;
     case 6:
     case 7:
     case 8:
     case 9:
     case 10:
-      std::snprintf(printString.data(), 22, "%.13g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.13g%s", val,
+                    trailingStr);
       break;
     default:
-      std::snprintf(printString.data(), 22, "%.9g%s", val, trailingStr);
+      std::snprintf(printString.data(), printString.size(), "%.9g%s", val,
+                    trailingStr);
   }
 
   return printString;
 }
 
-void HighsMipSolverData::printDisplayLine(char first) {
+void HighsMipSolverData::printDisplayLine(char source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1214,10 +1216,11 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (first == ' ' &&
+  if (source == ' ' &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
+  char use_source = source != 'Z' ? source : ' ';
 
   if (num_disp_lines % 20 == 0) {
     highsLogUser(
@@ -1236,11 +1239,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
   ++num_disp_lines;
 
-  std::array<char, 22> print_nodes = convertToPrintString(num_nodes);
-  std::array<char, 22> queue_nodes =
-      convertToPrintString(nodequeue.numActiveNodes());
-  std::array<char, 22> print_leaves =
-      convertToPrintString(num_leaves - num_leaves_before_run);
+  auto print_nodes = convertToPrintString(num_nodes);
+  auto queue_nodes = convertToPrintString(nodequeue.numActiveNodes());
+  auto print_leaves = convertToPrintString(num_leaves - num_leaves_before_run);
 
   double explored = 100 * double(pruned_treeweight);
 
@@ -1250,8 +1251,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double ub = kHighsInf;
   double gap = kHighsInf;
 
-  std::array<char, 22> print_lp_iters =
-      convertToPrintString(total_lp_iterations);
+  auto print_lp_iters = convertToPrintString(total_lp_iterations);
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
 
@@ -1262,7 +1262,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     else
       gap = 100. * (ub - lb) / fabs(ub);
 
-    std::array<char, 22> gap_string;
+    std::array<char, 22> gap_string = {};
     if (gap >= 9999.)
       std::strcpy(gap_string.data(), "Large");
     else
@@ -1276,7 +1276,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
@@ -1284,7 +1284,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
                  " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap_string.data(),
         cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
         conflictPool.getNumConflicts(), print_lp_iters.data(), time);
@@ -1297,7 +1297,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     } else
       ub_string = convertToPrintString((int)mipsolver.orig_model_->sense_ * ub);
 
-    std::array<char, 22> lb_string =
+    auto lb_string =
         convertToPrintString((int)mipsolver.orig_model_->sense_ * lb);
 
     highsLogUser(
@@ -1305,7 +1305,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         // clang-format off
         " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
         explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
@@ -1870,8 +1870,11 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     return true;
   }
 
-  if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
-      options.time_limit) {
+  //  const double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  //  printf("checkLimits: time = %g\n", time);
+  if (options.time_limit < kHighsInf &&
+      mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
+          options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Reached time limit\n");
@@ -1941,9 +1944,11 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   }
   FILE* file = mipsolver.improving_solution_file_;
   if (file) {
-    writeLpObjective(file, *(mipsolver.orig_model_), mipsolver.solution_);
+    writeLpObjective(file, mipsolver.options_mip_->log_options,
+                     *(mipsolver.orig_model_), mipsolver.solution_);
     writePrimalSolution(
-        file, *(mipsolver.orig_model_), mipsolver.solution_,
+        file, mipsolver.options_mip_->log_options, *(mipsolver.orig_model_),
+        mipsolver.solution_,
         mipsolver.options_mip_->mip_improving_solution_report_sparse);
   }
 }
@@ -1999,6 +2004,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
+  mipsolver.callback_->data_out.mip_total_lp_iterations =
+      mipsolver.mipdata_->total_lp_iterations;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
   // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,

@@ -17,6 +17,7 @@
 #include <sstream>
 
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -158,6 +159,11 @@ class Highs {
    * @brief Pass a row name to the incumbent model
    */
   HighsStatus passRowName(const HighsInt row, const std::string& name);
+
+  /**
+   * @brief Pass a model name to the incumbent model
+   */
+  HighsStatus passModelName(const std::string& name);
 
   /**
    * @brief Read in a model
@@ -500,12 +506,28 @@ class Highs {
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
+   * @brief Solve the feasibility relaxation problem
+   */
+  HighsStatus feasibilityRelaxation(const double global_lower_penalty,
+                                    const double global_upper_penalty,
+                                    const double global_rhs_penalty,
+                                    const double* local_lower_penalty = nullptr,
+                                    const double* local_upper_penalty = nullptr,
+                                    const double* local_rhs_penalty = nullptr);
+
+  /**
    * @brief Get the ill-conditioning information for the current basis
    */
   HighsStatus getIllConditioning(HighsIllConditioning& ill_conditioning,
                                  const bool constraint,
                                  const HighsInt method = 0,
                                  const double ill_conditioning_bound = 1e-4);
+
+  /**
+   * @brief Get (any) irreducible infeasible subsystem (IIS)
+   * information for the incumbent model
+   */
+  HighsStatus getIis(HighsIis& iis);
 
   /**
    * @brief Get the current model objective value
@@ -585,6 +607,14 @@ class Highs {
   HighsStatus getReducedColumn(const HighsInt col, double* col_vector,
                                HighsInt* col_num_nz = nullptr,
                                HighsInt* col_indices = nullptr);
+
+  /**
+   * @brief Get the condition number of the current basis matrix,
+   * possibly computing it exactly and reporting the error in the
+   * approximate condition number
+   */
+  HighsStatus getKappa(double& kappa, const bool exact = false,
+                       const bool report = false);
 
   /**
    * @brief Get the number of columns in the incumbent model
@@ -1064,6 +1094,12 @@ class Highs {
   HighsStatus setSolution(const HighsSolution& solution);
 
   /**
+   * @brief Pass a sparse primal solution
+   */
+  HighsStatus setSolution(const HighsInt num_entries, const HighsInt* index,
+                          const double* value);
+
+  /**
    * @brief Set the callback method to use for HiGHS
    */
   HighsStatus setCallback(HighsCallbackFunctionType user_callback,
@@ -1210,6 +1246,14 @@ class Highs {
   HighsStatus getBasisInverseRowSparse(const HighsInt row,
                                        HVector& row_ep_buffer);
 
+  /**
+   * @Brief Get the primal simplex phase 1 dual values. Advanced
+   * method: for HiGHS IIS calculation
+   */
+  const std::vector<double>& getPrimalPhase1Dual() const {
+    return ekk_instance_.primal_phase1_dual_;
+  }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
@@ -1326,6 +1370,7 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
   HighsRanging ranging_;
+  HighsIis iis_;
 
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
@@ -1368,7 +1413,7 @@ class Highs {
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, HighsFileType& file_type) const;
 
-  void reportModel();
+  void reportModel(const HighsModel& model);
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
   //
@@ -1414,6 +1459,9 @@ class Highs {
 
   // Invalidates ekk_instance_
   void invalidateEkk();
+
+  // Invalidates iis_
+  void invalidateIis();
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
@@ -1496,6 +1544,27 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
   HighsStatus getRangingInterface();
+
+  HighsStatus getIisInterface();
+
+  HighsStatus elasticityFilterReturn(
+      const HighsStatus return_status, const bool feasible_model,
+      const HighsInt original_num_col, const HighsInt original_num_row,
+      const std::vector<double>& original_col_cost,
+      const std::vector<double>& original_col_lower,
+      const std::vector<double> original_col_upper,
+      const std::vector<HighsVarType> original_integrality);
+  HighsStatus elasticityFilter(const double global_lower_penalty,
+                               const double global_upper_penalty,
+                               const double global_rhs_penalty,
+                               const double* local_lower_penalty,
+                               const double* local_upper_penalty,
+                               const double* local_rhs_penalty,
+                               const bool get_infeasible_row,
+                               std::vector<HighsInt>& infeasible_row_subset);
+  HighsStatus extractIis(HighsInt& num_iis_col, HighsInt& num_iis_row,
+                         HighsInt* iis_col_index, HighsInt* iis_row_index,
+                         HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);

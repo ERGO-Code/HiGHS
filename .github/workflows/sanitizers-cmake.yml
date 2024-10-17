@@ -1,0 +1,55 @@
+name: sanitizers-cmake
+on: [] #push
+
+jobs:
+  sanitizer_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        sanitizer: [Address, Thread, Leak]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake and Build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake --build . --parallel
+
+      - name: Run
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  sanitizer_debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        sanitizer: [Address, Thread, Leak]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake and Build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake --build . --parallel
+
+      - name: Run
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps

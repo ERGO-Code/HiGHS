@@ -27,6 +27,7 @@ const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
 const HighsInt kHighsIInf32 = std::numeric_limits<int>::max();
 const double kHighsInf = std::numeric_limits<double>::infinity();
+const double kHighsUndefined = kHighsInf;
 const double kHighsTiny = 1e-14;
 const double kHighsMacheps = std::ldexp(1, -52);
 const double kHighsZero = 1e-50;
@@ -262,6 +263,15 @@ enum PresolveRuleType : int {
   kPresolveRuleMax = kPresolveRuleParallelRowsAndCols,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount,
+};
+
+enum IisStrategy {
+  kIisStrategyMin = 0,
+  kIisStrategyFromLpRowPriority = kIisStrategyMin,  // 0
+  kIisStrategyFromLpColPriority,                    // 1
+  //  kIisStrategyFromRayRowPriority,                     // 2
+  //  kIisStrategyFromRayColPriority,                     // 3
+  kIisStrategyMax = kIisStrategyFromLpColPriority
 };
 
 // Default and max allowed power-of-two matrix scale factor

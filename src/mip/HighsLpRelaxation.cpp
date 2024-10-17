@@ -1088,13 +1088,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   switch (model_status) {
     case HighsModelStatus::kObjectiveBound:
       ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      avgSolveIters +=
+          (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualUBProof();
       return Status::kInfeasible;
     case HighsModelStatus::kInfeasible: {
       ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      avgSolveIters +=
+          (itercount - avgSolveIters) / static_cast<double>(numSolved);
 
       storeDualInfProof();
       if (true || checkDualProof()) return Status::kInfeasible;
@@ -1146,7 +1148,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
       ++numSolved;
-      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+      avgSolveIters +=
+          (itercount - avgSolveIters) / static_cast<double>(numSolved);
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::kOptimal;
@@ -1224,9 +1227,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           double val = std::max(
               std::min(sol.col_value[i], lpsolver.getLp().col_upper_[i]),
               lpsolver.getLp().col_lower_[i]);
-          double intval = std::floor(val + 0.5);
 
-          if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
+          if (fractionality(val) > mipsolver.mipdata_->feastol) {
             HighsInt col = i;
             if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
                 mipsolver.mipdata_->downlocks[col] != 0)

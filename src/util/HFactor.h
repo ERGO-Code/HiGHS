@@ -132,7 +132,7 @@ class HFactor {
         build_timer_(nullptr),
         nwork(0),
         u_merit_x(0),
-        u_total_x(0){};
+        u_total_x(0) {};
 
   /**
    * @brief Copy problem size and pointers of constraint matrix, and set
@@ -347,6 +347,7 @@ class HFactor {
   HighsInt num_row;
   HighsInt num_col;
   HighsInt num_basic;
+  double inv_num_row;  // 1.0/num_row
 
  private:
   bool a_matrix_valid;

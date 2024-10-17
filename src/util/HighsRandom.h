@@ -169,7 +169,7 @@ class HighsRandom {
                                     // or the 64bit version
     if (sup <= 1) return 0;
     int nbits = HighsHashHelpers::log2i(HighsUInt(sup - 1)) + 1;
-    return drawUniform(HighsUInt(sup), nbits);
+    return static_cast<HighsInt>(drawUniform(HighsUInt(sup), nbits));
   }
 
   /**
@@ -192,7 +192,7 @@ class HighsRandom {
                            static_cast<uint32_t>(state), state >> 32) >>
                        (64 - 26));
     // compute (1+output) / (2^52+1) which is strictly between 0 and 1
-    return (1 + output) * 2.2204460492503125e-16;
+    return static_cast<double>(1 + output) * 2.2204460492503125e-16;
   }
 
   /**
@@ -209,7 +209,7 @@ class HighsRandom {
                        32);
     // compute output / (2^53-1) in double precision which is in the closed
     // interval [0,1]
-    return output * 1.1102230246251566e-16;
+    return static_cast<double>(output) * 1.1102230246251566e-16;
   }
 
   /**

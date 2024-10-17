@@ -207,6 +207,52 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #if CUPDLP_DEBUG
   analysePdlpSolution(options, lp, highs_solution);
 #endif
+
+  free(cost);
+  free(lower);
+  free(upper);
+  free(csc_beg);
+  free(csc_idx);
+  free(csc_val);
+  free(rhs);
+
+  free(x_origin);
+  free(y_origin);
+
+  free(constraint_new_idx);
+
+  free(prob->cost);
+  free(prob->lower);
+  free(prob->upper);
+  free(prob->rhs);
+
+  free(prob->hasLower);
+  free(prob->hasUpper);
+
+  free(prob->data->csr_matrix->rowMatBeg);
+  free(prob->data->csr_matrix->rowMatIdx);
+  free(prob->data->csr_matrix->rowMatElem);
+  free(prob->data->csr_matrix);
+
+  free(prob->data->csc_matrix->colMatBeg);
+  free(prob->data->csc_matrix->colMatIdx);
+  free(prob->data->csc_matrix->colMatElem);
+  free(prob->data->csc_matrix);
+
+  free(prob->data);
+
+  free(prob);
+
+  free(csc_cpu->colMatBeg);
+  free(csc_cpu->colMatIdx);
+  free(csc_cpu->colMatElem);
+
+  free(csc_cpu);
+
+  if (scaling->rowScale != nullptr) free(scaling->rowScale);
+  if (scaling->colScale != nullptr) free(scaling->colScale);
+  free(scaling);
+
   return HighsStatus::kOk;
 }
 

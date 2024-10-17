@@ -229,6 +229,57 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.clear();
   }
 
+  const bool test6 = other_tests;
+  if (test6) {
+    if (dev_run)
+      printf(
+          "\n***************************\nSolving from sparse integer "
+          "solution\n");
+    HighsInt num_integer_variable = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      if (lp.integrality_[iCol] == HighsVarType::kInteger)
+        num_integer_variable++;
+
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
+    std::vector<HighsInt> index;
+    std::vector<double> value;
+    // Check that duplicate values are spotted
+    index.push_back(0);
+    value.push_back(0);
+    index.push_back(1);
+    value.push_back(1);
+    index.push_back(0);
+    value.push_back(2);
+    HighsInt num_entries = index.size();
+    return_status = highs.setSolution(num_entries, index.data(), value.data());
+    REQUIRE(return_status == HighsStatus::kWarning);
+
+    index.clear();
+    value.clear();
+    std::vector<bool> is_set;
+    is_set.assign(lp.num_col_, false);
+    HighsInt num_to_set = 2;
+    assert(num_to_set > 0);
+    HighsRandom random;
+    for (HighsInt iSet = 0; iSet < num_to_set;) {
+      HighsInt iCol = random.integer(lp.num_col_);
+      if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
+      if (is_set[iCol]) continue;
+      is_set[iCol] = true;
+      index.push_back(iCol);
+      value.push_back(optimal_solution.col_value[iCol]);
+      iSet++;
+    }
+    num_entries = index.size();
+    assert(num_entries == num_to_set);
+    return_status = highs.setSolution(num_entries, index.data(), value.data());
+    REQUIRE(return_status == HighsStatus::kOk);
+    highs.run();
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
+  }
+  assert(other_tests);
   std::remove(solution_file.c_str());
 }
 
@@ -351,6 +402,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   HighsStatus return_status;
   std::string solution_file;
   HighsModelStatus status = HighsModelStatus::kNotset;
+  if (dev_run) printf("\nSolving model %s from scratch\n", model.c_str());
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
@@ -358,6 +410,9 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   REQUIRE(status == require_model_status);
 
   solution_file = model + ".sol";
+  if (dev_run)
+    printf("Writing solution in style %d to %s\n", int(write_solution_style),
+           solution_file.c_str());
   if (dev_run) return_status = highs.writeSolution("", write_solution_style);
   return_status = highs.writeSolution(solution_file, write_solution_style);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -367,6 +422,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
 
   // primalDualInfeasible1Lp has no values in the solution file so,
   // after it's read, HiGHS::solution.value_valid is false
+  if (dev_run) printf("Reading solution from %s\n", solution_file.c_str());
   return_status = highs.readSolution(solution_file);
   if (value_valid) {
     REQUIRE(return_status == HighsStatus::kOk);
@@ -380,6 +436,13 @@ void runWriteReadCheckSolution(Highs& highs, const std::string model,
   } else {
     REQUIRE(return_status == HighsStatus::kError);
   }
+  if (dev_run) printf("Solving model from solution read from file\n");
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+
+  status = highs.getModelStatus();
+  REQUIRE(status == require_model_status);
+
   std::remove(solution_file.c_str());
 }
 
@@ -389,7 +452,7 @@ void runSetLpSolution(const std::string model) {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   const HighsInfo& info = highs.getInfo();
-  if (dev_run) printf("\nSolving from scratch\n");
+  if (dev_run) printf("\nSolving %s from scratch\n", model.c_str());
   highs.setOptionValue("output_flag", dev_run);
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
 
@@ -409,8 +472,8 @@ void runSetLpSolution(const std::string model) {
   REQUIRE(return_status == HighsStatus::kOk);
 
   highs.run();
-  // Use a reduction in iteration count as a anity check that starting
-  // from the optimal solution has worked
+  // Use a reduction in iteration count as a sanity check that
+  // starting from the optimal solution has worked
   HighsInt simplex_iteration_count1 = info.simplex_iteration_count;
   if (dev_run)
     printf(
@@ -419,4 +482,33 @@ void runSetLpSolution(const std::string model) {
         model.c_str(), (int)simplex_iteration_count0,
         (int)simplex_iteration_count1);
   REQUIRE(simplex_iteration_count1 < simplex_iteration_count0);
+
+  // Now write a sparse solution, and read it in to hot start
+  HighsInt write_solution_style = kSolutionStyleSparse;
+  std::string solution_file = model + ".sol";
+  if (dev_run) printf("Writing sparse solution to %s\n", solution_file.c_str());
+  if (dev_run) return_status = highs.writeSolution("");
+  return_status = highs.writeSolution(solution_file, write_solution_style);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.clear();
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
+
+  highs.readModel(model_file);
+  if (dev_run)
+    printf("Reading sparse solution from %s\n", solution_file.c_str());
+  return_status = highs.readSolution(solution_file);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  if (dev_run) printf("Solving model from sparse solution read from file\n");
+  HighsStatus run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::kOk);
+
+  HighsModelStatus status = highs.getModelStatus();
+  REQUIRE(status == HighsModelStatus::kOptimal);
+
+  highs.clear();
+
+  std::remove(solution_file.c_str());
 }

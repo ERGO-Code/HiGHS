@@ -301,6 +301,10 @@ HighsInt Highs_passColName(const void* highs, const HighsInt col,
   return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
 }
 
+HighsInt Highs_passModelName(const void* highs, const char* name) {
+  return (HighsInt)((Highs*)highs)->passModelName(std::string(name));
+}
+
 HighsInt Highs_readOptions(const void* highs, const char* filename) {
   return (HighsInt)((Highs*)highs)->readOptions(filename);
 }
@@ -666,6 +670,11 @@ HighsInt Highs_setSolution(void* highs, const double* col_value,
   }
 
   return (HighsInt)((Highs*)highs)->setSolution(solution);
+}
+
+HighsInt Highs_setSparseSolution(void* highs, const HighsInt num_entries,
+                                 const HighsInt* index, const double* value) {
+  return (HighsInt)((Highs*)highs)->setSolution(num_entries, index, value);
 }
 
 HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
@@ -1339,6 +1348,19 @@ HighsInt Highs_getRanging(
   return status;
 }
 
+HighsInt Highs_feasibilityRelaxation(void* highs,
+                                     const double global_lower_penalty,
+                                     const double global_upper_penalty,
+                                     const double global_rhs_penalty,
+                                     const double* local_lower_penalty,
+                                     const double* local_upper_penalty,
+                                     const double* local_rhs_penalty) {
+  return (HighsInt)((Highs*)highs)
+      ->feasibilityRelaxation(global_lower_penalty, global_upper_penalty,
+                              global_rhs_penalty, local_lower_penalty,
+                              local_upper_penalty, local_rhs_penalty);
+}
+
 void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
 }
@@ -1364,6 +1386,9 @@ const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
     return (void*)(&data_out->objective_function_value);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipNodeCountName)) {
     return (void*)(&data_out->mip_node_count);
+  } else if (!strcmp(item_name,
+                     kHighsCallbackDataOutMipTotalLpIterationsName)) {
+    return (void*)(&data_out->mip_total_lp_iterations);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipPrimalBoundName)) {
     return (void*)(&data_out->mip_primal_bound);
   } else if (!strcmp(item_name, kHighsCallbackDataOutMipDualBoundName)) {

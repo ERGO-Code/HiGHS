@@ -1175,6 +1175,32 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
 }
 
 void HighsSparseMatrix::productTransposeQuad(
+    vector<double>& result, const vector<double>& row,
+    const HighsInt debug_report) const {
+  assert(this->formatOk());
+  assert((int)row.size() >= this->num_row_);
+  result.assign(this->num_col_, 0.0);
+  if (this->isColwise()) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      HighsCDouble value = 0.0;
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        value += row[this->index_[iEl]] * this->value_[iEl];
+      result[iCol] = double(value);
+    }
+  } else {
+    std::vector<HighsCDouble> value(this->num_col_, 0);
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
+        value[this->index_[iEl]] += row[iRow] * this->value_[iEl];
+    }
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+      result[iCol] = double(value[iCol]);
+  }
+}
+
+void HighsSparseMatrix::productTransposeQuad(
     vector<double>& result_value, vector<HighsInt>& result_index,
     const HVector& column, const HighsInt debug_report) const {
   if (debug_report >= kDebugReportAll)
@@ -1383,6 +1409,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   assert(HighsInt(result.size) == this->num_col_);
   assert(HighsInt(result.index.size()) == this->num_col_);
   if (expected_density <= kHyperPriceDensity) {
+    double inv_num_col = 1.0 / this->num_col_;
     for (HighsInt ix = next_index; ix < column.count; ix++) {
       HighsInt iRow = column.index[ix];
       // Determine whether p_end_ or the next start_ ends the loop
@@ -1394,7 +1421,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       }
       // Possibly switch to standard row-wise price
       HighsInt row_num_nz = to_iEl - this->start_[iRow];
-      double local_density = (1.0 * result.count) / this->num_col_;
+      double local_density = (1.0 * result.count) * inv_num_col;
       bool switch_to_dense = result.count + row_num_nz >= this->num_col_ ||
                              local_density > switch_density;
       if (switch_to_dense) break;

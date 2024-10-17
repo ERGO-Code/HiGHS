@@ -177,7 +177,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
 }
 #endif
 
-const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
+const HighsModelStatus& Highs::getModelStatus(const bool) const {
   deprecationMessage("getModelStatus(const bool scaled_model)",
                      "getModelStatus()");
   return model_status_;

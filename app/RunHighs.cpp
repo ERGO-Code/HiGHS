@@ -15,6 +15,9 @@
 // #include "io/HighsIO.h"
 #include "lp_data/HighsRuntimeOptions.h"
 
+// uncomment if we will be shutting down task executor from exe
+// #include "parallel/HighsParallel.h"
+
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
                              const HighsModel& model);
@@ -62,6 +65,24 @@ int main(int argc, char** argv) {
       return (int)read_solution_status;
     }
   }
+  if (options.write_presolved_model_to_file) {
+    // Run presolve and write the presolved model to a file
+    HighsStatus status = highs.presolve();
+    if (status == HighsStatus::kError) return int(status);
+    HighsPresolveStatus model_presolve_status = highs.getModelPresolveStatus();
+    const bool ok_to_write =
+        model_presolve_status == HighsPresolveStatus::kNotReduced ||
+        model_presolve_status == HighsPresolveStatus::kReduced ||
+        model_presolve_status == HighsPresolveStatus::kReducedToEmpty ||
+        model_presolve_status == HighsPresolveStatus::kTimeout;
+    if (!ok_to_write) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "No presolved model to write to file\n");
+      return int(status);
+    }
+    status = highs.writePresolvedModel(options.write_presolved_model_file);
+    return int(status);
+  }
   // Solve the model
   HighsStatus run_status = highs.run();
   if (run_status == HighsStatus::kError) return int(run_status);
@@ -78,6 +99,10 @@ int main(int argc, char** argv) {
     if (write_model_status == HighsStatus::kError)
       return (int)write_model_status;  // todo: change to write model error
   }
+
+  // Shut down task executor: optional and wip
+  // HighsTaskExecutor::shutdown(true);
+
   return (int)run_status;
 }
 

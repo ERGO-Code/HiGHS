@@ -178,6 +178,9 @@ class HPresolve {
 
   bool isImpliedInteger(HighsInt col);
 
+  bool convertImpliedInteger(HighsInt col, HighsInt row = -1,
+                             bool skipInputChecks = false);
+
   bool isLowerImplied(HighsInt col) const;
 
   bool isUpperImplied(HighsInt col) const;
@@ -223,9 +226,11 @@ class HPresolve {
 
   void markColDeleted(HighsInt col);
 
-  void fixColToLower(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  bool fixColToLowerOrUnbounded(HighsPostsolveStack& postsolve_stack,
+                                HighsInt col);
 
-  void fixColToUpper(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  bool fixColToUpperOrUnbounded(HighsPostsolveStack& postsolve_stack,
+                                HighsInt col);
 
   void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
