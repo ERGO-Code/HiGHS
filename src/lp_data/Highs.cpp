@@ -4166,8 +4166,6 @@ HighsStatus Highs::openWriteFile(const string filename,
         file_type = HighsFileType::kLp;
       } else if (strcmp(dot + 1, "md") == 0) {
         file_type = HighsFileType::kMd;
-      } else if (strcmp(dot + 1, "html") == 0) {
-        file_type = HighsFileType::kHtml;
       }
     }
   }

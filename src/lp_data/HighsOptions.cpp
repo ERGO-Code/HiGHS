@@ -818,26 +818,7 @@ HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_deviations,
                                const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
-  if (html_file) {
-    fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
-    fprintf(file, "  <title>HiGHS Options</title>\n");
-    fprintf(file, "	<meta charset=\"utf-8\" />\n");
-    fprintf(file,
-            "	<meta name=\"viewport\" content=\"width=device-width, "
-            "initial-scale=1, user-scalable=no\" />\n");
-    fprintf(file,
-            "	<link rel=\"stylesheet\" href=\"assets/css/main.css\" />\n");
-    fprintf(file, "</head>\n");
-    fprintf(file, "<body style=\"background-color:f5fafa;\"></body>\n\n");
-    fprintf(file, "<h3>HiGHS Options</h3>\n\n");
-    fprintf(file, "<ul>\n");
-  }
   reportOptions(file, option_records, report_only_deviations, file_type);
-  if (html_file) {
-    fprintf(file, "</ul>\n");
-    fprintf(file, "</body>\n\n</html>\n");
-  }
   return HighsStatus::kOk;
 }
 
@@ -848,8 +829,8 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
     // Only report non-advanced options
-    if (option_records[index]->advanced) {  // && (html_file || md_file)) {
-      // Possibly the advanced options when creating HTML or Md file
+    if (option_records[index]->advanced) {
+      // Possibly skip the advanced options when creating Md file
       if (!kAdvancedInDocumentation) continue;
     }
     if (type == HighsOptionType::kBool) {
@@ -871,20 +852,9 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
 void reportOption(FILE* file, const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
   const bool md_file = file_type == HighsFileType::kMd;
   if (!report_only_deviations || option.default_value != *option.value) {
-    if (html_file) {
-      fprintf(file,
-              "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-              option.name.c_str());
-      fprintf(file, "%s<br>\n", option.description.c_str());
-      fprintf(file,
-              "type: bool, advanced: %s, range: {false, true}, default: %s\n",
-              highsBoolToString(option.advanced).c_str(),
-              highsBoolToString(option.default_value).c_str());
-      fprintf(file, "</li>\n");
-    } else if (md_file) {
+    if (md_file) {
       fprintf(file, "## %s\n- %s\n- Type: boolean\n- Default: \"%s\"\n\n",
               highsInsertMdEscapes(option.name).c_str(),
               highsInsertMdEscapes(option.description).c_str(),
@@ -905,21 +875,9 @@ void reportOption(FILE* file, const OptionRecordBool& option,
 void reportOption(FILE* file, const OptionRecordInt& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
   const bool md_file = file_type == HighsFileType::kMd;
   if (!report_only_deviations || option.default_value != *option.value) {
-    if (html_file) {
-      fprintf(file,
-              "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-              option.name.c_str());
-      fprintf(file, "%s<br>\n", option.description.c_str());
-      fprintf(file,
-              "type: integer, advanced: %s, range: {%" HIGHSINT_FORMAT
-              ", %" HIGHSINT_FORMAT "}, default: %" HIGHSINT_FORMAT "\n",
-              highsBoolToString(option.advanced).c_str(), option.lower_bound,
-              option.upper_bound, option.default_value);
-      fprintf(file, "</li>\n");
-    } else if (md_file) {
+    if (md_file) {
       fprintf(file,
               "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
               ", %" HIGHSINT_FORMAT "}\n- Default: %" HIGHSINT_FORMAT "\n\n",
@@ -942,20 +900,9 @@ void reportOption(FILE* file, const OptionRecordInt& option,
 void reportOption(FILE* file, const OptionRecordDouble& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
-  const bool html_file = file_type == HighsFileType::kHtml;
   const bool md_file = file_type == HighsFileType::kMd;
   if (!report_only_deviations || option.default_value != *option.value) {
-    if (html_file) {
-      fprintf(file,
-              "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-              option.name.c_str());
-      fprintf(file, "%s<br>\n", option.description.c_str());
-      fprintf(file,
-              "type: double, advanced: %s, range: [%g, %g], default: %g\n",
-              highsBoolToString(option.advanced).c_str(), option.lower_bound,
-              option.upper_bound, option.default_value);
-      fprintf(file, "</li>\n");
-    } else if (md_file) {
+    if (md_file) {
       fprintf(
           file,
           "## %s\n- %s\n- Type: double\n- Range: [%g, %g]\n- Default: %g\n\n",
@@ -977,23 +924,13 @@ void reportOption(FILE* file, const OptionRecordString& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
   // Don't report for the options file if writing to an options file
-  const bool html_file = file_type == HighsFileType::kHtml;
   const bool md_file = file_type == HighsFileType::kMd;
   // Don't report options that can only be passed via the command line
   if (option.name == kOptionsFileString) return;
   // ToDo: are there others?
 
   if (!report_only_deviations || option.default_value != *option.value) {
-    if (html_file) {
-      fprintf(file,
-              "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
-              option.name.c_str());
-      fprintf(file, "%s<br>\n", option.description.c_str());
-      fprintf(file, "type: string, advanced: %s, default: \"%s\"\n",
-              highsBoolToString(option.advanced).c_str(),
-              option.default_value.c_str());
-      fprintf(file, "</li>\n");
-    } else if (md_file) {
+    if (md_file) {
       fprintf(file, "## %s\n- %s\n- Type: string\n- Default: \"%s\"\n\n",
               highsInsertMdEscapes(option.name).c_str(),
               highsInsertMdEscapes(option.description).c_str(),
