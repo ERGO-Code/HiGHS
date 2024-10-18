@@ -1540,7 +1540,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       assert(has_invert);
     }
     if (has_dual_ray) {
-      assert(this->model_status_ == HighsModelStatus::kInfeasible);
       if (ekk_instance_.dual_ray_.size()) {
         // Dual ray is already computed
         highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1569,23 +1568,19 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         return_status = HighsStatus::kError;
       }
     } else {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "No dual ray found\n");
-      return_status = HighsStatus::kWarning;
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "No dual ray found\n");
+      return_status = HighsStatus::kOk;
     }
   }
   if (solve_feasibility_problem) {
     // Feasibility problem has been solved, so any objective-related
-    // information has been lost.
-    assert(this->model_status_ == HighsModelStatus::kInfeasible);
-    // Reverting the objective function via Highs calls clears info_,
-    // so better to just copy the data directly and set the info_
-    // entries that are no longer valid
+    // information has been lost. Reverting the objective function via
+    // Highs calls clears info_, so better to just copy the data
+    // directly and set the info_ entries that are no longer valid
     lp.col_cost_ = col_cost;
     if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
-    assert(this->info_.num_primal_infeasibilities > 0);
     // Modify the objective-related information
     this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
     this->info_.objective_function_value = 0;
@@ -1594,6 +1589,14 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
     this->info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
     this->info_.sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+    if (has_dual_ray) {
+      assert(this->info_.num_primal_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kInfeasible);
+    } else {
+      // If someone has tried to get a dual ray for a feasible
+      // problem, then any status of the original model has been lost
+      this->model_status_ = HighsModelStatus::kNotset;
+    }
   }
   return return_status;
 }
@@ -1615,17 +1618,10 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
 
-  // Declare identifiers to save column and row bounds, inttegrality,
-  // the presolve setting and allow_unbounded_or_infeasible, and a
-  // flag to know when they should be recovered
-  std::vector<double> col_lower;
-  std::vector<double> col_upper;
-  std::vector<double> row_lower;
-  std::vector<double> row_upper;
-  std::vector<HighsVarType> integrality;
   std::string presolve;
+  bool solve_relaxation;
   bool allow_unbounded_or_infeasible;
-  bool solve_feasibility_problem = false;
+  bool solve_unboundedness_problem = false;
 
   if (primal_ray_value != NULL) {
     // User wants a primal ray whatever
@@ -1642,22 +1638,15 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute primal ray\n");
-      col_lower = lp.col_lower_;
-      col_upper = lp.col_upper_;
-      row_lower = lp.row_lower_;
-      row_upper = lp.row_upper_;
-      integrality = lp.integrality_;
+      this->getOptionValue("presolve", presolve);
+      this->getOptionValue("solve_relaxation", solve_relaxation);
       this->getOptionValue("allow_unbounded_or_infeasible",
                            allow_unbounded_or_infeasible);
-      this->getOptionValue("presolve", presolve);
-      solve_feasibility_problem = true;
-      //      lp.col_lower_.assign(lp.num_col_, -kHighsInf);
-      //      lp.col_upper_.assign(lp.num_col_, kHighsInf);
-      //      lp.row_lower_.assign(lp.num_row_, -kHighsInf);
-      //      lp.row_upper_.assign(lp.num_row_, kHighsInf);
+      solve_unboundedness_problem = true;
       lp.integrality_.clear();
-      this->setOptionValue("allow_unbounded_or_infeasible", false);
       this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
+      this->setOptionValue("allow_unbounded_or_infeasible", false);
       this->writeModel("primal_ray_lp.mps");
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
@@ -1666,7 +1655,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       assert(has_invert);
     }
     if (has_primal_ray) {
-      assert(this->model_status_ == HighsModelStatus::kUnbounded);
       if (ekk_instance_.primal_ray_.size()) {
         // Primal ray is already computed
         highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1674,54 +1662,58 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
         for (HighsInt iCol = 0; iCol < num_col; iCol++)
           primal_ray_value[iCol] = ekk_instance_.primal_ray_[iCol];
         return return_status;
+      } else if (has_invert) {
+        // Primal ray is known and can be calculated
+	highsLogUser(options_.log_options, HighsLogType::kInfo,
+		     "Solving linear system to compute primal ray\n");
+	HighsInt col = ekk_instance_.info_.primal_ray_col_;
+	assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
+	// Get this pivotal column
+	vector<double> rhs;
+	vector<double> column;
+	column.assign(num_row, 0);
+	rhs.assign(num_row, 0);
+	lp.ensureColwise();
+	HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
+	if (col < num_col) {
+	  for (HighsInt iEl = lp.a_matrix_.start_[col];
+	       iEl < lp.a_matrix_.start_[col + 1]; iEl++)
+	    rhs[lp.a_matrix_.index_[iEl]] =
+	      primal_ray_sign * lp.a_matrix_.value_[iEl];
+	} else {
+	  rhs[col - num_col] = primal_ray_sign;
+	}
+	HighsInt* column_num_nz = 0;
+	basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
+	// Now zero primal_ray_value and scatter the column according to
+	// the basic variables.
+	for (HighsInt iCol = 0; iCol < num_col; iCol++)
+	  primal_ray_value[iCol] = 0;
+	for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+	  HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
+	  if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+	}
+	if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
+	// Now save the primal ray itself
+	ekk_instance_.primal_ray_.resize(num_col);
+	for (HighsInt iCol = 0; iCol < num_col; iCol++)
+	  ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
       }
-      // Primal ray is known
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Solving linear system to compute primal ray\n");
-      HighsInt col = ekk_instance_.info_.primal_ray_col_;
-      assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
-      // Get this pivotal column
-      vector<double> rhs;
-      vector<double> column;
-      column.assign(num_row, 0);
-      rhs.assign(num_row, 0);
-      lp.ensureColwise();
-      HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
-      if (col < num_col) {
-        for (HighsInt iEl = lp.a_matrix_.start_[col];
-             iEl < lp.a_matrix_.start_[col + 1]; iEl++)
-          rhs[lp.a_matrix_.index_[iEl]] =
-              primal_ray_sign * lp.a_matrix_.value_[iEl];
-      } else {
-        rhs[col - num_col] = primal_ray_sign;
-      }
-      HighsInt* column_num_nz = 0;
-      basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
-      // Now zero primal_ray_value and scatter the column according to
-      // the basic variables.
-      for (HighsInt iCol = 0; iCol < num_col; iCol++)
-        primal_ray_value[iCol] = 0;
-      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-        HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-        if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
-      }
-      if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
-      // Now save the primal ray itself
-      ekk_instance_.primal_ray_.resize(num_col);
-      for (HighsInt iCol = 0; iCol < num_col; iCol++)
-        ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo, "No primal ray found\n");
+      return_status = HighsStatus::kOk;
     }
   }
-  if (solve_feasibility_problem) {
-    lp.col_lower_ = col_lower;
-    lp.col_upper_ = col_upper;
-    lp.row_lower_ = row_lower;
-    lp.row_upper_ = row_upper;
-    lp.integrality_ = integrality;
+  if (solve_unboundedness_problem) {
+    // Restore the option values
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
     this->setOptionValue("allow_unbounded_or_infeasible",
                          allow_unbounded_or_infeasible);
-    this->setOptionValue("presolve", presolve);
-    assert(this->model_status_ == HighsModelStatus::kUnbounded);
+    if (has_primal_ray) {
+      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kUnbounded);
+    }
   }
   return return_status;
 }

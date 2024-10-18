@@ -1685,27 +1685,6 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
-HighsStatus Highs::getPrimalUnboundednessDirection(
-    bool& has_primal_unboundedness_direction,
-    double* primal_unboundedness_direction_value) {
-  if (primal_unboundedness_direction_value) {
-    std::vector<double> primal_ray_value(this->model_.lp_.num_col_);
-    HighsStatus status = getPrimalRay(has_primal_unboundedness_direction,
-                                      primal_ray_value.data());
-    if (status != HighsStatus::kOk || !has_primal_unboundedness_direction)
-      return HighsStatus::kError;
-    std::vector<double> primal_unboundedness_direction;
-    this->model_.lp_.a_matrix_.productTransposeQuad(
-        primal_unboundedness_direction, primal_ray_value);
-    for (HighsInt iRow = 0; iRow < this->model_.lp_.num_row_; iRow++)
-      primal_unboundedness_direction_value[iRow] =
-          primal_unboundedness_direction[iRow];
-  } else {
-    return getPrimalRay(has_primal_unboundedness_direction, nullptr);
-  }
-  return HighsStatus::kOk;
-}
-
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
   HighsStatus return_status = getRangingInterface();
   ranging = this->ranging_;
