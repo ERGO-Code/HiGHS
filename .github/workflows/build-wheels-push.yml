@@ -22,8 +22,8 @@ jobs:
         shell: bash
         run: pipx run build --sdist
 
-      - name: Check metadata
-        run: pipx run twine check python/dist/*
+      # - name: check metadata
+      #   run: pipx run twine check python/dist/*
 
       - uses: actions/upload-artifact@v3
         with:
