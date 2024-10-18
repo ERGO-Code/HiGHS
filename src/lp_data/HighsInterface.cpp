@@ -1575,22 +1575,25 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     }
   }
   if (solve_feasibility_problem) {
-    // Feasibility problem has been solved, so any dual information has been
-    // lost.
-    this->writeInfo("");
+    // Feasibility problem has been solved, so any objective-related
+    // information has been lost.
     assert(this->model_status_ == HighsModelStatus::kInfeasible);
-    HighsStatus status =
-        this->changeColsCost(0, lp.num_col_ - 1, col_cost.data());
-    assert(status == HighsStatus::kOk);
-    if (is_qp) this->passHessian(hessian);
+    // Reverting the objective function via Highs calls clears info_,
+    // so better to just copy the data directly and set the info_
+    // entries that are no longer valid
+    lp.col_cost_ = col_cost;
+    if (is_qp) model_.hessian_ = hessian;
     this->setOptionValue("presolve", presolve);
     this->setOptionValue("solve_relaxation", solve_relaxation);
-    this->model_status_ = HighsModelStatus::kInfeasible;
-    printf("\nAfter recovering objective\n");
-    this->writeInfo("");
-    fflush(stdout);
     assert(this->info_.num_primal_infeasibilities > 0);
-    assert(this->info_.num_dual_infeasibilities < 0);
+    // Modify the objective-related information
+    this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+    this->info_.objective_function_value = 0;
+    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    this->info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
+    this->info_.sum_complementarity_violations = kHighsIllegalComplementarityViolation;
   }
   return return_status;
 }
