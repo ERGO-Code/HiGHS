@@ -1568,7 +1568,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         return_status = HighsStatus::kError;
       }
     } else {
-      highsLogUser(options_.log_options, HighsLogType::kInfo, "No dual ray found\n");
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No dual ray found\n");
       return_status = HighsStatus::kOk;
     }
   }
@@ -1587,8 +1588,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
     this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    this->info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
-    this->info_.sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+    this->info_.max_complementarity_violation =
+        kHighsIllegalComplementarityViolation;
+    this->info_.sum_complementarity_violations =
+        kHighsIllegalComplementarityViolation;
     if (has_dual_ray) {
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
@@ -1664,43 +1667,44 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
         return return_status;
       } else if (has_invert) {
         // Primal ray is known and can be calculated
-	highsLogUser(options_.log_options, HighsLogType::kInfo,
-		     "Solving linear system to compute primal ray\n");
-	HighsInt col = ekk_instance_.info_.primal_ray_col_;
-	assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
-	// Get this pivotal column
-	vector<double> rhs;
-	vector<double> column;
-	column.assign(num_row, 0);
-	rhs.assign(num_row, 0);
-	lp.ensureColwise();
-	HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
-	if (col < num_col) {
-	  for (HighsInt iEl = lp.a_matrix_.start_[col];
-	       iEl < lp.a_matrix_.start_[col + 1]; iEl++)
-	    rhs[lp.a_matrix_.index_[iEl]] =
-	      primal_ray_sign * lp.a_matrix_.value_[iEl];
-	} else {
-	  rhs[col - num_col] = primal_ray_sign;
-	}
-	HighsInt* column_num_nz = 0;
-	basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
-	// Now zero primal_ray_value and scatter the column according to
-	// the basic variables.
-	for (HighsInt iCol = 0; iCol < num_col; iCol++)
-	  primal_ray_value[iCol] = 0;
-	for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-	  HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-	  if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
-	}
-	if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
-	// Now save the primal ray itself
-	ekk_instance_.primal_ray_.resize(num_col);
-	for (HighsInt iCol = 0; iCol < num_col; iCol++)
-	  ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Solving linear system to compute primal ray\n");
+        HighsInt col = ekk_instance_.info_.primal_ray_col_;
+        assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
+        // Get this pivotal column
+        vector<double> rhs;
+        vector<double> column;
+        column.assign(num_row, 0);
+        rhs.assign(num_row, 0);
+        lp.ensureColwise();
+        HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
+        if (col < num_col) {
+          for (HighsInt iEl = lp.a_matrix_.start_[col];
+               iEl < lp.a_matrix_.start_[col + 1]; iEl++)
+            rhs[lp.a_matrix_.index_[iEl]] =
+                primal_ray_sign * lp.a_matrix_.value_[iEl];
+        } else {
+          rhs[col - num_col] = primal_ray_sign;
+        }
+        HighsInt* column_num_nz = 0;
+        basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
+        // Now zero primal_ray_value and scatter the column according to
+        // the basic variables.
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          primal_ray_value[iCol] = 0;
+        for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+          HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
+          if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+        }
+        if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
+        // Now save the primal ray itself
+        ekk_instance_.primal_ray_.resize(num_col);
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
       }
     } else {
-      highsLogUser(options_.log_options, HighsLogType::kInfo, "No primal ray found\n");
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No primal ray found\n");
       return_status = HighsStatus::kOk;
     }
   }

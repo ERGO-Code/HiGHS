@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double zero_ray_value_tolerance = 1e-14;
 
 void reportRay(std::string message, HighsInt dim, double* computed,
@@ -19,9 +19,9 @@ void reportRay(std::string message, HighsInt dim, double* computed,
   }
 }
 
-void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
+bool checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
                        const vector<double>& expected_ray_value) {
-  bool ray_error = false;
+  bool ray_ok = true;
   HighsInt from_ix = -1;
   for (HighsInt ix = 0; ix < dim; ix++) {
     if (fabs(expected_ray_value[ix]) > zero_ray_value_tolerance) {
@@ -32,26 +32,26 @@ void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
       // Found a zero in the expected ray values, so make sure that
       // the ray value is also zero
       if (fabs(ray_value[ix]) > zero_ray_value_tolerance) {
-        ray_error = true;
+        ray_ok = false;
         break;
       }
     }
   }
-  REQUIRE(!ray_error);
-  if (from_ix < 0) return;
+  if (!ray_ok) return ray_ok;
+  if (from_ix < 0) return ray_ok;
   double scale = ray_value[from_ix] / expected_ray_value[from_ix];
   for (HighsInt ix = from_ix + 1; ix < dim; ix++) {
     double scaled_expected_ray_value = expected_ray_value[ix] * scale;
     if (fabs(ray_value[ix] - scaled_expected_ray_value) >
         zero_ray_value_tolerance) {
-      ray_error = true;
+      ray_ok = false;
       break;
     }
   }
-  REQUIRE(!ray_error);
+  return ray_ok;
 }
 
-void checkDualUnboundednessDirection(
+bool checkDualUnboundednessDirection(
     Highs& highs, const vector<double>& dual_unboundedness_direction_value) {
   const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.num_col_;
@@ -114,16 +114,14 @@ void checkDualUnboundednessDirection(
         "checkDualUnboundednessDirection: "
         "dual_unboundedness_direction_error_norm = %g\n",
         dual_unboundedness_direction_error_norm);
-  REQUIRE(dual_unboundedness_direction_error_norm < 1e-6);
+  return dual_unboundedness_direction_error_norm < 1e-6;
 }
 
-void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
+bool checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   double ray_error_norm = 0;
-  //  const vector<double>& colLower = lp.col_lower_;
-  //  const vector<double>& colUpper = lp.col_upper_;
   const vector<double>& rowLower = lp.row_lower_;
   const vector<double>& rowUpper = lp.row_upper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
@@ -138,7 +136,9 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       dual_unboundedness_direction_value[iCol] +=
           dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
   }
-  checkDualUnboundednessDirection(highs, dual_unboundedness_direction_value);
+  bool check_ok = checkDualUnboundednessDirection(
+      highs, dual_unboundedness_direction_value);
+  if (!check_ok) return check_ok;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (row_status[iRow] == HighsBasisStatus::kBasic ||
         rowLower[iRow] == rowUpper[iRow])
@@ -177,10 +177,10 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   }
   if (dev_run)
     printf("checkDualRayValue: ray_error_norm = %g\n", ray_error_norm);
-  REQUIRE(ray_error_norm < 1e-6);
+  return ray_error_norm < 1e-6;
 }
 
-void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
+bool checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
@@ -246,7 +246,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   }
   if (dev_run)
     printf("checkPrimalRayValue: ray_error_norm = %g\n", ray_error_norm);
-  REQUIRE(ray_error_norm < 1e-6);
+  return ray_error_norm < 1e-6;
 }
 
 void testInfeasibleMpsLp(const std::string model,
@@ -258,6 +258,7 @@ void testInfeasibleMpsLp(const std::string model,
   bool has_primal_ray;
   vector<double> dual_ray_value;
   vector<double> primal_ray_value;
+  vector<double> dual_unboundedness_direction_value;
 
   Highs highs;
   if (!dev_run) {
@@ -283,14 +284,25 @@ void testInfeasibleMpsLp(const std::string model,
   REQUIRE(has_dual_ray == has_dual_ray_);
   REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
           HighsStatus::kOk);
-  checkDualRayValue(highs, dual_ray_value);
+  REQUIRE(has_dual_ray == has_dual_ray_);
+  REQUIRE(checkDualRayValue(highs, dual_ray_value));
+  // Now check dual unboundedness direction
+  dual_unboundedness_direction_value.resize(lp.num_col_);
+  bool has_dual_unboundedness_direction;
+  REQUIRE(highs.getDualUnboundednessDirection(
+              has_dual_unboundedness_direction,
+              dual_unboundedness_direction_value.data()) == HighsStatus::kOk);
+  REQUIRE(has_dual_unboundedness_direction);
+  REQUIRE(checkDualUnboundednessDirection(highs,
+                                          dual_unboundedness_direction_value));
 
   // Check that there is no primal ray
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(!has_primal_ray);
   // ... even if forcing
   primal_ray_value.resize(lp.num_col_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(!has_primal_ray);
 
   // Now test with presolve on, and forcing ray calculation if possible
@@ -304,6 +316,7 @@ void testInfeasibleMpsMip(const std::string model) {
   bool has_primal_ray;
   vector<double> dual_ray_value;
   vector<double> primal_ray_value;
+  vector<double> dual_unboundedness_direction_value;
 
   Highs highs;
   if (!dev_run) {
@@ -315,6 +328,8 @@ void testInfeasibleMpsMip(const std::string model) {
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
   // Test dual ray for MIP of infeasible LP
+  //
+  // No dual ray from solve, since the problem is a MIP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kInfeasible;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
@@ -330,17 +345,29 @@ void testInfeasibleMpsMip(const std::string model) {
   // Check that there is no dual ray
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(!has_dual_ray);
-  // ... even if forcing
+  // ... but there is if forcing
   dual_ray_value.resize(lp.num_row_);
-  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
-  REQUIRE(!has_dual_ray);
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(has_dual_ray);
+  REQUIRE(checkDualRayValue(highs, dual_ray_value));
+  // Now check dual unboundedness direction
+  dual_unboundedness_direction_value.resize(lp.num_col_);
+  bool has_dual_unboundedness_direction;
+  REQUIRE(highs.getDualUnboundednessDirection(
+              has_dual_unboundedness_direction,
+              dual_unboundedness_direction_value.data()) == HighsStatus::kOk);
+  REQUIRE(has_dual_unboundedness_direction);
+  REQUIRE(checkDualUnboundednessDirection(highs,
+                                          dual_unboundedness_direction_value));
 
   // Check that there is no primal ray
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(!has_primal_ray);
   // ... even if forcing
   primal_ray_value.resize(lp.num_col_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(!has_primal_ray);
 }
 
@@ -384,7 +411,8 @@ void testUnboundedMpsLp(const std::string model,
   REQUIRE(!has_dual_ray);
   // ... even if forcing
   dual_ray_value.resize(lp.num_row_);
-  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(!has_dual_ray);
 
   // Check that there is a primal ray
@@ -394,7 +422,7 @@ void testUnboundedMpsLp(const std::string model,
   REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
           HighsStatus::kOk);
   REQUIRE(has_primal_ray);
-  checkPrimalRayValue(highs, primal_ray_value);
+  REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
 }
 
 TEST_CASE("Rays", "[highs_test_rays]") {
@@ -445,7 +473,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
       // Get the dual ray twice, to check that, second time, it's
       // copied from ekk_instance_.dual_ray_
       for (HighsInt p = 0; p < num_pass; p++) {
-        printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+        if (dev_run) printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
         // Check that there is a dual ray
         dual_ray_value.resize(lp.num_row_);
         REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
@@ -458,11 +486,22 @@ TEST_CASE("Rays", "[highs_test_rays]") {
                 HighsStatus::kOk);
         REQUIRE(has_dual_ray);
         vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
-        checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray);
         if (dev_run)
           reportRay("Dual ray:\nRow", lp.num_row_, dual_ray_value.data(),
                     expected_dual_ray.data());
-        checkDualRayValue(highs, dual_ray_value);
+        REQUIRE(
+            checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray));
+        REQUIRE(checkDualRayValue(highs, dual_ray_value));
+        // Now check dual unboundedness direction
+        dual_unboundedness_direction_value.resize(lp.num_col_);
+        bool has_dual_unboundedness_direction;
+        REQUIRE(highs.getDualUnboundednessDirection(
+                    has_dual_unboundedness_direction,
+                    dual_unboundedness_direction_value.data()) ==
+                HighsStatus::kOk);
+        REQUIRE(has_dual_unboundedness_direction);
+        REQUIRE(checkDualUnboundednessDirection(
+            highs, dual_unboundedness_direction_value));
       }
 
       // Check that there is no primal ray
@@ -470,7 +509,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
       REQUIRE(!has_primal_ray);
       // ... even if forcing
       primal_ray_value.resize(lp.num_col_);
-      REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
+      REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+              HighsStatus::kOk);
       REQUIRE(!has_primal_ray);
 
       highs.clearSolver();
@@ -483,9 +523,9 @@ TEST_CASE("Rays", "[highs_test_rays]") {
                   dual_unboundedness_direction_value.data()) ==
               HighsStatus::kOk);
       REQUIRE(has_dual_unboundedness_direction);
+      REQUIRE(checkDualUnboundednessDirection(
+          highs, dual_unboundedness_direction_value));
 
-      checkDualUnboundednessDirection(highs,
-                                      dual_unboundedness_direction_value);
       presolve_status = "on";
       presolve_off = false;
       REQUIRE(highs.setOptionValue("presolve", kHighsOnString) ==
@@ -509,7 +549,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(!has_dual_ray);
     // ... even if forcing
     dual_ray_value.resize(lp.num_row_);
-    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+            HighsStatus::kOk);
     REQUIRE(!has_dual_ray);
 
     // Check that there is no primal ray
@@ -517,7 +558,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(!has_primal_ray);
     // ... even if forcing
     primal_ray_value.resize(lp.num_col_);
-    REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
+    REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+            HighsStatus::kOk);
     REQUIRE(!has_primal_ray);
   }
 
@@ -546,7 +588,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(!has_dual_ray);
     // ... even if forcing
     dual_ray_value.resize(lp.num_row_);
-    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+            HighsStatus::kOk);
     REQUIRE(!has_dual_ray);
 
     // Check that a primal ray can be obtained
@@ -555,13 +598,13 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(has_primal_ray);
     REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
             HighsStatus::kOk);
-  REQUIRE(has_primal_ray);
+    REQUIRE(has_primal_ray);
     vector<double> expected_primal_ray = {0.5, -1};
     if (dev_run)
       reportRay("Primal ray:\nCol", lp.num_col_, primal_ray_value.data(),
                 expected_primal_ray.data());
-    checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray);
-    checkPrimalRayValue(highs, primal_ray_value);
+    REQUIRE(checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray));
+    REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
   }
   if (test_primalDualInfeasible1Lp) {
     // Test that there's no primal or (immediate) dual ray for this LP
@@ -585,17 +628,28 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     REQUIRE(!has_dual_ray);
     // ... but there is if forcing
     dual_ray_value.resize(lp.num_row_);
-    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+            HighsStatus::kOk);
     REQUIRE(has_dual_ray);
-    checkDualRayValue(highs, dual_ray_value);
+    REQUIRE(checkDualRayValue(highs, dual_ray_value));
+    // Now check dual unboundedness direction
+    dual_unboundedness_direction_value.resize(lp.num_col_);
+    bool has_dual_unboundedness_direction;
+    REQUIRE(highs.getDualUnboundednessDirection(
+                has_dual_unboundedness_direction,
+                dual_unboundedness_direction_value.data()) == HighsStatus::kOk);
+    REQUIRE(has_dual_unboundedness_direction);
+    REQUIRE(checkDualUnboundednessDirection(
+        highs, dual_unboundedness_direction_value));
 
-  // Check that there is no primal ray
+    // Check that there is no primal ray
     REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
     REQUIRE(!has_primal_ray);
-  // ... even if forcing
-  primal_ray_value.resize(lp.num_col_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
-  REQUIRE(!has_primal_ray);
+    // ... even if forcing
+    primal_ray_value.resize(lp.num_col_);
+    REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(!has_primal_ray);
   }
 }
 
@@ -681,7 +735,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
     // Get the primal ray twice, to check that, second time, it's
     // copied from ekk_instance_.primal_ray_
     for (HighsInt p = 0; p < num_pass; p++) {
-      printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+      if (dev_run) printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
       // Check that there is a primal ray
       primal_ray_value.resize(lp.num_col_);
       REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
@@ -703,16 +757,17 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
                   nullptr);
       REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
       REQUIRE(primal_ray_value[0] > 0);
-      checkPrimalRayValue(highs, primal_ray_value);
+      REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
     }
 
     // Check that there is no dual ray
     REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
     REQUIRE(!has_dual_ray);
-  // ... even if forcing
-  dual_ray_value.resize(lp.num_row_);
-  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
-  REQUIRE(!has_dual_ray);
+    // ... even if forcing
+    dual_ray_value.resize(lp.num_row_);
+    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(!has_dual_ray);
 
     highs.clearSolver();
 
@@ -777,7 +832,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
     // Get the primal ray twice, to check that, second time, it's
     // copied from ekk_instance_.primal_ray_
     for (HighsInt p = 0; p < num_pass; p++) {
-      printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
+      if (dev_run) printf("\nPass k = %1d; p = %1d\n", int(k), int(p));
       // Check that there is a primal ray
       primal_ray_value.resize(lp.num_col_);
       REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
@@ -799,18 +854,19 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
                   nullptr);
       REQUIRE(primal_ray_value[0] == primal_ray_value[1]);
       REQUIRE(primal_ray_value[0] > 0);
-      checkPrimalRayValue(highs, primal_ray_value);
+      REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
     }
 
     // Check that there is no dual ray
     REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
     REQUIRE(!has_dual_ray);
-   // ... even if forcing
-  primal_ray_value.resize(lp.num_col_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) == HighsStatus::kOk);
-  REQUIRE(!has_primal_ray);
+    // ... even if forcing
+    dual_ray_value.resize(lp.num_row_);
+    REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(!has_dual_ray);
 
-   highs.clearSolver();
+    highs.clearSolver();
 
     presolve_status = "on";
     presolve_off = false;
@@ -851,7 +907,19 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
   std::vector<double> dual_ray_value(2);
+  vector<double> dual_unboundedness_direction_value;
   //  dual_ray_value.assign(2, NAN);
-  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.getDualRay(has_dual_ray, dual_ray_value.data()) ==
+          HighsStatus::kOk);
   REQUIRE(has_dual_ray);
+  REQUIRE(checkDualRayValue(highs, dual_ray_value));
+  // Now check dual unboundedness direction
+  dual_unboundedness_direction_value.resize(lp.num_col_);
+  bool has_dual_unboundedness_direction;
+  REQUIRE(highs.getDualUnboundednessDirection(
+              has_dual_unboundedness_direction,
+              dual_unboundedness_direction_value.data()) == HighsStatus::kOk);
+  REQUIRE(has_dual_unboundedness_direction);
+  REQUIRE(checkDualUnboundednessDirection(highs,
+                                          dual_unboundedness_direction_value));
 }

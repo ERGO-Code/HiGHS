@@ -1746,8 +1746,9 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) {
-  dual_objective_function_value = 0;
-  return HighsStatus::kError;
+  const bool have_dual_objective_value = computeDualObjectiveValue(
+      model_.lp_, solution_, dual_objective_function_value);
+  return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
