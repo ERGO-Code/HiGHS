@@ -1360,12 +1360,14 @@ HighsStatus Highs::run() {
         return returnFromRun(return_status, undo_mods);
       }
       case HighsPresolveStatus::kUnboundedOrInfeasible: {
+        highsLogUser(
+            log_options, HighsLogType::kInfo,
+            "Problem status detected on presolve: %s\n",
+            modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible)
+                .c_str());
         if (options_.allow_unbounded_or_infeasible) {
           setHighsModelStatusAndClearSolutionAndBasis(
               HighsModelStatus::kUnboundedOrInfeasible);
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Problem status detected on presolve: %s\n",
-                       modelStatusToString(model_status_).c_str());
           return returnFromRun(return_status, undo_mods);
         }
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
@@ -1634,11 +1636,7 @@ HighsStatus Highs::run() {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
-  // Can't get a ray without an INVERT, but absence is only an error
-  // when solving an LP #1350
   has_dual_ray = false;
-  if (!ekk_instance_.status_.has_invert)
-    return lpInvertRequirementError("getDualRay");
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
@@ -1660,13 +1658,30 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getDualUnboundednessDirection(
+    bool& has_dual_unboundedness_direction,
+    double* dual_unboundedness_direction_value) {
+  if (dual_unboundedness_direction_value) {
+    std::vector<double> dual_ray_value(this->model_.lp_.num_row_);
+    HighsStatus status =
+        getDualRay(has_dual_unboundedness_direction, dual_ray_value.data());
+    if (status != HighsStatus::kOk || !has_dual_unboundedness_direction)
+      return HighsStatus::kError;
+    std::vector<double> dual_unboundedness_direction;
+    this->model_.lp_.a_matrix_.productTransposeQuad(
+        dual_unboundedness_direction, dual_ray_value);
+    for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
+      dual_unboundedness_direction_value[iCol] =
+          dual_unboundedness_direction[iCol];
+  } else {
+    return getDualRay(has_dual_unboundedness_direction, nullptr);
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
-  // Can't get a ray without an INVERT, but absence is only an error
-  // when solving an LP #1350
   has_primal_ray = false;
-  if (!ekk_instance_.status_.has_invert)
-    return lpInvertRequirementError("getPrimalRay");
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
@@ -1727,6 +1742,13 @@ HighsStatus Highs::getIis(HighsIis& iis) {
                           return_status, "getIisInterface");
   iis = this->iis_;
   return return_status;
+}
+
+HighsStatus Highs::getDualObjectiveValue(
+    double& dual_objective_function_value) {
+  const bool have_dual_objective_value = computeDualObjectiveValue(
+      model_.lp_, solution_, dual_objective_function_value);
+  return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
 }
 
 bool Highs::hasInvert() const { return ekk_instance_.status_.has_invert; }
@@ -2414,7 +2436,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsIntegrality "
+                 "Interval [%d, %d] supplied to Highs::changeColsIntegrality "
                  "is out of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2521,7 +2543,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsCost is out "
+                 "Interval [%d, %d] supplied to Highs::changeColsCost is out "
                  "of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2591,7 +2613,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeColsBounds is out "
+                 "Interval [%d, %d] supplied to Highs::changeColsBounds is out "
                  "of range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2672,7 +2694,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::changeRowsBounds is out "
+                 "Interval [%d, %d] supplied to Highs::changeRowsBounds is out "
                  "of range [0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
@@ -2793,7 +2815,7 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::getCols is out of range "
+                 "Interval [%d, %d] supplied to Highs::getCols is out of range "
                  "[0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -2914,7 +2936,7 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::getRows is out of range "
+                 "Interval [%d, %d] supplied to Highs::getRows is out of range "
                  "[0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
@@ -3029,7 +3051,7 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
       create(index_collection, from_col, to_col, model_.lp_.num_col_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::deleteCols is out of "
+                 "Interval [%d, %d] supplied to Highs::deleteCols is out of "
                  "range [0, %d)\n",
                  int(from_col), int(to_col), int(model_.lp_.num_col_));
     return HighsStatus::kError;
@@ -3073,7 +3095,7 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
       create(index_collection, from_row, to_row, model_.lp_.num_row_);
   if (create_error) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Interval [%d, %d) supplied to Highs::deleteRows is out of "
+                 "Interval [%d, %d] supplied to Highs::deleteRows is out of "
                  "range [0, %d)\n",
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
@@ -4146,7 +4168,7 @@ void Highs::setBasisValidity() {
 HighsStatus Highs::openWriteFile(const string filename,
                                  const string method_name, FILE*& file,
                                  HighsFileType& file_type) const {
-  file_type = HighsFileType::kNone;
+  file_type = HighsFileType::kFull;
   if (filename == "") {
     // Empty file name: use stdout
     file = stdout;
@@ -4166,8 +4188,6 @@ HighsStatus Highs::openWriteFile(const string filename,
         file_type = HighsFileType::kLp;
       } else if (strcmp(dot + 1, "md") == 0) {
         file_type = HighsFileType::kMd;
-      } else if (strcmp(dot + 1, "html") == 0) {
-        file_type = HighsFileType::kHtml;
       }
     }
   }

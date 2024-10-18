@@ -132,7 +132,9 @@ class HFactor {
         build_timer_(nullptr),
         nwork(0),
         u_merit_x(0),
+        // clang-format off
         u_total_x(0) {};
+  // clang-format on
 
   /**
    * @brief Copy problem size and pointers of constraint matrix, and set

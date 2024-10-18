@@ -95,6 +95,14 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& relative_primal_infeasibility,
                             double& dual_infeasibility, double& value_residual);
 
+bool getComplementarityViolations(const HighsLp& lp,
+                                  const HighsSolution& solution,
+                                  double& max_complementarity_violation,
+                                  double& sum_complementarity_violations);
+
+bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+                               double& dual_objective_value);
+
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
 
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
