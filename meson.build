@@ -9,7 +9,6 @@ project('highs', 'cpp', 'c',
 
 # Add C++ compiler options
 _args = [] # Extra arguments
-_cppargs = [] # Extra arguments
 _deps = [] # Dependencies
 _incdirs = [] # All the includes
 
@@ -22,14 +21,11 @@ is_windows = host_system == 'windows'
 is_mingw = is_windows and cc.get_id() == 'gcc'
 
 # Conditional arguments
-_args += cppc.get_supported_arguments([
+_args += cc.get_supported_arguments([
   '-Wno-unused-variable',
   '-Wno-unused-but-set-variable',
   '-Wno-unused-label',
   '-Wno-sign-compare',
-])
-_cppargs += _args + cppc.get_supported_arguments([
-  '-Wno-reorder',
 ])
 
 
