@@ -203,10 +203,10 @@ class TestHighsPy(unittest.TestCase):
 
         h.changeColCost(1, 1)
         [status, sense] = h.getObjectiveSense()
-        self.assertEqual(sense, highspy.ObjSense.kMinimize)
-        h.changeObjectiveSense(highspy.ObjSense.kMaximize)
+        self.assertEqual(sense, highspy.HighsObjSense.kMinimize)
+        h.changeObjectiveSense(highspy.HighsObjSense.kMaximize)
         [status, sense] = h.getObjectiveSense()
-        self.assertEqual(sense, highspy.ObjSense.kMaximize)
+        self.assertEqual(sense, highspy.HighsObjSense.kMaximize)
         h.run()
         sol = h.getSolution()
         self.assertAlmostEqual(sol.col_value[0], -5)
@@ -450,7 +450,7 @@ class TestHighsPy(unittest.TestCase):
         h.addRow(1, 1, len(tmp), tmp, ones)
 
         # needs to be rowwise for test to work correctly
-        self.assertEqual(h.getLp().a_matrix_.format_, highspy.MatrixFormat.kRowwise)
+        self.assertEqual(h.getLp().a_matrix_.format_, highspy.HighsMatrixFormat.kRowwise)
         self.assertEqual(h.getLp().a_matrix_.index_, list(tmp))
 
     def test_constraint_removal(self):
@@ -615,9 +615,9 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(h.val(x), -5)
         self.assertAlmostEqual(h.val(y), -5)
 
-        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMinimize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.HighsObjSense.kMinimize)
         h.maximize(y)
-        self.assertEqual(h.getObjectiveSense()[1], highspy.ObjSense.kMaximize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.HighsObjSense.kMaximize)
 
         self.assertAlmostEqual(h.val(x), -5)
         self.assertAlmostEqual(h.val(y), -5)
@@ -1028,12 +1028,12 @@ class TestHighsPy(unittest.TestCase):
         h.setMaximize()
         h.solve()
         self.assertEqual(h.getSolution().col_value[0], 1)
-        self.assertEqual(h.getObjectiveSense()[1], highspy.highs.ObjSense.kMaximize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.highs.HighsObjSense.kMaximize)
 
         h.setMinimize()
         h.optimize()
         self.assertEqual(h.getSolution().col_value[0], 0)
-        self.assertEqual(h.getObjectiveSense()[1], highspy.highs.ObjSense.kMinimize)
+        self.assertEqual(h.getObjectiveSense()[1], highspy.highs.HighsObjSense.kMinimize)
 
     def test_minimize(self):
         """Test the minimize method with and without an objective."""
