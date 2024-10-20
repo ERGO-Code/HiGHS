@@ -36,7 +36,7 @@ h.clear()
 lp = highspy.HighsLp()
 lp.num_col_ = 2
 lp.num_row_ = 2
-lp.sense_ = highspy.ObjSense.kMaximize
+lp.sense_ = highspy.HighsObjSense.kMaximize
 lp.col_cost_ = np.array([8, 10], dtype=np.double)
 lp.col_lower_ = np.array([0, 0], dtype=np.double)
 lp.col_upper_ = np.array([inf, inf], dtype=np.double)
@@ -91,7 +91,7 @@ model.lp_.col_lower_ = np.array([0, 0, 0], dtype=np.double)
 model.lp_.col_upper_ = np.array([inf, inf, inf], dtype=np.double)
 model.lp_.row_lower_ = np.array([2], dtype=np.double)
 model.lp_.row_upper_ = np.array([inf], dtype=np.double)
-model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kColwise
+model.lp_.a_matrix_.format_ = highspy.HighsMatrixFormat.kColwise
 model.lp_.a_matrix_.start_ = np.array([0, 1, 2, 3])
 model.lp_.a_matrix_.index_ = np.array([0, 0, 0])
 model.lp_.a_matrix_.value_ = np.array([1.0, 1.0, 1.0], dtype=np.double)
@@ -109,19 +109,19 @@ h.run()
 h.clear()
 num_col = 3
 num_row = 1
-sense = highspy.ObjSense.kMinimize
+sense = highspy.HighsObjSense.kMinimize
 offset = 0
 col_cost = np.array([1.0, 1.0, 2.0], dtype=np.double)
 col_lower = np.array([0, 0, 0], dtype=np.double)
 col_upper = np.array([inf, inf, inf], dtype=np.double)
 row_lower = np.array([2], dtype=np.double)
 row_upper = np.array([inf], dtype=np.double)
-a_matrix_format = highspy.MatrixFormat.kColwise
+a_matrix_format = highspy.HighsMatrixFormat.kColwise
 a_matrix_start = np.array([0, 1, 2, 3])
 a_matrix_index = np.array([0, 0, 0])
 a_matrix_value = np.array([1.0, 1.0, 1.0], dtype=np.double)
 a_matrix_num_nz = a_matrix_start[num_col]
-hessian_format = highspy.HessianFormat.kTriangular
+hessian_format = highspy.HighsHessianFormat.kTriangular
 hessian_start = np.array([0, 2, 2, 3])
 hessian_index = np.array([0, 2, 2])
 hessian_value = np.array([2.0, -1.0, 1.0], dtype=np.double)
@@ -356,7 +356,7 @@ lp.col_lower_ = np.array([0, 0, 0], dtype=np.double)
 lp.col_upper_ = np.array([1, 1, -1], dtype=np.double)
 lp.row_lower_ = np.array([1, 0], dtype=np.double)
 lp.row_upper_ = np.array([0, 1], dtype=np.double)
-lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+lp.a_matrix_.format_ = highspy.HighsMatrixFormat.kRowwise
 lp.a_matrix_.start_ = np.array([0, 2, 4])
 lp.a_matrix_.index_ = np.array([1, 2, 0, 2])
 lp.a_matrix_.value_ = np.array([1, 1, 1, 1], dtype=np.double)
@@ -367,23 +367,23 @@ h.run()
 assert h.getModelStatus() == highspy.HighsModelStatus.kInfeasible
 
 # Set IIS strategy to row priority and get IIS
-h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyFromLpRowPriority)
+h.setOptionValue("iis_strategy", highspy.HighsIisStrategy.kFromLpRowPriority)
 
 iis = highspy.HighsIis()
 assert h.getIis(iis) == highspy.HighsStatus.kOk
 assert len(iis.col_index) == 0
 assert len(iis.row_index) == 1
 assert iis.row_index[0] == 0
-assert iis.row_bound[0] == highspy.IisBoundStatus.kIisBoundStatusBoxed
+assert iis.row_bound[0] == highspy.HighsIisBoundStatus.kBoxed
 
 # Set IIS strategy to column priority and get IIS
-h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyFromLpColPriority)
+h.setOptionValue("iis_strategy", highspy.HighsIisStrategy.kFromLpColPriority)
 iis.invalidate()
 assert h.getIis(iis) == highspy.HighsStatus.kOk
 assert len(iis.col_index) == 1
 assert len(iis.row_index) == 0
 assert iis.col_index[0] == 2
-assert iis.col_bound[0] == highspy.IisBoundStatus.kIisBoundStatusBoxed
+assert iis.col_bound[0] == highspy.HighsIisBoundStatus.kBoxed
 
 print("IIS computation completed successfully")
 
@@ -394,8 +394,8 @@ inf = h.getInfinity()
 num_col = 2
 num_row = 3
 num_nz = 6
-a_format = highspy.MatrixFormat.kColwise
-sense = highspy.ObjSense.kMinimize
+a_format = highspy.HighsMatrixFormat.kColwise
+sense = highspy.HighsObjSense.kMinimize
 offset = 0
 col_cost = np.array([1, -2], dtype=np.double)
 col_lower = np.array([5, -inf], dtype=np.double)
