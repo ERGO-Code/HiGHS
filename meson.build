@@ -9,6 +9,7 @@ project('highs', 'cpp', 'c',
 
 # Add C++ compiler options
 _args = [] # Extra arguments
+_cppargs = [] # Extra arguments
 _deps = [] # Dependencies
 _incdirs = [] # All the includes
 
@@ -27,6 +28,10 @@ _args += cppc.get_supported_arguments([
   '-Wno-unused-label',
   '-Wno-sign-compare',
 ])
+_cppargs += _args + cppc.get_supported_arguments([
+  '-Wno-reorder',
+])
+
 
 if cppc.get_id() == 'msvc'
 _args +=  cppc.get_supported_arguments([
