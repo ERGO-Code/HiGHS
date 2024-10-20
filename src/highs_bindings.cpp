@@ -624,7 +624,7 @@ HighsStatus highs_setCallback(
     return h->setCallback((HighsCallbackFunctionType) nullptr, nullptr);
   else
     return h->setCallback(
-        [fn, data](int callbackType, const std::string& msg,
+        [fn](int callbackType, const std::string& msg,
                    const HighsCallbackDataOut* dataOut,
                    HighsCallbackDataIn* dataIn, void* d) {
           return fn(callbackType, msg, dataOut, dataIn, py::handle(reinterpret_cast<PyObject*>(d)));
