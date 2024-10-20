@@ -19,10 +19,13 @@ void *cupdlp_dcs_free(void *p) {
 
 /* wrapper for realloc */
 void *cupdlp_dcs_realloc(void *p, int n, size_t size, int *ok) {
-  void *pnew;
-  pnew = realloc(p, MAX(n, 1) * size); /* realloc the block */
-  *ok = (pnew != NULL);                /* realloc fails if pnew is NULL */
-  return ((*ok) ? pnew : p);           /* return original p if failure */
+    void *pnew = realloc(p, MAX(n, 1) * size); /* realloc the block */
+    if (pnew == NULL) { /* realloc fails if pnew is NULL */
+        *ok = 0;
+        return p; /* return original p if failure */
+    }
+    *ok = 1;
+    return pnew;
 }
 
 cupdlp_dcs *cupdlp_dcs_spalloc(int m, int n, int nzmax, int values,
