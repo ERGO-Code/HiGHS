@@ -4433,8 +4433,11 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 
 void Highs::reportSolvedLpQpStats() {
   HighsLogOptions& log_options = options_.log_options;
-  highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
-               modelStatusToString(model_status_).c_str());
+  if (this->model_.lp_.model_name_.length())
+    highsLogUser(log_options, HighsLogType::kInfo, "Model name          : %s\n",
+		 model_.lp_.model_name_.c_str());
+  highsLogUser(log_options, HighsLogType::kInfo, "Model status        : %s\n",
+	       modelStatusToString(model_status_).c_str());
   if (info_.valid) {
     if (info_.simplex_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -4460,16 +4463,20 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
+  if (solution_.dual_valid) {
+    double dual_objective_value;
+    this->getDualObjectiveValue(dual_objective_value);
+    const double relative_primal_dual_gap =
+      std::fabs(info_.objective_function_value - dual_objective_value)/
+      std::max(1.0, std::fabs(info_.objective_function_value));
+    highsLogUser(log_options, HighsLogType::kInfo,
+		 "Highs::reportSolvedLpQpStats Objective for %s: primal = %17.10e; dual = %17.10e; rel gap = %17.10e\n",
+		 this->model_.lp_.model_name_.c_str(),
+		 info_.objective_function_value, dual_objective_value, relative_primal_dual_gap);
+  }
   double run_time = timer_.readRunHighsClock();
   highsLogUser(log_options, HighsLogType::kInfo,
                "HiGHS run time      : %13.2f\n", run_time);
-}
-
-void Highs::underDevelopmentLogMessage(const std::string& method_name) {
-  highsLogUser(options_.log_options, HighsLogType::kWarning,
-               "Method %s is still under development and behaviour may be "
-               "unpredictable\n",
-               method_name.c_str());
 }
 
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {

@@ -546,7 +546,7 @@ class Highs {
   /**
    * @brief Try to get the current dual objective function value
    */
-  HighsStatus getDualObjectiveValue(double& dual_objective_function_value);
+  HighsStatus getDualObjectiveValue(double& dual_objective_value);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -1482,8 +1482,6 @@ class Highs {
                             const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
-
-  void underDevelopmentLogMessage(const std::string& method_name);
 
   // Interface methods
   HighsStatus basisForSolution();
