@@ -1746,8 +1746,10 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) {
-  const bool have_dual_objective_value = computeDualObjectiveValue(
-      model_.lp_, solution_, dual_objective_function_value);
+  bool have_dual_objective_value = false;
+  if (!this->model_.isQp())
+    have_dual_objective_value = computeDualObjectiveValue(
+        model_.lp_, solution_, dual_objective_function_value);
   return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
 }
 
@@ -4435,9 +4437,9 @@ void Highs::reportSolvedLpQpStats() {
   HighsLogOptions& log_options = options_.log_options;
   if (this->model_.lp_.model_name_.length())
     highsLogUser(log_options, HighsLogType::kInfo, "Model name          : %s\n",
-		 model_.lp_.model_name_.c_str());
-  highsLogUser(log_options, HighsLogType::kInfo, "Model status        : %s\n",
-	       modelStatusToString(model_status_).c_str());
+                 model_.lp_.model_name_.c_str());
+   highsLogUser(log_options, HighsLogType::kInfo, "Model status        : %s\n",
+               modelStatusToString(model_status_).c_str());
   if (info_.valid) {
     if (info_.simplex_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -4463,16 +4465,19 @@ void Highs::reportSolvedLpQpStats() {
                  "Objective value     : %17.10e\n",
                  info_.objective_function_value);
   }
-  if (solution_.dual_valid) {
+  if (solution_.dual_valid && !this->model_.isQp()) {
     double dual_objective_value;
-    this->getDualObjectiveValue(dual_objective_value);
+    HighsStatus status = this->getDualObjectiveValue(dual_objective_value);
+    assert(status == HighsStatus::kOk);
     const double relative_primal_dual_gap =
-      std::fabs(info_.objective_function_value - dual_objective_value)/
-      std::max(1.0, std::fabs(info_.objective_function_value));
+        std::fabs(info_.objective_function_value - dual_objective_value) /
+        std::max(1.0, std::fabs(info_.objective_function_value));
     highsLogUser(log_options, HighsLogType::kInfo,
-		 "Highs::reportSolvedLpQpStats Objective for %s: primal = %17.10e; dual = %17.10e; rel gap = %17.10e\n",
-		 this->model_.lp_.model_name_.c_str(),
-		 info_.objective_function_value, dual_objective_value, relative_primal_dual_gap);
+                 "Highs::reportSolvedLpQpStats Objective for %s: primal = "
+                 "%17.10e; dual = %17.10e; rel gap = %17.10e\n",
+                 this->model_.lp_.model_name_.c_str(),
+                 info_.objective_function_value, dual_objective_value,
+                 relative_primal_dual_gap);
   }
   double run_time = timer_.readRunHighsClock();
   highsLogUser(log_options, HighsLogType::kInfo,

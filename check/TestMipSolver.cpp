@@ -666,18 +666,19 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
   for (HighsInt k = 0; k < 2; k++) {
     for (HighsInt l = 0; l < 2; l++) {
       if (l == 0) {
-	// Infeasible
-	lp.col_lower_ = {0, delta};
-	lp.col_upper_ = {kHighsInf, 1-delta};
+        // Infeasible
+        lp.col_lower_ = {0, delta};
+        lp.col_upper_ = {kHighsInf, 1 - delta};
       } else {
-	// Unbounded
-	lp.col_lower_ = {0, -delta};
-	lp.col_upper_ = {kHighsInf, 1+delta};
+        // Unbounded
+        lp.col_lower_ = {0, -delta};
+        lp.col_upper_ = {kHighsInf, 1 + delta};
       }
       // Solve
       highs.passModel(lp);
       highs.run();
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
+      REQUIRE(highs.getModelStatus() ==
+              HighsModelStatus::kUnboundedOrInfeasible);
     }
     highs.setOptionValue("presolve", kHighsOnString);
   }

@@ -10,6 +10,25 @@ struct IterationCount {
   HighsInt crossover;
 };
 
+void testDualObjective(const std::string model) {
+  HighsStatus return_status;
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(model_file);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  double dual_objective;
+  return_status = highs.getDualObjectiveValue(dual_objective);
+  REQUIRE(return_status == HighsStatus::kOk);
+  double primal_objective = highs.getInfo().objective_function_value;
+  double relative_primal_dual_gap =
+      std::fabs(primal_objective - dual_objective) /
+      std::max(1.0, std::fabs(primal_objective));
+  REQUIRE(relative_primal_dual_gap < 1e-12);
+}
 void testSolver(Highs& highs, const std::string solver,
                 IterationCount& default_iteration_count,
                 const HighsInt int_simplex_strategy = 0) {
@@ -469,4 +488,12 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
     printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
   }
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("dual-objective", "[highs_lp_solver]") {
+  testDualObjective("avgas");
+  testDualObjective("adlittle");
+  testDualObjective("etamacro");
+  testDualObjective("stair");
 }

@@ -620,8 +620,8 @@ void HighsMipSolver::cleanupSolve() {
                "\nSolving report\n");
   if (this->orig_model_->model_name_.length())
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "  Model             %s\n",
-		 this->orig_model_->model_name_.c_str());
+                 "  Model             %s\n",
+                 this->orig_model_->model_name_.c_str());
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
