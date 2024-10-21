@@ -528,7 +528,7 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
   auto checkImpliedBound = [&](HighsInt row, HighsInt col, double val,
                                double dualRowBnd, double residualAct,
                                HighsInt direction) {
-    if (-direction * residualAct >= kHighsInf) return;
+    if (direction * residualAct <= -kHighsInf) return;
     double impliedBound =
         double((HighsCDouble(dualRowBnd) - residualAct) / val);
 
@@ -576,7 +576,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
   auto checkImpliedBound = [&](HighsInt row, HighsInt col, double val,
                                double rowBnd, double residualAct,
                                HighsInt direction) {
-    if (-direction * residualAct >= kHighsInf) return;
+    if (direction * residualAct <= -kHighsInf) return;
     double impliedBound = double((HighsCDouble(rowBnd) - residualAct) / val);
 
     if (std::abs(impliedBound) * kHighsTiny > primal_feastol) return;
