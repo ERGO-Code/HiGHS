@@ -536,14 +536,14 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
         options->dual_feasibility_tolerance)
       return;
 
+    const double threshold = 1000 * options->dual_feasibility_tolerance;
+
     if (direction * val > 0) {
       // only tighten bound if it is tighter by a wide enough margin
-      if (impliedBound <
-          implRowDualUpper[row] - 1000 * options->dual_feasibility_tolerance)
+      if (impliedBound < implRowDualUpper[row] - threshold)
         changeImplRowDualUpper(row, impliedBound, col);
     } else {
-      if (impliedBound >
-          implRowDualLower[row] + 1000 * options->dual_feasibility_tolerance)
+      if (impliedBound > implRowDualLower[row] + threshold)
         changeImplRowDualLower(row, impliedBound, col);
     }
   };
@@ -581,6 +581,8 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
     if (std::abs(impliedBound) * kHighsTiny > primal_feastol) return;
 
+    const double threshold = 1000 * primal_feastol;
+
     if (direction * val > 0) {
       // bound is an upper bound
       // check if we may round the bound due to integrality restrictions
@@ -594,7 +596,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
         if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
             mipsolver->orig_model_->num_row_) {
-          if (impliedBound < model->col_upper_[col] - 1000 * primal_feastol)
+          if (impliedBound < model->col_upper_[col] - threshold)
             changeColUpper(col, impliedBound);
 
           impliedBound = kHighsInf;
@@ -602,7 +604,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       }
 
       // only tighten bound if it is tighter by a wide enough margin
-      if (impliedBound < implColUpper[col] - 1000 * primal_feastol)
+      if (impliedBound < implColUpper[col] - threshold)
         changeImplColUpper(col, impliedBound, row);
     } else {
       // bound is a lower bound
@@ -620,7 +622,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
         // column as implied free
         if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
             mipsolver->orig_model_->num_row_) {
-          if (impliedBound > model->col_lower_[col] + 1000 * primal_feastol)
+          if (impliedBound > model->col_lower_[col] + threshold)
             changeColLower(col, impliedBound);
 
           impliedBound = -kHighsInf;
@@ -628,7 +630,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
       }
 
       // only tighten bound if it is tighter by a wide enough margin
-      if (impliedBound > implColLower[col] + 1000 * primal_feastol)
+      if (impliedBound > implColLower[col] + threshold)
         changeImplColLower(col, impliedBound, row);
     }
   };
