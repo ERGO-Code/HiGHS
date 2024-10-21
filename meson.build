@@ -1,5 +1,5 @@
 project('highs', 'cpp', 'c',
-  version : '1.7.2',
+  version : '1.8.0',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
