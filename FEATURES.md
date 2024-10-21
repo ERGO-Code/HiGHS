@@ -18,9 +18,21 @@ Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise p
 
 Added minimal documentation of solvers and how simplex variants can be run
 
-Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return HighsStatus::kOk (since internal matrix is exact)
+Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return `HighsStatus::kOk` (since internal matrix is exact)
 
 Now multiplying by pre-computed reciprocals rather than performing divisions in loops in simplex solver: LP performance improvement ~2.5%
+
+Primal and dual residuals after IPM and cuPDLP-C are checked, and corrections applied to row solution and column duals
+
+`Highs::passModelName` added to allow name to be given to the incumbent model
+
+Memory leaks in cuPDLP-C fixed
+
+Bug fixed in MIP presolve
+
+
+
+
 
 
 

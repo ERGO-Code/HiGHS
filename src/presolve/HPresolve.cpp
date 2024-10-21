@@ -3604,49 +3604,40 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         }
       }
 
-      if (model->row_lower_[row] == -kHighsInf &&
-          impliedRowUpper != kHighsInf) {
-        double maxCoefValue = impliedRowUpper - model->row_upper_[row];
-        HighsCDouble rhs = model->row_upper_[row];
+      auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
+                                 double maxCoefValue) {
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
-          if (nonz.value() > maxCoefValue + primal_feastol) {
-            // <= constraint, we decrease the coefficient value and the right
-            // hand side
-            double delta = maxCoefValue - nonz.value();
+          if (direction * nonz.value() > maxCoefValue + primal_feastol) {
+            double delta = direction * maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_upper_[nonz.index()];
-          } else if (nonz.value() < -maxCoefValue - primal_feastol) {
-            double delta = -maxCoefValue - nonz.value();
+          } else if (direction * nonz.value() <
+                     -maxCoefValue - primal_feastol) {
+            double delta = -direction * maxCoefValue - nonz.value();
             addToMatrix(row, nonz.index(), delta);
             rhs += delta * model->col_lower_[nonz.index()];
           }
         }
+      };
 
+      if (model->row_lower_[row] == -kHighsInf &&
+          impliedRowUpper != kHighsInf) {
+        // <= constraint: try to strengthen coefficients
+        HighsCDouble rhs = model->row_upper_[row];
+        strengthenCoefs(rhs, HighsInt{1},
+                        impliedRowUpper - model->row_upper_[row]);
         model->row_upper_[row] = double(rhs);
       }
 
       if (model->row_upper_[row] == kHighsInf &&
           impliedRowLower != -kHighsInf) {
-        double maxCoefValue = model->row_lower_[row] - impliedRowLower;
+        // >= constraint: try to strengthen coefficients
         HighsCDouble rhs = model->row_lower_[row];
-        for (const HighsSliceNonzero& nonz : getStoredRow()) {
-          if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
-            continue;
-
-          if (nonz.value() > maxCoefValue + primal_feastol) {
-            double delta = maxCoefValue - nonz.value();
-            addToMatrix(row, nonz.index(), delta);
-            rhs += delta * model->col_lower_[nonz.index()];
-          } else if (nonz.value() < -maxCoefValue - primal_feastol) {
-            double delta = -maxCoefValue - nonz.value();
-            addToMatrix(row, nonz.index(), delta);
-            rhs += delta * model->col_upper_[nonz.index()];
-          }
-        }
-
+        strengthenCoefs(rhs, HighsInt{-1},
+                        model->row_lower_[row] - impliedRowLower);
         model->row_lower_[row] = double(rhs);
       }
     }

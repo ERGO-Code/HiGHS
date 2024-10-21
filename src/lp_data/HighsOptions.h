@@ -389,6 +389,8 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
   bool run_centring;
+  double primal_residual_tolerance;
+  double dual_residual_tolerance;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
 
@@ -524,6 +526,8 @@ struct HighsOptionsStruct {
         run_centring(false),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),
+        primal_residual_tolerance(0.0),
+        dual_residual_tolerance(0.0),
         icrash(false),
         icrash_dualize(false),
         icrash_strategy(""),
@@ -1376,6 +1380,16 @@ class HighsOptions : public HighsOptionsStruct {
         "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
         "this tolerance (default = 100)",
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_residual_tolerance", "Primal residual tolerance", advanced,
+        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_residual_tolerance", "Dual residual tolerance", advanced,
+        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     // Set up the log_options aliases

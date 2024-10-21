@@ -123,6 +123,8 @@ HighsStatus formSimplexLpBasisAndFactor(
 
 void accommodateAlienBasis(HighsLpSolverObject& solver_object);
 
+void correctResiduals(HighsLpSolverObject& solver_object);
+
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
                                   HighsInfo& highs_info);

@@ -120,13 +120,12 @@ TEST_CASE("highs-names", "[highs_names]") {
 }
 
 TEST_CASE("highs-model-name", "[model_names]") {
-
   Highs highs;
   const HighsLp& lp = highs.getLp();
 
   std::string name = lp.model_name_;
   REQUIRE(name == "");
-  
+
   highs.passModelName("new_name");
   name = lp.model_name_;
   REQUIRE(name == "new_name");

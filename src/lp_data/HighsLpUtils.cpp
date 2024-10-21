@@ -2095,6 +2095,7 @@ HighsStatus readSolutionFile(const std::string filename,
   if (style == kSolutionStyleSparse) assert(sparse);
   if (sparse) {
     num_col = -num_col;
+    assert(num_col <= lp_num_col);
   } else {
     if (num_col != lp_num_col) {
       highsLogUser(log_options, HighsLogType::kError,
