@@ -4438,7 +4438,7 @@ void Highs::reportSolvedLpQpStats() {
   if (this->model_.lp_.model_name_.length())
     highsLogUser(log_options, HighsLogType::kInfo, "Model name          : %s\n",
                  model_.lp_.model_name_.c_str());
-   highsLogUser(log_options, HighsLogType::kInfo, "Model status        : %s\n",
+  highsLogUser(log_options, HighsLogType::kInfo, "Model status        : %s\n",
                modelStatusToString(model_status_).c_str());
   if (info_.valid) {
     if (info_.simplex_iteration_count)
