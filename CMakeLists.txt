@@ -405,6 +405,7 @@ if (DEBUG_MEMORY STREQUAL "Address")
   add_compile_options("-fsanitize=address,undefined")
   add_compile_options("-fno-omit-frame-pointer")
   add_link_options("-fsanitize=address,undefined")
+  add_link_options("-lubsan")
 
   # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
   #     -fsanitize=address,undefined \
@@ -427,9 +428,10 @@ if (DEBUG_MEMORY STREQUAL "Address")
 elseif (DEBUG_MEMORY STREQUAL "Thread")
   message(STATUS "DEBUG_MEMORY is set to Thread")
 
-  add_compile_options("-fsanitize=thread")
+  add_compile_options("-fsanitize=thread,undefined")
   add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=thread")
+  add_link_options("-fsanitize=thread,undefined")
+  add_link_options("-lubsan")
 
   # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
   #     -fsanitize=thread,undefined \
@@ -448,9 +450,10 @@ elseif (DEBUG_MEMORY STREQUAL "Thread")
 elseif (DEBUG_MEMORY STREQUAL "Leak")
   message(STATUS "DEBUG_MEMORY is set to Leak")
 
-  add_compile_options("-fsanitize=leak")
+  add_compile_options("-fsanitize=leak,undefined")
   add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=leak")
+  add_link_options("-fsanitize=leak,undefined")
+  add_link_options("-lubsan")
 
   # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
   #     -fsanitize=leak,undefined \
