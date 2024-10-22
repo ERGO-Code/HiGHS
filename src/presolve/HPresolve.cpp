@@ -651,15 +651,15 @@ void HPresolve::recomputeColImpliedBounds(HighsInt row) {
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
   std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
-  for (auto it = affectedCols.cbegin(); it != affectedCols.cend(); it++) {
+  for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the given
     // row
-    if (colLowerSource[*it] == row) changeImplColLower(*it, -kHighsInf, -1);
-    if (colUpperSource[*it] == row) changeImplColUpper(*it, kHighsInf, -1);
+    if (colLowerSource[col] == row) changeImplColLower(col, -kHighsInf, -1);
+    if (colUpperSource[col] == row) changeImplColUpper(col, kHighsInf, -1);
 
     // iterate over column and recompute the implied bounds
-    for (const HighsSliceNonzero& nonz : getColumnVector(*it)) {
-      updateColImpliedBounds(nonz.index(), *it, nonz.value());
+    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
+      updateColImpliedBounds(nonz.index(), col, nonz.value());
     }
   }
 }
@@ -669,19 +669,19 @@ void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
   std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
-  for (auto it = affectedRows.cbegin(); it != affectedRows.cend(); it++) {
+  for (const HighsInt& row : affectedRows) {
     // set implied bounds to infinite values if they were deduced from the given
     // column
-    if (rowDualLowerSource[*it] == col)
-      changeImplRowDualLower(*it, -kHighsInf, -1);
-    if (rowDualUpperSource[*it] == col)
-      changeImplRowDualUpper(*it, kHighsInf, -1);
+    if (rowDualLowerSource[row] == col)
+      changeImplRowDualLower(row, -kHighsInf, -1);
+    if (rowDualUpperSource[row] == col)
+      changeImplRowDualUpper(row, kHighsInf, -1);
 
     // iterate over row and recompute the implied bounds
-    for (const HighsSliceNonzero& nonz : getRowVector(*it)) {
+    for (const HighsSliceNonzero& nonz : getRowVector(row)) {
       // integer columns cannot be used to tighten bounds on dual multipliers
       if (model->integrality_[nonz.index()] != HighsVarType::kInteger)
-        updateRowDualImpliedBounds(*it, nonz.index(), nonz.value());
+        updateRowDualImpliedBounds(row, nonz.index(), nonz.value());
     }
   }
 }
