@@ -26,6 +26,24 @@
 #include "util/HighsInt.h"
 #include "util/HighsRandom.h"
 
+#if defined(SANITIZE_THREAD)
+#define TSAN_ENABLED
+#elif defined(__has_feature) &&  __has_feature(thread_sanitizer)
+#define TSAN_ENABLED
+#endif
+
+#ifdef TSAN_ENABLED
+#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr) \
+    AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
+#define TSAN_ANNOTATE_HAPPENS_AFTER(addr) \
+    AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
+extern "C" void AnnotateHappensBefore(const char* f, int l, void* addr);
+extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
+#else
+#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr)
+#define TSAN_ANNOTATE_HAPPENS_AFTER(addr)
+#endif
+
 class HighsTaskExecutor {
  public:
   using cache_aligned = highs::cache_aligned;
@@ -34,7 +52,11 @@ class HighsTaskExecutor {
     bool isMain{false};
 
     void dispose();
-    ~ExecutorHandle() { dispose(); }
+    ~ExecutorHandle() { 
+
+      TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk)
+      dispose(); 
+      }
   };
 
  private:
@@ -118,9 +140,12 @@ class HighsTaskExecutor {
 
     workerDeques.resize(numThreads);
     workerBunk = cache_aligned::make_shared<HighsSplitDeque::WorkerBunk>();
-    for (int i = 0; i < numThreads; ++i)
+    for (int i = 0; i < numThreads; ++i) {
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
+
+      TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk);
+    }
 
     threadLocalWorkerDeque() = workerDeques[0].get();
     workerThreads.reserve(numThreads - 1);
@@ -130,7 +155,9 @@ class HighsTaskExecutor {
          i < numThreads; ++i) {
       workerThreads.emplace_back(
           std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
+      TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
     }
+
   }
 
   void stopWorkerThreads(bool blocking = false) {
@@ -146,10 +173,12 @@ class HighsTaskExecutor {
     // only block if called on main thread, otherwise deadlock may occur
     if (blocking && executorHandle.isMain) {
       for (auto& workerThread : workerThreads) {
+        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
         workerThread.join();
       }
     } else {
       for (auto& workerThread : workerThreads) {
+        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
         workerThread.detach();
       }
     }

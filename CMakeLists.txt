@@ -93,6 +93,7 @@ endif()
 # Only Debug is theted atm 
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
+option(SANITIZE_THREAD "TSAN" OFF)
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
@@ -432,6 +433,8 @@ elseif (DEBUG_MEMORY STREQUAL "Thread")
   add_compile_options("-fno-omit-frame-pointer")
   add_link_options("-fsanitize=thread,undefined")
   add_link_options("-lubsan")
+
+  set(SANITIZE_THREAD ON)
 
   # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
   #     -fsanitize=thread,undefined \
