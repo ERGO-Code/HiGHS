@@ -81,3 +81,56 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   REQUIRE(solution_norm < 1e-6);
   if (dev_run) printf("Analytic centre solution norm is %g\n", solution_norm);
 }
+
+TEST_CASE("test-1966", "[highs_ipm]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {2, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf, 2};
+  lp.row_upper_ = {1, kHighsInf};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, -1, 1, -1};
+  highs.passModel(lp);
+  highs.setOptionValue("solver", kIpmString);
+  highs.setOptionValue("presolve", kHighsOffString);
+
+  if (dev_run) printf("\nWith default residual tolerances\n");
+  highs.run();
+  if (dev_run) {
+    highs.writeSolution("", kSolutionStylePretty);
+    printf("Num primal infeasibilities = %d\n",
+           int(info.num_primal_infeasibilities));
+    printf("Max primal infeasibility   = %g\n", info.max_primal_infeasibility);
+    printf("Sum primal infeasibilities = %g\n",
+           info.sum_primal_infeasibilities);
+    printf("Num   dual infeasibilities = %d\n",
+           int(info.num_dual_infeasibilities));
+    printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
+    printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  }
+  highs.clearSolver();
+
+  if (dev_run) printf("\nWith infinite residual tolerances\n");
+  highs.setOptionValue("primal_residual_tolerance", 1e30);
+  highs.setOptionValue("dual_residual_tolerance", 1e30);
+  highs.run();
+  if (dev_run) {
+    highs.writeSolution("", kSolutionStylePretty);
+    printf("Num primal infeasibilities = %d\n",
+           int(info.num_primal_infeasibilities));
+    printf("Max primal infeasibility   = %g\n", info.max_primal_infeasibility);
+    printf("Sum primal infeasibilities = %g\n",
+           info.sum_primal_infeasibilities);
+    printf("Num   dual infeasibilities = %d\n",
+           int(info.num_dual_infeasibilities));
+    printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
+    printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  }
+}
