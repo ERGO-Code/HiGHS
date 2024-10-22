@@ -402,9 +402,9 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 if (DEBUG_MEMORY STREQUAL "Address")
   message(STATUS "DEBUG_MEMORY is set to Address")
 
-  add_compile_options("-fsanitize=address")
+  add_compile_options("-fsanitize=address,undefined")
   add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=address")
+  add_link_options("-fsanitize=address,undefined")
 
   # set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
   #     -fsanitize=address,undefined \
@@ -466,14 +466,13 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
   #     -fsanitize=leak,undefined \
   #     -fno-omit-frame-pointer ")
 
-elseif (DEBUG_MEMORY STREQUAL "Undefined")
-  message(STATUS "DEBUG_MEMORY is set to Undefined")
+# elseif (DEBUG_MEMORY STREQUAL "Undefined")
+#   message(STATUS "DEBUG_MEMORY is set to Undefined")
 
-  add_compile_options("-fsanitize=undefined")
-  add_compile_options("-fno-omit-frame-pointer")
-  add_link_options("-fsanitize=undefined")
+#   add_compile_options("-fsanitize=undefined")
+#   add_link_options("-fsanitize=undefined")
 
-endif()
+# endif()
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
