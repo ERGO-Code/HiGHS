@@ -1922,9 +1922,7 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postsolve_stack) {
 
     double maxAbsVal = 0.0;
 
-    HighsInt rowlen = rowpositions.size();
-
-    for (HighsInt j = 0; j < rowlen; ++j) {
+    for (size_t j = 0; j < rowpositions.size(); ++j) {
       HighsInt nzPos = rowpositions[j];
       if (model->integrality_[Acol[nzPos]] != HighsVarType::kContinuous)
         continue;
@@ -2130,8 +2128,7 @@ bool HPresolve::okFromCSR(const std::vector<double>& ARval,
   //  entries.reserve(nnz);
 
   for (HighsInt i = 0; i != nrow; ++i) {
-    HighsInt rowlen = ARstart[i + 1] - ARstart[i];
-    Arow.insert(Arow.end(), rowlen, i);
+    Arow.insert(Arow.end(), ARstart[i + 1] - ARstart[i], i);
     Acol.insert(Acol.end(), ARindex.begin() + ARstart[i],
                 ARindex.begin() + ARstart[i + 1]);
   }
@@ -5197,24 +5194,19 @@ HighsInt HPresolve::strengthenInequalities() {
       HighsInt col = Acol[pos];
       ub = model->col_upper_[col] - model->col_lower_[col];
 
-      if (ub == kHighsInf) {
-        skiprow = true;
-        break;
-      }
+      skiprow = ub == kHighsInf;
+      if (skiprow) break;
 
       if (weight > 0) {
-        if (model->col_upper_[col] == kHighsInf) {
-          skiprow = true;
-          break;
-        }
+        skiprow = model->col_upper_[col] == kHighsInf;
+        if (skiprow) break;
 
         comp = 1;
         maxviolation += model->col_upper_[col] * weight;
       } else {
-        if (model->col_lower_[col] == -kHighsInf) {
-          skiprow = true;
-          break;
-        }
+        skiprow = model->col_lower_[col] == -kHighsInf;
+        if (skiprow) break;
+
         comp = -1;
         maxviolation += model->col_lower_[col] * weight;
         weight = -weight;
@@ -5700,17 +5692,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // now check whether the coefficients are actually parallel
       for (const HighsSliceNonzero& colNz : getColumnVector(col)) {
         HighsInt duplicateColRowPos = findNonzero(colNz.index(), duplicateCol);
-        if (duplicateColRowPos == -1) {
-          parallel = false;
-          break;
-        }
+        parallel = duplicateColRowPos != -1;
+        if (!parallel) break;
 
-        double difference = std::abs(
-            double(Avalue[duplicateColRowPos] - colScale * colNz.value()));
-        if (difference > options->small_matrix_value) {
-          parallel = false;
-          break;
-        }
+        parallel = std::abs(double(Avalue[duplicateColRowPos] -
+                                   colScale * colNz.value())) <=
+                   options->small_matrix_value;
+        if (!parallel) break;
       }
 
       if (!parallel) continue;
@@ -5981,17 +5969,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (colsize[rowNz.index()] == 1)  // skip singletons
           continue;
         HighsInt nzPos = findNonzero(parallelRowCand, rowNz.index());
-        if (nzPos == -1) {
-          parallel = false;
-          break;
-        }
+        parallel = nzPos != -1;
+        if (!parallel) break;
 
-        if (std::abs(double(Avalue[nzPos] -
-                            HighsCDouble(rowScale) * rowNz.value())) >
-            options->small_matrix_value) {
-          parallel = false;
-          break;
-        }
+        parallel = std::abs(double(Avalue[nzPos] -
+                                   HighsCDouble(rowScale) * rowNz.value())) <=
+                   options->small_matrix_value;
+        if (!parallel) break;
       }
       if (!parallel) continue;
 
@@ -6532,12 +6516,10 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postsolve_stack) {
             candRowVal = colNz.value();
           } else {
             HighsInt nzPos = findNonzero(candRow, nonzero.index());
-            if (nzPos == -1) {
-              // we already have a miss for the sparsest column, so with another
-              // one we want to skip the row
-              skip = true;
-              break;
-            }
+            // we already have a miss for the sparsest column, so with another
+            // one we want to skip the row
+            skip = nzPos == -1;
+            if (skip) break;
 
             candRowVal = Avalue[nzPos];
           }
