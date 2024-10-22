@@ -472,7 +472,7 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
 #   add_compile_options("-fsanitize=undefined")
 #   add_link_options("-fsanitize=undefined")
 
-# endif()
+endif()
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
