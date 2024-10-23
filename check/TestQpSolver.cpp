@@ -979,10 +979,22 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     highs.setSolution(solution);
     basis.alien = true;
     highs.setBasis(basis);
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
+    if (k == 0) {
+      // Modify the constraint so that the solution and basis are not
+      // feasible and one iteration is needed
+      REQUIRE(highs.changeCoeff(0, 1, 2.0) == HighsStatus::kOk);
+      REQUIRE(highs.changeRowBounds(0, 4.0, kHighsInf) == HighsStatus::kOk);
+      highs.clearSolver();
+      basis.alien = false;
+      highs.setBasis(basis);
+      highs.setSolution(solution);
+      return_status = highs.run();
+      REQUIRE(info.qp_iteration_count == 1);
+    }
   }
+  
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
