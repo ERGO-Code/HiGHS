@@ -30,8 +30,10 @@
 
 #if defined(SANITIZE_THREAD)
 #define TSAN_ENABLED
-#elif defined(__has_feature) &&  __has_feature(thread_sanitizer)
+#elif defined(__has_feature) 
+#if __has_feature(thread_sanitizer)
 #define TSAN_ENABLED
+#endif
 #endif
 
 #ifdef TSAN_ENABLED
@@ -56,8 +58,8 @@ class HighsTaskExecutor {
     void dispose();
     ~ExecutorHandle() { 
 
-      TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk)
-      dispose(); 
+      // TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk)
+      // dispose(); 
       }
   };
 
@@ -157,8 +159,8 @@ class HighsTaskExecutor {
          i < numThreads; ++i) {
       workerThreads.emplace_back(
           std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
-      TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
-      std::cout <<"happens before thread " << i << ": " << &workerThreads[i] << std::endl;
+      // TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
+      // std::cout <<"happens before thread " << i << ": " << &workerThreads[i] << std::endl;
     }
 
   }
@@ -176,14 +178,14 @@ class HighsTaskExecutor {
     // only block if called on main thread, otherwise deadlock may occur
     if (blocking && executorHandle.isMain) {
       for (auto& workerThread : workerThreads) {
-        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
-        std::cout <<"happens after thread " << ": " << &workerThread << std::endl;
+        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
+        // std::cout <<"happens after thread blocking and isMain" << ": " << &workerThread << std::endl;
         workerThread.join();
       }
     } else {
       for (auto& workerThread : workerThreads) {
-        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
-        std::cout <<"happens after thread " << ": " << &workerThread << std::endl;
+        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
+        // std::cout <<"happens after thread " << ": " << &workerThread << std::endl;
         workerThread.detach();
       }
     }

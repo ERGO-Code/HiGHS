@@ -398,7 +398,6 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 # string(TIMESTAMP TODAY "%Y-%m-%d")
 # message(STATUS "Compilation date: " ${TODAY})
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if (DEBUG_MEMORY STREQUAL "Address")
   message(STATUS "DEBUG_MEMORY is set to Address")
@@ -479,6 +478,8 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
 #   add_link_options("-fsanitize=undefined")
 
 endif()
+
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
