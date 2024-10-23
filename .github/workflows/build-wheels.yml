@@ -8,6 +8,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
     runs-on: ${{ matrix.buildplat[0] }}
@@ -38,24 +48,16 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
+
       - name: Build wheels (aarch64)
         if: ${{ contains(matrix.buildplat[1], 'aarch64') }}
         uses: pypa/cibuildwheel@v2.19
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
           CIBW_ARCHS_LINUX: aarch64
+
       - name: Build wheels (not aarch64)
         if: ${{ !contains(matrix.buildplat[1], 'aarch64') }}
         uses: pypa/cibuildwheel@v2.19
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build sdist
-        shell: bash -l {0}
-        run: pipx run build --sdist
