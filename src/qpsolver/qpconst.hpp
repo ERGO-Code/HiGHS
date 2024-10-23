@@ -13,6 +13,7 @@ enum class QpModelStatus {
   kIterationLimit,
   kTimeLimit,
   kLargeNullspace,
+  kInterrupt,
   kError
 };
 

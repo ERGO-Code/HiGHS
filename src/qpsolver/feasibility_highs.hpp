@@ -53,18 +53,17 @@ static void computeStartingPointHighs(Instance& instance,
   if (have_starting_point) {
     use_basis = highs_basis;
     use_solution = highs_solution;
+    // Have to assume that the supplied basis is feasible
+    modelstatus = QpModelStatus::kNotset;
   } else {
     Highs highs;
 
     // set HiGHS to be silent
     highs.setOptionValue("output_flag", false);
-
     highs.setOptionValue("presolve", "on");
-
-    const double use_time_limit = settings.time_limit < kHighsInf ?
-      settings.time_limit - timer.readRunHighsClock() :
-      kHighsInf;
-	     
+    // Set the residual time limit
+    const double use_time_limit = 
+      std::max(settings.time_limit - timer.readRunHighsClock(), 0.001);
     highs.setOptionValue("time_limit", use_time_limit);
 
     HighsLp lp;
@@ -119,18 +118,36 @@ static void computeStartingPointHighs(Instance& instance,
     }
 
     HighsStatus status = highs.run();
-    if (status != HighsStatus::kOk) {
+    if (status == HighsStatus::kError) {
       modelstatus = QpModelStatus::kError;
       return;
     }
 
+    HighsModelStatus phase1stat = highs.getModelStatus();
+    switch (phase1stat) {
+    case HighsModelStatus::kOptimal:
+      modelstatus = QpModelStatus::kNotset;
+      break;
+    case HighsModelStatus::kInfeasible:
+      modelstatus = QpModelStatus::kInfeasible;
+      break;
+    case HighsModelStatus::kTimeLimit:
+      modelstatus = QpModelStatus::kTimeLimit;
+      break;
+    case HighsModelStatus::kInterrupt:
+      modelstatus = QpModelStatus::kInterrupt;
+      break;
+    default:
+      modelstatus = QpModelStatus::kError;
+    }
+
     stats.phase1_iterations = highs.getInfo().simplex_iteration_count;
 
-    HighsModelStatus phase1stat = highs.getModelStatus();
-    if (phase1stat == HighsModelStatus::kInfeasible) {
-      modelstatus = QpModelStatus::kInfeasible;
-      return;
-    }
+    if (modelstatus != QpModelStatus::kNotset) return;
+
+    // Should only get here if feasibility problem is solved to
+    // optimality - hence there is a feasible basis
+    assert(phase1stat == HighsModelStatus::kOptimal);
 
     use_basis = highs.getBasis();
     use_solution = highs.getSolution();
@@ -244,8 +261,12 @@ static void computeStartingPointHighs(Instance& instance,
     printf(")\n");
   }
 
-  assert((HighsInt)(initial_active.size() + initial_inactive.size()) ==
-	 instance.num_var);
+  // This used to be an assert
+  if ((HighsInt)(initial_active.size() + initial_inactive.size()) !=
+      instance.num_var) {
+    modelstatus = QpModelStatus::kError;
+    return;
+  }
 
   if (!have_starting_point) {
     // When starting from a feasible basis, there will generally be
