@@ -34,13 +34,10 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
       highs_model_status = HighsModelStatus::kTimeLimit;
       qp_asm_return_status = QpAsmStatus::kWarning;
       break;
-<<<<<<< HEAD
     case QpModelStatus::kInterrupt:
       highs_model_status = HighsModelStatus::kInterrupt;
       qp_asm_return_status = QpAsmStatus::kWarning;
       break;
-=======
->>>>>>> latest
     case QpModelStatus::kUndetermined:
       highs_model_status = HighsModelStatus::kSolveError;
       qp_asm_return_status = QpAsmStatus::kError;
