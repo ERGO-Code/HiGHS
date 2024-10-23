@@ -1773,8 +1773,8 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
-  if (colUpperSource[col] != -1 && colLowerSource[col] != colUpperSource[col])
-    colImplSourceByRow[colUpperSource[col]].erase(col);
+  if (oldUpperSource != -1 && oldUpperSource != colLowerSource[col])
+    colImplSourceByRow[oldUpperSource].erase(col);
   if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
   colUpperSource[col] = originRow;
@@ -1813,8 +1813,8 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
-  if (colLowerSource[col] != -1 && colLowerSource[col] != colUpperSource[col])
-    colImplSourceByRow[colLowerSource[col]].erase(col);
+  if (oldLowerSource != -1 && oldLowerSource != colUpperSource[col])
+    colImplSourceByRow[oldLowerSource].erase(col);
   if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
   colLowerSource[col] = originRow;
