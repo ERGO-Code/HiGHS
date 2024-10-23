@@ -1,8 +1,12 @@
 #include "qpsolver/a_asm.hpp"
+
 #include "qpsolver/quass.hpp"
 #include "util/HighsCDouble.h"
 
-QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInformation& startinfo, Statistics& stats, QpModelStatus& status, QpSolution& solution, HighsTimer& qp_timer) {
+QpAsmStatus solveqp_actual(Instance& instance, Settings& settings,
+                           QpHotstartInformation& startinfo, Statistics& stats,
+                           QpModelStatus& status, QpSolution& solution,
+                           HighsTimer& qp_timer) {
   Runtime rt(instance, stats);
   rt.settings = settings;
   Quass quass(rt);
@@ -21,54 +25,55 @@ QpAsmStatus solveqp_actual(Instance& instance, Settings& settings, QpHotstartInf
   solution.dualcon = rt.dualcon;
 
   return QpAsmStatus::kOk;
-
 }
 
 std::string qpBasisStatusToString(const BasisStatus qp_basis_status) {
   switch (qp_basis_status) {
-  case BasisStatus::kInactive:
-    return "Inactive";
-  case BasisStatus::kActiveAtLower:
-    return "Active at lower bound";
-  case BasisStatus::kActiveAtUpper:
-    return "Active at upper bound";
-  case BasisStatus::kInactiveInBasis:
-    return "Inactive in basis";
-  default:
-    return "Unidentified QP basis status";
+    case BasisStatus::kInactive:
+      return "Inactive";
+    case BasisStatus::kActiveAtLower:
+      return "Active at lower bound";
+    case BasisStatus::kActiveAtUpper:
+      return "Active at upper bound";
+    case BasisStatus::kInactiveInBasis:
+      return "Inactive in basis";
+    default:
+      return "Unidentified QP basis status";
   }
 }
 
 std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
   switch (qp_model_status) {
-  case QpModelStatus::kNotset:
-    return "Not set";
-  case QpModelStatus::kUndetermined:
-    return "Undertermined";
-  case QpModelStatus::kOptimal:
-    return "Optimal";
-  case QpModelStatus::kUnbounded:
-    return "Unbounded";
-  case QpModelStatus::kInfeasible:
-    return "Infeasible";
-  case QpModelStatus::kIterationLimit:
-    return "Iteration limit";
-  case QpModelStatus::kTimeLimit:
-    return "Time ;limit";
-  case QpModelStatus::kLargeNullspace:
-    return "Large nullspace";
-  case QpModelStatus::kError:
-    return "Error";
-  default:
-    return "Unidentified QP model status";
+    case QpModelStatus::kNotset:
+      return "Not set";
+    case QpModelStatus::kUndetermined:
+      return "Undertermined";
+    case QpModelStatus::kOptimal:
+      return "Optimal";
+    case QpModelStatus::kUnbounded:
+      return "Unbounded";
+    case QpModelStatus::kInfeasible:
+      return "Infeasible";
+    case QpModelStatus::kIterationLimit:
+      return "Iteration limit";
+    case QpModelStatus::kTimeLimit:
+      return "Time ;limit";
+    case QpModelStatus::kLargeNullspace:
+      return "Large nullspace";
+    case QpModelStatus::kError:
+      return "Error";
+    default:
+      return "Unidentified QP model status";
   }
 }
 
-void assessQpPrimalFeasibility(const Instance& instance, const double primal_feasibility_tolerance,
-			       const std::vector<double>& var_value, const std::vector<double>& con_value,
-			       HighsInt& num_var_infeasibilities, double& max_var_infeasibility, double& sum_var_infeasibilities,
-			       HighsInt& num_con_infeasibilities, double& max_con_infeasibility, double& sum_con_infeasibilities,
-			       double& max_con_residual, double& sum_con_residuals) {
+void assessQpPrimalFeasibility(
+    const Instance& instance, const double primal_feasibility_tolerance,
+    const std::vector<double>& var_value, const std::vector<double>& con_value,
+    HighsInt& num_var_infeasibilities, double& max_var_infeasibility,
+    double& sum_var_infeasibilities, HighsInt& num_con_infeasibilities,
+    double& max_con_infeasibility, double& sum_con_infeasibilities,
+    double& max_con_residual, double& sum_con_residuals) {
   num_var_infeasibilities = 0;
   max_var_infeasibility = 0;
   sum_var_infeasibilities = 0;
@@ -91,14 +96,16 @@ void assessQpPrimalFeasibility(const Instance& instance, const double primal_fea
       var_infeasibility = primal - upper;
     }
     if (var_infeasibility > 0) {
-      if (var_infeasibility > primal_feasibility_tolerance) 
-	num_var_infeasibilities++;
+      if (var_infeasibility > primal_feasibility_tolerance)
+        num_var_infeasibilities++;
       max_var_infeasibility =
-	std::max(var_infeasibility, max_var_infeasibility);
+          std::max(var_infeasibility, max_var_infeasibility);
       sum_var_infeasibilities += var_infeasibility;
     }
-    for (HighsInt iEl = instance.A.mat.start[iVar]; iEl < instance.A.mat.start[iVar+1]; iEl++) {
-      con_value_quad[instance.A.mat.index[iEl]] += primal * instance.A.mat.value[iEl];
+    for (HighsInt iEl = instance.A.mat.start[iVar];
+         iEl < instance.A.mat.start[iVar + 1]; iEl++) {
+      con_value_quad[instance.A.mat.index[iEl]] +=
+          primal * instance.A.mat.value[iEl];
     }
   }
   for (HighsInt iCon = 0; iCon < instance.num_con; iCon++) {
@@ -112,15 +119,14 @@ void assessQpPrimalFeasibility(const Instance& instance, const double primal_fea
       con_infeasibility = primal - upper;
     }
     if (con_infeasibility > 0) {
-      if (con_infeasibility > primal_feasibility_tolerance) 
-	num_con_infeasibilities++;
+      if (con_infeasibility > primal_feasibility_tolerance)
+        num_con_infeasibilities++;
       max_con_infeasibility =
-	std::max(con_infeasibility, max_con_infeasibility);
+          std::max(con_infeasibility, max_con_infeasibility);
       sum_con_infeasibilities += con_infeasibility;
     }
-    double con_residual = std::fabs(primal-double(con_value_quad[iCon]));
+    double con_residual = std::fabs(primal - double(con_value_quad[iCon]));
     max_con_residual = std::max(con_residual, max_con_residual);
     sum_con_residuals += con_residual;
   }
 }
-

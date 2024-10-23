@@ -994,7 +994,6 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
       REQUIRE(info.qp_iteration_count == 1);
     }
   }
-  
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
