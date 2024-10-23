@@ -46,10 +46,10 @@ typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 #define cupdlp_copy_vec(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
 
-//#define cupdlp_init_csc_cpu(var, size)	\
-//   {\
-//     (var) = (CUPDLPcsc*)malloc((size) * sizeof(CUPDLPcsc));\
-//   }
+/* #define cupdlp_init_csc_cpu(var, size)	\ */
+/* {\ */
+/*     (var) = (CUPDLPcsc*)malloc((size) * sizeof(CUPDLPcsc));\ */
+/* } */
 
 cupdlp_retcode problem_create(CUPDLPproblem** prob);
 // cupdlp_retcode csc_create(CUPDLPcsc **csc_cpu);

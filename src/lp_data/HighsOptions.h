@@ -389,10 +389,10 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
   bool run_centring;
-  double primal_residual_tolerance;
-  double dual_residual_tolerance;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
+  double primal_residual_tolerance;
+  double dual_residual_tolerance;
 
   // Options for iCrash
   bool icrash;
