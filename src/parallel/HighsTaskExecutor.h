@@ -144,7 +144,7 @@ class HighsTaskExecutor {
       workerDeques[i] = cache_aligned::make_unique<HighsSplitDeque>(
           workerBunk, workerDeques.data(), i, numThreads);
 
-      TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk);
+      // TSAN_ANNOTATE_HAPPENS_AFTER(&workerBunk);
     }
 
     threadLocalWorkerDeque() = workerDeques[0].get();
@@ -155,7 +155,7 @@ class HighsTaskExecutor {
          i < numThreads; ++i) {
       workerThreads.emplace_back(
           std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
-      TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
+      // TSAN_ANNOTATE_HAPPENS_BEFORE(&workerThreads[i]);
     }
 
   }
@@ -173,12 +173,12 @@ class HighsTaskExecutor {
     // only block if called on main thread, otherwise deadlock may occur
     if (blocking && executorHandle.isMain) {
       for (auto& workerThread : workerThreads) {
-        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
+        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
         workerThread.join();
       }
     } else {
       for (auto& workerThread : workerThreads) {
-        TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
+        // TSAN_ANNOTATE_HAPPENS_AFTER(&workerThread);
         workerThread.detach();
       }
     }
