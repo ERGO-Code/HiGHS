@@ -1,11 +1,11 @@
 name: build-wheels-push
 
-on: push
+# on: push
  
-# on:
-#  release:
-#    types:
-#      - published
+on:
+ release:
+   types:
+     - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
