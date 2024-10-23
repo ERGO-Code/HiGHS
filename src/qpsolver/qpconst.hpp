@@ -5,7 +5,7 @@
 enum class QpSolverStatus { OK, NOTPOSITIVDEFINITE, DEGENERATE };
 
 enum class QpModelStatus {
-  kNotset, // 0
+  kNotset,  // 0
   kUndetermined,
   kOptimal,
   kUnbounded,
@@ -22,6 +22,5 @@ enum class BasisStatus {
   kActiveAtUpper,
   kInactiveInBasis
 };
-
 
 #endif
