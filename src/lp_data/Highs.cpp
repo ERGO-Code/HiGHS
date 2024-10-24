@@ -1575,14 +1575,18 @@ HighsStatus Highs::run() {
                 "Postsolve  : %" HIGHSINT_FORMAT "\n",
                 postsolve_iteration_count);
   }
-  highsLogDev(log_options, HighsLogType::kInfo, "Time       : %8.2f\n",
-              this_solve_time);
-  highsLogDev(log_options, HighsLogType::kInfo, "Time Pre   : %8.2f\n",
-              this_presolve_time);
-  highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP : %8.2f\n",
-              this_solve_presolved_lp_time);
-  highsLogDev(log_options, HighsLogType::kInfo, "Time PostLP: %8.2f\n",
-              this_solve_original_lp_time);
+  if (this_solve_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time       : %8.2f\n",
+                this_solve_time);
+  if (this_presolve_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time Pre   : %8.2f\n",
+                this_presolve_time);
+  if (this_solve_presolved_lp_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP : %8.2f\n",
+                this_solve_presolved_lp_time);
+  if (this_solve_original_lp_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time PostLP: %8.2f\n",
+                this_solve_original_lp_time);
   if (this_solve_time > 0) {
     highsLogDev(log_options, HighsLogType::kInfo, "For LP %16s",
                 incumbent_lp.model_name_.c_str());

@@ -12,7 +12,8 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
       buffer_row_ep(rt.instance.num_var) {
   buffer_vec2hvec.setup(rt.instance.num_var);
 
-  for (HighsInt i=0; i<runtime.instance.num_var + runtime.instance.num_con; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_var + runtime.instance.num_con;
+       i++) {
     basisstatus[i] = BasisStatus::kInactive;
   }
 
@@ -20,7 +21,7 @@ Basis::Basis(Runtime& rt, std::vector<HighsInt> active,
     active_constraint_index.push_back(active[i]);
     basisstatus[active_constraint_index[i]] = status[i];
   }
-  for (size_t i = 0; i< inactive.size(); i++) {
+  for (size_t i = 0; i < inactive.size(); i++) {
     non_active_constraint_index.push_back(inactive[i]);
     basisstatus[non_active_constraint_index[i]] = BasisStatus::kInactiveInBasis;
   }
@@ -38,14 +39,15 @@ void Basis::build() {
 
   updatessinceinvert = 0;
 
-  baseindex.resize(active_constraint_index.size() + non_active_constraint_index.size());
+  baseindex.resize(active_constraint_index.size() +
+                   non_active_constraint_index.size());
   constraintindexinbasisfactor.clear();
 
   basisfactor = HFactor();
 
   constraintindexinbasisfactor.assign(Atran.num_row + Atran.num_col, -1);
-  assert((HighsInt)(non_active_constraint_index.size() + active_constraint_index.size()) ==
-         Atran.num_row);
+  assert((HighsInt)(non_active_constraint_index.size() +
+                    active_constraint_index.size()) == Atran.num_row);
 
   HighsInt counter = 0;
   for (HighsInt i : non_active_constraint_index) {
@@ -66,12 +68,12 @@ void Basis::build() {
     Atran.value.resize(1);
   }
   basisfactor.setup(Atran.num_col, Atran.num_row, Atran.start.data(),
-                    Atran.index.data(), Atran.value.data(),
-                    baseindex.data());
+                    Atran.index.data(), Atran.value.data(), baseindex.data());
   basisfactor.build();
 
   for (size_t i = 0;
-       i < active_constraint_index.size() + non_active_constraint_index.size(); i++) {
+       i < active_constraint_index.size() + non_active_constraint_index.size();
+       i++) {
     constraintindexinbasisfactor[baseindex[i]] = i;
   }
 }
@@ -83,13 +85,14 @@ void Basis::rebuild() {
   constraintindexinbasisfactor.clear();
 
   constraintindexinbasisfactor.assign(Atran.num_row + Atran.num_col, -1);
-  assert((HighsInt)(non_active_constraint_index.size() + active_constraint_index.size()) ==
-         Atran.num_row);
+  assert((HighsInt)(non_active_constraint_index.size() +
+                    active_constraint_index.size()) == Atran.num_row);
 
   basisfactor.build();
 
   for (size_t i = 0;
-       i < active_constraint_index.size() + non_active_constraint_index.size(); i++) {
+       i < active_constraint_index.size() + non_active_constraint_index.size();
+       i++) {
     constraintindexinbasisfactor[baseindex[i]] = i;
   }
   reinversion_hint = false;
@@ -112,7 +115,7 @@ void Basis::report() {
   //
   // Remaining qp_num_con indices may be degenerate, otherwise they
   // are off their bounds. They are analogous to primal simplex basic
-  // variables, in that their values are solved for. 
+  // variables, in that their values are solved for.
   //
   // Hence the correspondence between the QP basis and a HiGHS
   // (simplex) basis is as follows
@@ -127,7 +130,7 @@ void Basis::report() {
   //
   // BasisStatus::kInactiveInBasis: HighsBasisStatus::kNonbasic
   //
-  // 
+  //
   const HighsInt qp_num_var = Atran.num_row;
   const HighsInt qp_num_con = Atran.num_col;
   const HighsInt num_active_in_basis = active_constraint_index.size();
@@ -144,39 +147,39 @@ void Basis::report() {
 
   for (HighsInt i = 0; i < qp_num_var; i++) {
     switch (basisstatus[qp_num_con + i]) {
-    case BasisStatus::kInactive:
-      num_var_inactive++;
-      continue;
-    case BasisStatus::kActiveAtLower:
-      num_var_active_at_lower++;
-      continue;
-    case BasisStatus::kActiveAtUpper:
-      num_var_active_at_upper++;
-      continue;
-    case BasisStatus::kInactiveInBasis:
-      num_var_inactive_in_basis++;
-      continue;
-    default:
-      assert(111==123);
+      case BasisStatus::kInactive:
+        num_var_inactive++;
+        continue;
+      case BasisStatus::kActiveAtLower:
+        num_var_active_at_lower++;
+        continue;
+      case BasisStatus::kActiveAtUpper:
+        num_var_active_at_upper++;
+        continue;
+      case BasisStatus::kInactiveInBasis:
+        num_var_inactive_in_basis++;
+        continue;
+      default:
+        assert(111 == 123);
     }
   }
 
   for (HighsInt i = 0; i < qp_num_con; i++) {
     switch (basisstatus[i]) {
-    case BasisStatus::kInactive:
-      num_con_inactive++;
-      continue;
-    case BasisStatus::kActiveAtLower:
-      num_con_active_at_lower++;
-      continue;
-    case BasisStatus::kActiveAtUpper:
-      num_con_active_at_upper++;
-      continue;
-    case BasisStatus::kInactiveInBasis:
-      num_con_inactive_in_basis++;
-      continue;
-    default:
-      assert(111==123);
+      case BasisStatus::kInactive:
+        num_con_inactive++;
+        continue;
+      case BasisStatus::kActiveAtLower:
+        num_con_active_at_lower++;
+        continue;
+      case BasisStatus::kActiveAtUpper:
+        num_con_active_at_upper++;
+        continue;
+      case BasisStatus::kInactiveInBasis:
+        num_con_inactive_in_basis++;
+        continue;
+      default:
+        assert(111 == 123);
     }
   }
 
@@ -185,38 +188,38 @@ void Basis::report() {
     printf("basis: ");
     for (HighsInt a_ : active_constraint_index) {
       if (a_ < qp_num_con) {
-	printf("c%-3d ", int(a_));
+        printf("c%-3d ", int(a_));
       } else {
-	printf("v%-3d ", int(a_-qp_num_con));
+        printf("v%-3d ", int(a_ - qp_num_con));
       }
-    } 
+    }
     printf(" - ");
     for (HighsInt n_ : non_active_constraint_index) {
       if (n_ < qp_num_con) {
-	printf("c%-3d ", int(n_));
+        printf("c%-3d ", int(n_));
       } else {
-	printf("v%-3d ", int(n_-qp_num_con));
+        printf("v%-3d ", int(n_ - qp_num_con));
       }
-    } 
+    }
     printf("\n");
   }
 
-  printf("Basis::report: QP(%6d [inact %6d; act %6d], %6d)",
-	 int(qp_num_var), int(num_inactive_in_basis), int(num_active_in_basis),
-	 int(qp_num_con));
-  printf(" (inact / lo / up / basis) for var (%6d / %6d / %6d / %6d) and con (%6d / %6d / %6d / %6d)\n",
-	 int(num_var_inactive),
-	 int(num_var_active_at_lower),
-	 int(num_var_active_at_upper),
-	 int(num_var_inactive_in_basis),
-	 int(num_con_inactive),
-	 int(num_con_active_at_lower),
-	 int(num_con_active_at_upper),
-	 int(num_con_inactive_in_basis));
+  printf("Basis::report: QP(%6d [inact %6d; act %6d], %6d)", int(qp_num_var),
+         int(num_inactive_in_basis), int(num_active_in_basis), int(qp_num_con));
+  printf(
+      " (inact / lo / up / basis) for var (%6d / %6d / %6d / %6d) and con (%6d "
+      "/ %6d / %6d / %6d)\n",
+      int(num_var_inactive), int(num_var_active_at_lower),
+      int(num_var_active_at_upper), int(num_var_inactive_in_basis),
+      int(num_con_inactive), int(num_con_active_at_lower),
+      int(num_con_active_at_upper), int(num_con_inactive_in_basis));
   assert(qp_num_var == num_inactive_in_basis + num_active_in_basis);
   assert(qp_num_con == num_var_inactive + num_con_inactive);
-  assert(num_inactive_in_basis == num_var_inactive_in_basis + num_con_inactive_in_basis);
-  assert(num_active_in_basis == num_var_active_at_lower + num_var_active_at_upper + num_con_active_at_lower + num_con_active_at_upper);
+  assert(num_inactive_in_basis ==
+         num_var_inactive_in_basis + num_con_inactive_in_basis);
+  assert(num_active_in_basis ==
+         num_var_active_at_lower + num_var_active_at_upper +
+             num_con_active_at_lower + num_con_active_at_upper);
 }
 
 // move that constraint into V section basis (will correspond to Nullspace
@@ -229,7 +232,8 @@ void Basis::deactivate(HighsInt conid) {
   non_active_constraint_index.push_back(conid);
 }
 
-QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisStatus newstatus,
+QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid,
+                               BasisStatus newstatus,
                                HighsInt nonactivetoremove, Pricing* pricing) {
   // printf("activ %" HIGHSINT_FORMAT "\n", conid);
   if (!contains(active_constraint_index, (HighsInt)conid)) {
@@ -257,8 +261,8 @@ QpSolverStatus Basis::activate(const Settings& settings, HighsInt conid, BasisSt
   return QpSolverStatus::OK;
 }
 
-void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsInt droppedcon,
-                        Pricing* pricing) {
+void Basis::updatebasis(const Settings& settings, HighsInt newactivecon,
+                        HighsInt droppedcon, Pricing* pricing) {
   if (newactivecon == droppedcon) {
     return;
   }
@@ -283,7 +287,8 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
   basisfactor.update(&col_aq, &row_ep, &row_out, &hint);
 
   updatessinceinvert++;
-  if (updatessinceinvert >= settings.reinvertfrequency || hint != kHintNotChanged) {
+  if (updatessinceinvert >= settings.reinvertfrequency ||
+      hint != kHintNotChanged) {
     reinversion_hint = true;
   }
   // since basis changed, buffered values are no longer valid
@@ -292,7 +297,7 @@ void Basis::updatebasis(const Settings& settings, HighsInt newactivecon, HighsIn
 }
 
 QpVector& Basis::btran(const QpVector& rhs, QpVector& target, bool buffer,
-                     HighsInt p) {
+                       HighsInt p) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.btranCall(rhs_hvec, 1.0);
   if (buffer) {
@@ -325,7 +330,7 @@ QpVector Basis::btran(const QpVector& rhs, bool buffer, HighsInt p) {
 }
 
 QpVector& Basis::ftran(const QpVector& rhs, QpVector& target, bool buffer,
-                     HighsInt q) {
+                       HighsInt q) {
   HVector rhs_hvec = vec2hvec(rhs);
   basisfactor.ftranCall(rhs_hvec, 1.0);
   if (buffer) {
@@ -394,7 +399,7 @@ QpVector Basis::recomputex(const Instance& inst) {
 }
 
 QpVector& Basis::Ztprod(const QpVector& rhs, QpVector& target, bool buffer,
-                      HighsInt q) {
+                        HighsInt q) {
   ftran(rhs, Ztprod_res, buffer, q);
 
   target.reset();
