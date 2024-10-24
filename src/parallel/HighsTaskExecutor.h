@@ -128,8 +128,7 @@ class HighsTaskExecutor {
 
     for (int i = 1, numThreads = static_cast<int>(workerDeques.size());
          i < numThreads; ++i) {
-      workerThreads.emplace_back(
-          std::move(std::thread(&HighsTaskExecutor::run_worker, i, this)));
+      workerThreads.emplace_back(&HighsTaskExecutor::run_worker, i, this);
     }
   }
 
