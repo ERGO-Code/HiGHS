@@ -267,7 +267,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
                   DEPENDS unit_tests_all)
           set_tests_properties (${name}${setting} PROPERTIES
                   PASS_REGULAR_EXPRESSION
-                  "Model   status      : ${solutionstatus}")
+                  "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off")

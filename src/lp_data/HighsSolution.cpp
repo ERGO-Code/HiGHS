@@ -109,8 +109,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   primal_dual_errors.max_dual_infeasibility.invalidate();
   highs_info.dual_solution_status = kSolutionStatusNone;
 
-  max_complementarity_violation = kHighsIllegalInfeasibilityMeasure;
-  sum_complementarity_violations = kHighsIllegalInfeasibilityMeasure;
+  max_complementarity_violation = kHighsIllegalComplementarityViolation;
+  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
@@ -393,6 +393,16 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       max_complementarity_violation =
           std::max(complementarity_violation, max_complementarity_violation);
     }
+    double check_max_complementarity_violation;
+    double check_sum_complementarity_violations;
+    const bool have_values = getComplementarityViolations(
+        lp, solution, check_max_complementarity_violation,
+        check_sum_complementarity_violations);
+    assert(have_values);
+    assert(check_max_complementarity_violation ==
+           max_complementarity_violation);
+    assert(check_sum_complementarity_violations ==
+           sum_complementarity_violations);
   }
 
   if (get_residuals) {
@@ -569,6 +579,71 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
     dual_infeasibility = fabs(dual);
   }
   return status_value_ok;
+}
+
+bool getComplementarityViolations(const HighsLp& lp,
+                                  const HighsSolution& solution,
+                                  double& max_complementarity_violation,
+                                  double& sum_complementarity_violations) {
+  max_complementarity_violation = kHighsIllegalComplementarityViolation;
+  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+  if (!solution.dual_valid) return false;
+
+  max_complementarity_violation = 0;
+  sum_complementarity_violations = 0;
+  double primal_residual = 0;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    const bool is_col = iVar < lp.num_col_;
+    const HighsInt iRow = iVar - lp.num_col_;
+    const double primal =
+        is_col ? solution.col_value[iVar] : solution.row_value[iRow];
+    const double dual =
+        is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
+    const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
+    const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      // Free
+      primal_residual = 1;
+    } else {
+      const double mid = (lower + upper) * 0.5;
+      primal_residual =
+          primal < mid ? std::fabs(lower - primal) : std::fabs(upper - primal);
+    }
+    const double dual_residual = std::fabs(dual);
+    const double complementarity_violation = primal_residual * dual_residual;
+    sum_complementarity_violations += complementarity_violation;
+    max_complementarity_violation =
+        std::max(complementarity_violation, max_complementarity_violation);
+  }
+  return true;
+}
+
+bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
+                               double& dual_objective_value) {
+  dual_objective_value = 0;
+  if (!solution.dual_valid) return false;
+
+  dual_objective_value = lp.offset_;
+  double bound = 0;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    const bool is_col = iVar < lp.num_col_;
+    const HighsInt iRow = iVar - lp.num_col_;
+    const double primal =
+        is_col ? solution.col_value[iVar] : solution.row_value[iRow];
+    const double dual =
+        is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
+    const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
+    const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      // Free
+      bound = 1;
+    } else {
+      const double mid = (lower + upper) * 0.5;
+      bound = primal < mid ? lower : upper;
+    }
+    dual_objective_value += bound * dual;
+  }
+  return true;
 }
 
 void HighsError::print(std::string message) {
