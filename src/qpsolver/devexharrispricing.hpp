@@ -56,7 +56,7 @@ class DevexHarrisPricing : public Pricing {
       : runtime(rt),
         basis(bas),
         redcosts(rc),
-        weights(std::vector<double>(rt.instance.num_var, 1.0)) {};
+        weights(std::vector<double>(rt.instance.num_var, 1.0)){};
 
   HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
