@@ -401,6 +401,12 @@ class Highs {
    */
 
   /**
+   * @brief Identify and the standard form of the HighsLp instance in
+   * HiGHS
+   */
+  HighsStatus getStandardFormLp(HighsLp& standard_form_lp);
+
+  /**
    * @brief Return a const reference to the presolved HighsLp instance in HiGHS
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
@@ -1378,6 +1384,10 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
+  std::vector<double> standard_form_cost_;
+  std::vector<double> standard_form_rhs_;
+  HighsSparseMatrix standard_form_matrix_;
+
   HEkk ekk_instance_;
 
   HighsPresolveLog presolve_log_;
@@ -1429,7 +1439,10 @@ class Highs {
   //
   // Clears the presolved model and its status
   void clearPresolve();
-  //
+   //
+  // Clears the standard form LP
+  void clearStandardFormLp();
+ //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
   // the incumbent model.
@@ -1473,6 +1486,7 @@ class Highs {
   void underDevelopmentLogMessage(const std::string& method_name);
 
   // Interface methods
+  HighsStatus formStandardFormLp();
   HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,

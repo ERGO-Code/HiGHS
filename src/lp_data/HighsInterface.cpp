@@ -21,6 +21,72 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
+HighsStatus Highs::formStandardFormLp() {
+  this->clearStandardFormLp();
+  HighsLp& lp = this->model_.lp_;
+  // Check for free variables
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (lp.col_lower_[iCol] <= -kHighsInf &&
+	lp.col_upper_[iCol] >= kHighsInf) {
+      // Free col
+      highsLogUser(options_.log_options, HighsLogType::kError,
+		   "Cannot generate standard form LP for problems with free variables\n");		
+      return HighsStatus::kError;
+    }
+  }
+  HighsSparseMatrix& matrix = lp.a_matrix_;
+  // Ensure that the incumbent LP is rowwise
+  matrix.ensureRowwise();
+  HighsSparseMatrix local_row;
+  std::vector<HighsInt>& index = local_row.index_;
+  std::vector<double> value = local_row.value_;
+  local_row.num_row_ = 1;
+  local_row.num_col_ = lp.num_col_;
+  index.resize(lp.num_col_);
+  value.resize(lp.num_col_);  
+  local_row.start_.resize(2);
+  HighsInt& num_nz = local_row.start_[1];
+  local_row.start_[0] = 0;
+  HighsInt num_free_row = 0;
+  std::vector<HighsInt>slack_ix;
+  HighsInt slack_k = 1;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lp.row_lower_[iRow] <= -kHighsInf &&
+	lp.row_upper_[iRow] >= kHighsInf) {
+      assert(0 == 1);
+      // Free row
+      num_free_row++;
+      continue;
+    }
+    if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
+      assert(0 == 2);
+      // Equality
+      matrix.getRow(iRow, num_nz, index.data(), value.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
+      continue;
+    } else if (lp.row_lower_[iRow] <= -kHighsInf) {
+      assert(0 == 3);
+      // Upper bounded, so record the slack
+      assert(lp.row_upper_[iRow] < kHighsInf);
+      slack_ix.push_back(HighsInt(standard_form_rhs_.size()));
+      matrix.getRow(iRow, num_nz, index.data(), value.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
+    } else if (lp.row_upper_[iRow] >= kHighsInf) {
+      assert(0 == 4);
+      // Lower bounded, so record the slack
+      assert(lp.row_lower_[iRow] > -kHighsInf);
+      slack_ix.push_back(HighsInt(standard_form_rhs_.size()));
+      matrix.getRow(iRow, num_nz, index.data(), value.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
+      
+  }
+  
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
   assert(!lp.isMip() || options_.solve_relaxation);
