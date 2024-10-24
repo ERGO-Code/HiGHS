@@ -525,6 +525,8 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
           ? model->col_cost_[col]
           : kHighsInf;
 
+  const double threshold = 1000 * options->dual_feasibility_tolerance;
+
   auto checkImpliedBound = [&](HighsInt row, HighsInt col, double val,
                                double dualRowBnd, double residualAct,
                                HighsInt direction) {
@@ -535,8 +537,6 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
     if (std::abs(impliedBound) * kHighsTiny >
         options->dual_feasibility_tolerance)
       return;
-
-    const double threshold = 1000 * options->dual_feasibility_tolerance;
 
     if (direction * val > 0) {
       // only tighten bound if it is tighter by a wide enough margin
@@ -573,6 +573,8 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
   assert(rowLower != kHighsInf);
   assert(rowUpper != -kHighsInf);
 
+  const double threshold = 1000 * primal_feastol;
+
   auto checkImpliedBound = [&](HighsInt row, HighsInt col, double val,
                                double rowBnd, double residualAct,
                                HighsInt direction) {
@@ -581,26 +583,23 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
 
     if (std::abs(impliedBound) * kHighsTiny > primal_feastol) return;
 
-    const double threshold = 1000 * primal_feastol;
-
     if (direction * val > 0) {
       // bound is an upper bound
-      // check if we may round the bound due to integrality restrictions
       if (mipsolver != nullptr) {
-        if (model->integrality_[col] != HighsVarType::kContinuous) {
-          double roundedBound = std::floor(impliedBound + primal_feastol);
+        // solving a MIP; tighten upper bound if possible
+        if (impliedBound <
+            model->col_upper_[col] -
+                (model->integrality_[col] != HighsVarType::kContinuous
+                     ? primal_feastol
+                     : threshold))
+          changeColUpper(col, impliedBound);
 
-          if (roundedBound < model->col_upper_[col])
-            changeColUpper(col, roundedBound);
-        }
-
+        // do not use the implied bound if this a not a model row, since the
+        // row can be removed and should not be used, e.g., to identify a
+        // column as implied free
         if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
-            mipsolver->orig_model_->num_row_) {
-          if (impliedBound < model->col_upper_[col] - threshold)
-            changeColUpper(col, impliedBound);
-
+            mipsolver->orig_model_->num_row_)
           impliedBound = kHighsInf;
-        }
       }
 
       // only tighten bound if it is tighter by a wide enough margin
@@ -608,25 +607,21 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
         changeImplColUpper(col, impliedBound, row);
     } else {
       // bound is a lower bound
-      // check if we may round the bound due to integrality restrictions
       if (mipsolver != nullptr) {
-        if (model->integrality_[col] != HighsVarType::kContinuous) {
-          double roundedBound = std::ceil(impliedBound - primal_feastol);
-
-          if (roundedBound > model->col_lower_[col])
-            changeColLower(col, roundedBound);
-        }
+        // solving a MIP; tighten lower bound if possible
+        if (impliedBound >
+            model->col_lower_[col] +
+                (model->integrality_[col] != HighsVarType::kContinuous
+                     ? primal_feastol
+                     : threshold))
+          changeColLower(col, impliedBound);
 
         // do not use the implied bound if this a not a model row, since the
         // row can be removed and should not be used, e.g., to identify a
         // column as implied free
         if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
-            mipsolver->orig_model_->num_row_) {
-          if (impliedBound > model->col_lower_[col] + threshold)
-            changeColLower(col, impliedBound);
-
+            mipsolver->orig_model_->num_row_)
           impliedBound = -kHighsInf;
-        }
       }
 
       // only tighten bound if it is tighter by a wide enough margin
