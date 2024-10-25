@@ -42,7 +42,7 @@ HighsStatus Highs::formStandardFormLp() {
   standard_form_matrix.num_col_ = lp.num_col_;
   // Create a HighsSparseMatrix instance to store rows extracted from
   // the original constraint matrix
-  HighsInt local_row_min_nnz = std::max(lp.num_col_, 2);
+  HighsInt local_row_min_nnz = std::max(lp.num_col_, HighsInt(2));
   HighsSparseMatrix local_row;
   local_row.ensureRowwise();
   local_row.num_row_ = 1;
