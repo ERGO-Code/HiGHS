@@ -1639,12 +1639,12 @@ HighsStatus Highs::run() {
 }
 
 HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
-                                     HighsInt& num_nz, double offset,
+                                     HighsInt& num_nz, double& offset,
                                      double* cost, double* rhs, HighsInt* start,
                                      HighsInt* index, double* value) {
   if (!this->standard_form_valid_) {
     HighsStatus status = formStandardFormLp();
-    if (status != HighsStatus::kOk) return status;
+    assert(status == HighsStatus::kOk);
   }
   num_col = this->standard_form_cost_.size();
   num_row = this->standard_form_rhs_.size();

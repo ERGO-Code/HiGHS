@@ -475,11 +475,30 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   std::string model;
   std::string model_file;
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  model = "avgas";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  highs.readModel(model_file);
+  // highs.setOptionValue("output_flag", dev_run);
+  const bool test_mps = false;
+  if (test_mps) {
+    model = "avgas";
+    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+    highs.readModel(model_file);
+  } else {
+    HighsLp lp;
+    lp.offset_ = 0.5;
+    lp.num_col_ = 4;
+    lp.num_row_ = 3;
+    lp.col_cost_ = {1, 1, 1, -1};
+    lp.col_lower_ = {1, -kHighsInf, -kHighsInf, -1};
+    lp.col_upper_ = {kHighsInf, kHighsInf, 2, 3};
+    lp.row_lower_ = {0, 1, -kHighsInf};
+    lp.row_upper_ = {4, kHighsInf, 4};
+    lp.a_matrix_.start_ = {0, 2, 4, 6, 8};
+    lp.a_matrix_.index_ = {0, 2, 0, 1, 1, 2, 0, 2};
+    lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1, 1, 1};
+    highs.passModel(lp);
+    highs.writeModel("");
+  }
   highs.run();
+  highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
       highs.getInfo().objective_function_value;
   //
@@ -502,6 +521,7 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   HighsLp standard_form_lp;
   standard_form_lp.num_col_ = num_col;
   standard_form_lp.num_row_ = num_row;
+  standard_form_lp.offset_ = offset;
   standard_form_lp.col_cost_ = cost;
   standard_form_lp.col_lower_.assign(num_col, 0);
   standard_form_lp.col_upper_.assign(num_col, kHighsInf);
@@ -511,9 +531,11 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   standard_form_lp.a_matrix_.index_ = index;
   standard_form_lp.a_matrix_.value_ = value;
   REQUIRE(highs.passModel(standard_form_lp) == HighsStatus::kOk);
-  if (dev_run) highs.writeModel("");
+  //  if (dev_run)
+  highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  highs.writeSolution("", kSolutionStylePretty);
   double objective_function_value = highs.getInfo().objective_function_value;
   double objective_difference =
       std::fabs(objective_function_value - required_objective_function_value) /

@@ -405,7 +405,7 @@ class Highs {
    * HiGHS
    */
   HighsStatus getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
-                                HighsInt& num_nz, double offset,
+                                HighsInt& num_nz, double& offset,
                                 double* cost = nullptr, double* rhs = nullptr,
                                 HighsInt* start = nullptr,
                                 HighsInt* index = nullptr,
