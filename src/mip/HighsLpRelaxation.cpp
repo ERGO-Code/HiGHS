@@ -1147,13 +1147,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // postsolve cannot be run, so there is no basis. Returning
       // Status::kError as a result yielded #1962, where the root node
       // is unbounded.
-      if (info.basis_validity == kBasisValidityInvalid) {
-	highsLogUser(mipsolver.options_mip_->log_options,
-		     HighsLogType::kWarning,
-            "HighsLpRelaxation::run LP is unbounded with no basis, "
-            "but not returning Status::kError\n");
-      }
-
+      if (info.basis_validity == kBasisValidityInvalid)
+        highsLogUser(mipsolver.options_mip_->log_options,
+                     HighsLogType::kWarning,
+                     "HighsLpRelaxation::run LP is unbounded with no basis, "
+                     "but not returning Status::kError\n");
       if (info.primal_solution_status == kSolutionStatusFeasible)
         mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
 
