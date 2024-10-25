@@ -58,7 +58,9 @@ class DevexPricing : public Pricing {
       : runtime(rt),
         basis(bas),
         redcosts(rc),
-        weights(std::vector<double>(rt.instance.num_var, 1.0)){};
+        //clang-format off
+        weights(std::vector<double>(rt.instance.num_var, 1.0)) {};
+  //clang-format on
 
   // B lambda = g
   // lambda = inv(B)g
