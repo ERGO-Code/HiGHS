@@ -52,7 +52,7 @@ class DantzigPricing : public Pricing {
 
  public:
   DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
-      : runtime(rt), basis(bas), redcosts(rc) {};
+      : runtime(rt), basis(bas), redcosts(rc){};
 
   HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());

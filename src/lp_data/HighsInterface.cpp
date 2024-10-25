@@ -24,67 +24,193 @@
 HighsStatus Highs::formStandardFormLp() {
   this->clearStandardFormLp();
   HighsLp& lp = this->model_.lp_;
-  // Check for free variables
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.col_lower_[iCol] <= -kHighsInf &&
-	lp.col_upper_[iCol] >= kHighsInf) {
-      // Free col
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "Cannot generate standard form LP for problems with free variables\n");		
-      return HighsStatus::kError;
-    }
-  }
   HighsSparseMatrix& matrix = lp.a_matrix_;
-  // Ensure that the incumbent LP is rowwise
+  // Ensure that the incumbent LP and standard form LP matrices are rowwise
   matrix.ensureRowwise();
+  // Original rows are processed before columns, so that any original
+  // boxed rows can be transformed to pairs of one-sided rows,
+  // requiring the standard form matrix to be row-wise. The original
+  // columns are assumed to come before any new columns, so their
+  // costs must be defined befor costs of new columns.
+  this->standard_form_cost_ = lp.col_cost_;
+  // Whilst debugging, work with local data structure
+  double standard_form_offset;
+  std::vector<double> standard_form_cost = lp.col_cost_;
+  std::vector<double> standard_form_rhs;
+  HighsSparseMatrix standard_form_matrix;
+  standard_form_matrix.format_ = MatrixFormat::kRowwise;
+  standard_form_matrix.num_col_ = lp.num_col_;
+  // Create a HighsSparseMatrix instance to store rows extracted from
+  // the original constraint matrix
+  HighsInt local_row_min_nnz = std::max(lp.num_col_, 2);
   HighsSparseMatrix local_row;
-  std::vector<HighsInt>& index = local_row.index_;
-  std::vector<double> value = local_row.value_;
+  local_row.ensureRowwise();
   local_row.num_row_ = 1;
   local_row.num_col_ = lp.num_col_;
-  index.resize(lp.num_col_);
-  value.resize(lp.num_col_);  
+  local_row.index_.resize(local_row_min_nnz);
+  local_row.value_.resize(local_row_min_nnz);
   local_row.start_.resize(2);
   HighsInt& num_nz = local_row.start_[1];
   local_row.start_[0] = 0;
   HighsInt num_free_row = 0;
-  std::vector<HighsInt>slack_ix;
+  std::vector<HighsInt> slack_ix;
   HighsInt slack_k = 1;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (lp.row_lower_[iRow] <= -kHighsInf &&
-	lp.row_upper_[iRow] >= kHighsInf) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       assert(0 == 1);
       // Free row
       num_free_row++;
       continue;
     }
-    if (lp.row_lower_[iRow] == lp.row_upper_[iRow]) {
+    if (lower == upper) {
       assert(0 == 2);
       // Equality
-      matrix.getRow(iRow, num_nz, index.data(), value.data());
-      this->standard_form_matrix_.addRows(local_row);
-      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(upper);
       continue;
-    } else if (lp.row_lower_[iRow] <= -kHighsInf) {
+    } else if (lower <= -kHighsInf) {
       assert(0 == 3);
       // Upper bounded, so record the slack
-      assert(lp.row_upper_[iRow] < kHighsInf);
-      slack_ix.push_back(HighsInt(standard_form_rhs_.size()));
-      matrix.getRow(iRow, num_nz, index.data(), value.data());
-      this->standard_form_matrix_.addRows(local_row);
-      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
-    } else if (lp.row_upper_[iRow] >= kHighsInf) {
-      assert(0 == 4);
+      assert(upper < kHighsInf);
+      slack_ix.push_back(++slack_k);
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(upper);
+    } else if (upper >= kHighsInf) {
       // Lower bounded, so record the slack
-      assert(lp.row_lower_[iRow] > -kHighsInf);
-      slack_ix.push_back(HighsInt(standard_form_rhs_.size()));
-      matrix.getRow(iRow, num_nz, index.data(), value.data());
-      this->standard_form_matrix_.addRows(local_row);
-      this->standard_form_rhs_.push_back(lp.row_upper_[iRow]);
-      
+      assert(lower > -kHighsInf);
+      slack_ix.push_back(-(++slack_k));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(lower);
+    } else {
+      assert(0 == 5);
+      // Boxed, so record the lower slack
+      assert(lower > -kHighsInf);
+      assert(upper < kHighsInf);
+      slack_ix.push_back(-(++slack_k));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(lower);
+      // .. and upper slack
+      slack_ix.push_back(++slack_k);
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(upper);
+    }
   }
-  
-  return HighsStatus::kError;
+  // Add rows corresponding to boxed columns
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf && upper < kHighsInf) {
+      // Boxed column
+      //
+      // x will be replaced by x = l + X (below) with X >= 0
+      //
+      // Introduce variable s >= 0 so that
+      //
+      // l + X = u - s => X + s = u - l
+      standard_form_cost.push_back(0);
+      standard_form_matrix.num_col_++;
+      local_row.num_col_++;
+      local_row.index_[0] = iCol;
+      local_row.index_[1] = standard_form_matrix.num_col_ - 1;
+      local_row.value_[0] = 1;
+      local_row.value_[1] = 1;
+      local_row.start_[1] = 2;
+      standard_form_matrix.addRows(local_row);
+      standard_form_rhs.push_back(upper - lower);
+    }
+  }
+  // Finished with both matrices, row-wise, so ensure that the
+  // incumbent matrix leaves col-wise, and that the standard form
+  // matrix is col-wise so RHS shifts can be applied and more columns
+  // can be added
+  matrix.ensureColwise();
+  standard_form_matrix.ensureColwise();
+  // Determine the objective scaling, and apply it to any offset
+  double objective_mu = double(lp.sense_);
+  standard_form_offset = objective_mu * lp.offset_;
+  // Work through the columns, ensuring that all have non-negativity bounds
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double cost = objective_mu * lp.col_cost_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf) {
+      // Finite lower bound
+      if (lower != 0) {
+        assert(1 == 2);
+        // x >= l, so shift x-l = X >= 0, giving x = X + l
+        //
+        // Cost contribution c(X+l) = cX + cl
+        standard_form_offset += cost * lower;
+        // Constraint contribution a(X+l) = aX + al
+        for (HighsInt iEl = standard_form_matrix.start_[iCol];
+             iEl < standard_form_matrix.start_[iCol + 1]; iEl++)
+          standard_form_rhs[standard_form_matrix.index_[iEl]] -=
+              standard_form_matrix.value_[iEl] * lower;
+      }
+    } else if (upper < kHighsInf) {
+      // Finite upper bound
+      //
+      // Have to operate even if u=0, since cost and column values are negated
+      //
+      // x <= u, so shift u-x = X >= 0, giving x = u - X
+      //
+      // Cost contribution c(u-X) = cu - cX
+      standard_form_offset += cost * upper;
+      standard_form_cost[iCol] = -cost;
+      // Constraint contribution a(u-X) = au - aX
+      for (HighsInt iEl = standard_form_matrix.start_[iCol];
+           iEl < standard_form_matrix.start_[iCol + 1]; iEl++) {
+        standard_form_rhs[standard_form_matrix.index_[iEl]] +=
+            standard_form_matrix.value_[iEl] * upper;
+        standard_form_matrix.value_[iEl] = -standard_form_matrix.value_[iEl];
+      }
+    } else {
+      assert(1 == 4);
+      // Free variable
+      //
+      // Represent as x = x+ - x-, where original column is now x+ >=
+      // 0 and x- >= 0 has negation of its cost and matrix column
+      standard_form_cost.push_back(-cost);
+      for (HighsInt iEl = standard_form_matrix.start_[iCol];
+           iEl < standard_form_matrix.start_[iCol + 1]; iEl++) {
+        standard_form_matrix.index_.push_back(standard_form_matrix.index_[iEl]);
+        standard_form_matrix.value_.push_back(
+            -standard_form_matrix.value_[iEl]);
+      }
+      standard_form_matrix.start_.push_back(
+          HighsInt(standard_form_matrix.index_.size()));
+    }
+  }
+  // Now add the slack variables
+  for (HighsInt iX = 0; iX < HighsInt(slack_ix.size()); iX++) {
+    HighsInt iRow = slack_ix[iX];
+    standard_form_cost.push_back(0);
+    if (iRow > 0) {
+      standard_form_matrix.index_.push_back(iRow - 1);
+      standard_form_matrix.value_.push_back(1);
+    } else {
+      standard_form_matrix.index_.push_back(-iRow - 1);
+      standard_form_matrix.value_.push_back(-1);
+    }
+    standard_form_matrix.start_.push_back(
+        HighsInt(standard_form_matrix.index_.size()));
+  }
+  this->standard_form_valid_ = true;
+  this->standard_form_offset_ = standard_form_offset;
+  this->standard_form_cost_ = standard_form_cost;
+  this->standard_form_rhs_ = standard_form_rhs;
+  this->standard_form_matrix_ = standard_form_matrix;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::basisForSolution() {

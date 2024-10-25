@@ -1638,10 +1638,34 @@ HighsStatus Highs::run() {
   return returnFromRun(return_status, undo_mods);
 }
 
-HighsStatus Highs::getStandardFormLp(HighsLp& standard_form_lp) {
-  HighsStatus status = formStandardFormLp();
-  if (status != HighsStatus::kOk) return status;
-  standard_form_lp = this->standard_form_lp_;
+HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
+                                     HighsInt& num_nz, double offset,
+                                     double* cost, double* rhs, HighsInt* start,
+                                     HighsInt* index, double* value) {
+  if (!this->standard_form_valid_) {
+    HighsStatus status = formStandardFormLp();
+    if (status != HighsStatus::kOk) return status;
+  }
+  num_col = this->standard_form_cost_.size();
+  num_row = this->standard_form_rhs_.size();
+  num_nz = this->standard_form_matrix_.start_[num_col];
+  offset = this->standard_form_offset_;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (cost) cost[iCol] = this->standard_form_cost_[iCol];
+    if (start) start[iCol] = this->standard_form_matrix_.start_[iCol];
+    if (index || value) {
+      for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+           iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++) {
+        if (index) index[iEl] = this->standard_form_matrix_.index_[iEl];
+        if (value) value[iEl] = this->standard_form_matrix_.value_[iEl];
+      }
+    }
+  }
+  if (start) start[num_col] = this->standard_form_matrix_.start_[num_col];
+  if (rhs) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      rhs[iRow] = this->standard_form_rhs_[iRow];
+  }
   return HighsStatus::kOk;
 }
 
@@ -2401,7 +2425,7 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
     model_.lp_.sense_ = sense;
     // Nontrivial change
     clearPresolve();
-  clearStandardFormLp();
+    clearStandardFormLp();
     invalidateModelStatusSolutionAndInfo();
   }
   return returnFromHighs(HighsStatus::kOk);
@@ -3451,6 +3475,8 @@ void Highs::clearPresolve() {
 }
 
 void Highs::clearStandardFormLp() {
+  standard_form_valid_ = false;
+  standard_form_offset_ = 0;
   standard_form_cost_.clear();
   standard_form_rhs_.clear();
   standard_form_matrix_.clear();

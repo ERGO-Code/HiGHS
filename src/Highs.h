@@ -404,7 +404,12 @@ class Highs {
    * @brief Identify and the standard form of the HighsLp instance in
    * HiGHS
    */
-  HighsStatus getStandardFormLp(HighsLp& standard_form_lp);
+  HighsStatus getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
+                                HighsInt& num_nz, double offset,
+                                double* cost = nullptr, double* rhs = nullptr,
+                                HighsInt* start = nullptr,
+                                HighsInt* index = nullptr,
+                                double* value = nullptr);
 
   /**
    * @brief Return a const reference to the presolved HighsLp instance in HiGHS
@@ -1384,6 +1389,8 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
+  bool standard_form_valid_;
+  double standard_form_offset_;
   std::vector<double> standard_form_cost_;
   std::vector<double> standard_form_rhs_;
   HighsSparseMatrix standard_form_matrix_;
@@ -1439,10 +1446,10 @@ class Highs {
   //
   // Clears the presolved model and its status
   void clearPresolve();
-   //
+  //
   // Clears the standard form LP
   void clearStandardFormLp();
- //
+  //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
   // the incumbent model.

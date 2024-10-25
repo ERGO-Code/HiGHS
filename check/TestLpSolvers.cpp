@@ -283,7 +283,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 0);
 
-  REQUIRE(info.simplex_iteration_count == 472);  // 476);  // 444);
+  REQUIRE(info.simplex_iteration_count == 472);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -296,7 +296,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 592);  // 621);  // 584);  //
+  REQUIRE(info.simplex_iteration_count == 592);
 }
 
 TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
@@ -468,5 +468,66 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
            int(info.num_dual_infeasibilities));
     printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
+  }
+}
+
+TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
+  std::string model;
+  std::string model_file;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  model = "avgas";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(model_file);
+  highs.run();
+  double required_objective_function_value =
+      highs.getInfo().objective_function_value;
+  //
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
+  double offset;
+  REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset) ==
+          HighsStatus::kOk);
+
+  std::vector<double> cost(num_col);
+  std::vector<double> rhs(num_row);
+  std::vector<HighsInt> start(num_col + 1);
+  std::vector<HighsInt> index(num_nz);
+  std::vector<double> value(num_nz);
+  REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset, cost.data(),
+                                  rhs.data(), start.data(), index.data(),
+                                  value.data()) == HighsStatus::kOk);
+
+  HighsLp standard_form_lp;
+  standard_form_lp.num_col_ = num_col;
+  standard_form_lp.num_row_ = num_row;
+  standard_form_lp.col_cost_ = cost;
+  standard_form_lp.col_lower_.assign(num_col, 0);
+  standard_form_lp.col_upper_.assign(num_col, kHighsInf);
+  standard_form_lp.row_lower_ = rhs;
+  standard_form_lp.row_upper_ = rhs;
+  standard_form_lp.a_matrix_.start_ = start;
+  standard_form_lp.a_matrix_.index_ = index;
+  standard_form_lp.a_matrix_.value_ = value;
+  REQUIRE(highs.passModel(standard_form_lp) == HighsStatus::kOk);
+  if (dev_run) highs.writeModel("");
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  double objective_function_value = highs.getInfo().objective_function_value;
+  double objective_difference =
+      std::fabs(objective_function_value - required_objective_function_value) /
+      std::max(1.0, std::fabs(required_objective_function_value));
+  REQUIRE(objective_difference < 1e-10);
+  const bool look_at_presolved_lp = false;
+  if (look_at_presolved_lp) {
+    // Strange that presolve doesn't convert the constraints
+    //
+    // Ax-s = b; s >= 0 into Ax >= b
+    REQUIRE(highs.passModel(standard_form_lp) == HighsStatus::kOk);
+    REQUIRE(highs.presolve() == HighsStatus::kOk);
+    HighsLp presolved_lp = highs.getPresolvedLp();
+    REQUIRE(highs.passModel(presolved_lp) == HighsStatus::kOk);
+    highs.writeModel("");
   }
 }
