@@ -471,43 +471,21 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
   }
 }
 
-TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
-  std::string model;
-  std::string model_file;
+void testStandardForm(const HighsLp& lp) {
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
-  const bool test_mps = false;
-  if (test_mps) {
-    model = "avgas";
-    model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-    highs.readModel(model_file);
-  } else {
-    HighsLp lp;
-    lp.offset_ = 0.5;
-    lp.num_col_ = 4;
-    lp.num_row_ = 3;
-    lp.col_cost_ = {1, 1, 1, -1};
-    lp.col_lower_ = {1, -kHighsInf, -kHighsInf, -1};
-    lp.col_upper_ = {kHighsInf, kHighsInf, 2, 3};
-    lp.row_lower_ = {0, 1, -kHighsInf};
-    lp.row_upper_ = {4, kHighsInf, 4};
-    lp.a_matrix_.start_ = {0, 2, 4, 6, 8};
-    lp.a_matrix_.index_ = {0, 2, 0, 1, 1, 2, 0, 2};
-    lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1, 1, 1};
-    highs.passModel(lp);
-    highs.writeModel("");
-  }
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
   highs.run();
   highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
-      highs.getInfo().objective_function_value;
-  //
+    highs.getInfo().objective_function_value;
+
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
   double offset;
   REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset) ==
-          HighsStatus::kOk);
+	  HighsStatus::kOk);
 
   std::vector<double> cost(num_col);
   std::vector<double> rhs(num_row);
@@ -515,8 +493,8 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   std::vector<HighsInt> index(num_nz);
   std::vector<double> value(num_nz);
   REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset, cost.data(),
-                                  rhs.data(), start.data(), index.data(),
-                                  value.data()) == HighsStatus::kOk);
+				  rhs.data(), start.data(), index.data(),
+				  value.data()) == HighsStatus::kOk);
 
   HighsLp standard_form_lp;
   standard_form_lp.num_col_ = num_col;
@@ -531,15 +509,15 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   standard_form_lp.a_matrix_.index_ = index;
   standard_form_lp.a_matrix_.value_ = value;
   REQUIRE(highs.passModel(standard_form_lp) == HighsStatus::kOk);
-  //  if (dev_run)
-  highs.writeModel("");
+  if (dev_run)
+    highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   highs.writeSolution("", kSolutionStylePretty);
   double objective_function_value = highs.getInfo().objective_function_value;
   double objective_difference =
-      std::fabs(objective_function_value - required_objective_function_value) /
-      std::max(1.0, std::fabs(required_objective_function_value));
+    std::fabs(objective_function_value - required_objective_function_value) /
+    std::max(1.0, std::fabs(required_objective_function_value));
   REQUIRE(objective_difference < 1e-10);
   const bool look_at_presolved_lp = false;
   if (look_at_presolved_lp) {
@@ -552,4 +530,52 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
     REQUIRE(highs.passModel(presolved_lp) == HighsStatus::kOk);
     highs.writeModel("");
   }
+}
+
+void testStandardFormModel(const std::string model) {
+  const std::string model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  HighsLp lp = highs.getLp();
+  testStandardForm(lp);
+}
+
+TEST_CASE("standard-form-mps", "[highs_lp_solver]") {
+  testStandardFormModel("avgas");
+}
+
+TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
+  HighsLp lp;
+  lp.offset_ = -0.5;
+  lp.num_col_ = 4;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {1, 1, 1, -1};
+  lp.col_lower_ = {1, -kHighsInf, -kHighsInf, -1};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 2, 3};
+  lp.row_lower_ = {0, 1, -kHighsInf};
+  lp.row_upper_ = {4, kHighsInf, 4};
+  lp.a_matrix_.start_ = {0, 2, 4, 6, 8};
+  lp.a_matrix_.index_ = {0, 2, 0, 1, 1, 2, 0, 2};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1, 1, 1};
+
+  testStandardForm(lp);
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  std::vector<HighsInt> index;
+    std::vector<double> value;
+  // Add a fixed column and a fixed row
+  highs.passModel(lp);
+  index = {0, 1, 2};
+  value = {-1, 1, -1};
+  REQUIRE(highs.addCol(-2.0, 1.0, 1.0, 3, index.data(), value.data()) == HighsStatus::kOk);
+  index = {0, 1, 2, 3};
+  value = {-2, -1, 1, 3};
+  REQUIRE(highs.addRow(1.0, 1.0, 4, index.data(), value.data()) == HighsStatus::kOk);
+
+  testStandardForm(highs.getLp());
+  
+
+
 }
