@@ -3,8 +3,8 @@
 
 #include "qpsolver/basis.hpp"
 #include "qpsolver/gradient.hpp"
-#include "qpsolver/runtime.hpp"
 #include "qpsolver/qpvector.hpp"
+#include "qpsolver/runtime.hpp"
 
 class ReducedCosts {
   Basis& basis;

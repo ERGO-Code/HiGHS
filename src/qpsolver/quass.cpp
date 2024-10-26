@@ -1,10 +1,12 @@
 #include "qpsolver/quass.hpp"
 
-#include <algorithm>
-#include <map>
 #include <fenv.h>
 
+#include <algorithm>
+#include <map>
+
 #include "Highs.h"
+#include "lp_data/HighsAnalysis.h"
 #include "qpsolver/basis.hpp"
 #include "qpsolver/crashsolution.hpp"
 #include "qpsolver/dantzigpricing.hpp"
@@ -13,18 +15,18 @@
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
-#include "lp_data/HighsAnalysis.h"
+#include "qpsolver/perturbation.hpp"
 #include "qpsolver/ratiotest.hpp"
 #include "qpsolver/reducedcosts.hpp"
 #include "qpsolver/reducedgradient.hpp"
+#include "qpsolver/scaling.hpp"
 #include "qpsolver/snippets.hpp"
 #include "qpsolver/steepestedgepricing.hpp"
-#include "qpsolver/scaling.hpp"
-#include "qpsolver/perturbation.hpp"
 
 Quass::Quass(Runtime& rt) : runtime(rt) {}
 
-static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, HighsTimer& timer) {
+static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor,
+                           HighsTimer& timer) {
   rt.statistics.iteration.push_back(rt.statistics.num_iterations);
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
@@ -38,7 +40,8 @@ static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor, Hi
   rt.statistics.density_nullspace.push_back(0.0);
 }
 
-static void tidyup(QpVector& p, QpVector& rowmove, Basis& basis, Runtime& runtime) {
+static void tidyup(QpVector& p, QpVector& rowmove, Basis& basis,
+                   Runtime& runtime) {
   for (unsigned acon : basis.getactive()) {
     if ((HighsInt)acon >= runtime.instance.num_con) {
       p.value[acon - runtime.instance.num_con] = 0.0;
@@ -49,7 +52,7 @@ static void tidyup(QpVector& p, QpVector& rowmove, Basis& basis, Runtime& runtim
 }
 
 static void computerowmove(Runtime& runtime, Basis& basis, QpVector& p,
-                    QpVector& rowmove) {
+                           QpVector& rowmove) {
   runtime.instance.A.mat_vec(p, rowmove);
   return;
   // rowmove.reset();
@@ -77,9 +80,10 @@ static void computerowmove(Runtime& runtime, Basis& basis, QpVector& p,
 
 // VECTOR
 static QpVector& computesearchdirection_minor(Runtime& rt, Basis& bas,
-                                     CholeskyFactor& cf,
-                                     ReducedGradient& redgrad, QpVector& p) {
-  QpVector g2 = -redgrad.get(); // TODO PERF: buffer QpVector
+                                              CholeskyFactor& cf,
+                                              ReducedGradient& redgrad,
+                                              QpVector& p) {
+  QpVector g2 = -redgrad.get();  // TODO PERF: buffer QpVector
   g2.sanitize();
   cf.solve(g2);
 
@@ -89,11 +93,10 @@ static QpVector& computesearchdirection_minor(Runtime& rt, Basis& bas,
 }
 
 // VECTOR
-static QpVector& computesearchdirection_major(Runtime& runtime, Basis& basis,
-                                     CholeskyFactor& factor, const QpVector& yp,
-                                     Gradient& gradient, QpVector& gyp, QpVector& l,
-                                     QpVector& m, QpVector& p) {
-  QpVector yyp = yp; // TODO PERF: buffer QpVector
+static QpVector& computesearchdirection_major(
+    Runtime& runtime, Basis& basis, CholeskyFactor& factor, const QpVector& yp,
+    Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p) {
+  QpVector yyp = yp;  // TODO PERF: buffer QpVector
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
@@ -102,7 +105,7 @@ static QpVector& computesearchdirection_major(Runtime& runtime, Basis& basis,
     basis.Ztprod(gyp, m);
     l = m;
     factor.solveL(l);
-    QpVector v = l; // TODO PERF: buffer QpVector
+    QpVector v = l;  // TODO PERF: buffer QpVector
     factor.solveLT(v);
     basis.Zprod(v, p);
     if (gradient.getGradient().dot(yyp) < 0.0) {
@@ -118,7 +121,8 @@ static QpVector& computesearchdirection_major(Runtime& runtime, Basis& basis,
 }
 
 static double computemaxsteplength(Runtime& runtime, const QpVector& p,
-                            Gradient& gradient, QpVector& buffer_Qp, bool& zcd) {
+                                   Gradient& gradient, QpVector& buffer_Qp,
+                                   bool& zcd) {
   double denominator = p * runtime.instance.Q.mat_vec(p, buffer_Qp);
   if (fabs(denominator) > runtime.settings.pQp_zero_threshold) {
     double numerator = -(p * gradient.getGradient());
@@ -133,9 +137,9 @@ static double computemaxsteplength(Runtime& runtime, const QpVector& p,
   }
 }
 
-static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactivecon,
-                      QpVector& buffer_d, HighsInt& maxabsd,
-                      HighsInt& constrainttodrop) {
+static QpSolverStatus reduce(Runtime& rt, Basis& basis,
+                             const HighsInt newactivecon, QpVector& buffer_d,
+                             HighsInt& maxabsd, HighsInt& constrainttodrop) {
   HighsInt idx = indexof(basis.getinactive(), newactivecon);
   if (idx != -1) {
     maxabsd = idx;
@@ -146,7 +150,8 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
   }
 
   // TODO: this operation is inefficient.
-  QpVector aq = rt.instance.A.t().extractcol(newactivecon); // TODO PERF: buffer QpVector
+  QpVector aq =
+      rt.instance.A.t().extractcol(newactivecon);  // TODO PERF: buffer QpVector
   basis.Ztprod(aq, buffer_d, true, newactivecon);
 
   maxabsd = 0;
@@ -169,7 +174,7 @@ static QpSolverStatus reduce(Runtime& rt, Basis& basis, const HighsInt newactive
 }
 
 static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
-                                    ReducedCosts& redcosts) {
+                                           ReducedCosts& redcosts) {
   switch (runtime.settings.pricing) {
     case PricingStrategy::SteepestEdge:
       return std::unique_ptr<Pricing>(
@@ -186,7 +191,7 @@ static std::unique_ptr<Pricing> getPricing(Runtime& runtime, Basis& basis,
 
 static void regularize(Runtime& rt) {
   if (!rt.settings.hessianregularization) {
-   return;
+    return;
   }
   // add small diagonal to hessian
   for (HighsInt i = 0; i < rt.instance.num_var; i++) {
@@ -271,18 +276,20 @@ static bool check_reinvert_due(Basis& basis) {
   return basis.getreinversionhint();
 }
 
-static void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad, ReducedCosts& rc, ReducedGradient& rg, std::unique_ptr<Pricing>& pricing) {
+static void reinvert(Basis& basis, CholeskyFactor& factor, Gradient& grad,
+                     ReducedCosts& rc, ReducedGradient& rg,
+                     std::unique_ptr<Pricing>& pricing) {
   basis.rebuild();
   factor.recompute();
   grad.recompute();
   rc.recompute();
   rg.recompute();
-  //pricing->recompute();
+  // pricing->recompute();
 }
 
-void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer& timer) {
-
-  //feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
+                  HighsTimer& timer) {
+  // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
   Basis& basis = b0;
@@ -316,18 +323,17 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
 
   runtime.relaxed_for_ratiotest = ratiotest_relax_instance(runtime);
 
-
-  HighsInt last_logging_iteration = runtime.statistics.num_iterations-1;
+  HighsInt last_logging_iteration = runtime.statistics.num_iterations - 1;
   double last_logging_time = 0;
   double logging_time_interval = 10;
-  
+
   const HighsInt current_num_active = basis.getnumactive();
   bool atfsep = current_num_active == runtime.instance.num_var;
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
       runtime.status = QpModelStatus::kIterationLimit;
-      break; 
+      break;
     }
 
     // check time limit
@@ -336,9 +342,9 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
       break;
     }
 
-    
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
-      runtime.settings.nullspace_limit_log.fire(runtime.settings.nullspace_limit);
+      runtime.settings.nullspace_limit_log.fire(
+          runtime.settings.nullspace_limit);
       runtime.status = QpModelStatus::kLargeNullspace;
       return;
     }
@@ -346,22 +352,22 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
     // LOGGING
     double run_time = timer.readRunHighsClock();
     if ((runtime.statistics.num_iterations %
-            runtime.settings.reportingfequency ==
-        0 ||
-	 run_time-last_logging_time > logging_time_interval) &&
-	runtime.statistics.num_iterations > last_logging_iteration) {
+                 runtime.settings.reportingfequency ==
+             0 ||
+         run_time - last_logging_time > logging_time_interval) &&
+        runtime.statistics.num_iterations > last_logging_iteration) {
       bool log_report = true;
-      if (runtime.statistics.num_iterations > 10*runtime.settings.reportingfequency) {
-	runtime.settings.reportingfequency *= 10;
-	log_report = false;
+      if (runtime.statistics.num_iterations >
+          10 * runtime.settings.reportingfequency) {
+        runtime.settings.reportingfequency *= 10;
+        log_report = false;
       }
-      if (run_time > 10*logging_time_interval) 
-	logging_time_interval *= 2.0;
+      if (run_time > 10 * logging_time_interval) logging_time_interval *= 2.0;
       if (log_report) {
-	last_logging_time = run_time;
-	last_logging_iteration = runtime.statistics.num_iterations;
-	loginformation(runtime, basis, factor, timer);
-	runtime.settings.iteration_log.fire(runtime.statistics);
+        last_logging_time = run_time;
+        last_logging_iteration = runtime.statistics.num_iterations;
+        loginformation(runtime, basis, factor, timer);
+        runtime.settings.iteration_log.fire(runtime.statistics);
       }
     }
 
@@ -419,7 +425,9 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
       runtime.instance.Q.mat_vec(p, buffer_Qp);
     }
     if (p.norm2() < runtime.settings.pnorm_zero_threshold ||
-        maxsteplength == 0.0 || (false && fabs(gradient.getGradient().dot(p)) < runtime.settings.improvement_zero_threshold)) {
+        maxsteplength == 0.0 ||
+        (false && fabs(gradient.getGradient().dot(p)) <
+                      runtime.settings.improvement_zero_threshold)) {
       atfsep = true;
     } else {
       // Now perform a real iteration
@@ -456,8 +464,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
           atfsep = false;
         }
       } else {
-        if (stepres.alpha ==
-            std::numeric_limits<double>::infinity()) {
+        if (stepres.alpha == std::numeric_limits<double>::infinity()) {
           // unbounded
           runtime.status = QpModelStatus::kUnbounded;
           return;
@@ -495,18 +502,20 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0, HighsTimer&
   runtime.dualcon.resparsify();
   runtime.dualvar.resparsify();
 
-  //QpVector actual_dual_var(runtime.instance.num_var);
-  //QpVector actual_dual_con(runtime.instance.num_con);
-  //compute_actual_duals(runtime, basis, redcosts.getReducedCosts(), actual_dual_con, actual_dual_var);
-  //printf("max primal violation = %.20lf\n", compute_primal_violation(runtime));
-  //printf("max dual   violation = %.20lf\n", compute_dual_violation(runtime.instance, runtime.primal, actual_dual_con, actual_dual_var));
+  // QpVector actual_dual_var(runtime.instance.num_var);
+  // QpVector actual_dual_con(runtime.instance.num_con);
+  // compute_actual_duals(runtime, basis, redcosts.getReducedCosts(),
+  // actual_dual_con, actual_dual_var); printf("max primal violation =
+  // %.20lf\n", compute_primal_violation(runtime)); printf("max dual   violation
+  // = %.20lf\n", compute_dual_violation(runtime.instance, runtime.primal,
+  // actual_dual_con, actual_dual_var));
 
   // extract basis status
-  for (HighsInt i=0; i<runtime.instance.num_var; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
     runtime.status_var[i] = basis.getstatus(runtime.instance.num_con + i);
   }
 
-  for (HighsInt i=0; i<runtime.instance.num_con; i++) {
+  for (HighsInt i = 0; i < runtime.instance.num_con; i++) {
     runtime.status_con[i] = basis.getstatus(i);
   }
 
