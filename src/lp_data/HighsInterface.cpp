@@ -31,8 +31,13 @@ HighsStatus Highs::formStandardFormLp() {
   // boxed rows can be transformed to pairs of one-sided rows,
   // requiring the standard form matrix to be row-wise. The original
   // columns are assumed to come before any new columns, so their
-  // costs must be defined befor costs of new columns.
-  this->standard_form_cost_ = lp.col_cost_;
+  // costs (as a minimization) must be defined befor costs of new
+  // columns.
+  // Determine the objective scaling, and apply it to any offset
+  HighsInt sense = HighsInt(lp.sense_);
+  this->standard_form_offset_ = sense * lp.offset_;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    this->standard_form_cost_.push_back(sense * lp.col_cost_[iCol]);
   this->standard_form_matrix_.format_ = MatrixFormat::kRowwise;
   this->standard_form_matrix_.num_col_ = lp.num_col_;
   // Create a HighsSparseMatrix instance to store rows extracted from
@@ -143,12 +148,9 @@ HighsStatus Highs::formStandardFormLp() {
   // can be added
   matrix.ensureColwise();
   this->standard_form_matrix_.ensureColwise();
-  // Determine the objective scaling, and apply it to any offset
-  double objective_mu = double(lp.sense_);
-  this->standard_form_offset_ = objective_mu * lp.offset_;
   // Work through the columns, ensuring that all have non-negativity bounds
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    double cost = objective_mu * lp.col_cost_[iCol];
+    double cost = sense * lp.col_cost_[iCol];
     double lower = lp.col_lower_[iCol];
     double upper = lp.col_upper_[iCol];
     if (lower > -kHighsInf) {

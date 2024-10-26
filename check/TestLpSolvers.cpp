@@ -2,7 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;  // false;
 
 struct IterationCount {
   HighsInt simplex;
@@ -474,6 +474,7 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
 void testStandardForm(const HighsLp& lp) {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  HighsInt sense = HighsInt(lp.sense_);
   highs.passModel(lp);
   highs.run();
   //  highs.writeSolution("", kSolutionStylePretty);
@@ -513,7 +514,8 @@ void testStandardForm(const HighsLp& lp) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   highs.writeSolution("", kSolutionStylePretty);
-  double objective_function_value = highs.getInfo().objective_function_value;
+  double objective_function_value =
+      sense * highs.getInfo().objective_function_value;
   double objective_difference =
       std::fabs(objective_function_value - required_objective_function_value) /
       std::max(1.0, std::fabs(required_objective_function_value));
@@ -567,7 +569,7 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
 
   std::vector<HighsInt> index;
   std::vector<double> value;
-  // Add a fixed column and a fixed row
+  // Add a fixed column and a fixed row, and maximize
   highs.passModel(lp);
   index = {0, 1, 2};
   value = {-1, 1, -1};
@@ -577,6 +579,8 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   value = {-2, -1, 1, 3};
   REQUIRE(highs.addRow(1.0, 1.0, 4, index.data(), value.data()) ==
           HighsStatus::kOk);
-
+  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  printf(
+      "\nNow test by adding a fixed column and a fixed row, and maximizing\n");
   testStandardForm(highs.getLp());
 }
