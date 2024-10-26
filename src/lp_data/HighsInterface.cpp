@@ -63,7 +63,6 @@ HighsStatus Highs::formStandardFormLp() {
   HighsInt num_upper_col = 0;
   HighsInt num_free_col = 0;
   std::vector<HighsInt> slack_ix;
-  HighsInt slack_k = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     double lower = lp.row_lower_[iRow];
     double upper = lp.row_upper_[iRow];
@@ -85,7 +84,8 @@ HighsStatus Highs::formStandardFormLp() {
       // Upper bounded row, so record the slack
       num_upper_row++;
       assert(upper < kHighsInf);
-      slack_ix.push_back(++slack_k);
+      HighsInt standard_form_row = standard_form_rhs.size();
+      slack_ix.push_back(standard_form_row+1);
       matrix.getRow(iRow, num_nz, local_row.index_.data(),
                     local_row.value_.data());
       standard_form_matrix.addRows(local_row);
@@ -94,7 +94,8 @@ HighsStatus Highs::formStandardFormLp() {
       // Lower bounded row, so record the slack
       num_lower_row++;
       assert(lower > -kHighsInf);
-      slack_ix.push_back(-(++slack_k));
+      HighsInt standard_form_row = standard_form_rhs.size();
+      slack_ix.push_back(-(standard_form_row+1));
       matrix.getRow(iRow, num_nz, local_row.index_.data(),
                     local_row.value_.data());
       standard_form_matrix.addRows(local_row);
@@ -104,13 +105,15 @@ HighsStatus Highs::formStandardFormLp() {
       assert(lower > -kHighsInf);
       assert(upper < kHighsInf);
       num_boxed_row++;
-      slack_ix.push_back(-(++slack_k));
+      HighsInt standard_form_row = standard_form_rhs.size();
+      slack_ix.push_back(-(standard_form_row+1));
       matrix.getRow(iRow, num_nz, local_row.index_.data(),
                     local_row.value_.data());
       standard_form_matrix.addRows(local_row);
       standard_form_rhs.push_back(lower);
       // .. and upper slack, adding a copy of the row
-      slack_ix.push_back(++slack_k);
+      standard_form_row = standard_form_rhs.size();
+      slack_ix.push_back(standard_form_row+1);
       standard_form_matrix.addRows(local_row);
       standard_form_rhs.push_back(upper);
     }

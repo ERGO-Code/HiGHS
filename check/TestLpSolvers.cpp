@@ -476,7 +476,7 @@ void testStandardForm(const HighsLp& lp) {
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(lp);
   highs.run();
-  highs.writeSolution("", kSolutionStylePretty);
+  //  highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
     highs.getInfo().objective_function_value;
 
@@ -509,8 +509,7 @@ void testStandardForm(const HighsLp& lp) {
   standard_form_lp.a_matrix_.index_ = index;
   standard_form_lp.a_matrix_.value_ = value;
   REQUIRE(highs.passModel(standard_form_lp) == HighsStatus::kOk);
-  if (dev_run)
-    highs.writeModel("");
+  // highs.writeModel("");
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   highs.writeSolution("", kSolutionStylePretty);
@@ -543,6 +542,7 @@ void testStandardFormModel(const std::string model) {
 
 TEST_CASE("standard-form-mps", "[highs_lp_solver]") {
   testStandardFormModel("avgas");
+  testStandardFormModel("afiro");
 }
 
 TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
