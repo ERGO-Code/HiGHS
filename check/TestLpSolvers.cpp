@@ -2,7 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;  // false;
+const bool dev_run = false;
 
 struct IterationCount {
   HighsInt simplex;
@@ -10,6 +10,25 @@ struct IterationCount {
   HighsInt crossover;
 };
 
+void testDualObjective(const std::string model) {
+  HighsStatus return_status;
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  highs.readModel(model_file);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  double dual_objective;
+  return_status = highs.getDualObjectiveValue(dual_objective);
+  REQUIRE(return_status == HighsStatus::kOk);
+  double primal_objective = highs.getInfo().objective_function_value;
+  double relative_primal_dual_gap =
+      std::fabs(primal_objective - dual_objective) /
+      std::max(1.0, std::fabs(primal_objective));
+  REQUIRE(relative_primal_dual_gap < 1e-12);
+}
 void testSolver(Highs& highs, const std::string solver,
                 IterationCount& default_iteration_count,
                 const HighsInt int_simplex_strategy = 0) {
@@ -469,6 +488,42 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
     printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
   }
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+}
+
+TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.offset_ = 10;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+  highs.passModel(lp);
+  highs.run();
+  double dual_objective;
+  HighsStatus return_status = highs.getDualObjectiveValue(dual_objective);
+  REQUIRE(return_status == HighsStatus::kOk);
+  double primal_objective = highs.getInfo().objective_function_value;
+  double relative_primal_dual_gap =
+      std::fabs(primal_objective - dual_objective) /
+      std::max(1.0, std::fabs(primal_objective));
+  REQUIRE(relative_primal_dual_gap < 1e-12);
+}
+
+TEST_CASE("dual-objective", "[highs_lp_solver]") {
+  testDualObjective("avgas");
+  testDualObjective("adlittle");
+  testDualObjective("etamacro");
+  testDualObjective("stair");
 }
 
 void testStandardForm(const HighsLp& lp) {

@@ -505,6 +505,15 @@ class Highs {
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
+   * @brief Indicate whether a dual unboundedness direction exists,
+   * and gets it if it does and dual_unboundedness_direction is not
+   * nullptr
+   */
+  HighsStatus getDualUnboundednessDirection(
+      bool& has_dual_unboundedness_direction,
+      double* dual_unboundedness_direction_value = nullptr);
+
+  /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
@@ -541,9 +550,14 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
-   * @brief Get the current model objective value
+   * @brief Get the current model objective function value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
+
+  /**
+   * @brief Try to get the current dual objective function value
+   */
+  HighsStatus getDualObjectiveValue(double& dual_objective_value);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -1333,9 +1347,8 @@ class Highs {
 
   HighsStatus resetHighsOptions();
 
-  HighsStatus writeHighsOptions(
-      const std::string& filename,  //!< The filename
-      const bool report_only_non_default_values = true);
+  HighsStatus writeHighsOptions(const std::string& filename,  //!< The filename
+                                const bool report_only_deviations = true);
 
   HighsInt getSimplexIterationCount() {
     deprecationMessage("getSimplexIterationCount", "None");
@@ -1489,8 +1502,6 @@ class Highs {
                             const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
-
-  void underDevelopmentLogMessage(const std::string& method_name);
 
   // Interface methods
   HighsStatus formStandardFormLp();
