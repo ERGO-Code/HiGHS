@@ -52,9 +52,9 @@ class DantzigPricing : public Pricing {
 
  public:
   DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
-      //clang-format off
+      // clang-format off
       : runtime(rt), basis(bas), redcosts(rc) {};
-  //clang-format on
+  // clang-format on
 
   HighsInt price(const QpVector& x, const QpVector& gradient) {
     HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());

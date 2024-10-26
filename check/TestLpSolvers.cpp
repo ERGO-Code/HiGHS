@@ -478,14 +478,14 @@ void testStandardForm(const HighsLp& lp) {
   highs.run();
   //  highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
-    highs.getInfo().objective_function_value;
+      highs.getInfo().objective_function_value;
 
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
   double offset;
   REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset) ==
-	  HighsStatus::kOk);
+          HighsStatus::kOk);
 
   std::vector<double> cost(num_col);
   std::vector<double> rhs(num_row);
@@ -493,8 +493,8 @@ void testStandardForm(const HighsLp& lp) {
   std::vector<HighsInt> index(num_nz);
   std::vector<double> value(num_nz);
   REQUIRE(highs.getStandardFormLp(num_col, num_row, num_nz, offset, cost.data(),
-				  rhs.data(), start.data(), index.data(),
-				  value.data()) == HighsStatus::kOk);
+                                  rhs.data(), start.data(), index.data(),
+                                  value.data()) == HighsStatus::kOk);
 
   HighsLp standard_form_lp;
   standard_form_lp.num_col_ = num_col;
@@ -515,8 +515,8 @@ void testStandardForm(const HighsLp& lp) {
   highs.writeSolution("", kSolutionStylePretty);
   double objective_function_value = highs.getInfo().objective_function_value;
   double objective_difference =
-    std::fabs(objective_function_value - required_objective_function_value) /
-    std::max(1.0, std::fabs(required_objective_function_value));
+      std::fabs(objective_function_value - required_objective_function_value) /
+      std::max(1.0, std::fabs(required_objective_function_value));
   REQUIRE(objective_difference < 1e-10);
   const bool look_at_presolved_lp = false;
   if (look_at_presolved_lp) {
@@ -532,7 +532,9 @@ void testStandardForm(const HighsLp& lp) {
 }
 
 void testStandardFormModel(const std::string model) {
-  const std::string model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";;
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  ;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
@@ -564,18 +566,17 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   highs.setOptionValue("output_flag", dev_run);
 
   std::vector<HighsInt> index;
-    std::vector<double> value;
+  std::vector<double> value;
   // Add a fixed column and a fixed row
   highs.passModel(lp);
   index = {0, 1, 2};
   value = {-1, 1, -1};
-  REQUIRE(highs.addCol(-2.0, 1.0, 1.0, 3, index.data(), value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.addCol(-2.0, 1.0, 1.0, 3, index.data(), value.data()) ==
+          HighsStatus::kOk);
   index = {0, 1, 2, 3};
   value = {-2, -1, 1, 3};
-  REQUIRE(highs.addRow(1.0, 1.0, 4, index.data(), value.data()) == HighsStatus::kOk);
+  REQUIRE(highs.addRow(1.0, 1.0, 4, index.data(), value.data()) ==
+          HighsStatus::kOk);
 
   testStandardForm(highs.getLp());
-  
-
-
 }
