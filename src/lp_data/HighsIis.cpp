@@ -40,7 +40,7 @@ void HighsIis::report(const std::string message, const HighsLp& lp) const {
   if (num_iis_col > 10 || num_iis_row > 10) return;
   printf("\nIIS %s\n===\n", message.c_str());
   printf("Column: ");
-  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) printf("%9d ", iCol);
+  for (HighsInt iCol = 0; iCol < num_iis_col; iCol++) printf("%9d ", int(iCol));
   printf("\nStatus: ");
   for (HighsInt iCol = 0; iCol < num_iis_col; iCol++)
     printf("%9s ", iisBoundStatusToString(this->col_bound_[iCol]).c_str());
