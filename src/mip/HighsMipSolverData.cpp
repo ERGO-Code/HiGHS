@@ -212,6 +212,30 @@ void HighsMipSolverData::finishSymmetryDetection(
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 }
 
+double HighsMipSolverData::getGapFromBounds(const double use_lower_bound,
+					    const double use_upper_bound,
+					    double& lb,
+					    double& ub) {
+  double offset = mipsolver.model_->offset_;
+  lb = use_lower_bound + offset;
+  if (std::abs(lb) <= epsilon) lb = 0;
+  ub = kHighsInf;
+  double gap = kHighsInf;
+  if (use_upper_bound != kHighsInf) {
+    ub = use_upper_bound + offset;
+    if (std::fabs(ub) <= epsilon) ub = 0;
+    lb = std::min(ub, lb);
+    if (ub == 0.0)
+      gap = lb == 0.0 ? 0.0 : kHighsInf;
+    else
+      gap = 100. * (ub - lb) / fabs(ub);
+  }
+  // To check final value of ub is the same as in 
+  if (mipsolver.options_mip_->objective_bound < ub)
+    ub = mipsolver.options_mip_->objective_bound;
+  return gap;
+}
+
 double HighsMipSolverData::computeNewUpperLimit(double ub, double mip_abs_gap,
                                                 double mip_rel_gap) const {
   double new_upper_limit;
@@ -1245,6 +1269,9 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   double explored = 100 * double(pruned_treeweight);
 
+  double check_lb;
+  double check_ub;
+  const double check_gap = getGapFromBounds(lower_bound, upper_bound, check_lb, check_ub);
   double offset = mipsolver.model_->offset_;
   double lb = lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
@@ -1320,6 +1347,11 @@ void HighsMipSolverData::printDisplayLine(char source) {
   assert(dual_bound == (int)mipsolver.orig_model_->sense_ * lb);
   assert(primal_bound == (int)mipsolver.orig_model_->sense_ * ub);
   assert(mip_rel_gap == gap);
+  // Check that getGapFromBounds yields the same values for lb, ub and gap
+  assert(lb == check_lb);
+  assert(ub == check_ub);
+  assert(gap == check_gap);
+
   // Possibly interrupt from MIP logging callback
   mipsolver.callback_->clearHighsCallbackDataOut();
   const bool interrupt = interruptFromCallbackWithData(
@@ -2013,4 +2045,15 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   // limitsToBounds) gives a percentage, so convert it a fraction
   mipsolver.callback_->data_out.mip_gap = 1e-2 * mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
+}
+
+void HighsPrimaDualIntegral::update(const double from_upper_bound, const double to_upper_bound,
+				    const double from_lower_bound, const double to_lower_bound) {
+  if (this->value > -kHighsInf) {
+    assert(from_upper_bound == this->prev_upper_bound);
+    assert(from_lower_bound == this->prev_lower_bound);
+  }
+}
+void HighsPrimaDualIntegral::initialise() {
+  this->value = -kHighsInf;
 }
