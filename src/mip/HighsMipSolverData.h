@@ -41,8 +41,6 @@ struct HighsPrimaDualIntegral {
   double prev_use_lower_bound;
   double prev_gap;
   double prev_time;
-  void update(const double from_upper_bound, const double to_upper_bound,
-	      const double from_lower_bound, const double to_lower_bound);
   void initialise();
 };
 
@@ -204,10 +202,12 @@ struct HighsMipSolverData {
   void finishSymmetryDetection(const highs::parallel::TaskGroup& taskGroup,
                                std::unique_ptr<SymmetryDetectionData>& symData);
 
-  double getGapFromBounds(const double use_lower_bound,
-			  const double use_upper_bound,
-			  double& lb,
-			  double& ub);
+  void updatePrimaDualIntegral(const double from_lower_bound, const double to_lower_bound,
+			       const double from_upper_bound, const double to_upper_bound);
+  double gapFromBounds(const double use_lower_bound,
+		       const double use_upper_bound,
+		       double* lb = nullptr,
+		       double* ub = nullptr);
   
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;

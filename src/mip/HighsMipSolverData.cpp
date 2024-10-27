@@ -212,14 +212,14 @@ void HighsMipSolverData::finishSymmetryDetection(
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 }
 
-double HighsMipSolverData::getGapFromBounds(const double use_lower_bound,
-					    const double use_upper_bound,
-					    double& lb,
-					    double& ub) {
+double HighsMipSolverData::gapFromBounds(const double use_lower_bound,
+					 const double use_upper_bound,
+					 double* return_lb,
+					 double* return_ub) {
   double offset = mipsolver.model_->offset_;
-  lb = use_lower_bound + offset;
+  double lb = use_lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
-  ub = kHighsInf;
+  double ub = kHighsInf;
   double gap = kHighsInf;
   if (use_upper_bound != kHighsInf) {
     ub = use_upper_bound + offset;
@@ -233,6 +233,8 @@ double HighsMipSolverData::getGapFromBounds(const double use_lower_bound,
   // To check final value of ub is the same as in 
   if (mipsolver.options_mip_->objective_bound < ub)
     ub = mipsolver.options_mip_->objective_bound;
+  if (return_lb) *return_lb = lb;
+  if (return_ub) *return_ub = ub;
   return gap;
 }
 
@@ -407,6 +409,7 @@ void HighsMipSolverData::init() {
   upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
+  primal_dual_integral.initialise();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -1271,7 +1274,8 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   double check_lb;
   double check_ub;
-  const double check_gap = getGapFromBounds(lower_bound, upper_bound, check_lb, check_ub);
+  const double check_gap = gapFromBounds(lower_bound, upper_bound,
+					 &check_lb, &check_ub);
   double offset = mipsolver.model_->offset_;
   double lb = lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
@@ -1347,7 +1351,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
   assert(dual_bound == (int)mipsolver.orig_model_->sense_ * lb);
   assert(primal_bound == (int)mipsolver.orig_model_->sense_ * ub);
   assert(mip_rel_gap == gap);
-  // Check that getGapFromBounds yields the same values for lb, ub and gap
+  // Check that gapFromBounds yields the same values for lb, ub and gap
   assert(lb == check_lb);
   assert(ub == check_ub);
   assert(gap == check_gap);
@@ -2047,12 +2051,29 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-void HighsPrimaDualIntegral::update(const double from_upper_bound, const double to_upper_bound,
-				    const double from_lower_bound, const double to_lower_bound) {
-  if (this->value > -kHighsInf) {
-    assert(from_upper_bound == this->prev_upper_bound);
-    assert(from_lower_bound == this->prev_lower_bound);
+void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, const double to_lower_bound,
+						 const double from_upper_bound, const double to_upper_bound) {
+  HighsPrimaDualIntegral& pdi = this->primal_dual_integral;
+  if (pdi.value > -kHighsInf) {
   }
+  const double gap = this->gapFromBounds(to_lower_bound, to_upper_bound);
+  if (gap < kHighsInf) {
+    double time = mipsolver.timer_.readRunHighsClock();
+    if (pdi.value > -kHighsInf) {
+      assert(pdi.prev_lower_bound == from_lower_bound);
+      assert(pdi.prev_upper_bound == from_upper_bound);
+      double time_diff = time - pdi.prev_time;
+      assert(time_diff >= 0);
+      assert(pdi.prev_gap < kHighsInf);
+      pdi.value += time_diff * pdi.prev_gap;
+    } else {
+      pdi.value = 0;
+    }
+    pdi.prev_gap = gap;
+    pdi.prev_time = time;
+    pdi.prev_lower_bound = to_lower_bound;
+    pdi.prev_upper_bound = to_upper_bound;
+  }    
 }
 void HighsPrimaDualIntegral::initialise() {
   this->value = -kHighsInf;
