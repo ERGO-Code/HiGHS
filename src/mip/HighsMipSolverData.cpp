@@ -214,12 +214,11 @@ void HighsMipSolverData::finishSymmetryDetection(
 
 double HighsMipSolverData::gapFromBounds(const double use_lower_bound,
 					 const double use_upper_bound,
-					 double* return_lb,
-					 double* return_ub) {
+					 double& lb, double& ub) {
   double offset = mipsolver.model_->offset_;
-  double lb = use_lower_bound + offset;
+  lb = use_lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
-  double ub = kHighsInf;
+  ub = kHighsInf;
   double gap = kHighsInf;
   if (use_upper_bound != kHighsInf) {
     ub = use_upper_bound + offset;
@@ -230,11 +229,6 @@ double HighsMipSolverData::gapFromBounds(const double use_lower_bound,
     else
       gap = 100. * (ub - lb) / fabs(ub);
   }
-  // To check final value of ub is the same as in 
-  if (mipsolver.options_mip_->objective_bound < ub)
-    ub = mipsolver.options_mip_->objective_bound;
-  if (return_lb) *return_lb = lb;
-  if (return_ub) *return_ub = ub;
   return gap;
 }
 
@@ -1312,11 +1306,15 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   double explored = 100 * double(pruned_treeweight);
 
+  // Check that gapFromBounds yields the same as the code below, since
+  // it's used in updatePrimaDualIntegral
   double check_lb;
   double check_ub;
-  this->updatePrimaDualIntegral(lower_bound, lower_bound, upper_bound, upper_bound);
   const double check_gap = gapFromBounds(lower_bound, upper_bound,
-					 &check_lb, &check_ub);
+					 check_lb, check_ub);
+  if (mipsolver.options_mip_->objective_bound < check_ub)
+    check_ub = mipsolver.options_mip_->objective_bound;
+
   double offset = mipsolver.model_->offset_;
   double lb = lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
@@ -2112,7 +2110,9 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
   printf("HighsMipSolverData::updatePrimaDualIntegral New bounds now [%g, %g]\n",
 	 to_lower_bound, to_upper_bound);
   HighsPrimaDualIntegral& pdi = this->primal_dual_integral;
-  const double gap = this->gapFromBounds(to_lower_bound, to_upper_bound);
+  double lb;
+  double ub;
+  const double gap = this->gapFromBounds(to_lower_bound, to_upper_bound, lb, ub);
   if (gap < kHighsInf) {
     double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
     if (pdi.value > -kHighsInf) {
