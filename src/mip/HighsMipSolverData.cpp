@@ -1274,6 +1274,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
 
   double check_lb;
   double check_ub;
+  //  this->updatePrimaDualIntegral(lower_bound, lower_bound, upper_bound, upper_bound);
   const double check_gap = gapFromBounds(lower_bound, upper_bound,
 					 &check_lb, &check_ub);
   double offset = mipsolver.model_->offset_;
@@ -2054,8 +2055,6 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, const double to_lower_bound,
 						 const double from_upper_bound, const double to_upper_bound) {
   HighsPrimaDualIntegral& pdi = this->primal_dual_integral;
-  if (pdi.value > -kHighsInf) {
-  }
   const double gap = this->gapFromBounds(to_lower_bound, to_upper_bound);
   if (gap < kHighsInf) {
     double time = mipsolver.timer_.readRunHighsClock();

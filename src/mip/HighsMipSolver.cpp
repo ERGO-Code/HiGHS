@@ -627,9 +627,12 @@ void HighsMipSolver::cleanupSolve() {
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
                "  Gap               %s\n"
+               "  P-D integral      %.12g\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data(), solutionstatus.c_str());
+               dual_bound_, gapString.data(),
+	       mipdata_->primal_dual_integral.value,
+	       solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
