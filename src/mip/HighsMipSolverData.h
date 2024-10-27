@@ -35,10 +35,8 @@
 
 struct HighsPrimaDualIntegral {
   double value;
-  double prev_upper_bound;
-  double prev_lower_bound;
-  double prev_use_upper_bound;
-  double prev_use_lower_bound;
+  double prev_lb;
+  double prev_ub;
   double prev_gap;
   double prev_time;
   void initialise();

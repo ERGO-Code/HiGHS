@@ -2110,31 +2110,35 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
   printf("HighsMipSolverData::updatePrimaDualIntegral New bounds now [%g, %g]\n",
 	 to_lower_bound, to_upper_bound);
   HighsPrimaDualIntegral& pdi = this->primal_dual_integral;
-  double lb;
-  double ub;
-  const double gap = this->gapFromBounds(to_lower_bound, to_upper_bound, lb, ub);
-  if (gap < kHighsInf) {
+  double from_lb;
+  double from_ub;
+  const double from_gap = this->gapFromBounds(from_lower_bound, from_upper_bound, from_lb, from_ub);
+  double to_lb;
+  double to_ub;
+  const double to_gap = this->gapFromBounds(to_lower_bound, to_upper_bound, to_lb, to_ub);
+  if (to_gap < kHighsInf) {
     double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
     if (pdi.value > -kHighsInf) {
-      bool lower_bound_eq = pdi.prev_lower_bound == from_lower_bound;
-      if (!lower_bound_eq) {
-	printf("HighsMipSolverData::updatePrimaDualIntegral (prev) lower bound of (%g) %g difference %g\n",
-	       pdi.prev_lower_bound, from_lower_bound, std::fabs(pdi.prev_lower_bound - from_lower_bound));
+      bool lb_eq = pdi.prev_lb == from_lb;
+      if (!lb_eq) {
+	printf("HighsMipSolverData::updatePrimaDualIntegral (prev) lb of (%g) %g difference %g\n",
+	       pdi.prev_lb, from_lb, std::fabs(pdi.prev_lb - from_lb));
       }
-      assert(lower_bound_eq);
-      assert(pdi.prev_upper_bound == from_upper_bound);
+      assert(lb_eq);
+      assert(pdi.prev_ub == from_ub);
       double time_diff = time - pdi.prev_time;
       assert(time_diff >= 0);
+      assert(pdi.prev_gap == from_gap);
       assert(pdi.prev_gap < kHighsInf);
       pdi.value += time_diff * pdi.prev_gap;
     } else {
       pdi.value = 0;
     }
-    pdi.prev_gap = gap;
     pdi.prev_time = time;
-    pdi.prev_lower_bound = to_lower_bound;
-    pdi.prev_upper_bound = to_upper_bound;
-  }    
+    pdi.prev_lb = to_lb;
+    pdi.prev_ub = to_ub;
+    pdi.prev_gap = to_gap;
+  }
 }
 void HighsPrimaDualIntegral::initialise() {
   this->value = -kHighsInf;
