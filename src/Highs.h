@@ -401,6 +401,17 @@ class Highs {
    */
 
   /**
+   * @brief Identify and the standard form of the HighsLp instance in
+   * HiGHS
+   */
+  HighsStatus getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
+                                HighsInt& num_nz, double& offset,
+                                double* cost = nullptr, double* rhs = nullptr,
+                                HighsInt* start = nullptr,
+                                HighsInt* index = nullptr,
+                                double* value = nullptr);
+
+  /**
    * @brief Return a const reference to the presolved HighsLp instance in HiGHS
    */
   const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
@@ -494,6 +505,15 @@ class Highs {
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
+   * @brief Indicate whether a dual unboundedness direction exists,
+   * and gets it if it does and dual_unboundedness_direction is not
+   * nullptr
+   */
+  HighsStatus getDualUnboundednessDirection(
+      bool& has_dual_unboundedness_direction,
+      double* dual_unboundedness_direction_value = nullptr);
+
+  /**
    * @brief Indicate whether a primal unbounded ray exists, and gets
    * it if it does and primal_ray is not nullptr
    */
@@ -530,9 +550,14 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
-   * @brief Get the current model objective value
+   * @brief Get the current model objective function value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
+
+  /**
+   * @brief Try to get the current dual objective function value
+   */
+  HighsStatus getDualObjectiveValue(double& dual_objective_value);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -1322,9 +1347,8 @@ class Highs {
 
   HighsStatus resetHighsOptions();
 
-  HighsStatus writeHighsOptions(
-      const std::string& filename,  //!< The filename
-      const bool report_only_non_default_values = true);
+  HighsStatus writeHighsOptions(const std::string& filename,  //!< The filename
+                                const bool report_only_deviations = true);
 
   HighsInt getSimplexIterationCount() {
     deprecationMessage("getSimplexIterationCount", "None");
@@ -1378,6 +1402,12 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
+  bool standard_form_valid_;
+  double standard_form_offset_;
+  std::vector<double> standard_form_cost_;
+  std::vector<double> standard_form_rhs_;
+  HighsSparseMatrix standard_form_matrix_;
+
   HEkk ekk_instance_;
 
   HighsPresolveLog presolve_log_;
@@ -1430,6 +1460,9 @@ class Highs {
   // Clears the presolved model and its status
   void clearPresolve();
   //
+  // Clears the standard form LP
+  void clearStandardFormLp();
+  //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
   // the incumbent model.
@@ -1470,9 +1503,8 @@ class Highs {
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
-  void underDevelopmentLogMessage(const std::string& method_name);
-
   // Interface methods
+  HighsStatus formStandardFormLp();
   HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,

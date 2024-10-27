@@ -238,10 +238,10 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 HighsStatus writeOptionsToFile(
     FILE* file, const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
-    const HighsFileType file_type = HighsFileType::kOther);
+    const HighsFileType file_type = HighsFileType::kFull);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_deviations = true,
-                   const HighsFileType file_type = HighsFileType::kOther);
+                   const bool report_only_deviations = false,
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportOption(FILE* file, const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
@@ -524,10 +524,10 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
         run_centring(false),
-        max_centring_steps(0),
-        centring_ratio_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
+        max_centring_steps(0),
+        centring_ratio_tolerance(0.0),
         icrash(false),
         icrash_dualize(false),
         icrash_strategy(""),

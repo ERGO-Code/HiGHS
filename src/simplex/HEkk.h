@@ -213,6 +213,10 @@ class HEkk {
   vector<HighsInt> proof_index_;
   vector<double> proof_value_;
 
+  // Data to be retained after computing primal or dual ray
+  vector<double> primal_ray_;
+  vector<double> dual_ray_;
+
   // Data to be retained when dualizing
   HighsInt original_num_col_;
   HighsInt original_num_row_;
