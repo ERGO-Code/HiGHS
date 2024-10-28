@@ -738,6 +738,14 @@ PYBIND11_MODULE(_core, m) {
       .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
       .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
       .export_values();
+  py::enum_<HighsDebugLevel>(m, "HighsDebugLevel")
+      .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
+      .value("kHighsDebugLevelCheap", HighsDebugLevel::kHighsDebugLevelCheap)
+      .value("kHighsDebugLevelCostly", HighsDebugLevel::kHighsDebugLevelCostly)
+      .value("kHighsDebugLevelExpensive", HighsDebugLevel::kHighsDebugLevelExpensive)
+      .value("kHighsDebugLevelMin", HighsDebugLevel::kHighsDebugLevelMin)
+      .value("kHighsDebugLevelMax", HighsDebugLevel::kHighsDebugLevelMax)
+      .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -1154,6 +1162,22 @@ PYBIND11_MODULE(_core, m) {
       .value("kSimplexStrategyPrimal", SimplexStrategy::kSimplexStrategyPrimal)
       .value("kSimplexStrategyMax", SimplexStrategy::kSimplexStrategyMax)
       .value("kSimplexStrategyNum", SimplexStrategy::kSimplexStrategyNum)
+      .export_values();
+  py::enum_<SimplexCrashStrategy>(simplex_constants, "SimplexCrashStrategy")
+      .value("kSimplexCrashStrategyMin", SimplexCrashStrategy::kSimplexCrashStrategyMin)
+      .value("kSimplexCrashStrategyOff", SimplexCrashStrategy::kSimplexCrashStrategyOff)
+      .value("kSimplexCrashStrategyLtssfK", SimplexCrashStrategy::kSimplexCrashStrategyLtssfK)
+      .value("kSimplexCrashStrategyLtssf", SimplexCrashStrategy::kSimplexCrashStrategyLtssf)
+      .value("kSimplexCrashStrategyBixby", SimplexCrashStrategy::kSimplexCrashStrategyBixby)
+      .value("kSimplexCrashStrategyLtssfPri", SimplexCrashStrategy::kSimplexCrashStrategyLtssfPri)
+      .value("kSimplexCrashStrategyLtsfK", SimplexCrashStrategy::kSimplexCrashStrategyLtsfK)
+      .value("kSimplexCrashStrategyLtsfPri", SimplexCrashStrategy::kSimplexCrashStrategyLtsfPri)
+      .value("kSimplexCrashStrategyLtsf", SimplexCrashStrategy::kSimplexCrashStrategyLtsf)
+      .value("kSimplexCrashStrategyBixbyNoNonzeroColCosts",
+             SimplexCrashStrategy::kSimplexCrashStrategyBixbyNoNonzeroColCosts)
+      .value("kSimplexCrashStrategyBasic", SimplexCrashStrategy::kSimplexCrashStrategyBasic)
+      .value("kSimplexCrashStrategyTestSing", SimplexCrashStrategy::kSimplexCrashStrategyTestSing)
+      .value("kSimplexCrashStrategyMax", SimplexCrashStrategy::kSimplexCrashStrategyMax)
       .export_values();
   py::enum_<SimplexUnscaledSolutionStrategy>(simplex_constants,
                                              "SimplexUnscaledSolutionStrategy")
