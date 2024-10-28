@@ -52,13 +52,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
     cupdlp_edot(primalResidual, work->rowScale, lp->nRows);
   }
 
-  if (work->settings->iInfNormAbsLocalTermination) {
-    cupdlp_int index;
-    cupdlp_infNormIndex(work, lp->nRows, primalResidual, &index);
-    *dPrimalFeasibility = fabs(primalResidual[index]);
-  } else {
-    cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
-  }
+  cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
 }
 
 void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
@@ -160,13 +154,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
     cupdlp_edot(dualResidual, work->colScale, lp->nCols);
   }
 
-  if (work->settings->iInfNormAbsLocalTermination) {
-    cupdlp_int index;
-    cupdlp_infNormIndex(work, lp->nCols, dualResidual, &index);
-    *dDualFeasibility = fabs(dualResidual[index]);
-  } else {
-    cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
-  }
+  cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
 }
 
 void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
