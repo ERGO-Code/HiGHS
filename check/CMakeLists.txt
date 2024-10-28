@@ -263,7 +263,8 @@ if (NOT FAST_BUILD OR ALL_TESTS)
         "standgub\; 1.2576994998\;"
         )
   endif()
-
+  1.1638929103e
+    163892910
   set(pdlpMacArmInstances
       "25fv47\; 5.50184589\;"
       "adlittle\; 2.254949631\;"
@@ -271,7 +272,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       "avgas\;-7.749999999\;"
       "blending\;-3.19999999\;"
       "chip\;-8.9999988715\;"
-      "e226\;-1.163892910 \;"
+      "e226\;-1.163892910\;"
       "scrs8\; 9.042969540\;"
       "sctest\; 5.749999936\;"
       "shell\; 1.2088253460\;"
