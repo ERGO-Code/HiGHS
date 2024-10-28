@@ -263,8 +263,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
         "standgub\; 1.2576994998\;"
         )
   endif()
-  1.1638929103e
-    163892910
+  
   set(pdlpMacArmInstances
       "25fv47\; 5.50184589\;"
       "adlittle\; 2.254949631\;"
