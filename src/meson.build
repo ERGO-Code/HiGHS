@@ -317,6 +317,9 @@ if get_option('default_library') == 'static'
   symbol_visibility = 'inlineshidden'
 endif
 
+do_install = get_option('do_install')
+
+if not get_option('with_pybind11')
 highslib = library('highs',
                    highslib_srcs,
                    dependencies: _deps,
@@ -325,7 +328,13 @@ highslib = library('highs',
                    include_directories: _incdirs,
                    gnu_symbol_visibility: symbol_visibility,
                    pic: true,
-                   install: true)
+                   install: do_install)
+
+highs_dep = declare_dependency(link_with: highslib,
+                               dependencies: _deps,
+                               include_directories: _incdirs,
+                               )
+endif
 
 # --------------- Interfaces
 
@@ -342,7 +351,7 @@ if get_option('with_fortran')
                         link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
-                        install: true)
+                        install: do_install)
 endif
 
 # C#
@@ -358,7 +367,7 @@ if get_option('with_csharp')
                         link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
-                        install: true)
+                        install: do_install)
 endif
 
 # C
@@ -378,35 +387,56 @@ if get_option('with_c')
                         link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
-                        install: true)
+                        install: do_install)
 endif
-
-highs_dep = declare_dependency(link_with: highslib,
-                               dependencies: _deps,
-                               include_directories: _incdirs,
-                               )
 
 if get_option('with_pybind11')
   py = import('python').find_installation(pure: false)
 
+  highslib = library('highs',
+                     highslib_srcs,
+                     dependencies: _deps,
+                     cpp_args: _args,
+                     c_args: _args,
+                     include_directories: _incdirs,
+                     gnu_symbol_visibility: symbol_visibility,
+                     pic: true,
+                     install: do_install,
+                     install_dir: py.get_install_dir() / 'highspy')
+
+  highs_dep = declare_dependency(link_with: highslib,
+                                 dependencies: _deps,
+                                 include_directories: _incdirs,
+                                )
+  _deps += highs_dep
   pyb11_dep = [
     # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
     # that is the minimum supported Python version
     py.dependency(),
     dependency('pybind11')
   ]
+  _deps += pyb11_dep
 
   highspy_cpp = files([
     'highs_bindings.cpp'
   ])
 
   py.extension_module(
-    '_highs',
+    '_core',
     sources : highspy_cpp,
     dependencies: [pyb11_dep, highs_dep],
     cpp_args: _args,
-    install: true,
+    install: do_install,
     subdir: 'highspy',
     include_directories: _incdirs,
+  )
+
+ highs_py_srcs = files(
+      'highspy/__init__.py',
+      'highspy/highs.py',)
+
+  py.install_sources(highs_py_srcs,
+    pure: false,
+    subdir: 'highspy'
   )
 endif
