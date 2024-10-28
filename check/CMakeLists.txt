@@ -384,7 +384,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
     endforeach(instance_pdlp)
   endif()
 
-  if (FAST BUILD AND APPLE) 
+  if (FAST_BUILD AND APPLE) 
     foreach(instance_pdlp ${pdlpMacArmInstances})
         # add default tests
         # treat the instance as a tuple (list) of two values
