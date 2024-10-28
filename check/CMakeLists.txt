@@ -75,15 +75,15 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
+      TestSpecialLps.cpp
+      TestLpSolvers.cpp
+      TestMipSolver.cpp
       Avgas.cpp)
 
   # todo: IG
-  if (NOT APPLE)
-      # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
-      # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
-      # may be an interface related issue which will pop up soon. 
-      # works OK on linux. The test was added to doctest for macOS but still hanging.
-      set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
+  if (NOT (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
+      NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
+    set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
@@ -181,6 +181,20 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       "greenbea\;5156\;-7.2555248130\;"
       "shell\;623\; 1.2088253460\;"
       "stair\;531\;-2.5126695119\;"
+      "standata\;72\; 1.2576995000\;"
+      "standgub\;68\; 1.2576995000\;"
+      "standmps\;218\; 1.4060175000\;"
+   )
+
+   set(successRiscVInstances
+      "25fv47\;3103\; 5.5018458883\;"
+      "80bau3b\;3705\; 9.8722419241\;"
+      "etamacro\;531\;-7.5571523330\;"
+      "greenbea\;5156\;-7.2555248130\;"
+      "stair\;531\;-2.5126695119\;" # last like mac arm
+      "adlittle\;74\; 2.2549496316\;"
+      "afiro\;22\;-4.6475314286\;"
+      "shell\;623\; 1.2088253460\;"
       "standata\;72\; 1.2576995000\;"
       "standgub\;68\; 1.2576995000\;"
       "standmps\;218\; 1.4060175000\;"
@@ -287,6 +301,10 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
     add_instancetests(successMacArmInstances "Optimal")
+  elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
+        add_instancetests(successRiscVInstances "Optimal")
+    endif()
   else()
     add_instancetests(successInstances "Optimal")
   endif()
