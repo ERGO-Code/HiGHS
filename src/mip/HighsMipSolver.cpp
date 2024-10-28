@@ -570,8 +570,11 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   mipdata_->printDisplayLine('Z');
+  // Need to complete the calculation of P-D integral, checking for NO
+  // gap change
   mipdata_->updatePrimaDualIntegral(mipdata_->lower_bound, mipdata_->lower_bound,
-				    mipdata_->upper_bound, mipdata_->upper_bound);
+				    mipdata_->upper_bound, mipdata_->upper_bound,
+				    false);
   timer_.start(timer_.postsolve_clock);
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
