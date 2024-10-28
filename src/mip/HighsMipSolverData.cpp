@@ -1218,6 +1218,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   } else if (incumbent.empty())
     incumbent = sol;
 
+    printf("HighsMipSolverData::addIncumbent 9 lower bound + offset = %g + %g = %g\n",
+	   lower_bound, mipsolver.model_->offset_, lower_bound + 	 mipsolver.model_->offset_);
   return true;
 }
 
@@ -2177,7 +2179,6 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
   // is false, in which case there is a check for unchanged bounds.
   const double lb_difference = possInfRelDiff(from_lb, to_lb, to_lb);
   const double ub_difference = possInfRelDiff(from_ub, to_ub, to_ub);
-  const bool bound_change = lb_difference > 1e-12 || ub_difference > 1e-12;
   const double bound_change_tolerance = 0;
   const bool bound_change =
     lb_difference > bound_change_tolerance ||
