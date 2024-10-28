@@ -269,8 +269,15 @@ void HighsPrimalHeuristics::rootReducedCost() {
       localdom.propagate();
       if (localdom.infeasible()) {
         localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+
+	double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+	
         mipsolver.mipdata_->lower_bound =
             std::max(mipsolver.mipdata_->lower_bound, currCutoff);
+
+	const bool bound_change = mipsolver.mipdata_->lower_bound != prev_lower_bound;
+	if (!mipsolver.submip && bound_change) mipsolver.mipdata_->updatePrimaDualIntegral(prev_lower_bound, mipsolver.mipdata_->lower_bound,
+								     mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->upper_bound);
         localdom.backtrack();
         if (localdom.getBranchDepth() == 0) break;
         neighbourhood.backtracked();

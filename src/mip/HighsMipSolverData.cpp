@@ -2138,71 +2138,111 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
+double possInfRelDiff(const double v0, const double v1, const double den) {
+  double rel_diff;
+  if (v0 == kHighsInf) {
+    if (v1 == kHighsInf) {
+      rel_diff = 0;
+    } else {
+      rel_diff = kHighsInf;
+    }
+  } else {
+    if (v1 == kHighsInf) {
+      rel_diff = kHighsInf;
+    } else {
+      rel_diff = std::fabs(v1 - v0) / std::max(1.0, std::fabs(den));
+    }
+  }
+  return rel_diff;
+}
+
 void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, const double to_lower_bound,
 						 const double from_upper_bound, const double to_upper_bound,
-						 const bool check_gap_change) {
+						 const bool check_bound_change) {
   HighsPrimaDualIntegral& pdi = this->primal_dual_integral;
-  printf("\nHighsMipSolverData::updatePrimaDualIntegral New bounds now [%16.10g, %16.10g]: (prev)offset = (%16.10g) %16.10g\n",
-	 to_lower_bound, to_upper_bound, pdi.prev_offset, mipsolver.model_->offset_);
   double from_lb;
   double from_ub;
   const double from_gap = this->gapFromBounds(from_lower_bound, from_upper_bound, from_lb, from_ub);
   double to_lb;
   double to_ub;
   const double to_gap = this->gapFromBounds(to_lower_bound, to_upper_bound, to_lb, to_ub);
-  if (to_gap < kHighsInf) {
-    double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-    if (pdi.value > -kHighsInf) {
-      double time_diff = time - pdi.prev_time;
-      assert(time_diff >= 0);
-      assert(pdi.prev_gap < kHighsInf);
-      // updatePrimaDualIntegral should only be called when there is a
-      // change in the gap - except when the final update is made, in
-      // which case the gap must NOT have changed. By default, a check
-      // for some gap change is made, unless check_gap_change is
-      // false, in which case there is a check for an unchanged gap.
-      const double gap_change = to_gap - from_gap;
-      if (check_gap_change) {
-	if (gap_change == 0) printf("HighsMipSolverData::updatePrimaDualIntegral Expected gap change not observed\n");
-	assert(gap_change != 0);
-      } else {
-	if (gap_change != 0) printf("HighsMipSolverData::updatePrimaDualIntegral Expected gap no-change not observed\n");
-	assert(gap_change == 0);
-      }
-      // These housekeeping tests check that the previous saved
-      // lower/upper bounds and gap are very close to the "from"
-      // lower/upper bounds and corresponding gap. They are usually
-      // identical, but rounding error can occur when passing through
-      // reset, when the old/new offsets are added/subtracted from the
-      // bounds due to changes in offset during presolve.
-      bool lb_eq = std::fabs(pdi.prev_lb - from_lb)/std::max(1.0, std::fabs(pdi.prev_lb)) < 1e-12;
-      if (!lb_eq) {
-	printf("HighsMipSolverData::updatePrimaDualIntegral (prev_lb)  from_lb  of (%16.10g) %16.10g: inconsistency of %16.10g\n",
-	       pdi.prev_lb, from_lb, std::fabs(pdi.prev_lb - from_lb));
-      }
-      bool ub_eq = std::fabs(pdi.prev_ub - from_ub)/std::max(1.0, std::fabs(pdi.prev_ub))  < 1e-12;
-      if (!ub_eq) {
-	printf("HighsMipSolverData::updatePrimaDualIntegral (prev_ub)  from_ub  of (%16.10g) %16.10g: inconsistency of %16.10g\n",
-	       pdi.prev_ub, from_ub, std::fabs(pdi.prev_ub - from_ub));
-      }
-      bool gap_eq = std::fabs(pdi.prev_gap - from_gap) < 1e-12;
-      if (!gap_eq) {
-	printf("HighsMipSolverData::updatePrimaDualIntegral (prev_gap) from_gap of (%16.10g) %16.10g: inconsistency of %16.10g\n",
-	       pdi.prev_gap, from_gap, std::fabs(pdi.prev_gap - from_gap));
-      }
-      assert(lb_eq);
-      assert(ub_eq);
-      assert(gap_eq);
-      pdi.value += time_diff * pdi.prev_gap;
-    } else {
-      pdi.value = 0;
-    }
-    pdi.prev_time = time;
-    pdi.prev_lb = to_lb;
-    pdi.prev_ub = to_ub;
-    pdi.prev_gap = to_gap;
-    pdi.prev_offset = mipsolver.model_->offset_;
+
+  printf("\nHighsMipSolverData::updatePrimaDualIntegral [lb; ub; gap] now [%16.10g, %16.10g, %16.10g]\n",
+	 to_lb, to_ub, to_gap);
+
+  // updatePrimaDualIntegral should only be called when there is a
+  // change in one of the bounds, except when the final update is
+  // made, in which case the bounds must NOT have changed. By default,
+  // a check for some bound change is made, unless check_bound_change
+  // is false, in which case there is a check for unchanged bounds.
+  const double lb_difference = possInfRelDiff(from_lb, to_lb, to_lb);
+  const double ub_difference = possInfRelDiff(from_ub, to_ub, to_ub);
+  const bool bound_change = lb_difference > 1e-12 || ub_difference > 1e-12;
+
+  if (check_bound_change) {
+    if (!bound_change) printf("HighsMipSolverData::updatePrimaDualIntegral Expected lower/upper bound change not observed: "
+			      "lower = [%16.10g, %16.10g] change = %16.10g"
+			      "upper = [%16.10g, %16.10g] change = %16.10g\n",
+			      from_lb, to_lb, lb_difference,
+			      from_ub, to_ub, ub_difference);
+    assert(bound_change);
+  } else {
+    if (bound_change) printf("HighsMipSolverData::updatePrimaDualIntegral Expected lower/upper bound no-change not observed: "
+			      "lower = [%16.10g, %16.10g] change = %16.10g"
+			      "upper = [%16.10g, %16.10g] change = %16.10g\n",
+			      from_lb, to_lb, lb_difference,
+			      from_ub, to_ub, ub_difference);
+    assert(!bound_change);
   }
+  if (pdi.value > -kHighsInf) {
+    // updatePrimaDualIntegral has been called previously, so can test
+    // housekeeping, even if gap is still inf
+    //
+    // These housekeeping tests check that the previous saved
+    // lower/upper bounds and gap are very close to the "from"
+    // lower/upper bounds and corresponding gap. They are usually
+    // identical, but rounding error can occur when passing through
+    // reset, when the old/new offsets are added/subtracted from the
+    // bounds due to changes in offset during presolve.
+    const double lb_inconsistency = possInfRelDiff(from_lb, pdi.prev_lb, pdi.prev_lb);
+    const bool lb_consistent = lb_inconsistency < 1e-12;
+    if (!lb_consistent) {
+      printf("HighsMipSolverData::updatePrimaDualIntegral (prev_lb)  from_lb  of (%16.10g) %16.10g: relative inconsistency of %16.10g\n",
+	     pdi.prev_lb, from_lb, lb_inconsistency);
+    }
+    const double ub_inconsistency = possInfRelDiff(from_ub, pdi.prev_ub, pdi.prev_ub);
+    const bool ub_consistent = ub_inconsistency < 1e-12;
+    if (!ub_consistent) {
+      printf("HighsMipSolverData::updatePrimaDualIntegral (prev_ub)  from_ub  of (%16.10g) %16.10g: relative inconsistency of %16.10g\n",
+	     pdi.prev_ub, from_ub, ub_inconsistency);
+    }
+    const double gap_inconsistency = possInfRelDiff(from_gap, pdi.prev_gap, 1.0);
+    const bool gap_consistent = gap_inconsistency < 1e-12;
+    if (!gap_consistent) {
+      printf("HighsMipSolverData::updatePrimaDualIntegral (prev_gap)  from_gap  of (%16.10g) %16.10g: relative inconsistency of %16.10g\n",
+	     pdi.prev_gap, from_gap, gap_inconsistency);
+    }
+    assert(lb_consistent);
+    assert(ub_consistent);
+    assert(gap_consistent);
+    
+    if (to_gap < kHighsInf) {
+      double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+      if (from_gap < kHighsInf) {
+	// Need to update the P-D integral
+	double time_diff = time - pdi.prev_time;
+	assert(time_diff >= 0);
+	pdi.value += time_diff * pdi.prev_gap;
+      }
+      pdi.prev_time = time;
+    }
+  } else {
+    pdi.value = 0;
+  }
+  pdi.prev_lb = to_lb;
+  pdi.prev_ub = to_ub;
+  pdi.prev_gap = to_gap;
+  pdi.prev_offset = mipsolver.model_->offset_;
   printf("#1946\n\n"); // TODO: Remove this #1946
 }
 
