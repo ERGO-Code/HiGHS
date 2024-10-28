@@ -399,9 +399,6 @@ if get_option('with_pybind11')
   highspy_cpp = files([
     'highs_bindings.cpp'
   ])
-  highsoptions_cpp = files([
-    'highs_options.cpp'
-  ])
 
   py.extension_module(
     '_highs',
@@ -412,15 +409,4 @@ if get_option('with_pybind11')
     subdir: 'highspy',
     include_directories: _incdirs,
   )
-
-  py.extension_module(
-    '_highs_options',
-    sources : highsoptions_cpp,
-    dependencies: [pyb11_dep, highs_dep],
-    cpp_args: _args,
-    install: true,
-    subdir: 'highspy',
-    include_directories: _incdirs,
-  )
-
 endif
