@@ -404,6 +404,7 @@ void HighsMipSolverData::init() {
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
   primal_dual_integral.initialise();
+  primal_dual_integral.prev_offset = mipsolver.model_->offset_;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -2207,5 +2208,9 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
 
 void HighsPrimaDualIntegral::initialise() {
   this->value = -kHighsInf;
-  this->prev_offset = 0;
+  this->prev_lb = -kHighsInf;
+  this->prev_ub = -kHighsInf;
+  this->prev_gap = -kHighsInf;
+  this->prev_time = -kHighsInf;
+  this->prev_offset = -kHighsInf;
 }
