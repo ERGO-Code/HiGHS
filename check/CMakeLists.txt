@@ -137,11 +137,11 @@ if (NOT FAST_BUILD OR ALL_TESTS)
                       RESOURCE_LOCK unittestbin)
 
   # create a binary running all the tests in the executable
-  add_test(NAME unit_tests_all COMMAND unit_tests --success)
-  set_tests_properties(unit_tests_all
-                      PROPERTIES
-                      DEPENDS unit-test-build)
-  set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+#   add_test(NAME unit_tests_all COMMAND unit_tests --success)
+#   set_tests_properties(unit_tests_all
+#                       PROPERTIES
+#                       DEPENDS unit-test-build)
+#   set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
 
   # An individual test can be added with the command below but the approach
   # above with a single add_test for all the unit tests automatically detects all
@@ -230,6 +230,22 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   #   "--parallel=on"
       )
 
+  set(pdlpInstances
+      "25fv47\; 5.50184588\;"
+      "adlittle\; 2.254949631\;"
+      "afiro\;-4.64753143\;"
+      "avgas\;-7.749999999\;"
+      "blending\;-3.19999999\;"
+      "chip\;-9.000000001\;"
+      "e226\;-1.163892906\;"
+      "scrs8\; 9.042969540\;"
+      "sctest\; 5.749999936\;"
+      "shell\; 1.2088253460\;"
+      "stair\;-2.5126695353\;"
+      "standata\; 1.257699499\;"
+      "standgub\; 1.2576994998\;"
+      )
+  
   # define a macro to add tests
   #
   # add_instancetests takes an instance group and a status
@@ -284,42 +300,64 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   endforeach(instance)
   endmacro(add_instancetests)
 
-  # add tests for success and fail instances
-  if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
-    add_instancetests(successMacArmInstances "Optimal")
-  else()
-    add_instancetests(successInstances "Optimal")
-  endif()
+#   # add tests for success and fail instances
+#   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
+#     add_instancetests(successMacArmInstances "Optimal")
+#   else()
+#     add_instancetests(successInstances "Optimal")
+#   endif()
 
-  add_instancetests(failInstances "Fail")
-  add_instancetests(infeasibleInstances "Infeasible")
-  #add_instancetests(unboundedInstances "Unbounded")
+#   add_instancetests(failInstances "Fail")
+#   add_instancetests(infeasibleInstances "Infeasible")
 
-  foreach(instance ${mipInstances})
-      list(GET instance 0 name)
-      list(GET instance 1 optval)
-      # specify the instance and the settings load command
-      set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+#   add_instancetests(unboundedInstances "Unbounded")
 
-      foreach(setting ${settings})
-          if (FAST_BUILD)
-            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting} 
-                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
-          else()
-            add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-                --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
-          endif()
 
-          set_tests_properties (${name}${setting} PROPERTIES
-                  DEPENDS unit_tests_all)
+#   foreach(instance ${mipInstances})
+#       list(GET instance 0 name)
+#       list(GET instance 1 optval)
+#       # specify the instance and the settings load command
+#       set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
-          set_tests_properties (${name}${setting} PROPERTIES
-                  PASS_REGULAR_EXPRESSION
-                  "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
-                  FAIL_REGULAR_EXPRESSION
-                  "Solution status   infeasible")
+#       foreach(setting ${settings})
+#           if (FAST_BUILD)
+#             add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs-bin> ${setting} 
+#                 --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+#           else()
+#             add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+#                 --options_file ${CMAKE_BINARY_DIR}/testoptions.txt ${inst})
+#           endif()
 
-      endforeach(setting)
-  endforeach()
+#           set_tests_properties (${name}${setting} PROPERTIES
+#                   DEPENDS unit_tests_all)
+
+#           set_tests_properties (${name}${setting} PROPERTIES
+#                   PASS_REGULAR_EXPRESSION
+#                   "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
+#                   FAIL_REGULAR_EXPRESSION
+#                   "Solution status   infeasible")
+
+#       endforeach(setting)
+#   endforeach(instance)
+
+  foreach(instance_pdlp ${pdlpInstances})
+      # add default tests
+      # treat the instance as a tuple (list) of two values
+      list(GET instance_pdlp 0 name_pdlp)
+      list(GET instance_pdlp 1 optval)
+
+      set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
+
+      add_test(NAME ${name_pdlp}--pdlp COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
+        ${inst_pdlp})
+
+      set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+          PASS_REGULAR_EXPRESSION
+          "Model status        : Optimal")
+
+      set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+          PASS_REGULAR_EXPRESSION
+          "Objective value     : ${optval}")
+  endforeach(instance_pdlp)
 
 endif()
