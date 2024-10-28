@@ -622,7 +622,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
             mipsolver->orig_model_->num_row_) {
           // keep implied bound (as column bound)
           if (impliedBound > model->col_lower_[col] + threshold)
-            changeColUpper(col, impliedBound);
+            changeColLower(col, impliedBound);
           // set to -infinity, so that it is not stored as an implied bound
           impliedBound = -kHighsInf;
         }
