@@ -111,9 +111,6 @@ cupdlp_int cupdlp_dot(CUPDLPwork *w, const cupdlp_int n, const cupdlp_float *x,
 cupdlp_int cupdlp_twoNorm(CUPDLPwork *w, const cupdlp_int n,
                           const cupdlp_float *x, cupdlp_float *res);
 
-cupdlp_int cupdlp_infNorm(CUPDLPwork *w, const cupdlp_int n,
-                          const cupdlp_float *x, cupdlp_float *res);
-
 cupdlp_int cupdlp_scaleVector(CUPDLPwork *w, const cupdlp_float weight,
                               cupdlp_float *x, const cupdlp_int n);
 
