@@ -2178,6 +2178,10 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
   const double lb_difference = possInfRelDiff(from_lb, to_lb, to_lb);
   const double ub_difference = possInfRelDiff(from_ub, to_ub, to_ub);
   const bool bound_change = lb_difference > 1e-12 || ub_difference > 1e-12;
+  const double bound_change_tolerance = 0;
+  const bool bound_change =
+    lb_difference > bound_change_tolerance ||
+    ub_difference > bound_change_tolerance;
 
   if (check_bound_change) {
     if (!bound_change) printf("HighsMipSolverData::updatePrimaDualIntegral Expected lower/upper bound change not observed: "
