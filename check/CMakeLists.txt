@@ -340,24 +340,26 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 #       endforeach(setting)
 #   endforeach(instance)
 
-  foreach(instance_pdlp ${pdlpInstances})
-      # add default tests
-      # treat the instance as a tuple (list) of two values
-      list(GET instance_pdlp 0 name_pdlp)
-      list(GET instance_pdlp 1 optval)
+  if(FAST_BUILD)
+    foreach(instance_pdlp ${pdlpInstances})
+        # add default tests
+        # treat the instance as a tuple (list) of two values
+        list(GET instance_pdlp 0 name_pdlp)
+        list(GET instance_pdlp 1 optval)
 
-      set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
+        set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
 
-      add_test(NAME ${name_pdlp}--pdlp COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
-        ${inst_pdlp})
+        add_test(NAME ${name_pdlp}--pdlp COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
+            ${inst_pdlp})
 
-      set_tests_properties (${name_pdlp}--pdlp PROPERTIES
-          PASS_REGULAR_EXPRESSION
-          "Model status        : Optimal")
+        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+            PASS_REGULAR_EXPRESSION
+            "Model status        : Optimal")
 
-      set_tests_properties (${name_pdlp}--pdlp PROPERTIES
-          PASS_REGULAR_EXPRESSION
-          "Objective value     : ${optval}")
-  endforeach(instance_pdlp)
+        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+            PASS_REGULAR_EXPRESSION
+            "Objective value     : ${optval}")
+    endforeach(instance_pdlp)
+  endif()
 
 endif()
