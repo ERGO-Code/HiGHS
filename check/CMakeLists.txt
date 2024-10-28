@@ -230,27 +230,40 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   #   "--parallel=on"
       )
 
-  set(pdlpInstances
-      "25fv47\; 5.50184588\;"
-      "adlittle\; 2.254949631\;"
-      "afiro\;-4.64753143\;"
-      "avgas\;-7.749999999\;"
-      "blending\;-3.19999999\;"
-      "chip\;-9.000000001\;"
-      "scrs8\; 9.042969540\;"
-      "sctest\; 5.749999936\;"
-      "shell\; 1.2088253460\;"
-      "stair\;-2.5126695353\;"
-      "standata\; 1.257699499\;"
-      "standgub\; 1.2576994998\;"
-      )
-      
-
-  if (UNIX)
-    # on windows model status is unknown, rel gap e00
-    set(pdlpInstances ${pdlpInstances} "e226\;-1.163892906\;")
+  if (UNIX AND NOT APPLE)
+    set(pdlpInstances
+        "25fv47\; 5.50184588\;"
+        "adlittle\; 2.254949631\;"
+        "afiro\;-4.64753143\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-9.000000001\;"
+        "e226\;-1.163892906\;"
+        "scrs8\; 9.042969540\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        "stair\;-2.5126695353\;"
+        "standata\; 1.257699499\;"
+        "standgub\; 1.2576994998\;"
+        )
+  elseif(WIN32)
+    # on windows e226 model status is unknown, rel gap e00
+    set(pdlpInstances
+        "25fv47\; 5.50184588\;"
+        "adlittle\; 2.254949631\;"
+        "afiro\;-4.64753143\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-9.000000001\;"
+        "scrs8\; 9.042969540\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        "stair\;-2.5126695353\;"
+        "standata\; 1.257699499\;"
+        "standgub\; 1.2576994998\;"
+        )
   endif()
-  
+
   set(pdlpMacArmInstances
       "25fv47\; 5.50184589\;"
       "adlittle\; 2.254949631\;"
