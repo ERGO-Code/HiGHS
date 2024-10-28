@@ -39,6 +39,7 @@ struct HighsPrimaDualIntegral {
   double prev_ub;
   double prev_gap;
   double prev_time;
+  double prev_offset;
   void initialise();
 };
 
