@@ -80,7 +80,6 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       TestMipSolver.cpp
       Avgas.cpp)
 
-  # todo: IG
   if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
       NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
     set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
