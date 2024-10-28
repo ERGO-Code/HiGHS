@@ -1218,8 +1218,6 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   } else if (incumbent.empty())
     incumbent = sol;
 
-    printf("HighsMipSolverData::addIncumbent 9 lower bound + offset = %g + %g = %g\n",
-	   lower_bound, mipsolver.model_->offset_, lower_bound + 	 mipsolver.model_->offset_);
   return true;
 }
 
@@ -1469,7 +1467,13 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       globalOrbits->orbitalFixing(domain);
 
     if (domain.infeasible()) {
+      double prev_lower_bound = lower_bound;
+      
       lower_bound = std::min(kHighsInf, upper_bound);
+
+      bool bound_change = lower_bound != prev_lower_bound;
+      if (!mipsolver.submip && bound_change) updatePrimaDualIntegral(prev_lower_bound, lower_bound,
+								     upper_bound, upper_bound);
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;
@@ -1511,7 +1515,14 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
           addIncumbent(lp.getLpSolver().getSolution().col_value,
                        lp.getObjective(), 'T')) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+
+	double prev_lower_bound = lower_bound;
+	
         lower_bound = upper_bound;
+
+	bool bound_change = lower_bound != prev_lower_bound;
+	if (!mipsolver.submip && bound_change) updatePrimaDualIntegral(prev_lower_bound, lower_bound,
+								     upper_bound, upper_bound);
         pruned_treeweight = 1.0;
         num_nodes += 1;
         num_leaves += 1;
@@ -1521,7 +1532,13 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       status = lp.getStatus();
 
     if (status == HighsLpRelaxation::Status::kInfeasible) {
+      double prev_lower_bound = lower_bound;
+	
       lower_bound = std::min(kHighsInf, upper_bound);
+
+      bool bound_change = lower_bound != prev_lower_bound;
+      if (!mipsolver.submip && bound_change) updatePrimaDualIntegral(prev_lower_bound, lower_bound,
+								     upper_bound, upper_bound);
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;
