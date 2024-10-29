@@ -644,17 +644,11 @@ cupdlp_bool PDHG_Check_Termination(CUPDLPwork *pdhg, int bool_print) {
   }
 
 #endif
-  int bool_pass = 0;
-  if (pdhg->settings->iInfNormAbsLocalTermination) {
-    bool_pass =
-      (resobj->dPrimalFeas < settings->dPrimalTol) &&
-      (resobj->dDualFeas < settings->dDualTol);
-  } else {
-    bool_pass =
-      (resobj->dPrimalFeas < settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
-      (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost));
-  }
-  bool_pass = bool_pass && (resobj->dRelObjGap < settings->dGapTol);
+  int bool_pass =
+      ((resobj->dPrimalFeas <
+        settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
+       (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost)) &&
+       (resobj->dRelObjGap < settings->dGapTol));
   return bool_pass;
 }
 
@@ -823,28 +817,25 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
         break;
       }
 
-      // Don't allow "average" termination if
-      // iInfNormAbsLocalTermination is set
-      if (!pdhg->settings->iInfNormAbsLocalTermination &&
-	  PDHG_Check_Termination_Average(pdhg, termination_print)) {
-	// cupdlp_printf("Optimal average solution.\n");
-	
-	CUPDLP_COPY_VEC(iterates->x->data, iterates->xAverage->data,
-			cupdlp_float, problem->nCols);
-	CUPDLP_COPY_VEC(iterates->y->data, iterates->yAverage->data,
-			cupdlp_float, problem->nRows);
-	CUPDLP_COPY_VEC(iterates->ax->data, iterates->axAverage->data,
-			cupdlp_float, problem->nRows);
-	CUPDLP_COPY_VEC(iterates->aty->data, iterates->atyAverage->data,
-			cupdlp_float, problem->nCols);
-	CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage,
-			cupdlp_float, problem->nCols);
-	CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage,
-			cupdlp_float, problem->nCols);
-	
-	resobj->termIterate = AVERAGE_ITERATE;
-	resobj->termCode = OPTIMAL;
-	break;
+      if (PDHG_Check_Termination_Average(pdhg, termination_print)) {
+        // cupdlp_printf("Optimal average solution.\n");
+ 
+        CUPDLP_COPY_VEC(iterates->x->data, iterates->xAverage->data,
+          cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(iterates->y->data, iterates->yAverage->data,
+          cupdlp_float, problem->nRows);
+        CUPDLP_COPY_VEC(iterates->ax->data, iterates->axAverage->data,
+          cupdlp_float, problem->nRows);
+        CUPDLP_COPY_VEC(iterates->aty->data, iterates->atyAverage->data,
+          cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(resobj->dSlackPos, resobj->dSlackPosAverage,
+          cupdlp_float, problem->nCols);
+        CUPDLP_COPY_VEC(resobj->dSlackNeg, resobj->dSlackNegAverage,
+          cupdlp_float, problem->nCols);
+ 
+        resobj->termIterate = AVERAGE_ITERATE;
+        resobj->termCode = OPTIMAL;
+        break;
       }
 
       if (PDHG_Check_Infeasibility(pdhg, 0) == INFEASIBLE_OR_UNBOUNDED) {

@@ -6,13 +6,9 @@ This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Pub
 
 cuPDLP-C terminates when either the current or averaged iterates satisfy primal/dual feasibility, using a 2-norm measure relative to the size of the RHS/costs, and after scaling the LP. 
 
-HiGHS assesses primal/dual feasibility using a infinity-norm absolute measure for the unscaled LP. Thus the cuPDLP-C result frequently fails to satisfy HiGHS primal/dual feasibility. To get around this partially, `iInfNormAbsLocalTermination` has been introduced into cuPDLP-C. 
+HiGHS assesses primal/dual feasibility using a infinity-norm absolute measure for the unscaled LP. Thus the cuPDLP-C result frequently fails to satisfy HiGHS primal/dual feasibility. 
 
-By default, `iInfNormAbsLocalTermination` is false, so that the original cuPDLP-C termination criteria are used.
-
-When `iInfNormAbsLocalTermination` is true, cuPDLP-C terminates only when primal/dual feasibility is satisfied for the infinity-norm absolute measure of the current iterate, so that HiGHS primal/dual feasibility is satisfied. 
-
-However, the cuPDLP-C scaling may still result in the HiGHS tolerances not being satisfied. Users can inspect `HighsInfo` values for the maximum and sum of infeasibilities, and the new `HighsInfo` values measuring the maximum and sum of complementarity violations.
+The cuPDLP-C scaling may result in the HiGHS tolerances not being satisfied. Users can inspect `HighsInfo` values for the maximum and sum of infeasibilities, and the new `HighsInfo` values measuring the maximum and sum of complementarity violations.
 
 ## Preprocessing issue
 

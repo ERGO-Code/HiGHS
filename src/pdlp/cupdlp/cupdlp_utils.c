@@ -425,7 +425,6 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("    eRestartMethod:    %d\n", settings->eRestartMethod);
   cupdlp_printf("    nLogLevel:    %d\n", settings->nLogLevel);
   cupdlp_printf("    nLogInterval:    %d\n", settings->nLogInterval);
-  cupdlp_printf("    iInfNormAbsLocalTermination:    %d\n", settings->iInfNormAbsLocalTermination);
   cupdlp_printf("\n");
   cupdlp_printf("--------------------------------------------------\n");
   cupdlp_printf("\n");
