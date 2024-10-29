@@ -404,7 +404,6 @@ void HighsMipSolverData::init() {
   upper_limit = mipsolver.options_mip_->objective_bound;
   optimality_limit = mipsolver.options_mip_->objective_bound;
   primal_dual_integral.initialise();
-  primal_dual_integral.prev_offset = mipsolver.model_->offset_;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -2216,9 +2215,10 @@ void HighsMipSolverData::updatePrimaDualIntegral(
   //   has been missed. Only for checking/debugging 
   // 
   // * prev_ub: Ditto for upper_bound. Only for checking/debugging 
+  // 
   // * prev_gap: Ditto for gap. Only for checking/debugging 
+  // 
   // * prev_time: Used to determine the time spent at the previous gap
-  // * prev_offset: Not used
 
   double from_lb;
   double from_ub;
@@ -2346,7 +2346,6 @@ void HighsMipSolverData::updatePrimaDualIntegral(
   pdi.prev_lb = to_lb;
   pdi.prev_ub = to_ub;
   pdi.prev_gap = to_gap;
-  pdi.prev_offset = mipsolver.model_->offset_;
   //  printf("#1946\n\n");  // TODO: Remove this #1946
 }
 
