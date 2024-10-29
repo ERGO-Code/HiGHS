@@ -335,7 +335,6 @@ struct HighsOptionsStruct {
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
-  bool pdlp_native_termination;
   bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;

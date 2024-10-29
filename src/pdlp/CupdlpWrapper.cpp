@@ -597,9 +597,6 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
-  //
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
-  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,

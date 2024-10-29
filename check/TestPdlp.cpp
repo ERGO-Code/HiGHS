@@ -27,25 +27,19 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   // First pass uses (HiGHS default) termination for PDLP solver to
   // satisfy HiGHS primal/dual feasibility tolerances
   bool optimal = true;
-  for (HighsInt k = 0; k < 2; k++) {
-    if (k == 1) {
-      // In second pass use native termination for PDLP solver,
-      // failing HiGHS optimality test
-      highs.setOptionValue("pdlp_native_termination", true);
-      optimal = false;
-    }
-    run_status = highs.run();
-    if (dev_run) highs.writeSolution("", 1);
-    REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
-            double_equal_tolerance);
-    if (optimal) {
-      REQUIRE(run_status == HighsStatus::kOk);
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-    } else {
-      REQUIRE(run_status == HighsStatus::kWarning);
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
-    }
+
+  run_status = highs.run();
+  if (dev_run) highs.writeSolution("", 1);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  if (optimal) {
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  } else {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
   }
+
   HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == 160);
