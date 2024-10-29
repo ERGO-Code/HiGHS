@@ -9,7 +9,7 @@ concurrency:
 jobs:
   # macos 12 is Intel
   build_macos_12:
-    runs-on: macos-12
+    runs-on: macos-latest
     # strategy:
       # matrix:
       #   python: [3.11]
