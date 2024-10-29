@@ -945,9 +945,9 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
  *                                                filled with the unboundedness
  *                                                direction.
  */
-HighsInt getDualUnboundednessDirection(const void* highs, 
-				       HighsInt* has_dual_unboundedness_direction,
-				       double* dual_unboundedness_direction_value);
+HighsInt getDualUnboundednessDirection(
+    const void* highs, HighsInt* has_dual_unboundedness_direction,
+    double* dual_unboundedness_direction_value);
 
 /**
  * Indicates whether a primal ray that is a certificate of primal

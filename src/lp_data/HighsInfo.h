@@ -275,9 +275,9 @@ class HighsInfo : public HighsInfoStruct {
         advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
 
-    record_double = new InfoRecordDouble(
-        "primal_dual_integral", "Primal-dual integral",
-        advanced, &primal_dual_integral, 0);
+    record_double =
+        new InfoRecordDouble("primal_dual_integral", "Primal-dual integral",
+                             advanced, &primal_dual_integral, 0);
     records.push_back(record_double);
   }
 
