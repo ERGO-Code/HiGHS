@@ -591,7 +591,15 @@ void HighsMipSolverData::runSetup() {
   domain.propagate();
   if (domain.infeasible()) {
     mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+
+    double prev_lower_bound = lower_bound;
+    
     lower_bound = kHighsInf;
+
+    bool bound_change = lower_bound != prev_lower_bound;
+    if (!mipsolver.submip && bound_change) updatePrimaDualIntegral(prev_lower_bound, lower_bound,
+								   upper_bound, upper_bound);
+
     pruned_treeweight = 1.0;
     return;
   }
@@ -635,7 +643,15 @@ void HighsMipSolverData::runSetup() {
           if (fractionality(domain.col_lower_[i]) > feastol) {
             // integer variable is fixed to a fractional value -> infeasible
             mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+
+	    double prev_lower_bound = lower_bound;
+
             lower_bound = kHighsInf;
+
+	    bool bound_change = lower_bound != prev_lower_bound;
+	    if (!mipsolver.submip && bound_change) updatePrimaDualIntegral(prev_lower_bound, lower_bound,
+									   upper_bound, upper_bound);
+
             pruned_treeweight = 1.0;
             return;
           }
