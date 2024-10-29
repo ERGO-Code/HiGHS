@@ -2244,7 +2244,7 @@ void HighsMipSolverData::updatePrimaDualIntegral(
     if (!bound_change) {
       //      printf(
       //          "HighsMipSolverData::updatePrimaDualIntegral\n"
-      //          "Expected original    lower/upper bound change not observed:\\"
+      //          "Expected original    lower/upper bound change not observed:\n"
       //          "lower = [%16.10g, %16.10g] change = %16.10g\n"
       //          "upper = [%16.10g, %16.10g] change = %16.10g\n",
       //          from_lb, to_lb, lb_difference, from_ub, to_ub, ub_difference);
@@ -2349,6 +2349,5 @@ void HighsMipSolverData::updatePrimaDualIntegral(
   //  printf("#1946\n\n");  // TODO: Remove this #1946
 }
 
-void HighsPrimaDualIntegral::initialise() {
-  this->value = -kHighsInf;
-}
+void HighsPrimaDualIntegral::initialise() { this->value = -kHighsInf; }
+
