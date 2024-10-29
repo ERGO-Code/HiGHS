@@ -2202,19 +2202,45 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound, 
     ub_difference > bound_change_tolerance;
 
   if (check_bound_change) {
-    if (!bound_change) printf("HighsMipSolverData::updatePrimaDualIntegral Expected lower/upper bound change not observed: "
-			      "lower = [%16.10g, %16.10g] change = %16.10g"
-			      "upper = [%16.10g, %16.10g] change = %16.10g\n",
-			      from_lb, to_lb, lb_difference,
-			      from_ub, to_ub, ub_difference);
-    assert(bound_change);
+    if (!bound_change) {
+      printf("HighsMipSolverData::updatePrimaDualIntegral\n"
+	     "Expected original    lower/upper bound change not observed:\\"
+	     "lower = [%16.10g, %16.10g] change = %16.10g\n"
+	     "upper = [%16.10g, %16.10g] change = %16.10g\n",
+	     from_lb, to_lb, lb_difference,
+	     from_ub, to_ub, ub_difference);
+      if (from_lower_bound == to_lower_bound && from_upper_bound == to_upper_bound) {
+	const double lower_bound_difference = possInfRelDiff(from_lower_bound, to_lower_bound, to_lower_bound);
+	const double upper_bound_difference = possInfRelDiff(from_upper_bound, to_upper_bound, to_upper_bound);
+	printf("HighsMipSolverData::updatePrimaDualIntegral\n"
+	       "Expected transformed lower/upper bound change not observed:\\"
+	       "lower = [%16.10g, %16.10g] change = %16.10g\n"
+	       "upper = [%16.10g, %16.10g] change = %16.10g\n",
+	       from_lower_bound, to_lower_bound, lower_bound_difference,
+	       from_upper_bound, to_upper_bound, upper_bound_difference);
+	assert(bound_change);
+      }
+    }
   } else {
-    if (bound_change) printf("HighsMipSolverData::updatePrimaDualIntegral Expected lower/upper bound no-change not observed: "
-			      "lower = [%16.10g, %16.10g] change = %16.10g"
-			      "upper = [%16.10g, %16.10g] change = %16.10g\n",
-			      from_lb, to_lb, lb_difference,
-			      from_ub, to_ub, ub_difference);
-    assert(!bound_change);
+    if (bound_change) {
+      printf("HighsMipSolverData::updatePrimaDualIntegral\n"
+	     "Expected original    lower/upper bound no-change not observed:\\"
+	     "lower = [%16.10g, %16.10g] change = %16.10g\n"
+	     "upper = [%16.10g, %16.10g] change = %16.10g\n",
+	     from_lb, to_lb, lb_difference,
+	     from_ub, to_ub, ub_difference);
+      if (from_lower_bound != to_lower_bound || from_upper_bound != to_upper_bound) {
+	const double lower_bound_difference = possInfRelDiff(from_lower_bound, to_lower_bound, to_lower_bound);
+	const double upper_bound_difference = possInfRelDiff(from_upper_bound, to_upper_bound, to_upper_bound);
+	printf("HighsMipSolverData::updatePrimaDualIntegral\n"
+	       "Expected transformed lower/upper bound no-change not observed:\\"
+	       "lower = [%16.10g, %16.10g] change = %16.10g\n"
+	       "upper = [%16.10g, %16.10g] change = %16.10g\n",
+	       from_lower_bound, to_lower_bound, lower_bound_difference,
+	       from_upper_bound, to_upper_bound, upper_bound_difference);
+	assert(!bound_change);
+      }
+    }
   }
   if (pdi.value > -kHighsInf) {
     // updatePrimaDualIntegral has been called previously, so can test
