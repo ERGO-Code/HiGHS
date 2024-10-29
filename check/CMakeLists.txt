@@ -262,23 +262,23 @@ if (NOT FAST_BUILD OR ALL_TESTS)
         "standata\; 1.257699499\;"
         "standgub\; 1.2576994998\;"
         )
-  endif()
-
-  set(pdlpMacArmInstances
-      "25fv47\; 5.50184589\;"
-      "adlittle\; 2.254949631\;"
-      "afiro\;-4.64753143\;"
-      "avgas\;-7.749999999\;"
-      "blending\;-3.19999999\;"
-      "chip\;-8.9999988715\;"
-      "e226\;-1.163892\;"
-      "scrs8\; 9.042969540\;"
-      "sctest\; 5.749999936\;"
-      "shell\; 1.2088253460\;"
-    #   "stair\;-2.5126695353\;"
-    #   "standata\; 1.257699499\;" #model status unknown, rel gap e00
-    #   "standgub\; 1.2576994998\;"
+  elseif(APPLE)
+    set(pdlpInstances
+        "25fv47\; 5.50184589\;"
+        "adlittle\; 2.254949631\;"
+        "afiro\;-4.64753143\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-8.9999988715\;"
+        "e226\;-1.163892\;"
+        "scrs8\; 9.042969540\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        #   "stair\;-2.5126695353\;"
+        #   "standata\; 1.257699499\;" #model status unknown, rel gap e00
+        #   "standgub\; 1.2576994998\;"
     )
+  endif()
 
 
   # define a macro to add tests
@@ -374,7 +374,7 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       endforeach(setting)
   endforeach(instance)
 
-  if(FAST_BUILD AND NOT APPLE)
+  if(FAST_BUILD)
     foreach(instance_pdlp ${pdlpInstances})
         # add default tests
         # treat the instance as a tuple (list) of two values
@@ -383,36 +383,14 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
         set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
 
-        add_test(NAME ${name_pdlp}--pdlp COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
-            ${inst_pdlp})
+        add_test(NAME ${name_pdlp}-pdlp-no-presolve COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
+            "--presolve=off" ${inst_pdlp})
 
-        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+        set_tests_properties (${name_pdlp}-pdlp-no-presolve PROPERTIES
             PASS_REGULAR_EXPRESSION
             "Model status        : Optimal")
 
-        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
-            PASS_REGULAR_EXPRESSION
-            "Objective value     : ${optval}")
-    endforeach(instance_pdlp)
-  endif()
-
-  if (FAST_BUILD AND APPLE) 
-    foreach(instance_pdlp ${pdlpMacArmInstances})
-        # add default tests
-        # treat the instance as a tuple (list) of two values
-        list(GET instance_pdlp 0 name_pdlp)
-        list(GET instance_pdlp 1 optval)
-
-        set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
-
-        add_test(NAME ${name_pdlp}--pdlp COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
-            ${inst_pdlp})
-
-        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
-            PASS_REGULAR_EXPRESSION
-            "Model status        : Optimal")
-
-        set_tests_properties (${name_pdlp}--pdlp PROPERTIES
+        set_tests_properties (${name_pdlp}-pdlp-no-presolve PROPERTIES
             PASS_REGULAR_EXPRESSION
             "Objective value     : ${optval}")
     endforeach(instance_pdlp)
