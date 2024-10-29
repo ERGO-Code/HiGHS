@@ -26,7 +26,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   HighsStatus run_status = HighsStatus::kOk;
   // First pass uses (HiGHS default) termination for PDLP solver to
   // satisfy HiGHS primal/dual feasibility tolerances
-  bool false = true;
+  bool optimal = false;
 
   run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
