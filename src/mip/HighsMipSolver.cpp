@@ -135,14 +135,6 @@ void HighsMipSolver::run() {
       mipdata_->transformNewIntegerFeasibleSolution(std::vector<double>());
       mipdata_->saveReportMipSolution();
     }
-    printf(
-        "HighsMipSolver::run() P-D integral value %g; LB %g; UB %g; gap %g; "
-        "offset %g\n",
-        mipdata_->primal_dual_integral.value,
-        mipdata_->primal_dual_integral.prev_lb,
-        mipdata_->primal_dual_integral.prev_ub,
-        mipdata_->primal_dual_integral.prev_gap,
-        mipdata_->primal_dual_integral.prev_offset);
     cleanupSolve();
     return;
   }

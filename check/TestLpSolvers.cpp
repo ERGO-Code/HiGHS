@@ -635,7 +635,6 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   REQUIRE(highs.addRow(1.0, 1.0, 4, index.data(), value.data()) ==
           HighsStatus::kOk);
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
-  printf(
-      "\nNow test by adding a fixed column and a fixed row, and maximizing\n");
+  if (dev_run) printf("\nNow test by adding a fixed column and a fixed row, and maximizing\n");
   testStandardForm(highs.getLp());
 }
