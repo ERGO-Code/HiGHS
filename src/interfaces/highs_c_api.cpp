@@ -529,6 +529,15 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
   return retcode;
 }
 
+HighsInt Highs_getDualUnboundednessDirection(const void* highs,
+					     HighsInt* has_dual_unboundedness_direction,
+					     double* dual_unboundedness_direction_value) {
+  bool v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)->getDualUnboundednessDirection(v, dual_unboundedness_direction_value);
+  *has_dual_unboundedness_direction = (HighsInt)v;
+  return retcode;
+}
+
 HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
                             double* primal_ray_value) {
   bool v;

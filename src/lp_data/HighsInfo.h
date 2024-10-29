@@ -115,6 +115,7 @@ struct HighsInfoStruct {
   double sum_dual_infeasibilities;
   double max_complementarity_violation;
   double sum_complementarity_violations;
+  double primal_dual_integral;
 };
 
 class HighsInfo : public HighsInfoStruct {
@@ -272,6 +273,11 @@ class HighsInfo : public HighsInfoStruct {
     record_double = new InfoRecordDouble(
         "sum_complementarity_violations", "Sum of complementarity violations",
         advanced, &sum_complementarity_violations, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble(
+        "primal_dual_integral", "Primal-dual integral",
+        advanced, &primal_dual_integral, 0);
     records.push_back(record_double);
   }
 

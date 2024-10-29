@@ -915,11 +915,13 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
 HighsInt Highs_getModelStatus(const void* highs);
 
 /**
- * Get an unbounded dual ray that is a certificate of primal infeasibility.
+ * Indicates whether a dual ray that is a certificate of primal
+ * infeasibility currently exists, and (at the expense of solving an
+ * LP) gets it if it does not and dual_ray_value is not nullptr.
  *
  * @param highs             A pointer to the Highs instance.
- * @param has_dual_ray      A pointer to an int to store 1 if the dual ray
- *                          exists.
+ * @param has_dual_ray      A pointer to an int to store 1 if a dual ray
+ *                          currently exists.
  * @param dual_ray_value    An array of length [num_row] filled with the
  *                          unbounded ray.
  *
@@ -929,7 +931,28 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
                           double* dual_ray_value);
 
 /**
- * Get an unbounded primal ray that is a certificate of dual infeasibility.
+ * Indicates whether a dual unboundedness direction (corresponding to a
+ * certificate of primal infeasibility) exists, and (at the expense of
+ * solving an LP) gets it if it does not and
+ * dual_unboundedness_direction is not nullptr
+ *
+ * @param highs                                   A pointer to the Highs
+ *                                                instance.
+ * @param has_dual_unboundedness_direction        A pointer to an int to store 1
+ *                                                if the dual unboundedness
+ *                                                direction exists.
+ * @param dual_unboundedness_direction_value      An array of length [num_col]
+ *                                                filled with the unboundedness
+ *                                                direction.
+ */
+HighsInt getDualUnboundednessDirection(const void* highs, 
+				       HighsInt* has_dual_unboundedness_direction,
+				       double* dual_unboundedness_direction_value);
+
+/**
+ * Indicates whether a primal ray that is a certificate of primal
+ * unboundedness currently exists, and (at the expense of solving an
+ * LP) gets it if it does not and primal_ray_value is not nullptr.
  *
  * @param highs             A pointer to the Highs instance.
  * @param has_primal_ray    A pointer to an int to store 1 if the primal ray

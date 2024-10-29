@@ -605,6 +605,7 @@ void HighsMipSolver::cleanupSolve() {
   node_count_ = mipdata_->num_nodes;
   total_lp_iterations_ = mipdata_->total_lp_iterations;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
+  primal_dual_integral_ = mipdata_->primal_dual_integral.value;
 
   // adjust objective sense in case of maximization problem
   if (orig_model_->sense_ == ObjSense::kMaximize) {
