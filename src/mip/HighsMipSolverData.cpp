@@ -2159,14 +2159,14 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 
 double possInfRelDiff(const double v0, const double v1, const double den) {
   double rel_diff;
-  if (v0 == kHighsInf) {
-    if (v1 == kHighsInf) {
+  if (std::fabs(v0) == kHighsInf) {
+    if (std::fabs(v1) == kHighsInf) {
       rel_diff = 0;
     } else {
       rel_diff = kHighsInf;
     }
   } else {
-    if (v1 == kHighsInf) {
+    if (std::fabs(v1) == kHighsInf) {
       rel_diff = kHighsInf;
     } else {
       rel_diff = std::fabs(v1 - v0) / std::max(1.0, std::fabs(den));
