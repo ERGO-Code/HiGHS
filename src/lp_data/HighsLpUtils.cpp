@@ -2047,6 +2047,7 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   std::string keyword;
   std::string name;
+  double value;
   HighsInt num_col;
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
@@ -2063,50 +2064,65 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Model status
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Optimal
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  //
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // # Primal solution values
-  if (!readSolutionFileKeywordLineOk(keyword, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  // Read in the primal solution values: return warning if there is none
-  if (keyword == "None")
-    return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
-                                  read_solution, read_basis, in_file);
-  // If there are primal solution values then keyword is the status
-  // and the next line is objective
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // EOL
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Objective
-  // Next line should be "Columns" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  assert(keyword == "Columns");
-  // The default style parameter is kSolutionStyleRaw, and this still
-  // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
-  // read either way
-  const bool sparse = num_col <= 0;
-  if (style == kSolutionStyleSparse) assert(sparse);
-  if (sparse) {
-    num_col = -num_col;
-    assert(num_col <= lp_num_col);
-  } else {
-    if (num_col != lp_num_col) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " columns, not %" HIGHSINT_FORMAT "\n",
-                   num_col, lp_num_col);
+  if (!readSolutionFileIdIgnoreLineOk(section_name, in_file))
+    return readSolutionFileErrorReturn(in_file);  // Model (status) or =obj= (value)
+  const bool miplib_sol = section_name == "=obj=";
+  printf("Read \"%s\" as first term of first line of solution file: miplib_sol = %d\n", section_name.c_str(), miplib_sol);
+  bool sparse = false;
+  if (!miplib_sol) {
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Optimal
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  //
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // # Primal solution values
+    if (!readSolutionFileKeywordLineOk(keyword, in_file))
       return readSolutionFileErrorReturn(in_file);
+    // Read in the primal solution values: return warning if there is none
+    if (keyword == "None")
+      return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
+				    read_solution, read_basis, in_file);
+    // If there are primal solution values then keyword is the status
+    // and the next line is objective
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // EOL
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Objective
+    // Next line should be "Columns" and correct number
+    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+      return readSolutionFileErrorReturn(in_file);
+    assert(keyword == "Columns");
+    // The default style parameter is kSolutionStyleRaw, and this still
+    // allows sparse files to be read. Recognise the latter from num_col
+    // <= 0. Doesn't matter if num_col = 0, since there's nothing to
+    // read either way
+    sparse = num_col <= 0;
+    if (style == kSolutionStyleSparse) assert(sparse);
+    if (sparse) {
+      num_col = -num_col;
+      assert(num_col <= lp_num_col);
+    } else {
+      if (num_col != lp_num_col) {
+	highsLogUser(log_options, HighsLogType::kError,
+		     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+		     " columns, not %" HIGHSINT_FORMAT "\n",
+		     num_col, lp_num_col);
+	return readSolutionFileErrorReturn(in_file);
+      }
     }
   }
-  double value;
-  if (sparse) {
+  if (miplib_sol) {
+    read_solution.col_value.assign(lp_num_col, 0);
+    for (;;) {
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
+        return readSolutionFileErrorReturn(in_file);
+      // Need to be able to hash names
+      HighsStatus status = HighsStatus::kError;
+      HighsInt iCol = 0;
+      read_solution.col_value[iCol] = value;
+      assert(123 == 456);
+    }
+  } else if (sparse) {
     read_solution.col_value.assign(lp_num_col, 0);
     HighsInt iCol;
     for (HighsInt iX = 0; iX < num_col; iX++) {
@@ -2116,7 +2132,7 @@ HighsStatus readSolutionFile(const std::string filename,
     }
   } else {
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(value, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_value[iCol] = value;
     }
@@ -2148,7 +2164,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // next.
   const bool num_row_ok = num_row == lp_num_row;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (!readSolutionFileIdDoubleLineOk(value, in_file))
+    if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
       return readSolutionFileErrorReturn(in_file);
     if (num_row_ok) read_solution.row_value[iRow] = value;
   }
@@ -2191,7 +2207,7 @@ HighsStatus readSolutionFile(const std::string filename,
     assert(keyword == "Columns");
     double dual;
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_dual[iCol] = dual;
     }
@@ -2202,7 +2218,7 @@ HighsStatus readSolutionFile(const std::string filename,
                                     read_solution, read_basis, in_file);
     assert(keyword == "Rows");
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.row_dual[iRow] = dual;
     }
@@ -2272,8 +2288,14 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
   return true;
 }
 
-bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file) {
-  std::string id;
+bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file >> id;  // Id
+  in_file.ignore(kMaxLineLength, '\n');
+  return true;
+}
+
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value, std::ifstream& in_file) {
   if (in_file.eof()) return false;
   in_file >> id;  // Id
   if (in_file.eof()) return false;

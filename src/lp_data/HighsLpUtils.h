@@ -216,7 +216,8 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
 bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
                                           std::ifstream& in_file);
-bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
+bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value, std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
 
