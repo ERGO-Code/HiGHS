@@ -264,19 +264,19 @@ if (NOT FAST_BUILD OR ALL_TESTS)
         )
   elseif(APPLE)
     set(pdlpInstances
-        "25fv47\; 5.50184589\;"
-        "adlittle\; 2.254949631\;"
-        "afiro\;-4.64753143\;"
+        "25fv47\; 5.5018458\;"
+        "adlittle\; 2.25494963\;"
+        "afiro\;-4.64753142\;"
         "avgas\;-7.749999999\;"
         "blending\;-3.19999999\;"
         "chip\;-8.9999988715\;"
         "e226\;-1.163892\;"
-        "scrs8\; 9.042969540\;"
+        "scrs8\; 9.04296953\;"
         "sctest\; 5.749999936\;"
         "shell\; 1.2088253460\;"
-        #   "stair\;-2.5126695353\;"
-        #   "standata\; 1.257699499\;" #model status unknown, rel gap e00
-        #   "standgub\; 1.2576994998\;"
+        "stair\;-2.5126695\;"
+        "standata\; 1.25769950\;"
+        "standgub\; 1.25769950\;"
     )
   endif()
 
