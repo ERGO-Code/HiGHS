@@ -2065,9 +2065,13 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
   if (!readSolutionFileIdIgnoreLineOk(section_name, in_file))
-    return readSolutionFileErrorReturn(in_file);  // Model (status) or =obj= (value)
+    return readSolutionFileErrorReturn(
+        in_file);  // Model (status) or =obj= (value)
   const bool miplib_sol = section_name == "=obj=";
-  printf("Read \"%s\" as first term of first line of solution file: miplib_sol = %d\n", section_name.c_str(), miplib_sol);
+  printf(
+      "Read \"%s\" as first term of first line of solution file: miplib_sol = "
+      "%d\n",
+      section_name.c_str(), miplib_sol);
   bool sparse = false;
   if (!miplib_sol) {
     if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2081,7 +2085,7 @@ HighsStatus readSolutionFile(const std::string filename,
     // Read in the primal solution values: return warning if there is none
     if (keyword == "None")
       return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
-				    read_solution, read_basis, in_file);
+                                    read_solution, read_basis, in_file);
     // If there are primal solution values then keyword is the status
     // and the next line is objective
     if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2103,11 +2107,11 @@ HighsStatus readSolutionFile(const std::string filename,
       assert(num_col <= lp_num_col);
     } else {
       if (num_col != lp_num_col) {
-	highsLogUser(log_options, HighsLogType::kError,
-		     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-		     " columns, not %" HIGHSINT_FORMAT "\n",
-		     num_col, lp_num_col);
-	return readSolutionFileErrorReturn(in_file);
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                     " columns, not %" HIGHSINT_FORMAT "\n",
+                     num_col, lp_num_col);
+        return readSolutionFileErrorReturn(in_file);
       }
     }
   }
@@ -2295,7 +2299,8 @@ bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file) {
   return true;
 }
 
-bool readSolutionFileIdDoubleLineOk(std::string& id, double& value, std::ifstream& in_file) {
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
+                                    std::ifstream& in_file) {
   if (in_file.eof()) return false;
   in_file >> id;  // Id
   if (in_file.eof()) return false;
