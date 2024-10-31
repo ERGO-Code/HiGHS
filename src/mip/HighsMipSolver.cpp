@@ -643,6 +643,7 @@ void HighsMipSolver::cleanupSolve() {
                "                    %.2f (presolve)\n"
                "                    %.2f (postsolve)\n"
                "  Nodes             %llu\n"
+               "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
@@ -651,6 +652,9 @@ void HighsMipSolver::cleanupSolve() {
                timer_.read(timer_.presolve_clock),
                timer_.read(timer_.postsolve_clock),
                (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->total_repair_lp,
+               (long long unsigned)mipdata_->total_repair_lp_feasible,
+               (long long unsigned)mipdata_->total_repair_lp_iterations,
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,

@@ -366,6 +366,9 @@ void HighsMipSolverData::init() {
   num_nodes_before_run = 0;
   num_leaves = 0;
   num_leaves_before_run = 0;
+  total_repair_lp = 0;
+  total_repair_lp_feasible = 0;
+  total_repair_lp_iterations = 0;
   total_lp_iterations = 0;
   heuristic_lp_iterations = 0;
   sepa_lp_iterations = 0;
@@ -801,16 +804,31 @@ try_again:
         fixedModel.col_upper_[i] = std::min(fixedModel.col_upper_[i], solval);
       }
     }
+    this->total_repair_lp++;
+    double time_available =
+        std::max(mipsolver.options_mip_->time_limit -
+                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                 0.1);
     Highs tmpSolver;
-    tmpSolver.setOptionValue("output_flag", false);
-    tmpSolver.setOptionValue("simplex_scale_strategy", 0);
-    tmpSolver.setOptionValue("presolve", "off");
+    const bool debug_report = false;
+    if (debug_report) {
+      tmpSolver.setOptionValue("log_dev_level", 2);
+      tmpSolver.setOptionValue("highs_analysis_level", 4);
+    } else {
+      tmpSolver.setOptionValue("output_flag", false);
+    }
+    // tmpSolver.setOptionValue("simplex_scale_strategy", 0);
+    // tmpSolver.setOptionValue("presolve", "off");
+    tmpSolver.setOptionValue("time_limit", time_available);
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mipsolver.options_mip_->mip_feasibility_tolerance);
     tmpSolver.passModel(std::move(fixedModel));
     tmpSolver.run();
 
+    this->total_repair_lp_iterations =
+        tmpSolver.getInfo().simplex_iteration_count;
     if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
+      this->total_repair_lp_feasible++;
       solution = tmpSolver.getSolution();
       allow_try_again = false;
       goto try_again;
