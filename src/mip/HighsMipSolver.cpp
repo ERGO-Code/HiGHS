@@ -49,7 +49,8 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     // so validate using assert
 #ifndef NDEBUG
     bool valid, integral, feasible;
-    assessLpPrimalSolution(options, lp, solution, valid, integral, feasible);
+    assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
+                           integral, feasible);
     assert(valid);
 #endif
     bound_violation_ = 0;
