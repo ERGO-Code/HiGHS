@@ -345,8 +345,7 @@ class HPresolve {
 
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
-  Result strengthenInequalities(HighsInt& num_strenghtened,
-                                HighsPostsolveStack& postsolve_stack);
+  Result strengthenInequalities(HighsInt& num_strenghtened);
 
   HighsInt detectImpliedIntegers();
 
