@@ -269,6 +269,8 @@ class HPresolve {
 
   Result presolve(HighsPostsolveStack& postsolve_stack);
 
+  Result checkTimeLimit();
+
   Result checkLimits(HighsPostsolveStack& postsolve_stack);
 
   void storeCurrentProblemSize();
@@ -343,7 +345,7 @@ class HPresolve {
 
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
-  HighsInt strengthenInequalities();
+  Result strengthenInequalities(HighsInt& num_strenghtened);
 
   HighsInt detectImpliedIntegers();
 

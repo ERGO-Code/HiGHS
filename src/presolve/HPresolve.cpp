@@ -4228,11 +4228,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
 
       if (mipsolver != nullptr) {
-        HighsInt numStrenghtened = strengthenInequalities();
-        if (numStrenghtened > 0)
+        HighsInt num_strengthened = -1;
+        HPRESOLVE_CHECKED_CALL(strengthenInequalities(num_strengthened));
+        assert(num_strengthened >= 0);
+        if (num_strengthened > 0)
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Strengthened %" HIGHSINT_FORMAT " coefficients\n",
-                      numStrenghtened);
+                      num_strengthened);
       }
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
@@ -4307,6 +4309,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::checkTimeLimit() {
+  assert(timer);
+  assert(run_clock >= 0);
+  if (options->time_limit < kHighsInf &&
+      timer->read(run_clock) >= options->time_limit)
+    return Result::kStopped;
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   size_t numreductions = postsolve_stack.numReductions();
 
@@ -4351,14 +4362,7 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
     postsolve_stack.debug_prev_numreductions = numreductions;
   }
 
-  if ((numreductions & 1023u) == 0) {
-    assert(timer);
-    assert(run_clock >= 0);
-    if (options->time_limit < kHighsInf &&
-        timer->read(run_clock) >= options->time_limit) {
-      return Result::kStopped;
-    }
-  }
+  if ((numreductions & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
   return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 
@@ -5127,7 +5131,8 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
   return Result::kOk;
 }
 
-HighsInt HPresolve::strengthenInequalities() {
+HPresolve::Result HPresolve::strengthenInequalities(
+    HighsInt& num_strengthened) {
   std::vector<int8_t> complementation;
   std::vector<double> reducedcost;
   std::vector<double> upper;
@@ -5137,7 +5142,9 @@ HighsInt HPresolve::strengthenInequalities() {
   std::vector<double> coefs;
   std::vector<HighsInt> cover;
 
-  HighsInt numstrenghtened = 0;
+  num_strengthened = 0;
+  // Check for timeout according to this frequency
+  const HighsInt check_time_frequency = 100;
 
   for (HighsInt row = 0; row != model->num_row_; ++row) {
     if (rowsize[row] <= 1) continue;
@@ -5146,9 +5153,9 @@ HighsInt HPresolve::strengthenInequalities() {
       continue;
 
     // do not run on very dense rows as this could get expensive
-    if (rowsize[row] >
-        std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20))
-      continue;
+    HighsInt rowsize_limit =
+        std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
+    if (rowsize[row] > rowsize_limit) continue;
 
     // printf("strengthening knapsack of %" HIGHSINT_FORMAT " vars\n",
     // rowsize[row]);
@@ -5224,6 +5231,11 @@ HighsInt HPresolve::strengthenInequalities() {
       complementation.push_back(comp);
       upper.push_back(ub);
     }
+
+    // Check for timeout according to frequency, unless a particularly
+    // dense row has just been analysed
+    if ((row & check_time_frequency) == 0 || 10 * rowsize[row] > rowsize_limit)
+      HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
     if (skiprow) {
       stack.clear();
@@ -5343,10 +5355,10 @@ HighsInt HPresolve::strengthenInequalities() {
       model->row_upper_[row] = double(rhs);
     }
 
-    numstrenghtened += indices.size();
+    num_strengthened += indices.size();
   }
 
-  return numstrenghtened;
+  return Result::kOk;
 }
 
 HighsInt HPresolve::detectImpliedIntegers() {
