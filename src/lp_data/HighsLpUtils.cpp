@@ -2028,7 +2028,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
 }
 
 HighsStatus readSolutionFile(const std::string filename,
-                             const HighsOptions& options, const HighsLp& lp,
+                             const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
   const HighsLogOptions& log_options = options.log_options;
@@ -2068,10 +2068,19 @@ HighsStatus readSolutionFile(const std::string filename,
     return readSolutionFileErrorReturn(
         in_file);  // Model (status) or =obj= (value)
   const bool miplib_sol = section_name == "=obj=";
-  printf(
-      "Read \"%s\" as first term of first line of solution file: miplib_sol = "
-      "%d\n",
-      section_name.c_str(), miplib_sol);
+  if (miplib_sol) {
+    // A MIPLIB solution file has nonzero solution values for a subset
+    // of the variables identified by name, so there must be column
+    // names
+    if (!lp.col_names_.size()) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "readSolutionFile: Cannot read a MIPLIB solution file "
+                   "without column names in the model\n");
+      return HighsStatus::kError;
+    }
+    // Ensure that the col name hash table has been formed
+    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  }
   bool sparse = false;
   if (!miplib_sol) {
     if (!readSolutionFileIgnoreLineOk(in_file))
@@ -2116,15 +2125,26 @@ HighsStatus readSolutionFile(const std::string filename,
     }
   }
   if (miplib_sol) {
+    HighsInt num_value = 0;
     read_solution.col_value.assign(lp_num_col, 0);
     for (;;) {
-      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
-        return readSolutionFileErrorReturn(in_file);
-      // Need to be able to hash names
-      HighsStatus status = HighsStatus::kError;
-      HighsInt iCol = 0;
+      // Only false return is for encountering EOF
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) break;
+      auto search = lp.col_hash_.name2index.find(name);
+      if (search == lp.col_hash_.name2index.end()) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is not found\n", name.c_str());
+        return HighsStatus::kError;
+      } else if (search->second == kHashIsDuplicate) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is duplicated\n", name.c_str());
+        return HighsStatus::kError;
+      }
+      HighsInt iCol = search->second;
+      assert(lp.col_names_[iCol] == name);
       read_solution.col_value[iCol] = value;
-      assert(123 == 456);
+      num_value++;
+      if (in_file.eof()) break;
     }
   } else if (sparse) {
     read_solution.col_value.assign(lp_num_col, 0);
@@ -2352,7 +2372,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
 
 // Determine validity, primal feasibility and (when relevant) integer
 // feasibility of a solution
-HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+HighsStatus assessLpPrimalSolution(const std::string message,
+                                   const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible) {
@@ -2377,7 +2398,8 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Assessing feasibility of %s tolerance of %11.4g\n",
+               "%sAssessing feasibility of %s tolerance of %11.4g\n",
+               message.c_str(),
                lp.isMip() ? "MIP using primal feasibility and integrality"
                           : "LP using primal feasibility",
                kPrimalFeasibilityTolerance);

@@ -201,7 +201,7 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
 HighsStatus readSolutionFile(const std::string filename,
-                             const HighsOptions& options, const HighsLp& lp,
+                             const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
 
@@ -227,7 +227,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);
 
-HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+HighsStatus assessLpPrimalSolution(const std::string message,
+                                   const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible);
