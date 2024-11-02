@@ -174,9 +174,7 @@ restart:
     mipdata_->cutpool.performAging();
     mipdata_->cutpool.performAging();
   }
-  printf("HighsMipSolver::run() bounds are [%g, %g]: nodequeue.empty() = %d; checkLimits() = %d\n", mipdata_->lower_bound, mipdata_->upper_bound, mipdata_->nodequeue.empty(), mipdata_->checkLimits());
   if (mipdata_->nodequeue.empty() || mipdata_->checkLimits()) {
-    printf("HighsMipSolver::run() calling cleanupSolve();\n");
     cleanupSolve();
     return;
   }
