@@ -22,6 +22,59 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
+std::string HighsMipSolverData::solutionSourceToString(
+    const int solution_source, const bool code) {
+  if (solution_source == kSolutionSourceNone) {
+    if (code) return " ";
+    return "None";
+  } else if (solution_source == kSolutionSourceBranching) {
+    if (code) return "B";
+    return "Branching";
+  } else if (solution_source == kSolutionSourceCentralRounding) {
+    if (code) return "C";
+    return "Central rounding";
+  } else if (solution_source == kSolutionSourceFeasibilityPump) {
+    if (code) return "F";
+    return "Feasibility pump";
+  } else if (solution_source == kSolutionSourceHeuristic) {
+    if (code) return "H";
+    return "Heuristic";
+  } else if (solution_source == kSolutionSourceInitial) {
+    if (code) return "I";
+    return "Initial";
+  } else if (solution_source == kSolutionSourceSubMip) {
+    if (code) return "L";
+    return "Sub-MIP";
+  } else if (solution_source == kSolutionSourceEmptyMip) {
+    if (code) return "P";
+    return "Empty MIP";
+  } else if (solution_source == kSolutionSourceRandomizedRounding) {
+    if (code) return "R";
+    return "Randomized rounding";
+  } else if (solution_source == kSolutionSourceSolveLp) {
+    if (code) return "S";
+    return "Solve LP";
+  } else if (solution_source == kSolutionSourceEvaluateNode) {
+    if (code) return "T";
+    return "Evaluate node";
+  } else if (solution_source == kSolutionSourceUnbounded) {
+    if (code) return "U";
+    return "Unbounded";
+  } else if (solution_source == kSolutionSourceOpt1) {
+    if (code) return "1";
+    return "1-opt";
+  } else if (solution_source == kSolutionSourceOpt2) {
+    if (code) return "2";
+    return "2-opt";
+  } else {
+    printf("HighsMipSolverData::solutionSourceToString: Unknown source = %d\n",
+           solution_source);
+    assert(0 == 111);
+    if (code) return "*";
+    return "None";
+  }
+}
+
 bool HighsMipSolverData::checkSolution(
     const std::vector<double>& solution) const {
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
@@ -1240,6 +1293,36 @@ static std::array<char, 22> convertToPrintString(double val,
   return printString;
 }
 
+void HighsMipSolverData::printSolutionSourceKey() {
+  std::stringstream ss;
+  int half_list = kSolutionSourceCount / 2;
+  ss.str(std::string());
+  for (int k = 0; k < half_list; k++) {
+    if (k == 0) {
+      ss << "\nSrc: ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+
+  ss.str(std::string());
+  for (int k = half_list; k < kSolutionSourceCount; k++) {
+    if (k == half_list) {
+      ss << "     ";
+    } else {
+      ss << "; ";
+    }
+    ss << solutionSourceToString(k) << " => "
+       << solutionSourceToString(k, false);
+  }
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo, "%s\n",
+               ss.str().c_str());
+}
+
 void HighsMipSolverData::printDisplayLine(char source) {
   // MIP logging method
   //
@@ -1262,6 +1345,7 @@ void HighsMipSolverData::printDisplayLine(char source) {
   char use_source = source != 'Z' ? source : ' ';
 
   if (num_disp_lines % 20 == 0) {
+    if (num_disp_lines == 0) printSolutionSourceKey();
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off

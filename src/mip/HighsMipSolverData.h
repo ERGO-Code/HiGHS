@@ -33,6 +33,25 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
+enum MipSolutionSource : int {
+  kSolutionSourceNone = -1,
+  kSolutionSourceMin = kSolutionSourceNone,
+  kSolutionSourceBranching,
+  kSolutionSourceCentralRounding,
+  kSolutionSourceFeasibilityPump,
+  kSolutionSourceHeuristic,
+  kSolutionSourceInitial,
+  kSolutionSourceSubMip,
+  kSolutionSourceEmptyMip,
+  kSolutionSourceRandomizedRounding,
+  kSolutionSourceSolveLp,
+  kSolutionSourceEvaluateNode,
+  kSolutionSourceUnbounded,
+  kSolutionSourceOpt1,
+  kSolutionSourceOpt2,
+  kSolutionSourceCount
+};
+
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;
@@ -221,6 +240,9 @@ struct HighsMipSolverData {
 
   const std::vector<double>& getSolution() const;
 
+  std::string solutionSourceToString(const int solution_source,
+                                     const bool code = true);
+  void printSolutionSourceKey();
   void printDisplayLine(char source = ' ');
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
