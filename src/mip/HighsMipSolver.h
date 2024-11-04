@@ -46,6 +46,8 @@ class HighsMipSolver {
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
+  HighsInt submip_level;
+  HighsInt max_submip_level;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
   const HighsCliqueTable* clqtableinit;
@@ -85,7 +87,7 @@ class HighsMipSolver {
 
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
-                 bool submip = false);
+                 bool submip = false, HighsInt submip_level = 0);
 
   ~HighsMipSolver();
 
