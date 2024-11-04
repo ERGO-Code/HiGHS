@@ -742,12 +742,10 @@ class HighsOptions : public HighsOptionsStruct {
                                      kHighsDebugLevelMin, kHighsDebugLevelMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("highs_analysis_level", "Analysis level in HiGHS",
-                            now_advanced, &highs_analysis_level,
-                            kHighsAnalysisLevelMin, kHighsAnalysisLevelMipTime,
-                            // kHighsAnalysisLevelMin,
-                            kHighsAnalysisLevelMax);
+    record_int = new OptionRecordInt(
+        "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
+        &highs_analysis_level, kHighsAnalysisLevelMin, kHighsAnalysisLevelMin,
+        kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

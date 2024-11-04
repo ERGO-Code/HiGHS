@@ -145,7 +145,8 @@ class HighsTimer {
       // understand this better, for now don't assert that this clock
       // has stopped
       if (!clock_stopped) {
-	printf("Clock %d - %s - still running\n", int(i_clock), clock_names[i_clock].c_str());
+        printf("Clock %d - %s - still running\n", int(i_clock),
+               clock_names[i_clock].c_str());
       }
       assert(clock_stopped);
     }
@@ -169,7 +170,8 @@ class HighsTimer {
     // -getWallTime() <= 0
     const bool clock_stopped = clock_start[i_clock] > 0;
     if (clock_stopped) {
-      printf("Clock %d - %s - not running\n", int(i_clock), clock_names[i_clock].c_str());
+      printf("Clock %d - %s - not running\n", int(i_clock),
+             clock_names[i_clock].c_str());
     }
     assert(!clock_stopped);
     double wall_time = getWallTime();
@@ -180,7 +182,7 @@ class HighsTimer {
     // stopped when it's next started
     if (i_clock == check_clock) {
       printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
-              this->clock_names[check_clock].c_str());
+             this->clock_names[check_clock].c_str());
     }
     clock_start[i_clock] = wall_time;
   }
@@ -217,9 +219,9 @@ class HighsTimer {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
-      printf("HighsTimer: querying clock %d: %s - with start record %g\n", int(check_clock),
-             this->clock_names[check_clock].c_str(),
-	     clock_start[i_clock]);
+      printf("HighsTimer: querying clock %d: %s - with start record %g\n",
+             int(check_clock), this->clock_names[check_clock].c_str(),
+             clock_start[i_clock]);
     }
     return clock_start[i_clock] < 0;
   }
@@ -283,7 +285,8 @@ class HighsTimer {
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
       const bool clock_stopped = clock_start[iClock] > 0;
       if (!clock_stopped) {
-	printf("Clock %d - %s - still running\n", int(iClock), clock_names[iClock].c_str());
+        printf("Clock %d - %s - still running\n", int(iClock),
+               clock_names[iClock].c_str());
       }
       assert(clock_stopped);
       sum_calls += clock_num_call[iClock];

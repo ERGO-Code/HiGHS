@@ -548,7 +548,8 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
+  if (mipsolver.numCol() == 0)
+    addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -2104,7 +2105,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   //  printf("checkLimits: time = %g\n", time);
   if (options.time_limit < kHighsInf &&
       mipsolver.timer_.read(mipsolver.timer_.total_clock) >=
-      options.time_limit) {
+          options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Reached time limit\n");

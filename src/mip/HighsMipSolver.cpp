@@ -185,7 +185,7 @@ restart:
     // Sometimes the analytic centre calculation is not completed when
     // evaluateRootNode returns, so stop its clock if it's running
     if (analysis_.analyse_mip_time &&
-	analysis_.mipTimerRunning(kMipClockIpmSolveLp))
+        analysis_.mipTimerRunning(kMipClockIpmSolveLp))
       analysis_.mipTimerStop(kMipClockIpmSolveLp);
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
@@ -732,8 +732,7 @@ void HighsMipSolver::cleanupSolve() {
                analysis_.mipTimerRead(kMipClockPresolve),
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
-	       int(max_submip_level),
-               (long long unsigned)mipdata_->num_nodes,
+               int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_repair_lp,
                (long long unsigned)mipdata_->total_repair_lp_feasible,
                (long long unsigned)mipdata_->total_repair_lp_iterations,

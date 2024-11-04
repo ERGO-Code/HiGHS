@@ -26,7 +26,6 @@ void HighsMipAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
 
 void HighsMipAnalysis::setupMipTime(const HighsOptions& options) {
   analyse_mip_time = kHighsAnalysisLevelMipTime & options.highs_analysis_level;
-  assert(analyse_mip_time);
   if (analyse_mip_time) {
     HighsTimerClock clock;
     clock.timer_pointer_ = timer_;

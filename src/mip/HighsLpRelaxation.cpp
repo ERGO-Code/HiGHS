@@ -1174,7 +1174,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                      "HighsLpRelaxation::run LP is unbounded with no basis, "
                      "but not returning Status::kError\n");
       if (info.primal_solution_status == kSolutionStatusFeasible)
-        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, kSolutionSourceUnbounded);
+        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value,
+                                        kSolutionSourceUnbounded);
 
       return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
@@ -1394,7 +1395,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
             objsum += roundsol[i] * mipsolver.colCost(i);
 
-          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), kSolutionSourceSolveLp);
+          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum),
+                                           kSolutionSourceSolveLp);
           objsum = 0;
         }
 

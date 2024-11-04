@@ -4141,8 +4141,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         HighsInt numRow = model->num_row_ - numDeletedRows;
         HighsInt numNonz = Avalue.size() - freeslots.size();
         // Only read the run time if it's to be printed
-        const double run_time =
-            options->output_flag ? this->timer->read() : 0;
+        const double run_time = options->output_flag ? this->timer->read() : 0;
 #ifndef NDEBUG
         std::string time_str = " " + std::to_string(run_time) + "s";
 #else
@@ -4325,8 +4324,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
 HPresolve::Result HPresolve::checkTimeLimit() {
   assert(timer);
-  if (options->time_limit < kHighsInf &&
-      timer->read() >= options->time_limit)
+  if (options->time_limit < kHighsInf && timer->read() >= options->time_limit)
     return Result::kStopped;
   return Result::kOk;
 }
