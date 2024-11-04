@@ -3283,7 +3283,7 @@ HighsStatus Highs::readSolution(const std::string& filename,
 
 HighsStatus Highs::assessPrimalSolution(bool& valid, bool& integral,
                                         bool& feasible) const {
-  return assessLpPrimalSolution(options_, model_.lp_, solution_, valid,
+  return assessLpPrimalSolution("", options_, model_.lp_, solution_, valid,
                                 integral, feasible);
 }
 
@@ -3399,6 +3399,10 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
+    // Start the MIP solver's total clock so that timeout in presolve
+    // can be identified
+    solver.timer_.start(timer_.total_clock);
+    // Only place that HighsMipSolver::runPresolve is called
     solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
     // Assign values to data members of presolve_
@@ -3568,7 +3572,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     bool valid, integral, feasible;
     // Determine whether this solution is integer feasible
     HighsStatus return_status = assessLpPrimalSolution(
-        options_, lp, solution_, valid, integral, feasible);
+        "", options_, lp, solution_, valid, integral, feasible);
     assert(return_status != HighsStatus::kError);
     assert(valid);
     // If the current solution is integer feasible, then it can be

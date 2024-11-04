@@ -14,6 +14,7 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
+#include "mip/HighsMipAnalysis.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -46,12 +47,16 @@ class HighsMipSolver {
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
+  HighsInt submip_level;
+  HighsInt max_submip_level;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
   const HighsCliqueTable* clqtableinit;
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
+
+  HighsMipAnalysis analysis_;
 
   void run();
 
@@ -83,7 +88,7 @@ class HighsMipSolver {
 
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
-                 bool submip = false);
+                 bool submip = false, HighsInt submip_level = 0);
 
   ~HighsMipSolver();
 

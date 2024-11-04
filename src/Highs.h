@@ -176,7 +176,9 @@ class Highs {
   HighsStatus readBasis(const std::string& filename);
 
   /**
-   * @brief Presolve the incumbent model
+   * @brief Presolve the incumbent model, allowing the presolved model
+   * to be extracted. Subsequent solution of the incumbent model will
+   * only use presolve if there is no valid basis
    */
   HighsStatus presolve();
 
