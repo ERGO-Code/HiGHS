@@ -303,7 +303,6 @@ _srcs = [
 ]
 
 highslib_srcs = [
-  highs_conf_file,
   files(_srcs),
   files(_cupdlp_srcs),
   files(_basiclu_srcs),
@@ -322,10 +321,10 @@ do_install = get_option('do_install')
 
 if not get_option('with_pybind11')
 highslib = library('highs',
-                   highslib_srcs,
+                   highslib_srcs + highs_conf_file,
                    dependencies: _deps,
-                   cpp_args: _args,
-                   c_args: _args,
+                   cpp_args: _highs_cpp_suppressions + _args,
+                   c_args: _highs_c_suppressions + _args,
                    include_directories: _incdirs,
                    gnu_symbol_visibility: symbol_visibility,
                    pic: true,
@@ -379,10 +378,10 @@ if get_option('with_pybind11')
   py = import('python').find_installation(pure: false)
 
   highslib = library('highs',
-                     highslib_srcs,
+                     highslib_srcs + highs_conf_file,
                      dependencies: _deps,
-                     cpp_args: _args,
-                     c_args: _args,
+                     cpp_args: _highs_cpp_suppressions + _args,
+                     c_args: _highs_c_suppressions + _args,
                      include_directories: _incdirs,
                      gnu_symbol_visibility: symbol_visibility,
                      pic: true,
