@@ -599,7 +599,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, solobj,
-              inheuristic ? 'H' : 'B');
+              inheuristic ? kSolutionSourceHeuristic : kSolutionSourceBranching);
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -732,7 +732,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, solobj,
-              inheuristic ? 'H' : 'B');
+              inheuristic ? kSolutionSourceHeuristic : kSolutionSourceBranching);
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -1062,7 +1062,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
-              inheuristic ? 'H' : 'T');
+              inheuristic ? kSolutionSourceHeuristic : kSolutionSourceEvaluateNode);
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 

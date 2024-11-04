@@ -594,7 +594,7 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
-  mipdata_->printDisplayLine('Z');
+  mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
   if (analysis_.mipTimerRunning(kMipClockSolve))

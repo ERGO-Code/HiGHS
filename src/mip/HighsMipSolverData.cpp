@@ -39,9 +39,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceHeuristic) {
     if (code) return "H";
     return "Heuristic";
-  } else if (solution_source == kSolutionSourceInitial) {
-    if (code) return "I";
-    return "Initial";
+    //  } else if (solution_source == kSolutionSourceInitial) {
+    //    if (code) return "I";
+    //    return "Initial";
   } else if (solution_source == kSolutionSourceSubMip) {
     if (code) return "L";
     return "Sub-MIP";
@@ -60,12 +60,15 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceUnbounded) {
     if (code) return "U";
     return "Unbounded";
-  } else if (solution_source == kSolutionSourceOpt1) {
-    if (code) return "1";
-    return "1-opt";
-  } else if (solution_source == kSolutionSourceOpt2) {
-    if (code) return "2";
-    return "2-opt";
+    //  } else if (solution_source == kSolutionSourceOpt1) {
+    //    if (code) return "1";
+    //    return "1-opt";
+    //  } else if (solution_source == kSolutionSourceOpt2) {
+    //    if (code) return "2";
+    //    return "2-opt";
+  } else if (solution_source == kSolutionSourceCleanup) {
+    if (code) return " ";
+    return "";
   } else {
     printf("HighsMipSolverData::solutionSourceToString: Unknown source = %d\n",
            solution_source);
@@ -102,7 +105,7 @@ bool HighsMipSolverData::checkSolution(
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
-                                     char source) {
+                                     const int solution_source) {
   if (int(solution.size()) != mipsolver.model_->num_col_) return false;
 
   HighsCDouble obj = 0;
@@ -130,7 +133,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
 
-  return addIncumbent(solution, double(obj), source);
+  return addIncumbent(solution, double(obj), solution_source);
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
@@ -545,7 +548,7 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
+  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, kSolutionSourceEmptyMip);
 
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
@@ -1166,7 +1169,8 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 }
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
-                                      double solobj, char source) {
+                                      double solobj, const int solution_source,
+                                      const bool print_display_line) {
   const bool execute_mip_solution_callback =
       !mipsolver.submip &&
       (mipsolver.callback_->user_callback
@@ -1208,19 +1212,27 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       domain.propagate();
       if (!domain.infeasible()) redcostfixing.propagateRootRedcost(mipsolver);
 
+      // Two calls to printDisplayLine added for completeness,
+      // ensuring that when the root node has an integer solution, a
+      // logging line is issued
+
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+        if (print_display_line)
+          printDisplayLine(solution_source);  // Added for completeness
         return true;
       }
       cliquetable.extractObjCliques(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
+        if (print_display_line)
+          printDisplayLine(solution_source);  // Added for completeness
         return true;
       }
       pruned_treeweight += nodequeue.performBounding(upper_limit);
-      printDisplayLine(source);
+      printDisplayLine(solution_source);
     }
   } else if (incumbent.empty())
     incumbent = sol;
@@ -1295,7 +1307,11 @@ static std::array<char, 22> convertToPrintString(double val,
 
 void HighsMipSolverData::printSolutionSourceKey() {
   std::stringstream ss;
-  int half_list = kSolutionSourceCount / 2;
+  // Last MipSolutionSource enum is kSolutionSourceCleanup - which is
+  // not a solution source, but used to force the last logging line to
+  // be printed
+  const int last_enum = kSolutionSourceCount - 1;
+  int half_list = last_enum / 2;
   ss.str(std::string());
   for (int k = 0; k < half_list; k++) {
     if (k == 0) {
@@ -1310,7 +1326,7 @@ void HighsMipSolverData::printSolutionSourceKey() {
                ss.str().c_str());
 
   ss.str(std::string());
-  for (int k = half_list; k < kSolutionSourceCount; k++) {
+  for (int k = half_list; k < last_enum; k++) {
     if (k == half_list) {
       ss << "     ";
     } else {
@@ -1323,7 +1339,7 @@ void HighsMipSolverData::printSolutionSourceKey() {
                ss.str().c_str());
 }
 
-void HighsMipSolverData::printDisplayLine(char source) {
+void HighsMipSolverData::printDisplayLine(const int solution_source) {
   // MIP logging method
   //
   // Note that if the original problem is a maximization, the cost
@@ -1338,19 +1354,18 @@ void HighsMipSolverData::printDisplayLine(char source) {
   if (!output_flag) return;
 
   double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
-  if (source == ' ' &&
+  if (solution_source == kSolutionSourceNone &&
       time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
     return;
   last_disptime = time;
-  char use_source = source != 'Z' ? source : ' ';
 
   if (num_disp_lines % 20 == 0) {
     if (num_disp_lines == 0) printSolutionSourceKey();
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
-          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
+	"\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
+          "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
         // clang-format on
     );
 
@@ -1405,12 +1420,13 @@ void HighsMipSolverData::printDisplayLine(char source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap_string.data(),
-        cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
   } else {
     std::array<char, 22> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1426,10 +1442,11 @@ void HighsMipSolverData::printDisplayLine(char source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
-        use_source, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
+        solutionSourceToString(solution_source).c_str(), print_nodes.data(),
+        queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
+        ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   }
@@ -1522,7 +1539,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       if (status == HighsLpRelaxation::Status::kOptimal &&
           lp.getFractionalIntegers().empty() &&
           addIncumbent(lp.getLpSolver().getSolution().col_value,
-                       lp.getObjective(), 'T')) {
+                       lp.getObjective(), kSolutionSourceEvaluateNode)) {
         mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
         lower_bound = upper_bound;
         pruned_treeweight = 1.0;
