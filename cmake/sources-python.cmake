@@ -315,6 +315,7 @@ set(highs_headers_python
     src/lp_data/HighsSolve.h
     src/lp_data/HighsStatus.h
     src/lp_data/HStruct.h
+    src/mip/feasibilityjump.hh
     src/mip/HighsCliqueTable.h
     src/mip/HighsConflictPool.h
     src/mip/HighsCutGeneration.h

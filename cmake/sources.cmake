@@ -319,6 +319,7 @@ set(highs_headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h
+    mip/feasibilityjump.hh
     mip/HighsCliqueTable.h
     mip/HighsConflictPool.h
     mip/HighsCutGeneration.h

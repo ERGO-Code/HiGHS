@@ -8,8 +8,9 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#include <climits>
+
 #include "mip/HighsMipSolverData.h"
+#include "mip/feasibilityjump.hh"
 
-void HighsMipSolverData::feasibilityJump() {
-}
-
+void HighsMipSolverData::feasibilityJump() {}
