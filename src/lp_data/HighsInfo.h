@@ -87,46 +87,6 @@ class InfoRecordDouble : public InfoRecord {
   virtual ~InfoRecordDouble() {}
 };
 
-InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
-                        const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        HighsInt& index);
-
-InfoStatus checkInfo(const HighsLogOptions& report_log_options,
-                     const std::vector<InfoRecord*>& info_records);
-InfoStatus checkInfo(const InfoRecordInt& info);
-InfoStatus checkInfo(const InfoRecordDouble& info);
-
-InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<InfoRecord*>& info_records,
-                             int64_t& value);
-InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<InfoRecord*>& info_records,
-                             HighsInt& value);
-InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
-                             const std::string& name, const bool valid,
-                             const std::vector<InfoRecord*>& info_records,
-                             double& value);
-
-InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
-                            const std::string& name,
-                            const std::vector<InfoRecord*>& info_records,
-                            HighsInfoType& type);
-
-HighsStatus writeInfoToFile(
-    FILE* file, const bool valid, const std::vector<InfoRecord*>& info_records,
-    const HighsFileType file_type = HighsFileType::kOther);
-void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
-                const HighsFileType file_type = HighsFileType::kOther);
-void reportInfo(FILE* file, const InfoRecordInt64& info,
-                const HighsFileType file_type = HighsFileType::kOther);
-void reportInfo(FILE* file, const InfoRecordInt& info,
-                const HighsFileType file_type = HighsFileType::kOther);
-void reportInfo(FILE* file, const InfoRecordDouble& info,
-                const HighsFileType file_type = HighsFileType::kOther);
-
 // For now, but later change so HiGHS properties are string based so that new
 // info (for debug and testing too) can be added easily. The info below
 // are just what has been used to parse info from argv.
@@ -318,5 +278,49 @@ class HighsInfo : public HighsInfoStruct {
  public:
   std::vector<InfoRecord*> records;
 };
+
+HighsStatus writeInfoToFile(
+    FILE* file, const bool valid, const HighsInfo& info,
+    const HighsFileType file_type = HighsFileType::kFull);
+
+InfoStatus getInfoIndex(const HighsLogOptions& report_log_options,
+                        const std::string& name,
+                        const std::vector<InfoRecord*>& info_records,
+                        HighsInt& index);
+
+InfoStatus checkInfo(const HighsLogOptions& report_log_options,
+                     const std::vector<InfoRecord*>& info_records);
+InfoStatus checkInfo(const InfoRecordInt& info);
+InfoStatus checkInfo(const InfoRecordDouble& info);
+
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             int64_t& value);
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             HighsInt& value);
+InfoStatus getLocalInfoValue(const HighsLogOptions& report_log_options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             double& value);
+
+InfoStatus getLocalInfoType(const HighsLogOptions& report_log_options,
+                            const std::string& name,
+                            const std::vector<InfoRecord*>& info_records,
+                            HighsInfoType& type);
+
+HighsStatus writeInfoToFile(
+    FILE* file, const bool valid, const std::vector<InfoRecord*>& info_records,
+    const HighsFileType file_type = HighsFileType::kFull);
+void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
+                const HighsFileType file_type = HighsFileType::kFull);
+void reportInfo(FILE* file, const InfoRecordInt64& info,
+                const HighsFileType file_type = HighsFileType::kFull);
+void reportInfo(FILE* file, const InfoRecordInt& info,
+                const HighsFileType file_type = HighsFileType::kFull);
+void reportInfo(FILE* file, const InfoRecordDouble& info,
+                const HighsFileType file_type = HighsFileType::kFull);
 
 #endif

@@ -48,7 +48,8 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     // so validate using assert
 #ifndef NDEBUG
     bool valid, integral, feasible;
-    assessLpPrimalSolution(options, lp, solution, valid, integral, feasible);
+    assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
+                           integral, feasible);
     assert(valid);
 #endif
     bound_violation_ = 0;
@@ -690,7 +691,12 @@ void HighsMipSolver::cleanupSolve() {
   }
 
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "\nSolving report\n"
+               "\nSolving report\n");
+  if (this->orig_model_->model_name_.length())
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  Model             %s\n",
+                 this->orig_model_->model_name_.c_str());
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
@@ -712,6 +718,7 @@ void HighsMipSolver::cleanupSolve() {
                "                    %.2f (solve)\n"
                "                    %.2f (postsolve)\n"
                "  Nodes             %llu\n"
+               "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
@@ -721,6 +728,9 @@ void HighsMipSolver::cleanupSolve() {
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
                (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->total_repair_lp,
+               (long long unsigned)mipdata_->total_repair_lp_feasible,
+               (long long unsigned)mipdata_->total_repair_lp_iterations,
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,

@@ -309,7 +309,6 @@ set(highs_headers_python
     src/lp_data/HighsModelUtils.h
     src/lp_data/HighsOptions.h
     src/lp_data/HighsRanging.h
-    src/lp_data/HighsRuntimeOptions.h
     src/lp_data/HighsSolution.h
     src/lp_data/HighsSolutionDebug.h
     src/lp_data/HighsSolve.h

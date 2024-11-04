@@ -38,6 +38,9 @@
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lp_iterations(0),
+      total_repair_lp(0),
+      total_repair_lp_feasible(0),
+      total_repair_lp_iterations(0),
       randgen(mipsolver.options_mip_->random_seed) {
   successObservations = 0;
   numSuccessObservations = 0;
@@ -153,7 +156,10 @@ bool HighsPrimalHeuristics::solveSubMip(
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
-
+    total_repair_lp += submipsolver.mipdata_->total_repair_lp;
+    total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
+    total_repair_lp_iterations +=
+        submipsolver.mipdata_->total_repair_lp_iterations;
     if (mipsolver.submip)
       mipsolver.mipdata_->num_nodes += std::max(
           int64_t{1}, int64_t(adjustmentfactor * submipsolver.node_count_));
@@ -1212,6 +1218,12 @@ void HighsPrimalHeuristics::clique() {
 #endif
 
 void HighsPrimalHeuristics::flushStatistics() {
+  mipsolver.mipdata_->total_repair_lp += total_repair_lp;
+  mipsolver.mipdata_->total_repair_lp_feasible += total_repair_lp_feasible;
+  mipsolver.mipdata_->total_repair_lp_iterations += total_repair_lp_iterations;
+  total_repair_lp = 0;
+  total_repair_lp_feasible = 0;
+  total_repair_lp_iterations = 0;
   mipsolver.mipdata_->heuristic_lp_iterations += lp_iterations;
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;

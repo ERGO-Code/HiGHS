@@ -22,6 +22,9 @@ class HighsMipSolver;
 class HighsPrimalHeuristics {
  private:
   HighsMipSolver& mipsolver;
+  size_t total_repair_lp;
+  size_t total_repair_lp_feasible;
+  size_t total_repair_lp_iterations;
   size_t lp_iterations;
 
   double successObservations;

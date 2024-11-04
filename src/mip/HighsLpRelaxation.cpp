@@ -1064,6 +1064,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
              int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
     }
   }
+  const bool solver_logging = false;
+  const bool detailed_simplex_logging = false;
+  if (solver_logging) lpsolver.setOptionValue("output_flag", true);
+  if (detailed_simplex_logging) {
+    lpsolver.setOptionValue("output_flag", true);
+    lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+    lpsolver.setOptionValue("highs_analysis_level",
+                            kHighsAnalysisLevelSolverRuntimeData);
+  }
 
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
@@ -1155,8 +1164,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     }
     case HighsModelStatus::kUnbounded:
-      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
-
+      // If unboundedness is detected in the presolved LP, then
+      // postsolve cannot be run, so there is no basis. Returning
+      // Status::kError as a result yielded #1962, where the root node
+      // is unbounded.
+      if (info.basis_validity == kBasisValidityInvalid)
+        highsLogUser(mipsolver.options_mip_->log_options,
+                     HighsLogType::kWarning,
+                     "HighsLpRelaxation::run LP is unbounded with no basis, "
+                     "but not returning Status::kError\n");
       if (info.primal_solution_status == kSolutionStatusFeasible)
         mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
 
@@ -1252,9 +1268,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
           if (fractionality(val) > mipsolver.mipdata_->feastol) {
             HighsInt col = i;
-            if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
-                mipsolver.mipdata_->downlocks[col] != 0)
-              roundable = false;
+            roundable = roundable && (mipsolver.mipdata_->uplocks[col] == 0 ||
+                                      mipsolver.mipdata_->downlocks[col] == 0);
 
             const HighsCliqueTable::Substitution* subst =
                 mipsolver.mipdata_->cliquetable.getSubstitution(col);

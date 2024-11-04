@@ -11,8 +11,9 @@ static double step(double x, double p, double l, double u, double t) {
 }
 
 static RatiotestResult ratiotest_textbook(Runtime& rt, const QpVector& p,
-                                   const QpVector& rowmove, Instance& instance,
-                                   const double alphastart) {
+                                          const QpVector& rowmove,
+                                          Instance& instance,
+                                          const double alphastart) {
   RatiotestResult result;
   result.limitingconstraint = -1;
   result.alpha = alphastart;
@@ -46,8 +47,9 @@ static RatiotestResult ratiotest_textbook(Runtime& rt, const QpVector& p,
 }
 
 static RatiotestResult ratiotest_twopass(Runtime& runtime, const QpVector& p,
-                                  const QpVector& rowmove, Instance& relaxed,
-                                  const double alphastart) {
+                                         const QpVector& rowmove,
+                                         Instance& relaxed,
+                                         const double alphastart) {
   RatiotestResult res1 =
       ratiotest_textbook(runtime, p, rowmove, relaxed, alphastart);
 
@@ -94,32 +96,31 @@ static RatiotestResult ratiotest_twopass(Runtime& runtime, const QpVector& p,
   return result;
 }
 
-
 Instance ratiotest_relax_instance(Runtime& runtime) {
   Instance relaxed_instance = runtime.instance;
-      for (double& bound : relaxed_instance.con_lo) {
-        if (bound != -std::numeric_limits<double>::infinity()) {
-          bound -= runtime.settings.ratiotest_d;
-        }
-      }
+  for (double& bound : relaxed_instance.con_lo) {
+    if (bound != -std::numeric_limits<double>::infinity()) {
+      bound -= runtime.settings.ratiotest_d;
+    }
+  }
 
-      for (double& bound : relaxed_instance.con_up) {
-        if (bound != std::numeric_limits<double>::infinity()) {
-          bound += runtime.settings.ratiotest_d;
-        }
-      }
+  for (double& bound : relaxed_instance.con_up) {
+    if (bound != std::numeric_limits<double>::infinity()) {
+      bound += runtime.settings.ratiotest_d;
+    }
+  }
 
-      for (double& bound : relaxed_instance.var_lo) {
-        if (bound != -std::numeric_limits<double>::infinity()) {
-          bound -= runtime.settings.ratiotest_d;
-        }
-      }
+  for (double& bound : relaxed_instance.var_lo) {
+    if (bound != -std::numeric_limits<double>::infinity()) {
+      bound -= runtime.settings.ratiotest_d;
+    }
+  }
 
-      for (double& bound : relaxed_instance.var_up) {
-        if (bound != std::numeric_limits<double>::infinity()) {
-          bound += runtime.settings.ratiotest_d;
-        }
-      }
+  for (double& bound : relaxed_instance.var_up) {
+    if (bound != std::numeric_limits<double>::infinity()) {
+      bound += runtime.settings.ratiotest_d;
+    }
+  }
   return relaxed_instance;
 }
 
@@ -131,7 +132,7 @@ RatiotestResult ratiotest(Runtime& runtime, const QpVector& p,
                                 alphastart);
     case RatiotestStrategy::TwoPass:
     default:  // to fix -Wreturn-type warning
-      return ratiotest_twopass(runtime, p, rowmove, runtime.relaxed_for_ratiotest,
-                               alphastart);
+      return ratiotest_twopass(runtime, p, rowmove,
+                               runtime.relaxed_for_ratiotest, alphastart);
   }
 }
