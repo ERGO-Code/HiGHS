@@ -204,6 +204,7 @@ set(highs_sources_python
     src/mip/HighsDebugSol.cpp
     src/mip/HighsDomain.cpp
     src/mip/HighsDynamicRowMatrix.cpp
+    src/mip/HighsFeasibilityJump.cpp
     src/mip/HighsGFkSolve.cpp
     src/mip/HighsImplications.cpp
     src/mip/HighsLpAggregator.cpp

@@ -39,6 +39,7 @@ enum MipSolutionSource : int {
   kSolutionSourceBranching,
   kSolutionSourceCentralRounding,
   kSolutionSourceFeasibilityPump,
+  kSolutionSourceFeasibilityJump,
   kSolutionSourceHeuristic,
   //  kSolutionSourceInitial,
   kSolutionSourceSubMip,
@@ -198,6 +199,8 @@ struct HighsMipSolverData {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
   }
+
+  void feasibilityJump();
 
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);

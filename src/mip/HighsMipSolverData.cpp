@@ -36,6 +36,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceFeasibilityPump) {
     if (code) return "F";
     return "Feasibility pump";
+  } else if (solution_source == kSolutionSourceFeasibilityJump) {
+    if (code) return "J";
+    return "Feasibility jump";
   } else if (solution_source == kSolutionSourceHeuristic) {
     if (code) return "H";
     return "Heuristic";

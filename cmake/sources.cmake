@@ -205,6 +205,7 @@ set(highs_sources
     mip/HighsDebugSol.cpp
     mip/HighsDomain.cpp
     mip/HighsDynamicRowMatrix.cpp
+    mip/HighsFeasibilityJump.cpp
     mip/HighsGFkSolve.cpp
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp

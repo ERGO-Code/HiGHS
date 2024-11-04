@@ -175,6 +175,10 @@ restart:
       cleanupSolve();
       return;
     }
+    // Apply the feasibility jump before evaluating the root node
+    analysis_.mipTimerStart(kMipClockFeasibilityJump);
+    mipdata_->feasibilityJump();
+    analysis_.mipTimerStop(kMipClockFeasibilityJump);
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
