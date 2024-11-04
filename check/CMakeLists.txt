@@ -230,6 +230,57 @@ if (NOT FAST_BUILD OR ALL_TESTS)
   #   "--parallel=on"
       )
 
+  if (UNIX AND NOT APPLE)
+    set(pdlpInstances
+        "25fv47\; 5.50184588\;"
+        "adlittle\; 2.254949631\;"
+        "afiro\;-4.64753142\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-9.000000001\;"
+        "e226\;-1.16389293\;"
+        "scrs8\; 9.042969511\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        "stair\;-2.51266951\;"
+        "standata\; 1.257699499\;"
+        "standgub\; 1.25769949\;"
+        )
+  elseif(WIN32)
+    # on windows e226 model status is unknown, rel gap e00
+    set(pdlpInstances
+        "25fv47\; 5.50184588\;"
+        "adlittle\; 2.25494963\;"
+        "afiro\;-4.64753142\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-9.000000001\;"
+        "scrs8\; 9.0429695\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        "stair\;-2.51266951\;"
+        "standata\; 1.2576995\;"
+        "standgub\; 1.2576995\;"
+        )
+  elseif(APPLE)
+    set(pdlpInstances
+        "25fv47\; 5.5018458\;"
+        "adlittle\; 2.25494963\;"
+        "afiro\;-4.64753142\;"
+        "avgas\;-7.749999999\;"
+        "blending\;-3.19999999\;"
+        "chip\;-8.9999988715\;"
+        "e226\;-1.163892\;"
+        "scrs8\; 9.04296953\;"
+        "sctest\; 5.749999936\;"
+        "shell\; 1.2088253460\;"
+        "stair\;-2.5126695\;"
+        "standata\; 1.25769950\;"
+        "standgub\; 1.25769950\;"
+    )
+  endif()
+
+
   # define a macro to add tests
   #
   # add_instancetests takes an instance group and a status
@@ -293,7 +344,8 @@ if (NOT FAST_BUILD OR ALL_TESTS)
 
   add_instancetests(failInstances "Fail")
   add_instancetests(infeasibleInstances "Infeasible")
-  #add_instancetests(unboundedInstances "Unbounded")
+  add_instancetests(unboundedInstances "Unbounded")
+
 
   foreach(instance ${mipInstances})
       list(GET instance 0 name)
@@ -320,6 +372,28 @@ if (NOT FAST_BUILD OR ALL_TESTS)
                   "Solution status   infeasible")
 
       endforeach(setting)
-  endforeach()
+  endforeach(instance)
+
+  if(FAST_BUILD)
+    foreach(instance_pdlp ${pdlpInstances})
+        # add default tests
+        # treat the instance as a tuple (list) of two values
+        list(GET instance_pdlp 0 name_pdlp)
+        list(GET instance_pdlp 1 optval)
+
+        set(inst_pdlp "${HIGHS_SOURCE_DIR}/check/instances/${name_pdlp}.mps")
+
+        add_test(NAME ${name_pdlp}-pdlp-no-presolve COMMAND $<TARGET_FILE:highs-bin> "--solver=pdlp"
+            "--presolve=off" ${inst_pdlp})
+
+        set_tests_properties (${name_pdlp}-pdlp-no-presolve PROPERTIES
+            PASS_REGULAR_EXPRESSION
+            "Model status        : Optimal")
+
+        set_tests_properties (${name_pdlp}-pdlp-no-presolve PROPERTIES
+            PASS_REGULAR_EXPRESSION
+            "Objective value     : ${optval}")
+    endforeach(instance_pdlp)
+  endif()
 
 endif()
