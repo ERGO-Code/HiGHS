@@ -209,6 +209,7 @@ set(highs_sources
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
     mip/HighsLpRelaxation.cpp
+    mip/HighsMipAnalysis.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
     mip/HighsModkSeparator.cpp
@@ -329,6 +330,7 @@ set(highs_headers
     mip/HighsImplications.h
     mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
+    mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
     mip/HighsModkSeparator.h
@@ -343,6 +345,7 @@ set(highs_headers
     mip/HighsSeparator.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    mip/MipTimer.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h

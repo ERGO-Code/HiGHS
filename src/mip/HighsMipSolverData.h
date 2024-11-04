@@ -33,6 +33,26 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
+enum MipSolutionSource : int {
+  kSolutionSourceNone = -1,
+  kSolutionSourceMin = kSolutionSourceNone,
+  kSolutionSourceBranching,
+  kSolutionSourceCentralRounding,
+  kSolutionSourceFeasibilityPump,
+  kSolutionSourceHeuristic,
+  //  kSolutionSourceInitial,
+  kSolutionSourceSubMip,
+  kSolutionSourceEmptyMip,
+  kSolutionSourceRandomizedRounding,
+  kSolutionSourceSolveLp,
+  kSolutionSourceEvaluateNode,
+  kSolutionSourceUnbounded,
+  //  kSolutionSourceOpt1,
+  //  kSolutionSourceOpt2,
+  kSolutionSourceCleanup,
+  kSolutionSourceCount
+};
+
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;
@@ -212,16 +232,22 @@ struct HighsMipSolverData {
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;
-  bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool trySolution(const std::vector<double>& solution,
+                   const int solution_source = kSolutionSourceNone);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
-  bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source,
+                    const bool print_display_line = true);
 
   const std::vector<double>& getSolution() const;
 
-  void printDisplayLine(char source = ' ');
+  std::string solutionSourceToString(const int solution_source,
+                                     const bool code = true);
+  void printSolutionSourceKey();
+  void printDisplayLine(const int solution_source = kSolutionSourceNone);
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
