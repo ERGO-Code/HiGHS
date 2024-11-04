@@ -39,6 +39,7 @@ cc_library(
     hdrs = glob([
         "HConfig.h",
         "**/*.h",
+        "src/mip/feasibilityjump.hh",
         "src/qpsolver/*.hpp",
         "src/Highs.h",
         "extern/filereaderlp/*.hpp",
