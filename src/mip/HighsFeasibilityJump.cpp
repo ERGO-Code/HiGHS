@@ -14,15 +14,23 @@
 #include "mip/feasibilityjump.hh"
 
 void HighsMipSolverData::feasibilityJump() {
-
+  // This is the (presolved) model being solved
   const HighsLp* model = this->mipsolver.model_;
+  printf("HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
+         lower_bound);
+
+  // Use feasibility jump to try to find an integer feasible solution
+
   const bool found_integer_feasible_solution = false;
   std::vector<double> col_value;
   double objective_function_value;
+
   if (found_integer_feasible_solution) {
+    // Feasibility jump has found a solution, so call addIncumbent to
+    // (possibly) update the incumbent
     col_value.assign(model->num_col_, 0);
     objective_function_value = 0.0;
     addIncumbent(col_value, objective_function_value,
-		 kSolutionSourceFeasibilityJump);
+                 kSolutionSourceFeasibilityJump);
   }
 }
