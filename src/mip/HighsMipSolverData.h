@@ -204,7 +204,7 @@ struct HighsMipSolverData {
   }
 
   bool solutionRowFeasible(const std::vector<double>& solution) const;
-  void trivialHeuristics();
+  HighsModelStatus trivialHeuristics();
 
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);

@@ -166,7 +166,7 @@ bool HighsMipSolverData::solutionRowFeasible(
   return true;
 }
 
-void HighsMipSolverData::trivialHeuristics() {
+HighsModelStatus HighsMipSolverData::trivialHeuristics() {
   //  printf("\nHighsMipSolverData::trivialHeuristics() Number of continuous
   //  columns is %d\n",
   //	 int(continuous_cols.size()));
@@ -176,8 +176,8 @@ void HighsMipSolverData::trivialHeuristics() {
       kSolutionSourceTrivialZ, kSolutionSourceTrivialL, kSolutionSourceTrivialU,
       kSolutionSourceTrivialP};
 
-  const std::vector<double>& col_lower = mipsolver.model_->col_lower_;
-  const std::vector<double>& col_upper = mipsolver.model_->col_upper_;
+  std::vector<double> col_lower = mipsolver.model_->col_lower_;
+  std::vector<double> col_upper = mipsolver.model_->col_upper_;
   const std::vector<double>& row_lower = mipsolver.model_->row_lower_;
   const std::vector<double>& row_upper = mipsolver.model_->row_upper_;
   const HighsSparseMatrix& matrix = mipsolver.model_->a_matrix_;
@@ -189,6 +189,12 @@ void HighsMipSolverData::trivialHeuristics() {
   bool all_integer_upper_finite = true;
   for (HighsInt integer_col = 0; integer_col < numintegercols; integer_col++) {
     HighsInt iCol = integer_cols[integer_col];
+    // Round bounds in to nearest integer
+    col_lower[iCol] = std::ceil(col_lower[iCol]);
+    col_upper[iCol] = std::floor(col_upper[iCol]);
+    // If bounds are inconsistent then MIP is infeasible
+    if (col_lower[iCol] > col_upper[iCol]) return HighsModelStatus::kInfeasible;
+
     if (col_lower[iCol] > 0) all_integer_lower_non_positive = false;
     if (col_lower[iCol]) all_integer_lower_zero = false;
     if (col_lower[iCol] <= -kHighsInf) all_integer_lower_finite = false;
@@ -288,6 +294,7 @@ void HighsMipSolverData::trivialHeuristics() {
       }
     }
   }
+  return HighsModelStatus::kNotset;
 }
 
 void HighsMipSolverData::startAnalyticCenterComputation(
