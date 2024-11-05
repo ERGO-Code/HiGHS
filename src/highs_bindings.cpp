@@ -537,6 +537,14 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                          py::cast(value));
 }
 
+std::tuple<HighsStatus, HighsVarType>
+highs_getColIntegrality(Highs* h, HighsInt col) {
+  HighsInt col_ = static_cast<HighsInt>(col);
+  HighsVarType integrality;
+  HighsStatus status = h->getColIntegrality(col_, integrality);
+  return std::make_tuple(status, integrality);
+}
+
 std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
            HighsInt>
 highs_getRows(Highs* h, HighsInt num_set_entries,
@@ -1029,11 +1037,13 @@ PYBIND11_MODULE(_core, m) {
 
       .def("getCol", &highs_getCol)
       .def("getColEntries", &highs_getColEntries)
+      .def("getColIntegrality", &highs_getColIntegrality)
       .def("getRow", &highs_getRow)
       .def("getRowEntries", &highs_getRowEntries)
 
       .def("getCols", &highs_getCols)
       .def("getColsEntries", &highs_getColsEntries)
+
       .def("getRows", &highs_getRows)
       .def("getRowsEntries", &highs_getRowsEntries)
 
@@ -1041,9 +1051,6 @@ PYBIND11_MODULE(_core, m) {
       .def("getColByName", &highs_getColByName)
       .def("getRowName", &highs_getRowName)
       .def("getRowByName", &highs_getRowByName)
-
-    //      .def("getColIntegrality", &Highs::getColIntegrality)
-    //      .def("getColsIntegrality", &Highs::getColsIntegrality)
 
       .def("writeModel", &Highs::writeModel)
       .def("writePresolvedModel", &Highs::writePresolvedModel)
