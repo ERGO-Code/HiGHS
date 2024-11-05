@@ -1042,6 +1042,9 @@ PYBIND11_MODULE(_core, m) {
       .def("getRowName", &highs_getRowName)
       .def("getRowByName", &highs_getRowByName)
 
+    //      .def("getColIntegrality", &Highs::getColIntegrality)
+    //      .def("getColsIntegrality", &Highs::getColsIntegrality)
+
       .def("writeModel", &Highs::writeModel)
       .def("writePresolvedModel", &Highs::writePresolvedModel)
       .def("crossover", &Highs::crossover)
