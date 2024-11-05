@@ -170,7 +170,7 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
   //  printf("\nHighsMipSolverData::trivialHeuristics() Number of continuous
   //  columns is %d\n",
   //	 int(continuous_cols.size()));
-  if (continuous_cols.size() > 0) return HighsModelStatus::kOk;
+  if (continuous_cols.size() > 0) return HighsModelStatus::kNotset;
   const HighsInt num_try_heuristic = 4;
   const std::vector<int> heuristic_source = {
       kSolutionSourceTrivialZ, kSolutionSourceTrivialL, kSolutionSourceTrivialU,
