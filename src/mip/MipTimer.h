@@ -24,6 +24,7 @@ enum iClockMip {
   kMipClockInit,
   kMipClockRunPresolve,
   kMipClockRunSetup,
+  kMipClockTrivialHeuristics,
   kMipClockEvaluateRootNode,
   kMipClockPerformAging0,
   kMipClockSearch,
@@ -95,6 +96,8 @@ class MipTimer {
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
     clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
+    clock[kMipClockTrivialHeuristics] =
+        timer_pointer->clock_def("Trivial heuristics");
     clock[kMipClockEvaluateRootNode] =
         timer_pointer->clock_def("Evaluate root node");
     clock[kMipClockPerformAging0] = timer_pointer->clock_def("Perform aging 0");
@@ -249,11 +252,14 @@ class MipTimer {
   };
 
   void reportMipLevel1Clock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{
-        kMipClockInit,          kMipClockRunPresolve,
-        kMipClockRunSetup,      kMipClockEvaluateRootNode,
-        kMipClockPerformAging0, kMipClockSearch,
-        kMipClockPostsolve};
+    const std::vector<HighsInt> mip_clock_list{kMipClockInit,
+                                               kMipClockRunPresolve,
+                                               kMipClockRunSetup,
+                                               kMipClockTrivialHeuristics,
+                                               kMipClockEvaluateRootNode,
+                                               kMipClockPerformAging0,
+                                               kMipClockSearch,
+                                               kMipClockPostsolve};
     reportMipClockList("MipLevl1", mip_clock_list, mip_timer_clock,
                        kMipClockTotal, tolerance_percent_report);
   };
