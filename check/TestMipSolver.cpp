@@ -677,8 +677,17 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
       // Solve
       highs.passModel(lp);
       highs.run();
-      REQUIRE(highs.getModelStatus() ==
-              HighsModelStatus::kUnboundedOrInfeasible);
+      HighsModelStatus required_model_status;
+      if (k == 0) {
+        if (l == 0) {
+          required_model_status = HighsModelStatus::kInfeasible;
+        } else {
+          required_model_status = HighsModelStatus::kUnbounded;
+        }
+      } else {
+        required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+      }
+      REQUIRE(highs.getModelStatus() == required_model_status);
     }
     highs.setOptionValue("presolve", kHighsOnString);
   }

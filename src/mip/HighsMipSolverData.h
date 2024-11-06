@@ -56,6 +56,10 @@ enum MipSolutionSource : int {
   kSolutionSourceSolveLp,
   kSolutionSourceEvaluateNode,
   kSolutionSourceUnbounded,
+  kSolutionSourceTrivialZ,
+  kSolutionSourceTrivialL,
+  kSolutionSourceTrivialU,
+  kSolutionSourceTrivialP,
   //  kSolutionSourceOpt1,
   //  kSolutionSourceOpt2,
   kSolutionSourceCleanup,
@@ -209,6 +213,9 @@ struct HighsMipSolverData {
     domain.addCutpool(cutpool);
     domain.addConflictPool(conflictPool);
   }
+
+  bool solutionRowFeasible(const std::vector<double>& solution) const;
+  HighsModelStatus trivialHeuristics();
 
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);
