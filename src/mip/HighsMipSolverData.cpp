@@ -283,7 +283,7 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
-    const bool lc_report = true;
+    const bool lc_report = false;
     if (lc_report) {
       printf("Trivial heuristic %d has succeeded: objective = %g",
              int(try_heuristic), obj);
