@@ -226,12 +226,12 @@ struct HighsMipSolverData {
   void finishSymmetryDetection(const highs::parallel::TaskGroup& taskGroup,
                                std::unique_ptr<SymmetryDetectionData>& symData);
 
-  void updatePrimaDualIntegral(const double from_lower_bound,
-                               const double to_lower_bound,
-                               const double from_upper_bound,
-                               const double to_upper_bound,
-                               const bool check_bound_change = true,
-                               const bool check_prev_data = true);
+  void updatePrimalDualIntegral(const double from_lower_bound,
+                                const double to_lower_bound,
+                                const double from_upper_bound,
+                                const double to_upper_bound,
+                                const bool check_bound_change = true,
+                                const bool check_prev_data = true);
   double gapFromBounds(const double use_lower_bound,
                        const double use_upper_bound, double& lb, double& ub);
 

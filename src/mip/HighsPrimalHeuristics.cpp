@@ -289,7 +289,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
         const bool bound_change =
             mipsolver.mipdata_->lower_bound != prev_lower_bound;
         if (!mipsolver.submip && bound_change)
-          mipsolver.mipdata_->updatePrimaDualIntegral(
+          mipsolver.mipdata_->updatePrimalDualIntegral(
               prev_lower_bound, mipsolver.mipdata_->lower_bound,
               mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->upper_bound);
         localdom.backtrack();

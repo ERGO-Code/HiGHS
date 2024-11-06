@@ -557,8 +557,8 @@ void HighsMipSolverData::runSetup() {
 
       bool bound_change = upper_bound != prev_upper_bound;
       if (!mipsolver.submip && bound_change)
-        updatePrimaDualIntegral(lower_bound, lower_bound, prev_upper_bound,
-                                upper_bound);
+        updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
+                                 upper_bound);
 
       double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
       saveReportMipSolution(new_upper_limit);
@@ -672,8 +672,8 @@ void HighsMipSolverData::runSetup() {
 
     bool bound_change = lower_bound != prev_lower_bound;
     if (!mipsolver.submip && bound_change)
-      updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                              upper_bound);
+      updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                               upper_bound);
 
     pruned_treeweight = 1.0;
     return;
@@ -725,8 +725,8 @@ void HighsMipSolverData::runSetup() {
 
             bool bound_change = lower_bound != prev_lower_bound;
             if (!mipsolver.submip && bound_change)
-              updatePrimaDualIntegral(prev_lower_bound, lower_bound,
-                                      upper_bound, upper_bound);
+              updatePrimalDualIntegral(prev_lower_bound, lower_bound,
+                                       upper_bound, upper_bound);
 
             pruned_treeweight = 1.0;
             return;
@@ -1180,20 +1180,20 @@ void HighsMipSolverData::performRestart() {
     // lower_bound still relates to the original model, and the offset
     // is never applied, since MIP solving is complete, and
     // lower_bound is set to upper_bound, so apply the offset now, so
-    // that housekeeping in updatePrimaDualIntegral is correct
+    // that housekeeping in updatePrimalDualIntegral is correct
     double prev_lower_bound = lower_bound - mipsolver.model_->offset_;
 
     lower_bound = upper_bound;
 
     // There must be a gap change, since it's now zero, so always call
-    // updatePrimaDualIntegral (unless solving a sub-MIP)
+    // updatePrimalDualIntegral (unless solving a sub-MIP)
     //
     // Surely there must be a lower bound change
     bool bound_change = lower_bound != prev_lower_bound;
     assert(bound_change);
     if (!mipsolver.submip && bound_change)
-      updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                              upper_bound);
+      updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                               upper_bound);
     if (mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
@@ -1277,8 +1277,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 
     bool bound_change = upper_bound != prev_upper_bound;
     if (!mipsolver.submip && bound_change)
-      updatePrimaDualIntegral(lower_bound, lower_bound, prev_upper_bound,
-                              upper_bound);
+      updatePrimalDualIntegral(lower_bound, lower_bound, prev_upper_bound,
+                               upper_bound);
 
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
@@ -1468,8 +1468,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
 
   double lb;
   double ub;
-  const double gap =
-      1e2 * gapFromBounds(lower_bound, upper_bound, lb, ub);
+  const double gap = 1e2 * gapFromBounds(lower_bound, upper_bound, lb, ub);
   if (mipsolver.options_mip_->objective_bound < ub)
     ub = mipsolver.options_mip_->objective_bound;
 
@@ -1579,8 +1578,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       bool bound_change = lower_bound != prev_lower_bound;
       if (!mipsolver.submip && bound_change)
-        updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                                upper_bound);
+        updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                                 upper_bound);
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;
@@ -1629,8 +1628,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
         bool bound_change = lower_bound != prev_lower_bound;
         if (!mipsolver.submip && bound_change)
-          updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                                  upper_bound);
+          updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                                   upper_bound);
         pruned_treeweight = 1.0;
         num_nodes += 1;
         num_leaves += 1;
@@ -1646,8 +1645,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       bool bound_change = lower_bound != prev_lower_bound;
       if (!mipsolver.submip && bound_change)
-        updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                                upper_bound);
+        updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                                 upper_bound);
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;
@@ -1661,8 +1660,8 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       bool bound_change = lower_bound != prev_lower_bound;
       if (!mipsolver.submip && bound_change)
-        updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                                upper_bound);
+        updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                                 upper_bound);
 
       if (lpWasSolved) {
         redcostfixing.addRootRedcost(mipsolver,
@@ -1721,8 +1720,8 @@ restart:
 
   bool bound_change = lower_bound != prev_lower_bound;
   if (!mipsolver.submip && bound_change)
-    updatePrimaDualIntegral(prev_lower_bound, lower_bound, upper_bound,
-                            upper_bound);
+    updatePrimalDualIntegral(prev_lower_bound, lower_bound, upper_bound,
+                             upper_bound);
 
   printDisplayLine();
 
@@ -2375,16 +2374,16 @@ double possInfRelDiff(const double v0, const double v1, const double den) {
   return rel_diff;
 }
 
-void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound,
-                                                 const double to_lower_bound,
-                                                 const double from_upper_bound,
-                                                 const double to_upper_bound,
-                                                 const bool check_bound_change,
-                                                 const bool check_prev_data) {
-  // Parameters to updatePrimaDualIntegral are lower and upper bounds
+void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
+                                                  const double to_lower_bound,
+                                                  const double from_upper_bound,
+                                                  const double to_upper_bound,
+                                                  const bool check_bound_change,
+                                                  const bool check_prev_data) {
+  // Parameters to updatePrimalDualIntegral are lower and upper bounds
   // before/after a change
   //
-  // updatePrimaDualIntegral should only be called when there is a
+  // updatePrimalDualIntegral should only be called when there is a
   // change in one of the bounds, except when the final update is
   // made, in which case the bounds must NOT have changed. By default,
   // a check for some bound change is made, unless check_bound_change
@@ -2446,7 +2445,7 @@ void HighsMipSolverData::updatePrimaDualIntegral(const double from_lower_bound,
     }
   }
   if (pdi.value > -kHighsInf) {
-    // updatePrimaDualIntegral has been called previously, so can
+    // updatePrimalDualIntegral has been called previously, so can
     // usually test housekeeping, even if gap is still inf
     //
     // The one case where the checking can't be done comes after restart, where

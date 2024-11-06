@@ -4543,8 +4543,7 @@ void Highs::reportSolvedLpQpStats() {
         std::fabs(info_.objective_function_value - dual_objective_value) /
         std::max(1.0, std::fabs(info_.objective_function_value));
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Relative P-D gap    : %17.10e\n",
-                 relative_primal_dual_gap);
+                 "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
   }
   double run_time = timer_.readRunHighsClock();
   highsLogUser(log_options, HighsLogType::kInfo,
