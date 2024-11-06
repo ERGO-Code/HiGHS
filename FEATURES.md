@@ -8,8 +8,21 @@ The method `Highs::getDualObjectiveValue` now exitsts to compute the dual object
 
 The method `Highs::getStandardFormLp` now exists to return the incumbent LP in standard form - overlooking any integrality or Hessian. To determine the sizes of the vectors of data, the method is called without specifying pointers to the data arrays.
 
-
 Added documentation on the use of presolve when solving an incumbent model, and clarifying the use of the method `Highs::presolve`.
+
+HiGHS will now read a `MIPLIB` solution file
+
+Added time limit check to `HPresolve::strengthenInequalities`
+
+Added `getColIntegrality` to `highspy`
+
+Now computing the primal-dual integral, reporting it, and making it available as `HighsInfo::primal_dual_integral`
+
+Trivial primal heuristics "all zero", "all lower bound", "all upper bound", and "lock point" added to the MIP solver
+
+
+
+
 
 
 

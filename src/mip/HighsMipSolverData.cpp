@@ -1096,7 +1096,7 @@ try_again:
     this->total_repair_lp++;
     double time_available =
         std::max(mipsolver.options_mip_->time_limit -
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
                  0.1);
     Highs tmpSolver;
     const bool debug_report = false;
@@ -2617,7 +2617,7 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
       assert(gap_consistent);
     }
     if (to_gap < kHighsInf) {
-      double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+      double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
       if (from_gap < kHighsInf) {
         // Need to update the P-D integral
         double time_diff = time - pdi.prev_time;
