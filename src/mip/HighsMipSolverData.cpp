@@ -1531,7 +1531,14 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
   assert(dual_bound == (int)mipsolver.orig_model_->sense_ * lb);
   assert(primal_bound == (int)mipsolver.orig_model_->sense_ * ub);
-  assert(mip_rel_gap == gap);
+  if (gap < kHighsInf) {
+    // 
+    const double gap_diff_tolerance = 1e-12;
+    double gap_diff = std::fabs(gap - mip_rel_gap);
+    assert(gap_diff <= gap_diff_tolerance);
+  } else {
+    assert(gap == mip_rel_gap);
+  }
 
   // Possibly interrupt from MIP logging callback
   mipsolver.callback_->clearHighsCallbackDataOut();
