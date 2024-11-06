@@ -4503,6 +4503,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 }
 
 void Highs::reportSolvedLpQpStats() {
+  if (!options_.output_flag) return;
   HighsLogOptions& log_options = options_.log_options;
   if (this->model_.lp_.model_name_.length())
     highsLogUser(log_options, HighsLogType::kInfo, "Model name          : %s\n",
@@ -4542,10 +4543,7 @@ void Highs::reportSolvedLpQpStats() {
         std::fabs(info_.objective_function_value - dual_objective_value) /
         std::max(1.0, std::fabs(info_.objective_function_value));
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Highs::reportSolvedLpQpStats Objective for %s: primal = "
-                 "%17.10e; dual = %17.10e; rel gap = %17.10e\n",
-                 this->model_.lp_.model_name_.c_str(),
-                 info_.objective_function_value, dual_objective_value,
+                 "Relative P-D gap    : %17.10e\n",
                  relative_primal_dual_gap);
   }
   double run_time = timer_.readRunHighsClock();
