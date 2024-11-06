@@ -41,6 +41,7 @@ class HighsMipSolver {
   double gap_;
   int64_t node_count_;
   int64_t total_lp_iterations_;
+  double primal_dual_integral_;
 
   FILE* improving_solution_file_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;

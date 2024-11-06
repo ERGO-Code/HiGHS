@@ -33,6 +33,15 @@
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
+struct HighsPrimaDualIntegral {
+  double value;
+  double prev_lb;
+  double prev_ub;
+  double prev_gap;
+  double prev_time;
+  void initialise();
+};
+
 enum MipSolutionSource : int {
   kSolutionSourceNone = -1,
   kSolutionSourceMin = kSolutionSourceNone,
@@ -140,6 +149,8 @@ struct HighsMipSolverData {
 
   HighsNodeQueue nodequeue;
 
+  HighsPrimaDualIntegral primal_dual_integral;
+
   HighsDebugSol debugSolution;
 
   HighsMipSolverData(HighsMipSolver& mipsolver)
@@ -221,6 +232,15 @@ struct HighsMipSolverData {
                               std::unique_ptr<SymmetryDetectionData>& symData);
   void finishSymmetryDetection(const highs::parallel::TaskGroup& taskGroup,
                                std::unique_ptr<SymmetryDetectionData>& symData);
+
+  void updatePrimalDualIntegral(const double from_lower_bound,
+                                const double to_lower_bound,
+                                const double from_upper_bound,
+                                const double to_upper_bound,
+                                const bool check_bound_change = true,
+                                const bool check_prev_data = true);
+  double limitsToGap(const double use_lower_bound, const double use_upper_bound,
+                     double& lb, double& ub) const;
 
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;

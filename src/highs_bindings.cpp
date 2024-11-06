@@ -832,7 +832,9 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("max_complementarity_violation",
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
-                     &HighsInfo::sum_complementarity_violations);
+                     &HighsInfo::sum_complementarity_violations)
+      .def_readwrite("primal_dual_integral",
+                     &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
