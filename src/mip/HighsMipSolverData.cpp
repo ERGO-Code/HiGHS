@@ -287,9 +287,9 @@ void HighsMipSolverData::finishSymmetryDetection(
     globalOrbits = symmetries.computeStabilizerOrbits(domain);
 }
 
-double HighsMipSolverData::gapFromBounds(const double use_lower_bound,
-                                         const double use_upper_bound,
-                                         double& lb, double& ub) {
+double HighsMipSolverData::limitsToGap(const double use_lower_bound,
+                                       const double use_upper_bound, double& lb,
+                                       double& ub) const {
   double offset = mipsolver.model_->offset_;
   lb = use_lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
@@ -1468,7 +1468,8 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
 
   double lb;
   double ub;
-  const double gap = 1e2 * gapFromBounds(lower_bound, upper_bound, lb, ub);
+  double gap = limitsToGap(lower_bound, upper_bound, lb, ub);
+  gap *= 1e2;
   if (mipsolver.options_mip_->objective_bound < ub)
     ub = mipsolver.options_mip_->objective_bound;
 
@@ -1529,16 +1530,10 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   double primal_bound;
   double mip_rel_gap;
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
+  mip_rel_gap *= 1e2;
   assert(dual_bound == (int)mipsolver.orig_model_->sense_ * lb);
   assert(primal_bound == (int)mipsolver.orig_model_->sense_ * ub);
-  if (gap < kHighsInf) {
-    // 
-    const double gap_diff_tolerance = 1e-12;
-    double gap_diff = std::fabs(gap - mip_rel_gap);
-    assert(gap_diff <= gap_diff_tolerance);
-  } else {
-    assert(gap == mip_rel_gap);
-  }
+  assert(gap == mip_rel_gap);
 
   // Possibly interrupt from MIP logging callback
   mipsolver.callback_->clearHighsCallbackDataOut();
@@ -2304,30 +2299,11 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
 void HighsMipSolverData::limitsToBounds(double& dual_bound,
                                         double& primal_bound,
                                         double& mip_rel_gap) const {
-  const HighsLp* model = this->mipsolver.model_;
-  const HighsLp* orig_model = this->mipsolver.orig_model_;
-
-  const double offset = model->offset_;
-  dual_bound = lower_bound + offset;
-  if (std::abs(dual_bound) <= epsilon) dual_bound = 0;
-  primal_bound = kHighsInf;
-  mip_rel_gap = kHighsInf;
-
-  if (upper_bound != kHighsInf) {
-    primal_bound = upper_bound + offset;
-
-    if (std::fabs(primal_bound) <= epsilon) primal_bound = 0;
-    dual_bound = std::min(dual_bound, primal_bound);
-    if (primal_bound == 0.0)
-      mip_rel_gap = dual_bound == 0.0 ? 0.0 : kHighsInf;
-    else
-      mip_rel_gap = 100. * (primal_bound - dual_bound) / fabs(primal_bound);
-  }
+  mip_rel_gap = limitsToGap(lower_bound, upper_bound, dual_bound, primal_bound);
   primal_bound =
       std::min(mipsolver.options_mip_->objective_bound, primal_bound);
-
   // Adjust objective sense in case of maximization problem
-  if (orig_model->sense_ == ObjSense::kMaximize) {
+  if (this->mipsolver.orig_model_->sense_ == ObjSense::kMaximize) {
     dual_bound = -dual_bound;
     primal_bound = -primal_bound;
   }
@@ -2356,10 +2332,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
       mipsolver.mipdata_->total_lp_iterations;
   mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
-  // Option mip_rel_gap, and mip_gap in HighsInfo, are both fractions,
-  // whereas mip_rel_gap in logging output (mimicked by
-  // limitsToBounds) gives a percentage, so convert it a fraction
-  mipsolver.callback_->data_out.mip_gap = 1e-2 * mip_rel_gap;
+  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
@@ -2416,11 +2389,11 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
   double from_lb;
   double from_ub;
   const double from_gap =
-      this->gapFromBounds(from_lower_bound, from_upper_bound, from_lb, from_ub);
+      this->limitsToGap(from_lower_bound, from_upper_bound, from_lb, from_ub);
   double to_lb;
   double to_ub;
   const double to_gap =
-      this->gapFromBounds(to_lower_bound, to_upper_bound, to_lb, to_ub);
+      this->limitsToGap(to_lower_bound, to_upper_bound, to_lb, to_ub);
 
   const double lb_difference = possInfRelDiff(from_lb, to_lb, to_lb);
   const double ub_difference = possInfRelDiff(from_ub, to_ub, to_ub);

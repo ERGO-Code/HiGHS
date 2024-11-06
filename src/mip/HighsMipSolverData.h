@@ -232,8 +232,8 @@ struct HighsMipSolverData {
                                 const double to_upper_bound,
                                 const bool check_bound_change = true,
                                 const bool check_prev_data = true);
-  double gapFromBounds(const double use_lower_bound,
-                       const double use_upper_bound, double& lb, double& ub);
+  double limitsToGap(const double use_lower_bound, const double use_upper_bound,
+                     double& lb, double& ub) const;
 
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;
