@@ -179,6 +179,17 @@ restart:
     analysis_.mipTimerStart(kMipClockFeasibilityJump);
     mipdata_->feasibilityJump();
     analysis_.mipTimerStop(kMipClockFeasibilityJump);
+    // Apply the trivial heuristics
+    analysis_.mipTimerStart(kMipClockTrivialHeuristics);
+    HighsModelStatus model_status = mipdata_->trivialHeuristics();
+    if (modelstatus_ == HighsModelStatus::kNotset &&
+        model_status == HighsModelStatus::kInfeasible) {
+      // trivialHeuristics can spot trivial infeasibility, so act on it
+      modelstatus_ = model_status;
+      cleanupSolve();
+      return;
+    }
+    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
@@ -218,7 +229,15 @@ restart:
   search.setLpRelaxation(&mipdata_->lp);
   sepa.setLpRelaxation(&mipdata_->lp);
 
+  double prev_lower_bound = mipdata_->lower_bound;
+
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
+
+  bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+  if (!submip && bound_change)
+    mipdata_->updatePrimalDualIntegral(prev_lower_bound, mipdata_->lower_bound,
+                                       mipdata_->upper_bound,
+                                       mipdata_->upper_bound);
 
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
@@ -341,8 +360,16 @@ restart:
     search.flushStatistics();
 
     if (limit_reached) {
+      double prev_lower_bound = mipdata_->lower_bound;
+
       mipdata_->lower_bound = std::min(mipdata_->upper_bound,
                                        mipdata_->nodequeue.getBestLowerBound());
+
+      bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+      if (!submip && bound_change)
+        mipdata_->updatePrimalDualIntegral(
+            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+            mipdata_->upper_bound);
       mipdata_->printDisplayLine();
       break;
     }
@@ -364,13 +391,29 @@ restart:
     if (mipdata_->domain.infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
+
+      double prev_lower_bound = mipdata_->lower_bound;
+
       mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+
+      bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+      if (!submip && bound_change)
+        mipdata_->updatePrimalDualIntegral(
+            prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+            mipdata_->upper_bound);
       mipdata_->printDisplayLine();
       break;
     }
 
+    double prev_lower_bound = mipdata_->lower_bound;
+
     mipdata_->lower_bound = std::min(mipdata_->upper_bound,
                                      mipdata_->nodequeue.getBestLowerBound());
+    bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+    if (!submip && bound_change)
+      mipdata_->updatePrimalDualIntegral(
+          prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+          mipdata_->upper_bound);
     mipdata_->printDisplayLine();
     if (mipdata_->nodequeue.empty()) break;
 
@@ -531,7 +574,16 @@ restart:
         if (mipdata_->domain.infeasible()) {
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
+
+          double prev_lower_bound = mipdata_->lower_bound;
+
           mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+
+          bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+          if (!submip && bound_change)
+            mipdata_->updatePrimalDualIntegral(
+                prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+                mipdata_->upper_bound);
           break;
         }
 
@@ -540,9 +592,16 @@ restart:
           break;
         }
 
+        double prev_lower_bound = mipdata_->lower_bound;
+
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
+        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+        if (!submip && bound_change)
+          mipdata_->updatePrimalDualIntegral(
+              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+              mipdata_->upper_bound);
         mipdata_->printDisplayLine();
 
         if (!mipdata_->domain.getChangedCols().empty()) {
@@ -572,7 +631,16 @@ restart:
         search.openNodesToQueue(mipdata_->nodequeue);
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
+
+        double prev_lower_bound = mipdata_->lower_bound;
+
         mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
+
+        bool bound_change = mipdata_->lower_bound != prev_lower_bound;
+        if (!submip && bound_change)
+          mipdata_->updatePrimalDualIntegral(
+              prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+              mipdata_->upper_bound);
         break;
       }
 
@@ -602,12 +670,20 @@ restart:
 }
 
 void HighsMipSolver::cleanupSolve() {
+  // Force a final logging line
   mipdata_->printDisplayLine(kSolutionSourceCleanup);
   // Stop the solve clock - which won't be running if presolve
   // determines the model status
   if (analysis_.mipTimerRunning(kMipClockSolve))
     analysis_.mipTimerStop(kMipClockSolve);
+
+  // Need to complete the calculation of P-D integral, checking for NO
+  // gap change
+  mipdata_->updatePrimalDualIntegral(
+      mipdata_->lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
+      mipdata_->upper_bound, false);
   analysis_.mipTimerStart(kMipClockPostsolve);
+
   bool havesolution = solution_objective_ != kHighsInf;
   bool feasible;
   if (havesolution)
@@ -632,6 +708,7 @@ void HighsMipSolver::cleanupSolve() {
   node_count_ = mipdata_->num_nodes;
   total_lp_iterations_ = mipdata_->total_lp_iterations;
   dual_bound_ = std::min(dual_bound_, primal_bound_);
+  primal_dual_integral_ = mipdata_->primal_dual_integral.value;
 
   // adjust objective sense in case of maximization problem
   if (orig_model_->sense_ == ObjSense::kMaximize) {
@@ -709,9 +786,11 @@ void HighsMipSolver::cleanupSolve() {
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
                "  Gap               %s\n"
+               "  P-D integral      %.12g\n"
                "  Solution status   %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data(), solutionstatus.c_str());
+               dual_bound_, gapString.data(),
+               mipdata_->primal_dual_integral.value, solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"

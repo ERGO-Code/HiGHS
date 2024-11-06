@@ -25,6 +25,7 @@ enum iClockMip {
   kMipClockRunPresolve,
   kMipClockRunSetup,
   kMipClockFeasibilityJump,
+  kMipClockTrivialHeuristics,
   kMipClockEvaluateRootNode,
   kMipClockPerformAging0,
   kMipClockSearch,
@@ -98,6 +99,8 @@ class MipTimer {
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
     clock[kMipClockFeasibilityJump] =
         timer_pointer->clock_def("Feasibility jump");
+    clock[kMipClockTrivialHeuristics] =
+        timer_pointer->clock_def("Trivial heuristics");
     clock[kMipClockEvaluateRootNode] =
         timer_pointer->clock_def("Evaluate root node");
     clock[kMipClockPerformAging0] = timer_pointer->clock_def("Perform aging 0");
@@ -256,6 +259,7 @@ class MipTimer {
                                                kMipClockRunPresolve,
                                                kMipClockRunSetup,
                                                kMipClockFeasibilityJump,
+                                               kMipClockTrivialHeuristics,
                                                kMipClockEvaluateRootNode,
                                                kMipClockPerformAging0,
                                                kMipClockSearch,

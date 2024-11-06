@@ -537,6 +537,14 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                          py::cast(value));
 }
 
+std::tuple<HighsStatus, HighsVarType>
+highs_getColIntegrality(Highs* h, HighsInt col) {
+  HighsInt col_ = static_cast<HighsInt>(col);
+  HighsVarType integrality;
+  HighsStatus status = h->getColIntegrality(col_, integrality);
+  return std::make_tuple(status, integrality);
+}
+
 std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
            HighsInt>
 highs_getRows(Highs* h, HighsInt num_set_entries,
@@ -824,7 +832,9 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("max_complementarity_violation",
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
-                     &HighsInfo::sum_complementarity_violations);
+                     &HighsInfo::sum_complementarity_violations)
+      .def_readwrite("primal_dual_integral",
+                     &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -1029,11 +1039,13 @@ PYBIND11_MODULE(_core, m) {
 
       .def("getCol", &highs_getCol)
       .def("getColEntries", &highs_getColEntries)
+      .def("getColIntegrality", &highs_getColIntegrality)
       .def("getRow", &highs_getRow)
       .def("getRowEntries", &highs_getRowEntries)
 
       .def("getCols", &highs_getCols)
       .def("getColsEntries", &highs_getColsEntries)
+
       .def("getRows", &highs_getRows)
       .def("getRowsEntries", &highs_getRowsEntries)
 
