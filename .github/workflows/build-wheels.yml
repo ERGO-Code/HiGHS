@@ -29,7 +29,7 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2019, win_amd64]
           - [windows-2019, win32]
-        python: ["cp38", "cp39","cp310", "cp311","cp312"]
+        python: ["cp38", "cp39", "cp310", "cp311", "cp312", "cp313"]
 
     steps:
       - uses: actions/checkout@v4
