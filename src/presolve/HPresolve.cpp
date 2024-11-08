@@ -4380,7 +4380,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   return Result::kOk;
 }
 
-HPresolve::Result HPresolve::removeSlacks(HighsPostsolveStack& postsolve_stack) {
+HPresolve::Result HPresolve::removeSlacks(
+    HighsPostsolveStack& postsolve_stack) {
   // singletonColumns data structure appears not to be retained
   // throughout presolve
   //
@@ -4399,7 +4400,10 @@ HPresolve::Result HPresolve::removeSlacks(HighsPostsolveStack& postsolve_stack) 
     double cost = model->col_cost_[iCol];
     double rhs = model->row_lower_[iRow];
     double coeff = Avalue[coliter];
-    printf("Col %d is continuous and is singleton in equality row %d with cost %g, bounds [%g, %g], coeff %g and RHS = %g\n", int(iCol), int(iRow), cost, lower, upper, coeff, rhs);
+    printf(
+        "Col %d is continuous and is singleton in equality row %d with cost "
+        "%g, bounds [%g, %g], coeff %g and RHS = %g\n",
+        int(iCol), int(iRow), cost, lower, upper, coeff, rhs);
     if (unit_coeff_only && std::fabs(coeff) != 1.0) continue;
     assert(coeff);
     // Slack is s = (rhs - a^Tx)/coeff
@@ -4409,26 +4413,27 @@ HPresolve::Result HPresolve::removeSlacks(HighsPostsolveStack& postsolve_stack) 
     // For coeff > 0 [rhs - coeff * upper, rhs - coeff * lower]
     //
     // For coeff < 0 [rhs - coeff * lower, rhs - coeff * upper]
-    model->row_lower_[iRow] = coeff > 0 ? rhs - coeff * upper : rhs - coeff * lower;
-    model->row_upper_[iRow] = coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
+    model->row_lower_[iRow] =
+        coeff > 0 ? rhs - coeff * upper : rhs - coeff * lower;
+    model->row_upper_[iRow] =
+        coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
     if (cost) {
       // Cost is (cost * rhs / coeff) + (col_cost - (cost/coeff) row_values)^Tx
       double multiplier = cost / coeff;
       for (const HighsSliceNonzero& nonzero : getRowVector(iRow)) {
-	HighsInt local_iCol = nonzero.index();
-	double local_value = nonzero.value();
-	model->col_cost_[local_iCol] -= multiplier * local_value;
+        HighsInt local_iCol = nonzero.index();
+        double local_value = nonzero.value();
+        model->col_cost_[local_iCol] -= multiplier * local_value;
       }
       model->offset_ += multiplier * rhs;
     }
-    // 
-    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, cost, lower, upper, //coeff,
-					 getRowVector(iRow),
-					 getColumnVector(iCol));
+    //
+    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, cost,
+                                         getRowVector(iRow));
+
     markColDeleted(iCol);
 
     unlink(coliter);
-    
   }
   return Result::kOk;
 }

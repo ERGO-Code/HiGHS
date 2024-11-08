@@ -508,7 +508,7 @@ struct HighsOptionsStruct {
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
         presolve_rule_logging(false),
-	presolve_remove_slacks(false),
+        presolve_remove_slacks(false),
         simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
         simplex_initial_condition_tolerance(0.0),
@@ -1326,9 +1326,9 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "presolve_remove_slacks", "Remove slacks after presolve",
-        advanced, &presolve_remove_slacks, true);//false);
+    record_bool = new OptionRecordBool("presolve_remove_slacks",
+                                       "Remove slacks after presolve", advanced,
+                                       &presolve_remove_slacks, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(

@@ -1353,9 +1353,7 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
 
 void HighsPostsolveStack::SlackColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
-    const std::vector<Nonzero>& colValues, HighsSolution& solution,
-    HighsBasis& basis) {
-
+    HighsSolution& solution, HighsBasis& basis) {
   // Taken from HighsPostsolveStack::FreeColSubstitution::undo(
   //
   // a (removed) cut may have been used in this reduction.
@@ -1378,33 +1376,47 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
 
   assert(colCoef != 0);
   // Row values aren't fully postsolved, so why do this?
-  if (isModelRow) solution.row_value[row] =
+  if (isModelRow)
+    solution.row_value[row] =
         double(rowValue + colCoef * solution.col_value[col]);
-  printf("HighsPostsolveStack::SlackColSubstitution::undo rowValue = %g\n", double(rowValue));
+
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
+  printf(
+      "\nHighsPostsolveStack::SlackColSubstitution::undo rowValue = %g; "
+      "colValue = %g\n",
+      double(rowValue), solution.col_value[col]);
 
   // if no dual values requested, return here
   if (!solution.dual_valid) return;
 
   // compute the row dual value such that reduced cost of basic column is 0
+  double save_row_dual = solution.row_dual[row];
   if (isModelRow) {
     solution.row_dual[row] = 0;
-    HighsCDouble dualval = colCost;
-    for (const auto& colVal : colValues) {
-      if (static_cast<size_t>(colVal.index) < solution.row_dual.size())
-        dualval -= colVal.value * solution.row_dual[colVal.index];
-    }
+    HighsCDouble dualval = HighsCDouble(colCost);
+    dualval = -colCoef * solution.row_dual[row];
     solution.row_dual[row] = double(dualval / colCoef);
   }
 
   solution.col_dual[col] = 0;
+  printf(
+      "HighsPostsolveStack::SlackColSubstitution::undo OgRowDual = %g; rowDual "
+      "= %g; colDual = %g\n",
+      save_row_dual, solution.row_dual[row], solution.col_dual[col]);
 
   // set basis status if necessary
   if (!basis.valid) return;
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
+  HighsBasisStatus save_row_basis_status = basis.row_status[row];
   if (isModelRow)
-    basis.row_status[row] = computeRowStatus(solution.row_dual[row], RowType::kEq);
+    basis.row_status[row] =
+        computeRowStatus(solution.row_dual[row], RowType::kEq);
+  printf(
+      "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %d; "
+      "RowStatus = %d; ColStatus = %d\n",
+      int(save_row_basis_status), int(basis.row_status[row]),
+      int(basis.col_status[col]));
 }
 
 }  // namespace presolve

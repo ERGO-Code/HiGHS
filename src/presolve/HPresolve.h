@@ -270,7 +270,7 @@ class HPresolve {
   Result presolve(HighsPostsolveStack& postsolve_stack);
 
   Result removeSlacks(HighsPostsolveStack& postsolve_stack);
-  
+
   Result checkLimits(HighsPostsolveStack& postsolve_stack);
 
   void storeCurrentProblemSize();
