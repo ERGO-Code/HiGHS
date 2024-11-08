@@ -274,6 +274,8 @@ if (BUILD_CXX)
       message(STATUS "IPO / LTO is not supported at the moment when PDLP is using GPU: LTO disabled.")
   endif()
 
+endif()
+
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
