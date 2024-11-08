@@ -1351,4 +1351,52 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
   primalSol[col] = primalSol[col] + colScale * primalSol[duplicateCol];
 }
 
+void HighsPostsolveStack::SlackColSubstitution::undo(
+    const HighsOptions& options, const std::vector<Nonzero>& rowValues,
+    const std::vector<Nonzero>& colValues, HighsSolution& solution,
+    HighsBasis& basis) {
+  // a (removed) cut may have been used in this reduction.
+  bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
+
+  // compute primal values
+  double colCoef = 0;
+  HighsCDouble rowValue = 0;
+  for (const auto& rowVal : rowValues) {
+    if (rowVal.index == col)
+      colCoef = rowVal.value;
+    else
+      rowValue += rowVal.value * solution.col_value[rowVal.index];
+  }
+
+  assert(colCoef != 0);
+  // Row values aren't fully postsolved, so why do this?
+  if (isModelRow)
+    solution.row_value[row] =
+        double(rowValue + colCoef * solution.col_value[col]);
+  solution.col_value[col] = double((rhs - rowValue) / colCoef);
+
+  // if no dual values requested, return here
+  if (!solution.dual_valid) return;
+
+  // compute the row dual value such that reduced cost of basic column is 0
+  if (isModelRow) {
+    solution.row_dual[row] = 0;
+    HighsCDouble dualval = colCost;
+    for (const auto& colVal : colValues) {
+      if (static_cast<size_t>(colVal.index) < solution.row_dual.size())
+        dualval -= colVal.value * solution.row_dual[colVal.index];
+    }
+    solution.row_dual[row] = double(dualval / colCoef);
+  }
+
+  solution.col_dual[col] = 0;
+
+  // set basis status if necessary
+  if (!basis.valid) return;
+
+  basis.col_status[col] = HighsBasisStatus::kBasic;
+  if (isModelRow)
+    basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
+}
+
 }  // namespace presolve

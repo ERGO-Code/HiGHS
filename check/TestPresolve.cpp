@@ -616,7 +616,7 @@ TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1, 1};
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.presolve() == HighsStatus::kOk);
   REQUIRE(h.getPresolvedLp().num_col_ == 0);
@@ -636,6 +636,6 @@ TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.presolve() == HighsStatus::kOk);
-  //  REQUIRE(h.getPresolvedLp().num_col_ == 0);
-  //  REQUIRE(h.getPresolvedLp().num_row_ == 0);
+  REQUIRE(h.getPresolvedLp().num_col_ == 2);
+  REQUIRE(h.getPresolvedLp().num_row_ == 2);
 }
