@@ -4429,6 +4429,8 @@ HPresolve::Result HPresolve::removeSlacks(
     }
     //
     postsolve_stack.slackColSubstitution(iRow, iCol, rhs, cost,
+					 lower,
+					 upper,
                                          getRowVector(iRow));
 
     markColDeleted(iCol);

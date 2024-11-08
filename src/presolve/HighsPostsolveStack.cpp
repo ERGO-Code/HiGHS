@@ -13,6 +13,7 @@
 #include <numeric>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsModelUtils.h" // For debugging
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsUtils.h"
@@ -1381,42 +1382,54 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
         double(rowValue + colCoef * solution.col_value[col]);
 
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
+  double rowLower = colCoef > 0 ? rhs - colCoef * slackUpper : rhs - colCoef * slackLower;
+  double rowUpper = colCoef > 0 ? rhs - colCoef * slackLower : rhs - colCoef * slackUpper;
+    
   printf(
-      "\nHighsPostsolveStack::SlackColSubstitution::undo rowValue = %g; "
-      "colValue = %g\n",
-      double(rowValue), solution.col_value[col]);
+      "\nHighsPostsolveStack::SlackColSubstitution::undo rowValue = %11.5g; "
+      "bounds [%11.5g, %11.5g] colCoef = %11.6g\n",
+      double(rowValue), rowLower, rowUpper, colCoef);
+  printf(
+      "HighsPostsolveStack::SlackColSubstitution::undo colValue = %11.5g, bounds [%11.5g, %11.5g]\n",
+      solution.col_value[col], slackLower, slackUpper);
 
-  // if no dual values requested, return here
+  // If no dual values requested, return here
   if (!solution.dual_valid) return;
 
-  // compute the row dual value such that reduced cost of basic column is 0
-  double save_row_dual = solution.row_dual[row];
+  // Row retains its dual value, and column has this dual value scaled by coeff
   if (isModelRow) {
-    solution.row_dual[row] = 0;
-    HighsCDouble dualval = HighsCDouble(colCost);
-    dualval = -colCoef * solution.row_dual[row];
-    solution.row_dual[row] = double(dualval / colCoef);
+    solution.col_dual[col] = - solution.row_dual[row] / colCoef;
+    printf(
+	   "HighsPostsolveStack::SlackColSubstitution::undo rowDual = %11.5g; colDual = %11.5g\n",
+	   solution.row_dual[row], solution.col_dual[col]);
   }
 
-  solution.col_dual[col] = 0;
-  printf(
-      "HighsPostsolveStack::SlackColSubstitution::undo OgRowDual = %g; rowDual "
-      "= %g; colDual = %g\n",
-      save_row_dual, solution.row_dual[row], solution.col_dual[col]);
-
-  // set basis status if necessary
+  // Set basis status if necessary
   if (!basis.valid) return;
 
-  basis.col_status[col] = HighsBasisStatus::kBasic;
-  HighsBasisStatus save_row_basis_status = basis.row_status[row];
-  if (isModelRow)
-    basis.row_status[row] =
-        computeRowStatus(solution.row_dual[row], RowType::kEq);
-  printf(
-      "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %d; "
-      "RowStatus = %d; ColStatus = %d\n",
-      int(save_row_basis_status), int(basis.row_status[row]),
-      int(basis.col_status[col]));
+  // If row is basic, then slack is basic, otherwise row retains its status 
+  if (isModelRow) {
+    HighsBasisStatus save_row_basis_status = basis.row_status[row];
+    if (basis.row_status[row] == HighsBasisStatus::kBasic) {
+      basis.col_status[col] = HighsBasisStatus::kBasic;
+      basis.row_status[row] = computeRowStatus(solution.row_dual[row], RowType::kEq);
+    } else if (basis.row_status[row] == HighsBasisStatus::kLower) {
+      basis.col_status[col] = colCoef > 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+    } else {
+      basis.col_status[col] = colCoef > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+    }
+    printf("HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
+	   "RowStatus = %s; ColStatus = %s\n",
+	   utilBasisStatusToString(save_row_basis_status).c_str(), utilBasisStatusToString(basis.row_status[row]).c_str(),
+	   utilBasisStatusToString(basis.col_status[col]).c_str());
+    if (basis.col_status[col] == HighsBasisStatus::kLower) {
+      assert(solution.col_dual[col] > 0);
+    } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
+      assert(solution.col_dual[col] < 0);
+    }
+  } else {
+    basis.col_status[col] = HighsBasisStatus::kNonbasic;
+  }
 }
 
 }  // namespace presolve

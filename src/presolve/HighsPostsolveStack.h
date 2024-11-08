@@ -222,6 +222,8 @@ class HighsPostsolveStack {
   struct SlackColSubstitution {
     double rhs;
     double colCost;
+    double slackLower;
+    double slackUpper;
     HighsInt row;
     HighsInt col;
 
@@ -338,12 +340,15 @@ class HighsPostsolveStack {
   template <typename RowStorageFormat>
   void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
                             double colCost,
+			    double slackLower, double slackUpper,
                             const HighsMatrixSlice<RowStorageFormat>& rowVec) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : rowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
 
-    reductionValues.push(SlackColSubstitution{rhs, colCost, origRowIndex[row],
+    reductionValues.push(SlackColSubstitution{rhs, colCost,
+			     slackLower,  slackUpper,
+					      origRowIndex[row],
                                               origColIndex[col]});
     reductionValues.push(rowValues);
     reductionAdded(ReductionType::kSlackColSubstitution);
