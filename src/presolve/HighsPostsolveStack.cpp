@@ -1356,11 +1356,14 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
     HighsBasis& basis) {
 
-    assert(111==222);
-    
-
-
+  // Taken from HighsPostsolveStack::FreeColSubstitution::undo(
+  //
   // a (removed) cut may have been used in this reduction.
+  //
+  // May have to determine row dual and basis status unless doing
+  // primal-only transformation in MIP solver, in which case row may
+  // no longer exist if it corresponds to a removed cut, so have to
+  // avoid exceeding array bounds of solution.row_value
   bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
 
   // compute primal values
@@ -1375,9 +1378,9 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
 
   assert(colCoef != 0);
   // Row values aren't fully postsolved, so why do this?
-  if (isModelRow)
-    solution.row_value[row] =
+  if (isModelRow) solution.row_value[row] =
         double(rowValue + colCoef * solution.col_value[col]);
+  printf("HighsPostsolveStack::SlackColSubstitution::undo rowValue = %g\n", double(rowValue));
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
 
   // if no dual values requested, return here

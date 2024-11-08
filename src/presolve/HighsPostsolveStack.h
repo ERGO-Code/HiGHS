@@ -224,7 +224,7 @@ class HighsPostsolveStack {
     double colCost;
     double colLower;
     double colUpper;
-    double colCoeff;
+    //    double colCoeff;
     HighsInt row;
     HighsInt col;
 
@@ -339,16 +339,22 @@ class HighsPostsolveStack {
     reductionAdded(ReductionType::kFreeColSubstitution);
   }
 
-  template <typename ColStorageFormat>
+  template <typename RowStorageFormat, typename ColStorageFormat>
   void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
-			    double colCost, double colLower, double colUpper, double colCoeff, 
+			    double colCost, double colLower, double colUpper, //double colCoeff,
+			    const HighsMatrixSlice<RowStorageFormat>& rowVec, 
 			    const HighsMatrixSlice<ColStorageFormat>& colVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(SlackColSubstitution{rhs, colCost, colLower, colUpper, colCoeff, origRowIndex[row],
-                                             origColIndex[col]});
+    reductionValues.push(SlackColSubstitution{rhs, colCost, colLower, colUpper, //colCoeff,
+					      origRowIndex[row],
+					      origColIndex[col]});
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kSlackColSubstitution);
