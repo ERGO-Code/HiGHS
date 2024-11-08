@@ -1355,6 +1355,11 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
     HighsBasis& basis) {
+
+    assert(111==222);
+    
+
+
   // a (removed) cut may have been used in this reduction.
   bool isModelRow = static_cast<size_t>(row) < solution.row_value.size();
 
@@ -1396,7 +1401,7 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
 
   basis.col_status[col] = HighsBasisStatus::kBasic;
   if (isModelRow)
-    basis.row_status[row] = computeRowStatus(solution.row_dual[row], rowType);
+    basis.row_status[row] = computeRowStatus(solution.row_dual[row], RowType::kEq);
 }
 
 }  // namespace presolve

@@ -1252,7 +1252,7 @@ HighsStatus Highs::run() {
     bool have_optimal_solution = false;
     // ToDo Put solution of presolved problem in a separate method
     
-    if (!this->options_.presolve_remove_slacks) {
+    //    if (!this->options_.presolve_remove_slacks) {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
       HighsInt num_double_slack = 0;
       HighsInt num_slack = 0;
@@ -1271,19 +1271,20 @@ HighsStatus Highs::run() {
 	  continue;
 	}
 	if (reduced_lp.row_lower_[iRow] != reduced_lp.row_upper_[iRow]) continue;
+	num_slack++;
+	printf("Column %d is slack\n", int(iCol));
 	double coeff = std::fabs(reduced_lp.a_matrix_.value_[reduced_lp.a_matrix_.start_[iCol]]);
 	if (coeff == 1.0) num_unit_coeff_slack++;
 	min_slack_coeff = std::min(coeff,min_slack_coeff);
 	max_slack_coeff = std::max(coeff,max_slack_coeff);
 	found_slack[iRow] = true;
-	num_slack++;
 	if (reduced_lp.col_cost_[iCol] == 0) num_zero_cost_slack++;
       }
       printf("grepSlack,model,col,slack,unit coeff,zero_cost,double,min coeff, max_coeff\n");
       printf("grepSlack,%s,%d, %d, %d, %d, %d, %g, %g\n", this->model_.lp_.model_name_.c_str(),
 	     int(reduced_lp.num_col_), int(num_slack), int(num_unit_coeff_slack), int(num_zero_cost_slack), int(num_double_slack),
 	     min_slack_coeff, max_slack_coeff);
-    }
+      //    }
 
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
