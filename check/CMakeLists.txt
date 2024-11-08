@@ -13,6 +13,19 @@ if (FORTRAN)
         ${HIGHS_SOURCE_DIR}/check)
 endif()
 
+if (CUPLDP_GPU)
+    # add a test
+    add_executable(testcudalin ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cuda_linalg.c)
+    add_executable(testcublas ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cublas.c)
+
+    set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
+    target_link_libraries(testcudalin PRIVATE highs ${CUDA_LIBRARY})
+
+    set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    target_link_libraries(testcublas PRIVATE highs ${CUDA_LIBRARY})
+endif()
+
 if (NOT FAST_BUILD OR ALL_TESTS)
   # prepare Catch library
   set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)

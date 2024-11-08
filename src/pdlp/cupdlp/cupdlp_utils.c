@@ -384,6 +384,15 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     }
     if (scaling) {
       // scaling_clear(scaling);
+      if (scaling->colScale) {
+        // cupdlp_free(scaling->colScale);
+        CUPDLP_FREE_VEC(scaling->colScale);  // now on gpu
+      }
+      if (scaling->rowScale) {
+        // cupdlp_free(scaling->rowScale);
+        CUPDLP_FREE_VEC(scaling->rowScale);  // now on gpu
+      }
+      // cupdlp_free(scaling);
       scaling = cupdlp_NULL;
     }
     cupdlp_free(w);
@@ -1318,7 +1327,14 @@ exit_cleanup:
 
 cupdlp_retcode csc_create(CUPDLPcsc **csc) {
   cupdlp_retcode retcode = RETCODE_OK;
+#ifdef CUPDLP_CPU
   CUPDLP_INIT_CSC_MATRIX(*csc, 1);
+#else
+  // CUPDLP_INIT(*csc, 1);
+  // (*csc) = typeof(CUPDLPcsc) (malloc((1) * sizeof(CUPDLPcsc)); 
+  (*csc) = (typeof(*csc))malloc((1) * sizeof(typeof(**csc))); if ((*csc) == 0) { retcode = (1); goto exit_cleanup; }
+  // if ((*csc) == 0) { retcode = (1); goto exit_cleanup; } 
+#endif
 
 exit_cleanup:
   return retcode;
@@ -1405,9 +1421,22 @@ cupdlp_retcode csc_alloc_matrix(CUPDLPcsc *csc, cupdlp_int nRows,
     default:
       break;
   }
+
+#ifndef CUPDLP_CPU
+  cusparseStatus_t status = cudaMalloc((void **)&(csc->colMatBeg), (nCols + 1) * sizeof(int));       
+  cusparseStatus_t status2 = cudaMalloc((void **)&(csc->colMatIdx), (nnz) * sizeof(int));       
+  cusparseStatus_t status3 = cudaMalloc((void **)&(csc->colMatElem), (nnz) * sizeof(double));       
+  if (status || status2 || status3) return 2;
+
+  status = cudaMemset(csc->colMatBeg, 0, (nCols + 1) * sizeof(int));        
+  status2 = cudaMemset(csc->colMatIdx, 0, (nnz) * sizeof(int));        
+  status3 = cudaMemset(csc->colMatElem, 0, (nnz) * sizeof(double));        
+  if (status || status2 || status3) return 2;
+#else
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
   CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
   CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
+#endif
 
   switch (src_matrix_format) {
     case DENSE:

@@ -48,18 +48,35 @@ install(FILES ${PROJECT_BINARY_DIR}/highs_export.h
 
 string (TOLOWER ${PROJECT_NAME} lower)
 
-install(TARGETS highs
-   EXPORT ${lower}-targets
-   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-  
-# Add library targets to the build-tree export set
-export(TARGETS highs
-  NAMESPACE ${PROJECT_NAMESPACE}::highs
-  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+# if (NOT CUPDLP_GPU)
+    install(TARGETS highs
+      EXPORT ${lower}-targets
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+      
+    # Add library targets to the build-tree export set
+    export(TARGETS highs
+      NAMESPACE ${PROJECT_NAMESPACE}::highs
+      FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+# else()
+
+#     install(TARGETS highs cudalin
+#       EXPORT ${lower}-targets
+#       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
+#       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#       PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+      
+#     # Add library targets to the build-tree export set
+#     export(TARGETS highs cudalin
+#       NAMESPACE ${PROJECT_NAMESPACE}::highs
+#       FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+# endif()
+
 
 install(EXPORT ${lower}-targets
   NAMESPACE ${PROJECT_NAMESPACE}::

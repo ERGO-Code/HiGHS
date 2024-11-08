@@ -4,6 +4,7 @@
 #cmakedefine FAST_BUILD
 #cmakedefine ZLIB_FOUND
 #cmakedefine CUPDLP_CPU
+#cmakedefine CUPDLP_GPU
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine CMAKE_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
 #cmakedefine HIGHSINT64

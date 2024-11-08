@@ -43,6 +43,12 @@ set(cupdlp_headers_python
   src/pdlp/cupdlp/cupdlp_step.h
   src/pdlp/cupdlp/cupdlp_utils.c)
 
+set(cuda_sources_python
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu)
+
 set(basiclu_sources_python
   src/ipm/basiclu/basiclu_factorize.c
   src/ipm/basiclu/basiclu_get_factors.c

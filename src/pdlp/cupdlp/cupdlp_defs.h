@@ -1,7 +1,7 @@
 #ifndef CUPDLP_H_GUARD
 #define CUPDLP_H_GUARD
 
-#define CUPDLP_CPU
+// #define CUPDLP_CPU
 #define CUPDLP_DEBUG (0)
 #define CUPDLP_TIMER
 
@@ -9,6 +9,7 @@
 #include "cuda/cupdlp_cuda_kernels.cuh"
 #include "cuda/cupdlp_cudalinalg.cuh"
 #endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

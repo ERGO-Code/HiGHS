@@ -177,6 +177,17 @@ else()
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
+  
+  # Optional Cuda 
+  if (CUPDLP_GPU)
+    enable_language(CXX CUDA)
+    target_sources(highs PRIVATE ${cuda_sources})
+
+    set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+    target_link_libraries(highs ${CUDA_LIBRARY} m)
+  endif()
+
   target_include_directories(highs PRIVATE ${include_dirs})
 
   if(MSVC)

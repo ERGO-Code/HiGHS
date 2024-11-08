@@ -45,6 +45,15 @@ target_link_libraries(_core PRIVATE pybind11::headers)
 # sources for python 
 target_sources(_core PUBLIC ${sources_python} ${headers_python})
 
+if (CUPDLP_GPU)
+    enable_language(CXX CUDA)
+    target_sources(_core PRIVATE ${cuda_sources_python})
+
+    target_include_directories(_core PUBLIC "/usr/local/cuda/include")
+    set_target_properties(_core PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+endif()
+
+
 # include directories for python 
 target_include_directories(_core PUBLIC ${include_dirs_python})
 
