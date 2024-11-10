@@ -1252,6 +1252,7 @@ HighsStatus Highs::run() {
     // Run solver.
     bool have_optimal_solution = false;
     // ToDo Put solution of presolved problem in a separate method
+
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1527,6 +1528,10 @@ HighsStatus Highs::run() {
             options_ = save_options;
             if (return_status == HighsStatus::kError)
               return returnFromRun(return_status, undo_mods);
+            if (postsolve_iteration_count > 0)
+              highsLogUser(options_.log_options, HighsLogType::kInfo,
+                           "Required %d simplex iterations after postsolve\n",
+                           int(postsolve_iteration_count));
           }
         } else {
           highsLogUser(log_options, HighsLogType::kError,

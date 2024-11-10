@@ -219,6 +219,16 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
+  struct SlackColSubstitution {
+    double rhs;
+    HighsInt row;
+    HighsInt col;
+
+    void undo(const HighsOptions& options,
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -234,6 +244,7 @@ class HighsPostsolveStack {
     kForcingColumnRemovedRow,
     kDuplicateRow,
     kDuplicateColumn,
+    kSlackColSubstitution,
   };
 
   HighsDataStack reductionValues;
@@ -321,6 +332,19 @@ class HighsPostsolveStack {
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFreeColSubstitution);
+  }
+
+  template <typename RowStorageFormat>
+  void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
+                            const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(
+        SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kSlackColSubstitution);
   }
 
   template <typename ColStorageFormat>
@@ -710,6 +734,13 @@ class HighsPostsolveStack {
           reduction.undo(options, solution, basis);
           break;
         }
+        case ReductionType::kSlackColSubstitution: {
+          SlackColSubstitution reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         default:
           printf("Reduction case %d not handled\n",
                  int(reductions[i - 1].first));
@@ -886,6 +917,13 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+        }
+        case ReductionType::kSlackColSubstitution: {
+          SlackColSubstitution reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
         }
       }
     }

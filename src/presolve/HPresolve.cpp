@@ -4307,6 +4307,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       break;
     }
 
+    // Now consider removing slacks
+    if (options->presolve_remove_slacks)
+      HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
+
     report();
   } else {
     highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -4319,6 +4323,56 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
   assert(analysis_.analysePresolveRuleLog());
   // Possibly report presolve log
   analysis_.analysePresolveRuleLog(true);
+  return Result::kOk;
+}
+
+HPresolve::Result HPresolve::removeSlacks(
+    HighsPostsolveStack& postsolve_stack) {
+  // SingletonColumns data structure appears not to be retained
+  // throughout presolve
+  for (HighsInt iCol = 0; iCol != model->num_col_; ++iCol) {
+    if (colDeleted[iCol]) continue;
+    if (colsize[iCol] != 1) continue;
+    if (model->integrality_[iCol] == HighsVarType::kInteger) continue;
+    HighsInt coliter = colhead[iCol];
+    HighsInt iRow = Arow[coliter];
+    assert(Acol[coliter] == iCol);
+    assert(!rowDeleted[iRow]);
+    if (model->row_lower_[iRow] != model->row_upper_[iRow]) continue;
+    double lower = model->col_lower_[iCol];
+    double upper = model->col_upper_[iCol];
+    double cost = model->col_cost_[iCol];
+    double rhs = model->row_lower_[iRow];
+    double coeff = Avalue[coliter];
+    assert(coeff);
+    // Slack is s = (rhs - a^Tx)/coeff
+    //
+    // Constraint bounds become:
+    //
+    // For coeff > 0 [rhs - coeff * upper, rhs - coeff * lower]
+    //
+    // For coeff < 0 [rhs - coeff * lower, rhs - coeff * upper]
+    model->row_lower_[iRow] =
+        coeff > 0 ? rhs - coeff * upper : rhs - coeff * lower;
+    model->row_upper_[iRow] =
+        coeff > 0 ? rhs - coeff * lower : rhs - coeff * upper;
+    if (cost) {
+      // Cost is (cost * rhs / coeff) + (col_cost - (cost/coeff) row_values)^Tx
+      double multiplier = cost / coeff;
+      for (const HighsSliceNonzero& nonzero : getRowVector(iRow)) {
+        HighsInt local_iCol = nonzero.index();
+        double local_value = nonzero.value();
+        model->col_cost_[local_iCol] -= multiplier * local_value;
+      }
+      model->offset_ += multiplier * rhs;
+    }
+    //
+    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, getRowVector(iRow));
+
+    markColDeleted(iCol);
+
+    unlink(coliter);
+  }
   return Result::kOk;
 }
 

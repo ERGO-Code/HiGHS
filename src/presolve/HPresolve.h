@@ -268,6 +268,8 @@ class HPresolve {
 
   Result presolve(HighsPostsolveStack& postsolve_stack);
 
+  Result removeSlacks(HighsPostsolveStack& postsolve_stack);
+
   Result checkTimeLimit();
 
   Result checkLimits(HighsPostsolveStack& postsolve_stack);
