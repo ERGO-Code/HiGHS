@@ -21,6 +21,228 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
+HighsStatus Highs::formStandardFormLp() {
+  this->clearStandardFormLp();
+  HighsLp& lp = this->model_.lp_;
+  HighsSparseMatrix& matrix = lp.a_matrix_;
+  // Ensure that the incumbent LP and standard form LP matrices are rowwise
+  matrix.ensureRowwise();
+  // Original rows are processed before columns, so that any original
+  // boxed rows can be transformed to pairs of one-sided rows,
+  // requiring the standard form matrix to be row-wise. The original
+  // columns are assumed to come before any new columns, so their
+  // costs (as a minimization) must be defined befor costs of new
+  // columns.
+  // Determine the objective scaling, and apply it to any offset
+  HighsInt sense = HighsInt(lp.sense_);
+  this->standard_form_offset_ = sense * lp.offset_;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    this->standard_form_cost_.push_back(sense * lp.col_cost_[iCol]);
+  this->standard_form_matrix_.format_ = MatrixFormat::kRowwise;
+  this->standard_form_matrix_.num_col_ = lp.num_col_;
+  // Create a HighsSparseMatrix instance to store rows extracted from
+  // the original constraint matrix
+  HighsInt local_row_min_nnz = std::max(lp.num_col_, HighsInt(2));
+  HighsSparseMatrix local_row;
+  local_row.ensureRowwise();
+  local_row.num_row_ = 1;
+  local_row.num_col_ = lp.num_col_;
+  local_row.index_.resize(local_row_min_nnz);
+  local_row.value_.resize(local_row_min_nnz);
+  local_row.start_.resize(2);
+  HighsInt& num_nz = local_row.start_[1];
+  local_row.start_[0] = 0;
+  HighsInt num_fixed_row = 0;
+  HighsInt num_boxed_row = 0;
+  HighsInt num_lower_row = 0;
+  HighsInt num_upper_row = 0;
+  HighsInt num_free_row = 0;
+  HighsInt num_fixed_col = 0;
+  HighsInt num_boxed_col = 0;
+  HighsInt num_lower_col = 0;
+  HighsInt num_upper_col = 0;
+  HighsInt num_free_col = 0;
+  std::vector<HighsInt> slack_ix;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      assert(0 == 1);
+      // Free row
+      num_free_row++;
+      continue;
+    }
+    if (lower == upper) {
+      // Equality row
+      num_fixed_row++;
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+      continue;
+    } else if (lower <= -kHighsInf) {
+      // Upper bounded row, so record the slack
+      num_upper_row++;
+      assert(upper < kHighsInf);
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(standard_form_row + 1);
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    } else if (upper >= kHighsInf) {
+      // Lower bounded row, so record the slack
+      num_lower_row++;
+      assert(lower > -kHighsInf);
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(-(standard_form_row + 1));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lower);
+    } else {
+      // Boxed row, so record the lower slack
+      assert(lower > -kHighsInf);
+      assert(upper < kHighsInf);
+      num_boxed_row++;
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(-(standard_form_row + 1));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lower);
+      // .. and upper slack, adding a copy of the row
+      standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(standard_form_row + 1);
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    }
+  }
+  // Add rows corresponding to boxed columns
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf && upper < kHighsInf) {
+      // Boxed column
+      //
+      // x will be replaced by x = l + X (below) with X >= 0
+      //
+      // Introduce variable s >= 0 so that (with x >= l still)
+      //
+      // x = u - s => x + s = u
+      this->standard_form_cost_.push_back(0);
+      this->standard_form_matrix_.num_col_++;
+      local_row.num_col_++;
+      local_row.index_[0] = iCol;
+      local_row.index_[1] = this->standard_form_matrix_.num_col_ - 1;
+      local_row.value_[0] = 1;
+      local_row.value_[1] = 1;
+      local_row.start_[1] = 2;
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    }
+  }
+  // Finished with both matrices, row-wise, so ensure that the
+  // incumbent matrix leaves col-wise, and that the standard form
+  // matrix is col-wise so RHS shifts can be applied and more columns
+  // can be added
+  matrix.ensureColwise();
+  this->standard_form_matrix_.ensureColwise();
+  // Work through the columns, ensuring that all have non-negativity bounds
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double cost = sense * lp.col_cost_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf) {
+      // Finite lower bound
+      if (upper < kHighsInf) {
+        if (lower == upper) {
+          // Fixed column
+          num_fixed_col++;
+        } else {
+          // Boxed column
+          num_boxed_col++;
+        }
+      } else {
+        // Lower column
+        num_lower_col++;
+      }
+      if (lower != 0) {
+        // x >= l, so shift x-l = X >= 0, giving x = X + l
+        //
+        // Cost contribution c(X+l) = cX + cl
+        this->standard_form_offset_ += cost * lower;
+        // Constraint contribution a(X+l) = aX + al
+        for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+             iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++)
+          this->standard_form_rhs_[this->standard_form_matrix_.index_[iEl]] -=
+              this->standard_form_matrix_.value_[iEl] * lower;
+      }
+    } else if (upper < kHighsInf) {
+      // Upper column
+      num_upper_col++;
+      // Have to operate even if u=0, since cost and column values are negated
+      //
+      // x <= u, so shift u-x = X >= 0, giving x = u - X
+      //
+      // Cost contribution c(u-X) = cu - cX
+      this->standard_form_offset_ += cost * upper;
+      this->standard_form_cost_[iCol] = -cost;
+      // Constraint contribution a(u-X) = -aX + au
+      for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+           iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++) {
+        this->standard_form_rhs_[this->standard_form_matrix_.index_[iEl]] -=
+            this->standard_form_matrix_.value_[iEl] * upper;
+        this->standard_form_matrix_.value_[iEl] =
+            -this->standard_form_matrix_.value_[iEl];
+      }
+    } else {
+      // Free column
+      num_free_col++;
+      // Represent as x = x+ - x-
+      //
+      // where original column is now x+ >= 0
+      //
+      // and x- >= 0 has negation of its cost and matrix column
+      this->standard_form_cost_.push_back(-cost);
+      for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+           iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++) {
+        this->standard_form_matrix_.index_.push_back(
+            this->standard_form_matrix_.index_[iEl]);
+        this->standard_form_matrix_.value_.push_back(
+            -this->standard_form_matrix_.value_[iEl]);
+      }
+      this->standard_form_matrix_.start_.push_back(
+          HighsInt(this->standard_form_matrix_.index_.size()));
+    }
+  }
+  // Now add the slack variables
+  for (HighsInt iX = 0; iX < HighsInt(slack_ix.size()); iX++) {
+    HighsInt iRow = slack_ix[iX];
+    this->standard_form_cost_.push_back(0);
+    if (iRow > 0) {
+      this->standard_form_matrix_.index_.push_back(iRow - 1);
+      this->standard_form_matrix_.value_.push_back(1);
+    } else {
+      this->standard_form_matrix_.index_.push_back(-iRow - 1);
+      this->standard_form_matrix_.value_.push_back(-1);
+    }
+    this->standard_form_matrix_.start_.push_back(
+        HighsInt(this->standard_form_matrix_.index_.size()));
+  }
+  this->standard_form_valid_ = true;
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Standard form LP obtained for LP with (free / lower / upper / "
+               "boxed / fixed) variables"
+               " (%d / %d / %d / %d / %d) and constraints"
+               " (%d / %d / %d / %d / %d) \n",
+               int(num_free_col), int(num_lower_col), int(num_upper_col),
+               int(num_boxed_col), int(num_fixed_col), int(num_free_row),
+               int(num_lower_row), int(num_upper_row), int(num_boxed_row),
+               int(num_fixed_row));
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
   assert(!lp.isMip() || options_.solve_relaxation);
@@ -1485,16 +1707,121 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
-  if (has_dual_ray && dual_ray_value != NULL) {
-    vector<double> rhs;
-    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
-    rhs.assign(num_row, 0);
-    rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
-    HighsInt* dual_ray_num_nz = 0;
-    basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+
+  // Declare identifiers to save column costs, integrality, any Hessian and the
+  // presolve setting, and a flag to know when they should be
+  // recovered
+  std::vector<double> col_cost;
+  HighsHessian hessian;
+  bool solve_relaxation;
+  std::string presolve;
+  bool solve_feasibility_problem = false;
+  const bool is_qp = model_.isQp();
+
+  if (dual_ray_value != NULL) {
+    // User wants a dual ray whatever
+    if (!has_dual_ray || !has_invert) {
+      // No dual ray is known, or no INVERT to compute it
+      //
+      // No point in trying to get a dual ray if the model status is
+      // optimal
+      if (this->model_status_ == HighsModelStatus::kOptimal) {
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Model status is optimal, so no dual ray is available\n");
+        return return_status;
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP to try to compute dual ray\n");
+      // Save the column costs, integrality, any Hessian and the
+      // presolve setting
+      col_cost = lp.col_cost_;
+      if (is_qp) hessian = model_.hessian_;
+      this->getOptionValue("presolve", presolve);
+      this->getOptionValue("solve_relaxation", solve_relaxation);
+      solve_feasibility_problem = true;
+      // Zero the costs, integrality and Hessian
+      std::vector<double> zero_costs;
+      zero_costs.assign(lp.num_col_, 0);
+      HighsStatus status =
+          this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
+      assert(status == HighsStatus::kOk);
+      if (is_qp) {
+        HighsHessian zero_hessian;
+        this->passHessian(zero_hessian);
+      }
+      this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
+      HighsStatus call_status = this->run();
+      this->writeSolution("", kSolutionStylePretty);
+      if (call_status != HighsStatus::kOk) return_status = call_status;
+      has_dual_ray = ekk_instance_.status_.has_dual_ray;
+      has_invert = ekk_instance_.status_.has_invert;
+      assert(has_invert);
+    }
+    if (has_dual_ray) {
+      if (ekk_instance_.dual_ray_.size()) {
+        // Dual ray is already computed
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Copying known dual ray\n");
+        for (HighsInt iRow = 0; iRow < num_row; iRow++)
+          dual_ray_value[iRow] = ekk_instance_.dual_ray_[iRow];
+      } else if (has_invert) {
+        // Dual ray is known and can be calculated
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Solving linear system to compute dual ray\n");
+        vector<double> rhs;
+        HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+        rhs.assign(num_row, 0);
+        rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
+        HighsInt* dual_ray_num_nz = 0;
+        basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+        // Now save the dual ray itself
+        ekk_instance_.dual_ray_.resize(num_row);
+        for (HighsInt iRow = 0; iRow < num_row; iRow++)
+          ekk_instance_.dual_ray_[iRow] = dual_ray_value[iRow];
+      } else {
+        assert(!has_invert);
+        // Dual ray is known but cannot be calculated
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "No LP invertible representation to compute dual ray\n");
+        return_status = HighsStatus::kError;
+      }
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No dual ray found\n");
+      return_status = HighsStatus::kOk;
+    }
+  }
+  if (solve_feasibility_problem) {
+    // Feasibility problem has been solved, so any objective-related
+    // information has been lost. Reverting the objective function via
+    // Highs calls clears info_, so better to just copy the data
+    // directly and set the info_ entries that are no longer valid
+    lp.col_cost_ = col_cost;
+    if (is_qp) model_.hessian_ = hessian;
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
+    // Modify the objective-related information
+    this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+    this->info_.objective_function_value = 0;
+    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    this->info_.max_complementarity_violation =
+        kHighsIllegalComplementarityViolation;
+    this->info_.sum_complementarity_violations =
+        kHighsIllegalComplementarityViolation;
+    if (has_dual_ray) {
+      assert(this->info_.num_primal_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kInfeasible);
+    } else {
+      // If someone has tried to get a dual ray for a feasible
+      // problem, then any status of the original model has been lost
+      this->model_status_ = HighsModelStatus::kNotset;
+    }
   }
   return return_status;
 }
@@ -1507,37 +1834,112 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the primal ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  if (model_.isQp()) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Cannot find primal ray for unbounded QP\n");
+    return HighsStatus::kError;
+  }
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
-  if (has_primal_ray && primal_ray_value != NULL) {
-    HighsInt col = ekk_instance_.info_.primal_ray_col_;
-    assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
-    // Get this pivotal column
-    vector<double> rhs;
-    vector<double> column;
-    column.assign(num_row, 0);
-    rhs.assign(num_row, 0);
-    lp.ensureColwise();
-    HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
-    if (col < num_col) {
-      for (HighsInt iEl = lp.a_matrix_.start_[col];
-           iEl < lp.a_matrix_.start_[col + 1]; iEl++)
-        rhs[lp.a_matrix_.index_[iEl]] =
-            primal_ray_sign * lp.a_matrix_.value_[iEl];
+
+  std::string presolve;
+  bool solve_relaxation;
+  bool allow_unbounded_or_infeasible;
+  bool solve_unboundedness_problem = false;
+
+  if (primal_ray_value != NULL) {
+    // User wants a primal ray whatever
+    if (!has_primal_ray || !has_invert) {
+      // No primal ray is known, or no INVERT to compute it
+      //
+      // No point in trying to get a primal ray if the model status is
+      // optimal
+      if (this->model_status_ == HighsModelStatus::kOptimal) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Model status is optimal, so no primal ray is available\n");
+        return return_status;
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP to try to compute primal ray\n");
+      this->getOptionValue("presolve", presolve);
+      this->getOptionValue("solve_relaxation", solve_relaxation);
+      this->getOptionValue("allow_unbounded_or_infeasible",
+                           allow_unbounded_or_infeasible);
+      solve_unboundedness_problem = true;
+      lp.integrality_.clear();
+      this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
+      this->setOptionValue("allow_unbounded_or_infeasible", false);
+      this->writeModel("primal_ray_lp.mps");
+      HighsStatus call_status = this->run();
+      if (call_status != HighsStatus::kOk) return_status = call_status;
+      has_primal_ray = ekk_instance_.status_.has_primal_ray;
+      has_invert = ekk_instance_.status_.has_invert;
+      assert(has_invert);
+    }
+    if (has_primal_ray) {
+      if (ekk_instance_.primal_ray_.size()) {
+        // Primal ray is already computed
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Copying known primal ray\n");
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          primal_ray_value[iCol] = ekk_instance_.primal_ray_[iCol];
+        return return_status;
+      } else if (has_invert) {
+        // Primal ray is known and can be calculated
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Solving linear system to compute primal ray\n");
+        HighsInt col = ekk_instance_.info_.primal_ray_col_;
+        assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
+        // Get this pivotal column
+        vector<double> rhs;
+        vector<double> column;
+        column.assign(num_row, 0);
+        rhs.assign(num_row, 0);
+        lp.ensureColwise();
+        HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
+        if (col < num_col) {
+          for (HighsInt iEl = lp.a_matrix_.start_[col];
+               iEl < lp.a_matrix_.start_[col + 1]; iEl++)
+            rhs[lp.a_matrix_.index_[iEl]] =
+                primal_ray_sign * lp.a_matrix_.value_[iEl];
+        } else {
+          rhs[col - num_col] = primal_ray_sign;
+        }
+        HighsInt* column_num_nz = 0;
+        basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
+        // Now zero primal_ray_value and scatter the column according to
+        // the basic variables.
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          primal_ray_value[iCol] = 0;
+        for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+          HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
+          if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+        }
+        if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
+        // Now save the primal ray itself
+        ekk_instance_.primal_ray_.resize(num_col);
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
+      }
     } else {
-      rhs[col - num_col] = primal_ray_sign;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No primal ray found\n");
+      return_status = HighsStatus::kOk;
     }
-    HighsInt* column_num_nz = 0;
-    basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
-    // Now zero primal_ray_value and scatter the column according to
-    // the basic variables.
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) primal_ray_value[iCol] = 0;
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-      if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+  }
+  if (solve_unboundedness_problem) {
+    // Restore the option values
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
+    this->setOptionValue("allow_unbounded_or_infeasible",
+                         allow_unbounded_or_infeasible);
+    if (has_primal_ray) {
+      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kUnbounded);
     }
-    if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
   }
   return return_status;
 }

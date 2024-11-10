@@ -7,9 +7,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 12 is Intel
-  build_macos_12:
-    runs-on: macos-12
+  # macos 13 is Intel
+  build_macos_13:
+    runs-on: macos-13
     # strategy:
       # matrix:
       #   python: [3.11]
@@ -54,9 +54,8 @@ jobs:
           dotnet add package Highs.Native -s ${{runner.workspace}}/nugets 
           dotnet run
 
-
             
-  # macos 14 is M1 (beta)
+  # macos 14 is M1
   build_macos_14:
     runs-on: macos-14 
     steps:

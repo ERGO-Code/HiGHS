@@ -222,3 +222,20 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 ## Set basis
 
  * `setBasis`
+
+## Presolve/postsolve
+
+ * `presolve`
+ * `getPresolvedLp`
+ * `getPresolvedModel`
+ * `getPresolveLog`
+ * `getPresolveOrigColsIndex`
+ * `getPresolveOrigRowsIndex`
+ * `getModelPresolveStatus`
+ * `writePresolvedModel`
+ * `presolveStatusToString`
+ * `presolveRuleTypeToString`
+ * `postsolve`
+ 
+ 
+ 
