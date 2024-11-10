@@ -1252,46 +1252,6 @@ HighsStatus Highs::run() {
     bool have_optimal_solution = false;
     // ToDo Put solution of presolved problem in a separate method
 
-    //    if (!this->options_.presolve_remove_slacks) {
-    HighsLp& reduced_lp = presolve_.getReducedProblem();
-    HighsInt num_double_slack = 0;
-    HighsInt num_slack = 0;
-    HighsInt num_zero_cost_slack = 0;
-    HighsInt num_unit_coeff_slack = 0;
-    double min_slack_coeff = kHighsInf;
-    double max_slack_coeff = -kHighsInf;
-    std::vector<bool> found_slack;
-    found_slack.assign(reduced_lp.num_row_, false);
-    for (HighsInt iCol = 0; iCol < reduced_lp.num_col_; iCol++) {
-      HighsInt nnz = reduced_lp.a_matrix_.start_[iCol + 1] -
-                     reduced_lp.a_matrix_.start_[iCol];
-      if (nnz != 1) continue;
-      HighsInt iRow =
-          reduced_lp.a_matrix_.index_[reduced_lp.a_matrix_.start_[iCol]];
-      if (found_slack[iRow]) {
-        num_double_slack++;
-        continue;
-      }
-      if (reduced_lp.row_lower_[iRow] != reduced_lp.row_upper_[iRow]) continue;
-      num_slack++;
-      printf("Column %d is slack\n", int(iCol));
-      double coeff = std::fabs(
-          reduced_lp.a_matrix_.value_[reduced_lp.a_matrix_.start_[iCol]]);
-      if (coeff == 1.0) num_unit_coeff_slack++;
-      min_slack_coeff = std::min(coeff, min_slack_coeff);
-      max_slack_coeff = std::max(coeff, max_slack_coeff);
-      found_slack[iRow] = true;
-      if (reduced_lp.col_cost_[iCol] == 0) num_zero_cost_slack++;
-    }
-    printf(
-        "grepSlack,model,col,slack,unit coeff,zero_cost,double,min coeff, "
-        "max_coeff\n");
-    printf("grepSlack,%s,%d, %d, %d, %d, %d, %g, %g\n",
-           this->model_.lp_.model_name_.c_str(), int(reduced_lp.num_col_),
-           int(num_slack), int(num_unit_coeff_slack), int(num_zero_cost_slack),
-           int(num_double_slack), min_slack_coeff, max_slack_coeff);
-    //    }
-
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1565,6 +1525,10 @@ HighsStatus Highs::run() {
             options_ = save_options;
             if (return_status == HighsStatus::kError)
               return returnFromRun(return_status, undo_mods);
+            if (postsolve_iteration_count > 0)
+              highsLogUser(options_.log_options, HighsLogType::kInfo,
+                           "Required %d simplex iterations after postsolve\n",
+                           int(postsolve_iteration_count));
           }
         } else {
           highsLogUser(log_options, HighsLogType::kError,

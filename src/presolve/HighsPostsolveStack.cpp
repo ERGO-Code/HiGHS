@@ -13,7 +13,7 @@
 #include <numeric>
 
 #include "lp_data/HConst.h"
-#include "lp_data/HighsModelUtils.h" // For debugging
+#include "lp_data/HighsModelUtils.h"  // For debugging #2001
 #include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsUtils.h"
@@ -1355,10 +1355,7 @@ void HighsPostsolveStack::DuplicateColumn::transformToPresolvedSpace(
 void HighsPostsolveStack::SlackColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     HighsSolution& solution, HighsBasis& basis) {
-  // Taken from HighsPostsolveStack::FreeColSubstitution::undo(
-  //
-  // a (removed) cut may have been used in this reduction.
-  //
+  bool debug_print = false;
   // May have to determine row dual and basis status unless doing
   // primal-only transformation in MIP solver, in which case row may
   // no longer exist if it corresponds to a removed cut, so have to
@@ -1382,50 +1379,41 @@ void HighsPostsolveStack::SlackColSubstitution::undo(
         double(rowValue + colCoef * solution.col_value[col]);
 
   solution.col_value[col] = double((rhs - rowValue) / colCoef);
-  double rowLower = colCoef > 0 ? rhs - colCoef * slackUpper : rhs - colCoef * slackLower;
-  double rowUpper = colCoef > 0 ? rhs - colCoef * slackLower : rhs - colCoef * slackUpper;
-    
-  printf(
-      "\nHighsPostsolveStack::SlackColSubstitution::undo rowValue = %11.5g; "
-      "bounds [%11.5g, %11.5g] colCoef = %11.6g\n",
-      double(rowValue), rowLower, rowUpper, colCoef);
-  printf(
-      "HighsPostsolveStack::SlackColSubstitution::undo colValue = %11.5g, bounds [%11.5g, %11.5g]\n",
-      solution.col_value[col], slackLower, slackUpper);
 
   // If no dual values requested, return here
   if (!solution.dual_valid) return;
 
   // Row retains its dual value, and column has this dual value scaled by coeff
-  if (isModelRow) {
-    solution.col_dual[col] = - solution.row_dual[row] / colCoef;
-    printf(
-	   "HighsPostsolveStack::SlackColSubstitution::undo rowDual = %11.5g; colDual = %11.5g\n",
-	   solution.row_dual[row], solution.col_dual[col]);
-  }
+  if (isModelRow) solution.col_dual[col] = -solution.row_dual[row] / colCoef;
 
   // Set basis status if necessary
   if (!basis.valid) return;
 
-  // If row is basic, then slack is basic, otherwise row retains its status 
+  // If row is basic, then slack is basic, otherwise row retains its status
   if (isModelRow) {
     HighsBasisStatus save_row_basis_status = basis.row_status[row];
     if (basis.row_status[row] == HighsBasisStatus::kBasic) {
       basis.col_status[col] = HighsBasisStatus::kBasic;
-      basis.row_status[row] = computeRowStatus(solution.row_dual[row], RowType::kEq);
+      basis.row_status[row] =
+          computeRowStatus(solution.row_dual[row], RowType::kEq);
     } else if (basis.row_status[row] == HighsBasisStatus::kLower) {
-      basis.col_status[col] = colCoef > 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
+      basis.col_status[col] =
+          colCoef > 0 ? HighsBasisStatus::kUpper : HighsBasisStatus::kLower;
     } else {
-      basis.col_status[col] = colCoef > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
+      basis.col_status[col] =
+          colCoef > 0 ? HighsBasisStatus::kLower : HighsBasisStatus::kUpper;
     }
-    printf("HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
-	   "RowStatus = %s; ColStatus = %s\n",
-	   utilBasisStatusToString(save_row_basis_status).c_str(), utilBasisStatusToString(basis.row_status[row]).c_str(),
-	   utilBasisStatusToString(basis.col_status[col]).c_str());
+    if (debug_print)
+      printf(
+          "HighsPostsolveStack::SlackColSubstitution::undo OgRowStatus = %s; "
+          "RowStatus = %s; ColStatus = %s\n",
+          utilBasisStatusToString(save_row_basis_status).c_str(),
+          utilBasisStatusToString(basis.row_status[row]).c_str(),
+          utilBasisStatusToString(basis.col_status[col]).c_str());
     if (basis.col_status[col] == HighsBasisStatus::kLower) {
-      assert(solution.col_dual[col] > 0);
+      assert(solution.col_dual[col] > -options.dual_feasibility_tolerance);
     } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
-      assert(solution.col_dual[col] < 0);
+      assert(solution.col_dual[col] < options.dual_feasibility_tolerance);
     }
   } else {
     basis.col_status[col] = HighsBasisStatus::kNonbasic;

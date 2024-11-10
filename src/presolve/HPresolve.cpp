@@ -4361,9 +4361,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     }
 
     // Now consider removing slacks
-    if (options->presolve_remove_slacks) {
+    if (options->presolve_remove_slacks)
       HPRESOLVE_CHECKED_CALL(removeSlacks(postsolve_stack));
-    }
 
     report();
   } else {
@@ -4382,10 +4381,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
 HPresolve::Result HPresolve::removeSlacks(
     HighsPostsolveStack& postsolve_stack) {
-  // singletonColumns data structure appears not to be retained
+  // SingletonColumns data structure appears not to be retained
   // throughout presolve
-  //
-  bool unit_coeff_only = true;
   for (HighsInt iCol = 0; iCol != model->num_col_; ++iCol) {
     if (colDeleted[iCol]) continue;
     if (colsize[iCol] != 1) continue;
@@ -4400,11 +4397,6 @@ HPresolve::Result HPresolve::removeSlacks(
     double cost = model->col_cost_[iCol];
     double rhs = model->row_lower_[iRow];
     double coeff = Avalue[coliter];
-    printf(
-        "Col %d is continuous and is singleton in equality row %d with cost "
-        "%g, bounds [%g, %g], coeff %g and RHS = %g\n",
-        int(iCol), int(iRow), cost, lower, upper, coeff, rhs);
-    if (unit_coeff_only && std::fabs(coeff) != 1.0) continue;
     assert(coeff);
     // Slack is s = (rhs - a^Tx)/coeff
     //
@@ -4428,10 +4420,7 @@ HPresolve::Result HPresolve::removeSlacks(
       model->offset_ += multiplier * rhs;
     }
     //
-    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, cost,
-					 lower,
-					 upper,
-                                         getRowVector(iRow));
+    postsolve_stack.slackColSubstitution(iRow, iCol, rhs, getRowVector(iRow));
 
     markColDeleted(iCol);
 
