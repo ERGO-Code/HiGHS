@@ -13,18 +13,18 @@ if (FORTRAN AND NOT BUILD_EXTRA_UNIT_ONLY)
         ${HIGHS_SOURCE_DIR}/check)
 endif()
 
-if (CUPLDP_GPU)
-    # add a test
-    add_executable(testcudalin ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cuda_linalg.c)
-    add_executable(testcublas ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cublas.c)
+# if (CUPLDP_GPU AND BUILD_CXX)
+#     # add a test
+#     add_executable(testcudalin ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cuda_linalg.c)
+#     add_executable(testcublas ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cublas.c)
 
-    set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-    #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
-    target_link_libraries(testcudalin PRIVATE highs ${CUDA_LIBRARY})
+#     set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+#     #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
+#     target_link_libraries(testcudalin PRIVATE highs ${CUDA_LIBRARY})
 
-    set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-    target_link_libraries(testcublas PRIVATE highs ${CUDA_LIBRARY})
-endif()
+#     set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+#     target_link_libraries(testcublas PRIVATE highs ${CUDA_LIBRARY})
+# endif()
 
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library

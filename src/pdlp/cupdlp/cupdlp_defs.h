@@ -5,6 +5,8 @@
 #define CUPDLP_DEBUG (0)
 #define CUPDLP_TIMER
 
+#include "HConfig.h"
+
 #ifdef CUPDLP_GPU
 #include "cuda/cupdlp_cuda_kernels.cuh"
 #include "cuda/cupdlp_cudalinalg.cuh"

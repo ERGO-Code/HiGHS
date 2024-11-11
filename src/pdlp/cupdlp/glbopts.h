@@ -1,13 +1,13 @@
 #ifndef GLB_H_GUARD
 #define GLB_H_GUARD
 
-// #ifndef CUPDLP_CPU
+#include "HConfig.h"
+
+// #ifdef CUPDLP_GPU
 // #include <cublas_v2.h>         // cublas
 // #include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
 // #include <cusparse.h>          // cusparseSpMV
 // #endif
-
-#include "HConfig.h"
 
 #ifdef __cplusplus
 
