@@ -21,7 +21,6 @@ jobs:
       - name: Create symlink
         shell: bash
         working-directory: ${{runner.workspace}}
-        working-directory: 
         run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
 
       - name: Create Build Environment
