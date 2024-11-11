@@ -13,7 +13,7 @@
  */
 #include "Highs.h"
 // #include "io/HighsIO.h"
-#include "lp_data/HighsRuntimeOptions.h"
+#include "HighsRuntimeOptions.h"
 
 // uncomment if we will be shutting down task executor from exe
 // #include "parallel/HighsParallel.h"

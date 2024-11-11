@@ -201,7 +201,7 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
 HighsStatus readSolutionFile(const std::string filename,
-                             const HighsOptions& options, const HighsLp& lp,
+                             const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
 
@@ -216,7 +216,9 @@ bool readSolutionFileKeywordLineOk(std::string& keyword,
                                    std::ifstream& in_file);
 bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
                                           std::ifstream& in_file);
-bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file);
+bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
+                                    std::ifstream& in_file);
 bool readSolutionFileIdDoubleIntLineOk(double& value, HighsInt& index,
                                        std::ifstream& in_file);
 
@@ -225,7 +227,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);
 
-HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+HighsStatus assessLpPrimalSolution(const std::string message,
+                                   const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible);

@@ -117,45 +117,45 @@ _incdirs += include_directories('.')
 # --------------------- Libraries
 
 _cupdlp_srcs = [
-    'pdlp/cupdlp/cupdlp_solver.c',
-    'pdlp/cupdlp/cupdlp_scaling_cuda.c',
-    'pdlp/cupdlp/cupdlp_restart.c',
-    'pdlp/cupdlp/cupdlp_proj.c',
-    'pdlp/cupdlp/cupdlp_linalg.c',
     'pdlp/cupdlp/cupdlp_cs.c',
-    'pdlp/cupdlp/cupdlp_utils.c',
+    'pdlp/cupdlp/cupdlp_linalg.c',
+    'pdlp/cupdlp/cupdlp_proj.c',
+    'pdlp/cupdlp/cupdlp_restart.c',
+    'pdlp/cupdlp/cupdlp_scaling_cuda.c',
+    'pdlp/cupdlp/cupdlp_solver.c',
     'pdlp/cupdlp/cupdlp_step.c',
+    'pdlp/cupdlp/cupdlp_utils.c',
 ]
 
 _basiclu_srcs = [
     'ipm/basiclu/basiclu_factorize.c',
-    'ipm/basiclu/basiclu_solve_dense.c',
-    'ipm/basiclu/lu_build_factors.c',
-    'ipm/basiclu/lu_factorize_bump.c',
-    'ipm/basiclu/lu_initialize.c',
-    'ipm/basiclu/lu_markowitz.c',
-    'ipm/basiclu/lu_setup_bump.c',
-    'ipm/basiclu/lu_solve_sparse.c',
     'ipm/basiclu/basiclu_get_factors.c',
-    'ipm/basiclu/basiclu_solve_for_update.c',
-    'ipm/basiclu/lu_condest.c',
-    'ipm/basiclu/lu_file.c',
-    'ipm/basiclu/lu_internal.c',
-    'ipm/basiclu/lu_matrix_norm.c',
-    'ipm/basiclu/lu_singletons.c',
-    'ipm/basiclu/lu_solve_symbolic.c',
-    'ipm/basiclu/lu_update.c',
     'ipm/basiclu/basiclu_initialize.c',
-    'ipm/basiclu/basiclu_solve_sparse.c',
-    'ipm/basiclu/lu_pivot.c',
-    'ipm/basiclu/lu_solve_dense.c',
-    'ipm/basiclu/lu_solve_triangular.c',
     'ipm/basiclu/basiclu_object.c',
+    'ipm/basiclu/basiclu_solve_dense.c',
+    'ipm/basiclu/basiclu_solve_for_update.c',
+    'ipm/basiclu/basiclu_solve_sparse.c',
     'ipm/basiclu/basiclu_update.c',
+    'ipm/basiclu/lu_build_factors.c',
+    'ipm/basiclu/lu_condest.c',
     'ipm/basiclu/lu_dfs.c',
+    'ipm/basiclu/lu_factorize_bump.c',
+    'ipm/basiclu/lu_file.c',
     'ipm/basiclu/lu_garbage_perm.c',
+    'ipm/basiclu/lu_initialize.c',
+    'ipm/basiclu/lu_internal.c',
+    'ipm/basiclu/lu_markowitz.c',
+    'ipm/basiclu/lu_matrix_norm.c',
+    'ipm/basiclu/lu_pivot.c',
     'ipm/basiclu/lu_residual_test.c',
+    'ipm/basiclu/lu_setup_bump.c',
+    'ipm/basiclu/lu_singletons.c',
+    'ipm/basiclu/lu_solve_dense.c',
     'ipm/basiclu/lu_solve_for_update.c',
+    'ipm/basiclu/lu_solve_sparse.c',
+    'ipm/basiclu/lu_solve_symbolic.c',
+    'ipm/basiclu/lu_solve_triangular.c',
+    'ipm/basiclu/lu_update.c',
 ]
 
 _ipx_srcs = [
@@ -194,85 +194,88 @@ _ipx_srcs = [
 
 _srcs = [
     '../extern/filereaderlp/reader.cpp',
+    'interfaces/highs_c_api.cpp',
     'io/Filereader.cpp',
-    'io/FilereaderLp.cpp',
     'io/FilereaderEms.cpp',
+    'io/FilereaderLp.cpp',
     'io/FilereaderMps.cpp',
-    'io/HighsIO.cpp',
     'io/HMPSIO.cpp',
     'io/HMpsFF.cpp',
+    'io/HighsIO.cpp',
     'io/LoadOptions.cpp',
+    'ipm/IpxWrapper.cpp',
     'lp_data/Highs.cpp',
     'lp_data/HighsCallback.cpp',
     'lp_data/HighsDebug.cpp',
     'lp_data/HighsIis.cpp',
+    'lp_data/HighsDeprecated.cpp',
     'lp_data/HighsInfo.cpp',
     'lp_data/HighsInfoDebug.cpp',
-    'lp_data/HighsDeprecated.cpp',
     'lp_data/HighsInterface.cpp',
     'lp_data/HighsLp.cpp',
     'lp_data/HighsLpUtils.cpp',
     'lp_data/HighsModelUtils.cpp',
+    'lp_data/HighsOptions.cpp',
     'lp_data/HighsRanging.cpp',
     'lp_data/HighsSolution.cpp',
     'lp_data/HighsSolutionDebug.cpp',
     'lp_data/HighsSolve.cpp',
     'lp_data/HighsStatus.cpp',
-    'lp_data/HighsOptions.cpp',
-    'mip/HighsMipSolver.cpp',
-    'mip/HighsMipSolverData.cpp',
+    'mip/HighsCliqueTable.cpp',
+    'mip/HighsConflictPool.cpp',
+    'mip/HighsCutGeneration.cpp',
+    'mip/HighsCutPool.cpp',
+    'mip/HighsDebugSol.cpp',
     'mip/HighsDomain.cpp',
     'mip/HighsDynamicRowMatrix.cpp',
-    'mip/HighsLpRelaxation.cpp',
-    'mip/HighsSeparation.cpp',
-    'mip/HighsSeparator.cpp',
-    'mip/HighsTableauSeparator.cpp',
-    'mip/HighsModkSeparator.cpp',
-    'mip/HighsPathSeparator.cpp',
-    'mip/HighsCutGeneration.cpp',
-    'mip/HighsSearch.cpp',
-    'mip/HighsConflictPool.cpp',
-    'mip/HighsCutPool.cpp',
-    'mip/HighsCliqueTable.cpp',
     'mip/HighsGFkSolve.cpp',
-    'mip/HighsTransformedLp.cpp',
-    'mip/HighsLpAggregator.cpp',
-    'mip/HighsDebugSol.cpp',
     'mip/HighsImplications.cpp',
+    'mip/HighsLpAggregator.cpp',
+    'mip/HighsLpRelaxation.cpp',
+    'mip/HighsMipAnalysis.cpp',
+    'mip/HighsMipSolver.cpp',
+    'mip/HighsMipSolverData.cpp',
+    'mip/HighsModkSeparator.cpp',
+    'mip/HighsNodeQueue.cpp',
+    'mip/HighsObjectiveFunction.cpp',
+    'mip/HighsPathSeparator.cpp',
     'mip/HighsPrimalHeuristics.cpp',
     'mip/HighsPseudocost.cpp',
     'mip/HighsRedcostFixing.cpp',
-    'mip/HighsNodeQueue.cpp',
-    'mip/HighsObjectiveFunction.cpp',
+    'mip/HighsSearch.cpp',
+    'mip/HighsSeparation.cpp',
+    'mip/HighsSeparator.cpp',
+    'mip/HighsTableauSeparator.cpp',
+    'mip/HighsTransformedLp.cpp',
     'model/HighsHessian.cpp',
     'model/HighsHessianUtils.cpp',
     'model/HighsModel.cpp',
     'parallel/HighsTaskExecutor.cpp',
+    'pdlp/CupdlpWrapper.cpp',
+    'presolve/HPresolve.cpp',
+    'presolve/HPresolveAnalysis.cpp',
+    'presolve/HighsPostsolveStack.cpp',
+    'presolve/HighsSymmetry.cpp',
     'presolve/ICrash.cpp',
     'presolve/ICrashUtil.cpp',
     'presolve/ICrashX.cpp',
-    'presolve/HighsPostsolveStack.cpp',
-    'presolve/HighsSymmetry.cpp',
-    'presolve/HPresolve.cpp',
-    'presolve/HPresolveAnalysis.cpp',
     'presolve/PresolveComponent.cpp',
     'qpsolver/a_asm.cpp',
     'qpsolver/a_quass.cpp',
     'qpsolver/basis.cpp',
+    'qpsolver/perturbation.cpp',
     'qpsolver/quass.cpp',
     'qpsolver/ratiotest.cpp',
     'qpsolver/scaling.cpp',
-    'qpsolver/perturbation.cpp',
     'simplex/HEkk.cpp',
     'simplex/HEkkControl.cpp',
     'simplex/HEkkDebug.cpp',
-    'simplex/HEkkPrimal.cpp',
     'simplex/HEkkDual.cpp',
+    'simplex/HEkkDualMulti.cpp',
     'simplex/HEkkDualRHS.cpp',
     'simplex/HEkkDualRow.cpp',
-    'simplex/HEkkDualMulti.cpp',
     'simplex/HEkkInterface.cpp',
-    'simplex/HighsSimplexAnalysis.cpp',
+    'simplex/HEkkPrimal.cpp',
     'simplex/HSimplex.cpp',
     'simplex/HSimplexDebug.cpp',
     'simplex/HSimplexNla.cpp',
@@ -280,6 +283,7 @@ _srcs = [
     'simplex/HSimplexNlaFreeze.cpp',
     'simplex/HSimplexNlaProductForm.cpp',
     'simplex/HSimplexReport.cpp',
+    'simplex/HighsSimplexAnalysis.cpp',
     'test/DevKkt.cpp',
     'test/KktCh2.cpp',
     'util/HFactor.cpp',
@@ -287,6 +291,8 @@ _srcs = [
     'util/HFactorExtend.cpp',
     'util/HFactorRefactor.cpp',
     'util/HFactorUtils.cpp',
+    'util/HSet.cpp',
+    'util/HVectorBase.cpp',
     'util/HighsHash.cpp',
     'util/HighsLinearSumBounds.cpp',
     'util/HighsMatrixPic.cpp',
@@ -294,19 +300,14 @@ _srcs = [
     'util/HighsSort.cpp',
     'util/HighsSparseMatrix.cpp',
     'util/HighsUtils.cpp',
-    'util/HSet.cpp',
-    'util/HVectorBase.cpp',
     'util/stringutil.cpp',
 ]
 
 highslib_srcs = [
-  highs_conf_file,
-  _srcs,
-  'ipm/IpxWrapper.cpp',
-  'pdlp/CupdlpWrapper.cpp',
-  _cupdlp_srcs,
-  _basiclu_srcs,
-  _ipx_srcs
+  files(_srcs),
+  files(_cupdlp_srcs),
+  files(_basiclu_srcs),
+  files(_ipx_srcs),
 ]
 
 
@@ -317,15 +318,24 @@ if get_option('default_library') == 'static'
   symbol_visibility = 'inlineshidden'
 endif
 
+do_install = get_option('do_install')
+
+if not get_option('with_pybind11')
 highslib = library('highs',
-                   highslib_srcs,
+                   highslib_srcs + highs_conf_file,
                    dependencies: _deps,
-                   cpp_args: _args,
-                   c_args: _args,
+                   cpp_args: _highs_cpp_suppressions + _args,
+                   c_args: _highs_c_suppressions + _args,
                    include_directories: _incdirs,
                    gnu_symbol_visibility: symbol_visibility,
                    pic: true,
-                   install: true)
+                   install: do_install)
+
+highs_dep = declare_dependency(link_with: highslib,
+                               dependencies: _deps,
+                               include_directories: _incdirs,
+                               )
+endif
 
 # --------------- Interfaces
 
@@ -342,7 +352,7 @@ if get_option('with_fortran')
                         link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
-                        install: true)
+                        install: do_install)
 endif
 
 # C#
@@ -358,69 +368,60 @@ if get_option('with_csharp')
                         link_with: highslib,
                         include_directories: _incdirs,
                         pic: true,
-                        install: true)
+                        install: do_install)
 endif
 
-# C
-if get_option('with_c')
-  add_languages('c', required: true)
-  if not is_windows
-    m_dep = cppc.find_library('m', required: false)
-    _deps += m_dep
-  endif
-  _c_src = [
-    'interfaces/highs_c_api.cpp',
-  ]
-  c_lib = library('HighsC',
-                        _c_src,
-                        dependencies: _deps,
-                        cpp_args: _args,
-                        link_with: highslib,
-                        include_directories: _incdirs,
-                        pic: true,
-                        install: true)
-endif
-
-highs_dep = declare_dependency(link_with: highslib,
-                               dependencies: _deps,
-                               include_directories: _incdirs,
-                               )
+highspy_cpp = files([
+  'highs_bindings.cpp'
+])
 
 if get_option('with_pybind11')
   py = import('python').find_installation(pure: false)
 
+  highslib = library('highs',
+                     highslib_srcs + highs_conf_file,
+                     dependencies: _deps,
+                     cpp_args: _highs_cpp_suppressions + _args,
+                     c_args: _highs_c_suppressions + _args,
+                     include_directories: _incdirs,
+                     gnu_symbol_visibility: symbol_visibility,
+                     pic: true,
+                     install: do_install,
+                     install_dir: py.get_install_dir() / 'highspy')
+
+  highs_dep = declare_dependency(link_with: highslib,
+                                 dependencies: _deps,
+                                 include_directories: _incdirs,
+                                )
+  _deps += highs_dep
   pyb11_dep = [
     # py_dep is auto-added for Python >= 3.9, so it can be dropped here when
     # that is the minimum supported Python version
     py.dependency(),
     dependency('pybind11')
   ]
+  _deps += pyb11_dep
 
   highspy_cpp = files([
     'highs_bindings.cpp'
   ])
-  highsoptions_cpp = files([
-    'highs_options.cpp'
-  ])
 
   py.extension_module(
-    '_highs',
+    '_core',
     sources : highspy_cpp,
     dependencies: [pyb11_dep, highs_dep],
     cpp_args: _args,
-    install: true,
+    install: do_install,
     subdir: 'highspy',
     include_directories: _incdirs,
   )
 
-  py.extension_module(
-    '_highs_options',
-    sources : highsoptions_cpp,
-    dependencies: [pyb11_dep, highs_dep],
-    cpp_args: _args,
-    install: true,
-    subdir: 'highspy',
-    include_directories: _incdirs,
-  )
+ highs_py_srcs = files(
+      'highspy/__init__.py',
+      'highspy/highs.py',)
 
+  py.install_sources(highs_py_srcs,
+    pure: false,
+    subdir: 'highspy'
+  )
 endif

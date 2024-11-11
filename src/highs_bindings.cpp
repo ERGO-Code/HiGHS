@@ -442,7 +442,6 @@ std::tuple<HighsStatus, double, double, double, HighsInt> highs_getCol(
 
 std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<double>>
 highs_getColEntries(Highs* h, HighsInt col) {
-  double cost, lower, upper;
   HighsInt get_num_col;
   HighsInt get_num_nz;
   HighsInt col_ = static_cast<HighsInt>(col);
@@ -462,7 +461,7 @@ highs_getColEntries(Highs* h, HighsInt col) {
 
 std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h,
                                                                HighsInt row) {
-  double cost, lower, upper;
+  double lower, upper;
   HighsInt get_num_row;
   HighsInt get_num_nz;
   HighsInt row_ = static_cast<HighsInt>(row);
@@ -473,7 +472,6 @@ std::tuple<HighsStatus, double, double, HighsInt> highs_getRow(Highs* h,
 
 std::tuple<HighsStatus, dense_array_t<HighsInt>, dense_array_t<double>>
 highs_getRowEntries(Highs* h, HighsInt row) {
-  double cost, lower, upper;
   HighsInt get_num_row;
   HighsInt get_num_nz;
   HighsInt row_ = static_cast<HighsInt>(row);
@@ -537,6 +535,14 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                  nullptr, get_num_nz, start_ptr, index_ptr, value_ptr);
   return std::make_tuple(status, py::cast(start), py::cast(index),
                          py::cast(value));
+}
+
+std::tuple<HighsStatus, HighsVarType>
+highs_getColIntegrality(Highs* h, HighsInt col) {
+  HighsInt col_ = static_cast<HighsInt>(col);
+  HighsVarType integrality;
+  HighsStatus status = h->getColIntegrality(col_, integrality);
+  return std::make_tuple(status, integrality);
 }
 
 std::tuple<HighsStatus, HighsInt, dense_array_t<double>, dense_array_t<double>,
@@ -624,7 +630,7 @@ HighsStatus highs_setCallback(
     return h->setCallback((HighsCallbackFunctionType) nullptr, nullptr);
   else
     return h->setCallback(
-        [fn, data](int callbackType, const std::string& msg,
+        [fn](int callbackType, const std::string& msg,
                    const HighsCallbackDataOut* dataOut,
                    HighsCallbackDataIn* dataIn, void* d) {
           return fn(callbackType, msg, dataOut, dataIn, py::handle(reinterpret_cast<PyObject*>(d)));
@@ -633,20 +639,25 @@ HighsStatus highs_setCallback(
 }
 
 PYBIND11_MODULE(_core, m) {
-  // enum classes
+  // To keep a smaller diff, for reviewers, the declarations are not moved, but
+  // keep in mind:
+  // C++ enum classes :: don't need .export_values()
+  // C++ enums, need .export_values()
+  // Quoting [1]:
+  // "The enum_::export_values() function exports the enum entries into the
+  // parent scope, which should be skipped for newer C++11-style strongly typed
+  // enums."
+  // [1]: https://pybind11.readthedocs.io/en/stable/classes.html
   py::enum_<ObjSense>(m, "ObjSense")
       .value("kMinimize", ObjSense::kMinimize)
       .value("kMaximize", ObjSense::kMaximize);
-  // // .export_values();
   py::enum_<MatrixFormat>(m, "MatrixFormat")
       .value("kColwise", MatrixFormat::kColwise)
       .value("kRowwise", MatrixFormat::kRowwise)
       .value("kRowwisePartitioned", MatrixFormat::kRowwisePartitioned);
-  // // .export_values();
   py::enum_<HessianFormat>(m, "HessianFormat")
       .value("kTriangular", HessianFormat::kTriangular)
       .value("kSquare", HessianFormat::kSquare);
-  // .export_values();
   py::enum_<SolutionStatus>(m, "SolutionStatus")
       .value("kSolutionStatusNone", SolutionStatus::kSolutionStatusNone)
       .value("kSolutionStatusInfeasible",
@@ -677,7 +688,6 @@ PYBIND11_MODULE(_core, m) {
       .value("kSolutionLimit", HighsModelStatus::kSolutionLimit)
       .value("kInterrupt", HighsModelStatus::kInterrupt)
       .value("kMemoryLimit", HighsModelStatus::kMemoryLimit);
-  // .export_values();
   py::enum_<HighsPresolveStatus>(m, "HighsPresolveStatus")
       .value("kNotPresolved", HighsPresolveStatus::kNotPresolved)
       .value("kNotReduced", HighsPresolveStatus::kNotReduced)
@@ -689,59 +699,60 @@ PYBIND11_MODULE(_core, m) {
       .value("kTimeout", HighsPresolveStatus::kTimeout)
       .value("kNullError", HighsPresolveStatus::kNullError)
       .value("kOptionsError", HighsPresolveStatus::kOptionsError);
-  // .export_values();
   py::enum_<HighsBasisStatus>(m, "HighsBasisStatus")
       .value("kLower", HighsBasisStatus::kLower)
       .value("kBasic", HighsBasisStatus::kBasic)
       .value("kUpper", HighsBasisStatus::kUpper)
       .value("kZero", HighsBasisStatus::kZero)
       .value("kNonbasic", HighsBasisStatus::kNonbasic);
-  // .export_values();
   py::enum_<HighsVarType>(m, "HighsVarType")
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
       .value("kSemiInteger", HighsVarType::kSemiInteger);
-  // .export_values();
   py::enum_<HighsOptionType>(m, "HighsOptionType")
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
       .value("kDouble", HighsOptionType::kDouble)
       .value("kString", HighsOptionType::kString);
-  // .export_values();
   py::enum_<HighsInfoType>(m, "HighsInfoType")
       .value("kInt64", HighsInfoType::kInt64)
       .value("kInt", HighsInfoType::kInt)
       .value("kDouble", HighsInfoType::kDouble);
-  // .export_values();
   py::enum_<HighsStatus>(m, "HighsStatus")
       .value("kError", HighsStatus::kError)
       .value("kOk", HighsStatus::kOk)
       .value("kWarning", HighsStatus::kWarning);
-  // .export_values();
   py::enum_<HighsLogType>(m, "HighsLogType")
       .value("kInfo", HighsLogType::kInfo)
       .value("kDetailed", HighsLogType::kDetailed)
       .value("kVerbose", HighsLogType::kVerbose)
       .value("kWarning", HighsLogType::kWarning)
       .value("kError", HighsLogType::kError);
-  // .export_values();
   py::enum_<IisStrategy>(m, "IisStrategy")
       .value("kIisStrategyMin", IisStrategy::kIisStrategyMin)
       .value("kIisStrategyFromLpRowPriority",
              IisStrategy::kIisStrategyFromLpRowPriority)
       .value("kIisStrategyFromLpColPriority",
              IisStrategy::kIisStrategyFromLpColPriority)
-      .value("kIisStrategyMax", IisStrategy::kIisStrategyMax);
-  // .export_values();
+      .value("kIisStrategyMax", IisStrategy::kIisStrategyMax)
+      .export_values();
   py::enum_<IisBoundStatus>(m, "IisBoundStatus")
       .value("kIisBoundStatusDropped", IisBoundStatus::kIisBoundStatusDropped)
       .value("kIisBoundStatusNull", IisBoundStatus::kIisBoundStatusNull)
       .value("kIisBoundStatusFree", IisBoundStatus::kIisBoundStatusFree)
       .value("kIisBoundStatusLower", IisBoundStatus::kIisBoundStatusLower)
       .value("kIisBoundStatusUpper", IisBoundStatus::kIisBoundStatusUpper)
-      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed);
-  // .export_values();
+      .value("kIisBoundStatusBoxed", IisBoundStatus::kIisBoundStatusBoxed)
+      .export_values();
+  py::enum_<HighsDebugLevel>(m, "HighsDebugLevel")
+      .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
+      .value("kHighsDebugLevelCheap", HighsDebugLevel::kHighsDebugLevelCheap)
+      .value("kHighsDebugLevelCostly", HighsDebugLevel::kHighsDebugLevelCostly)
+      .value("kHighsDebugLevelExpensive", HighsDebugLevel::kHighsDebugLevelExpensive)
+      .value("kHighsDebugLevelMin", HighsDebugLevel::kHighsDebugLevelMin)
+      .value("kHighsDebugLevelMax", HighsDebugLevel::kHighsDebugLevelMax)
+      .export_values();
   // Classes
   py::class_<HighsSparseMatrix>(m, "HighsSparseMatrix")
       .def(py::init<>())
@@ -821,7 +832,9 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("max_complementarity_violation",
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
-                     &HighsInfo::sum_complementarity_violations);
+                     &HighsInfo::sum_complementarity_violations)
+      .def_readwrite("primal_dual_integral",
+                     &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -1026,11 +1039,13 @@ PYBIND11_MODULE(_core, m) {
 
       .def("getCol", &highs_getCol)
       .def("getColEntries", &highs_getColEntries)
+      .def("getColIntegrality", &highs_getColIntegrality)
       .def("getRow", &highs_getRow)
       .def("getRowEntries", &highs_getRowEntries)
 
       .def("getCols", &highs_getCols)
       .def("getColsEntries", &highs_getColsEntries)
+
       .def("getRows", &highs_getRows)
       .def("getRowsEntries", &highs_getRowsEntries)
 
@@ -1158,7 +1173,7 @@ PYBIND11_MODULE(_core, m) {
       .value("kSimplexStrategyPrimal", SimplexStrategy::kSimplexStrategyPrimal)
       .value("kSimplexStrategyMax", SimplexStrategy::kSimplexStrategyMax)
       .value("kSimplexStrategyNum", SimplexStrategy::kSimplexStrategyNum)
-      .export_values();  // needed since it isn't an enum class
+      .export_values();
   py::enum_<SimplexUnscaledSolutionStrategy>(simplex_constants,
                                              "SimplexUnscaledSolutionStrategy")
       .value(

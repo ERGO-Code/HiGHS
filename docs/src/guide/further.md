@@ -47,7 +47,7 @@ is [changeRowsBounds](@ref Modify-model-data). An individual matrix coefficient
 is changed by passing its row index, column index and new value to
 [changeCoeff](@ref Modify-model-data).
 
-### [Hot start](@id hot-start)
+## [Hot start](@id hot-start)
 
 It may be possible for HiGHS to start solving a model using data
 obtained by solving a related model, or supplied by a user. Whether
@@ -55,7 +55,7 @@ this is possible depends on the the class of model being solved, the
 solver to be used, and the modifications (if any) that have been to
 the incumbent model since it was last solved.
 
-#### LP
+### LP
 
 To run HiGHS from a user-defined solution or basis, this is passed to HiGHS
 using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis). The basis passed to HiGHS need not be complete
@@ -71,7 +71,7 @@ using the methods [setSolution](@ref Set-solution) or [setBasis](@ref Set-basis)
 * For nonbasic variables, it is unnecessary to specify whether they
   are at their lower or upper bound unless they are "boxed" variables.
 
-#### MIP
+### MIP
 
 If a (partial) feasible assignment of the integer variables is known,
 this can be passed to HiGHS via [setSolution](@ref Set-solution). If
@@ -81,4 +81,26 @@ integer variables is not complete). If a feasible solution is
 obtained, it will be used to provide the MIP solver with an initial
 primal bound when it run to solve for all integer variables.
 
+## [Presolve](@id guide-presolve)
 
+HiGHS has a sophisticated presolve procedure for LPs and MIPs that
+aims to reduce the dimension of the model that must be solved. In most
+cases, the time saved by solving the reduced model is very much
+greater than the time taken to perform presolve. Once he presolved
+model is solved, a postsolve procedure (of minimal computational cost)
+deduces the optimal solution to the original model. Hence presolve is
+performed by default. The only exception occus when there is a valid
+basis for an LP and the simplex solver is used. In this case the
+original LP is solved, starting from this basis. In cases where the
+use of presolve is found not to be advantageous, its use can be
+switched off by setting the [presolve](@ref option-presolve) option to
+"off".
+
+HiGHS has a method [presolve](@ref Presolve/postsolve) that performs presolve on
+the incumbent model, allowing the presolved model to be extracted or
+written to a file. This is intended for users who have their own
+solution technique that they wish to test using models presolved by
+HiGHS. Note that this does not affect how the incumbent model is
+solved. There are two corresponding [postsolve](@ref Presolve/postsolve)
+methods, according to whether there are just solution values, or also
+a basis.

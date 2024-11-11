@@ -229,7 +229,7 @@ jobs:
         # Note the current convention is to use the -S and -B options here to specify source
         # and build directories, but this is only available with CMake 3.13 and higher.
         # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
+        run: cmake $GITHUB_WORKSPACE -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -263,7 +263,7 @@ jobs:
         # Note the current convention is to use the -S and -B options here to specify source
         # and build directories, but this is only available with CMake 3.13 and higher.
         # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
+        run: cmake $GITHUB_WORKSPACE -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON -DALL_TESTS=ON
 
       - name: Build
         working-directory: ${{runner.workspace}}/build

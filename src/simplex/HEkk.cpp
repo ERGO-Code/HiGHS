@@ -146,6 +146,9 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
+  this->primal_ray_.clear();
+  this->dual_ray_.clear();
+
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
 
@@ -319,8 +322,15 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_fresh_rebuild = false;
   this->status_.has_dual_objective_value = false;
   this->status_.has_primal_objective_value = false;
+  // Invalidate dual and primal ray data
   this->status_.has_dual_ray = false;
   this->status_.has_primal_ray = false;
+  this->info_.dual_ray_row_ = -1;
+  this->info_.dual_ray_sign_ = -1;
+  this->dual_ray_.clear();
+  this->info_.primal_ray_col_ = -1;
+  this->info_.primal_ray_sign_ = -1;
+  this->primal_ray_.clear();
 }
 
 void HEkk::updateStatus(LpAction action) {

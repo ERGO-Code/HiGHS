@@ -1,6 +1,6 @@
 # [List of options](@id option-definitions)
 
-## presolve
+## [presolve](@id option-presolve)
 - Presolve option: "off", "choose" or "on"
 - Type: string
 - Default: "choose"
@@ -236,7 +236,7 @@
 - Default: ""
 
 ## mip\_max\_leaves
-- MIP solver max number of leave nodes
+- MIP solver max number of leaf nodes
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
