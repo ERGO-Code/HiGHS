@@ -9,11 +9,11 @@ cmake_minimum_required(VERSION 3.15...3.27)
 # set preference for clang compiler and intel compiler over gcc and other compilers
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-C OPTIONAL)
-set(CMAKE_C_COMPILER_NAMES clang icc cc ${CMAKE_C_COMPILER_NAMES})
+set(CMAKE_C_COMPILER_NAMES clang gcc icx cc ${CMAKE_C_COMPILER_NAMES})
 
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
-set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
+set(CMAKE_CXX_COMPILER_NAMES clang++ g++ icpx c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -81,6 +81,21 @@ include(CMakeDependentOption)
 
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
 message(STATUS "Build all tests: ${ALL_TESTS}")
+
+option(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF)
+if (BUILD_EXTRA_UNIT_TESTS)
+  message(STATUS "Build extra unit tests: ON")
+endif()
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_ONLY "Build extra unit tests ONLY" OFF "BUILD_EXTRA_UNIT_TESTS" OFF)
+if (BUILD_EXTRA_UNIT_ONLY)
+  message(STATUS "Build only extra unit tests: ON")
+endif()
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_PROBLEM_SET "Build extra instance tests" OFF "BUILD_TESTING" OFF)
+if (BUILD_EXTRA_PROBLEM_SET)
+  message(STATUS "Build extra instance tests: ON")
+endif()
 
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
@@ -609,12 +624,12 @@ else(FAST_BUILD)
 
   if(BUILD_CXX)
     add_subdirectory(app)
-    if(BUILD_TESTING)
-      enable_testing()
-      add_subdirectory(check)
-    endif()
-    # Add tests in examples/tests
     add_subdirectory(examples)
+  endif()
+
+  if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(check)
   endif()
 
   include(python-highs)
