@@ -119,6 +119,26 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   CUPDLPwork* w = cupdlp_NULL;
   cupdlp_init_work(w, 1);
 
+#ifdef CUPDLP_GPU
+  cupdlp_float cuda_prepare_time = getTimeStamp();
+  // CHECK_CUSPARSE(cusparseCreate(&w->cusparsehandle));
+    cusparseStatus_t status_cusparse = cusparseCreate(&w->cusparsehandle);                                      
+    if (status_cusparse != CUSPARSE_STATUS_SUCCESS) {                               
+      printf("CUSPARSE API failed at line %d of %s with error: %s (%d)\n", 
+             __LINE__, __FILE__, 
+             cusparseGetErrorString(status_cusparse), status_cusparse);  
+    }
+
+  // CHECK_CUBLAS(cublasCreate(&w->cublashandle));
+    cublasStatus_t status_cublas = cublasCreate(&w->cublashandle);
+    if (status_cublas != CUBLAS_STATUS_SUCCESS) {                               
+      printf("CUBLAS API failed at line %d of %s with error: %s (%d)\n", 
+             __LINE__, __FILE__,
+             cublasGetStatusString(status_cublas), status_cublas);  
+    }
+  cuda_prepare_time = getTimeStamp() - cuda_prepare_time;
+#endif
+
   problem_create(&prob);
 
   // currently, only supprot that input matrix is CSC, and store both CSC and
@@ -151,8 +171,13 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   PDHG_Alloc(w);
   w->timers->dScalingTime = scaling_time;
   w->timers->dPresolveTime = 0;  // presolve_time;
+#ifdef CUPDLP_CPU
   cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
+#else CUPDLP_GPU
+  CUPDLP_COPY_VEC(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
+  CUPDLP_COPY_VEC(w->colScale, scaling->colScale, cupdlp_float, nCols);
+#endif
 
   // CUPDLP_CALL(LP_SolvePDHG(prob, cupdlp_NULL, cupdlp_NULL, cupdlp_NULL,
   // cupdlp_NULL));
