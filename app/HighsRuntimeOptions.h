@@ -245,7 +245,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
-  } catch (const cxxopts::OptionException& e) {
+  } catch (const cxxopts::exceptions::exception& e) {
     highsLogUser(report_log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
     return false;

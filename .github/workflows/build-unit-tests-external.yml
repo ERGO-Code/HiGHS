@@ -2,415 +2,127 @@ name: build-unit-tests-external
 
 on: [push, pull_request]
 
-jobs:
-  fast_build_release:
-    runs-on: windows-2019
+jobs: 
+  release_extra_only:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
+      - name: Clone extra unit tests repo 
         shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=ON -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS -DCMAKE_BUILD_TYPE=Release
+        working-directory: ${{runner.workspace}}
+        run: |
+          git clone https://github.com/galabovaa/highs-unit-tests.git
 
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
+      - name: Create symlink
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Release --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release
-
-      - name: Configure CMake All
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON
-
-  fast_build_release_all_tests:
-    runs-on: windows-2019
-
-    steps:
-      - uses: actions/checkout@v4
+        working-directory: ${{runner.workspace}}
+        run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
 
       - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake All
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON
+        run: cmake $GITHUB_WORKSPACE -DBUILD_EXTRA_UNIT_TESTS=ON -DBUILD_EXTRA_UNIT_ONLY=ON -DBUILD_CXX=OFF
 
       - name: Build All
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: |
-          cmake --build . --parallel --config Release
+          cmake --build . --parallel
 
-      - name: Test All
+      - name: Test Extra Only
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel --timeout 300 --output-on-failure -C Release
+        run: ctest --parallel --timeout 300 --output-on-failure 
 
-      - name: Install
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --install .
-
-  windows_release_fb_off:
-    runs-on: windows-2019
+  release_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Clone extra unit tests repo 
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: |
+          git clone https://github.com/galabovaa/highs-unit-tests.git
+
+      - name: Create symlink
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
+        
       - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Release --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 10000 --output-on-failure -C Release
-
-  fast_build_debug:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=ON -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Debug --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug 
-  
-  fast_build_debug_all_tests:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Debug --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug
-
-  windows_debug_fb_off:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
         run: cmake -E make_directory ${{runner.workspace}}/build
 
       - name: Configure CMake All
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=OFF
+        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON 
 
       - name: Build All
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: |
-          cmake --build . --parallel --config Debug
+          cmake --build . --parallel 
 
       - name: Test All
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel --timeout 300 --output-on-failure -C Debug
+        run: ctest --parallel --timeout 300 --output-on-failure 
 
-  windows_release64:
-    runs-on: windows-2019
+  # release__windows_extra_unit_tests:
+  #   runs-on: windows-2019
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
+  #     - name: Create Build Environment
+  #       run: cmake -E make_directory ${{runner.workspace}}/build
 
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
+  #     - name: Clone extra unit tests repo 
+  #       working-directory: ${{runner.workspace}}/build
+  #       run: git clone https://github.com/galabovaa/highs-unit-tests.git
 
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Release --parallel
+  #     - name: Create symlink
+  #       shell: bash
+  #       working-directory: $GITHUB_WORKSPACE/check
+  #       run: mklink /d highs-unit-tests ${{runner.workspace}}/highs-unit-tests
 
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release 
-  
-  windows_release64_all_tests:
-    runs-on: windows-2019
+  #     - name: Configure CMake
+  #       # Use a bash shell so we can use the same syntax for environment variable
+  #       # access regardless of the host operating system
+  #       shell: bash
+  #       working-directory: ${{runner.workspace}}/build
+  #       # Note the current convention is to use the -S and -B options here to specify source
+  #       # and build directories, but this is only available with CMake 3.13 and higher.
+  #       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+  #       run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON
 
-    steps:
-      - uses: actions/checkout@v4
+  #     - name: Build
+  #       working-directory: ${{runner.workspace}}/build
+  #       shell: bash
+  #       # Execute the build.  You can specify a specific target with "--target <NAME>"
+  #       run: cmake --build . --config Release --parallel
 
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
+  #     - name: Unit Test Extra
+  #       working-directory: ${{runner.workspace}}/build
+  #       shell: bash
+  #       run: ./bin/Release/unit_tests.exe highs-names-extra 
 
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Release --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release 
-        
-        
-  windows_release64_fb_off:
-    runs-on: windows-2019
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Release --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --timeout 300 --output-on-failure -C Release
-
-  windows_debug64:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Debug --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug
-
-  windows_debug64_all_tests:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Debug --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug
-
-  windows_debug64_fb_off:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=OFF -DHIGHSINT64=on -DHIGHS_NO_DEFAULT_THREADS=ON
-
-      - name: Build
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: cmake --build . --config Debug --parallel
-
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest  --output-on-failure -C Debug
+  #     - name: Test
+  #       working-directory: ${{runner.workspace}}/build
+  #       shell: bash
+  #       # Execute tests defined by the CMake configuration.
+  #       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+  #       run: ctest --timeout 300 --output-on-failure -C Release

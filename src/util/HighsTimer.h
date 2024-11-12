@@ -24,6 +24,10 @@
 
 #include "util/HighsInt.h"
 
+const HighsInt check_clock = -46;
+const HighsInt ipm_clock = 46;
+const bool kNoClockCalls = false;
+
 /**
  * @brief Clock record structure
  */
@@ -43,13 +47,14 @@ class HighsTimer {
  public:
   HighsTimer() {
     num_clock = 0;
-    HighsInt i_clock = clock_def("Run HiGHS", "RnH");
+    HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
     run_highs_clock = i_clock;
+    total_clock = run_highs_clock;
 
-    presolve_clock = clock_def("Presolve", "Pre");
-    solve_clock = clock_def("Solve", "Slv");
-    postsolve_clock = clock_def("Postsolve", "Pst");
+    presolve_clock = clock_def("Presolve");
+    solve_clock = clock_def("Solve");
+    postsolve_clock = clock_def("Postsolve");
   }
 
   /**
@@ -127,44 +132,73 @@ class HighsTimer {
   /**
    * @brief Start a clock
    */
-  void start(HighsInt i_clock  //!< Index of the clock to be started
+  void start(const HighsInt i_clock = 0  //!< Index of the clock to be started
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     // Check that the clock's been stopped. It should be set to
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
-    assert(clock_start[i_clock] > 0);
+    const bool clock_stopped = clock_start[i_clock] > 0;
+    if (i_clock != ipm_clock) {
+      // Sometimes the analytic centre clock isn't stopped - because
+      // it runs on a separate thread. Although it would be good to
+      // understand this better, for now don't assert that this clock
+      // has stopped
+      if (!clock_stopped) {
+        printf("Clock %d - %s - still running\n", int(i_clock),
+               clock_names[i_clock].c_str());
+      }
+      assert(clock_stopped);
+    }
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
+    if (i_clock == check_clock) {
+      printf("HighsTimer: starting clock %d: %s\n", int(check_clock),
+             this->clock_names[check_clock].c_str());
+    }
     clock_start[i_clock] = -getWallTime();
   }
 
   /**
    * @brief Stop a clock
    */
-  void stop(HighsInt i_clock  //!< Index of the clock to be stopped
+  void stop(const HighsInt i_clock = 0  //!< Index of the clock to be stopped
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     // Check that the clock's been started. It should be set to
     // -getWallTime() <= 0
-    assert(clock_start[i_clock] < 0);
+    const bool clock_stopped = clock_start[i_clock] > 0;
+    if (clock_stopped) {
+      printf("Clock %d - %s - not running\n", int(i_clock),
+             clock_names[i_clock].c_str());
+    }
+    assert(!clock_stopped);
     double wall_time = getWallTime();
     double callClockTimes = wall_time + clock_start[i_clock];
     clock_time[i_clock] += callClockTimes;
     clock_num_call[i_clock]++;
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
+    if (i_clock == check_clock) {
+      printf("HighsTimer: stopping clock %d: %s\n", int(check_clock),
+             this->clock_names[check_clock].c_str());
+    }
     clock_start[i_clock] = wall_time;
   }
 
   /**
    * @brief Read the time of a clock
    */
-  double read(HighsInt i_clock  //!< Index of the clock to be read
+  double read(const HighsInt i_clock = 0  //!< Index of the clock to be read
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
+    if (i_clock == check_clock) {
+      std::string clock_name = this->clock_names[check_clock];
+      printf("HighsTimer: reading clock %d: %s\n", int(check_clock),
+             clock_name.c_str());
+    }
     double read_time;
     if (clock_start[i_clock] < 0) {
       // The clock's been started, so find the current time
@@ -180,10 +214,15 @@ class HighsTimer {
   /**
    * @brief Return whether a clock is running
    */
-  bool running(HighsInt i_clock  //!< Index of the clock to be read
+  bool running(const HighsInt i_clock = 0  //!< Index of the clock to be read
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
+    if (i_clock == check_clock) {
+      printf("HighsTimer: querying clock %d: %s - with start record %g\n",
+             int(check_clock), this->clock_names[check_clock].c_str(),
+             clock_start[i_clock]);
+    }
     return clock_start[i_clock] < 0;
   }
 
@@ -244,7 +283,12 @@ class HighsTimer {
       assert(iClock < num_clock);
       // Check that the clock's not still running. It should be set to
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
-      assert(clock_start[iClock] > 0);
+      const bool clock_stopped = clock_start[iClock] > 0;
+      if (!clock_stopped) {
+        printf("Clock %d - %s - still running\n", int(iClock),
+               clock_names[iClock].c_str());
+      }
+      assert(clock_stopped);
       sum_calls += clock_num_call[iClock];
       sum_clock_times += clock_time[iClock];
     }
@@ -265,7 +309,7 @@ class HighsTimer {
     non_null_report = true;
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("%s-time  Operation                       :    Time     ( Total",
+    printf("\n%s-time  Operation                       :    Time     ( Total",
            grep_stamp);
     if (ideal_sum_time > 0) printf(";  Ideal");
     printf(";  Local):    Calls  Time/Call\n");
@@ -311,9 +355,12 @@ class HighsTimer {
    */
   double getWallTime() {
     using namespace std::chrono;
-    return duration_cast<duration<double> >(
-               wall_clock::now().time_since_epoch())
-        .count();
+    const double wall_time = kNoClockCalls
+                                 ? 0
+                                 : duration_cast<duration<double> >(
+                                       wall_clock::now().time_since_epoch())
+                                       .count();
+    return wall_time;
   }
 
   virtual ~HighsTimer() = default;
@@ -334,7 +381,10 @@ class HighsTimer {
   std::vector<std::string> clock_ch3_names;
   // The index of the RunHighsClock - should always be 0
   HighsInt run_highs_clock;
-  // Fundamental Highs clocks
+  // Synonym for run_highs_clock that makes more sense when (as in MIP
+  // solver) there is an independent timer
+  HighsInt total_clock;
+  // Fundamental clocks
   HighsInt presolve_clock;
   HighsInt solve_clock;
   HighsInt postsolve_clock;

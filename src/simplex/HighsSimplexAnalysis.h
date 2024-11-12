@@ -23,11 +23,6 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 #include "util/HFactor.h"
-#include "util/HVector.h"
-#include "util/HVectorBase.h"
-#include "util/HighsInt.h"
-#include "util/HighsTimer.h"
-#include "util/HighsUtils.h"
 
 enum TRAN_STAGE {
   TRAN_STAGE_FTRAN_LOWER = 0,

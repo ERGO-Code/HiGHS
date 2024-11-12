@@ -134,6 +134,11 @@ class HEkk {
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
+  double computeBasisCondition(const HighsLp& lp, const bool exact = false,
+                               const bool report = false);
+  double computeBasisCondition() {
+    return computeBasisCondition(this->lp_, false, false);
+  }
 
   HighsStatus initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
@@ -207,6 +212,10 @@ class HEkk {
   // Data to be retained after proving primal infeasibility
   vector<HighsInt> proof_index_;
   vector<double> proof_value_;
+
+  // Data to be retained after computing primal or dual ray
+  vector<double> primal_ray_;
+  vector<double> dual_ray_;
 
   // Data to be retained when dualizing
   HighsInt original_num_col_;
@@ -333,7 +342,6 @@ class HEkk {
   HighsStatus returnFromEkkSolve(const HighsStatus return_status);
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
-  double computeBasisCondition();
   void initialiseAnalysis();
   std::string rebuildReason(const HighsInt rebuild_reason);
 

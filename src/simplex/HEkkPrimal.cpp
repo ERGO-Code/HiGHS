@@ -2676,7 +2676,7 @@ void HEkkPrimal::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->rebuild_reason = reason_for_rebuild;
   analysis->rebuild_reason_string =
       ekk_instance_.rebuildReason(reason_for_rebuild);
-  analysis->invertReport();
+  if (ekk_instance_.options_->output_flag) analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }
 
@@ -2812,6 +2812,15 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     shift = infeasibility + feasibility;
     bound -= shift;
     new_infeasibility = bound - value;
+    if (new_infeasibility >= 0) {
+      printf(
+          "HEkkPrimal::shiftBound LB = %g; random_value = %g; value = %g; "
+          "feasibility = %g; infeasibility = %g; shift = %g; bound = %g; "
+          "new_infeasibility = %g; \n",
+          old_bound, random_value, value, feasibility, infeasibility, shift,
+          bound, new_infeasibility);
+      fflush(stdout);
+    }
     assert(new_infeasibility < 0);
   } else {
     // Bound to shift is upper

@@ -104,7 +104,11 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
       return "BS";
       break;
     case HighsBasisStatus::kUpper:
-      return "UB";
+      if (lower == upper) {
+        return "FX";
+      } else {
+        return "UB";
+      }
       break;
     case HighsBasisStatus::kZero:
       return "FR";
@@ -1505,7 +1509,7 @@ std::string findModelObjectiveName(const HighsLp* lp,
     // If there are no row names, then the objective name is certainly
     // OK
     if (lp->row_names_.size() == 0) break;
-    if (pass) objective_name += pass;
+    if (pass != 0) objective_name += pass;
     // Ensure that the objective name doesn't clash with any row names
     bool ok_objective_name = true;
     for (HighsInt iRow = 0; iRow < lp->num_row_; iRow++) {

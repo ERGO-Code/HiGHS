@@ -1403,7 +1403,7 @@ void HEkkDual::reportRebuild(const HighsInt reason_for_rebuild) {
   analysis->rebuild_reason = reason_for_rebuild;
   analysis->rebuild_reason_string =
       ekk_instance_.rebuildReason(reason_for_rebuild);
-  analysis->invertReport();
+  if (ekk_instance_.options_->output_flag) analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }
 
@@ -2807,10 +2807,10 @@ bool HEkkDual::reachedExactObjectiveBound() {
         exact_dual_objective_value - objective_bound;
     std::string action;
     if (exact_dual_objective_value > objective_bound) {
-      highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kDetailed,
-                  "HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-                  ekk_instance_.info_.updated_dual_objective_value,
-                  objective_bound);
+      highsLogDev(
+          ekk_instance_.options_->log_options, HighsLogType::kDetailed,
+          "HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB = %12g\n",
+          ekk_instance_.info_.updated_dual_objective_value, objective_bound);
       action = "Have DualUB bailout";
       if (ekk_instance_.info_.costs_perturbed ||
           ekk_instance_.info_.costs_shifted) {

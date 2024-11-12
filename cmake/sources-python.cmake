@@ -208,6 +208,7 @@ set(highs_sources_python
     src/mip/HighsImplications.cpp
     src/mip/HighsLpAggregator.cpp
     src/mip/HighsLpRelaxation.cpp
+    src/mip/HighsMipAnalysis.cpp
     src/mip/HighsMipSolver.cpp
     src/mip/HighsMipSolverData.cpp
     src/mip/HighsModkSeparator.cpp
@@ -308,7 +309,6 @@ set(highs_headers_python
     src/lp_data/HighsModelUtils.h
     src/lp_data/HighsOptions.h
     src/lp_data/HighsRanging.h
-    src/lp_data/HighsRuntimeOptions.h
     src/lp_data/HighsSolution.h
     src/lp_data/HighsSolutionDebug.h
     src/lp_data/HighsSolve.h
@@ -326,6 +326,7 @@ set(highs_headers_python
     src/mip/HighsImplications.h
     src/mip/HighsLpAggregator.h
     src/mip/HighsLpRelaxation.h
+    src/mip/HighsMipAnalysis.h
     src/mip/HighsMipSolver.h
     src/mip/HighsMipSolverData.h
     src/mip/HighsModkSeparator.h
@@ -340,6 +341,7 @@ set(highs_headers_python
     src/mip/HighsSeparator.h
     src/mip/HighsTableauSeparator.h
     src/mip/HighsTransformedLp.h
+    src/mip/MipTimer.h
     src/model/HighsHessian.h
     src/model/HighsHessianUtils.h
     src/model/HighsModel.h

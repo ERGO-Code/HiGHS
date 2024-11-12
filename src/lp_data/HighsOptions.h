@@ -238,10 +238,10 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 HighsStatus writeOptionsToFile(
     FILE* file, const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
-    const HighsFileType file_type = HighsFileType::kOther);
+    const HighsFileType file_type = HighsFileType::kFull);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_deviations = true,
-                   const HighsFileType file_type = HighsFileType::kOther);
+                   const bool report_only_deviations = false,
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportOption(FILE* file, const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
@@ -372,6 +372,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
+  bool presolve_remove_slacks;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
@@ -389,6 +390,8 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
   bool run_centring;
+  double primal_residual_tolerance;
+  double dual_residual_tolerance;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
 
@@ -505,6 +508,7 @@ struct HighsOptionsStruct {
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
         presolve_rule_logging(false),
+        presolve_remove_slacks(false),
         simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
         simplex_initial_condition_tolerance(0.0),
@@ -522,6 +526,8 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
         run_centring(false),
+        primal_residual_tolerance(0.0),
+        dual_residual_tolerance(0.0),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),
         icrash(false),
@@ -555,7 +561,9 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        mip_improving_solution_file("") {};
+        // clang-format off
+	mip_improving_solution_file("") {};
+  // clang-format on
 };
 
 // For now, but later change so HiGHS properties are string based so that new
@@ -1318,6 +1326,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("presolve_remove_slacks",
+                                       "Remove slacks after presolve", advanced,
+                                       &presolve_remove_slacks, false);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt(
         "presolve_substitution_maxfillin",
         "Maximal fillin allowed for substitutions in presolve", advanced,
@@ -1376,6 +1389,16 @@ class HighsOptions : public HighsOptionsStruct {
         "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
         "this tolerance (default = 100)",
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_residual_tolerance", "Primal residual tolerance", advanced,
+        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_residual_tolerance", "Dual residual tolerance", advanced,
+        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     // Set up the log_options aliases

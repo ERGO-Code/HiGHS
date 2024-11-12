@@ -653,6 +653,50 @@ TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
   std::remove(solution_file.c_str());
 }
 
+TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  double delta = 0.2;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-1, 0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  highs.setOptionValue("presolve", kHighsOffString);
+  for (HighsInt k = 0; k < 2; k++) {
+    for (HighsInt l = 0; l < 2; l++) {
+      if (l == 0) {
+        // Infeasible
+        lp.col_lower_ = {0, delta};
+        lp.col_upper_ = {kHighsInf, 1 - delta};
+      } else {
+        // Unbounded
+        lp.col_lower_ = {0, -delta};
+        lp.col_upper_ = {kHighsInf, 1 + delta};
+      }
+      // Solve
+      highs.passModel(lp);
+      highs.run();
+      HighsModelStatus required_model_status;
+      if (k == 0) {
+	// Presolve off
+        if (l == 0) {
+	  // MIP solver proves infeasiblilty
+          required_model_status = HighsModelStatus::kInfeasible;
+        } else {
+	  // Relaxation is unbounded, but origin is feasible
+          required_model_status = HighsModelStatus::kUnbounded;
+        }
+      } else {
+	// Presolve on, and identifies primal infeasible or unbounded
+        required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+      }
+      REQUIRE(highs.getModelStatus() == required_model_status);
+    }
+    highs.setOptionValue("presolve", kHighsOnString);
+  }
+}
+
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   Highs highs;
   // No presolve

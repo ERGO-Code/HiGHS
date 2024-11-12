@@ -13,6 +13,7 @@
 #include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/MipTimer.h"
 
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
@@ -539,7 +540,10 @@ void HighsImplications::separateImpliedBounds(
           (implicationsCached(col, 0) && implicationsCached(col, 1)))
         continue;
 
-      if (runProbing(col, numboundchgs)) {
+      mipsolver.analysis_.mipTimerStart(kMipClockProbingImplications);
+      const bool probing_result = runProbing(col, numboundchgs);
+      mipsolver.analysis_.mipTimerStop(kMipClockProbingImplications);
+      if (probing_result) {
         if (globaldomain.infeasible()) return;
       }
 

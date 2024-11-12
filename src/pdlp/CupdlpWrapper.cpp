@@ -207,7 +207,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #if CUPDLP_DEBUG
   analysePdlpSolution(options, lp, highs_solution);
 #endif
-  
+
   free(cost);
   free(lower);
   free(upper);
@@ -225,7 +225,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   free(prob->lower);
   free(prob->upper);
   free(prob->rhs);
-   
+
   free(prob->hasLower);
   free(prob->hasUpper);
 
@@ -233,7 +233,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   free(prob->data->csr_matrix->rowMatIdx);
   free(prob->data->csr_matrix->rowMatElem);
   free(prob->data->csr_matrix);
-   
+
   free(prob->data->csc_matrix->colMatBeg);
   free(prob->data->csc_matrix->colMatIdx);
   free(prob->data->csc_matrix->colMatElem);
@@ -246,13 +246,11 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   free(csc_cpu->colMatBeg);
   free(csc_cpu->colMatIdx);
   free(csc_cpu->colMatElem);
-  
+
   free(csc_cpu);
 
-  if (scaling->rowScale != nullptr)
-    free(scaling->rowScale);
-  if (scaling->colScale != nullptr)
-    free(scaling->colScale);
+  if (scaling->rowScale != nullptr) free(scaling->rowScale);
+  if (scaling->colScale != nullptr) free(scaling->colScale);
   free(scaling);
 
   return HighsStatus::kOk;

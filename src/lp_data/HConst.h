@@ -86,11 +86,14 @@ enum HighsAnalysisLevel {
   kHighsAnalysisLevelSolverTime = 8,
   kHighsAnalysisLevelNlaData = 16,
   kHighsAnalysisLevelNlaTime = 32,
+  kHighsAnalysisLevelMipData = 64,
+  kHighsAnalysisLevelMipTime = 128,
   kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverSummaryData +
       kHighsAnalysisLevelSolverRuntimeData + kHighsAnalysisLevelSolverTime +
-      kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime
+      kHighsAnalysisLevelNlaData + kHighsAnalysisLevelNlaTime +
+      kHighsAnalysisLevelMipData + kHighsAnalysisLevelMipTime
 };
 
 enum class HighsVarType : uint8_t {
@@ -287,6 +290,10 @@ const HighsInt kHighsIllegalInfeasibilityCount = -1;
 // values aren't known
 const double kHighsIllegalErrorValue = kHighsInf;
 const HighsInt kHighsIllegalErrorIndex = -1;
+
+// Illegal values for complementarity violations used to indicate that true
+// values aren't known
+const double kHighsIllegalComplementarityViolation = kHighsInf;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;

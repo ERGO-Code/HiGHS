@@ -1,11 +1,11 @@
 #ifndef __SRC_LIB_RUNTIME_HPP__
 #define __SRC_LIB_RUNTIME_HPP__
 
-#include "util/HighsTimer.h"
 #include "instance.hpp"
+#include "qpsolver/qpconst.hpp"
 #include "settings.hpp"
 #include "statistics.hpp"
-#include "qpsolver/qpconst.hpp"
+#include "util/HighsTimer.h"
 
 struct Runtime {
   Instance instance;

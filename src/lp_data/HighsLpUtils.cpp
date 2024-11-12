@@ -2028,7 +2028,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
 }
 
 HighsStatus readSolutionFile(const std::string filename,
-                             const HighsOptions& options, const HighsLp& lp,
+                             const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
   const HighsLogOptions& log_options = options.log_options;
@@ -2047,6 +2047,7 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   std::string keyword;
   std::string name;
+  double value;
   HighsInt num_col;
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
@@ -2063,49 +2064,89 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Model status
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Optimal
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  //
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // # Primal solution values
-  if (!readSolutionFileKeywordLineOk(keyword, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  // Read in the primal solution values: return warning if there is none
-  if (keyword == "None")
-    return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
-                                  read_solution, read_basis, in_file);
-  // If there are primal solution values then keyword is the status
-  // and the next line is objective
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // EOL
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Objective
-  // Next line should be "Columns" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  assert(keyword == "Columns");
-  // The default style parameter is kSolutionStyleRaw, and this still
-  // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
-  // read either way
-  const bool sparse = num_col <= 0;
-  if (style == kSolutionStyleSparse) assert(sparse);
-  if (sparse) {
-    num_col = -num_col;
-  } else {
-    if (num_col != lp_num_col) {
+  if (!readSolutionFileIdIgnoreLineOk(section_name, in_file))
+    return readSolutionFileErrorReturn(
+        in_file);  // Model (status) or =obj= (value)
+  const bool miplib_sol = section_name == "=obj=";
+  if (miplib_sol) {
+    // A MIPLIB solution file has nonzero solution values for a subset
+    // of the variables identified by name, so there must be column
+    // names
+    if (!lp.col_names_.size()) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " columns, not %" HIGHSINT_FORMAT "\n",
-                   num_col, lp_num_col);
+                   "readSolutionFile: Cannot read a MIPLIB solution file "
+                   "without column names in the model\n");
+      return HighsStatus::kError;
+    }
+    // Ensure that the col name hash table has been formed
+    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  }
+  bool sparse = false;
+  if (!miplib_sol) {
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Optimal
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  //
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // # Primal solution values
+    if (!readSolutionFileKeywordLineOk(keyword, in_file))
       return readSolutionFileErrorReturn(in_file);
+    // Read in the primal solution values: return warning if there is none
+    if (keyword == "None")
+      return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
+                                    read_solution, read_basis, in_file);
+    // If there are primal solution values then keyword is the status
+    // and the next line is objective
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // EOL
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Objective
+    // Next line should be "Columns" and correct number
+    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+      return readSolutionFileErrorReturn(in_file);
+    assert(keyword == "Columns");
+    // The default style parameter is kSolutionStyleRaw, and this still
+    // allows sparse files to be read. Recognise the latter from num_col
+    // <= 0. Doesn't matter if num_col = 0, since there's nothing to
+    // read either way
+    sparse = num_col <= 0;
+    if (style == kSolutionStyleSparse) assert(sparse);
+    if (sparse) {
+      num_col = -num_col;
+      assert(num_col <= lp_num_col);
+    } else {
+      if (num_col != lp_num_col) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                     " columns, not %" HIGHSINT_FORMAT "\n",
+                     num_col, lp_num_col);
+        return readSolutionFileErrorReturn(in_file);
+      }
     }
   }
-  double value;
-  if (sparse) {
+  if (miplib_sol) {
+    HighsInt num_value = 0;
+    read_solution.col_value.assign(lp_num_col, 0);
+    for (;;) {
+      // Only false return is for encountering EOF
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) break;
+      auto search = lp.col_hash_.name2index.find(name);
+      if (search == lp.col_hash_.name2index.end()) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is not found\n", name.c_str());
+        return HighsStatus::kError;
+      } else if (search->second == kHashIsDuplicate) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is duplicated\n", name.c_str());
+        return HighsStatus::kError;
+      }
+      HighsInt iCol = search->second;
+      assert(lp.col_names_[iCol] == name);
+      read_solution.col_value[iCol] = value;
+      num_value++;
+      if (in_file.eof()) break;
+    }
+  } else if (sparse) {
     read_solution.col_value.assign(lp_num_col, 0);
     HighsInt iCol;
     for (HighsInt iX = 0; iX < num_col; iX++) {
@@ -2115,7 +2156,7 @@ HighsStatus readSolutionFile(const std::string filename,
     }
   } else {
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(value, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_value[iCol] = value;
     }
@@ -2147,7 +2188,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // next.
   const bool num_row_ok = num_row == lp_num_row;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (!readSolutionFileIdDoubleLineOk(value, in_file))
+    if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
       return readSolutionFileErrorReturn(in_file);
     if (num_row_ok) read_solution.row_value[iRow] = value;
   }
@@ -2190,7 +2231,7 @@ HighsStatus readSolutionFile(const std::string filename,
     assert(keyword == "Columns");
     double dual;
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_dual[iCol] = dual;
     }
@@ -2201,7 +2242,7 @@ HighsStatus readSolutionFile(const std::string filename,
                                     read_solution, read_basis, in_file);
     assert(keyword == "Rows");
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.row_dual[iRow] = dual;
     }
@@ -2271,8 +2312,15 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
   return true;
 }
 
-bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file) {
-  std::string id;
+bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file >> id;  // Id
+  in_file.ignore(kMaxLineLength, '\n');
+  return true;
+}
+
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
+                                    std::ifstream& in_file) {
   if (in_file.eof()) return false;
   in_file >> id;  // Id
   if (in_file.eof()) return false;
@@ -2324,7 +2372,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
 
 // Determine validity, primal feasibility and (when relevant) integer
 // feasibility of a solution
-HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+HighsStatus assessLpPrimalSolution(const std::string message,
+                                   const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible) {
@@ -2349,7 +2398,8 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Assessing feasibility of %s tolerance of %11.4g\n",
+               "%sAssessing feasibility of %s tolerance of %11.4g\n",
+               message.c_str(),
                lp.isMip() ? "MIP using primal feasibility and integrality"
                           : "LP using primal feasibility",
                kPrimalFeasibilityTolerance);

@@ -979,9 +979,20 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     highs.setSolution(solution);
     basis.alien = true;
     highs.setBasis(basis);
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(info.qp_iteration_count == 0);
+    if (k == 0) {
+      // Modify the constraint so that the solution and basis are not
+      // feasible and one iteration is needed
+      REQUIRE(highs.changeCoeff(0, 1, 2.0) == HighsStatus::kOk);
+      REQUIRE(highs.changeRowBounds(0, 4.0, kHighsInf) == HighsStatus::kOk);
+      highs.clearSolver();
+      basis.alien = false;
+      highs.setBasis(basis);
+      highs.setSolution(solution);
+      return_status = highs.run();
+      REQUIRE(info.qp_iteration_count == 1);
+    }
   }
 }
 
@@ -1011,4 +1022,43 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
   highs.setOptionValue("qp_nullspace_limit", 4000);
+}
+
+TEST_CASE("rowless-qp", "[qpsolver]") {
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {0, -3};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  hessian.dim_ = 2;
+  hessian.start_ = {0, 2, 3};
+  hessian.index_ = {0, 1, 1};
+  hessian.value_ = {2, 1, 2};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.writeSolution("", kSolutionStylePretty) == HighsStatus::kOk);
+
+  const double require_objective_function_value = -2.25;
+  const double objective_function_value =
+      highs.getInfo().objective_function_value;
+  const double dl_objective_function_value =
+      std::fabs(objective_function_value - require_objective_function_value);
+  REQUIRE(dl_objective_function_value < 1e-10);
+  const std::vector<double>& col_value = highs.getSolution().col_value;
+  if (dev_run)
+    printf("Solution (%24.18g, %24.18g)\n", col_value[0], col_value[1]);
+  double dl_solution = std::fabs(col_value[0]);
+  REQUIRE(dl_solution < 1e-6);
+  dl_solution = std::fabs(col_value[1] - 1.5);
+  REQUIRE(dl_solution < 1e-6);
 }
