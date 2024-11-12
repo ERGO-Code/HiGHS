@@ -21,7 +21,6 @@ jobs:
       - name: Create symlink
         shell: bash
         working-directory: ${{runner.workspace}}
-        working-directory: 
         run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
 
       - name: Create Build Environment
@@ -43,33 +42,44 @@ jobs:
         shell: bash
         run: ctest --parallel --timeout 300 --output-on-failure 
 
-  # release_all_tests:
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest]
+  release_all_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
 
-  #   steps:
-  #     - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - name: Create Build Environment
-  #       run: cmake -E make_directory ${{runner.workspace}}/build
+      - name: Clone extra unit tests repo 
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: |
+          git clone https://github.com/galabovaa/highs-unit-tests.git
 
-  #     - name: Configure CMake All
-  #       shell: bash
-  #       working-directory: ${{runner.workspace}}/build
-  #       run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON 
+      - name: Create symlink
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: ln -s ${{runner.workspace}}/highs-unit-tests $GITHUB_WORKSPACE/check
+        
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
 
-  #     - name: Build All
-  #       working-directory: ${{runner.workspace}}/build
-  #       shell: bash
-  #       run: |
-  #         cmake --build . --parallel 
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DALL_TESTS=ON -DBUILD_EXTRA_UNIT_TESTS=ON 
 
-  #     - name: Test All
-  #       working-directory: ${{runner.workspace}}/build
-  #       shell: bash
-  #       run: ctest --parallel --timeout 300 --output-on-failure 
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --parallel 
+
+      - name: Test All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 300 --output-on-failure 
 
   # release__windows_extra_unit_tests:
   #   runs-on: windows-2019
