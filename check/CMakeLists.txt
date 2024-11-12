@@ -117,6 +117,12 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   if (FAST_BUILD)
     target_link_libraries(unit_tests highs Catch)
+
+    if (CUPDLP_GPU)
+        target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
+        target_include_directories(unit_tests PRIVATE ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda)
+        set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)
   endif()
