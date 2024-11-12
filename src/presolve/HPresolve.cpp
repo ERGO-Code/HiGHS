@@ -222,6 +222,26 @@ void HPresolve::dualImpliedFreeGetRhsAndRowType(
   }
 }
 
+bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
+  // if the implied lower bound on a row dual is strictly positive then the row
+  // is an implied equation (using its lower bound) due to complementary
+  // slackness
+  bool isLbndPositive =
+      implRowDualLower[row] > options->dual_feasibility_tolerance;
+  assert(!isLbndPositive || model->row_lower_[row] != -kHighsInf);
+  return isLbndPositive;
+}
+
+bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
+  // if the implied upper bound on a row dual is strictly negative then the row
+  // is an implied equation (using its upper bound) due to complementary
+  // slackness
+  bool isUbndNegative =
+      implRowDualUpper[row] < -options->dual_feasibility_tolerance;
+  assert(!isUbndNegative || model->row_upper_[row] != kHighsInf);
+  return isUbndNegative;
+}
+
 bool HPresolve::isImpliedIntegral(HighsInt col) {
   bool runDualDetection = true;
 
@@ -236,15 +256,13 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
       continue;
     }
 
-    double rowLower =
-        implRowDualUpper[nz.index()] < -options->dual_feasibility_tolerance
-            ? model->row_upper_[nz.index()]
-            : model->row_lower_[nz.index()];
+    double rowLower = isImpliedEquationAtUpper(nz.index())
+                          ? model->row_upper_[nz.index()]
+                          : model->row_lower_[nz.index()];
 
-    double rowUpper =
-        implRowDualLower[nz.index()] > options->dual_feasibility_tolerance
-            ? model->row_lower_[nz.index()]
-            : model->row_upper_[nz.index()];
+    double rowUpper = isImpliedEquationAtLower(nz.index())
+                          ? model->row_lower_[nz.index()]
+                          : model->row_upper_[nz.index()];
 
     if (rowUpper == rowLower) {
       // if there is an equation the dual detection does not need to be tried
@@ -308,15 +326,13 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
       continue;
     }
 
-    double rowLower =
-        implRowDualUpper[nz.index()] < -options->dual_feasibility_tolerance
-            ? model->row_upper_[nz.index()]
-            : model->row_lower_[nz.index()];
+    double rowLower = isImpliedEquationAtUpper(nz.index())
+                          ? model->row_upper_[nz.index()]
+                          : model->row_lower_[nz.index()];
 
-    double rowUpper =
-        implRowDualLower[nz.index()] > options->dual_feasibility_tolerance
-            ? model->row_lower_[nz.index()]
-            : model->row_upper_[nz.index()];
+    double rowUpper = isImpliedEquationAtLower(nz.index())
+                          ? model->row_lower_[nz.index()]
+                          : model->row_upper_[nz.index()];
 
     if (rowUpper == rowLower) {
       // if there is an equation the dual detection does not need to be tried
@@ -564,12 +580,10 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
 
 void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
   // propagate implied column bound upper bound if row has an upper bound
-  double rowUpper = implRowDualLower[row] > options->dual_feasibility_tolerance
-                        ? model->row_lower_[row]
-                        : model->row_upper_[row];
-  double rowLower = implRowDualUpper[row] < -options->dual_feasibility_tolerance
-                        ? model->row_upper_[row]
-                        : model->row_lower_[row];
+  double rowUpper = isImpliedEquationAtLower(row) ? model->row_lower_[row]
+                                                  : model->row_upper_[row];
+  double rowLower = isImpliedEquationAtUpper(row) ? model->row_upper_[row]
+                                                  : model->row_lower_[row];
 
   assert(rowLower != kHighsInf);
   assert(rowUpper != -kHighsInf);
@@ -3067,7 +3081,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
   double origRowLower = model->row_lower_[row];
 
   if (model->row_lower_[row] != model->row_upper_[row]) {
-    if (implRowDualLower[row] > options->dual_feasibility_tolerance) {
+    if (isImpliedEquationAtLower(row)) {
       // Convert to equality constraint (note that currently postsolve will not
       // know about this conversion)
       model->row_upper_[row] = model->row_lower_[row];
@@ -3076,7 +3090,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       changeRowDualLower(row, -kHighsInf);
       if (mipsolver == nullptr)
         checkRedundantBounds(rowDualLowerSource[row], row);
-    } else if (implRowDualUpper[row] < -options->dual_feasibility_tolerance) {
+    } else if (isImpliedEquationAtUpper(row)) {
       // Convert to equality constraint (note that currently postsolve will not
       // know about this conversion)
       model->row_lower_[row] = model->row_upper_[row];
@@ -3769,27 +3783,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     }
   }
 
-  bool hasRowUpper =
-      model->row_upper_[row] != kHighsInf ||
-      implRowDualUpper[row] < -options->dual_feasibility_tolerance;
-  // #1711: This looks very dodgy: surely model->row_lower_[row] !=
-  // -kHighsInf: dates from before 25/02/21
-  //
-  // bool hasRowLower =
-  //    model->row_lower_[row] != kHighsInf ||
-  //    implRowDualLower[row] > options->dual_feasibility_tolerance;
-  //
-  // Using this corrected line will reduce the number of calls to
-  // updateColImpliedBounds, as model->row_lower_[row] != kHighsInf is
-  // never false
-  bool hasRowLower =
-      model->row_lower_[row] != -kHighsInf ||
-      implRowDualLower[row] > options->dual_feasibility_tolerance;
-  // #1711: Unsurprisingly, the assert is triggered very frequently
-  //  assert(true_hasRowLower == hasRowLower);
-
-  if ((hasRowUpper && impliedRowBounds.getNumInfSumLowerOrig(row) <= 1) ||
-      (hasRowLower && impliedRowBounds.getNumInfSumUpperOrig(row) <= 1)) {
+  // implied bounds can only be computed when row bounds are available and
+  // bounds on activity contain at most one infinite bound
+  if (((model->row_upper_[row] != kHighsInf || isImpliedEquationAtLower(row)) &&
+       impliedRowBounds.getNumInfSumLowerOrig(row) <= 1) ||
+      ((model->row_lower_[row] != -kHighsInf ||
+        isImpliedEquationAtUpper(row)) &&
+       impliedRowBounds.getNumInfSumUpperOrig(row) <= 1)) {
     for (const HighsSliceNonzero& nonzero : getRowVector(row))
       updateColImpliedBounds(row, nonzero.index(), nonzero.value());
   }

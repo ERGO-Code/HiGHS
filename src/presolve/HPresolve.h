@@ -173,6 +173,10 @@ class HPresolve {
                                        HighsPostsolveStack::RowType& rowType,
                                        bool relaxRowDualBounds = false);
 
+  bool isImpliedEquationAtLower(HighsInt row) const;
+
+  bool isImpliedEquationAtUpper(HighsInt row) const;
+
   bool isImpliedIntegral(HighsInt col);
 
   bool isImpliedInteger(HighsInt col);
