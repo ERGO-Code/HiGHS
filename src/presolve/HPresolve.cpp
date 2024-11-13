@@ -2986,19 +2986,12 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
     if (logging_on)
       analysis_.startPresolveRuleLog(kPresolveRuleFreeColSubstitution);
+
     // todo, store which side of an implied free dual variable needs to be used
     // for substitution
     storeRow(row);
 
-    HighsPostsolveStack::RowType rowType;
-    double rhs;
-    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType);
-
-    postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
-                                        rowType, getStoredRow(),
-                                        getColumnVector(col));
-    // todo, check integrality of coefficients and allow this
-    substitute(row, col, rhs);
+    substituteFreeCol(postsolve_stack, row, col);
 
     analysis_.logging_on_ = logging_on;
     if (logging_on)
@@ -3008,6 +3001,26 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postsolve_stack,
 
   // todo: check for zero cost singleton and remove
   return Result::kOk;
+}
+
+void HPresolve::substituteFreeCol(HighsPostsolveStack& postsolve_stack,
+                                  HighsInt row, HighsInt col,
+                                  bool relaxRowDualBounds) {
+  assert(!rowDeleted[row]);
+  assert(!colDeleted[col]);
+  assert(isDualImpliedFree(row));
+  assert(isImpliedFree(col));
+
+  HighsPostsolveStack::RowType rowType;
+  double rhs;
+  dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, relaxRowDualBounds);
+
+  postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
+                                      rowType, getStoredRow(),
+                                      getColumnVector(col));
+
+  // todo, check integrality of coefficients and allow this
+  substitute(row, col, rhs);
 }
 
 HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
@@ -4846,18 +4859,9 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     // in the case where the row has length two or the column has length two
     // we always do the substitution since the fillin can never be problematic
     if (rowsize[row] == 2 || colsize[col] == 2) {
-      double rhs;
-      HighsPostsolveStack::RowType rowType;
-      dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
-
       storeRow(row);
-
-      postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
-                                          rowType, getStoredRow(),
-                                          getColumnVector(col));
+      substituteFreeCol(postsolve_stack, row, col, true);
       substitutionOpportunities[i].first = -1;
-
-      substitute(row, col, rhs);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
       HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
       continue;
@@ -4894,15 +4898,8 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postsolve_stack) {
     }
 
     nfail = 0;
-    double rhs;
-    HighsPostsolveStack::RowType rowType;
-    dualImpliedFreeGetRhsAndRowType(row, rhs, rowType, true);
-
-    postsolve_stack.freeColSubstitution(row, col, rhs, model->col_cost_[col],
-                                        rowType, getStoredRow(),
-                                        getColumnVector(col));
+    substituteFreeCol(postsolve_stack, row, col, true);
     substitutionOpportunities[i].first = -1;
-    substitute(row, col, rhs);
     HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
