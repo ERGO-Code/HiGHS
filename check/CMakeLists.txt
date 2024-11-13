@@ -1,6 +1,6 @@
 include(CTest)
 
-if (FORTRAN)
+if (FORTRAN AND NOT BUILD_EXTRA_UNIT_ONLY)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_executable(fortrantest TestFortranAPI.f90)
     if (NOT FAST_BUILD)
@@ -13,7 +13,7 @@ if (FORTRAN)
         ${HIGHS_SOURCE_DIR}/check)
 endif()
 
-if (NOT FAST_BUILD OR ALL_TESTS)
+if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
   set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
   add_library(Catch INTERFACE)
@@ -86,7 +86,17 @@ if (NOT FAST_BUILD OR ALL_TESTS)
       set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
   endif()
 
+    if (BUILD_EXTRA_UNIT_TESTS)
+        list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+        message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+        include(highs-unit-tests)
+
+        set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
+        message(STATUS ${TEST_SOURCES})
+    endif()
+
   add_executable(unit_tests ${TEST_SOURCES})
+
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
       target_compile_options(unit_tests PRIVATE "-Wno-unused-const-variable")
@@ -395,5 +405,54 @@ if (NOT FAST_BUILD OR ALL_TESTS)
             "Objective value     : ${optval}")
     endforeach(instance_pdlp)
   endif()
+
+endif()
+
+if (BUILD_EXTRA_PROBLEM_SET)
+    list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-problem-set")
+    message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-problem-set")
+    include(highs-problem-set)
+endif()
+
+if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
+    # prepare Catch library
+    set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
+    add_library(Catch INTERFACE)
+    target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
+
+
+    list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+    message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+    include(highs-unit-tests)
+
+    set(TEST_SOURCES TestMain.cpp ${HIGHS_EXTRA_UNIT_TESTS})
+    message(STATUS ${TEST_SOURCES})
+
+    add_executable(unit_tests_extra ${TEST_SOURCES})
+    target_link_libraries(unit_tests_extra Catch)
+
+    if (BUILD_CXX)
+        configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
+        target_link_libraries(unit_tests_extra highs)
+    endif()
+
+    add_test(NAME unit-test-extra-build
+          COMMAND ${CMAKE_COMMAND}
+                  --build ${HIGHS_BINARY_DIR}
+                  --target unit_tests_extra
+                  #  --config ${CMAKE_BUILD_TYPE}
+          )
+
+    # Avoid that several build jobs try to concurretly build.
+    set_tests_properties(unit-test-extra-build
+                        PROPERTIES
+                        RESOURCE_LOCK unittestbin)
+
+    # create a binary running all the tests in the executable
+    add_test(NAME unit_tests_extra COMMAND unit_tests_extra --success)
+    set_tests_properties(unit_tests_extra
+                        PROPERTIES
+                        DEPENDS unit-test-extra-build)
+    set_tests_properties(unit_tests_extra PROPERTIES TIMEOUT 10000) 
 
 endif()
