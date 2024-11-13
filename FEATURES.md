@@ -20,6 +20,11 @@ Now computing the primal-dual integral, reporting it, and making it available as
 
 Trivial primal heuristics "all zero", "all lower bound", "all upper bound", and "lock point" added to the MIP solver
 
+# Build changes
+
+Added wheels for Python 3.13 
+
+Updated command line options and moved them out of the library and into the executable 
 
 
 

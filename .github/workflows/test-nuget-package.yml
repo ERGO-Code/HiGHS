@@ -35,7 +35,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.8.0
+        run: dotnet pack -c Release /p:Version=1.8.1
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -81,7 +81,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.8.0
+        run: dotnet pack -c Release /p:Version=1.8.1
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -124,7 +124,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.8.0
+        run: dotnet pack -c Release /p:Version=1.8.1
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -167,7 +167,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.8.0
+        run: dotnet pack -c Release /p:Version=1.8.1
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -212,7 +212,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.8.0
+        run: dotnet pack -c Release /p:Version=1.8.1
 
       - name: Add local feed 
         run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
@@ -228,5 +228,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.8.0 -s ${{runner.workspace}}\nugets 
+          dotnet add package Highs.Native -v 1.8.1 -s ${{runner.workspace}}\nugets 
           dotnet run
