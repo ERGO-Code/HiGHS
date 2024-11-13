@@ -179,6 +179,12 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   CUPDLP_COPY_VEC(w->colScale, scaling->colScale, cupdlp_float, nCols);
 #endif
 
+#ifdef CUPDLP_GPU
+  w->timers->AllocMem_CopyMatToDeviceTime += alloc_matrix_time;
+  w->timers->CopyVecToDeviceTime += copy_vec_time;
+  w->timers->CudaPrepareTime = cuda_prepare_time;
+#endif
+
   // CUPDLP_CALL(LP_SolvePDHG(prob, cupdlp_NULL, cupdlp_NULL, cupdlp_NULL,
   // cupdlp_NULL));
   //   CUPDLP_CALL(LP_SolvePDHG(prob, ifChangeIntParam, intParam,
@@ -478,6 +484,11 @@ cupdlp_retcode data_alloc(CUPDLPdata* data, cupdlp_int nRows, cupdlp_int nCols,
   data->csr_matrix = cupdlp_NULL;
   data->csc_matrix = cupdlp_NULL;
   data->device = CPU;
+#ifdef CUPDLP_CPU
+  data->device = CPU;
+#else
+  data->device = SINGLE_GPU;
+#endif
 
   switch (dst_matrix_format) {
     case DENSE:
@@ -549,10 +560,18 @@ cupdlp_retcode problem_alloc(
       infNorm(((CUPDLPcsc*)matrix)->colMatElem, ((CUPDLPcsc*)matrix)->nMatElem);
 
   begin = getTimeStamp();
+#ifndef CUPDLP_GPU
   cupdlp_copy_vec(prob->cost, cost, cupdlp_float, nCols);
   cupdlp_copy_vec(prob->rhs, rhs, cupdlp_float, nRows);
   cupdlp_copy_vec(prob->lower, lower, cupdlp_float, nCols);
   cupdlp_copy_vec(prob->upper, upper, cupdlp_float, nCols);
+#else
+  cupdlp_copy_vec_cuda(prob->cost, cost, cupdlp_float, nCols);
+  cupdlp_copy_vec_cuda(prob->rhs, rhs, cupdlp_float, nRows);
+  cupdlp_copy_vec_cuda(prob->lower, lower, cupdlp_float, nCols);
+  cupdlp_copy_vec_cuda(prob->upper, upper, cupdlp_float, nCols);
+#endif
+
   *copy_vec_time = getTimeStamp() - begin;
 
   // Keep
