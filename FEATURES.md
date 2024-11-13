@@ -2,33 +2,30 @@
 
 ## Code changes
 
-Added `int64_t mip_total_lp_iterations` to `HighsCallbackDataOut` and modified accessor function
+When primal infeasiblity is detected in presolve, no dual ray is available so, previously, the `has_dual_ray` parameter of `Highs::getDualRay` returned false and that was it. Now, if a null pointer is not passed for `dual_ray_value`, `Highs::getDualRay` will compute a dual ray - at the cost of solving the feasiblility LP without presolve. The same is now true for `Highs::getPrimalRay`. `Highs::getDualUnboundednessDirection` has been introduced to determine the product between the constraint matrix and the dual ray, forcing the calculation of the latter if necessary. Once a dual ray is known for the incumbent model in HiGHS, subsequent calls to `Highs::getDualRay` and `Highs::getDualUnboundednessDirection` will be vastly cheaper
 
-`Highs::writeSolution` and `Highs::writeBasis` now being done via `HighsIO` logging, so can be redirected to logging callback.
+The method `Highs::getDualObjectiveValue` now exitsts to compute the dual objective value, returning `HighsStatus::kError` if it is not possible.
 
-Introduced `const double kHighsUndefined` as value of undefined values in a user solution. It's equal to `kHighsInf`
+The method `Highs::getStandardFormLp` now exists to return the incumbent LP in standard form - overlooking any integrality or Hessian. To determine the sizes of the vectors of data, the method is called without specifying pointers to the data arrays.
 
-Added `Highs::setSolution(const HighsInt num_entries, const HighsInt* index, const double* value);` to allow a sparse primal solution to be defined. When a MIP is solved to do this, the value of (new) option `mip_max_start_nodes` is used for `mip_max_nodes` to avoid excessive cost
+Added documentation on the use of presolve when solving an incumbent model, and clarifying the use of the method `Highs::presolve`.
 
-Added options `write_presolved_model_to_file` and `write_presolved_model_file` so that presolved model can be written via a command line option
+HiGHS will now read a `MIPLIB` solution file
 
-Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possibly weighted) sum of (allowable) infeasibilities in an LP/MIP.
+Added time limit check to `HPresolve::strengthenInequalities`
 
-Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise progress of the MIP solver.
+Added `getColIntegrality` to `highspy`
 
-Added minimal documentation of solvers and how simplex variants can be run
+Now computing the primal-dual integral, reporting it, and making it available as `HighsInfo::primal_dual_integral`
 
-Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return `HighsStatus::kOk` (since internal matrix is exact)
+Trivial primal heuristics "all zero", "all lower bound", "all upper bound", and "lock point" added to the MIP solver
 
-Now multiplying by pre-computed reciprocals rather than performing divisions in loops in simplex solver: LP performance improvement ~2.5%
+# Build changes
 
-Primal and dual residuals after IPM and cuPDLP-C are checked, and corrections applied to row solution and column duals
+Added wheels for Python 3.13 
 
-`Highs::passModelName` added to allow name to be given to the incumbent model
+Updated command line options and moved them out of the library and into the executable 
 
-Memory leaks in cuPDLP-C fixed
-
-Bug fixed in MIP presolve
 
 
 

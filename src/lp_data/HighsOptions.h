@@ -238,10 +238,10 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 HighsStatus writeOptionsToFile(
     FILE* file, const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
-    const HighsFileType file_type = HighsFileType::kOther);
+    const HighsFileType file_type = HighsFileType::kFull);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_deviations = true,
-                   const HighsFileType file_type = HighsFileType::kOther);
+                   const bool report_only_deviations = false,
+                   const HighsFileType file_type = HighsFileType::kFull);
 void reportOption(FILE* file, const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
@@ -372,6 +372,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
+  bool presolve_remove_slacks;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
@@ -507,6 +508,7 @@ struct HighsOptionsStruct {
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
         presolve_rule_logging(false),
+        presolve_remove_slacks(false),
         simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
         simplex_initial_condition_tolerance(0.0),
@@ -524,10 +526,10 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
         run_centring(false),
-        max_centring_steps(0),
-        centring_ratio_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
+        max_centring_steps(0),
+        centring_ratio_tolerance(0.0),
         icrash(false),
         icrash_dualize(false),
         icrash_strategy(""),
@@ -559,7 +561,9 @@ struct HighsOptionsStruct {
 #endif
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
-        mip_improving_solution_file("") {};
+        // clang-format off
+	mip_improving_solution_file("") {};
+  // clang-format on
 };
 
 // For now, but later change so HiGHS properties are string based so that new
@@ -1320,6 +1324,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool(
         "presolve_rule_logging", "Log effectiveness of presolve rules for LP",
         advanced, &presolve_rule_logging, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("presolve_remove_slacks",
+                                       "Remove slacks after presolve", advanced,
+                                       &presolve_remove_slacks, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(

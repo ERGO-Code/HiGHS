@@ -601,3 +601,41 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == -1);
   std::remove(presolved_model_file.c_str());
 }
+
+TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
+  // This LP reduces to empty, because the equation is a doubleton
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolvedLp().num_col_ == 0);
+  REQUIRE(h.getPresolvedLp().num_row_ == 0);
+
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-10, -25, 0, 0};
+  lp.col_lower_ = {0, 0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {80, 120};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4, 1, 1};
+  REQUIRE(h.setOptionValue("presolve_remove_slacks", true) == HighsStatus::kOk);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolvedLp().num_col_ == 2);
+  REQUIRE(h.getPresolvedLp().num_row_ == 2);
+}

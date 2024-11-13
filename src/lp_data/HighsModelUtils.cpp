@@ -104,7 +104,11 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
       return "BS";
       break;
     case HighsBasisStatus::kUpper:
-      return "UB";
+      if (lower == upper) {
+        return "FX";
+      } else {
+        return "UB";
+      }
       break;
     case HighsBasisStatus::kZero:
       return "FR";

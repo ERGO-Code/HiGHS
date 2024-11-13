@@ -8,7 +8,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
-version = "1.8.0"
+version = "1.8.1"
 description = "A thin set of pybind11 wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
@@ -25,6 +25,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Typing :: Typed",
 ]
 
@@ -194,6 +195,9 @@ testpaths = ["tests"]
 [tool.cibuildwheel]
 build = "*"
 skip = "cp3{6,7}-*"
+
+# Enable free-threaded support
+free-threaded-support = true
 
 test-command = "pytest {project}/tests"
 test-extras = ["test", "numpy"]

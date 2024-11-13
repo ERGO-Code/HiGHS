@@ -17,6 +17,7 @@
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/MipTimer.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
@@ -547,7 +548,9 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    mipsolver.analysis_.mipTimerStart(kMipClockSimplexBasisSolveLp);
     lpsolver.run();
+    mipsolver.analysis_.mipTimerStop(kMipClockSimplexBasisSolveLp);
   }
 }
 
@@ -1045,9 +1048,35 @@ void HighsLpRelaxation::setObjectiveLimit(double objlim) {
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue(
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
-                        mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+                        mipsolver.timer_.read(mipsolver.timer_.total_clock));
   // lpsolver.setOptionValue("output_flag", true);
+  const bool valid_basis = lpsolver.getBasis().valid;
+  const HighsInt simplex_solve_clock = valid_basis
+                                           ? kMipClockSimplexBasisSolveLp
+                                           : kMipClockSimplexNoBasisSolveLp;
+  const bool dev_report = false;
+  if (dev_report && !mipsolver.submip) {
+    if (valid_basis) {
+      printf("Solving LP (%7d, %7d) with    a valid basis\n",
+             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+    } else {
+      printf("Solving LP (%7d, %7d) without a valid basis\n",
+             int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
+    }
+  }
+  const bool solver_logging = false;
+  const bool detailed_simplex_logging = false;
+  if (solver_logging) lpsolver.setOptionValue("output_flag", true);
+  if (detailed_simplex_logging) {
+    lpsolver.setOptionValue("output_flag", true);
+    lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
+    lpsolver.setOptionValue("highs_analysis_level",
+                            kHighsAnalysisLevelSolverRuntimeData);
+  }
+
+  mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
+  mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
@@ -1135,10 +1164,18 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::kError;
     }
     case HighsModelStatus::kUnbounded:
-      if (info.basis_validity == kBasisValidityInvalid) return Status::kError;
-
+      // If unboundedness is detected in the presolved LP, then
+      // postsolve cannot be run, so there is no basis. Returning
+      // Status::kError as a result yielded #1962, where the root node
+      // is unbounded.
+      if (info.basis_validity == kBasisValidityInvalid)
+        highsLogUser(mipsolver.options_mip_->log_options,
+                     HighsLogType::kWarning,
+                     "HighsLpRelaxation::run LP is unbounded with no basis, "
+                     "but not returning Status::kError\n");
       if (info.primal_solution_status == kSolutionStatusFeasible)
-        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value, 'T');
+        mipsolver.mipdata_->trySolution(lpsolver.getSolution().col_value,
+                                        kSolutionSourceUnbounded);
 
       return Status::kUnbounded;
     case HighsModelStatus::kUnknown:
@@ -1178,7 +1215,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
+        mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
         ipm.run();
+        mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }
@@ -1230,9 +1269,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
           if (fractionality(val) > mipsolver.mipdata_->feastol) {
             HighsInt col = i;
-            if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
-                mipsolver.mipdata_->downlocks[col] != 0)
-              roundable = false;
+            roundable = roundable && (mipsolver.mipdata_->uplocks[col] == 0 ||
+                                      mipsolver.mipdata_->downlocks[col] == 0);
 
             const HighsCliqueTable::Substitution* subst =
                 mipsolver.mipdata_->cliquetable.getSubstitution(col);
@@ -1357,7 +1395,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
             objsum += roundsol[i] * mipsolver.colCost(i);
 
-          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), 'S');
+          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum),
+                                           kSolutionSourceSolveLp);
           objsum = 0;
         }
 

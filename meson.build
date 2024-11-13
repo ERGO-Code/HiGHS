@@ -1,5 +1,5 @@
 project('highs', 'cpp', 'c',
-  version : '1.8.0',
+  version : '1.8.1',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
@@ -20,17 +20,54 @@ host_system = host_machine.system()
 is_windows = host_system == 'windows'
 is_mingw = is_windows and cc.get_id() == 'gcc'
 
+# Granular flags
+# C++
+_cpp_Wno_invalid_offsetof = cppc.get_supported_arguments('-Wno-invalid-offsetof')
+_cpp_Wno_maybe_uninitialized = cppc.get_supported_arguments('-Wno-maybe-uninitialized')
+_cpp_Wno_reorder = cppc.get_supported_arguments('-Wno-reorder')
+_cpp_Wno_reorder_ctor = cppc.get_supported_arguments('-Wno-reorder-ctor')
+_cpp_Wno_sometimes_uninitialized = cppc.get_supported_arguments('-Wno-sometimes-uninitialized')
+_cpp_Wno_unused_but_set_variable = cppc.get_supported_arguments('-Wno-unused-but-set-variable')
+_cpp_Wno_unused_variable = cppc.get_supported_arguments('-Wno-unused-variable')
+_cpp_Wno_use_after_free = cppc.get_supported_arguments('-Wno-use-after-free')
+_cpp_Wno_comment = cppc.get_supported_arguments('-Wno-comment')
+
+
+# C
+Wno_comment = cc.get_supported_arguments('-Wno-comment')
+Wno_invalid_offsetof = cc.get_supported_arguments('-Wno-invalid-offsetof')
+Wno_maybe_uninitialized = cc.get_supported_arguments('-Wno-maybe-uninitialized')
+Wno_sometimes_uninitialized = cc.get_supported_arguments('-Wno-sometimes-uninitialized')
+Wno_unused_label = cc.get_supported_arguments('-Wno-unused-label')
+Wno_use_after_free = cc.get_supported_arguments('-Wno-use-after-free')
+Wno_unused_but_set_variable = cc.get_supported_arguments('-Wno-unused-but-set-variable')
+Wno_unused_variable = cc.get_supported_arguments('-Wno-unused-variable')
+Wno_use_after_free = cc.get_supported_arguments('-Wno-use-after-free')
+
 # Conditional arguments
-_args += cppc.get_supported_arguments([
-  '-Wno-return-type',
-  '-Wno-switch',
-  '-Wno-comment',
-  '-Wno-unused-variable',
-  '-Wno-unused-but-set-variable',
-  '-Wno-unused-const-variable',
-  '-Wno-unused-function',
-  '-Wno-unused-label',
-])
+_highs_cpp_suppressions = [
+  _cpp_Wno_comment,
+  _cpp_Wno_invalid_offsetof,
+  _cpp_Wno_maybe_uninitialized,
+  _cpp_Wno_reorder,
+  _cpp_Wno_reorder_ctor,
+  _cpp_Wno_sometimes_uninitialized,
+  _cpp_Wno_unused_but_set_variable,
+  _cpp_Wno_unused_variable,
+  _cpp_Wno_use_after_free,
+]
+
+_highs_c_suppressions = [
+  Wno_comment,
+  Wno_invalid_offsetof,
+  Wno_maybe_uninitialized,
+  Wno_sometimes_uninitialized,
+  Wno_unused_but_set_variable,
+  Wno_unused_label,
+  Wno_unused_variable,
+  Wno_use_after_free,
+]
+
 
 if cppc.get_id() == 'msvc'
   add_project_arguments(

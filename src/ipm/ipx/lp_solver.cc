@@ -354,7 +354,11 @@ void LpSolver::ClearSolution() {
 }
 
 void LpSolver::InteriorPointSolve() {
-  control_.hLog("Interior Point Solve\n");
+    if (control_.runCentring()) {
+      control_.hLog("Interior point solve for analytic centre\n");
+    } else {
+      control_.hLog("Interior point solve\n");
+    }
 
     // Allocate new iterate and set tolerances for IPM termination test.
     iterate_.reset(new Iterate(model_));

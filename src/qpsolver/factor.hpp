@@ -36,7 +36,7 @@ class CholeskyFactor {
     HighsInt min_k_max = min(new_k_max, current_k_max);
     for (HighsInt i = 0; i < min_k_max; i++) {
       for (HighsInt j = 0; j < min_k_max; j++) {
-	assert(i * (new_k_max) + j < l_size);
+        assert(i * (new_k_max) + j < l_size);
         L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
       }
     }
@@ -51,7 +51,6 @@ class CholeskyFactor {
             basis.getnuminactive());
     L.resize(current_k_max * current_k_max);
   }
-
 
   void recompute() {
     std::vector<std::vector<double>> orig;
@@ -97,7 +96,8 @@ class CholeskyFactor {
     uptodate = true;
   }
 
-  QpSolverStatus expand(const QpVector& yp, QpVector& gyp, QpVector& l, QpVector& m) {
+  QpSolverStatus expand(const QpVector& yp, QpVector& gyp, QpVector& l,
+                        QpVector& m) {
     if (!uptodate) {
       return QpSolverStatus::OK;
     }
@@ -124,14 +124,15 @@ class CholeskyFactor {
       // b*b -a*a = mu
       // k(b-a) = 1
       // b + a = k*mu
-  // Commented out unreachable code
+      // Commented out unreachable code
       //      const double tolerance = 0.001;
       //
       //      double beta = max(tolerance, sqrt(m.norm2() / L[0] + fabs(mu)));
       //      double k = 1 / (beta + sqrt(beta * beta - mu));
       //      double alpha = k * mu - beta;
       //
-      //      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n", (int)current_k, alpha,
+      //      printf("k = %d, alpha = %lf, beta = %lf, k = %lf\n",
+      //      (int)current_k, alpha,
       //             beta, k);
       //
       //      a.clear();

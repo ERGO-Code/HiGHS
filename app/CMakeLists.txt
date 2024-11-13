@@ -13,7 +13,7 @@ if(FAST_BUILD)
       set(win_version_file)
     endif()
 
-    target_sources(highs-bin PRIVATE RunHighs.cpp ${win_version_file})
+    target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
       $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
