@@ -322,6 +322,9 @@ class HPresolve {
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                            bool handleSingletonRows = true);
+
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
