@@ -1,0 +1,1 @@
+/usr/bin/g++  -mpopcnt -g -flto=auto -fno-fat-lto-objects "CMakeFiles/highs-bin.dir/RunHighs.cpp.o" -o ../bin/highs  -Wl,-rpath,/home/ivet/code/HiGHS/build-cpu/lib: ../lib/libhighs.so.1.8.1 /usr/lib/x86_64-linux-gnu/libz.so 

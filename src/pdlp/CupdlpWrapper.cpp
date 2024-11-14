@@ -566,10 +566,10 @@ cupdlp_retcode problem_alloc(
   cupdlp_copy_vec(prob->lower, lower, cupdlp_float, nCols);
   cupdlp_copy_vec(prob->upper, upper, cupdlp_float, nCols);
 #else
-  cupdlp_copy_vec_cuda(prob->cost, cost, cupdlp_float, nCols);
-  cupdlp_copy_vec_cuda(prob->rhs, rhs, cupdlp_float, nRows);
-  cupdlp_copy_vec_cuda(prob->lower, lower, cupdlp_float, nCols);
-  cupdlp_copy_vec_cuda(prob->upper, upper, cupdlp_float, nCols);
+  CUPDLP_COPY_VEC(prob->cost, cost, cupdlp_float, nCols);
+  CUPDLP_COPY_VEC(prob->rhs, rhs, cupdlp_float, nRows);
+  CUPDLP_COPY_VEC(prob->lower, lower, cupdlp_float, nCols);
+  CUPDLP_COPY_VEC(prob->upper, upper, cupdlp_float, nCols);
 #endif
 
   *copy_vec_time = getTimeStamp() - begin;
