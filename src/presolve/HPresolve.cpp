@@ -4039,6 +4039,113 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolve_stack,
   return Result::kOk;
 }
 
+HPresolve::Result HPresolve::detectDominatedCol(
+    HighsPostsolveStack& postsolve_stack, HighsInt col,
+    bool handleSingletonRows) {
+  assert(!colDeleted[col]);
+
+  double colDualUpper =
+      -impliedDualRowBounds.getSumLower(col, -model->col_cost_[col]);
+  double colDualLower =
+      -impliedDualRowBounds.getSumUpper(col, -model->col_cost_[col]);
+
+  const bool logging_on = analysis_.logging_on_;
+
+  auto dominatedCol = [&](HighsInt col, double dualBound, double bound,
+                          HighsInt direction) {
+    if (direction * dualBound <= options->dual_feasibility_tolerance)
+      return Result::kOk;
+    if (direction * bound == -kHighsInf) return Result::kDualInfeasible;
+    if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
+    bool unbounded = false;
+    if (direction > 0)
+      unbounded = fixColToLowerOrUnbounded(postsolve_stack, col);
+    else
+      unbounded = fixColToUpperOrUnbounded(postsolve_stack, col);
+    if (unbounded) {
+      // Handle unboundedness
+      presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+      return Result::kDualInfeasible;
+    }
+    analysis_.logging_on_ = logging_on;
+    if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
+    if (handleSingletonRows)
+      HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolve_stack));
+    return checkLimits(postsolve_stack);
+  };
+
+  auto weaklyDominatedCol = [&](HighsInt col, double dualBound, double bound,
+                                double otherBound, HighsInt direction) {
+    if (direction * dualBound < -options->dual_feasibility_tolerance)
+      return Result::kOk;
+    if (direction * bound != -kHighsInf) {
+      if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleDominatedCol);
+      bool unbounded = false;
+      if (direction > 0)
+        unbounded = fixColToLowerOrUnbounded(postsolve_stack, col);
+      else
+        unbounded = fixColToUpperOrUnbounded(postsolve_stack, col);
+      if (unbounded) {
+        // Handle unboundedness
+        presolve_status_ = HighsPresolveStatus::kUnboundedOrInfeasible;
+        return Result::kDualInfeasible;
+      }
+      analysis_.logging_on_ = logging_on;
+      if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleDominatedCol);
+      return checkLimits(postsolve_stack);
+    } else if (analysis_.allow_rule_[kPresolveRuleForcingCol]) {
+      HighsCDouble sum = 0;
+      if (direction > 0)
+        sum = impliedDualRowBounds.getSumUpperOrig(col);
+      else
+        sum = impliedDualRowBounds.getSumLowerOrig(col);
+      if (sum == 0.0) {
+        if (logging_on) analysis_.startPresolveRuleLog(kPresolveRuleForcingCol);
+        postsolve_stack.forcingColumn(
+            col, getColumnVector(col), model->col_cost_[col], otherBound,
+            direction < 0, model->integrality_[col] == HighsVarType::kInteger);
+        markColDeleted(col);
+        HighsInt coliter = colhead[col];
+        while (coliter != -1) {
+          HighsInt row = Arow[coliter];
+          double rhs = direction * Avalue[coliter] > 0.0
+                           ? model->row_upper_[row]
+                           : model->row_lower_[row];
+          coliter = Anext[coliter];
+
+          postsolve_stack.forcingColumnRemovedRow(col, row, rhs,
+                                                  getRowVector(row));
+          removeRow(row);
+        }
+        analysis_.logging_on_ = logging_on;
+        if (logging_on) analysis_.stopPresolveRuleLog(kPresolveRuleForcingCol);
+        return checkLimits(postsolve_stack);
+      }
+    }
+    return Result::kOk;
+  };
+
+  // check for dominated column
+  HPRESOLVE_CHECKED_CALL(
+      dominatedCol(col, colDualLower, model->col_lower_[col], HighsInt{1}));
+  if (colDeleted[col]) return Result::kOk;
+
+  HPRESOLVE_CHECKED_CALL(
+      dominatedCol(col, colDualUpper, model->col_upper_[col], HighsInt{-1}));
+  if (colDeleted[col]) return Result::kOk;
+
+  // check for weakly dominated column
+  HPRESOLVE_CHECKED_CALL(
+      weaklyDominatedCol(col, colDualLower, model->col_lower_[col],
+                         model->col_upper_[col], HighsInt{1}));
+  if (colDeleted[col]) return Result::kOk;
+
+  HPRESOLVE_CHECKED_CALL(
+      weaklyDominatedCol(col, colDualUpper, model->col_upper_[col],
+                         model->col_lower_[col], HighsInt{-1}));
+  return Result::kOk;
+}
+
 HPresolve::Result HPresolve::initialRowAndColPresolve(
     HighsPostsolveStack& postsolve_stack) {
   // do a full scan over the rows as the singleton arrays and the changed row
