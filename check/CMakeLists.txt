@@ -474,4 +474,7 @@ if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
                         DEPENDS unit-test-extra-build)
     set_tests_properties(unit_tests_extra PROPERTIES TIMEOUT 10000) 
 
+    if (CUPDLP_GPU)
+        target_link_libraries(unit_tests_extra ${CUDA_LIBRARY})
+    endif()
 endif()
