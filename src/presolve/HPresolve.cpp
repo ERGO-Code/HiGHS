@@ -354,7 +354,7 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
 
   if ((model->col_lower_[col] != -kHighsInf &&
        fractionality(model->col_lower_[col]) > options->small_matrix_value) ||
-      (model->col_upper_[col] != -kHighsInf &&
+      (model->col_upper_[col] != kHighsInf &&
        fractionality(model->col_upper_[col]) > options->small_matrix_value))
     return false;
 
@@ -2356,7 +2356,7 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
   if (integral) {
     if (model->row_upper_[row] != kHighsInf)
       model->row_upper_[row] = std::round(model->row_upper_[row]);
-    if (model->row_lower_[row] != kHighsInf)
+    if (model->row_lower_[row] != -kHighsInf)
       model->row_lower_[row] = std::round(model->row_lower_[row]);
   }
 
@@ -5685,7 +5685,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // incorporate the check for the variable types that allow domination.
       if (objDiff < -options->dual_feasibility_tolerance) {
         // scaled col is better than duplicate col
-        if (colUpperInf() && model->col_lower_[duplicateCol] != kHighsInf)
+        if (colUpperInf() && model->col_lower_[duplicateCol] != -kHighsInf)
           reductionCase = kDominanceDuplicateColToLower;
         else if (duplicateColLowerInf() &&
                  (colScale < 0 || model->col_upper_[col] != kHighsInf) &&
