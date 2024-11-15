@@ -475,6 +475,16 @@ if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
     set_tests_properties(unit_tests_extra PROPERTIES TIMEOUT 10000) 
 
     if (CUPDLP_GPU)
+        set_target_properties(unit_tests_extra PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
         target_link_libraries(unit_tests_extra ${CUDA_LIBRARY})
+
+        add_executable(cublas_example cublas_example.cpp)
+        set_target_properties(cublas_example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        target_link_libraries(cublas_example ${CUDA_LIBRARY})
+
+        add_executable(cublas_gpu_start cublas_gpu_start.cpp)
+        set_target_properties(cublas_gpu_start PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        target_link_libraries(cublas_gpu_start ${CUDA_LIBRARY})
     endif()
+
 endif()
