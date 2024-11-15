@@ -679,16 +679,16 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
       highs.run();
       HighsModelStatus required_model_status;
       if (k == 0) {
-	// Presolve off
+        // Presolve off
         if (l == 0) {
-	  // MIP solver proves infeasiblilty
+          // MIP solver proves infeasiblilty
           required_model_status = HighsModelStatus::kInfeasible;
         } else {
-	  // Relaxation is unbounded, but origin is feasible
+          // Relaxation is unbounded, but origin is feasible
           required_model_status = HighsModelStatus::kUnbounded;
         }
       } else {
-	// Presolve on, and identifies primal infeasible or unbounded
+        // Presolve on, and identifies primal infeasible or unbounded
         required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
       }
       REQUIRE(highs.getModelStatus() == required_model_status);

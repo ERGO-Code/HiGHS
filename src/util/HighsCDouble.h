@@ -300,7 +300,14 @@ class HighsCDouble {
     double ceil_x = std::ceil(double(x));
     HighsCDouble res;
 
-    two_sum(res.hi, res.lo, ceil_x, std::ceil(double(x - ceil_x)));
+    HighsCDouble x_m_ceil_x = x - ceil_x;
+    double double_x_m_ceil_x = double(x_m_ceil_x);
+    double ceil_double_x_m_ceil_x = std::ceil(double_x_m_ceil_x);
+    HighsCDouble local_res;
+
+    two_sum(local_res.hi, local_res.lo, ceil_x, ceil_double_x_m_ceil_x);
+    res = local_res;
+    //    two_sum(res.hi, res.lo, ceil_x, std::ceil(double(x - ceil_x)));
     return res;
   }
 

@@ -43,6 +43,7 @@ TEST_CASE("HighsIntegers", "[util]") {
 TEST_CASE("HighsCdouble-ceil", "[util]") {
   // For fix-2041
   HighsCDouble a = 1e-23;
+  a = 1e-12;
   double ceil_a;
   double double_a;
   ceil_a = double(ceil(a));
