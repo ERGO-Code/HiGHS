@@ -1,5 +1,6 @@
 #include "HCheckConfig.h"
 #include "catch.hpp"
+#include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
 
 const bool dev_run = false;
@@ -37,4 +38,19 @@ TEST_CASE("HighsIntegers", "[util]") {
   REQUIRE(integralscalar == primes[0] * primes[1] * primes[2] * primes[3]);
 
   if (dev_run) printf("integral scalar is %g\n", integralscalar);
+}
+
+TEST_CASE("HighsCdouble-ceil", "[util]") {
+  // For fix-2041
+  HighsCDouble a = 1e-23;
+  double ceil_a;
+  double double_a;
+  ceil_a = double(ceil(a));
+  double_a = double(a);
+  if (dev_run) {
+    printf("ceil_a = %23.18g\n", ceil_a);
+    printf("double_a = %23.18g\n", double_a);
+  }
+  REQUIRE(ceil_a >= double_a);
+  REQUIRE(ceil(a) >= a);
 }
