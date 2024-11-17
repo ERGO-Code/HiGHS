@@ -5568,17 +5568,21 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // compensating column is integral
       bool checkColImplBounds = true;
       bool checkDuplicateColImplBounds = true;
+      auto isLowerStrictlyImplied = [&](HighsInt col) {
+        return (model->col_lower_[col] == -kHighsInf ||
+                implColLower[col] > model->col_lower_[col] + primal_feastol);
+      };
+      auto isUpperStrictlyImplied = [&](HighsInt col) {
+        return (model->col_upper_[col] == kHighsInf ||
+                implColUpper[col] < model->col_upper_[col] - primal_feastol);
+      };
       auto colUpperInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
           // for LP we check strict redundancy of the bounds as otherwise dual
           // postsolve might fail when the bound is used in the optimal solution
-          return colScale > 0 ? model->col_upper_[col] == kHighsInf ||
-                                    implColUpper[col] <
-                                        model->col_upper_[col] - primal_feastol
-                              : model->col_lower_[col] == -kHighsInf ||
-                                    implColLower[col] >
-                                        model->col_lower_[col] + primal_feastol;
+          return colScale > 0 ? isUpperStrictlyImplied(col)
+                              : isLowerStrictlyImplied(col);
         } else {
           // for MIP we do not need dual postsolve so the reduction is valid if
           // the bound is weakly redundant
@@ -5589,12 +5593,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       auto colLowerInf = [&]() {
         if (!checkColImplBounds) return false;
         if (mipsolver == nullptr) {
-          return colScale > 0 ? model->col_lower_[col] == -kHighsInf ||
-                                    implColLower[col] >
-                                        model->col_lower_[col] + primal_feastol
-                              : model->col_upper_[col] == kHighsInf ||
-                                    implColUpper[col] <
-                                        model->col_upper_[col] - primal_feastol;
+          return colScale > 0 ? isLowerStrictlyImplied(col)
+                              : isUpperStrictlyImplied(col);
         } else {
           return colScale > 0 ? isLowerImplied(col) : isUpperImplied(col);
         }
@@ -5603,9 +5603,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       auto duplicateColUpperInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
         if (mipsolver == nullptr) {
-          return model->col_upper_[duplicateCol] == kHighsInf ||
-                 implColUpper[duplicateCol] <
-                     model->col_upper_[duplicateCol] - primal_feastol;
+          return isUpperStrictlyImplied(duplicateCol);
         } else {
           return isUpperImplied(duplicateCol);
         }
@@ -5614,9 +5612,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       auto duplicateColLowerInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
         if (mipsolver == nullptr) {
-          return model->col_lower_[duplicateCol] == -kHighsInf ||
-                 implColLower[duplicateCol] >
-                     model->col_lower_[duplicateCol] + primal_feastol;
+          return isLowerStrictlyImplied(duplicateCol);
         } else {
           return isLowerImplied(duplicateCol);
         }
