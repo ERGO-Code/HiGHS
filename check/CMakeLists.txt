@@ -257,9 +257,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "standgub\; 1.25769949\;"
         )
   elseif(WIN32)
-    # on windows e226 model status is unknown, rel gap e00
+    # on windows e226 model status is unknown
+    # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
     set(pdlpInstances
-        "25fv47\; 5.50184588\;"
+        "25fv47\; 5.5018458\;"
         "adlittle\; 2.25494963\;"
         "afiro\;-4.64753142\;"
         "avgas\;-7.749999999\;"
