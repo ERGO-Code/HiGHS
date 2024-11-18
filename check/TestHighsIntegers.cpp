@@ -2,6 +2,7 @@
 #include "catch.hpp"
 #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
+#include "util/HighsRandom.h"
 
 const bool dev_run = false;
 
@@ -40,18 +41,106 @@ TEST_CASE("HighsIntegers", "[util]") {
   if (dev_run) printf("integral scalar is %g\n", integralscalar);
 }
 
-TEST_CASE("HighsCdouble-ceil", "[util]") {
-  // For fix-2041
-  HighsCDouble a = 1e-23;
-  a = 1e-12;
-  double ceil_a;
-  double double_a;
-  ceil_a = double(ceil(a));
-  double_a = double(a);
-  if (dev_run) {
-    printf("ceil_a = %23.18g\n", ceil_a);
-    printf("double_a = %23.18g\n", double_a);
+void testCeil(HighsCDouble x) {
+  double ceil_x;
+  double double_x;
+  ceil_x = double(ceil(x));
+  double_x = double(x);
+  REQUIRE(ceil_x >= double_x);
+  REQUIRE(ceil(x) >= x);
+}
+
+void testFloor(HighsCDouble x) {
+  double floor_x;
+  double double_x;
+  floor_x = double(floor(x));
+  double_x = double(x);
+  REQUIRE(floor_x <= double_x);
+  REQUIRE(floor(x) <= x);
+}
+TEST_CASE("HighsCDouble-ceil", "[util]") {
+  HighsCDouble x;
+  x = -1e-34;
+  testCeil(x);
+  x = -1e-32;
+  testCeil(x);
+  x = -1e-30;
+  testCeil(x);
+  x = -1e-23;
+  testCeil(x);
+  x = -1e-12;
+  testCeil(x);
+  x = -1e-1;
+  testCeil(x);
+  x = -0.99;
+  testCeil(x);
+
+  x = 0.99;
+  testCeil(x);
+  x = 1e-1;
+  testCeil(x);
+  x = 1e-12;
+  testCeil(x);
+  // This and rest failed in #2041
+  x = 1e-23;
+  testCeil(x);
+  x = 1e-30;
+  testCeil(x);
+  x = 1e-32;
+  testCeil(x);
+  x = 1e-34;
+  testCeil(x);
+
+  HighsRandom rand;
+  for (HighsInt k = 0; k < 1000; k++) {
+    double man = rand.fraction();
+    HighsInt power = 2 - rand.integer(5);
+    double exp = std::pow(10, power);
+    x = man * exp;
+    testCeil(x);
   }
-  REQUIRE(ceil_a >= double_a);
-  REQUIRE(ceil(a) >= a);
+}
+
+TEST_CASE("HighsCDouble-floor", "[util]") {
+  HighsCDouble x;
+
+  x = 1e-34;
+  testFloor(x);
+  x = 1e-32;
+  testFloor(x);
+  x = 1e-30;
+  testFloor(x);
+  x = 1e-23;
+  testFloor(x);
+  x = 1e-12;
+  testFloor(x);
+  x = 1e-1;
+  testFloor(x);
+  x = 0.99;
+  testFloor(x);
+
+  x = -0.99;
+  testFloor(x);
+  x = -1e-1;
+  testFloor(x);
+  x = -1e-12;
+  testFloor(x);
+  // This and rest failed in #2041
+  x = -1e-23;
+  testFloor(x);
+  x = -1e-30;
+  testFloor(x);
+  x = -1e-32;
+  testFloor(x);
+  x = -1e-34;
+  testFloor(x);
+
+  HighsRandom rand;
+  for (HighsInt k = 0; k < 1000; k++) {
+    double man = rand.fraction();
+    HighsInt power = 2 - rand.integer(5);
+    double exp = std::pow(10, power);
+    x = man * exp;
+    testFloor(x);
+  }
 }
