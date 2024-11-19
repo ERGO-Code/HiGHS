@@ -11,6 +11,7 @@
 #include "lp_data/HighsLpUtils.h"
 
 const bool dev_run = false;
+const double inf = kHighsInf;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
@@ -357,3 +358,45 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
 //   double objective_value = highs.getInfo().objective_function_value;
 //   REQUIRE(objective_value == optimal_objective_value);
 // }
+
+TEST_CASE("writeLocalModel", "[highs_filereader]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  std::string write_model_file = "foo.mps";
+  HighsModel model;
+  HighsLp& lp = model.lp_;;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
+
+  //  if (dev_run)
+  printf("\nModel with no column lower or upper bounds\n");
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+  lp.col_lower_ = {0, 0};
+
+  //  if (dev_run)
+  printf("\nModel with no column upper bounds\n");
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+  lp.col_upper_ = {inf, inf};
+
+  // Model has no dimensions for a_matrix_, but these are set in
+  // writeLocalModel. 
+  printf("\nModel with no column or row names\n");
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kWarning);
+  lp.col_names_ = {"C0", "C1"};
+  lp.row_names_ = {"R0", "R1", "R2"};
+
+  printf("\nModel with column and row names\n");
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kOk);
+
+  // Introduce illegal index
+  lp.a_matrix_.index_ = {0, -1, 2, 0, 1, 2};
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+  
+  std::remove(write_model_file.c_str());
+}

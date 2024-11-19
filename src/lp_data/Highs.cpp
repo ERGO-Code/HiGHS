@@ -706,8 +706,17 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
+  HighsLp& lp = model.lp_;
+  // Dimensions in a_matrix_ may not be set, so take them from lp
+  lp.setMatrixDimensions();
   // Ensure that the LP is column-wise
-  model.lp_.ensureColwise();
+  lp.ensureColwise();
+  // Ensure that the dimensions are OK
+  if (!lpDimensionsOk("writeLocalModel", lp, options_.log_options)) return HighsStatus::kError;
+  if (model.hessian_.dim_ > 0) {
+    HighsStatus call_status = assessHessianDimensions(options_, model.hessian_);
+    if (call_status == HighsStatus::kError) return call_status;
+  }
   // Check for repeated column or row names that would corrupt the file
   if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,

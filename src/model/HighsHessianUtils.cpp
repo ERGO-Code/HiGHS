@@ -28,14 +28,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
-  // Assess the Hessian dimensions and vector sizes, returning on error
-  vector<HighsInt> hessian_p_end;
-  const bool partitioned = false;
-  call_status = assessMatrixDimensions(
-      options.log_options, hessian.dim_, partitioned, hessian.start_,
-      hessian_p_end, hessian.index_, hessian.value_);
-  return_status = interpretCallStatus(options.log_options, call_status,
-                                      return_status, "assessMatrixDimensions");
+  return_status = interpretCallStatus(options.log_options, assessHessianDimensions(options, hessian),
+                                      return_status, "assessHessianDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
@@ -108,6 +102,17 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
                 "assessHessian returns HighsStatus = %s\n",
                 highsStatusToString(return_status).c_str());
   return return_status;
+}
+
+HighsStatus assessHessianDimensions(const HighsOptions& options,
+                                    HighsHessian& hessian) {
+  if (hessian.dim_ == 0) return HighsStatus::kOk;
+
+  // Assess the Hessian dimensions and vector sizes
+  vector<HighsInt> hessian_p_end;
+  const bool partitioned = false;
+  return assessMatrixDimensions(options.log_options, hessian.dim_, partitioned, hessian.start_,
+				hessian_p_end, hessian.index_, hessian.value_);
 }
 
 void completeHessianDiagonal(const HighsOptions& options,
