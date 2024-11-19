@@ -68,7 +68,7 @@ HighsStatus assessMatrix(
   //
   // Check whether the first start is zero
   if (matrix_start[0]) {
-    highsLogUser(log_options, HighsLogType::kWarning,
+    highsLogUser(log_options, HighsLogType::kError,
                  "%s matrix start vector begins with %" HIGHSINT_FORMAT
                  " rather than 0\n",
                  matrix_name.c_str(), matrix_start[0]);

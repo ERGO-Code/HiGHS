@@ -361,10 +361,11 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
 
 TEST_CASE("writeLocalModel", "[highs_filereader]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   std::string write_model_file = "foo.mps";
   HighsModel model;
-  HighsLp& lp = model.lp_;;
+  HighsLp& lp = model.lp_;
+  ;
   lp.num_col_ = 2;
   lp.num_row_ = 3;
   lp.col_cost_ = {8, 10};
@@ -374,29 +375,44 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
   lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
 
-  //  if (dev_run)
-  printf("\nModel with no column lower or upper bounds\n");
+  if (dev_run) printf("\nModel with no column lower or upper bounds\n");
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
   lp.col_lower_ = {0, 0};
 
-  //  if (dev_run)
-  printf("\nModel with no column upper bounds\n");
+  if (dev_run) printf("\nModel with no column upper bounds\n");
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
   lp.col_upper_ = {inf, inf};
 
   // Model has no dimensions for a_matrix_, but these are set in
-  // writeLocalModel. 
-  printf("\nModel with no column or row names\n");
+  // writeLocalModel.
+  if (dev_run) printf("\nModel with no column or row names\n");
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kWarning);
   lp.col_names_ = {"C0", "C1"};
   lp.row_names_ = {"R0", "R1", "R2"};
 
-  printf("\nModel with column and row names\n");
+  if (dev_run) printf("\nModel with column and row names\n");
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kOk);
 
+  // Introduce illegal start
+  if (dev_run) printf("\nModel with start entry > num_nz\n");
+  lp.a_matrix_.start_ = {0, 7, 6};
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+
+  // Introduce illegal start
+  if (dev_run) printf("\nModel with start entry -1\n");
+  lp.a_matrix_.start_ = {0, -1, 6};
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {0, 3, 6};
+
   // Introduce illegal index
+  if (dev_run) printf("\nModel with index entry -1\n");
   lp.a_matrix_.index_ = {0, -1, 2, 0, 1, 2};
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
-  
+
+  // Introduce illegal index
+  if (dev_run) printf("\nModel with index entry 3 >= num_row\n");
+  lp.a_matrix_.index_ = {0, 1, 3, 0, 1, 2};
+  REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
+
   std::remove(write_model_file.c_str());
 }

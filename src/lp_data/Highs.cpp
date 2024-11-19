@@ -705,18 +705,32 @@ HighsStatus Highs::writePresolvedModel(const std::string& filename) {
 HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
 
   HighsLp& lp = model.lp_;
   // Dimensions in a_matrix_ may not be set, so take them from lp
   lp.setMatrixDimensions();
+
   // Ensure that the LP is column-wise
   lp.ensureColwise();
+
   // Ensure that the dimensions are OK
-  if (!lpDimensionsOk("writeLocalModel", lp, options_.log_options)) return HighsStatus::kError;
+  if (!lpDimensionsOk("writeLocalModel", lp, options_.log_options))
+    return HighsStatus::kError;
+
   if (model.hessian_.dim_ > 0) {
-    HighsStatus call_status = assessHessianDimensions(options_, model.hessian_);
+    call_status = assessHessianDimensions(options_, model.hessian_);
     if (call_status == HighsStatus::kError) return call_status;
   }
+
+  // Check that the matrix starts are OK
+  call_status = lp.a_matrix_.assessStart(options_.log_options);
+  if (call_status == HighsStatus::kError) return call_status;
+
+  // Check that the matrix indices are within bounds
+  call_status = lp.a_matrix_.assessIndexBounds(options_.log_options);
+  if (call_status == HighsStatus::kError) return call_status;
+
   // Check for repeated column or row names that would corrupt the file
   if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,

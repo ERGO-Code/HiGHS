@@ -28,7 +28,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
 
-  return_status = interpretCallStatus(options.log_options, assessHessianDimensions(options, hessian),
+  return_status = interpretCallStatus(options.log_options,
+                                      assessHessianDimensions(options, hessian),
                                       return_status, "assessHessianDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -111,8 +112,9 @@ HighsStatus assessHessianDimensions(const HighsOptions& options,
   // Assess the Hessian dimensions and vector sizes
   vector<HighsInt> hessian_p_end;
   const bool partitioned = false;
-  return assessMatrixDimensions(options.log_options, hessian.dim_, partitioned, hessian.start_,
-				hessian_p_end, hessian.index_, hessian.value_);
+  return assessMatrixDimensions(options.log_options, hessian.dim_, partitioned,
+                                hessian.start_, hessian_p_end, hessian.index_,
+                                hessian.value_);
 }
 
 void completeHessianDiagonal(const HighsOptions& options,
