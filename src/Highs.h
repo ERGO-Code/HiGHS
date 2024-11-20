@@ -183,9 +183,14 @@ class Highs {
   HighsStatus presolve();
 
   /**
-   * @brief Solve the incumbent model according to the specified options
+   * @brief Run the solver, accounting for any multiple objective
    */
   HighsStatus run();
+
+  /**
+   * @brief Solve the incumbent model according to the specified options
+   */
+  HighsStatus solve();
 
   /**
    * @brief Postsolve the incumbent model using a solution

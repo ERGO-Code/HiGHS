@@ -877,9 +877,13 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::run() {
+  return this->solve();
+}
+
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
-HighsStatus Highs::run() {
+HighsStatus Highs::solve() {
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
