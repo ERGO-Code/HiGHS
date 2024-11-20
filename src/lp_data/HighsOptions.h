@@ -1125,8 +1125,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "blend_multi_objectives",
-        "Blend multiple objectives or apply lexicographically: Default = true", advanced,
-        &blend_multi_objectives, true);
+        "Blend multiple objectives or apply lexicographically: Default = true",
+        advanced, &blend_multi_objectives, true);
     records.push_back(record_bool);
 
     // Fix the number of user settable options

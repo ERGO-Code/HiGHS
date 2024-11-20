@@ -877,9 +877,7 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::run() {
-  return this->solve();
-}
+HighsStatus Highs::run() { return this->solve(); }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
