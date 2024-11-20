@@ -3584,3 +3584,12 @@ bool Highs::infeasibleBoundsOk() {
                  int(num_true_infeasible_bound));
   return num_true_infeasible_bound == 0;
 }
+
+void HighsLinearObjective::clear() {
+  this->weight = 0.0;
+  this->offset = 0.0;
+  this->coefficients.clear();
+  this->abs_tolerance = 0.0;
+  this->rel_tolerance = 0.0;
+  this->priority = 0;
+}

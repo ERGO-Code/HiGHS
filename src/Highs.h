@@ -1389,6 +1389,8 @@ class Highs {
   ICrashInfo icrash_info_;
 
   HighsModel model_;
+  std::vector<HighsLinearObjective> multi_linear_objective_;
+
   HighsModel presolved_model_;
   HighsTimer timer_;
 
@@ -1397,7 +1399,6 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
   HighsIis iis_;
-
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =

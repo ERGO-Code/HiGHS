@@ -59,6 +59,7 @@ HighsStatus Highs::clear() {
 
 HighsStatus Highs::clearModel() {
   model_.clear();
+  multi_linear_objective_.clear();
   return clearSolver();
 }
 
