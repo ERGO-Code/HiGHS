@@ -151,6 +151,23 @@ class Highs {
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
   /**
+   * @brief Pass multiple linear objectives for the incumbent model
+   */
+  HighsStatus passLinearObjectives(
+      const HighsInt num_linear_objective,
+      const HighsLinearObjective* linear_objective);
+
+  /**
+   * @brief Add a linear objective for the incumbent model
+   */
+  HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective);
+
+  /**
+   * @brief Clear the multiple linear objective data
+   */
+  HighsStatus clearLinearObjectives();
+
+  /**
    * @brief Pass a column name to the incumbent model
    */
   HighsStatus passColName(const HighsInt col, const std::string& name);
@@ -186,11 +203,6 @@ class Highs {
    * @brief Run the solver, accounting for any multiple objective
    */
   HighsStatus run();
-
-  /**
-   * @brief Solve the incumbent model according to the specified options
-   */
-  HighsStatus solve();
 
   /**
    * @brief Postsolve the incumbent model using a solution
@@ -1429,6 +1441,8 @@ class Highs {
   HighsInt debug_run_call_num_ = 0;
 
   bool written_log_header = false;
+
+  HighsStatus solve();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();

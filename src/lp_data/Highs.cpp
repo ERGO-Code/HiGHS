@@ -578,6 +578,39 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passLinearObjectives(
+    const HighsInt num_linear_objective,
+    const HighsLinearObjective* linear_objective) {
+  if (num_linear_objective < 0) return HighsStatus::kOk;
+  this->multi_linear_objective_.clear();
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
+    if (this->addLinearObjective(linear_objective[iObj]) != HighsStatus::kOk)
+      return HighsStatus::kError;
+  ;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::addLinearObjective(
+    const HighsLinearObjective& linear_objective) {
+  HighsInt linear_objective_coefficients_size =
+      linear_objective.coefficients.size();
+  if (linear_objective_coefficients_size != this->model_.lp_.num_col_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Coefficient vector for linear objective has size %d != %d = "
+                 "lp.num_col_\n",
+                 int(linear_objective_coefficients_size),
+                 int(this->model_.lp_.num_col_));
+    return HighsStatus::kError;
+  }
+  this->multi_linear_objective_.push_back(linear_objective);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::clearLinearObjectives() {
+  this->multi_linear_objective_.clear();
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   const HighsInt num_col = this->model_.lp_.num_col_;
   if (col < 0 || col >= num_col) {
@@ -877,7 +910,31 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::run() { return this->solve(); }
+HighsStatus Highs::run() {
+  HighsInt num_multi_linear_objective = this->multi_linear_objective_.size();
+  printf("Has %d multiple linear objectives\n",
+         int(num_multi_linear_objective));
+  if (!this->multi_linear_objective_.size()) return this->solve();
+  HighsLp& lp = this->model_.lp_;
+  HighsLinearObjective& multi_linear_objective =
+      this->multi_linear_objective_[0];
+  if (multi_linear_objective.coefficients.size() !=
+      static_cast<size_t>(lp.num_col_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Multiple linear objective coefficient vector %d has size "
+                 "incompatible with model\n",
+                 int(0));
+    return HighsStatus::kError;
+  }
+  this->clearSolver();
+  // Objective is multiplied by the weight and minimized
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.col_cost_[iCol] = multi_linear_objective.weight *
+                         multi_linear_objective.coefficients[iCol];
+  lp.offset_ = multi_linear_objective.weight * multi_linear_objective.offset;
+  lp.sense_ = ObjSense::kMinimize;
+  return this->solve();
+}
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
