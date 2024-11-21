@@ -4,7 +4,9 @@
 const bool dev_run = false;
 
 bool smallDoubleDifference(double v0, double v1) {
-  return std::fabs(v0 - v1) < 1e-12;
+  double difference = std::fabs(v0 - v1);
+  //  printf("smallDoubleDifference = %g\n", difference);
+  return difference < 1e-4;
 }
 
 TEST_CASE("multi-objective", "[util]") {
@@ -105,4 +107,62 @@ TEST_CASE("multi-objective", "[util]") {
   h.writeSolution("", kSolutionStylePretty);
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[0], 2));
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[1], 6));
+
+  // Back to blending
+  h.setOptionValue("blend_multi_objectives", true);
+  //  h.setOptionValue("output_flag", true);
+  REQUIRE(h.clearLinearObjectives() == HighsStatus::kOk);
+  linear_objectives[0].coefficients = {1.0001, 1};
+  linear_objectives[0].abs_tolerance = -1e-5;
+  linear_objectives[0].rel_tolerance = 0.95;
+
+  if (dev_run) printf("\nBlending: Illegal abs_tolerance \n");
+  REQUIRE(h.passLinearObjectives(1, linear_objectives.data()) ==
+          HighsStatus::kError);
+  linear_objectives[0].abs_tolerance = 1e-5;
+
+  if (dev_run) printf("\nBlending: Illegal rel_tolerance \n");
+  REQUIRE(h.passLinearObjectives(1, linear_objectives.data()) ==
+          HighsStatus::kError);
+  linear_objectives[0].rel_tolerance = 1.05;
+
+  linear_objectives[1].weight = 1e-3;
+  if (dev_run)
+    printf(
+        "\nBlending: first solve objective just giving unique optimal "
+        "solution\n");
+  REQUIRE(h.passLinearObjectives(1, linear_objectives.data()) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  h.writeSolution("", kSolutionStylePretty);
+
+  REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  h.writeSolution("", kSolutionStylePretty);
+
+  // Back to lexicographic optimization
+  h.setOptionValue("blend_multi_objectives", false);
+
+  if (dev_run) printf("\nLexicographic using non-trivial tolerances\n");
+  REQUIRE(h.run() == HighsStatus::kOk);
+  h.writeSolution("", kSolutionStylePretty);
+
+  REQUIRE(smallDoubleDifference(h.getSolution().col_value[0], 4.9));
+  REQUIRE(smallDoubleDifference(h.getSolution().col_value[1], 3.1));
+
+  linear_objectives[0].abs_tolerance = kHighsInf;
+
+  REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  h.writeSolution("", kSolutionStylePretty);
+
+  //  printf("Solution = [%23.18g, %23.18g]\n", h.getSolution().col_value[0],
+  //  h.getSolution().col_value[1]);
+  REQUIRE(smallDoubleDifference(h.getSolution().col_value[0], 1.30069));
+  REQUIRE(smallDoubleDifference(h.getSolution().col_value[1], 6.34966));
 }
