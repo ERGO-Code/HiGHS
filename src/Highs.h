@@ -1523,6 +1523,8 @@ class Highs {
   HighsStatus returnFromRun(const HighsStatus return_status,
                             const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
+  HighsStatus returnFromLexicographicOptimization(
+      const HighsStatus return_status, HighsInt original_lp_num_row);
   void reportSolvedLpQpStats();
 
   // Interface methods

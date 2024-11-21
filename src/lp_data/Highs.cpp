@@ -602,6 +602,18 @@ HighsStatus Highs::addLinearObjective(
                  int(this->model_.lp_.num_col_));
     return HighsStatus::kError;
   }
+  if (linear_objective.abs_tolerance < 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Illegal absolute linear objective tolerance of %g < 0\n",
+                 linear_objective.abs_tolerance);
+    return HighsStatus::kError;
+  }
+  if (linear_objective.rel_tolerance < 1) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Illegal relative linear objective tolerance of %g < 1\n",
+                 linear_objective.rel_tolerance);
+    return HighsStatus::kError;
+  }
   this->multi_linear_objective_.push_back(linear_objective);
   return HighsStatus::kOk;
 }
@@ -910,30 +922,143 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
+bool comparison(std::pair<HighsInt, HighsInt> x1,
+                std::pair<HighsInt, HighsInt> x2) {
+  return x1.first >= x2.first;
+}
+
 HighsStatus Highs::run() {
-  HighsInt num_multi_linear_objective = this->multi_linear_objective_.size();
-  printf("Has %d multiple linear objectives\n",
-         int(num_multi_linear_objective));
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  printf("Has %d linear objectives\n", int(num_linear_objective));
   if (!this->multi_linear_objective_.size()) return this->solve();
   HighsLp& lp = this->model_.lp_;
-  HighsLinearObjective& multi_linear_objective =
-      this->multi_linear_objective_[0];
-  if (multi_linear_objective.coefficients.size() !=
-      static_cast<size_t>(lp.num_col_)) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Multiple linear objective coefficient vector %d has size "
-                 "incompatible with model\n",
-                 int(0));
-    return HighsStatus::kError;
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    HighsLinearObjective& multi_linear_objective =
+        this->multi_linear_objective_[iObj];
+    if (multi_linear_objective.coefficients.size() !=
+        static_cast<size_t>(lp.num_col_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Multiple linear objective coefficient vector %d has size "
+                   "incompatible with model\n",
+                   int(iObj));
+      return HighsStatus::kError;
+    }
   }
+
   this->clearSolver();
-  // Objective is multiplied by the weight and minimized
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    lp.col_cost_[iCol] = multi_linear_objective.weight *
-                         multi_linear_objective.coefficients[iCol];
-  lp.offset_ = multi_linear_objective.weight * multi_linear_objective.offset;
-  lp.sense_ = ObjSense::kMinimize;
-  return this->solve();
+  if (this->options_.blend_multi_objectives) {
+    // Objectives are blended by weight and minimized
+    lp.offset_ = 0;
+    lp.col_cost_.assign(lp.num_col_, 0);
+    for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+      HighsLinearObjective& multi_linear_objective =
+          this->multi_linear_objective_[iObj];
+      lp.offset_ +=
+          multi_linear_objective.weight * multi_linear_objective.offset;
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        lp.col_cost_[iCol] += multi_linear_objective.weight *
+                              multi_linear_objective.coefficients[iCol];
+    }
+    lp.sense_ = ObjSense::kMinimize;
+    return this->solve();
+  }
+
+  // Objectives are applied lexicographically
+  std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
+
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
+    priority_objective.push_back(
+        std::make_pair(this->multi_linear_objective_[iObj].priority, iObj));
+  std::sort(priority_objective.begin(), priority_objective.end(), comparison);
+  // Clear LP objective
+  lp.offset_ = 0;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  const HighsInt original_lp_num_row = lp.num_row_;
+  std::vector<HighsInt> index(lp.num_col_);
+  std::vector<double> value(lp.num_col_);
+  for (HighsInt iIx = 0; iIx < num_linear_objective; iIx++) {
+    HighsInt iObj = priority_objective[iIx].second;
+    printf("\nEntry %d is objective %d with priority %d\n", int(iIx), int(iObj),
+           int(priority_objective[iIx].first));
+    // Use this objective
+    HighsLinearObjective& linear_objective =
+        this->multi_linear_objective_[iObj];
+    lp.offset_ = linear_objective.offset;
+    lp.col_cost_ = linear_objective.coefficients;
+    lp.sense_ =
+        linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
+    printf("LP objective function is %s %g ",
+           lp.sense_ == ObjSense::kMinimize ? "min" : "max", lp.offset_);
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      printf(" + %g x[%d]", lp.col_cost_[iCol], int(iCol));
+    printf("\n");
+    HighsStatus solve_status = this->solve();
+    if (solve_status == HighsStatus::kError)
+      return returnFromLexicographicOptimization(HighsStatus::kError,
+                                                 original_lp_num_row);
+    if (model_status_ != HighsModelStatus::kOptimal) {
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "After priority %d solve, model status is %s\n", int(),
+                   modelStatusToString(model_status_).c_str());
+      return returnFromLexicographicOptimization(HighsStatus::kWarning,
+                                                 original_lp_num_row);
+    }
+    this->writeSolution("", kSolutionStylePretty);
+    if (iIx == num_linear_objective - 1) break;
+    // Add the constraint
+    HighsInt nnz = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.col_cost_[iCol]) {
+        index[nnz] = iCol;
+        value[nnz] = lp.col_cost_[iCol];
+        nnz++;
+      }
+    }
+    double objective = info_.objective_function_value;
+    HighsStatus add_row_status;
+    if (lp.sense_ == ObjSense::kMinimize) {
+      // Minimizing, so set a greater upper bound than the objective
+      double upper_bound = objective + linear_objective.abs_tolerance;
+      if (objective >= 0) {
+        // Guarantees objective of at least t.f^*
+        //
+        // so (t.f^*-f^*)/f^* = t-1
+        upper_bound =
+            std::min(objective * linear_objective.rel_tolerance, upper_bound);
+      } else if (objective < 0) {
+        // Guarantees objective of at least (2-t).f^*
+        //
+        // so ((2-t).f^*-f^*)/f^* = 1-t
+        upper_bound = std::min(
+            objective * (2.0 - linear_objective.rel_tolerance), upper_bound);
+      }
+      upper_bound -= lp.offset_;
+      add_row_status = this->addRow(-kHighsInf, upper_bound, nnz, index.data(),
+                                    value.data());
+    } else {
+      // Maximizing, so set a lesser lower bound than the objective
+      double lower_bound = objective - linear_objective.abs_tolerance;
+      if (objective >= 0) {
+        // Guarantees objective of at most (2-t).f^*
+        //
+        // so ((2-t).f^*-f^*)/f^* = 1-t
+        lower_bound = std::max(
+            objective * (2.0 - linear_objective.rel_tolerance), lower_bound);
+      } else if (objective < 0) {
+        // Guarantees objective of at least t.f^*
+        //
+        // so (t.f^*-f^*)/f^* = t-1
+        lower_bound =
+            std::max(objective * linear_objective.rel_tolerance, lower_bound);
+      }
+      lower_bound -= lp.offset_;
+      add_row_status =
+          this->addRow(lower_bound, kHighsInf, nnz, index.data(), value.data());
+    }
+    assert(add_row_status == HighsStatus::kOk);
+  }
+  return returnFromLexicographicOptimization(HighsStatus::kOk,
+                                             original_lp_num_row);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -4534,6 +4659,12 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
                              model_.isMip() && !options_.solve_relaxation;
   if (!solved_as_mip) reportSolvedLpQpStats();
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::returnFromLexicographicOptimization(
+    HighsStatus return_status, HighsInt original_lp_num_row) {
+  this->deleteRows(original_lp_num_row, this->model_.lp_.num_row_ - 1);
+  return return_status;
 }
 
 HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
