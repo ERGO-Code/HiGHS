@@ -292,7 +292,7 @@ void reportInfo(FILE* file, const InfoRecordInt64& info,
     fprintf(file, "\n# %s\n# [type: int64_t]\n%s = %" PRId64 "\n",
             info.description.c_str(), info.name.c_str(), *info.value);
   } else {
-    fprintf(file, "%s = %" PRId64 "\n", info.name.c_str(), *info.value);
+    fprintf(file, "%-30s = %" PRId64 "\n", info.name.c_str(), *info.value);
   }
 }
 
@@ -306,7 +306,7 @@ void reportInfo(FILE* file, const InfoRecordInt& info,
     fprintf(file, "\n# %s\n# [type: HighsInt]\n%s = %" HIGHSINT_FORMAT "\n",
             info.description.c_str(), info.name.c_str(), *info.value);
   } else {
-    fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
+    fprintf(file, "%-30s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
             *info.value);
   }
 }
@@ -321,6 +321,6 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
     fprintf(file, "\n# %s\n# [type: double]\n%s = %g\n",
             info.description.c_str(), info.name.c_str(), *info.value);
   } else {
-    fprintf(file, "%s = %g\n", info.name.c_str(), *info.value);
+    fprintf(file, "%-30s = %g\n", info.name.c_str(), *info.value);
   }
 }

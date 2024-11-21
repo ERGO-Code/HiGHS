@@ -160,7 +160,8 @@ class Highs {
   /**
    * @brief Add a linear objective for the incumbent model
    */
-  HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective);
+  HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective,
+                                 const HighsInt iObj = -1);
 
   /**
    * @brief Clear the multiple linear objective data
@@ -1645,6 +1646,10 @@ class Highs {
                               const bool constraint,
                               const double ill_conditioning_bound);
   bool infeasibleBoundsOk();
+  bool validLinearObjective(const HighsLinearObjective& linear_objective,
+                            const HighsInt iObj) const;
+  bool hasRepeatedLinearObjectivePriorities(
+      const HighsLinearObjective* linear_objective = nullptr) const;
 };
 
 // Start of deprecated methods not in the Highs class

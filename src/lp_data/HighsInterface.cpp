@@ -3585,6 +3585,68 @@ bool Highs::infeasibleBoundsOk() {
   return num_true_infeasible_bound == 0;
 }
 
+bool Highs::validLinearObjective(const HighsLinearObjective& linear_objective,
+                                 const HighsInt iObj) const {
+  HighsInt linear_objective_coefficients_size =
+      linear_objective.coefficients.size();
+  if (linear_objective_coefficients_size != this->model_.lp_.num_col_) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Coefficient vector for linear objective %s has size %d != %d = "
+        "lp.num_col_\n",
+        iObj >= 0 ? std::to_string(iObj).c_str() : "",
+        int(linear_objective_coefficients_size),
+        int(this->model_.lp_.num_col_));
+    return false;
+  }
+  if (linear_objective.abs_tolerance < 0) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Linear objective %s has illegal absolute linear objective "
+                 "tolerance of %g < 0\n",
+                 iObj >= 0 ? std::to_string(iObj).c_str() : "",
+                 linear_objective.abs_tolerance);
+    return false;
+  }
+  if (linear_objective.rel_tolerance < 1) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Linear objective %s has illegal relative linear objective "
+                 "tolerance of %g < 1\n",
+                 iObj >= 0 ? std::to_string(iObj).c_str() : "",
+                 linear_objective.rel_tolerance);
+    return false;
+  }
+  if (!options_.blend_multi_objectives &&
+      hasRepeatedLinearObjectivePriorities(&linear_objective)) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Repeated priorities for lexicographic optimization is illegal\n");
+    return false;
+  }
+  return true;
+}
+
+bool Highs::hasRepeatedLinearObjectivePriorities(
+    const HighsLinearObjective* linear_objective) const {
+  // Look for repeated values in the linear objective priorities, also
+  // comparing linear_objective if it's not a null pointer. Cost is
+  // O(n^2), but who will have more than O(1) linear objectives!
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective <= 0 ||
+      num_linear_objective <= 1 && !linear_objective)
+    return false;
+  for (HighsInt iObj0 = 0; iObj0 < num_linear_objective; iObj0++) {
+    HighsInt priority0 = this->multi_linear_objective_[iObj0].priority;
+    for (HighsInt iObj1 = iObj0 + 1; iObj1 < num_linear_objective; iObj1++) {
+      HighsInt priority1 = this->multi_linear_objective_[iObj1].priority;
+      if (priority1 == priority0) return true;
+    }
+    if (linear_objective) {
+      if (linear_objective->priority == priority0) return true;
+    }
+  }
+  return false;
+}
+
 void HighsLinearObjective::clear() {
   this->weight = 0.0;
   this->offset = 0.0;

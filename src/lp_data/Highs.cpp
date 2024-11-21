@@ -584,36 +584,21 @@ HighsStatus Highs::passLinearObjectives(
   if (num_linear_objective < 0) return HighsStatus::kOk;
   this->multi_linear_objective_.clear();
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
-    if (this->addLinearObjective(linear_objective[iObj]) != HighsStatus::kOk)
+    if (this->addLinearObjective(linear_objective[iObj], iObj) !=
+        HighsStatus::kOk)
       return HighsStatus::kError;
-  ;
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::addLinearObjective(
-    const HighsLinearObjective& linear_objective) {
-  HighsInt linear_objective_coefficients_size =
-      linear_objective.coefficients.size();
-  if (linear_objective_coefficients_size != this->model_.lp_.num_col_) {
+    const HighsLinearObjective& linear_objective, const HighsInt iObj) {
+  if (model_.isQp()) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Coefficient vector for linear objective has size %d != %d = "
-                 "lp.num_col_\n",
-                 int(linear_objective_coefficients_size),
-                 int(this->model_.lp_.num_col_));
+                 "Cannot define additional linear objective for QP\n");
     return HighsStatus::kError;
   }
-  if (linear_objective.abs_tolerance < 0) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Illegal absolute linear objective tolerance of %g < 0\n",
-                 linear_objective.abs_tolerance);
+  if (!this->validLinearObjective(linear_objective, iObj))
     return HighsStatus::kError;
-  }
-  if (linear_objective.rel_tolerance < 1) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Illegal relative linear objective tolerance of %g < 1\n",
-                 linear_objective.rel_tolerance);
-    return HighsStatus::kError;
-  }
   this->multi_linear_objective_.push_back(linear_objective);
   return HighsStatus::kOk;
 }
@@ -929,8 +914,8 @@ bool comparison(std::pair<HighsInt, HighsInt> x1,
 
 HighsStatus Highs::run() {
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
-  printf("Has %d linear objectives\n", int(num_linear_objective));
   if (!this->multi_linear_objective_.size()) return this->solve();
+  // Handle multiple linear objectives
   HighsLp& lp = this->model_.lp_;
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
     HighsLinearObjective& multi_linear_objective =
@@ -964,6 +949,21 @@ HighsStatus Highs::run() {
   }
 
   // Objectives are applied lexicographically
+  if (model_.isQp() && num_linear_objective > 1) {
+    // Lexicographic optimization with a single linear objective is
+    // trivially standard optimization, so is OK
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Cannot perform non-trivial lexicographic optimization for QP\n");
+    return HighsStatus::kError;
+  }
+  // Check whether there are repeated linear objective priorities
+  if (hasRepeatedLinearObjectivePriorities()) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Repeated priorities for lexicographic optimization is illegal\n");
+    return HighsStatus::kError;
+  }
   std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
 
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
@@ -978,8 +978,8 @@ HighsStatus Highs::run() {
   std::vector<double> value(lp.num_col_);
   for (HighsInt iIx = 0; iIx < num_linear_objective; iIx++) {
     HighsInt iObj = priority_objective[iIx].second;
-    printf("\nEntry %d is objective %d with priority %d\n", int(iIx), int(iObj),
-           int(priority_objective[iIx].first));
+    printf("\nHighs::run() Entry %d is objective %d with priority %d\n",
+           int(iIx), int(iObj), int(priority_objective[iIx].first));
     // Use this objective
     HighsLinearObjective& linear_objective =
         this->multi_linear_objective_[iObj];
@@ -987,7 +987,7 @@ HighsStatus Highs::run() {
     lp.col_cost_ = linear_objective.coefficients;
     lp.sense_ =
         linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
-    printf("LP objective function is %s %g ",
+    printf("Highs::run() LP objective function is %s %g ",
            lp.sense_ == ObjSense::kMinimize ? "min" : "max", lp.offset_);
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       printf(" + %g x[%d]", lp.col_cost_[iCol], int(iCol));
@@ -4663,7 +4663,46 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
 
 HighsStatus Highs::returnFromLexicographicOptimization(
     HighsStatus return_status, HighsInt original_lp_num_row) {
+  const bool lexicographic_optimization_logging = false;
+  if (lexicographic_optimization_logging)
+    printf("\nOn return, model status is %s\n",
+           this->modelStatusToString(this->model_status_).c_str());
+
+  // Save model_status_ and info_ since they are cleared by calling
+  // deleteRows
+  HighsModelStatus model_status = this->model_status_;
+  HighsInfo info = this->info_;
+  if (lexicographic_optimization_logging)
+    writeInfoToFile(stdout, true, info_.records, HighsFileType::kMinimal);
+
   this->deleteRows(original_lp_num_row, this->model_.lp_.num_row_ - 1);
+  if (lexicographic_optimization_logging)
+    printf("\nAfter deleteRows, model status %s\n",
+           this->modelStatusToString(model_status_).c_str());
+
+  // Recover model_status_ and info_, and then account for lack of basis or dual
+  // solution
+  this->model_status_ = model_status;
+  this->info_ = info;
+  info_.objective_function_value = 0;
+  info_.basis_validity = kBasisValidityInvalid;
+  info_.dual_solution_status = kSolutionStatusNone;
+  info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
+  info_.sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+  this->solution_.value_valid = true;
+
+  if (lexicographic_optimization_logging) {
+    printf("On return solution is\n");
+    for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
+      printf("Col %2d Primal = %11.6g; Dual = %11.6g\n", int(iCol),
+             solution_.col_value[iCol], solution_.col_value[iCol]);
+    for (HighsInt iRow = 0; iRow < this->model_.lp_.num_row_; iRow++)
+      printf("Row %2d Primal = %11.6g; Dual = %11.6g\n", int(iRow),
+             solution_.row_value[iRow], solution_.row_value[iRow]);
+  }
   return return_status;
 }
 

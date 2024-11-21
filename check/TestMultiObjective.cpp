@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 bool smallDoubleDifference(double v0, double v1) {
   return std::fabs(v0 - v1) < 1e-12;
@@ -27,18 +27,17 @@ TEST_CASE("multi-objective", "[util]") {
   std::vector<HighsLinearObjective> linear_objectives;
 
   // Begin with an illegal linear objective
-  printf("\nPass illegal linear objective\n");
+  if (dev_run) printf("\nPass illegal linear objective\n");
   linear_objective.weight = -1;
   linear_objective.offset = -1;
   linear_objective.coefficients = {2, 1, 0};
   linear_objective.abs_tolerance = 0.0;
   linear_objective.rel_tolerance = 1.0;
-  linear_objective.priority = 10;
   REQUIRE(h.addLinearObjective(linear_objective) == HighsStatus::kError);
 
   // Now legalise the linear objective so LP has nonunique optimal
   // solutions on the line joining (2, 6) and (5, 3)
-  printf("\nPass legal linear objective\n");
+  if (dev_run) printf("\nPass legal linear objective\n");
   linear_objective.coefficients = {1, 1};
   REQUIRE(h.addLinearObjective(linear_objective) == HighsStatus::kOk);
 
@@ -50,11 +49,10 @@ TEST_CASE("multi-objective", "[util]") {
 
   // Add a second linear objective with a very small minimization
   // weight that should push the optimal solution to (2, 6)
-  printf("\nPass second linear objective\n");
+  if (dev_run) printf("\nPass second linear objective\n");
   linear_objective.weight = 1e-4;
   linear_objective.offset = 0;
   linear_objective.coefficients = {1, 0};
-  linear_objective.priority = 0;
   REQUIRE(h.addLinearObjective(linear_objective) == HighsStatus::kOk);
 
   REQUIRE(h.run() == HighsStatus::kOk);
@@ -63,7 +61,7 @@ TEST_CASE("multi-objective", "[util]") {
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[1], 6));
   linear_objectives.push_back(linear_objective);
 
-  printf("\nClear and pass two linear objectives\n");
+  if (dev_run) printf("\nClear and pass two linear objectives\n");
   REQUIRE(h.clearLinearObjectives() == HighsStatus::kOk);
   REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
           HighsStatus::kOk);
@@ -72,9 +70,37 @@ TEST_CASE("multi-objective", "[util]") {
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[0], 2));
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[1], 6));
 
+  // Set illegal priorities - that can be passed OK since
+  // blend_multi_objectives = true
+  if (dev_run)
+    printf(
+        "\nSetting priorities that will be illegal when using lexicographic "
+        "optimization\n");
+  linear_objectives[0].priority = 0;
+  linear_objectives[1].priority = 0;
+  REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
+          HighsStatus::kOk);
+
   // Now test lexicographic optimization
   h.setOptionValue("blend_multi_objectives", false);
-  printf("\nLexicographic using existing multi objective data\n");
+
+  if (dev_run) printf("\nLexicographic using illegal priorities\n");
+  REQUIRE(h.run() == HighsStatus::kError);
+
+  if (dev_run)
+    printf(
+        "\nSetting priorities that are illegal now blend_multi_objectives = "
+        "false\n");
+  REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
+          HighsStatus::kError);
+
+  if (dev_run)
+    printf("\nSetting legal priorities for blend_multi_objectives = false\n");
+  linear_objectives[0].priority = 10;
+  REQUIRE(h.passLinearObjectives(2, linear_objectives.data()) ==
+          HighsStatus::kOk);
+
+  if (dev_run) printf("\nLexicographic using existing multi objective data\n");
   REQUIRE(h.run() == HighsStatus::kOk);
   h.writeSolution("", kSolutionStylePretty);
   REQUIRE(smallDoubleDifference(h.getSolution().col_value[0], 2));
