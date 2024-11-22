@@ -3638,25 +3638,13 @@ bool comparison(std::pair<HighsInt, HighsInt> x1,
 
 HighsStatus Highs::returnFromLexicographicOptimization(
     HighsStatus return_status, HighsInt original_lp_num_row) {
-  const bool lexicographic_optimization_logging = false;
-  if (lexicographic_optimization_logging)
-    printf("\nOn return, model status is %s\n",
-           this->modelStatusToString(this->model_status_).c_str());
-
   // Save model_status_ and info_ since they are cleared by calling
   // deleteRows
   HighsModelStatus model_status = this->model_status_;
   HighsInfo info = this->info_;
-  if (lexicographic_optimization_logging)
-    writeInfoToFile(stdout, true, info_.records, HighsFileType::kMinimal);
-
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
   if (num_linear_objective > 1) {
     this->deleteRows(original_lp_num_row, this->model_.lp_.num_row_ - 1);
-    if (lexicographic_optimization_logging)
-      printf("\nAfter deleteRows, model status %s\n",
-             this->modelStatusToString(model_status_).c_str());
-
     // Recover model_status_ and info_, and then account for lack of basis or
     // dual solution
     this->model_status_ = model_status;
@@ -3671,16 +3659,6 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info_.sum_complementarity_violations =
         kHighsIllegalComplementarityViolation;
     this->solution_.value_valid = true;
-
-    if (lexicographic_optimization_logging) {
-      printf("On return solution is\n");
-      for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
-        printf("Col %2d Primal = %11.6g; Dual = %11.6g\n", int(iCol),
-               solution_.col_value[iCol], solution_.col_value[iCol]);
-      for (HighsInt iRow = 0; iRow < this->model_.lp_.num_row_; iRow++)
-        printf("Row %2d Primal = %11.6g; Dual = %11.6g\n", int(iRow),
-               solution_.row_value[iRow], solution_.row_value[iRow]);
-    }
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
   }
   return return_status;
@@ -3718,11 +3696,6 @@ HighsStatus Highs::multiobjectiveSolve() {
                               multi_linear_objective.coefficients[iCol];
     }
     lp.sense_ = ObjSense::kMinimize;
-    printf("Highs::run() LP objective function is %s %g ",
-           lp.sense_ == ObjSense::kMinimize ? "min" : "max", lp.offset_);
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      printf(" + (%g) x[%d]", lp.col_cost_[iCol], int(iCol));
-    printf("\n");
     return this->solve();
   }
 
@@ -3757,8 +3730,6 @@ HighsStatus Highs::multiobjectiveSolve() {
   for (HighsInt iIx = 0; iIx < num_linear_objective; iIx++) {
     HighsInt priority = priority_objective[iIx].first;
     HighsInt iObj = priority_objective[iIx].second;
-    printf("\nHighs::run() Entry %d is objective %d with priority %d\n",
-           int(iIx), int(iObj), int(priority_objective[iIx].first));
     // Use this objective
     HighsLinearObjective& linear_objective =
         this->multi_linear_objective_[iObj];
@@ -3766,19 +3737,14 @@ HighsStatus Highs::multiobjectiveSolve() {
     lp.col_cost_ = linear_objective.coefficients;
     lp.sense_ =
         linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
-    printf("Highs::run() LP objective function is %s %g ",
-           lp.sense_ == ObjSense::kMinimize ? "min" : "max", lp.offset_);
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      printf(" + %g x[%d]", lp.col_cost_[iCol], int(iCol));
-    printf("\n");
     HighsStatus solve_status = this->solve();
     if (solve_status == HighsStatus::kError)
       return returnFromLexicographicOptimization(HighsStatus::kError,
                                                  original_lp_num_row);
     if (model_status_ != HighsModelStatus::kOptimal) {
       highsLogUser(options_.log_options, HighsLogType::kWarning,
-                   "After priority %d solve, model status is %s\n", int(priority),
-                   modelStatusToString(model_status_).c_str());
+                   "After priority %d solve, model status is %s\n",
+                   int(priority), modelStatusToString(model_status_).c_str());
       return returnFromLexicographicOptimization(HighsStatus::kWarning,
                                                  original_lp_num_row);
     }
@@ -3800,54 +3766,51 @@ HighsStatus Highs::multiobjectiveSolve() {
     if (lp.sense_ == ObjSense::kMinimize) {
       // Minimizing, so set a greater upper bound than the objective
       if (linear_objective.abs_tolerance >= 0)
-	upper_bound = objective + linear_objective.abs_tolerance;
+        upper_bound = objective + linear_objective.abs_tolerance;
       if (linear_objective.rel_tolerance >= 0) {
-	if (objective >= 0) {
-	  // Guarantees objective of at least (1+t).f^*
-	  //
-	  // so ((1+t).f^*-f^*)/f^* = t
-	  upper_bound = std::min(
-				 objective * (1.0 + linear_objective.rel_tolerance), upper_bound);
-	} else if (objective < 0) {
-	  // Guarantees objective of at least (1-t).f^*
-	  //
-	  // so ((1-t).f^*-f^*)/f^* = -t
-	  upper_bound = std::min(
-				 objective * (1.0 - linear_objective.rel_tolerance), upper_bound);
-	}
+        if (objective >= 0) {
+          // Guarantees objective of at least (1+t).f^*
+          //
+          // so ((1+t).f^*-f^*)/f^* = t
+          upper_bound = std::min(
+              objective * (1.0 + linear_objective.rel_tolerance), upper_bound);
+        } else if (objective < 0) {
+          // Guarantees objective of at least (1-t).f^*
+          //
+          // so ((1-t).f^*-f^*)/f^* = -t
+          upper_bound = std::min(
+              objective * (1.0 - linear_objective.rel_tolerance), upper_bound);
+        }
       }
       upper_bound -= lp.offset_;
     } else {
       // Maximizing, so set a lesser lower bound than the objective
       if (linear_objective.abs_tolerance >= 0)
-	lower_bound = objective - linear_objective.abs_tolerance;
+        lower_bound = objective - linear_objective.abs_tolerance;
       if (linear_objective.rel_tolerance >= 0) {
-	if (objective >= 0) {
-	  // Guarantees objective of at most (1-t).f^*
-	  //
-	  // so ((1-t).f^*-f^*)/f^* = -t
-	  lower_bound = std::max(
-				 objective * (1.0 - linear_objective.rel_tolerance), lower_bound);
-	} else if (objective < 0) {
-	  // Guarantees objective of at least (1+t).f^*
-	  //
-	  // so ((1+t).f^*-f^*)/f^* = t
-	  lower_bound = std::max(
-				 objective * (1.0 + linear_objective.rel_tolerance), lower_bound);
-	}
+        if (objective >= 0) {
+          // Guarantees objective of at most (1-t).f^*
+          //
+          // so ((1-t).f^*-f^*)/f^* = -t
+          lower_bound = std::max(
+              objective * (1.0 - linear_objective.rel_tolerance), lower_bound);
+        } else if (objective < 0) {
+          // Guarantees objective of at least (1+t).f^*
+          //
+          // so ((1+t).f^*-f^*)/f^* = t
+          lower_bound = std::max(
+              objective * (1.0 + linear_objective.rel_tolerance), lower_bound);
+        }
       }
       lower_bound -= lp.offset_;
     }
-    if (lower_bound == -kHighsInf && upper_bound == kHighsInf) 
-     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		  "After priority %d solve, no objective constraint due to absolute tolerance being %g < 0,"
-		  " and relative tolerance being %g < 0\n",
-		  int(priority), linear_objective.abs_tolerance, linear_objective.rel_tolerance);
-    printf("Highs::run() Add objective constraint %g <= ", lower_bound);
-    for (HighsInt iEl = 0; iEl < nnz; iEl++)
-      printf(" + (%g) x[%d]", value[iEl], int(index[iEl]));
-    printf(" <= %g\n", upper_bound);
-
+    if (lower_bound == -kHighsInf && upper_bound == kHighsInf)
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "After priority %d solve, no objective constraint due to "
+                   "absolute tolerance being %g < 0,"
+                   " and relative tolerance being %g < 0\n",
+                   int(priority), linear_objective.abs_tolerance,
+                   linear_objective.rel_tolerance);
     add_row_status =
         this->addRow(lower_bound, upper_bound, nnz, index.data(), value.data());
     assert(add_row_status == HighsStatus::kOk);
