@@ -110,7 +110,7 @@ a basis.
 Users can specify multiple linear objectives with respect to which
 HiGHS will optimize by either blending them, or by performing
 lexicographic optimization according to the truth of the
-[blend_multi_objectives](@ref blend_multi_objectives) option. Each
+[blend\_multi\_objectives](@ref blend_multi_objectives) option. Each
 linear objective is represented by the following data, held in the
 [HighsLinearObjective](@ref HighsLinearObjective) structure
 
@@ -134,7 +134,7 @@ the `col_cost_` data in the incumbent model is ignored.
 
 ### Blending multiple linear objectives
 
-When [blend_multi_objectives](@ref blend_multi_objectives) is `true`,
+When [blend\_multi\_objectives](@ref blend_multi_objectives) is `true`,
 as it is by default, any `HighsLinearObjective` instances will be
 combined according to the `weight` values, and the resulting objective
 will be minimized. Hence, any objectives that should be maximized
@@ -142,11 +142,18 @@ within the combination must have a negative `weight` value.
 
 ### Lexicographic optimization of multiple linear objectives
 
-When [blend_multi_objectives](@ref blend_multi_objectives) is `false`,
+When [blend\_multi\_objectives](@ref blend_multi_objectives) is `false`,
 HiGHS will optimize lexicographically with respect to any
-`HighsLinearObjective` instances. This is carried out according to the
-`priority` values in `HighsLinearObjective` instances. Note that all
-priority values must be distinct.
+`HighsLinearObjective` instances. This is carried out as follows, according to the
+`priority` values in `HighsLinearObjective` instances. Note that _all
+priority values must be distinct_.
+
+- Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
+
+- Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs\_tolerance` and/or `rel\_tolerance`.
+
+-- If the objective was minimized to a value ``f^*``, then the constraint ensures that the this objective value is no creater than ``f^*+```abs\_tolerance`
+
 
 
 
