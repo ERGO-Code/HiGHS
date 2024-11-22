@@ -104,3 +104,20 @@ HiGHS. Note that this does not affect how the incumbent model is
 solved. There are two corresponding [postsolve](@ref Presolve/postsolve)
 methods, according to whether there are just solution values, or also
 a basis.
+
+## [Multi-objective optimization](@id guide-multi-objective-optimization)
+
+Users can specify multiple linear objectives with respect to which
+HiGHS will optimize by either blending them, or by performing
+lexicographic optimization according to the truth of the
+[blend_multi_objectives](@ref blend_multi_objectives) option. Each
+linear objective is represented by the following data, held in the
+[HighsLinearObjective](@ref HighsLinearObjective) structure
+
+- weight: Scalar of type double - The weight of this objective when blending 
+- offset: Scalar of type double - The offset of this objective
+- coefficients: Vector of type double - The coefficients of this objective
+- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization 
+- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization 
+- priority: Scalar of type HighsInt - The priority of this objective when performing lexicographic optimization
+
