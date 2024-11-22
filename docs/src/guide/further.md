@@ -121,3 +121,32 @@ linear objective is represented by the following data, held in the
 - rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization 
 - priority: Scalar of type HighsInt - The priority of this objective when performing lexicographic optimization
 
+### Methods
+
+Multi-objective optimization in HiGHS is defined by the following methods
+
+- passLinearObjectives - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
+- addLinearObjective - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
+- clearLinearObjectives - Clears any linear objectives stored in HiGHS
+
+When there is at least one `HighsLinearObjective` instance in HiGHS,
+the `col_cost_` data in the incumbent model is ignored.
+
+### Blending multiple linear objectives
+
+When [blend_multi_objectives](@ref blend_multi_objectives) is `true`,
+as it is by default, any `HighsLinearObjective` instances will be
+combined according to the `weight` values, and the resulting objective
+will be minimized. Hence, any objectives that should be maximized
+within the combination must have a negative `weight` value.
+
+### Lexicographic optimization of multiple linear objectives
+
+When [blend_multi_objectives](@ref blend_multi_objectives) is `false`,
+HiGHS will optimize lexicographically with respect to any
+`HighsLinearObjective` instances. This is carried out according to the
+`priority` values in `HighsLinearObjective` instances. Note that all
+priority values must be distinct.
+
+
+
