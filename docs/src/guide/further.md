@@ -150,10 +150,21 @@ priority values must be distinct_.
 
 - Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
 
-- Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs\_tolerance` and/or `rel\_tolerance`.
+- Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
 
--- If the objective was minimized to a value ``f^*``, then the constraint ensures that the this objective value is no creater than ``f^*+```abs\_tolerance`
+-- If the objective was minimized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+```abs_tolerance```,~f^*(1+```rel_tolerance```))`.
 
+-- If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+```abs_tolerance```,~f^*(1-```rel_tolerance```))`.
 
+-- If the objective was maximized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-```abs_tolerance```,~f^*(1-```rel_tolerance```))`.
+
+-- If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-```abs_tolerance```,~f^*(1+```rel_tolerance```))`.
+
+- Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
+
+Note
+
+- Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
+- When the model is continuous, no dual information will be returned if there is more than one linear objective.
 
 

@@ -1755,7 +1755,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       HighsStatus call_status = this->run();
-      this->writeSolution("", kSolutionStylePretty);
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.status_.has_dual_ray;
       has_invert = ekk_instance_.status_.has_invert;
@@ -3727,6 +3726,9 @@ HighsStatus Highs::multiobjectiveSolve() {
   const HighsInt original_lp_num_row = lp.num_row_;
   std::vector<HighsInt> index(lp.num_col_);
   std::vector<double> value(lp.num_col_);
+  // Use the solution of one MIP to provide an integer feasible
+  // solution of the next
+  HighsSolution solution;
   for (HighsInt iIx = 0; iIx < num_linear_objective; iIx++) {
     HighsInt priority = priority_objective[iIx].first;
     HighsInt iObj = priority_objective[iIx].second;
@@ -3737,6 +3739,28 @@ HighsStatus Highs::multiobjectiveSolve() {
     lp.col_cost_ = linear_objective.coefficients;
     lp.sense_ =
         linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
+    if (lp.isMip() && solution.value_valid) {
+      HighsStatus set_solution_status = this->setSolution(solution);
+      if (set_solution_status == HighsStatus::kError) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Failure to use one MIP to provide an integer feasible "
+                     "solution of the next\n");
+        return returnFromLexicographicOptimization(HighsStatus::kError,
+                                                   original_lp_num_row);
+      }
+      bool valid, integral, feasible;
+      HighsStatus assess_primal_solution =
+          assessPrimalSolution(valid, integral, feasible);
+      if (!valid || !integral || !feasible) {
+        highsLogUser(options_.log_options, HighsLogType::kWarning,
+                     "Failure to use one MIP to provide an integer feasible "
+                     "solution of the next: "
+                     "status is valid = %s, integral = %s, feasible = %s\n",
+                     highsBoolToString(valid).c_str(),
+                     highsBoolToString(integral).c_str(),
+                     highsBoolToString(feasible).c_str());
+      }
+    }
     HighsStatus solve_status = this->solve();
     if (solve_status == HighsStatus::kError)
       return returnFromLexicographicOptimization(HighsStatus::kError,
@@ -3748,8 +3772,13 @@ HighsStatus Highs::multiobjectiveSolve() {
       return returnFromLexicographicOptimization(HighsStatus::kWarning,
                                                  original_lp_num_row);
     }
-    this->writeSolution("", kSolutionStylePretty);
     if (iIx == num_linear_objective - 1) break;
+    if (lp.isMip()) {
+      // Save the solution to provide an integer feasible solution of
+      // the next MIP
+      solution.col_value = this->solution_.col_value;
+      solution.value_valid = true;
+    }
     // Add the constraint
     HighsInt nnz = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
