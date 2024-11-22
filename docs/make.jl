@@ -65,7 +65,7 @@ Documenter.makedocs(
                 "structures/classes/HighsHessian.md",
                 "structures/classes/HighsModel.md",
             ],
-	    "Structures" => Any[,
+	    "Structures" => Any[
                 "structures/structs/HighsSolution.md",
                 "structures/structs/HighsBasis.md",
                 "structures/structs/HighsInfo.md",
