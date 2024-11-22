@@ -125,9 +125,9 @@ linear objective is represented by the following data, held in the
 
 Multi-objective optimization in HiGHS is defined by the following methods
 
-- passLinearObjectives - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
-- addLinearObjective - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
-- clearLinearObjectives - Clears any linear objectives stored in HiGHS
+- [passLinearObjectives](@ref Multi-objective-optimization] - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
+- [addLinearObjective](@ref Multi-objective-optimization] - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
+- [clearLinearObjectives](@ref Multi-objective-optimization] - Clears any linear objectives stored in HiGHS
 
 When there is at least one `HighsLinearObjective` instance in HiGHS,
 the `col_cost_` data in the incumbent model is ignored.
@@ -148,23 +148,36 @@ HiGHS will optimize lexicographically with respect to any
 `priority` values in `HighsLinearObjective` instances. Note that _all
 priority values must be distinct_.
 
-- Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
+* Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
 
-- Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
+* Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
 
--- If the objective was minimized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+```abs_tolerance```,~f^*(1+```rel_tolerance```))`.
+    + If the objective was minimized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no greater than
+```math
 
--- If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+```abs_tolerance```,~f^*(1-```rel_tolerance```))`.
+\min(f^*+`abs_tolerance`,~f^*[1+`rel_tolerance`]).
+```
 
--- If the objective was maximized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-```abs_tolerance```,~f^*(1-```rel_tolerance```))`.
+    + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than
+```math
+\min(f^*+`abs_tolerance`,~f^*[1-`rel_tolerance`]).
+```
 
--- If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-```abs_tolerance```,~f^*(1+```rel_tolerance```))`.
+    + If the objective was maximized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no less than
+```math
+\max(f^*-`abs_tolerance`,~f^*[1-`rel_tolerance`]).
+```
 
-- Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
+    + If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than
+```math
+\max(f^*-`abs_tolerance`,~f^*[1+`rel_tolerance`]).
+```
+
+* Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
 
 Note
 
-- Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
-- When the model is continuous, no dual information will be returned if there is more than one linear objective.
+* Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
+* When the model is continuous, no dual information will be returned if there is more than one linear objective.
 
 
