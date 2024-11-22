@@ -4513,55 +4513,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::returnFromLexicographicOptimization(
-    HighsStatus return_status, HighsInt original_lp_num_row) {
-  const bool lexicographic_optimization_logging = false;
-  if (lexicographic_optimization_logging)
-    printf("\nOn return, model status is %s\n",
-           this->modelStatusToString(this->model_status_).c_str());
-
-  // Save model_status_ and info_ since they are cleared by calling
-  // deleteRows
-  HighsModelStatus model_status = this->model_status_;
-  HighsInfo info = this->info_;
-  if (lexicographic_optimization_logging)
-    writeInfoToFile(stdout, true, info_.records, HighsFileType::kMinimal);
-
-  HighsInt num_linear_objective = this->multi_linear_objective_.size();
-  if (num_linear_objective > 1) {
-    this->deleteRows(original_lp_num_row, this->model_.lp_.num_row_ - 1);
-    if (lexicographic_optimization_logging)
-      printf("\nAfter deleteRows, model status %s\n",
-             this->modelStatusToString(model_status_).c_str());
-
-    // Recover model_status_ and info_, and then account for lack of basis or
-    // dual solution
-    this->model_status_ = model_status;
-    this->info_ = info;
-    info_.objective_function_value = 0;
-    info_.basis_validity = kBasisValidityInvalid;
-    info_.dual_solution_status = kSolutionStatusNone;
-    info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-    info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-    info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
-    info_.sum_complementarity_violations =
-        kHighsIllegalComplementarityViolation;
-    this->solution_.value_valid = true;
-
-    if (lexicographic_optimization_logging) {
-      printf("On return solution is\n");
-      for (HighsInt iCol = 0; iCol < this->model_.lp_.num_col_; iCol++)
-        printf("Col %2d Primal = %11.6g; Dual = %11.6g\n", int(iCol),
-               solution_.col_value[iCol], solution_.col_value[iCol]);
-      for (HighsInt iRow = 0; iRow < this->model_.lp_.num_row_; iRow++)
-        printf("Row %2d Primal = %11.6g; Dual = %11.6g\n", int(iRow),
-               solution_.row_value[iRow], solution_.row_value[iRow]);
-    }
-  }
-  return return_status;
-}
-
 HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   // Applies checks before returning from HiGHS
   HighsStatus return_status = highs_return_status;
