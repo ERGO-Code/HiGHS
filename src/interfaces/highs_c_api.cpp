@@ -291,6 +291,46 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passLinearObjectives(const void* highs, const HighsInt num_linear_objective,
+				    const double* weight, const double* offset, const double* coefficients,
+				    const double* abs_tolerance, const double* rel_tolerance, const HighsInt* priority) {
+  HighsInt status = Highs_clearLinearObjectives(highs);
+  if (status != kHighsStatusOk) return status;
+  HighsInt num_col = Highs_getNumCol(highs);
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    status = Highs_addLinearObjectiveWithIndex(highs, weight[iObj], offset[iObj], &coefficients[iObj*num_col], abs_tolerance[iObj], rel_tolerance[iObj], priority[iObj], iObj);
+    if (status != kHighsStatusOk) return status;
+  }
+  return kHighsStatusOk;
+}
+
+HighsInt Highs_addLinearObjective(const void* highs, 
+				  const double weight, const double offset, const double* coefficients,
+				  const double abs_tolerance, const double rel_tolerance, const HighsInt priority) {
+  return Highs_addLinearObjectiveWithIndex(highs, weight, offset, coefficients, abs_tolerance, rel_tolerance, priority, -1);
+}
+
+HighsInt Highs_addLinearObjectiveWithIndex(const void* highs, 
+					   const double weight, const double offset, const double* coefficients,
+					   const double abs_tolerance, const double rel_tolerance, const HighsInt priority,
+					   const HighsInt iObj) {
+  HighsLinearObjective linear_objective;
+  HighsInt num_col = Highs_getNumCol(highs);
+  linear_objective.weight = weight;
+  linear_objective.offset = offset;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) 
+    linear_objective.coefficients.push_back(coefficients[iCol]);
+  linear_objective.abs_tolerance = abs_tolerance;
+  linear_objective.rel_tolerance = rel_tolerance;
+  linear_objective.priority = priority;
+  linear_objective.weight = weight;
+  return HighsInt(((Highs*)highs)->addLinearObjective(linear_objective));
+}
+
+HighsInt Highs_clearLinearObjectives(const void* highs) {
+  return HighsInt(((Highs*)highs)->clearLinearObjectives());
+}
+
 HighsInt Highs_passRowName(const void* highs, const HighsInt row,
                            const char* name) {
   return (HighsInt)((Highs*)highs)->passRowName(row, std::string(name));

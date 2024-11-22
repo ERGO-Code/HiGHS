@@ -1855,6 +1855,83 @@ void test_getModel() {
   Highs_destroy(highs);
 }
 
+void test_multiObjective() {
+  void* highs;
+  highs = Highs_create();
+  const double inf = Highs_getInfinity(highs);
+
+  HighsInt num_col = 2;
+  HighsInt num_row = 3;
+  HighsInt num_nz = num_col * num_row;
+  HighsInt a_format = kHighsMatrixFormatColwise;
+  HighsInt sense = kHighsObjSenseMaximize;
+  double offset = -1;
+  double col_cost[2] = {1, 1};
+  double col_lower[2] = {0, 0};
+  double col_upper[2] = {inf, inf};
+  double row_lower[3] = {-inf, -inf, -inf};
+  double row_upper[3] = {18, 8, 14};
+  HighsInt a_start[3] = {0, 3, 6};
+  HighsInt a_index[6] = {0, 1, 2, 0, 1, 2};
+  double a_value[6] = {3, 1, 1, 1, 1, 2};
+  HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
+
+  //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,
+					offset, col_cost, col_lower, col_upper,
+					row_lower, row_upper, a_start, a_index, a_value);
+  assert(return_status == kHighsStatusOk);
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  HighsInt model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+  Highs_writeSolutionPretty(highs, "");
+
+  return_status = Highs_clearLinearObjectives(highs);
+  assert(return_status == kHighsStatusOk);
+
+  double weight = -1;
+  double linear_objective_offset = -1;
+  double coefficients[2] = {2, 1};
+  double abs_tolerance = 0;
+  double rel_tolerance = 0;
+  HighsInt priority = 10;
+  return_status = Highs_addLinearObjective(highs, weight, linear_objective_offset, coefficients, abs_tolerance, rel_tolerance, priority);
+  assert(return_status == kHighsStatusOk);
+  
+  weight = 1e-4;
+  linear_objective_offset = 0;
+  coefficients[0] = 1;
+  coefficients[1] = 0;
+  priority = 0;
+  return_status = Highs_addLinearObjective(highs, weight, linear_objective_offset, coefficients, abs_tolerance, rel_tolerance, priority);
+  assert(return_status == kHighsStatusOk);
+
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+
+  Highs_writeSolutionPretty(highs, "");
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  return_status =
+    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2);
+  assertDoubleValuesEqual("col_value[1]", col_value[1], 6);
+
+  Highs_setBoolOptionValue(highs, "blend_multi_objectives", 0);
+
+  //  double weight = {};
+  //  double offset = {};
+  //  double coefficients = {};
+  //  double abs_tolerance = {};
+  //  double rel_tolerance = {};
+  //  HighsInt priority = {};
+ 
+  Highs_destroy(highs);
+  free(col_value);
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -1901,24 +1978,25 @@ iteration_count1); assertLogical("Dual", logic);
 }
 */
 int main() {
-  minimal_api_illegal_lp();
-  test_callback();
-  version_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_options();
-  full_api_lp();
-  full_api_mip();
-  full_api_qp();
-  pass_presolve_get_lp();
-  options();
-  test_getColsByRange();
-  test_passHessian();
-  test_ranging();
-  test_feasibilityRelaxation();
-  test_getModel();
+  //  minimal_api_illegal_lp();
+  //  test_callback();
+  //  version_api();
+  //  full_api();
+  //  minimal_api_lp();
+  //  minimal_api_mip();
+  //  minimal_api_qp();
+  //  full_api_options();
+  //  full_api_lp();
+  //  full_api_mip();
+  //  full_api_qp();
+  //  pass_presolve_get_lp();
+  //  options();
+  //  test_getColsByRange();
+  //  test_passHessian();
+  //  test_ranging();
+  //  test_feasibilityRelaxation();
+  //  test_getModel();
+  test_multiObjective();
   return 0;
 }
 //  test_setSolution();
