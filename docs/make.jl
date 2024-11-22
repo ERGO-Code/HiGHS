@@ -63,13 +63,14 @@ Documenter.makedocs(
                 "structures/classes/HighsSparseMatrix.md",
                 "structures/classes/HighsLp.md",
                 "structures/classes/HighsHessian.md",
-                "structures/classes/HighsModel.md",
+                "structures/classes/HighsModel.md"
             ],
 	    "Structures" => Any[
+                "structures/structs/index.md",
                 "structures/structs/HighsSolution.md",
                 "structures/structs/HighsBasis.md",
                 "structures/structs/HighsInfo.md",
-                "structures/structs/HighsLinearObjective.md",
+                "structures/structs/HighsLinearObjective.md"
             ],
 	],
         "Callbacks" => "callbacks.md",
