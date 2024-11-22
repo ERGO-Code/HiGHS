@@ -180,31 +180,24 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     if (lprelaxation.isColIntegral(col)) {
       if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
-      bool useVbd = false;
-      if (ub - lb > 1.5 && boundDist[col] == 0.0 && simpleLbDist[col] != 0 &&
-          simpleUbDist[col] != 0) {
-        if (bestVlb[col].first == -1 ||
-            ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
-          assert(bestVub[col].first != -1);
-          boundTypes[col] = BoundType::kVariableUb;
-          useVbd = true;
-        } else if (bestVub[col].first == -1 ||
-                   lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
-          assert(bestVlb[col].first != -1);
-          boundTypes[col] = BoundType::kVariableLb;
-          useVbd = true;
-        } else if (vals[i] > 0) {
-          assert(bestVub[col].first != -1);
-          boundTypes[col] = BoundType::kVariableUb;
-          useVbd = true;
-        } else {
-          assert(bestVlb[col].first != -1);
-          boundTypes[col] = BoundType::kVariableLb;
-          useVbd = true;
-        }
+      if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
+          simpleUbDist[col] == 0)
+        continue;
+      if (bestVlb[col].first == -1 ||
+          ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
+        assert(bestVub[col].first != -1);
+        boundTypes[col] = BoundType::kVariableUb;
+      } else if (bestVub[col].first == -1 ||
+                 lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
+        assert(bestVlb[col].first != -1);
+        boundTypes[col] = BoundType::kVariableLb;
+      } else if (vals[i] > 0) {
+        assert(bestVub[col].first != -1);
+        boundTypes[col] = BoundType::kVariableUb;
+      } else {
+        assert(bestVlb[col].first != -1);
+        boundTypes[col] = BoundType::kVariableLb;
       }
-
-      if (!useVbd) continue;
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (bestVlb[col].first == -1)
@@ -242,6 +235,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     switch (boundTypes[col]) {
       case BoundType::kSimpleLb:
         if (vals[i] > 0) {
+          // relax away using lower bound
           tmpRhs -= lb * vals[i];
           vals[i] = 0.0;
           removeZeros = true;
@@ -250,6 +244,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         break;
       case BoundType::kSimpleUb:
         if (vals[i] < 0) {
+          // relax away using upper bound
           tmpRhs -= ub * vals[i];
           vals[i] = 0.0;
           removeZeros = true;
@@ -259,6 +254,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       case BoundType::kVariableLb:
         tmpRhs -= bestVlb[col].second.constant * vals[i];
         vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
+        // arbitrarily initialize bound type for vlb variable in order to
+        // distinguish from variable 'col'. the bound type will be set properly
+        // in subsequently.
+        boundTypes[bestVlb[col].first] = BoundType::kSimpleLb;
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
@@ -267,8 +266,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       case BoundType::kVariableUb:
         tmpRhs -= bestVub[col].second.constant * vals[i];
         vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
-        vals[i] = -vals[i];
-        if (vals[i] > 0) {
+        // arbitrarily initialize bound type for vub variable in order to
+        // distinguish from variable 'col'. the bound type will be set properly
+        // in subsequently.
+        boundTypes[bestVub[col].first] = BoundType::kSimpleLb;
+        if (vals[i] < 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
         }
@@ -316,28 +318,25 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     inds.resize(numNz);
   }
 
-  if (integersPositive) {
-    // complement integers to make coefficients positive
-    for (HighsInt j = 0; j != numNz; ++j) {
-      HighsInt col = inds[j];
-      if (!lprelaxation.isColIntegral(inds[j])) continue;
+  // integersPositive == true: complement integers to make coefficients positive
+  // integersPositive == false: complement integers with closest bound
+  for (HighsInt j = 0; j != numNz; ++j) {
+    HighsInt col = inds[j];
 
-      if (vals[j] > 0)
-        boundTypes[col] = BoundType::kSimpleLb;
-      else
-        boundTypes[col] = BoundType::kSimpleUb;
-    }
-  } else {
-    // complement integers with closest bound
-    for (HighsInt j = 0; j != numNz; ++j) {
-      HighsInt col = inds[j];
-      if (!lprelaxation.isColIntegral(inds[j])) continue;
+    // skip non-integer variables as their bound types were set above
+    if (!lprelaxation.isColIntegral(col)) continue;
 
-      if (lbDist[col] < ubDist[col])
-        boundTypes[col] = BoundType::kSimpleLb;
-      else
-        boundTypes[col] = BoundType::kSimpleUb;
-    }
+    // skip integral vlb / vub variables since their status was also already set
+    // (and it would otherwise be overwritten)
+    if (boundTypes[col] == BoundType::kVariableLb ||
+        boundTypes[col] == BoundType::kVariableUb)
+      continue;
+
+    if ((integersPositive && vals[j] > 0) ||
+        (!integersPositive && lbDist[col] < ubDist[col]))
+      boundTypes[col] = BoundType::kSimpleLb;
+    else
+      boundTypes[col] = BoundType::kSimpleUb;
   }
 
   upper.resize(numNz);
@@ -362,12 +361,14 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     switch (boundTypes[col]) {
       case BoundType::kSimpleLb: {
+        // shift (lower bound)
         assert(lb != -kHighsInf);
         tmpRhs -= lb * vals[j];
         solval[j] = lbDist[col];
         break;
       }
       case BoundType::kSimpleUb: {
+        // complement (upper bound)
         assert(ub != kHighsInf);
         tmpRhs -= ub * vals[j];
         vals[j] = -vals[j];
@@ -379,6 +380,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         break;
       }
       case BoundType::kVariableUb: {
+        vals[j] = -vals[j];
         solval[j] = ubDist[col];
         continue;
       }
