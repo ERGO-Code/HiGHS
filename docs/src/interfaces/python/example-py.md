@@ -239,7 +239,6 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  
 ## Multi-objective optimization
 
-* `passLinearObjectives`
 * `addLinearObjective`
 * `clearLinearObjectives`
 

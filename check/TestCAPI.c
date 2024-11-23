@@ -2013,24 +2013,24 @@ iteration_count1); assertLogical("Dual", logic);
 }
 */
 int main() {
-  //  minimal_api_illegal_lp();
-  //  test_callback();
-  //  version_api();
-  //  full_api();
-  //  minimal_api_lp();
-  //  minimal_api_mip();
-  //  minimal_api_qp();
-  //  full_api_options();
-  //  full_api_lp();
-  //  full_api_mip();
-  //  full_api_qp();
-  //  pass_presolve_get_lp();
-  //  options();
-  //  test_getColsByRange();
-  //  test_passHessian();
-  //  test_ranging();
-  //  test_feasibilityRelaxation();
-  //  test_getModel();
+  minimal_api_illegal_lp();
+  test_callback();
+  version_api();
+  full_api();
+  minimal_api_lp();
+  minimal_api_mip();
+  minimal_api_qp();
+  full_api_options();
+  full_api_lp();
+  full_api_mip();
+  full_api_qp();
+  pass_presolve_get_lp();
+  options();
+  test_getColsByRange();
+  test_passHessian();
+  test_ranging();
+  test_feasibilityRelaxation();
+  test_getModel();
   test_multiObjective();
   return 0;
 }

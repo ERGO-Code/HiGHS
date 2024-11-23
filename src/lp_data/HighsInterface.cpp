@@ -3836,7 +3836,6 @@ HighsStatus Highs::multiobjectiveSolve() {
       return returnFromLexicographicOptimization(HighsStatus::kWarning,
                                                  original_lp_num_row);
     }
-    this->writeSolution("", kSolutionStylePretty);
     if (iIx == num_linear_objective - 1) break;
     if (lp.isMip()) {
       // Save the solution to provide an integer feasible solution of
