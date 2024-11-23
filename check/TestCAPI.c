@@ -1876,23 +1876,18 @@ void test_multiObjective() {
   double a_value[6] = {3, 1, 1, 1, 1, 2};
   HighsInt integrality[2] = {kHighsVarTypeInteger, kHighsVarTypeInteger};
 
-  //  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
   HighsInt return_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense,
 					offset, col_cost, col_lower, col_upper,
 					row_lower, row_upper, a_start, a_index, a_value);
   assert(return_status == kHighsStatusOk);
-  return_status = Highs_run(highs);
-  assert(return_status == kHighsStatusOk);
-  HighsInt model_status = Highs_getModelStatus(highs);
-  assert(model_status == kHighsModelStatusOptimal);
-  Highs_writeSolutionPretty(highs, "");
 
   return_status = Highs_clearLinearObjectives(highs);
   assert(return_status == kHighsStatusOk);
 
   double weight = -1;
   double linear_objective_offset = -1;
-  double coefficients[2] = {2, 1};
+  double coefficients[2] = {1, 1};
   double abs_tolerance = 0;
   double rel_tolerance = 0;
   HighsInt priority = 10;
@@ -1909,7 +1904,7 @@ void test_multiObjective() {
 
   return_status = Highs_run(highs);
   assert(return_status == kHighsStatusOk);
-  model_status = Highs_getModelStatus(highs);
+  HighsInt model_status = Highs_getModelStatus(highs);
   assert(model_status == kHighsModelStatusOptimal);
 
   Highs_writeSolutionPretty(highs, "");
@@ -1921,13 +1916,53 @@ void test_multiObjective() {
 
   Highs_setBoolOptionValue(highs, "blend_multi_objectives", 0);
 
-  //  double weight = {};
-  //  double offset = {};
-  //  double coefficients = {};
-  //  double abs_tolerance = {};
-  //  double rel_tolerance = {};
-  //  HighsInt priority = {};
- 
+  if (dev_run) printf("\n***************\nLexicographic 1\n***************\n");
+  double weight2[2] = {-1, 1e-4};
+  double linear_objective_offset2[2] = {-1, 0};
+  double coefficients2[4] = {1, 1, 1, 0};
+  double abs_tolerance2[2] = {0, -1};
+  double rel_tolerance2[2] = {0, -1};
+  HighsInt priority2[2] = {10, 0};
+  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+  Highs_writeSolutionPretty(highs, "");
+  return_status =
+    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 2);
+  assertDoubleValuesEqual("col_value[1]", col_value[1], 6);
+
+  //  weight2[1] = 1e-5;
+  coefficients2[0] = 1.0001;
+  abs_tolerance2[0] = 1e-5;
+  rel_tolerance2[0] = 0.05;
+  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+  Highs_writeSolutionPretty(highs, "");
+  return_status =
+    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 4.9);
+  assertDoubleValuesEqual("col_value[1]", col_value[1], 3.1);
+
+  if (dev_run) printf("\n***************\nLexicographic 2\n***************\n");
+  abs_tolerance2[0] = -1;
+
+  return_status = Highs_passLinearObjectives(highs, 2, weight2, linear_objective_offset2, coefficients2, abs_tolerance2, rel_tolerance2, priority2);
+  return_status = Highs_run(highs);
+  assert(return_status == kHighsStatusOk);
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == kHighsModelStatusOptimal);
+  Highs_writeSolutionPretty(highs, "");
+  return_status =
+    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+  assertDoubleValuesEqual("col_value[0]", col_value[0], 1.30069);
+  assertDoubleValuesEqual("col_value[1]", col_value[1], 6.34966);
+
   Highs_destroy(highs);
   free(col_value);
 }

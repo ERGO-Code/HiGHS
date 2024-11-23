@@ -56,7 +56,7 @@ TEST_CASE("multi-objective", "[util]") {
       if (dev_run) printf("\nPass illegal linear objective\n");
       linear_objective.weight = -obj_mu;
       linear_objective.offset = -obj_mu;
-      linear_objective.coefficients = {obj_mu * 2, obj_mu * 1, obj_mu * 0};
+      linear_objective.coefficients = {obj_mu * 1, obj_mu * 1, obj_mu * 0};
       linear_objective.abs_tolerance = 0.0;
       linear_objective.rel_tolerance = 0.0;
       REQUIRE(h.addLinearObjective(linear_objective) == HighsStatus::kError);

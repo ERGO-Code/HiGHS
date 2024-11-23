@@ -3664,7 +3664,9 @@ HighsStatus Highs::returnFromLexicographicOptimization(
 }
 
 HighsStatus Highs::multiobjectiveSolve() {
+  const HighsInt coeff_logging_size_limit = 10;
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
+
   assert(num_linear_objective > 0);
   HighsLp& lp = this->model_.lp_;
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
@@ -3680,6 +3682,37 @@ HighsStatus Highs::multiobjectiveSolve() {
     }
   }
 
+  std::unique_ptr<std::stringstream> multi_objective_log;
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Solving with %d multiple linear objectives, %s\n",
+               int(num_linear_objective),
+               this->options_.blend_multi_objectives
+                   ? "blending objectives by weight"
+                   : "using lexicographic optimization by priority");
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo,
+      "Ix      weight      offset     abs_tol     rel_tol    priority%s\n",
+      lp.num_col_ < coeff_logging_size_limit ? "   coefficients" : "");
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    HighsLinearObjective& linear_objective =
+        this->multi_linear_objective_[iObj];
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "%2d %11.6g %11.6g %11.6g %11.6g %11d  ", int(iObj),
+        linear_objective.weight, linear_objective.offset,
+        linear_objective.abs_tolerance, linear_objective.rel_tolerance,
+        linear_objective.priority);
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            "%s c_{%1d} = %g", iCol == 0 ? "" : ",", int(iCol),
+            linear_objective.coefficients[iCol]);
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
+  }
   this->clearSolver();
   if (this->options_.blend_multi_objectives) {
     // Objectives are blended by weight and minimized
@@ -3695,6 +3728,22 @@ HighsStatus Highs::multiobjectiveSolve() {
                               multi_linear_objective.coefficients[iCol];
     }
     lp.sense_ = ObjSense::kMinimize;
+
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "Solving with blended objective");
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString(
+          ": %s %g", lp.sense_ == ObjSense::kMinimize ? "min" : "max",
+          lp.offset_);
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            " + (%g) x[%d]", lp.col_cost_[iCol], int(iCol));
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
     return this->solve();
   }
 
@@ -3761,6 +3810,21 @@ HighsStatus Highs::multiobjectiveSolve() {
                      highsBoolToString(feasible).c_str());
       }
     }
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString("Solving with objective %d",
+                                                int(iObj));
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString(
+          ": %s %g", lp.sense_ == ObjSense::kMinimize ? "min" : "max",
+          lp.offset_);
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            " + (%g) x[%d]", lp.col_cost_[iCol], int(iCol));
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
     HighsStatus solve_status = this->solve();
     if (solve_status == HighsStatus::kError)
       return returnFromLexicographicOptimization(HighsStatus::kError,
@@ -3772,6 +3836,7 @@ HighsStatus Highs::multiobjectiveSolve() {
       return returnFromLexicographicOptimization(HighsStatus::kWarning,
                                                  original_lp_num_row);
     }
+    this->writeSolution("", kSolutionStylePretty);
     if (iIx == num_linear_objective - 1) break;
     if (lp.isMip()) {
       // Save the solution to provide an integer feasible solution of
@@ -3840,6 +3905,22 @@ HighsStatus Highs::multiobjectiveSolve() {
                    " and relative tolerance being %g < 0\n",
                    int(priority), linear_objective.abs_tolerance,
                    linear_objective.rel_tolerance);
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "Add constraint for objective %d: ", int(iObj));
+    if (nnz < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString("%g <= ", lower_bound);
+      for (HighsInt iEl = 0; iEl < nnz; iEl++)
+        *multi_objective_log << highsFormatToString(
+            "%s(%g) x[%d]", iEl > 0 ? " + " : "", value[iEl], int(index[iEl]));
+      *multi_objective_log << highsFormatToString(" <= %g\n", upper_bound);
+    } else {
+      *multi_objective_log << highsFormatToString("Bounds [%g, %g]\n",
+                                                  lower_bound, upper_bound);
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
     add_row_status =
         this->addRow(lower_bound, upper_bound, nnz, index.data(), value.data());
     assert(add_row_status == HighsStatus::kOk);

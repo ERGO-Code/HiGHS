@@ -557,18 +557,25 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const HighsInt* start, const HighsInt* index,
                            const double* value);
 
-HighsInt Highs_passLinearObjectives(const void* highs, const HighsInt num_linear_objective,
-				    const double* weight, const double* offset, const double* coefficients,
-				    const double* abs_tolerance, const double* rel_tolerance, const HighsInt* priority);
+HighsInt Highs_passLinearObjectives(const void* highs,
+                                    const HighsInt num_linear_objective,
+                                    const double* weight, const double* offset,
+                                    const double* coefficients,
+                                    const double* abs_tolerance,
+                                    const double* rel_tolerance,
+                                    const HighsInt* priority);
 
-HighsInt Highs_addLinearObjective(const void* highs, 
-				  const double weight, const double offset, const double* coefficients,
-				  const double abs_tolerance, const double rel_tolerance, const HighsInt priority);
+HighsInt Highs_addLinearObjective(const void* highs, const double weight,
+                                  const double offset,
+                                  const double* coefficients,
+                                  const double abs_tolerance,
+                                  const double rel_tolerance,
+                                  const HighsInt priority);
 
-HighsInt Highs_addLinearObjectiveWithIndex(const void* highs, 
-					   const double weight, const double offset, const double* coefficients,
-					   const double abs_tolerance, const double rel_tolerance, const HighsInt priority,
-					   const HighsInt iObj);
+HighsInt Highs_addLinearObjectiveWithIndex(
+    const void* highs, const double weight, const double offset,
+    const double* coefficients, const double abs_tolerance,
+    const double rel_tolerance, const HighsInt priority, const HighsInt iObj);
 
 HighsInt Highs_clearLinearObjectives(const void* highs);
 /**
