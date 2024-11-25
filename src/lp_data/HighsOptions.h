@@ -1037,7 +1037,10 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_compute_analytic_centre",
         "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 => true",
-        advanced, &mip_compute_analytic_centre, 0, 1, 2);
+        advanced, &mip_compute_analytic_centre,
+	kMipAnalyticCentreCalulationMin,
+	kMipAnalyticCentreCalulationOriginal,
+	kMipAnalyticCentreCalulationMax);
     records.push_back(record_int);
 
     record_int =

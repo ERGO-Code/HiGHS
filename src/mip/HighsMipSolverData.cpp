@@ -302,24 +302,27 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
+    assert(mipsolver.options_mip_->mip_compute_analytic_centre >= kMipAnalyticCentreCalulationOriginal);
     Highs ipm;
-    ipm.setOptionValue("solver", "ipm");
-    ipm.setOptionValue("run_crossover", kHighsOffString);
+    if (mipsolver.options_mip_->mip_compute_analytic_centre == kMipAnalyticCentreCalulationOriginal) {
+      // Original calculation is just IPM with crossover off
+      ipm.setOptionValue("solver", "ipm");
+      ipm.setOptionValue("run_crossover", kHighsOffString);
+    } else {
+      // True calculation performs centring properly
+      ipm.setOptionValue("run_centring", true);
+      ipm.setOptionValue("ipm_optimality_tolerance", 1e-2);
+    }
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
-    // ipm.setOptionValue("output_flag", !mipsolver.submip);
+    ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
-    //    if (!mipsolver.submip) {
-    //      const std::string file_name = mipsolver.model_->model_name_ +
-    //      "_ipm.mps"; printf("Calling ipm.writeModel(%s)\n",
-    //      file_name.c_str()); fflush(stdout); ipm.writeModel(file_name);
-    //    }
-    printf("HighsMipSolverData::startAnalyticCenterComputation submip = %d analyticCenterFailed = %d; num_Col = %d; num_row = %d\n",
-	   mipsolver.submip, analyticCenterFailed, int(ipm.getNumCol()), int(ipm.getNumRow()));
+    //    if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ + "_ipm.mps");
+
     mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
