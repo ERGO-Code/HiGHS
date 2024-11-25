@@ -53,6 +53,8 @@ std::ostream& operator<<(std::ostream& os, const Info& info) {
     dump(os, "iter", info.iter);
     dump(os, "kktiter1", info.kktiter1);
     dump(os, "kktiter2", info.kktiter2);
+    dump(os, "kkt_iter_max1", info.kkt_iter_max1);
+    dump(os, "kkt_iter_max2", info.kkt_iter_max2);
     dump(os, "basis_repairs", info.basis_repairs);
     dump(os, "updates_start", info.updates_start);
     dump(os, "updates_ipm", info.updates_ipm);

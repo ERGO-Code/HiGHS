@@ -558,7 +558,7 @@ struct HighsOptionsStruct {
         mip_pool_soft_limit(0),
         mip_pscost_minreliable(0),
         mip_min_cliquetable_entries_for_parallelism(0),
-	mip_compute_analytic_centre(0),
+        mip_compute_analytic_centre(0),
         mip_report_level(0),
         mip_feasibility_tolerance(0.0),
         mip_rel_gap(0.0),
@@ -1038,11 +1038,10 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_compute_analytic_centre",
-        "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 => true",
-        advanced, &mip_compute_analytic_centre,
-	kMipAnalyticCentreCalulationMin,
-	kMipAnalyticCentreCalulationOriginal,
-	kMipAnalyticCentreCalulationMax);
+        "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 "
+        "=> true",
+        advanced, &mip_compute_analytic_centre, kMipAnalyticCentreCalulationMin,
+        kMipAnalyticCentreCalulationOriginal, kMipAnalyticCentreCalulationMax);
     records.push_back(record_int);
 
     record_int =
@@ -1084,9 +1083,11 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "kkt_iteration_limit", "Iteration limit for PCG in IPX IPM solver: default is -1, so set internally", advanced,
-        &kkt_iteration_limit, -1, -1, kHighsIInf);
+    record_int =
+        new OptionRecordInt("kkt_iteration_limit",
+                            "Iteration limit for PCG in IPX IPM solver: "
+                            "default is -1, so set internally",
+                            advanced, &kkt_iteration_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

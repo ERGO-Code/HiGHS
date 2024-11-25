@@ -116,7 +116,8 @@ struct HighsInfoStruct {
   double max_complementarity_violation;
   double sum_complementarity_violations;
   double primal_dual_integral;
-  HighsInt max_cr_iteration_count;
+  HighsInt max_cr_iteration_count1;
+  HighsInt max_cr_iteration_count2;
 };
 
 class HighsInfo : public HighsInfoStruct {
@@ -281,9 +282,16 @@ class HighsInfo : public HighsInfoStruct {
                              advanced, &primal_dual_integral, 0);
     records.push_back(record_double);
 
-    record_int = new InfoRecordInt("max_cr_iteration_count",
-                                   "Maximum number of CG iterations in IPX", advanced,
-                                   &max_cr_iteration_count, -1);
+    record_int =
+        new InfoRecordInt("max_cr_iteration_count1",
+                          "Maximum number of diag CR iterations in IPX",
+                          advanced, &max_cr_iteration_count1, -1);
+    records.push_back(record_int);
+
+    record_int =
+        new InfoRecordInt("max_cr_iteration_count2",
+                          "Maximum number of basic CR iterations in IPX",
+                          advanced, &max_cr_iteration_count2, -1);
     records.push_back(record_int);
   }
 

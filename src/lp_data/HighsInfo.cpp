@@ -41,7 +41,8 @@ void HighsInfo::invalidate() {
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violations = kHighsIllegalComplementarityViolation;
   primal_dual_integral = -kHighsInf;
-  max_cr_iteration_count = -1;
+  max_cr_iteration_count1 = -1;
+  max_cr_iteration_count2 = -1;
 }
 
 static std::string infoEntryTypeToString(const HighsInfoType type) {

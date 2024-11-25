@@ -19,7 +19,6 @@ void KKTSolverDiag::_Factorize(Iterate* pt, Info* info) {
     const Int m = model_.rows();
     const Int n = model_.cols();
     iter_sum_ = 0;
-    iter_max_ = 0;
     factorized_ = false;
 
     if (pt) {
@@ -100,6 +99,7 @@ void KKTSolverDiag::_Solve(const Vector& a, const Vector& b, double tol,
     cr.Solve(normal_matrix_, precond_, rhs, tol, &resscale_[0], maxiter_, y);
     info->errflag = cr.errflag();
     info->kktiter1 += cr.iter();
+    info->kkt_iter_max1 = std::max(cr.iter(), info->kkt_iter_max1);
     info->time_cr1 += cr.time();
     info->time_cr1_AAt += normal_matrix_.time();
     info->time_cr1_pre += precond_.time();

@@ -302,9 +302,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
-    assert(mipsolver.options_mip_->mip_compute_analytic_centre >= kMipAnalyticCentreCalulationOriginal);
+    assert(mipsolver.options_mip_->mip_compute_analytic_centre >=
+           kMipAnalyticCentreCalulationOriginal);
     Highs ipm;
-    if (mipsolver.options_mip_->mip_compute_analytic_centre == kMipAnalyticCentreCalulationOriginal) {
+    if (mipsolver.options_mip_->mip_compute_analytic_centre ==
+        kMipAnalyticCentreCalulationOriginal) {
       // Original calculation is just IPM with crossover off
       ipm.setOptionValue("solver", "ipm");
       ipm.setOptionValue("run_crossover", kHighsOffString);
@@ -321,11 +323,18 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
-    //    if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ + "_ipm.mps");
+    //    if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ +
+    //    "_ipm.mps");
 
     mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
+    if (!mipsolver.submip) {
+      printf("grepAC: model; num_row; max CR counts are, %s, %d, %d, %d\n",
+             mipsolver.model_->model_name_.c_str(), int(ipm.getNumRow()),
+             int(ipm.getInfo().max_cr_iteration_count1),
+             int(ipm.getInfo().max_cr_iteration_count2));
+    }
     const std::vector<double>& sol = ipm.getSolution().col_value;
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
@@ -1877,9 +1886,10 @@ restart:
   if (mipsolver.options_mip_->mip_compute_analytic_centre &&
       !analyticCenterComputed && !analyticCenterFailed) {
     if (mipsolver.analysis_.analyse_mip_time) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		   "MIP-Timing: %11.2g - starting analytic centre calculation\n",
-		   mipsolver.timer_.read());
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+          "MIP-Timing: %11.2g - starting analytic centre calculation\n",
+          mipsolver.timer_.read());
       fflush(stdout);
     }
     mipsolver.analysis_.mipTimerStart(kMipClockStartAnalyticCentreComputation);
@@ -2059,7 +2069,8 @@ restart:
       return;
     }
     if (nseparounds >= 5 && !mipsolver.submip &&
-        mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
+        mipsolver.options_mip_->mip_compute_analytic_centre &&
+        !analyticCenterComputed) {
       if (checkLimits()) {
         mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
         return;
@@ -2154,7 +2165,8 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-  if (mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
+  if (mipsolver.options_mip_->mip_compute_analytic_centre &&
+      !analyticCenterComputed) {
     if (checkLimits()) return;
 
     mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
@@ -2276,7 +2288,8 @@ restart:
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
-      if (mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
+      if (mipsolver.options_mip_->mip_compute_analytic_centre &&
+          !analyticCenterComputed) {
         mipsolver.analysis_.mipTimerStart(
             kMipClockFinishAnalyticCentreComputation);
         finishAnalyticCenterComputation(tg);

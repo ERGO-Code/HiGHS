@@ -34,7 +34,7 @@ private:
     void _Solve(const Vector& a, const Vector& b, double tol,
                 Vector& x, Vector& y, Info* info) override;
     Int _iterSum() const override { return iter_sum_; }
-  //    Int _iterMax() const override { return iter_max_; }
+    Int _iterMax() const override { return iter_max_; }
     Int _basis_changes() const override { return basis_changes_; }
     const Basis* _basis() const override { return &basis_; }
 

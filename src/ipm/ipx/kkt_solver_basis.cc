@@ -21,7 +21,6 @@ void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
     info->errflag = 0;
     factorized_ = false;
     iter_sum_ = 0;
-    iter_max_ = 0;
     basis_changes_ = 0;
 
     for (Int j = 0; j < n+m; j++)
@@ -149,6 +148,7 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
     cr.Solve(splitted_normal_matrix_, work, tol, nullptr, maxiter_, lhs);
     info->errflag = cr.errflag();
     info->kktiter2 += cr.iter();
+    info->kkt_iter_max2 = std::max(cr.iter(), info->kkt_iter_max2);
     info->time_cr2 += cr.time();
     info->time_cr2_NNt += splitted_normal_matrix_.time_NNt();
     info->time_cr2_B += splitted_normal_matrix_.time_B();
