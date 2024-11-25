@@ -84,6 +84,7 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  bool analyticCenterFailed;
   HighsModelStatus analyticCenterStatus;
   bool detectSymmetries;
   HighsInt numRestarts;
@@ -170,6 +171,7 @@ struct HighsMipSolverData {
         cliquesExtracted(false),
         rowMatrixSet(false),
         analyticCenterComputed(false),
+	analyticCenterFailed(false),
         analyticCenterStatus(HighsModelStatus::kNotset),
         detectSymmetries(false),
         numRestarts(0),

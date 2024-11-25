@@ -26,6 +26,12 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
     if (maxiter < 0)
         maxiter = m+100;
 
+    Int putative_large_iter = 100;//std::max(1000, maxiter/100);
+    maxiter = putative_large_iter;
+    Int large_iter = 0;//std::max(1000, maxiter/100);
+    Int report_frequency = 1;//100;
+    Int report_iter = 0;
+
     // Initialize residual, step and Cstep.
     if (Infnorm(lhs) == 0.0) {
         residual = rhs;         // saves a matrix-vector op
@@ -59,6 +65,11 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
             errflag_ = IPX_ERROR_cr_matrix_not_posdef;
             break;
         }
+	if (iter_ > large_iter && iter_ > report_iter + report_frequency) {
+	  printf("ConjugateResiduals::Solve Iteration count (large = %d; max = %d) is %d\n", int(putative_large_iter), int(maxiter), int(iter_));
+	  report_iter = iter_;
+	  report_frequency *= 2;
+	}
 
         // Update lhs, residual and Cresidual.
         const double denom = Dot(Cstep,Cstep);

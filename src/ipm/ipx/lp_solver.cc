@@ -65,16 +65,16 @@ Int LpSolver::Solve() {
 	//        if ((info_.status_ipm == IPX_STATUS_optimal ||
 	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
 	if (run_crossover) {
-	    if (run_crossover_on) {
-	      control_.hLog("Running crossover as requested\n");
-	    } else if (run_crossover_choose) {
-	      assert(info_.status_ipm == IPX_STATUS_imprecise);
-	      control_.hLog("Running crossover since IPX is imprecise\n");
-	    } else {
-	      assert(run_crossover_on || run_crossover_choose);
-	    }
-	    BuildCrossoverStartingPoint();
-            RunCrossover();
+	  if (run_crossover_on) {
+	    control_.hLog("Running crossover as requested\n");
+	  } else if (run_crossover_choose) {
+	    assert(info_.status_ipm == IPX_STATUS_imprecise);
+	    control_.hLog("Running crossover since IPX is imprecise\n");
+	  } else {
+	    assert(run_crossover_on || run_crossover_choose);
+	  }
+	  BuildCrossoverStartingPoint();
+	  RunCrossover();
         }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();
