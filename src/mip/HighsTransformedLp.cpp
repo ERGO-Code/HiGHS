@@ -140,20 +140,21 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   HighsInt numNz = inds.size();
   bool removeZeros = false;
 
+  auto getLb = [&](HighsInt col) {
+    return (col < slackOffset ? mip.mipdata_->domain.col_lower_[col]
+                              : lprelaxation.slackLower(col - slackOffset));
+  };
+
+  auto getUb = [&](HighsInt col) {
+    return (col < slackOffset ? mip.mipdata_->domain.col_upper_[col]
+                              : lprelaxation.slackUpper(col - slackOffset));
+  };
+
   for (HighsInt i = 0; i != numNz; ++i) {
     HighsInt col = inds[i];
 
-    double lb;
-    double ub;
-
-    if (col < slackOffset) {
-      lb = mip.mipdata_->domain.col_lower_[col];
-      ub = mip.mipdata_->domain.col_upper_[col];
-    } else {
-      HighsInt row = col - slackOffset;
-      lb = lprelaxation.slackLower(row);
-      ub = lprelaxation.slackUpper(row);
-    }
+    double lb = getLb(col);
+    double ub = getUb(col);
 
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       tmpRhs -= std::min(lb, ub) * vals[i];
@@ -179,7 +180,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     BoundType oldBoundType = boundTypes[col];
 
     if (lprelaxation.isColIntegral(col)) {
-      if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0)
         continue;
@@ -255,8 +255,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         tmpRhs -= bestVlb[col].second.constant * vals[i];
         vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
         // arbitrarily initialize bound type for vlb variable in order to
-        // distinguish from variable 'col'. the bound type will be set properly
-        // in subsequently.
+        // distinguish from already processed integer-constrained variables. the
+        // bound type will be set properly in subsequently.
         boundTypes[bestVlb[col].first] = BoundType::kSimpleLb;
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
@@ -266,11 +266,12 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       case BoundType::kVariableUb:
         tmpRhs -= bestVub[col].second.constant * vals[i];
         vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
+        vals[i] = -vals[i];
         // arbitrarily initialize bound type for vub variable in order to
-        // distinguish from variable 'col'. the bound type will be set properly
-        // in subsequently.
+        // distinguish from already processed integer-constrained variables. the
+        // bound type will be set properly in subsequently.
         boundTypes[bestVub[col].first] = BoundType::kSimpleLb;
-        if (vals[i] < 0) {
+        if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
         }
@@ -318,21 +319,22 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     inds.resize(numNz);
   }
 
-  // integersPositive == true: complement integers to make coefficients positive
-  // integersPositive == false: complement integers with closest bound
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
-    // skip non-integer variables as their bound types were set above
-    if (!lprelaxation.isColIntegral(col)) continue;
-
-    // skip integral vlb / vub variables since their status was also already set
-    // (and it would otherwise be overwritten)
-    if (boundTypes[col] == BoundType::kVariableLb ||
+    // set bound type for previously unprocessed integer-constrained variables.
+    // do not overwrite bound type for integral slacks from vlb / vub
+    // constraints.
+    if (!lprelaxation.isColIntegral(col) ||
+        boundTypes[col] == BoundType::kVariableLb ||
         boundTypes[col] == BoundType::kVariableUb)
       continue;
 
-    if ((integersPositive && vals[j] > 0) ||
+    // complement integers to make coefficients positive if both bounds are
+    // finite; otherwise, complement integers with closest bound.
+    // take into account 'integersPositive' provided by caller.
+    if ((integersPositive && getLb(col) != -kHighsInf &&
+         getUb(col) != kHighsInf && vals[j] > 0) ||
         (!integersPositive && lbDist[col] < ubDist[col]))
       boundTypes[col] = BoundType::kSimpleLb;
     else
@@ -345,17 +347,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
-    double lb;
-    double ub;
-
-    if (col < slackOffset) {
-      lb = mip.mipdata_->domain.col_lower_[col];
-      ub = mip.mipdata_->domain.col_upper_[col];
-    } else {
-      HighsInt row = col - slackOffset;
-      lb = lprelaxation.slackLower(row);
-      ub = lprelaxation.slackUpper(row);
-    }
+    double lb = getLb(col);
+    double ub = getUb(col);
 
     upper[j] = ub - lb;
 
@@ -380,11 +373,14 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         break;
       }
       case BoundType::kVariableUb: {
-        vals[j] = -vals[j];
         solval[j] = ubDist[col];
-        continue;
+        break;
       }
     }
+
+    // check if all integer-constrained variables have positive coefficients
+    if (lprelaxation.isColIntegral(col))
+      integersPositive = integersPositive && vals[j] > 0;
   }
 
   rhs = double(tmpRhs);
