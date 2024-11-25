@@ -256,7 +256,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
         // arbitrarily initialize bound type for vlb variable in order to
         // distinguish from already processed integer-constrained variables. the
-        // bound type will be set properly in subsequently.
+        // bound type will be set properly subsequently.
         boundTypes[bestVlb[col].first] = BoundType::kSimpleLb;
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
@@ -269,7 +269,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         vals[i] = -vals[i];
         // arbitrarily initialize bound type for vub variable in order to
         // distinguish from already processed integer-constrained variables. the
-        // bound type will be set properly in subsequently.
+        // bound type will be set properly subsequently.
         boundTypes[bestVub[col].first] = BoundType::kSimpleLb;
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
