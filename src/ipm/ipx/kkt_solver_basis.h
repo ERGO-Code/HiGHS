@@ -33,7 +33,8 @@ private:
     void _Factorize(Iterate* iterate, Info* info) override;
     void _Solve(const Vector& a, const Vector& b, double tol,
                 Vector& x, Vector& y, Info* info) override;
-    Int _iter() const override { return iter_; }
+    Int _iterSum() const override { return iter_sum_; }
+  //    Int _iterMax() const override { return iter_max_; }
     Int _basis_changes() const override { return basis_changes_; }
     const Basis* _basis() const override { return &basis_; }
 
@@ -57,7 +58,8 @@ private:
     Vector colscale_;           // interior point column scaling factors
     bool factorized_{false};    // preconditioner prepared?
     Int maxiter_{-1};
-    Int iter_{0};
+    Int iter_sum_{0};
+    Int iter_max_{0};
     Int basis_changes_{0};
 };
 

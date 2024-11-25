@@ -29,7 +29,8 @@ private:
     void _Factorize(Iterate* iterate, Info* info) override;
     void _Solve(const Vector& a, const Vector& b, double tol,
                 Vector& x, Vector& y, Info* info) override;
-    Int _iter() const override { return iter_; };
+    Int _iterSum() const override { return iter_sum_; };
+  //    Int _iterMax() const override { return iter_max_; };
 
     const Control& control_;
     const Model& model_;
@@ -40,7 +41,8 @@ private:
     Vector resscale_;        // residual scaling factors for CR termination test
     bool factorized_{false}; // KKT matrix factorized?
     Int maxiter_{-1};
-    Int iter_{0};               // # CR iterations since last Factorize()
+    Int iter_sum_{0};
+    Int iter_max_{0};
 };
 
 }  // namespace ipx

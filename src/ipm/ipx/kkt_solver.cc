@@ -16,7 +16,8 @@ void KKTSolver::Solve(const Vector& a, const Vector& b, double tol,
     info->time_kkt_solve += timer.Elapsed();
 }
 
-Int KKTSolver::iter() const { return _iter(); }
+Int KKTSolver::iterSum() const { return _iterSum(); }
+  //Int KKTSolver::iterMax() const { return _iterMax(); }
 Int KKTSolver::basis_changes() const { return _basis_changes(); }
 const Basis* KKTSolver::basis() const { return _basis(); }
 
