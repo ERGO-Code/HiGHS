@@ -300,12 +300,22 @@ HighsInt Highs_passLinearObjectives(const void* highs,
                                     const HighsInt* priority) {
   HighsInt status = Highs_clearLinearObjectives(highs);
   if (status != kHighsStatusOk) return status;
-  HighsInt num_col = Highs_getNumCol(highs);
+  HighsLinearObjective linear_objective;
   for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
-    status = Highs_addLinearObjectiveWithIndex(
-        highs, weight[iObj], offset[iObj], &coefficients[iObj * num_col],
-        abs_tolerance[iObj], rel_tolerance[iObj], priority[iObj], iObj);
+    HighsInt num_col = Highs_getNumCol(highs);
+    linear_objective.weight = weight[iObj];
+    linear_objective.offset = offset[iObj];
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      linear_objective.coefficients.push_back(
+          coefficients[iObj * num_col + iCol]);
+    linear_objective.abs_tolerance = abs_tolerance[iObj];
+    linear_objective.rel_tolerance = rel_tolerance[iObj];
+    linear_objective.priority = priority[iObj];
+    linear_objective.weight = weight[iObj];
+    status =
+        HighsInt(((Highs*)highs)->addLinearObjective(linear_objective, iObj));
     if (status != kHighsStatusOk) return status;
+    linear_objective.coefficients.clear();
   }
   return kHighsStatusOk;
 }
@@ -316,15 +326,6 @@ HighsInt Highs_addLinearObjective(const void* highs, const double weight,
                                   const double abs_tolerance,
                                   const double rel_tolerance,
                                   const HighsInt priority) {
-  return Highs_addLinearObjectiveWithIndex(highs, weight, offset, coefficients,
-                                           abs_tolerance, rel_tolerance,
-                                           priority, -1);
-}
-
-HighsInt Highs_addLinearObjectiveWithIndex(
-    const void* highs, const double weight, const double offset,
-    const double* coefficients, const double abs_tolerance,
-    const double rel_tolerance, const HighsInt priority, const HighsInt iObj) {
   HighsLinearObjective linear_objective;
   HighsInt num_col = Highs_getNumCol(highs);
   linear_objective.weight = weight;

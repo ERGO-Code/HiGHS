@@ -125,7 +125,6 @@ linear objective is represented by the following data, held in the
 
 Multi-objective optimization in HiGHS is defined by the following methods
 
-- [passLinearObjectives](@ref Multi-objective-optimization] - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
 - [addLinearObjective](@ref Multi-objective-optimization] - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
 - [clearLinearObjectives](@ref Multi-objective-optimization] - Clears any linear objectives stored in HiGHS
 
