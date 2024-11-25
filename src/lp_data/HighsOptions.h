@@ -421,6 +421,7 @@ struct HighsOptionsStruct {
   HighsInt mip_pool_soft_limit;
   HighsInt mip_pscost_minreliable;
   HighsInt mip_min_cliquetable_entries_for_parallelism;
+  HighsInt mip_compute_analytic_centre;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_rel_gap;
@@ -555,6 +556,7 @@ struct HighsOptionsStruct {
         mip_pool_soft_limit(0),
         mip_pscost_minreliable(0),
         mip_min_cliquetable_entries_for_parallelism(0),
+	mip_compute_analytic_centre(0),
         mip_report_level(0),
         mip_feasibility_tolerance(0.0),
         mip_rel_gap(0.0),
@@ -1030,6 +1032,12 @@ class HighsOptions : public HighsOptionsStruct {
         "queries of the conflict graph use parallel processing",
         advanced, &mip_min_cliquetable_entries_for_parallelism, 0, 100000,
         kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_compute_analytic_centre",
+        "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 => true",
+        advanced, &mip_compute_analytic_centre, 0, 1, 2);
     records.push_back(record_int);
 
     record_int =

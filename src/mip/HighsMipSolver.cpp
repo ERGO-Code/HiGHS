@@ -800,25 +800,28 @@ void HighsMipSolver::cleanupSolve() {
                "                    %.2f (presolve)\n"
                "                    %.2f (solve)\n"
                "                    %.2f (postsolve)\n"
-               "  Max sub-MIP depth %d\n"
                "  Nodes             %llu\n"
                "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
-               "                    %llu (heuristics)\n",
+               "                    %llu (heuristics)\n"
+	       "  AC failures       %d\n"
+               "  Max sub-MIP depth %d\n",
                timer_.read(timer_.total_clock),
                analysis_.mipTimerRead(kMipClockPresolve),
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
-               int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
+	       (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_repair_lp,
                (long long unsigned)mipdata_->total_repair_lp_feasible,
                (long long unsigned)mipdata_->total_repair_lp_iterations,
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
-               (long long unsigned)mipdata_->heuristic_lp_iterations);
+               (long long unsigned)mipdata_->heuristic_lp_iterations,
+	       int(mipdata_->num_analytic_centre_failures),
+               int(max_submip_level > 0 ? max_submip_level : 0));
 
   analysis_.reportMipTimer();
 

@@ -347,6 +347,7 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
   }
   analyticCenterComputed = true;
   analyticCenterFailed = analyticCenterStatus == HighsModelStatus::kSolveError;
+  if (analyticCenterFailed) num_analytic_centre_failures++;
   if (analyticCenterStatus == HighsModelStatus::kOptimal) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
@@ -636,6 +637,7 @@ void HighsMipSolverData::init() {
   heuristic_lp_iterations_before_run = 0;
   sepa_lp_iterations_before_run = 0;
   sb_lp_iterations_before_run = 0;
+  num_analytic_centre_failures = 0;
   num_disp_lines = 0;
   numCliqueEntriesAfterPresolve = 0;
   numCliqueEntriesAfterFirstPresolve = 0;
@@ -1857,8 +1859,6 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 }
 
 void HighsMipSolverData::evaluateRootNode() {
-  const bool compute_analytic_centre = true;
-  if (!compute_analytic_centre) printf("NOT COMPUTING ANALYTIC CENTRE!\n");
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   if (numRestarts == 0)
     maxSepaRounds =
@@ -1871,7 +1871,8 @@ restart:
     startSymmetryDetection(tg, symData);
     mipsolver.analysis_.mipTimerStop(kMipClockStartSymmetryDetection);
   }
-  if (compute_analytic_centre && !analyticCenterComputed && !analyticCenterFailed) {
+  if (mipsolver.options_mip_->mip_compute_analytic_centre &&
+      !analyticCenterComputed && !analyticCenterFailed) {
     if (mipsolver.analysis_.analyse_mip_time) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
 		   "MIP-Timing: %11.2g - starting analytic centre calculation\n",
@@ -2055,7 +2056,7 @@ restart:
       return;
     }
     if (nseparounds >= 5 && !mipsolver.submip &&
-        compute_analytic_centre && !analyticCenterComputed) {
+        mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
       if (checkLimits()) {
         mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
         return;
@@ -2150,7 +2151,7 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-  if (compute_analytic_centre && !analyticCenterComputed) {
+  if (mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
     if (checkLimits()) return;
 
     mipsolver.analysis_.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
@@ -2272,7 +2273,7 @@ restart:
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
-      if (compute_analytic_centre && !analyticCenterComputed) {
+      if (mipsolver.options_mip_->mip_compute_analytic_centre && !analyticCenterComputed) {
         mipsolver.analysis_.mipTimerStart(
             kMipClockFinishAnalyticCentreComputation);
         finishAnalyticCenterComputation(tg);
