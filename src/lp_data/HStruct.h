@@ -144,4 +144,14 @@ struct HighsIllConditioning {
   void clear();
 };
 
+struct HighsLinearObjective {
+  double weight;
+  double offset;
+  std::vector<double> coefficients;
+  double abs_tolerance;
+  double rel_tolerance;
+  HighsInt priority;
+  void clear();
+};
+
 #endif /* LP_DATA_HSTRUCT_H_ */

@@ -348,6 +348,9 @@ struct HighsOptionsStruct {
   // Options for IIS calculation
   HighsInt iis_strategy;
 
+  // Option for multi-objective optimization
+  bool blend_multi_objectives;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -485,6 +488,8 @@ struct HighsOptionsStruct {
         pdlp_d_gap_tol(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
+        iis_strategy(0),
+        blend_multi_objectives(false),
         log_dev_level(0),
         log_githash(false),
         solve_relaxation(false),
@@ -1119,6 +1124,12 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyFromLpRowPriority,
         kIisStrategyMax);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "blend_multi_objectives",
+        "Blend multiple objectives or apply lexicographically: Default = true",
+        advanced, &blend_multi_objectives, true);
+    records.push_back(record_bool);
 
     // Fix the number of user settable options
     num_user_settable_options_ = static_cast<HighsInt>(records.size());

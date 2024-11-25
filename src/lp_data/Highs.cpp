@@ -59,6 +59,7 @@ HighsStatus Highs::clear() {
 
 HighsStatus Highs::clearModel() {
   model_.clear();
+  multi_linear_objective_.clear();
   return clearSolver();
 }
 
@@ -577,6 +578,36 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passLinearObjectives(
+    const HighsInt num_linear_objective,
+    const HighsLinearObjective* linear_objective) {
+  if (num_linear_objective < 0) return HighsStatus::kOk;
+  this->multi_linear_objective_.clear();
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
+    if (this->addLinearObjective(linear_objective[iObj], iObj) !=
+        HighsStatus::kOk)
+      return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::addLinearObjective(
+    const HighsLinearObjective& linear_objective, const HighsInt iObj) {
+  if (model_.isQp()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define additional linear objective for QP\n");
+    return HighsStatus::kError;
+  }
+  if (!this->validLinearObjective(linear_objective, iObj))
+    return HighsStatus::kError;
+  this->multi_linear_objective_.push_back(linear_objective);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::clearLinearObjectives() {
+  this->multi_linear_objective_.clear();
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   const HighsInt num_col = this->model_.lp_.num_col_;
   if (col < 0 || col >= num_col) {
@@ -876,9 +907,15 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::run() {
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective == 0) return this->solve();
+  return this->multiobjectiveSolve();
+}
+
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
-HighsStatus Highs::run() {
+HighsStatus Highs::solve() {
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;

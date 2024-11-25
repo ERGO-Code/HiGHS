@@ -151,6 +151,24 @@ class Highs {
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
   /**
+   * @brief Pass multiple linear objectives for the incumbent model
+   */
+  HighsStatus passLinearObjectives(
+      const HighsInt num_linear_objective,
+      const HighsLinearObjective* linear_objective);
+
+  /**
+   * @brief Add a linear objective for the incumbent model
+   */
+  HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective,
+                                 const HighsInt iObj = -1);
+
+  /**
+   * @brief Clear the multiple linear objective data
+   */
+  HighsStatus clearLinearObjectives();
+
+  /**
    * @brief Pass a column name to the incumbent model
    */
   HighsStatus passColName(const HighsInt col, const std::string& name);
@@ -183,7 +201,7 @@ class Highs {
   HighsStatus presolve();
 
   /**
-   * @brief Solve the incumbent model according to the specified options
+   * @brief Run the solver, accounting for any multiple objective
    */
   HighsStatus run();
 
@@ -1389,6 +1407,8 @@ class Highs {
   ICrashInfo icrash_info_;
 
   HighsModel model_;
+  std::vector<HighsLinearObjective> multi_linear_objective_;
+
   HighsModel presolved_model_;
   HighsTimer timer_;
 
@@ -1397,7 +1417,6 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
   HighsIis iis_;
-
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =
@@ -1423,6 +1442,8 @@ class Highs {
   HighsInt debug_run_call_num_ = 0;
 
   bool written_log_header = false;
+
+  HighsStatus solve();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();
@@ -1600,6 +1621,10 @@ class Highs {
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
+  HighsStatus returnFromLexicographicOptimization(
+      const HighsStatus return_status, HighsInt original_lp_num_row);
+  HighsStatus multiobjectiveSolve();
+
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
@@ -1623,6 +1648,10 @@ class Highs {
                               const bool constraint,
                               const double ill_conditioning_bound);
   bool infeasibleBoundsOk();
+  bool validLinearObjective(const HighsLinearObjective& linear_objective,
+                            const HighsInt iObj) const;
+  bool hasRepeatedLinearObjectivePriorities(
+      const HighsLinearObjective* linear_objective = nullptr) const;
 };
 
 // Start of deprecated methods not in the Highs class

@@ -48,6 +48,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestBasis.cpp
       TestBasisSolves.cpp
       TestCrossover.cpp
+      TestHighsCDouble.cpp
       TestHighsHash.cpp
       TestHighsIntegers.cpp
       TestHighsParallel.cpp
@@ -66,6 +67,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestLpModification.cpp
       TestLpOrientation.cpp
       TestModelProperties.cpp
+      TestMultiObjective.cpp
       TestPdlp.cpp
       TestPresolve.cpp
       TestQpSolver.cpp

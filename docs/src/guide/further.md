@@ -104,3 +104,80 @@ HiGHS. Note that this does not affect how the incumbent model is
 solved. There are two corresponding [postsolve](@ref Presolve/postsolve)
 methods, according to whether there are just solution values, or also
 a basis.
+
+## [Multi-objective optimization](@id guide-multi-objective-optimization)
+
+Users can specify multiple linear objectives with respect to which
+HiGHS will optimize by either blending them, or by performing
+lexicographic optimization according to the truth of the
+[blend\_multi\_objectives](@ref blend_multi_objectives) option. Each
+linear objective is represented by the following data, held in the
+[HighsLinearObjective](@ref HighsLinearObjective) structure
+
+- weight: Scalar of type double - The weight of this objective when blending 
+- offset: Scalar of type double - The offset of this objective
+- coefficients: Vector of type double - The coefficients of this objective
+- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization 
+- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization 
+- priority: Scalar of type HighsInt - The priority of this objective when performing lexicographic optimization
+
+### Methods
+
+Multi-objective optimization in HiGHS is defined by the following methods
+
+- [passLinearObjectives](@ref Multi-objective-optimization] - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
+- [addLinearObjective](@ref Multi-objective-optimization] - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
+- [clearLinearObjectives](@ref Multi-objective-optimization] - Clears any linear objectives stored in HiGHS
+
+When there is at least one `HighsLinearObjective` instance in HiGHS,
+the `col_cost_` data in the incumbent model is ignored.
+
+### Blending multiple linear objectives
+
+When [blend\_multi\_objectives](@ref blend_multi_objectives) is `true`,
+as it is by default, any `HighsLinearObjective` instances will be
+combined according to the `weight` values, and the resulting objective
+will be minimized. Hence, any objectives that should be maximized
+within the combination must have a negative `weight` value.
+
+### Lexicographic optimization of multiple linear objectives
+
+When [blend\_multi\_objectives](@ref blend_multi_objectives) is `false`,
+HiGHS will optimize lexicographically with respect to any
+`HighsLinearObjective` instances. This is carried out as follows, according to the
+`priority` values in `HighsLinearObjective` instances. Note that _all
+priority values must be distinct_.
+
+* Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
+
+* Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
+
+    + If the objective was minimized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no greater than
+```math
+
+\min(f^*+`abs_tolerance`,~f^*[1+`rel_tolerance`]).
+```
+
+    + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than
+```math
+\min(f^*+`abs_tolerance`,~f^*[1-`rel_tolerance`]).
+```
+
+    + If the objective was maximized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no less than
+```math
+\max(f^*-`abs_tolerance`,~f^*[1-`rel_tolerance`]).
+```
+
+    + If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than
+```math
+\max(f^*-`abs_tolerance`,~f^*[1+`rel_tolerance`]).
+```
+
+* Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
+
+Note
+
+* Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
+* When the model is continuous, no dual information will be returned if there is more than one linear objective.
+
+
