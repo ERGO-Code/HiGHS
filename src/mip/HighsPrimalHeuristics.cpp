@@ -37,10 +37,10 @@
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-      lp_iterations(0),
       total_repair_lp(0),
       total_repair_lp_feasible(0),
       total_repair_lp_iterations(0),
+      lp_iterations(0),
       randgen(mipsolver.options_mip_->random_seed) {
   successObservations = 0;
   numSuccessObservations = 0;
