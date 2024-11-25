@@ -151,21 +151,13 @@ priority values must be distinct_.
 
 * Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
     + If the objective was minimized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no greater than
-```math
-\min(f^*+`abs\_tolerance`,~f^*\times[1+`rel\_tolerance`]).
-```
-    + If the objective was minimized to a value ``f^*\lt0``, then the constraint ensures that the this objective value is no greater than
-```math
-\min(f^*+`abs\_tolerance`,~f^*\times[1-`rel\_tolerance`]).
-```
+``\min(f^*+abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
+    + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than
+``\min(f^*+abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
     + If the objective was maximized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no less than
-```math
-\max(f^*-`abs\_tolerance`,~f^*\times[1-`rel\_tolerance`]).
-```
-    + If the objective was maximized to a value ``f^*\lt0``, then the constraint ensures that the this objective value is no less than
-```math
-\max(f^*-`abs\_tolerance`,~f^*\times[1+`rel\_tolerance`]).
-```
+``\max(f^*-abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
+    + If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than
+``\max(f^*-abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
 * Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
 
 Note
