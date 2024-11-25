@@ -2501,7 +2501,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-double possInfRelDiff(const double v0, const double v1, const double den) {
+static double possInfRelDiff(const double v0, const double v1,
+                             const double den) {
   double rel_diff;
   if (std::fabs(v0) == kHighsInf) {
     if (std::fabs(v1) == kHighsInf) {
