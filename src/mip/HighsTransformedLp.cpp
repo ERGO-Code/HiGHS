@@ -330,15 +330,30 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         boundTypes[col] == BoundType::kVariableUb)
       continue;
 
+    // get bounds
+    double lb = getLb(col);
+    double ub = getUb(col);
+
+    // make sure that variable is bounded
+    if (lb == -kHighsInf && ub == kHighsInf) {
+      vectorsum.clear();
+      return false;
+    }
+
     // complement integers to make coefficients positive if both bounds are
     // finite; otherwise, complement integers with closest bound.
     // take into account 'integersPositive' provided by caller.
-    if ((integersPositive && getLb(col) != -kHighsInf &&
-         getUb(col) != kHighsInf && vals[j] > 0) ||
-        (!integersPositive && lbDist[col] < ubDist[col]))
-      boundTypes[col] = BoundType::kSimpleLb;
-    else
-      boundTypes[col] = BoundType::kSimpleUb;
+    if (integersPositive) {
+      if ((lb != -kHighsInf && vals[j] > 0) || ub == kHighsInf)
+        boundTypes[col] = BoundType::kSimpleLb;
+      else
+        boundTypes[col] = BoundType::kSimpleUb;
+    } else {
+      if (lbDist[col] < ubDist[col])
+        boundTypes[col] = BoundType::kSimpleLb;
+      else
+        boundTypes[col] = BoundType::kSimpleUb;
+    }
   }
 
   upper.resize(numNz);
