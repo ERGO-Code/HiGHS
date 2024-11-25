@@ -125,7 +125,6 @@ linear objective is represented by the following data, held in the
 
 Multi-objective optimization in HiGHS is defined by the following methods
 
-- [passLinearObjectives](@ref Multi-objective-optimization] - Pass multiple linear objectives as their number `num_linear_objective` and pointer to a vector of `HighsLinearObjective` instances, overwriting any previous linear objectives
 - [addLinearObjective](@ref Multi-objective-optimization] - Add a single `HighsLinearObjective` instance to any already stored in HiGHS
 - [clearLinearObjectives](@ref Multi-objective-optimization] - Clears any linear objectives stored in HiGHS
 
@@ -151,27 +150,13 @@ priority values must be distinct_.
 * Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
 
 * Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
+    + If the objective was minimized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
 
-    + If the objective was minimized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no greater than
-```math
+    + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
 
-\min(f^*+`abs_tolerance`,~f^*[1+`rel_tolerance`]).
-```
+    + If the objective was maximized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
 
-    + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than
-```math
-\min(f^*+`abs_tolerance`,~f^*[1-`rel_tolerance`]).
-```
-
-    + If the objective was maximized to a value ``f^*>=0``, then the constraint ensures that the this objective value is no less than
-```math
-\max(f^*-`abs_tolerance`,~f^*[1-`rel_tolerance`]).
-```
-
-    + If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than
-```math
-\max(f^*-`abs_tolerance`,~f^*[1+`rel_tolerance`]).
-```
+    + If the objective was maximized to a value ``f^*<0``, then the constraint ensures that the this objective value is no less than ``\max(f^*-abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
 
 * Minimize/maximize with respect to the linear objective of next highest priority, and then add a corresponding objective constraint to the model, repeating until optimization with respect to the linear objective of lowest priority has taken place.
 
