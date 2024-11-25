@@ -28,6 +28,7 @@ struct ipx_parameters {
     double ipm_drop_dual;
 
     /* Linear solver */
+    ipxint kkt_maxiter;
     double kkt_tol;
 
     /* Basis construction in IPM */

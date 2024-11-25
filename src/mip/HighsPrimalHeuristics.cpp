@@ -135,8 +135,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   // If the analytic centre calculation has failed for the parent MIP,
   // then don't perform it for the sub-MIP
 
-  if (mipsolver.mipdata_->analyticCenterFailed)
-    submipoptions.mip_compute_analytic_centre = 0;
+  //  if (mipsolver.mipdata_->analyticCenterFailed) submipoptions.mip_compute_analytic_centre = 0;
   // setup solver and run it
   HighsSolution solution;
   solution.value_valid = false;

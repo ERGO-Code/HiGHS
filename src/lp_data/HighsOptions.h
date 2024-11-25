@@ -333,6 +333,7 @@ struct HighsOptionsStruct {
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
+  HighsInt kkt_iteration_limit;
 
   // Options for PDLP solver
   bool pdlp_native_termination;
@@ -482,6 +483,7 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         ipm_iteration_limit(0),
+        kkt_iteration_limit(0),
         pdlp_native_termination(false),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
@@ -1080,6 +1082,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "kkt_iteration_limit", "Iteration limit for PCG in IPX IPM solver: default is -1, so set internally", advanced,
+        &kkt_iteration_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

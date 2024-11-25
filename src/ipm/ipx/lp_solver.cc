@@ -558,6 +558,7 @@ void LpSolver::RunMainIPM(IPM& ipm) {
     KKTSolverBasis kkt(control_, *basis_);
     Timer timer;
     ipm.maxiter(control_.ipm_maxiter());
+    kkt.maxiter(control_.kkt_maxiter());
     ipm.Driver(&kkt, iterate_.get(), &info_);
     info_.time_ipm2 = timer.Elapsed();
 }

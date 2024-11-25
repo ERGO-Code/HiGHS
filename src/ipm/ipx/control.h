@@ -69,6 +69,7 @@ public:
     double ipm_drop_primal() const { return parameters_.ipm_drop_primal; }
     double ipm_drop_dual() const { return parameters_.ipm_drop_dual; }
     double kkt_tol() const { return parameters_.kkt_tol; }
+    ipxint kkt_maxiter() const { return parameters_.kkt_maxiter; }
     ipxint crash_basis() const { return parameters_.crash_basis; }
     double dependency_tol() const { return parameters_.dependency_tol; }
     double volume_tol() const { return parameters_.volume_tol; }
