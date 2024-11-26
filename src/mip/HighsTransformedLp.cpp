@@ -260,22 +260,24 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       case BoundType::kVariableLb:
         tmpRhs -= bestVlb[col].second.constant * vals[i];
         vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
-        // store integral slack in set
-        if (lprelaxation.isColIntegral(col)) intVariableBndSlacks.insert(col);
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
+        } else if (lprelaxation.isColIntegral(col)) {
+          // store integral slack in set
+          intVariableBndSlacks.insert(col);
         }
         break;
       case BoundType::kVariableUb:
         tmpRhs -= bestVub[col].second.constant * vals[i];
         vectorsum.add(bestVub[col].first, vals[i] * bestVub[col].second.coef);
         vals[i] = -vals[i];
-        // store integral slack in set
-        if (lprelaxation.isColIntegral(col)) intVariableBndSlacks.insert(col);
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
           vals[i] = 0;
+        } else if (lprelaxation.isColIntegral(col)) {
+          // store integral slack in set
+          intVariableBndSlacks.insert(col);
         }
     }
   }
