@@ -304,6 +304,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     assert(mipsolver.options_mip_->mip_compute_analytic_centre >=
            kMipAnalyticCentreCalulationOriginal);
+    const bool ac_logging = !mipsolver.submip;
     Highs ipm;
     if (mipsolver.options_mip_->mip_compute_analytic_centre ==
         kMipAnalyticCentreCalulationOriginal) {
@@ -317,8 +318,11 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
-    ipm.setOptionValue("output_flag", !mipsolver.submip);
+    //    ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
+    HighsInt kkt_iteration_limit =
+        std::max(100, mipsolver.model_->num_row_ / 1000);
+    ipm.setOptionValue("kkt_iteration_limit", kkt_iteration_limit);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
@@ -326,14 +330,28 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //    if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ +
     //    "_ipm.mps");
 
+    if (ac_logging) num_analytic_centre_start++;
+    double tt0 = mipsolver.timer_.read(mipsolver.timer_.total_clock);
     mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
     ipm.run();
     mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
-    if (!mipsolver.submip) {
-      printf("grepAC: model; num_row; max CR counts are, %s, %d, %d, %d\n",
-             mipsolver.model_->model_name_.c_str(), int(ipm.getNumRow()),
-             int(ipm.getInfo().max_cr_iteration_count1),
-             int(ipm.getInfo().max_cr_iteration_count2));
+    double tt1 = mipsolver.timer_.read(mipsolver.timer_.total_clock);
+    if (ac_logging) {
+      HighsModelStatus ac_status = ipm.getModelStatus();
+      printf(
+          "grepAcLocal: model; num_row; CR limit; max CR counts; time and "
+          "status, %s, %d, %d, %d, %d, %g, %s\n",
+          mipsolver.model_->model_name_.c_str(), int(ipm.getNumRow()),
+          int(kkt_iteration_limit), int(ipm.getInfo().max_cr_iteration_count1),
+          int(ipm.getInfo().max_cr_iteration_count2), tt1 - tt0,
+          ipm.modelStatusToString(ac_status).c_str());
+      if (ac_status == HighsModelStatus::kSolveError) {
+        num_analytic_centre_fail++;
+      } else if (ac_status == HighsModelStatus::kOptimal) {
+        num_analytic_centre_opt++;
+      } else {
+        num_analytic_centre_other++;
+      }
     }
     const std::vector<double>& sol = ipm.getSolution().col_value;
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
@@ -359,7 +377,6 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
   }
   analyticCenterComputed = true;
   analyticCenterFailed = analyticCenterStatus == HighsModelStatus::kSolveError;
-  if (analyticCenterFailed) num_analytic_centre_failures++;
   if (analyticCenterStatus == HighsModelStatus::kOptimal) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
@@ -649,7 +666,10 @@ void HighsMipSolverData::init() {
   heuristic_lp_iterations_before_run = 0;
   sepa_lp_iterations_before_run = 0;
   sb_lp_iterations_before_run = 0;
-  num_analytic_centre_failures = 0;
+  num_analytic_centre_start = 0;
+  num_analytic_centre_opt = 0;
+  num_analytic_centre_other = 0;
+  num_analytic_centre_fail = 0;
   num_disp_lines = 0;
   numCliqueEntriesAfterPresolve = 0;
   numCliqueEntriesAfterFirstPresolve = 0;

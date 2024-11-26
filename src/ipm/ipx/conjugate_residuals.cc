@@ -9,6 +9,8 @@ namespace ipx {
 ConjugateResiduals::ConjugateResiduals(const Control& control) :
     control_(control) {}
 
+const bool cr_logging = false;
+
 void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
                               double tol, const double* resscale, Int maxiter,
                               Vector& lhs) {
@@ -23,9 +25,12 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
     errflag_ = 0;
     iter_ = 0;
     time_ = 0.0;
+    Int use_maxiter = maxiter;
     if (maxiter < 0)
-        maxiter = m+100;
+        use_maxiter = m+100;
 
+    if (cr_logging) printf("\nCR(C) maxiter = (entry = %d, use = %d)\n", int(maxiter), int(use_maxiter)); fflush(stdout);
+    maxiter = use_maxiter;
     // Initialize residual, step and Cstep.
     if (Infnorm(lhs) == 0.0) {
         residual = rhs;         // saves a matrix-vector op
@@ -37,9 +42,10 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
     step = residual;
     Cstep = Cresidual;
 
+    double resnorm;
     while (true) {
         // Termination check.
-        double resnorm = 0.0;
+        resnorm = 0.0;
         if (resscale)
             for (Int i = 0; i < m; i++)
                 resnorm = std::max(resnorm, std::abs(resscale[i]*residual[i]));
@@ -48,6 +54,7 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
         if (resnorm <= tol)
             break;
         if (iter_ == maxiter) {
+ 	  if (cr_logging) printf("CR(C) reached maxiter!\n\n"); fflush(stdout);
             control_.Debug(3)
                 << " CR method not converged in " << maxiter << " iterations."
                 << " residual = " << sci2(resnorm) << ','
@@ -78,11 +85,10 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
         cdot = cdotnew;
 
         iter_++;
-        if ((errflag_ = control_.InterruptCheck()) != 0) {
-	  printf("ConjugateResiduals::Solve control_.InterruptCheck()) != 0: time = %g\n", control_.Elapsed());
-	  break;
-	}
+        if ((errflag_ = control_.InterruptCheck()) != 0) break;
     }
+    if (errflag_ != IPX_ERROR_cr_iter_limit)
+      if (cr_logging) printf("CR(C)    iter = %d; resnorm = %g <= %g = tol? %s\n\n", int(iter_), resnorm, tol, resnorm <= tol ? "T" : "F"); fflush(stdout);
     time_ = timer.Elapsed();
 }
 
@@ -110,9 +116,12 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
     errflag_ = 0;
     iter_ = 0;
     time_ = 0.0;
+    Int use_maxiter = maxiter;
     if (maxiter < 0)
-        maxiter = m+100;
+        use_maxiter = m+100;
 
+    if (cr_logging) printf("\nCR(C,P) maxiter = (entry = %d, use = %d)\n", int(maxiter), int(use_maxiter)); fflush(stdout);
+    maxiter = use_maxiter;
     // Initialize residual, sresidual, step and Cstep.
     if (Infnorm(lhs) == 0.0) {
         residual = rhs;         // saves a matrix-vector op
@@ -125,9 +134,10 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
     step = sresidual;
     Cstep = Csresidual;
 
+    double resnorm;
     while (true) {
         // Termination check.
-        double resnorm = 0.0;
+        resnorm = 0.0;
         if (resscale)
             for (Int i = 0; i < m; i++)
                 resnorm = std::max(resnorm, std::abs(resscale[i]*residual[i]));
@@ -136,7 +146,8 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
         if (resnorm <= tol)
             break;
         if (iter_ == maxiter) {
-            control_.Debug(3)
+ 	  if (cr_logging) printf("CR(C,P) reached maxiter!\n\n"); fflush(stdout);
+           control_.Debug(3)
                 << " PCR method not converged in " << maxiter << " iterations."
                 << " residual = " << sci2(resnorm) << ','
                 << " tolerance = " << sci2(tol) << '\n';
@@ -208,6 +219,8 @@ void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
         if ((errflag_ = control_.InterruptCheck()) != 0)
             break;
     }
+    if (errflag_ != IPX_ERROR_cr_iter_limit)
+      if (cr_logging) printf("CR(C,P)    iter = %d; resnorm = %g <= %g = tol? %s\n\n", int(iter_), resnorm, tol, resnorm <= tol ? "T" : "F"); fflush(stdout);
     time_ = timer.Elapsed();
 }
 

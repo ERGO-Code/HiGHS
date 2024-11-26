@@ -137,6 +137,7 @@ bool HighsPrimalHeuristics::solveSubMip(
 
   //  if (mipsolver.mipdata_->analyticCenterFailed)
   //  submipoptions.mip_compute_analytic_centre = 0;
+
   // setup solver and run it
   HighsSolution solution;
   solution.value_valid = false;
