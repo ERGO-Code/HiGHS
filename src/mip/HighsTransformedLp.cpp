@@ -132,6 +132,9 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& solval,
                                    std::vector<HighsInt>& inds, double& rhs,
                                    bool& integersPositive, bool preferVbds) {
+  // vector sum should be empty
+  assert(vectorsum.getNonzeros().empty());
+
   HighsCDouble tmpRhs = rhs;
 
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
@@ -335,10 +338,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     double ub = getUb(col);
 
     // make sure that variable is bounded
-    if (lb == -kHighsInf && ub == kHighsInf) {
-      vectorsum.clear();
-      return false;
-    }
+    if (lb == -kHighsInf && ub == kHighsInf) return false;
 
     // complement integers to make coefficients positive if both bounds are
     // finite; otherwise, complement integers with closest bound.
