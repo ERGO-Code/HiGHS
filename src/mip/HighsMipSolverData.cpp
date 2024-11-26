@@ -321,7 +321,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //    ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
     HighsInt kkt_iteration_limit = mipsolver.model_->num_row_ / 1000;
-    kkt_iteration_limit = std::max(100, kkt_iteration_limit);
+    kkt_iteration_limit = std::max(HighsInt(100), kkt_iteration_limit);
     ipm.setOptionValue("kkt_iteration_limit", kkt_iteration_limit);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
