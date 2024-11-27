@@ -24,7 +24,8 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
-
+  //    double current_fill() const { return 0; }
+  
 private:
     void _Factorize(Iterate* iterate, Info* info) override;
     void _Solve(const Vector& a, const Vector& b, double tol,

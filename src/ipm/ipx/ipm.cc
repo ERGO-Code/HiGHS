@@ -89,6 +89,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         kkt->Factorize(iterate, info);
         if (info->errflag)
             break;
+	printf("IPM::Driver fill factor = %g\n", kkt_->current_fill());
         Predictor(step);
         if (info->errflag)
             break;

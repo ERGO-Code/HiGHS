@@ -35,7 +35,9 @@ private:
                 Vector& x, Vector& y, Info* info) override;
     Int _iterSum() const override { return iter_sum_; }
     Int _iterMax() const override { return iter_max_; }
+
     Int _basis_changes() const override { return basis_changes_; }
+    double _current_fill() const override { return _basis()->current_fill(); }
     const Basis* _basis() const override { return &basis_; }
 
     // Processes basic variables that are close to a bound by either pivoting

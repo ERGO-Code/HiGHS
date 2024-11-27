@@ -219,6 +219,7 @@ public:
     double time_ftran() const;        // time FTRAN, including partial
     double time_btran() const;        // time BTRAN, including partial
     double time_update() const;       // time LU update
+    double current_fill() const;      // Current LU fill factors
     double mean_fill() const;         // geom. mean of LU fill factors
     double max_fill() const;          // max LU fill factor
     

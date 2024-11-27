@@ -56,6 +56,9 @@ public:
     // call to Factorize(). Otherwise returns 0.
     Int basis_changes() const;
 
+    //
+    double current_fill() const;
+
     // If a basis matrix is maintained, returns a pointer to it.
     // Otherwise returns NULL.
     const Basis* basis() const;
@@ -67,6 +70,7 @@ private:
     virtual Int _iterSum() const = 0;
     virtual Int _iterMax() const = 0;
     virtual Int _basis_changes() const { return 0; }
+    virtual double _current_fill() const { return 0.0; }
     virtual const Basis* _basis() const { return nullptr; }
 };
 
