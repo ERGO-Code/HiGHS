@@ -333,8 +333,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // cr2_iteration_limit is not set internal to IPX, so the default
     // value is m+100, which is OK if you're desperate to solve an LP,
     // but can make the use of the AC in MIP prohibitively expensive
-    HighsInt cr2_iteration_limit = 50 + mipsolver.model_->num_row_ / 1000;
-    cr2_iteration_limit = std::min(HighsInt(100), cr2_iteration_limit);
+    HighsInt cr2_iteration_limit = 50 + mipsolver.model_->num_row_ / 50;
+    cr2_iteration_limit = std::min(HighsInt(500), cr2_iteration_limit);
     // 2049 Set this ultimately
     ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
     HighsLp lpmodel(*mipsolver.model_);
