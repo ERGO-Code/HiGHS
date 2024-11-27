@@ -144,7 +144,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   const HighsInt slackOffset = lprelaxation.numCols();
 
   HighsInt numNz = inds.size();
-  bool removeZeros = false;
 
   auto getLb = [&](HighsInt col) {
     return (col < slackOffset ? mip.mipdata_->domain.col_lower_[col]
@@ -156,7 +155,16 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                               : lprelaxation.slackUpper(col - slackOffset));
   };
 
-  for (HighsInt i = 0; i != numNz; ++i) {
+  auto remove = [&](HighsInt position) {
+    numNz--;
+    inds[position] = inds[numNz];
+    vals[position] = vals[numNz];
+    inds[numNz] = 0;
+    vals[numNz] = 0;
+  };
+
+  HighsInt i = 0;
+  while (i < numNz) {
     HighsInt col = inds[i];
 
     double lb = getLb(col);
@@ -164,8 +172,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     if (ub - lb < mip.options_mip_->small_matrix_value) {
       tmpRhs -= std::min(lb, ub) * vals[i];
-      vals[i] = 0.0;
-      removeZeros = true;
+      remove(i);
       continue;
     }
 
@@ -187,8 +194,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     if (lprelaxation.isColIntegral(col)) {
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
-          simpleUbDist[col] == 0)
+          simpleUbDist[col] == 0) {
+        i++;
         continue;
+      }
       if (bestVlb[col].first == -1 ||
           ubDist[col] < lbDist[col] - mip.mipdata_->feastol) {
         assert(bestVub[col].first != -1);
@@ -243,18 +252,18 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         if (vals[i] > 0) {
           // relax away using lower bound
           tmpRhs -= lb * vals[i];
-          vals[i] = 0.0;
-          removeZeros = true;
           boundTypes[col] = oldBoundType;
+          remove(i);
+          continue;
         }
         break;
       case BoundType::kSimpleUb:
         if (vals[i] < 0) {
           // relax away using upper bound
           tmpRhs -= ub * vals[i];
-          vals[i] = 0.0;
-          removeZeros = true;
           boundTypes[col] = oldBoundType;
+          remove(i);
+          continue;
         }
         break;
       case BoundType::kVariableLb:
@@ -262,7 +271,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         vectorsum.add(bestVlb[col].first, vals[i] * bestVlb[col].second.coef);
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
-          vals[i] = 0;
+          remove(i);
+          continue;
         } else if (lprelaxation.isColIntegral(col)) {
           // store integral slack in set
           intVariableBndSlacks.insert(col);
@@ -274,12 +284,15 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
         vals[i] = -vals[i];
         if (vals[i] > 0) {
           boundTypes[col] = oldBoundType;
-          vals[i] = 0;
+          remove(i);
+          continue;
         } else if (lprelaxation.isColIntegral(col)) {
           // store integral slack in set
           intVariableBndSlacks.insert(col);
         }
     }
+    // move to next element
+    i++;
   }
 
   if (!vectorsum.getNonzeros().empty()) {
@@ -289,9 +302,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     double maxError = 0.0;
     auto IsZero = [&](HighsInt col, double val) {
-      double absval = std::abs(val);
-      if (absval <= mip.options_mip_->small_matrix_value) return true;
-
+      if (std::abs(val) <= mip.options_mip_->small_matrix_value) return true;
       return false;
     };
 
@@ -308,17 +319,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     for (HighsInt j = 0; j != numNz; ++j) vals[j] = vectorsum.getValue(inds[j]);
 
     vectorsum.clear();
-  } else if (removeZeros) {
-    for (HighsInt i = numNz - 1; i >= 0; --i) {
-      if (vals[i] == 0) {
-        --numNz;
-        vals[i] = vals[numNz];
-        inds[i] = inds[numNz];
-        std::swap(vals[i], vals[numNz]);
-        std::swap(inds[i], inds[numNz]);
-      }
-    }
-
+  } else {
     vals.resize(numNz);
     inds.resize(numNz);
   }
@@ -333,7 +334,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     double lb = getLb(col);
     double ub = getUb(col);
 
-    // make sure that variable is bounded
+    // make sure that variable is not free
     if (lb == -kHighsInf && ub == kHighsInf) return false;
 
     // do not overwrite bound type for integral slacks from vlb / vub
