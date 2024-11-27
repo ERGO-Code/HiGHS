@@ -122,6 +122,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   parameters.kkt_maxiter = options.kkt_iteration_limit;
+  parameters.kkt_logging = options.kkt_logging;
   // Determine if crossover is to be run or not
   //
   // When doing analytic centring calculations, crossover must not be

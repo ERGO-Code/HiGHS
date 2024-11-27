@@ -9,11 +9,12 @@ namespace ipx {
 ConjugateResiduals::ConjugateResiduals(const Control& control) :
     control_(control) {}
 
-const bool cr_logging = false;
-
 void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
                               double tol, const double* resscale, Int maxiter,
                               Vector& lhs) {
+
+    const bool cr_logging = control_.kkt_logging();
+
     const Int m = rhs.size();
     Vector residual(m);  // rhs - C*lhs
     Vector step(m);      // update to lhs
@@ -95,6 +96,8 @@ void ConjugateResiduals::Solve(LinearOperator& C, const Vector& rhs,
 void ConjugateResiduals::Solve(LinearOperator& C, LinearOperator& P,
                               const Vector& rhs, double tol,
                               const double* resscale, Int maxiter, Vector& lhs){
+    const bool cr_logging = control_.kkt_logging();
+
     const Int m = rhs.size();
     Vector residual(m);   // rhs - C*lhs
     Vector sresidual(m);  // preconditioned residual

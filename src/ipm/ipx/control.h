@@ -68,6 +68,7 @@ public:
     double ipm_optimality_tol() const { return parameters_.ipm_optimality_tol; }
     double ipm_drop_primal() const { return parameters_.ipm_drop_primal; }
     double ipm_drop_dual() const { return parameters_.ipm_drop_dual; }
+    bool kkt_logging() const { return parameters_.kkt_logging; }
     double kkt_tol() const { return parameters_.kkt_tol; }
     ipxint kkt_maxiter() const { return parameters_.kkt_maxiter; }
     ipxint crash_basis() const { return parameters_.crash_basis; }
