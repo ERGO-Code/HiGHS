@@ -29,7 +29,8 @@ struct ipx_parameters {
 
     /* Linear solver */
     bool kkt_logging;
-    ipxint kkt_maxiter;
+    ipxint cr1_maxiter;
+    ipxint cr2_maxiter;
     double kkt_tol;
 
     /* Basis construction in IPM */

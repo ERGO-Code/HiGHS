@@ -33,7 +33,8 @@ struct Parameters : public ipx_parameters {
     ipm_drop_dual = 1e-9;
     kkt_logging = false;
     kkt_tol = 0.3;
-    kkt_maxiter = -1;
+    cr1_maxiter = -1;
+    cr2_maxiter = -1;
     crash_basis = 1;
     dependency_tol = 1e-6;
     volume_tol = 2.0;
