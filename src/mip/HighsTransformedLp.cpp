@@ -135,9 +135,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   // vector sum should be empty
   assert(vectorsum.getNonzeros().empty());
 
-  // set for storing indices of integral slacks from variable bound constraints
-  std::set<HighsInt> intVariableBndSlacks;
-
   HighsCDouble tmpRhs = rhs;
 
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
@@ -273,9 +270,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           boundTypes[col] = oldBoundType;
           remove(i);
           continue;
-        } else if (lprelaxation.isColIntegral(col)) {
-          // store integral slack in set
-          intVariableBndSlacks.insert(col);
         }
         break;
       case BoundType::kVariableUb:
@@ -286,9 +280,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
           boundTypes[col] = oldBoundType;
           remove(i);
           continue;
-        } else if (lprelaxation.isColIntegral(col)) {
-          // store integral slack in set
-          intVariableBndSlacks.insert(col);
         }
     }
     // move to next element
@@ -327,19 +318,21 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   for (HighsInt j = 0; j != numNz; ++j) {
     HighsInt col = inds[j];
 
-    // set bound type for previously unprocessed integer-constrained variables
-    if (!lprelaxation.isColIntegral(col)) continue;
-
     // get bounds
     double lb = getLb(col);
     double ub = getUb(col);
 
-    // make sure that variable is not free
-    if (lb == -kHighsInf && ub == kHighsInf) return false;
+    // variable should not be free
+    assert(lb != -kHighsInf || ub != kHighsInf);
+
+    // set bound type for previously unprocessed integer-constrained variables
+    if (!lprelaxation.isColIntegral(col)) continue;
 
     // do not overwrite bound type for integral slacks from vlb / vub
     // constraints
-    if (intVariableBndSlacks.find(col) != intVariableBndSlacks.end()) continue;
+    if (boundTypes[col] == BoundType::kVariableLb ||
+        boundTypes[col] == BoundType::kVariableUb)
+      continue;
 
     // complement integers to make coefficients positive if both bounds are
     // finite; otherwise, complement integers with closest bound.

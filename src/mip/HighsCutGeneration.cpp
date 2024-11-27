@@ -1184,11 +1184,6 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       }
     } while (false);
 
-    // save data that might otherwise be overwritten when calling the cmir
-    // separator
-    bool saveIntegalSupport = integralSupport;
-    bool saveIntegralCoefficients = integralCoefficients;
-
     double minMirEfficacy = minEfficacy;
     if (success) {
       double violation = -double(rhs);
@@ -1210,7 +1205,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
         minMirEfficacy += efficacy;
         if (!complementation.empty()) {
           // remove the complementation if it exists, so that the values stored
-          // values are uncomplemented
+          // are uncomplemented
           for (HighsInt i = 0; i != rowlen; ++i) {
             if (complementation[i]) {
               rhs -= upper[i] * vals[i];
@@ -1225,6 +1220,11 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
     inds = tmpInds.data();
     vals = tmpVals.data();
+
+    // save data that might otherwise be overwritten when calling the cmir
+    // separator
+    bool saveIntegalSupport = integralSupport;
+    bool saveIntegralCoefficients = integralCoefficients;
 
     bool cmirSuccess =
         cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale);
@@ -1244,6 +1244,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       complementation.clear();
       inds = inds_.data();
       vals = vals_.data();
+      // restore indicators
       integralSupport = saveIntegalSupport;
       integralCoefficients = saveIntegralCoefficients;
     } else
@@ -1423,6 +1424,11 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     inds = tmpInds.data();
     vals = tmpVals.data();
 
+    // save data that might otherwise be overwritten when calling the cmir
+    // separator
+    bool saveIntegalSupport = integralSupport;
+    bool saveIntegralCoefficients = integralCoefficients;
+
     bool cmirSuccess = cmirCutGenerationHeuristic(minEfficacy);
 
     if (cmirSuccess) {
@@ -1438,6 +1444,9 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       complementation.swap(tmpComplementation);
       inds = proofinds.data();
       vals = proofvals.data();
+      // restore indicators
+      integralSupport = saveIntegalSupport;
+      integralCoefficients = saveIntegralCoefficients;
     } else
       // neither cmir nor lifted cut successful
       return false;
