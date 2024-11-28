@@ -320,7 +320,12 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("output_flag", false);
     ipm.setOptionValue("output_flag", !mipsolver.submip); // 2049 unset this ultimately
     ipm.setOptionValue("ipm_iteration_limit", 200);
-    ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this ultimately
+    double time_available =
+      std::max(mipsolver.options_mip_->time_limit -
+	       mipsolver.timer_.read(mipsolver.timer_.total_clock),
+	       0.1);
+    ipm.setOptionValue("time_limit", time_available);
+    // ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this ultimately
     //
     // cr1_iteration_limit is what's set internal to IPX to limit the
     // CR iterations before the initial basis is computed, and perhaps
@@ -329,20 +334,19 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     cr1_iteration_limit = std::min(HighsInt(500), cr1_iteration_limit); // IPX internal default
     cr1_iteration_limit = std::min(HighsInt(100), cr1_iteration_limit); //2049 set this ultimately
      // 2049 set this ultimately
-    ipm.setOptionValue("cr1_iteration_limit", cr1_iteration_limit);
+    // ipm.setOptionValue("cr1_iteration_limit", cr1_iteration_limit);
     // cr2_iteration_limit is not set internal to IPX, so the default
     // value is m+100, which is OK if you're desperate to solve an LP,
     // but can make the use of the AC in MIP prohibitively expensive
     HighsInt cr2_iteration_limit = 50 + mipsolver.model_->num_row_ / 50;
     cr2_iteration_limit = std::min(HighsInt(500), cr2_iteration_limit);
     // 2049 Set this ultimately
-    ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
+    // ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
-    //    if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ +
-    //    "_ipm.mps");
+       if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ +    "_ipm.mps");
 
     if (ac_logging) num_analytic_centre_start++;
     double tt0 = mipsolver.timer_.read(mipsolver.timer_.total_clock);
@@ -1161,9 +1165,9 @@ try_again:
     }
     this->total_repair_lp++;
     double time_available =
-        std::max(mipsolver.options_mip_->time_limit -
-                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
-                 0.1);
+      std::max(mipsolver.options_mip_->time_limit -
+	       mipsolver.timer_.read(mipsolver.timer_.total_clock),
+	       0.1);
     Highs tmpSolver;
     const bool debug_report = false;
     if (debug_report) {

@@ -89,7 +89,6 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         kkt->Factorize(iterate, info);
         if (info->errflag)
             break;
-	printf("IPM::Driver fill factor = %g\n", kkt_->current_fill());
         Predictor(step);
         if (info->errflag)
             break;
@@ -97,6 +96,14 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         if (info->errflag)
             break;
         MakeStep(step);
+	//
+	std::stringstream h_logging_stream;
+	h_logging_stream << "IPM::Driver fill factor = " <<
+	  kkt_->current_fill() << "; iter (sum = " <<
+	  kkt_->iterSum() << ", max = " <<
+	  kkt_->iterMax() << ")\n";
+        control_.hLog(h_logging_stream);
+	//
         info->iter++;
         PrintOutput();
     }
