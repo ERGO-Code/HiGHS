@@ -29,6 +29,7 @@ void testDualObjective(const std::string model) {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 }
+
 void testSolver(Highs& highs, const std::string solver,
                 IterationCount& default_iteration_count,
                 const HighsInt int_simplex_strategy = 0) {
@@ -640,4 +641,21 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
         "\nNow test by adding a fixed column and a fixed row, and "
         "maximizing\n");
   testStandardForm(highs.getLp());
+}
+
+TEST_CASE("simplex-stats", "[highs_lp_solver]") {
+   HighsStatus return_status;
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(h.readModel(model_file)  == HighsStatus::kOk);
+  const HighsSimplexStats& simplex_stats = h.getSimplexStats();
+  simplex_stats.report(stdout);
+  h.reportSimplexStats(stdout);
+  REQUIRE(h.run()  == HighsStatus::kOk);
+  simplex_stats.report(stdout);
+  h.reportSimplexStats(stdout);
+  
 }

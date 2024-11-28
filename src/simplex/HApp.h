@@ -112,6 +112,10 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // return
   resetModelStatusAndHighsInfo(solver_object);
 
+  // Clear the simplex stats
+  ekk_instance.clearSimplexStats();
+  ekk_instance.simplex_stats_.iteration_count = -ekk_instance.iteration_count_;
+
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLp
   bool positive_num_row = solver_object.lp_.num_row_ > 0;

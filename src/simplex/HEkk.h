@@ -156,6 +156,10 @@ class HEkk {
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
 
+  const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
+  void clearSimplexStats() { simplex_stats_.clear(); }
+  void reportSimplexStats(FILE* file) const { simplex_stats_.report(file); }
+
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
@@ -170,6 +174,7 @@ class HEkk {
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
+
 
   // Data members
   HighsCallback* callback_;
@@ -254,6 +259,8 @@ class HEkk {
 
   std::vector<HighsSimplexBadBasisChangeRecord> bad_basis_change_;
   std::vector<double> primal_phase1_dual_;
+
+  HighsSimplexStats simplex_stats_;
 
  private:
   bool isUnconstrainedLp();

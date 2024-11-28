@@ -154,4 +154,19 @@ struct HighsLinearObjective {
   void clear();
 };
 
+struct HighsSimplexStats {
+  bool valid;
+  HighsInt iteration_count;
+  HighsInt num_invert;
+  HighsInt last_invert_num_el;
+  HighsInt last_factored_basis_num_el;
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  void report(FILE* file) const;
+  void clear();
+};
+
+
 #endif /* LP_DATA_HSTRUCT_H_ */
