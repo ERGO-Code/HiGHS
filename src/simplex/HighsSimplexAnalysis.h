@@ -251,6 +251,7 @@ class HighsSimplexAnalysis {
   void reportFactorTimer();
   void updateInvertFormData(const HFactor& factor);
   void reportInvertFormData();
+  HighsInt numInvert() { return num_invert; }
 
   // Control methods to be moved to HEkkControl
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
