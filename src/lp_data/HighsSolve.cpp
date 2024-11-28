@@ -17,7 +17,7 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
-// The method below runs simplex or ipx solver on the lp.
+// The method below runs simplex, ipx or pdlp solver on the lp.
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
