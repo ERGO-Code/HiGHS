@@ -644,18 +644,38 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
 }
 
 TEST_CASE("simplex-stats", "[highs_lp_solver]") {
-   HighsStatus return_status;
+  HighsStatus return_status;
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  REQUIRE(h.readModel(model_file)  == HighsStatus::kOk);
   const HighsSimplexStats& simplex_stats = h.getSimplexStats();
-  simplex_stats.report(stdout);
-  h.reportSimplexStats(stdout);
-  REQUIRE(h.run()  == HighsStatus::kOk);
-  simplex_stats.report(stdout);
-  h.reportSimplexStats(stdout);
-  
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.iteration_count == 0);
+  REQUIRE(simplex_stats.num_invert == 1);
+  REQUIRE(simplex_stats.last_invert_num_el > 0);
+  REQUIRE(simplex_stats.last_factored_basis_num_el > 0);
+  REQUIRE(simplex_stats.col_aq_density == 0);
+  REQUIRE(simplex_stats.row_ep_density == 0);
+  REQUIRE(simplex_stats.row_ap_density == 0);
+  REQUIRE(simplex_stats.row_DSE_density == 0);
+  if (dev_run) h.reportSimplexStats(stdout);
+
+  h.clearSolver();
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.iteration_count > 0);
+  REQUIRE(simplex_stats.num_invert > 0);
+  REQUIRE(simplex_stats.last_invert_num_el > 0);
+  REQUIRE(simplex_stats.last_factored_basis_num_el > 0);
+  REQUIRE(simplex_stats.col_aq_density > 0);
+  REQUIRE(simplex_stats.row_ep_density > 0);
+  REQUIRE(simplex_stats.row_ap_density > 0);
+  REQUIRE(simplex_stats.row_DSE_density > 0);
+  if (dev_run) h.reportSimplexStats(stdout);
 }

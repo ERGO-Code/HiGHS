@@ -164,9 +164,8 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file) const;
-  void clear();
+  void report(FILE* file, const std::string message = "") const;
+  void initialise(const HighsInt iteration_count_ = 0);
 };
-
 
 #endif /* LP_DATA_HSTRUCT_H_ */

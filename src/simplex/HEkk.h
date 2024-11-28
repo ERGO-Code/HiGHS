@@ -157,8 +157,10 @@ class HEkk {
                            const vector<double>& rowUpper);
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
-  void clearSimplexStats() { simplex_stats_.clear(); }
-  void reportSimplexStats(FILE* file) const { simplex_stats_.report(file); }
+  void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
+  void reportSimplexStats(FILE* file, const std::string message = "") const {
+    simplex_stats_.report(file, message);
+  }
 
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
@@ -174,7 +176,6 @@ class HEkk {
   HighsDebugStatus debugNlaCheckInvert(
       const std::string message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
-
 
   // Data members
   HighsCallback* callback_;

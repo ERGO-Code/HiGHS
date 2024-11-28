@@ -1216,8 +1216,12 @@ class Highs {
 
   // Start of advanced methods for HiGHS MIP solver
 
-  const HighsSimplexStats& getSimplexStats() const { return ekk_instance_.getSimplexStats(); }
-  void reportSimplexStats(FILE* file) const { ekk_instance_.reportSimplexStats(file); }
+  const HighsSimplexStats& getSimplexStats() const {
+    return ekk_instance_.getSimplexStats();
+  }
+  void reportSimplexStats(FILE* file) const {
+    ekk_instance_.reportSimplexStats(file);
+  }
 
   /**
    * @brief Get the hot start basis data from the most recent simplex

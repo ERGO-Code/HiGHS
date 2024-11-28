@@ -296,7 +296,7 @@ void HEkk::invalidate() {
   assert(!this->status_.is_permuted);
   this->status_.initialised_for_solve = false;
   this->invalidateBasisMatrix();
-  this->simplex_stats_.clear();
+  this->simplex_stats_.initialise();
 }
 
 void HEkk::invalidateBasisMatrix() {
@@ -3509,7 +3509,8 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   simplex_stats_.iteration_count += iteration_count_;
   //  simplex_stats_.num_invert is incremented internally
   simplex_stats_.last_invert_num_el = simplex_nla_.factor_.invert_num_el;
-  simplex_stats_.last_factored_basis_num_el = simplex_nla_.factor_.basis_matrix_num_el;
+  simplex_stats_.last_factored_basis_num_el =
+      simplex_nla_.factor_.basis_matrix_num_el;
   simplex_stats_.col_aq_density = analysis_.col_aq_density;
   simplex_stats_.row_ep_density = analysis_.row_ep_density;
   simplex_stats_.row_ap_density = analysis_.row_ap_density;
@@ -4420,23 +4421,24 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file) const {
-  fprintf(file, "\nSimplex stats\n");
+void HighsSimplexStats::report(FILE* file, std::string message) const {
+  fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
   fprintf(file, "   iteration_count            = %d\n", this->iteration_count);
   fprintf(file, "   num_invert                 = %d\n", this->num_invert);
-  fprintf(file, "   last_invert_num_el         = %d\n", this->last_invert_num_el);
-  fprintf(file, "   last_factored_basis_num_el = %d\n", this->last_factored_basis_num_el);
+  fprintf(file, "   last_invert_num_el         = %d\n",
+          this->last_invert_num_el);
+  fprintf(file, "   last_factored_basis_num_el = %d\n",
+          this->last_factored_basis_num_el);
   fprintf(file, "   col_aq_density             = %g\n", this->col_aq_density);
   fprintf(file, "   row_ep_density             = %g\n", this->row_ep_density);
   fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
   fprintf(file, "   row_DSE_density            = %g\n", this->row_DSE_density);
- 
 }
 
-void HighsSimplexStats::clear() {
+void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   valid = false;
-  iteration_count = 0;
+  iteration_count = -iteration_count_;
   num_invert = 0;
   last_invert_num_el = 0;
   last_factored_basis_num_el = 0;
