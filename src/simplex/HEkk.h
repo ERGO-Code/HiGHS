@@ -17,6 +17,7 @@
 #include "lp_data/HighsCallback.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "lp_data/HighsSolutionStats.h"
 #include "util/HSet.h"
 #include "util/HighsHash.h"
 #include "util/HighsRandom.h"

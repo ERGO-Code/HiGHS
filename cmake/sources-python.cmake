@@ -311,6 +311,7 @@ set(highs_headers_python
     src/lp_data/HighsRanging.h
     src/lp_data/HighsSolution.h
     src/lp_data/HighsSolutionDebug.h
+    src/lp_data/HighsSolutionStats.h
     src/lp_data/HighsSolve.h
     src/lp_data/HighsStatus.h
     src/lp_data/HStruct.h
