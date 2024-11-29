@@ -342,6 +342,10 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     cr2_iteration_limit = std::min(HighsInt(500), cr2_iteration_limit);
     // 2049 Set this ultimately
     // ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
+
+    HighsSimplexStats simplex_stats = lp.getLpSolver().getSimplexStats();
+    if (!mipsolver.submip) simplex_stats.report(stdout);
+    ipm.passSimplexStats(simplex_stats);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));

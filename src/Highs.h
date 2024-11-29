@@ -1219,6 +1219,9 @@ class Highs {
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
   }
+  void passSimplexStats(const HighsSimplexStats simplex_stats) {
+    return ekk_instance_.passSimplexStats(simplex_stats);
+  }
   void reportSimplexStats(FILE* file) const {
     ekk_instance_.reportSimplexStats(file);
   }

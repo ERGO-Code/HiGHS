@@ -4421,6 +4421,10 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
+void HEkk::passSimplexStats(const HighsSimplexStats simplex_stats) {
+  this->simplex_stats_ = simplex_stats;
+}
+
 void HighsSimplexStats::report(FILE* file, std::string message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);

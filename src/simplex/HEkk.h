@@ -158,6 +158,7 @@ class HEkk {
                            const vector<double>& rowUpper);
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
+  void passSimplexStats(const HighsSimplexStats simplex_stats);
   void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
   void reportSimplexStats(FILE* file, const std::string message = "") const {
     simplex_stats_.report(file, message);
