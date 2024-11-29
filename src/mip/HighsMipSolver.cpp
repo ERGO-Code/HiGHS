@@ -795,30 +795,43 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
+  int ac_start = mipdata_->num_analytic_centre_start;
+  int ac_opt = mipdata_->num_analytic_centre_opt;
+  int ac_other = mipdata_->num_analytic_centre_other;
+  int ac_fail = mipdata_->num_analytic_centre_fail;
+  int ac_abort = ac_start - ac_opt - ac_other - ac_fail;
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Timing            %.2f (total)\n"
                "                    %.2f (presolve)\n"
                "                    %.2f (solve)\n"
                "                    %.2f (postsolve)\n"
-               "  Max sub-MIP depth %d\n"
                "  Nodes             %llu\n"
                "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
                "  LP iterations     %llu (total)\n"
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
-               "                    %llu (heuristics)\n",
+               "                    %llu (heuristics)\n"
+               "  Max sub-MIP depth %d\n"
+               "  Analytic centre calculations (Optimal / other / abort / "
+               "fail) = (%d / %d / %d / %d) of %d\n",
                timer_.read(timer_.total_clock),
                analysis_.mipTimerRead(kMipClockPresolve),
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
-               int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_repair_lp,
                (long long unsigned)mipdata_->total_repair_lp_feasible,
                (long long unsigned)mipdata_->total_repair_lp_iterations,
                (long long unsigned)mipdata_->total_lp_iterations,
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
-               (long long unsigned)mipdata_->heuristic_lp_iterations);
+               (long long unsigned)mipdata_->heuristic_lp_iterations,
+               int(max_submip_level > 0 ? max_submip_level : 0), ac_opt,
+               ac_other, ac_abort, ac_fail, ac_start);
+
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "grepAcStats,%s,%d,%d,%d,%d,%d\n", model_->model_name_.c_str(),
+               ac_opt, ac_other, ac_abort, ac_fail, ac_start);
 
   analysis_.reportMipTimer();
 

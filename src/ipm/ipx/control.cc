@@ -13,8 +13,10 @@ Control::Control() {
 Int Control::InterruptCheck(const Int ipm_iteration_count) const {
     HighsTaskExecutor::getThisWorkerDeque()->checkInterrupt();
     if (parameters_.time_limit >= 0.0 &&
-        parameters_.time_limit < timer_.Elapsed())
+        parameters_.time_limit < timer_.Elapsed()) {
+      printf("Control::InterruptCheck Reached time limit of %g\n", parameters_.time_limit);
         return IPX_ERROR_time_interrupt;
+    }
     // The pointer callback_ should not be null, since that indicates
     // that it's not been set
     assert(callback_);

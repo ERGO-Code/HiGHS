@@ -333,6 +333,9 @@ struct HighsOptionsStruct {
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
+  HighsInt cr1_iteration_limit;
+  HighsInt cr2_iteration_limit;
+  bool kkt_logging;
 
   // Options for PDLP solver
   bool pdlp_native_termination;
@@ -421,6 +424,7 @@ struct HighsOptionsStruct {
   HighsInt mip_pool_soft_limit;
   HighsInt mip_pscost_minreliable;
   HighsInt mip_min_cliquetable_entries_for_parallelism;
+  HighsInt mip_compute_analytic_centre;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_rel_gap;
@@ -481,6 +485,9 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         ipm_iteration_limit(0),
+        cr1_iteration_limit(0),
+        cr2_iteration_limit(0),
+        kkt_logging(false),
         pdlp_native_termination(false),
         pdlp_scaling(false),
         pdlp_iteration_limit(0),
@@ -555,6 +562,7 @@ struct HighsOptionsStruct {
         mip_pool_soft_limit(0),
         mip_pscost_minreliable(0),
         mip_min_cliquetable_entries_for_parallelism(0),
+        mip_compute_analytic_centre(0),
         mip_report_level(0),
         mip_feasibility_tolerance(0.0),
         mip_rel_gap(0.0),
@@ -1032,6 +1040,14 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "mip_compute_analytic_centre",
+        "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 "
+        "=> true",
+        advanced, &mip_compute_analytic_centre, kMipAnalyticCentreCalulationMin,
+        kMipAnalyticCentreCalulationOriginal, kMipAnalyticCentreCalulationMax);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("mip_report_level", "MIP solver reporting level",
                             now_advanced, &mip_report_level, 0, 1, 2);
@@ -1069,6 +1085,26 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "kkt_logging",
+        "Perform logging in CR solver for KKT in IPX: Default = false",
+        advanced, &kkt_logging, false);
+    records.push_back(record_bool);
+
+    record_int =
+        new OptionRecordInt("cr1_iteration_limit",
+                            "Iteration limit for initial CR in IPX IPM solver: "
+                            "default is -1, so set internally",
+                            advanced, &cr1_iteration_limit, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("cr2_iteration_limit",
+                            "Iteration limit for main CR in IPX IPM solver: "
+                            "default is -1, so set internally",
+                            advanced, &cr2_iteration_limit, -1, -1, kHighsIInf);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(

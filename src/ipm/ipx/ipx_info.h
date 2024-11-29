@@ -58,6 +58,8 @@ struct ipx_info {
     ipxint iter;                /* # interior point iterations */
     ipxint kktiter1;            /* # linear solver iterations before switch */
     ipxint kktiter2;            /* # linear solver iterations after switch */
+    ipxint kkt_iter_max1;       /* # max linear solver iterations before switch */
+    ipxint kkt_iter_max2;       /* # max linear solver iterations after switch */
     ipxint basis_repairs;       /* # basis repairs after crash, < 0 discarded */
     ipxint updates_start;       /* # basis updates for starting basis */
     ipxint updates_ipm;         /* # basis updates in IPM */

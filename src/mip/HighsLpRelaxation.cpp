@@ -1064,9 +1064,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
              int(lpsolver.getNumCol()), int(lpsolver.getNumRow()));
     }
   }
-  const bool solver_logging = false;
+  const bool solver_logging = false;  //! mipsolver.submip && !valid_basis;
   const bool detailed_simplex_logging = false;
-  if (solver_logging) lpsolver.setOptionValue("output_flag", true);
+  if (solver_logging) {
+    lpsolver.setOptionValue("output_flag", true);
+  }
   if (detailed_simplex_logging) {
     lpsolver.setOptionValue("output_flag", true);
     lpsolver.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
@@ -1076,6 +1078,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
+  lpsolver.setOptionValue("output_flag", false);  // !fix-2049
+  //  if (solver_logging) lpsolver.reportSimplexStats(stdout); // !fix-2049
   mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
 
   const HighsInfo& info = lpsolver.getInfo();

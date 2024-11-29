@@ -2,6 +2,7 @@
 #define IPX_PARAMETERS_H_
 
 #include "io/HighsIO.h"
+#include "lp_data/HighsSolutionStats.h"
 #include "ipm/ipx/ipx_config.h"
 #include <iostream>
 
@@ -28,6 +29,9 @@ struct ipx_parameters {
     double ipm_drop_dual;
 
     /* Linear solver */
+    bool kkt_logging;
+    ipxint cr1_maxiter;
+    ipxint cr2_maxiter;
     double kkt_tol;
 
     /* Basis construction in IPM */
@@ -65,7 +69,9 @@ struct ipx_parameters {
     /* HiGHS logging parameters */
     bool highs_logging;
     const HighsLogOptions* log_options;
-  
+
+    /* Simplex solution stats */
+    HighsSimplexStats simplex_stats;
 };
 
 #ifdef __cplusplus

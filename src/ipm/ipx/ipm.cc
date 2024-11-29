@@ -96,6 +96,14 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         if (info->errflag)
             break;
         MakeStep(step);
+	//
+	std::stringstream h_logging_stream;
+	h_logging_stream << "IPM::Driver fill factor = " <<
+	  kkt_->current_fill() << "; iter (sum = " <<
+	  kkt_->iterSum() << ", max = " <<
+	  kkt_->iterMax() << ")\n";
+        control_.hLog(h_logging_stream);
+	//
         info->iter++;
         PrintOutput();
     }
@@ -856,7 +864,7 @@ void IPM::PrintOutput() {
     control_.Debug()
       << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)
       << "  " << Format(kkt_->basis_changes(), 7)
-      << " "  << Format(kkt_->iter(), 7);
+      << " "  << Format(kkt_->iterSum(), 7);
     control_.Debug()
       << "  " << Format(info_->dual_dropped, 7)
       << " "  << Format(info_->primal_dropped, 7);

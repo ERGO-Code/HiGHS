@@ -23,14 +23,15 @@ using std::min;
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_,
-                    solver_object.lp_, solver_object.basis_,
-                    solver_object.solution_, solver_object.model_status_,
-                    solver_object.highs_info_, solver_object.callback_);
+                    solver_object.lp_, solver_object.ekk_instance_,
+                    solver_object.basis_, solver_object.solution_,
+                    solver_object.model_status_, solver_object.highs_info_,
+                    solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
+                       const HighsLp& lp, const HEkk& ekk_instance,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback) {
   // Use IPX to try to solve the LP
@@ -121,6 +122,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
+  parameters.cr1_maxiter = options.cr1_iteration_limit;
+  parameters.cr2_maxiter = options.cr2_iteration_limit;
+  parameters.kkt_logging = options.kkt_logging;
   // Determine if crossover is to be run or not
   //
   // When doing analytic centring calculations, crossover must not be
@@ -145,6 +149,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.run_centring = options.run_centring ? 1 : 0;
   parameters.max_centring_steps = options.max_centring_steps;
   parameters.centring_ratio_tolerance = options.centring_ratio_tolerance;
+
+  parameters.simplex_stats = ekk_instance.getSimplexStats();
 
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
@@ -183,6 +189,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
   highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  highs_info.max_cr_iteration_count1 = ipx_info.kkt_iter_max1;
+  highs_info.max_cr_iteration_count2 = ipx_info.kkt_iter_max2;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -960,6 +968,10 @@ void reportSolveData(const HighsLogOptions& log_options,
               (int)ipx_info.kktiter1);
   highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter 2 = %d\n",
               (int)ipx_info.kktiter2);
+  highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter max 1 = %d\n",
+              (int)ipx_info.kkt_iter_max1);
+  highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter max 2 = %d\n",
+              (int)ipx_info.kkt_iter_max2);
   highsLogDev(log_options, HighsLogType::kInfo, "    Basis repairs = %d\n",
               (int)ipx_info.basis_repairs);
   highsLogDev(log_options, HighsLogType::kInfo, "    Updates start     = %d\n",

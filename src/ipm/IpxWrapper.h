@@ -25,8 +25,8 @@
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
+                       const HighsLp& lp, const HEkk& ekk_instance,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback);
 

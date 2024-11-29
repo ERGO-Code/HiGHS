@@ -315,6 +315,7 @@ set(highs_headers
     lp_data/HighsRanging.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
+    lp_data/HighsSolutionStats.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HStruct.h

@@ -46,11 +46,18 @@ public:
     // If an iterative method is used, returns the # iterations in all Solve()
     // calls since the last call to Factorize(). A direct solver returns the #
     // iterative refinement steps.
-    Int iter() const;
+    Int iterSum() const;
+
+    // If an iterative method is used, returns the max # iterations in
+    // _all_ Solve() calls.
+    Int iterMax() const;
 
     // If a basis matrix is maintained, returns the # basis changes in the last
     // call to Factorize(). Otherwise returns 0.
     Int basis_changes() const;
+
+    //
+    double current_fill() const;
 
     // If a basis matrix is maintained, returns a pointer to it.
     // Otherwise returns NULL.
@@ -60,8 +67,10 @@ private:
     virtual void _Factorize(Iterate* iterate, Info* info) = 0;
     virtual void _Solve(const Vector& a, const Vector& b, double tol,
                          Vector& x, Vector& y, Info* info) = 0;
-    virtual Int _iter() const = 0;
+    virtual Int _iterSum() const = 0;
+    virtual Int _iterMax() const = 0;
     virtual Int _basis_changes() const { return 0; }
+    virtual double _current_fill() const { return 0.0; }
     virtual const Basis* _basis() const { return nullptr; }
 };
 

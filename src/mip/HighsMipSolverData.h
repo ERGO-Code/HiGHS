@@ -84,6 +84,7 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  bool analyticCenterFailed;
   HighsModelStatus analyticCenterStatus;
   bool detectSymmetries;
   HighsInt numRestarts;
@@ -119,6 +120,10 @@ struct HighsMipSolverData {
   HighsInt numintegercols;
   HighsInt maxTreeSizeLog2;
 
+  HighsInt num_analytic_centre_start;
+  HighsInt num_analytic_centre_opt;
+  HighsInt num_analytic_centre_other;
+  HighsInt num_analytic_centre_fail;
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;
   double last_disptime;
@@ -170,6 +175,7 @@ struct HighsMipSolverData {
         cliquesExtracted(false),
         rowMatrixSet(false),
         analyticCenterComputed(false),
+        analyticCenterFailed(false),
         analyticCenterStatus(HighsModelStatus::kNotset),
         detectSymmetries(false),
         numRestarts(0),
@@ -184,6 +190,10 @@ struct HighsMipSolverData {
         rootlpsolobj(-kHighsInf),
         numintegercols(0),
         maxTreeSizeLog2(0),
+        num_analytic_centre_start(0),
+        num_analytic_centre_opt(0),
+        num_analytic_centre_other(0),
+        num_analytic_centre_fail(0),
         pruned_treeweight(0),
         avgrootlpiters(0.0),
         last_disptime(0.0),

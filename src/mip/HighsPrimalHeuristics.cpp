@@ -132,8 +132,15 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.presolve = "on";
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
-  // setup solver and run it
+  // If the analytic centre calculation has failed for the parent MIP,
+  // then don't perform it for the sub-MIP
 
+  // 2049 Set this ultimately
+  //
+  if (mipsolver.mipdata_->analyticCenterFailed)
+    submipoptions.mip_compute_analytic_centre = 0;
+
+  // setup solver and run it
   HighsSolution solution;
   solution.value_valid = false;
   solution.dual_valid = false;

@@ -449,6 +449,13 @@ double Basis::time_update() const {
     return time_update_;
 }
 
+double Basis::current_fill() const {
+    if (fill_factors_.empty())
+        return 0.0;
+    Int num_factors = fill_factors_.size();
+    return fill_factors_[num_factors-1];
+}
+
 double Basis::mean_fill() const {
     if (fill_factors_.empty())
         return 0.0;
