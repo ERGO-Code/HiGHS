@@ -24,18 +24,15 @@ using std::min;
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_,
                     solver_object.lp_, solver_object.ekk_instance_,
-		    solver_object.basis_, solver_object.solution_,
-		    solver_object.model_status_,
-                    solver_object.highs_info_,
-		    solver_object.callback_);
+                    solver_object.basis_, solver_object.solution_,
+                    solver_object.model_status_, solver_object.highs_info_,
+                    solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, const HEkk& ekk_instance,
-		       HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
-                       HighsModelStatus& model_status,
-		       HighsInfo& highs_info,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info,
                        HighsCallback& callback) {
   // Use IPX to try to solve the LP
   //

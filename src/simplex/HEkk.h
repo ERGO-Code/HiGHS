@@ -15,9 +15,9 @@
 #define SIMPLEX_HEKK_H_
 
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsSolutionStats.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
-#include "lp_data/HighsSolutionStats.h"
 #include "util/HSet.h"
 #include "util/HighsHash.h"
 #include "util/HighsRandom.h"

@@ -318,22 +318,26 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
-    ipm.setOptionValue("output_flag", !mipsolver.submip); // 2049 unset this ultimately
+    ipm.setOptionValue("output_flag",
+                       !mipsolver.submip);  // 2049 unset this ultimately
     ipm.setOptionValue("ipm_iteration_limit", 200);
     double time_available =
-      std::max(mipsolver.options_mip_->time_limit -
-	       mipsolver.timer_.read(mipsolver.timer_.total_clock),
-	       0.1);
+        std::max(mipsolver.options_mip_->time_limit -
+                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
+                 0.1);
     ipm.setOptionValue("time_limit", time_available);
-    // ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this ultimately
+    // ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this
+    // ultimately
     //
     // cr1_iteration_limit is what's set internal to IPX to limit the
     // CR iterations before the initial basis is computed, and perhaps
     // should not be changed, but maybe 500 is too high
     HighsInt cr1_iteration_limit = 10 + mipsolver.model_->num_row_ / 20;
-    cr1_iteration_limit = std::min(HighsInt(500), cr1_iteration_limit); // IPX internal default
-    cr1_iteration_limit = std::min(HighsInt(100), cr1_iteration_limit); //2049 set this ultimately
-     // 2049 set this ultimately
+    cr1_iteration_limit =
+        std::min(HighsInt(500), cr1_iteration_limit);  // IPX internal default
+    cr1_iteration_limit = std::min(
+        HighsInt(100), cr1_iteration_limit);  // 2049 set this ultimately
+                                              //  2049 set this ultimately
     // ipm.setOptionValue("cr1_iteration_limit", cr1_iteration_limit);
     // cr2_iteration_limit is not set internal to IPX, so the default
     // value is m+100, which is OK if you're desperate to solve an LP,
@@ -350,7 +354,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
-       if (!mipsolver.submip) ipm.writeModel(mipsolver.model_->model_name_ +    "_ipm.mps");
+    if (!mipsolver.submip)
+      ipm.writeModel(mipsolver.model_->model_name_ + "_ipm.mps");
 
     if (ac_logging) num_analytic_centre_start++;
     double tt0 = mipsolver.timer_.read(mipsolver.timer_.total_clock);
@@ -364,17 +369,14 @@ void HighsMipSolverData::startAnalyticCenterComputation(
           "grepAcLocal: model; num_row; CR limits+counts; time and status,"
           "%s,%d,"
           "%d,%d,"
-	            "%d,%d,"
+          "%d,%d,"
           "%g,%s\n",
           mipsolver.model_->model_name_.c_str(), int(ipm.getNumRow()),
-	            int(cr1_iteration_limit),
-	  int(ipm.getInfo().max_cr_iteration_count1),
-	            int(cr2_iteration_limit),
-          int(ipm.getInfo().max_cr_iteration_count2),
-	  tt1 - tt0,
-          ipm.modelStatusToString(ac_status).c_str());
+          int(cr1_iteration_limit), int(ipm.getInfo().max_cr_iteration_count1),
+          int(cr2_iteration_limit), int(ipm.getInfo().max_cr_iteration_count2),
+          tt1 - tt0, ipm.modelStatusToString(ac_status).c_str());
       if (ac_status == HighsModelStatus::kSolveError ||
-	  ac_status == HighsModelStatus::kUnknown) {
+          ac_status == HighsModelStatus::kUnknown) {
         num_analytic_centre_fail++;
       } else if (ac_status == HighsModelStatus::kOptimal) {
         num_analytic_centre_opt++;
@@ -406,8 +408,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
   }
   analyticCenterComputed = true;
   analyticCenterFailed =
-    analyticCenterStatus == HighsModelStatus::kSolveError ||
-    analyticCenterStatus == HighsModelStatus::kUnknown;
+      analyticCenterStatus == HighsModelStatus::kSolveError ||
+      analyticCenterStatus == HighsModelStatus::kUnknown;
   if (analyticCenterStatus == HighsModelStatus::kOptimal) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
@@ -445,8 +447,10 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   } else if (!analyticCenterFailed) {
-    printf("HighsMipSolverData::finishAnalyticCenterComputation: analyticCenterStatus = %s\n",
-	   lp.getLpSolver().modelStatusToString(analyticCenterStatus).c_str());
+    printf(
+        "HighsMipSolverData::finishAnalyticCenterComputation: "
+        "analyticCenterStatus = %s\n",
+        lp.getLpSolver().modelStatusToString(analyticCenterStatus).c_str());
   }
 }
 
@@ -1169,9 +1173,9 @@ try_again:
     }
     this->total_repair_lp++;
     double time_available =
-      std::max(mipsolver.options_mip_->time_limit -
-	       mipsolver.timer_.read(mipsolver.timer_.total_clock),
-	       0.1);
+        std::max(mipsolver.options_mip_->time_limit -
+                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
+                 0.1);
     Highs tmpSolver;
     const bool debug_report = false;
     if (debug_report) {

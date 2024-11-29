@@ -1088,7 +1088,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        "kkt_logging", "Perform logging in CR solver for KKT in IPX: Default = false",
+        "kkt_logging",
+        "Perform logging in CR solver for KKT in IPX: Default = false",
         advanced, &kkt_logging, false);
     records.push_back(record_bool);
 
