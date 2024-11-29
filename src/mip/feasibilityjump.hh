@@ -32,8 +32,8 @@ namespace external_feasibilityjump {
       double* solution;
     };
 
-    const double violationTolerance = 1.0e-5;
-    const double equalityTolerance = 1.0e-5;
+    double violationTolerance = 1.0e-5;
+    double equalityTolerance = 1.0e-5;
 
     // Measures if two doubles are equal within a tolerance of 1.0e-5.
     bool eq(double a, double b) { return fabs(a - b) < equalityTolerance; }
