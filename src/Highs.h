@@ -1220,13 +1220,15 @@ class Highs {
     return presolved_lp_simplex_stats_;
   }
 
-  void reportPresolvedLpSimplexStats(FILE* file, const HighsInt style = HighsSimplexStatsReportPretty) const {
+  void reportPresolvedLpSimplexStats(
+      FILE* file, const HighsInt style = HighsSimplexStatsReportPretty) const {
     presolved_lp_simplex_stats_.report(file, style, "Presolved LP");
   }
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
 
-  void reportSimplexStats(FILE* file, const HighsInt style = HighsSimplexStatsReportPretty) const {
+  void reportSimplexStats(
+      FILE* file, const HighsInt style = HighsSimplexStatsReportPretty) const {
     simplex_stats_.report(file, style, "Original LP");
   }
 

@@ -34,9 +34,8 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file,
-	      const HighsInt style = HighsSimplexStatsReportPretty,
-	      const std::string message = "") const;
+  void report(FILE* file, const HighsInt style = HighsSimplexStatsReportPretty,
+              const std::string message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
 };
 
