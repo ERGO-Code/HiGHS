@@ -1507,7 +1507,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateInfo() and invalidateEkk()
+  // invalidateInfo(), invalidateEkk(), invalidateIis() and
+  // invalidateSimplexStats();
   void invalidateUserSolverData();
   //
   // Invalidates the model status, solution_ and info_
@@ -1533,6 +1534,9 @@ class Highs {
 
   // Invalidates iis_
   void invalidateIis();
+
+  // Invalidates simplex_stats_ and presolved_lp_simplex_stats_;
+  void invalidateSimplexStats();
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);

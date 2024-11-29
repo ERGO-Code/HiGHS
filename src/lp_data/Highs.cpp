@@ -3589,6 +3589,7 @@ void Highs::invalidateUserSolverData() {
   invalidateInfo();
   invalidateEkk();
   invalidateIis();
+  invalidateSimplexStats();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
@@ -3627,6 +3628,8 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 void Highs::invalidateIis() { iis_.invalidate(); }
+
+void Highs::invalidateSimplexStats() { simplex_stats_.initialise(); presolved_lp_simplex_stats_.initialise(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
