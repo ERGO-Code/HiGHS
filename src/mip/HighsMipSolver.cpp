@@ -134,7 +134,7 @@ void HighsMipSolver::run() {
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
   // Identify whether time limit has been reached (in presolve)
@@ -158,16 +158,48 @@ void HighsMipSolver::run() {
 
   analysis_.mipTimerStart(kMipClockSolve);
 
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
   mipdata_->runSetup();
   analysis_.mipTimerStop(kMipClockRunSetup);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - completed setup\n",
-                 timer_.read(timer_.total_clock));
+		 "MIP-Timing: %11.2g - completed setup\n",
+		 timer_.read(timer_.total_clock));
+  if (!submip) {
+    if (analysis_.analyse_mip_time) {
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "MIP-Timing: %11.2g - starting  relaxation simplex solve\n", timer_.read());
+      analysis_.mipTimerStart(kMipClockRelaxationSimplexSolve);
+      analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
+    }
+    Highs root;
+    HighsLp lpmodel(*model_);
+    root.passModel(std::move(lpmodel));
+    root.setOptionValue("solve_relaxation", true);
+    root.setOptionValue("output_flag", true);
+    HighsStatus status = root.run();
+    modelstatus_ = root.getModelStatus();
+    if (status != HighsStatus::kOk) {
+      cleanupSolve();
+      return;
+    }
+    if (modelstatus_ != HighsModelStatus::kOptimal) {
+      cleanupSolve();
+      return;
+    }
+    mipdata_->firstrootbasis = root.getBasis();
+    mipdata_->simplex_stats = root.getSimplexStats();
+    mipdata_->simplex_stats.report(stdout, HighsSimplexStatsReportPretty, "Root node");
+    if (analysis_.analyse_mip_time) {
+      analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
+      analysis_.mipTimerStop(kMipClockRelaxationSimplexSolve);
+      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		   "MIP-Timing: %11.2g - completed relaxation simplex solve\n", timer_.read());
+    }
+  }
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -186,7 +218,7 @@ restart:
       return;
     }
     analysis_.mipTimerStop(kMipClockTrivialHeuristics);
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
                    timer_.read(timer_.total_clock));
@@ -198,7 +230,7 @@ restart:
     if (analysis_.analyse_mip_time &&
         analysis_.mipTimerRunning(kMipClockIpmSolveLp))
       analysis_.mipTimerStop(kMipClockIpmSolveLp);
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
                    timer_.read(timer_.total_clock));

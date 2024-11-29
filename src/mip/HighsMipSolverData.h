@@ -91,6 +91,7 @@ struct HighsMipSolverData {
   HighsInt numRestartsRoot;
   HighsInt numCliqueEntriesAfterPresolve;
   HighsInt numCliqueEntriesAfterFirstPresolve;
+  HighsSimplexStats simplex_stats; 
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;

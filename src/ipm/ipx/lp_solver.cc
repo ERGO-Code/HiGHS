@@ -490,13 +490,15 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
         // min(control_.cr1_maxiter(), 500,10+m/20)
         //
         // iterations, ignoring control_.cr1_maxiter() if negative
+      //
+      // 2049 revert all this
         Int m = model_.rows();
 	ipxint df_cr1_maxiter = std::min(500l, (long) (10+m/20));
 	ipxint cr1_maxiter = df_cr1_maxiter;
 	ipxint control_cr1_maxiter = control_.cr1_maxiter();
 	if (control_cr1_maxiter > 0) cr1_maxiter = std::min(control_cr1_maxiter, cr1_maxiter);
-	printf("LpSolver::RunInitialIPM Using kkt.maxiter = %d, from df_cr1_maxiter = %d and control_cr1_maxiter = %d\n",
-	       int(cr1_maxiter), int(df_cr1_maxiter), int(control_cr1_maxiter));
+	//	printf("LpSolver::RunInitialIPM Using kkt.maxiter = %d, from df_cr1_maxiter = %d and control_cr1_maxiter = %d\n",
+	//	       int(cr1_maxiter), int(df_cr1_maxiter), int(control_cr1_maxiter));
         kkt.maxiter(cr1_maxiter);
         ipm.maxiter(control_.ipm_maxiter());
     } else {

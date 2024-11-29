@@ -304,7 +304,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     assert(mipsolver.options_mip_->mip_compute_analytic_centre >=
            kMipAnalyticCentreCalulationOriginal);
-    const bool ac_logging = !mipsolver.submip;
+    const bool ac_logging = false;// !mipsolver.submip; // 2049 unset this
     Highs ipm;
     if (mipsolver.options_mip_->mip_compute_analytic_centre ==
         kMipAnalyticCentreCalulationOriginal) {
@@ -318,8 +318,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
-    ipm.setOptionValue("output_flag",
-                       !mipsolver.submip);  // 2049 unset this ultimately
+    //    ipm.setOptionValue("output_flag", !mipsolver.submip);  // 2049 unset this ultimately
     ipm.setOptionValue("ipm_iteration_limit", 200);
     double time_available =
         std::max(mipsolver.options_mip_->time_limit -
@@ -348,14 +347,13 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
 
     HighsSimplexStats simplex_stats = lp.getLpSolver().getSimplexStats();
-    if (!mipsolver.submip) simplex_stats.report(stdout);
+    //    if (!mipsolver.submip) simplex_stats.report(stdout);
     ipm.passSimplexStats(simplex_stats);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));
 
-    if (!mipsolver.submip)
-      ipm.writeModel(mipsolver.model_->model_name_ + "_ipm.mps");
+    //    if (!mipsolver.submip)ipm.writeModel(mipsolver.model_->model_name_ + "_ipm.mps");
 
     if (ac_logging) num_analytic_centre_start++;
     double tt0 = mipsolver.timer_.read(mipsolver.timer_.total_clock);
