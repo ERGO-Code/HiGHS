@@ -648,22 +648,44 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
 
   Highs h;
   const HighsSimplexStats& simplex_stats = h.getSimplexStats();
+  const HighsSimplexStats& presolved_lp_simplex_stats =
+      h.getPresolvedLpSimplexStats();
   h.setOptionValue("output_flag", dev_run);
+  // std::string model = "dcp2";
+  std::string model = "adlittle";
   std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(simplex_stats.valid);
-  REQUIRE(simplex_stats.iteration_count == 0);
-  REQUIRE(simplex_stats.num_invert == 1);
+  REQUIRE(simplex_stats.iteration_count >= 0);
+  REQUIRE(simplex_stats.num_invert > 0);
   REQUIRE(simplex_stats.last_invert_num_el > 0);
   REQUIRE(simplex_stats.last_factored_basis_num_el > 0);
-  REQUIRE(simplex_stats.col_aq_density == 0);
-  REQUIRE(simplex_stats.row_ep_density == 0);
-  REQUIRE(simplex_stats.row_ap_density == 0);
-  REQUIRE(simplex_stats.row_DSE_density == 0);
+  if (simplex_stats.iteration_count > 0) {
+    REQUIRE(simplex_stats.col_aq_density > 0);
+    REQUIRE(simplex_stats.row_ep_density > 0);
+    REQUIRE(simplex_stats.row_ap_density > 0);
+    REQUIRE(simplex_stats.row_DSE_density > 0);
+  } else {
+    REQUIRE(simplex_stats.col_aq_density == 0);
+    REQUIRE(simplex_stats.row_ep_density == 0);
+    REQUIRE(simplex_stats.row_ap_density == 0);
+    REQUIRE(simplex_stats.row_DSE_density == 0);
+  }
   if (dev_run) h.reportSimplexStats(stdout);
+
+  REQUIRE(presolved_lp_simplex_stats.valid);
+  REQUIRE(presolved_lp_simplex_stats.iteration_count > 0);
+  REQUIRE(presolved_lp_simplex_stats.num_invert > 0);
+  REQUIRE(presolved_lp_simplex_stats.last_invert_num_el > 0);
+  REQUIRE(presolved_lp_simplex_stats.last_factored_basis_num_el > 0);
+  REQUIRE(presolved_lp_simplex_stats.col_aq_density > 0);
+  REQUIRE(presolved_lp_simplex_stats.row_ep_density > 0);
+  REQUIRE(presolved_lp_simplex_stats.row_ap_density > 0);
+  REQUIRE(presolved_lp_simplex_stats.row_DSE_density > 0);
+  if (dev_run) h.reportPresolvedLpSimplexStats(stdout);
 
   h.clearSolver();
   h.setOptionValue("presolve", kHighsOffString);

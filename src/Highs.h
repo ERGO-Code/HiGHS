@@ -1216,11 +1216,16 @@ class Highs {
 
   // Start of advanced methods for HiGHS MIP solver
 
-  const HighsSimplexStats& getSimplexStats() const {
-    return ekk_instance_.getSimplexStats();
+  const HighsSimplexStats& getPresolvedLpSimplexStats() const {
+    return presolved_lp_simplex_stats_;
   }
+  void reportPresolvedLpSimplexStats(FILE* file) const {
+    presolved_lp_simplex_stats_.report(file, "Presolved LP");
+  }
+
+  const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
   void reportSimplexStats(FILE* file) const {
-    ekk_instance_.reportSimplexStats(file);
+    simplex_stats_.report(file, "Original LP");
   }
 
   /**
@@ -1438,6 +1443,8 @@ class Highs {
   HighsSparseMatrix standard_form_matrix_;
 
   HEkk ekk_instance_;
+  HighsSimplexStats simplex_stats_;
+  HighsSimplexStats presolved_lp_simplex_stats_;
 
   HighsPresolveLog presolve_log_;
 
