@@ -18,6 +18,12 @@
 
 #include "lp_data/HConst.h"
 
+enum HighsSimplexStatsReport {
+  HighsSimplexStatsReportPretty = 0,
+  HighsSimplexStatsReportCsvHeader,
+  HighsSimplexStatsReportCsvData
+};
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt iteration_count;
@@ -28,7 +34,9 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file, const std::string message = "") const;
+  void report(FILE* file,
+	      const HighsInt style = HighsSimplexStatsReportPretty,
+	      const std::string message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
 };
 

@@ -160,8 +160,8 @@ class HEkk {
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
   void passSimplexStats(const HighsSimplexStats simplex_stats);
   void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
-  void reportSimplexStats(FILE* file, const std::string message = "") const {
-    simplex_stats_.report(file, message);
+  void reportSimplexStats(FILE* file, const HighsInt style = HighsSimplexStatsReportPretty, const std::string message = "") const {
+    simplex_stats_.report(file, style, message);
   }
 
   // Make this private later
