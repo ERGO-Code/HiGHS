@@ -103,6 +103,13 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	  kkt_->iterSum() << ", max = " <<
 	  kkt_->iterMax() << ")\n";
         control_.hLog(h_logging_stream);
+	// Find nnz for L and U
+	//
+	// incopororate kkt_->current_fill() * 
+	double ipm_cost_measure = kkt_->iterSum();
+	HighsSimplexStats simplex_stats = control_.simplexStats();
+	simplex_stats.report(stdout, "In ipm.cpp");
+	double simplex_cost_measure = simplex_stats.iteration_count;
 	//
         info->iter++;
         PrintOutput();

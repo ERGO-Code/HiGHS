@@ -2,7 +2,7 @@
 #define IPX_PARAMETERS_H_
 
 #include "io/HighsIO.h"
-#include "lp_data/HighsSolutionStats.h"
+#include "lp_data/HighsSolverStats.h"
 #include "ipm/ipx/ipx_config.h"
 #include <iostream>
 

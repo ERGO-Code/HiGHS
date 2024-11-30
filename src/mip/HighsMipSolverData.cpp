@@ -304,7 +304,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // due to early return in the root node evaluation
     assert(mipsolver.options_mip_->mip_compute_analytic_centre >=
            kMipAnalyticCentreCalulationOriginal);
-    const bool ac_logging = false;// !mipsolver.submip; // 2049 unset this
+    const bool ac_logging = !mipsolver.submip; // 2049 unset this
     Highs ipm;
     if (mipsolver.options_mip_->mip_compute_analytic_centre ==
         kMipAnalyticCentreCalulationOriginal) {
@@ -318,14 +318,14 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     ipm.setOptionValue("presolve", "off");
     ipm.setOptionValue("output_flag", false);
-    //    ipm.setOptionValue("output_flag", !mipsolver.submip);  // 2049 unset this ultimately
+    ipm.setOptionValue("output_flag", !mipsolver.submip);  // 2049 unset this ultimately
     ipm.setOptionValue("ipm_iteration_limit", 200);
     double time_available =
         std::max(mipsolver.options_mip_->time_limit -
                      mipsolver.timer_.read(mipsolver.timer_.total_clock),
                  0.1);
     ipm.setOptionValue("time_limit", time_available);
-    // ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this
+    ipm.setOptionValue("kkt_logging", !mipsolver.submip); // 2049 unset this
     // ultimately
     //
     // cr1_iteration_limit is what's set internal to IPX to limit the
@@ -346,9 +346,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     // 2049 Set this ultimately
     // ipm.setOptionValue("cr2_iteration_limit", cr2_iteration_limit);
 
-    HighsSimplexStats simplex_stats = lp.getLpSolver().getSimplexStats();
-    //    if (!mipsolver.submip) simplex_stats.report(stdout);
-    ipm.passSimplexStats(simplex_stats);
+    if (!mipsolver.submip) this->simplex_stats.report(stdout);
+    ipm.passSimplexStats(this->simplex_stats);
     HighsLp lpmodel(*mipsolver.model_);
     lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     ipm.passModel(std::move(lpmodel));

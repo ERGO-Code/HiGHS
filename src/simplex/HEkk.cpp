@@ -4425,9 +4425,8 @@ void HEkk::passSimplexStats(const HighsSimplexStats simplex_stats) {
   this->simplex_stats_ = simplex_stats;
 }
 
-void HighsSimplexStats::report(FILE* file, const HighsInt style,
-                               std::string message) const {
-  if (style == HighsSimplexStatsReportPretty) {
+void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt style) const {
+  if (style == HighsSolverStatsReportPretty) {
     fprintf(file, "\nSimplex stats: %s\n", message.c_str());
     fprintf(file, "   valid                      = %d\n", this->valid);
     fprintf(file, "   iteration_count            = %d\n",
@@ -4442,12 +4441,12 @@ void HighsSimplexStats::report(FILE* file, const HighsInt style,
     fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
     fprintf(file, "   row_DSE_density            = %g\n",
             this->row_DSE_density);
-  } else if (style == HighsSimplexStatsReportCsvHeader) {
+  } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,iteration_count,num_invert,last_invert_num_el,last_factored_"
             "basis_num_el,col_aq_density,row_ep_density,row_ap_density,row_DSE_"
             "density,");
-  } else if (style == HighsSimplexStatsReportCsvData) {
+  } else if (style == HighsSolverStatsReportCsvData) {
     fprintf(file, "%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
             int(this->iteration_count), int(this->num_invert),
             int(this->last_invert_num_el),

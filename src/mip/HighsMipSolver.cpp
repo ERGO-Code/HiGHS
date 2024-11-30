@@ -177,22 +177,24 @@ void HighsMipSolver::run() {
     }
     Highs root;
     HighsLp lpmodel(*model_);
+    lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
     root.passModel(std::move(lpmodel));
     root.setOptionValue("solve_relaxation", true);
     root.setOptionValue("output_flag", true);
     HighsStatus status = root.run();
-    modelstatus_ = root.getModelStatus();
+    HighsModelStatus root_modelstatus = root.getModelStatus();
     if (status != HighsStatus::kOk) {
       cleanupSolve();
       return;
     }
-    if (modelstatus_ != HighsModelStatus::kOptimal) {
+    if (root_modelstatus != HighsModelStatus::kOptimal) {
+      modelstatus_ = root_modelstatus;
       cleanupSolve();
       return;
     }
     mipdata_->firstrootbasis = root.getBasis();
-    mipdata_->simplex_stats = root.getSimplexStats();
-    mipdata_->simplex_stats.report(stdout, HighsSimplexStatsReportPretty, "Root node");
+    mipdata_->simplex_stats = root.getPresolvedLpSimplexStats();
+    mipdata_->simplex_stats.report(stdout, "Root node");
     if (analysis_.analyse_mip_time) {
       analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
       analysis_.mipTimerStop(kMipClockRelaxationSimplexSolve);
