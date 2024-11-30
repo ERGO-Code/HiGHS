@@ -43,6 +43,8 @@ bool LuUpdate::NeedFreshFactorization() {
     return _NeedFreshFactorization();
 }
 
+Int LuUpdate::matrix_nz() const { return 0; }
+
 double LuUpdate::fill_factor() const {
     return _fill_factor();
 }

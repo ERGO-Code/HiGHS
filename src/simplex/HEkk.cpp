@@ -3503,6 +3503,10 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   // reverts to its value given by options_
   if (analysis_.analyse_simplex_time) analysis_.reportSimplexTimer();
   simplex_stats_.valid = true;
+  simplex_stats_.num_col = lp_.num_col_;
+  simplex_stats_.num_row = lp_.num_row_;
+  simplex_stats_.num_nz = lp_.a_matrix_.numNz();
+
   // Since HEkk::iteration_count_ includes iteration on presolved LP,
   // simplex_stats_.iteration_count is initialised to -
   // HEkk::iteration_count_
@@ -4429,6 +4433,12 @@ void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt s
   if (style == HighsSolverStatsReportPretty) {
     fprintf(file, "\nSimplex stats: %s\n", message.c_str());
     fprintf(file, "   valid                      = %d\n", this->valid);
+    fprintf(file, "   num_col                    = %d\n",
+            this->num_col);
+    fprintf(file, "   num_row                    = %d\n",
+            this->num_row);
+    fprintf(file, "   num_nz                     = %d\n",
+            this->num_nz);
     fprintf(file, "   iteration_count            = %d\n",
             this->iteration_count);
     fprintf(file, "   num_invert                 = %d\n", this->num_invert);
@@ -4461,6 +4471,9 @@ void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt s
 void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   valid = false;
   iteration_count = -iteration_count_;
+  num_col = 0;
+  num_row = 0;
+  num_nz = 0;
   num_invert = 0;
   last_invert_num_el = 0;
   last_factored_basis_num_el = 0;
@@ -4468,4 +4481,23 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+}
+
+double HighsSimplexStats::workEstimate() {
+  double work = 0;
+  // INVERT
+  work += num_invert*(2*last_factored_basis_num_el + 2*num_row);
+  // Compute primal
+  work += num_invert*(last_factored_basis_num_el + num_nz-last_invert_num_el);
+  // Compute dual
+  work += num_invert*(last_factored_basis_num_el + num_nz-last_invert_num_el);
+  // BTRAN
+  work += iteration_count*num_row*row_ep_density;
+  // PRICE
+  work += iteration_count*row_ep_density*(num_nz-last_invert_num_el) + num_col*row_ap_density;
+  // FTRAN
+  work += iteration_count*num_row*col_aq_density;
+  // FTRAN_DSE
+  work += iteration_count*num_row*row_DSE_density;
+  return work;
 }

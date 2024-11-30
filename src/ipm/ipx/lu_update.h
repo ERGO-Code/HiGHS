@@ -94,6 +94,9 @@ public:
     // or speed. No stability test is done.
     bool NeedFreshFactorization();
 
+    // Returns nnz(B) from the last factorization.
+    Int matrix_nz() const;
+
     // Returns (nnz(L)+nnz(U))/nnz(B) from the last factorization.
     double fill_factor() const;
 
@@ -117,6 +120,7 @@ private:
     virtual void _BtranForUpdate(Int p, IndexedVector& lhs) = 0;
     virtual Int _Update(double pivot) = 0;
     virtual bool _NeedFreshFactorization() = 0;
+    virtual Int _matrix_nz() const = 0;
     virtual double _fill_factor() const = 0;
     virtual double _pivottol() const = 0;
     virtual void _pivottol(double new_pivottol) = 0;

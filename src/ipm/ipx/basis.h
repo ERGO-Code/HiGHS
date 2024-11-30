@@ -219,6 +219,7 @@ public:
     double time_ftran() const;        // time FTRAN, including partial
     double time_btran() const;        // time BTRAN, including partial
     double time_update() const;       // time LU update
+    Int matrix_nz() const;            // Current nonzeros of matrix to be factored
     double current_fill() const;      // Current LU fill factors
     double mean_fill() const;         // geom. mean of LU fill factors
     double max_fill() const;          // max LU fill factor
@@ -308,6 +309,7 @@ private:
     double time_btran_{0.0};       // time for BTRAN ops, including partial
     double time_update_{0.0};      // time for LU updates
     double time_factorize_{0.0};   // time for LU factorizations
+    Int matrix_nz_{0};             // nonzeros of matrix to be factored
     std::vector<double> fill_factors_; // fill factors from LU factorizations
     double sum_ftran_density_{0.0};
     double sum_btran_density_{0.0};

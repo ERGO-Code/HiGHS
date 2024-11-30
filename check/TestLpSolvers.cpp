@@ -659,6 +659,9 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
 
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.num_col > 0);
+  REQUIRE(simplex_stats.num_row > 0);
+  REQUIRE(simplex_stats.num_nz > 0);
   REQUIRE(simplex_stats.iteration_count >= 0);
   REQUIRE(simplex_stats.num_invert > 0);
   REQUIRE(simplex_stats.last_invert_num_el > 0);
@@ -677,6 +680,9 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   if (dev_run) h.reportSimplexStats(stdout);
 
   REQUIRE(presolved_lp_simplex_stats.valid);
+  REQUIRE(presolved_lp_simplex_stats.num_col > 0);
+  REQUIRE(presolved_lp_simplex_stats.num_row > 0);
+  REQUIRE(presolved_lp_simplex_stats.num_nz > 0);
   REQUIRE(presolved_lp_simplex_stats.iteration_count > 0);
   REQUIRE(presolved_lp_simplex_stats.num_invert > 0);
   REQUIRE(presolved_lp_simplex_stats.last_invert_num_el > 0);
@@ -691,6 +697,9 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   h.setOptionValue("presolve", kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.num_col > 0);
+  REQUIRE(simplex_stats.num_row > 0);
+  REQUIRE(simplex_stats.num_nz > 0);
   REQUIRE(simplex_stats.iteration_count > 0);
   REQUIRE(simplex_stats.num_invert > 0);
   REQUIRE(simplex_stats.last_invert_num_el > 0);

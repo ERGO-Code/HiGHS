@@ -253,6 +253,10 @@ bool BasicLu::_NeedFreshFactorization() {
     return nforrest == dim || update_cost > 1.0;
 }
 
+Int BasicLu::_matrix_nz() const {
+    return xstore_[BASICLU_MATRIX_NZ];
+}
+
 double BasicLu::_fill_factor() const {
     return fill_factor_;
 }

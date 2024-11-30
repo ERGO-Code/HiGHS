@@ -24,6 +24,7 @@ private:
     void _BtranForUpdate(Int j, IndexedVector& lhs) override;
     Int _Update(double pivot) override;
     bool _NeedFreshFactorization() override;
+    Int _matrix_nz() const override;
     double _fill_factor() const override;
     double _pivottol() const override;
     void _pivottol(double new_pivottol) override;
