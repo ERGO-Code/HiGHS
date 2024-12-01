@@ -24,8 +24,6 @@ public:
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
-    Int matrix_nz() const { return 0; }
-    Int invert_nz() const { return 0; }
   
 private:
     void _Factorize(Iterate* iterate, Info* info) override;

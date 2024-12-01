@@ -364,8 +364,8 @@ void IPM::ComputeStartingPoint() {
     ipx_stats_->iteration_count++;
     ipx_stats_->cr_type.push_back(1);
     ipx_stats_->cr_count.push_back(kktiter1);
-    ipx_stats_->factored_basis_num_el.push_back(kkt_->matrix_nz());
-    ipx_stats_->invert_num_el.push_back(kkt_->invert_nz());
+    ipx_stats_->factored_basis_num_el.push_back(0);
+    ipx_stats_->invert_num_el.push_back(0);
     ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
 }
 

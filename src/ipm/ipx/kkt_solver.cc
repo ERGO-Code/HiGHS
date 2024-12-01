@@ -19,8 +19,6 @@ void KKTSolver::Solve(const Vector& a, const Vector& b, double tol,
 Int KKTSolver::iterSum() const { return _iterSum(); }
 Int KKTSolver::iterMax() const { return _iterMax(); }
 Int KKTSolver::basis_changes() const { return _basis_changes(); }
-Int KKTSolver::matrix_nz() const {return _matrix_nz(); }
-Int KKTSolver::invert_nz() const {return _invert_nz(); }
 const Basis* KKTSolver::basis() const { return _basis(); }
 
 }  // namespace ipx
