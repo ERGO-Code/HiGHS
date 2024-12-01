@@ -25,7 +25,7 @@ public:
     // IPX_STATUS_time_limit if the KKT solver was interrupted by time limit,
     // IPX_STATUS_failed     if the KKT solver failed with info->errflag.
     // If the method did not terminate successfully, @iterate is unchanged.
-    void StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info);
+    void StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info, HighsIpxStats* ipx_stats);
 
     // Updates @iterate by interior point iterations. On return ipm_status is
     // IPX_STATUS_optimal       if iterate->term_crit_reached() is true,
@@ -74,6 +74,7 @@ private:
     KKTSolver* kkt_{nullptr};
     Iterate* iterate_{nullptr};
     Info* info_{nullptr};
+    HighsIpxStats* ipx_stats_{nullptr};
 
     double step_primal_{0.0}, step_dual_{0.0};
     // Counts the # bad iterations since the last good iteration. An iteration

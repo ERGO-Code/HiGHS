@@ -37,6 +37,7 @@ private:
     Int _iterMax() const override { return iter_max_; }
 
     Int _basis_changes() const override { return basis_changes_; }
+    Int _matrix_nz() const override { return _basis()->matrix_nz(); }
     double _current_fill() const override { return _basis()->current_fill(); }
     const Basis* _basis() const override { return &basis_; }
 

@@ -20,10 +20,11 @@ struct IPM::Step {
 
 IPM::IPM(const Control& control) : control_(control) {}
 
-void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info) {
+  void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info, HighsIpxStats* ipx_stats) {
     kkt_ = kkt;
     iterate_ = iterate;
     info_ = info;
+    ipx_stats_ = ipx_stats;
     PrintHeader();
     ComputeStartingPoint();
     if (info->errflag == 0)
@@ -97,21 +98,15 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             break;
         MakeStep(step);
 	//
-	std::stringstream h_logging_stream;
-	h_logging_stream << "IPM::Driver fill factor = " <<
-	  kkt_->current_fill() << "; iter (sum = " <<
-	  kkt_->iterSum() << ", max = " <<
-	  kkt_->iterMax() << ")\n";
-        control_.hLog(h_logging_stream);
-	// Find nnz for L and U
-	//
-	// incopororate kkt_->current_fill() * 
-	double ipm_cost_measure = kkt_->iterSum();
+	// Get deeper IPX stats unavailable at this level
+	HighsIpxStats control_ipx_stats = control_.ipxStats();
+
 	HighsSimplexStats simplex_stats = control_.simplexStats();
-	simplex_stats.report(stdout, "In ipm.cpp");
-	double simplex_cost_measure = simplex_stats.iteration_count;
+	//	simplex_stats.report(stdout, "In ipm.cpp");
+	double simplex_work_measure = simplex_stats.workEstimate();
 	//
         info->iter++;
+	
         PrintOutput();
     }
 
@@ -217,7 +212,9 @@ void IPM::ComputeStartingPoint() {
     Vector x(n+m), xl(n+m), xu(n+m), y(m), zl(n+m), zu(n+m);
     Vector rb(m);               // workspace
 
-    // Factorize the KKT matrix with the identity matrix in the (1,1) block.
+    // "Factorize" the KKT matrix with the identity matrix in the (1,1) block.
+    //
+    // Just inverts the diagonal of the normal matrix
     kkt_->Factorize(nullptr, info_);
     if (info_->errflag)
         return;
@@ -237,6 +234,7 @@ void IPM::ComputeStartingPoint() {
     }
     double tol = 0.1 * Infnorm(rb);
     zl = 0.0;
+    Int kktiter1_before = info_->kktiter1;
     kkt_->Solve(zl, rb, tol, xl, y, info_);
     if (info_->errflag)
         return;
@@ -339,6 +337,14 @@ void IPM::ComputeStartingPoint() {
     }
     iterate_->Initialize(x, xl, xu, y, zl, zu);
     best_complementarity_ = iterate_->complementarity();
+    // Gather deep stats and update local stats
+    Int kkt_iter1 = info_->kktiter1 - kktiter1_before;
+
+    ipx_stats_->iteration_count++;
+    ipx_stats_->cr_count.push_back(kkt_iter1);
+    ipx_stats_->factored_basis_num_el.push_back(m);
+    ipx_stats_->invert_num_el.push_back(m);
+    ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
 }
 
 // Computes maximum alpha such that x + alpha*dx >= 0.

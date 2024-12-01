@@ -95,6 +95,7 @@ public:
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
     HighsSimplexStats simplexStats() const{return parameters_.simplex_stats; }
+    HighsIpxStats ipxStats() const{return parameters_.ipx_stats; }
 
    const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);

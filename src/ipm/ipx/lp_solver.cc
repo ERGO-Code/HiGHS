@@ -392,6 +392,11 @@ void LpSolver::RunIPM() {
     info_.centring_tried = false;
     info_.centring_success = false;
 
+    ipx_stats_.initialise();
+    ipx_stats_.num_col = model_.cols();
+    ipx_stats_.num_row = model_.rows();
+    ipx_stats_.num_nz = model_.AI().entries();
+    
     if (x_start_.size() != 0) {
       control_.hLog(" Using starting point provided by user. Skipping initial iterations.\n");
         iterate_->Initialize(x_start_, xl_start_, xu_start_,
@@ -474,7 +479,7 @@ void LpSolver::ComputeStartingPoint(IPM& ipm) {
     // If the starting point procedure fails, then iterate_ remains as
     // initialized by the constructor, which is a valid state for
     // postprocessing/postsolving.
-    ipm.StartingPoint(&kkt, iterate_.get(), &info_);
+    ipm.StartingPoint(&kkt, iterate_.get(), &info_, &ipx_stats_);
     info_.time_ipm1 += timer.Elapsed();
 }
 

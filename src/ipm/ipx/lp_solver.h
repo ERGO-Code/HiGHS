@@ -163,6 +163,8 @@ public:
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
+    HighsIpxStats ipx_stats_;
+
 private:
     void ClearSolution();
     void InteriorPointSolve();

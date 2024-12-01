@@ -1086,3 +1086,45 @@ void reportSolveData(const HighsLogOptions& log_options,
               "    Volume increase      = %11.4g\n\n",
               ipx_info.volume_increase);
 }
+
+double HighsIpxStats::workEstimate() const {
+  return 0;
+}
+
+void HighsIpxStats::report(FILE* file, const std::string message, const HighsInt style) const {
+  if (style == HighsSolverStatsReportPretty) {
+    fprintf(file, "\nIpx stats: %s\n", message.c_str());
+    fprintf(file, "   valid                      = %d\n", this->valid);
+    fprintf(file, "   num_col                    = %d\n",
+            this->num_col);
+    fprintf(file, "   num_row                    = %d\n",
+            this->num_row);
+    fprintf(file, "   num_nz                     = %d\n",
+            this->num_nz);
+    fprintf(file, "   iteration_count            = %d\n",
+            this->iteration_count);
+    assert(iteration_count == HighsInt(cr_count.size()));
+    assert(iteration_count == HighsInt(invert_num_el.size()));
+    assert(iteration_count == HighsInt(factored_basis_num_el.size()));
+    fprintf(file, "   Iter  cr_count basisNz invertNz\n");
+    for (HighsInt iteration = 0; iteration < iteration_count; iteration++) {
+      fprintf(file, "   %4d     %5d %7d  %7d\n",
+	      int(iteration),
+	      int(cr_count[iteration]),
+	      int(factored_basis_num_el[iteration]),
+	      int(invert_num_el[iteration]));
+    }
+  }
+}
+   
+void HighsIpxStats::initialise() {
+  valid = false;
+  iteration_count = 0;
+  num_col = 0;
+  num_row = 0;
+  num_nz = 0;
+  iteration_count = 0;
+  cr_count.clear();
+  factored_basis_num_el.clear();
+  invert_num_el.clear();
+}

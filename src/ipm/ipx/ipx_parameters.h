@@ -70,8 +70,9 @@ struct ipx_parameters {
     bool highs_logging;
     const HighsLogOptions* log_options;
 
-    /* Simplex solution stats */
+    /* Simplex and IPX solution stats */
     HighsSimplexStats simplex_stats;
+    HighsIpxStats ipx_stats;
 };
 
 #ifdef __cplusplus

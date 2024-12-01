@@ -31,13 +31,13 @@ struct HighsSimplexStats {
   HighsInt num_nz;
   HighsInt iteration_count;
   HighsInt num_invert;
-  HighsInt last_invert_num_el;
   HighsInt last_factored_basis_num_el;
+  HighsInt last_invert_num_el;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  double workEstimate();
+  double workEstimate() const;
   void report(FILE* file,
               const std::string message = "",
 	      const HighsInt style = HighsSolverStatsReportPretty) const;
@@ -49,11 +49,11 @@ struct HighsIpxStats {
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
-  HighsInt ipm_iteration_count;
-  HighsInt average_cr_count;
-  HighsInt last_invert_num_el;
-  HighsInt last_factored_basis_num_el;
-  double workEstimate();
+  HighsInt iteration_count;
+  std::vector<HighsInt> cr_count;
+  std::vector<HighsInt> factored_basis_num_el;
+  std::vector<HighsInt> invert_num_el;
+  double workEstimate() const;
   void report(FILE* file, const std::string message = "",
 	      const HighsInt style = HighsSolverStatsReportPretty) const;
   void initialise();
