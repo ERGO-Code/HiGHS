@@ -133,7 +133,6 @@ Int Basis::Factorize() {
 	matrix_nz_ = lu_->matrix_nz();
 	invert_nz_ = lu_->invert_nz();
 	double fill_factor = lu_->fill_factor();
-	printf("Basis::Factorize() nz (%d, %d) fill = %g\n", int(matrix_nz_), int(invert_nz_), fill_factor);
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
             AdaptToSingularFactorization();
@@ -650,6 +649,7 @@ void Basis::CrashFactorize(Int* num_dropped) {
                               AI.values(), true);
     num_factorizations_++;
     matrix_nz_ = lu_->matrix_nz();
+    invert_nz_ = lu_->invert_nz();
     fill_factors_.push_back(lu_->fill_factor());
     Int ndropped = 0;
     if (flag & 2)
