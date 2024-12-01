@@ -87,6 +87,8 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         }
         if ((info->errflag = control_.InterruptCheck(info->iter)) != 0)
             break;
+	Int kktiter1 = -info_->kktiter1;
+	Int kktiter2 = -info_->kktiter2;
         kkt->Factorize(iterate, info);
         if (info->errflag)
             break;
@@ -107,6 +109,20 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	//
         info->iter++;
 	
+	// Update IPX stats
+	kktiter1 += info_->kktiter1;
+	kktiter2 += info_->kktiter2;
+	Int cr_type = kktiter1 > 0 ? 1 : 2;
+	Int kktiter = cr_type == 1 ? kktiter1 : kktiter2;
+	if (cr_type == 1) assert(kktiter2 == 0);
+
+	ipx_stats_->iteration_count++;
+	ipx_stats_->cr_type.push_back(cr_type);
+	ipx_stats_->cr_count.push_back(kktiter);
+	ipx_stats_->factored_basis_num_el.push_back(kkt_->matrix_nz());
+	ipx_stats_->invert_num_el.push_back(kkt_->invert_nz());
+	if (cr_type == 2) ipx_stats_->report(stdout, "IPM::Driver()");
+
         PrintOutput();
     }
 
@@ -234,7 +250,7 @@ void IPM::ComputeStartingPoint() {
     }
     double tol = 0.1 * Infnorm(rb);
     zl = 0.0;
-    Int kktiter1_before = info_->kktiter1;
+    Int kktiter1 = -info_->kktiter1;
     kkt_->Solve(zl, rb, tol, xl, y, info_);
     if (info_->errflag)
         return;
@@ -337,13 +353,14 @@ void IPM::ComputeStartingPoint() {
     }
     iterate_->Initialize(x, xl, xu, y, zl, zu);
     best_complementarity_ = iterate_->complementarity();
-    // Gather deep stats and update local stats
-    Int kkt_iter1 = info_->kktiter1 - kktiter1_before;
 
+    // Update IPX stats
+    kktiter1 += info_->kktiter1;
     ipx_stats_->iteration_count++;
-    ipx_stats_->cr_count.push_back(kkt_iter1);
-    ipx_stats_->factored_basis_num_el.push_back(m);
-    ipx_stats_->invert_num_el.push_back(m);
+    ipx_stats_->cr_type.push_back(1);
+    ipx_stats_->cr_count.push_back(kktiter1);
+    ipx_stats_->factored_basis_num_el.push_back(kkt_->matrix_nz());
+    ipx_stats_->invert_num_el.push_back(kkt_->invert_nz());
     ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
 }
 

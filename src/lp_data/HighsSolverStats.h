@@ -50,6 +50,7 @@ struct HighsIpxStats {
   HighsInt num_row;
   HighsInt num_nz;
   HighsInt iteration_count;
+  std::vector<HighsInt> cr_type;
   std::vector<HighsInt> cr_count;
   std::vector<HighsInt> factored_basis_num_el;
   std::vector<HighsInt> invert_num_el;

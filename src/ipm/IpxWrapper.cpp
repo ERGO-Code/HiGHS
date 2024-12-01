@@ -1103,16 +1103,35 @@ void HighsIpxStats::report(FILE* file, const std::string message, const HighsInt
             this->num_nz);
     fprintf(file, "   iteration_count            = %d\n",
             this->iteration_count);
-    assert(iteration_count == HighsInt(cr_count.size()));
-    assert(iteration_count == HighsInt(invert_num_el.size()));
-    assert(iteration_count == HighsInt(factored_basis_num_el.size()));
-    fprintf(file, "   Iter  cr_count basisNz invertNz\n");
+    if (this->iteration_count != HighsInt(cr_type.size()))
+      printf("iteration_count = %d != %d = cr_type.size()\n",
+	     int(this->iteration_count),
+	     int(this->cr_type.size()));
+    if (this->iteration_count != HighsInt(cr_count.size()))
+      printf("iteration_count = %d != %d = cr_count.size()\n",
+	     int(this->iteration_count),
+	     int(this->cr_count.size()));
+    if (this->iteration_count != HighsInt(invert_num_el.size()))
+      printf("iteration_count = %d != %d = invert_num_el.size()\n",
+	     int(this->iteration_count),
+	     int(this->invert_num_el.size()));
+    if (this->iteration_count != HighsInt(factored_basis_num_el.size()))
+      printf("iteration_count = %d != %d = factored_basis_num_el.size()\n",
+	     int(this->iteration_count),
+	     int(this->factored_basis_num_el.size()));
+    assert(this->iteration_count == HighsInt(this->cr_type.size()));
+    assert(this->iteration_count == HighsInt(this->cr_count.size()));
+    assert(this->iteration_count == HighsInt(this->invert_num_el.size()));
+    assert(this->iteration_count == HighsInt(this->factored_basis_num_el.size()));
+    fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
+    //rintf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
     for (HighsInt iteration = 0; iteration < iteration_count; iteration++) {
-      fprintf(file, "   %4d     %5d %7d  %7d\n",
+      fprintf(file, "   %4d     %1d    %5d %7d  %7d\n",
 	      int(iteration),
-	      int(cr_count[iteration]),
-	      int(factored_basis_num_el[iteration]),
-	      int(invert_num_el[iteration]));
+	      int(this->cr_type[iteration]),
+	      int(this->cr_count[iteration]),
+	      int(this->factored_basis_num_el[iteration]),
+	      int(this->invert_num_el[iteration]));
     }
   }
 }
@@ -1124,6 +1143,7 @@ void HighsIpxStats::initialise() {
   num_row = 0;
   num_nz = 0;
   iteration_count = 0;
+  cr_type.clear();
   cr_count.clear();
   factored_basis_num_el.clear();
   invert_num_el.clear();

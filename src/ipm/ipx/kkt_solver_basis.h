@@ -37,8 +37,8 @@ private:
     Int _iterMax() const override { return iter_max_; }
 
     Int _basis_changes() const override { return basis_changes_; }
-    Int _matrix_nz() const override { return _basis()->matrix_nz(); }
-    double _current_fill() const override { return _basis()->current_fill(); }
+    Int _matrix_nz() const override { return matrix_nz_; }
+    Int _invert_nz() const override { return invert_nz_; }
     const Basis* _basis() const override { return &basis_; }
 
     // Processes basic variables that are close to a bound by either pivoting
@@ -64,6 +64,8 @@ private:
     Int iter_sum_{0};
     Int iter_max_{0};
     Int basis_changes_{0};
+    Int matrix_nz_{0};
+    Int invert_nz_{0};
 };
 
 }  // namespace ipx

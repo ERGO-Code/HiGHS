@@ -59,6 +59,8 @@ void KKTSolverBasis::_Factorize(Iterate* iterate, Info* info) {
         if (info->errflag)
             return;
     }
+    matrix_nz_ = basis_.matrix_nz();
+    invert_nz_ = 0;
     splitted_normal_matrix_.Prepare(basis_, &colscale_[0]);
 
     factorized_ = true;
