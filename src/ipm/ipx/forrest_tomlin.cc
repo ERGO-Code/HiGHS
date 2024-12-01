@@ -237,6 +237,8 @@ bool ForrestTomlin::_NeedFreshFactorization() {
 
 Int ForrestTomlin::_matrix_nz() const { return 0;}
 
+Int ForrestTomlin::_invert_nz() const { return 0;}
+
 double ForrestTomlin::_fill_factor() const {
     return fill_factor_;
 }

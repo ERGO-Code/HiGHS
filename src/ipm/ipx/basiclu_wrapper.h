@@ -25,6 +25,7 @@ private:
     Int _Update(double pivot) override;
     bool _NeedFreshFactorization() override;
     Int _matrix_nz() const override;
+    Int _invert_nz() const override;
     double _fill_factor() const override;
     double _pivottol() const override;
     void _pivottol(double new_pivottol) override;
@@ -40,6 +41,8 @@ private:
     std::vector<double> xstore_;
     std::vector<Int> Li_, Ui_, Wi_;
     std::vector<double> Lx_, Ux_, Wx_;
+    Int matrix_nz_;
+    Int invert_nz_;
     double fill_factor_;
 };
 

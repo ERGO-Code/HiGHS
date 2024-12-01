@@ -58,6 +58,8 @@ Int BasicLu::_Factorize(const Int* Bbegin, const Int* Bend, const Int* Bi,
     Int lnz = xstore_[BASICLU_LNZ];
     Int unz = xstore_[BASICLU_UNZ];
     Int dim = xstore_[BASICLU_DIM];
+    matrix_nz_ = matrix_nz;
+    invert_nz_ = lnz + unz + dim;
     fill_factor_ = 1.0 * (lnz+unz+dim) / matrix_nz;
 
     double normLinv = xstore_[BASICLU_NORMEST_LINV];
@@ -254,7 +256,11 @@ bool BasicLu::_NeedFreshFactorization() {
 }
 
 Int BasicLu::_matrix_nz() const {
-    return xstore_[BASICLU_MATRIX_NZ];
+  return matrix_nz_;//xstore_[BASICLU_MATRIX_NZ];
+}
+
+Int BasicLu::_invert_nz() const {
+  return invert_nz_;//xstore_[BASICLU_LNZ] + xstore_[BASICLU_UNZ] + xstore_[BASICLU_DIM];
 }
 
 double BasicLu::_fill_factor() const {

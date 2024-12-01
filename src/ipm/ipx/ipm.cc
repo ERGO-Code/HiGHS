@@ -110,6 +110,9 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         info->iter++;
 	
 	// Update IPX stats
+
+
+
 	kktiter1 += info_->kktiter1;
 	kktiter2 += info_->kktiter2;
 	Int cr_type = kktiter1 > 0 ? 1 : 2;
@@ -119,8 +122,10 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	ipx_stats_->iteration_count++;
 	ipx_stats_->cr_type.push_back(cr_type);
 	ipx_stats_->cr_count.push_back(kktiter);
-	ipx_stats_->factored_basis_num_el.push_back(kkt_->matrix_nz());
-	ipx_stats_->invert_num_el.push_back(kkt_->invert_nz());
+	Int matrix_nz = cr_type == 1 ? 0 : kkt_->basis()->matrix_nz();
+	Int invert_nz = cr_type == 1 ? 0 : kkt_->basis()->invert_nz();
+	ipx_stats_->factored_basis_num_el.push_back(matrix_nz);
+	ipx_stats_->invert_num_el.push_back(invert_nz);
 	if (cr_type == 2) ipx_stats_->report(stdout, "IPM::Driver()");
 
         PrintOutput();

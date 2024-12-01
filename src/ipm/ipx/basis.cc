@@ -131,6 +131,9 @@ Int Basis::Factorize() {
                                   AI.values(), false);
         num_factorizations_++;
 	matrix_nz_ = lu_->matrix_nz();
+	invert_nz_ = lu_->invert_nz();
+	double fill_factor = lu_->fill_factor();
+	printf("Basis::Factorize() nz (%d, %d) fill = %g\n", int(matrix_nz_), int(invert_nz_), fill_factor);
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
             AdaptToSingularFactorization();
@@ -452,6 +455,10 @@ double Basis::time_update() const {
 
 Int Basis::matrix_nz() const {
   return matrix_nz_;
+}
+
+Int Basis::invert_nz() const {
+  return invert_nz_;
 }
 
 double Basis::current_fill() const {
