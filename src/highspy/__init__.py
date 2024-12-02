@@ -29,6 +29,7 @@ from ._core import (
     HighsRanging,
     kHighsInf,
     kHighsIInf,
+    HighsLinearObjective,
     HIGHS_VERSION_MAJOR,
     HIGHS_VERSION_MINOR,
     HIGHS_VERSION_PATCH,

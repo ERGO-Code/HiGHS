@@ -112,10 +112,10 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.8.0")
+        self.assertEqual(h.version(), "1.8.1")
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 8)
-        self.assertEqual(h.versionPatch(), 0)
+        self.assertEqual(h.versionPatch(), 1)
 
     def test_basics(self):
         h = self.get_basic_model()

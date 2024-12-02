@@ -348,6 +348,9 @@ struct HighsOptionsStruct {
   // Options for IIS calculation
   HighsInt iis_strategy;
 
+  // Option for multi-objective optimization
+  bool blend_multi_objectives;
+
   // Advanced options
   HighsInt log_dev_level;
   bool log_githash;
@@ -372,6 +375,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_substitution_maxfillin;
   HighsInt presolve_rule_off;
   bool presolve_rule_logging;
+  bool presolve_remove_slacks;
   bool simplex_initial_condition_check;
   bool no_unnecessary_rebuild_refactor;
   double simplex_initial_condition_tolerance;
@@ -484,6 +488,8 @@ struct HighsOptionsStruct {
         pdlp_d_gap_tol(0.0),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
+        iis_strategy(0),
+        blend_multi_objectives(false),
         log_dev_level(0),
         log_githash(false),
         solve_relaxation(false),
@@ -507,6 +513,7 @@ struct HighsOptionsStruct {
         presolve_substitution_maxfillin(0),
         presolve_rule_off(0),
         presolve_rule_logging(false),
+        presolve_remove_slacks(false),
         simplex_initial_condition_check(false),
         no_unnecessary_rebuild_refactor(false),
         simplex_initial_condition_tolerance(0.0),
@@ -1118,6 +1125,12 @@ class HighsOptions : public HighsOptionsStruct {
         kIisStrategyMax);
     records.push_back(record_int);
 
+    record_bool = new OptionRecordBool(
+        "blend_multi_objectives",
+        "Blend multiple objectives or apply lexicographically: Default = true",
+        advanced, &blend_multi_objectives, true);
+    records.push_back(record_bool);
+
     // Fix the number of user settable options
     num_user_settable_options_ = static_cast<HighsInt>(records.size());
 
@@ -1322,6 +1335,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool(
         "presolve_rule_logging", "Log effectiveness of presolve rules for LP",
         advanced, &presolve_rule_logging, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("presolve_remove_slacks",
+                                       "Remove slacks after presolve", advanced,
+                                       &presolve_remove_slacks, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(

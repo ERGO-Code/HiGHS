@@ -1,6 +1,6 @@
 # HighsSolution
 
-The solution of a model is communicated via an instance of the HighsSolution class
+The solution of a model is communicated via an instance of the HighsSolution structure
 
 - value\_valid: Scalar of type bool - Indicates whether the column and row values are valid
 - dual\_valid: Scalar of type bool - Indicates whether the column and row [duals](@ref Dual-values) are valid

@@ -286,7 +286,7 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
     const double save_upper_bound = upper_bound;
     const bool new_incumbent =
         addIncumbent(solution, obj, heuristic_source[try_heuristic]);
-    const bool lc_report = true;
+    const bool lc_report = false;
     if (lc_report) {
       printf("Trivial heuristic %d has succeeded: objective = %g",
              int(try_heuristic), obj);
@@ -1099,7 +1099,7 @@ try_again:
     this->total_repair_lp++;
     double time_available =
         std::max(mipsolver.options_mip_->time_limit -
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
                  0.1);
     Highs tmpSolver;
     const bool debug_report = false;
@@ -2504,7 +2504,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-double possInfRelDiff(const double v0, const double v1, const double den) {
+static double possInfRelDiff(const double v0, const double v1,
+                             const double den) {
   double rel_diff;
   if (std::fabs(v0) == kHighsInf) {
     if (std::fabs(v1) == kHighsInf) {
@@ -2620,7 +2621,7 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
       assert(gap_consistent);
     }
     if (to_gap < kHighsInf) {
-      double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+      double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
       if (from_gap < kHighsInf) {
         // Need to update the P-D integral
         double time_diff = time - pdi.prev_time;

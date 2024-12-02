@@ -59,6 +59,7 @@ HighsStatus Highs::clear() {
 
 HighsStatus Highs::clearModel() {
   model_.clear();
+  multi_linear_objective_.clear();
   return clearSolver();
 }
 
@@ -577,6 +578,36 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   return passHessian(hessian);
 }
 
+HighsStatus Highs::passLinearObjectives(
+    const HighsInt num_linear_objective,
+    const HighsLinearObjective* linear_objective) {
+  if (num_linear_objective < 0) return HighsStatus::kOk;
+  this->multi_linear_objective_.clear();
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
+    if (this->addLinearObjective(linear_objective[iObj], iObj) !=
+        HighsStatus::kOk)
+      return HighsStatus::kError;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::addLinearObjective(
+    const HighsLinearObjective& linear_objective, const HighsInt iObj) {
+  if (model_.isQp()) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot define additional linear objective for QP\n");
+    return HighsStatus::kError;
+  }
+  if (!this->validLinearObjective(linear_objective, iObj))
+    return HighsStatus::kError;
+  this->multi_linear_objective_.push_back(linear_objective);
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::clearLinearObjectives() {
+  this->multi_linear_objective_.clear();
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
   const HighsInt num_col = this->model_.lp_.num_col_;
   if (col < 0 || col >= num_col) {
@@ -705,9 +736,32 @@ HighsStatus Highs::writePresolvedModel(const std::string& filename) {
 HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
   HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+
+  HighsLp& lp = model.lp_;
+  // Dimensions in a_matrix_ may not be set, so take them from lp
+  lp.setMatrixDimensions();
 
   // Ensure that the LP is column-wise
-  model.lp_.ensureColwise();
+  lp.ensureColwise();
+
+  // Ensure that the dimensions are OK
+  if (!lpDimensionsOk("writeLocalModel", lp, options_.log_options))
+    return HighsStatus::kError;
+
+  if (model.hessian_.dim_ > 0) {
+    call_status = assessHessianDimensions(options_, model.hessian_);
+    if (call_status == HighsStatus::kError) return call_status;
+  }
+
+  // Check that the matrix starts are OK
+  call_status = lp.a_matrix_.assessStart(options_.log_options);
+  if (call_status == HighsStatus::kError) return call_status;
+
+  // Check that the matrix indices are within bounds
+  call_status = lp.a_matrix_.assessIndexBounds(options_.log_options);
+  if (call_status == HighsStatus::kError) return call_status;
+
   // Check for repeated column or row names that would corrupt the file
   if (model.lp_.col_hash_.hasDuplicate(model.lp_.col_names_)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -853,9 +907,15 @@ HighsStatus Highs::presolve() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::run() {
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective == 0) return this->solve();
+  return this->multiobjectiveSolve();
+}
+
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
-HighsStatus Highs::run() {
+HighsStatus Highs::solve() {
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
@@ -1252,6 +1312,7 @@ HighsStatus Highs::run() {
     // Run solver.
     bool have_optimal_solution = false;
     // ToDo Put solution of presolved problem in a separate method
+
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1527,6 +1588,10 @@ HighsStatus Highs::run() {
             options_ = save_options;
             if (return_status == HighsStatus::kError)
               return returnFromRun(return_status, undo_mods);
+            if (postsolve_iteration_count > 0)
+              highsLogUser(options_.log_options, HighsLogType::kInfo,
+                           "Required %d simplex iterations after postsolve\n",
+                           int(postsolve_iteration_count));
           }
         } else {
           highsLogUser(log_options, HighsLogType::kError,

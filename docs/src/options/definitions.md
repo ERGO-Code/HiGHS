@@ -353,3 +353,8 @@
 - Range: {0, 2147483647}
 - Default: 4000
 
+## blend\_multi\_objectives
+- Blend multiple objectives or apply lexicographically
+- Type: boolean
+- Default: "true"
+

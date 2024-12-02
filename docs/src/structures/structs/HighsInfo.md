@@ -1,6 +1,6 @@
 # HighsInfo
 
-Scalar information about a solved model is communicated via an instance of the HighsInfo class
+Scalar information about a solved model is communicated via an instance of the HighsInfo structure
 
 ## valid
 - Indicates whether the values in a HighsInfo instance are valid

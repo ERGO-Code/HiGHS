@@ -1,6 +1,8 @@
 #include "HCheckConfig.h"
 #include "catch.hpp"
+// #include "util/HighsCDouble.h"
 #include "util/HighsIntegers.h"
+// #include "util/HighsRandom.h"
 
 const bool dev_run = false;
 

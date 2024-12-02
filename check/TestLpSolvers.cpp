@@ -29,6 +29,7 @@ void testDualObjective(const std::string model) {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 }
+
 void testSolver(Highs& highs, const std::string solver,
                 IterationCount& default_iteration_count,
                 const HighsInt int_simplex_strategy = 0) {
@@ -640,4 +641,41 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
         "\nNow test by adding a fixed column and a fixed row, and "
         "maximizing\n");
   testStandardForm(highs.getLp());
+}
+
+TEST_CASE("simplex-stats", "[highs_lp_solver]") {
+  HighsStatus return_status;
+
+  Highs h;
+  const HighsSimplexStats& simplex_stats = h.getSimplexStats();
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.iteration_count == 0);
+  REQUIRE(simplex_stats.num_invert == 1);
+  REQUIRE(simplex_stats.last_invert_num_el > 0);
+  REQUIRE(simplex_stats.last_factored_basis_num_el > 0);
+  REQUIRE(simplex_stats.col_aq_density == 0);
+  REQUIRE(simplex_stats.row_ep_density == 0);
+  REQUIRE(simplex_stats.row_ap_density == 0);
+  REQUIRE(simplex_stats.row_DSE_density == 0);
+  if (dev_run) h.reportSimplexStats(stdout);
+
+  h.clearSolver();
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(simplex_stats.valid);
+  REQUIRE(simplex_stats.iteration_count > 0);
+  REQUIRE(simplex_stats.num_invert > 0);
+  REQUIRE(simplex_stats.last_invert_num_el > 0);
+  REQUIRE(simplex_stats.last_factored_basis_num_el > 0);
+  REQUIRE(simplex_stats.col_aq_density > 0);
+  REQUIRE(simplex_stats.row_ep_density > 0);
+  REQUIRE(simplex_stats.row_ap_density > 0);
+  REQUIRE(simplex_stats.row_DSE_density > 0);
+  if (dev_run) h.reportSimplexStats(stdout);
 }

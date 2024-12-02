@@ -2,21 +2,13 @@
 
 ## Code changes
 
-When primal infeasiblity is detected in presolve, no dual ray is available so, previously, the `has_dual_ray` parameter of `Highs::getDualRay` returned false and that was it. Now, if a null pointer is not passed for `dual_ray_value`, `Highs::getDualRay` will compute a dual ray - at the cost of solving the feasiblility LP without presolve. The same is now true for `Highs::getPrimalRay`. `Highs::getDualUnboundednessDirection` has been introduced to determine the product between the constraint matrix and the dual ray, forcing the calculation of the latter if necessary. Once a dual ray is known for the incumbent model in HiGHS, subsequent calls to `Highs::getDualRay` and `Highs::getDualUnboundednessDirection` will be vastly cheaper
+HiGHS now handles multiple linear objectives by either blending using weights, or performing lexicographic optimization: see https://ergo-code.github.io/HiGHS/stable/guide/further/#guide-multi-objective-optimization
 
-The method `Highs::getDualObjectiveValue` now exitsts to compute the dual objective value, returning `HighsStatus::kError` if it is not possible.
+Fixed minor bug in bound checking in presolve
 
-The method `Highs::getStandardFormLp` now exists to return the incumbent LP in standard form - overlooking any integrality or Hessian. To determine the sizes of the vectors of data, the method is called without specifying pointers to the data arrays.
+Fixed bug in `floor(HighsCDouble x)` and `ceil(HighsCDouble x)` when argument is small
 
-
-Added documentation on the use of presolve when solving an incumbent model, and clarifying the use of the method `Highs::presolve`.
-
-
-
-
-
-
-
+Added some sanity checks to Highs::writeLocalModel to prevent segfaults if called directly by a user
 
 
 
