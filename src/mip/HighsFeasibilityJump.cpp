@@ -26,7 +26,7 @@ void HighsMipSolverData::feasibilityJump() {
   std::vector<double> col_value(model->num_col_, 0.0);
   double objective_function_value;
 
-  printf("DEBUG: configuring feasilibility jump\n");
+  printf("DEBUG: configuring feasibility jump\n");
 
   // Configure Feasibility Jump and pass it the problem
   external_feasibilityjump::equalityTolerance = epsilon;
@@ -92,7 +92,7 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
-    if (std::isfinite(status.solutionObjectiveValue)) {
+    if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
                                       status.solution + status.numVars);
