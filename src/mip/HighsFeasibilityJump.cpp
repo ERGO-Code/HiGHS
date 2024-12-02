@@ -10,6 +10,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <climits>
 
+#include "lp_data/HighsModelUtils.h" // for typeToString Remove 1423
+
 #include "mip/HighsMipSolverData.h"
 #include "mip/feasibilityjump.hh"
 
@@ -45,9 +47,8 @@ void HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Integer;
     } else {
       printf(
-          "Feasibility Jump only supports continuous and integer variables. "
-          "Skipping Feasibility Jump...\n"
-      );
+          "Feasibility Jump only supports continuous and integer variables, but integrality_[%d] is %s. "
+          "Skipping Feasibility Jump...\n", int(i), typeToString(model->integrality_[i]).c_str());
       return;
     }
     solver.addVar(

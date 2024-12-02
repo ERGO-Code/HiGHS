@@ -309,6 +309,9 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     return_status = highs.passModel(lp);
     REQUIRE(return_status == HighsStatus::kOk);
 
+    // Feasibility jump doesn't handle the unbounded MIP at present
+    highs.setOptionValue("mip_allow_feasibility_jump", dev_run);
+
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
 
