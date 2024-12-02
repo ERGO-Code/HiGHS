@@ -642,7 +642,7 @@ HighsStatus highs_setCallback(
         data.ptr());
 }
 
-PYBIND11_MODULE(_core, m) {
+PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   // To keep a smaller diff, for reviewers, the declarations are not moved, but
   // keep in mind:
   // C++ enum classes :: don't need .export_values()
