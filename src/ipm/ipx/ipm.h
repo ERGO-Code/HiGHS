@@ -33,7 +33,7 @@ public:
     // IPX_STATUS_no_progress   if no progress over a number of iterations,
     // IPX_STATUS_time_limit    if interrupted by time limit,
     // IPX_STATUS_failed        if the KKT solver failed with info->errflag.
-    void Driver(KKTSolver* kkt, Iterate* iterate, Info* info);
+    void Driver(KKTSolver* kkt, Iterate* iterate, Info* info, const bool diag);
 
     Int maxiter() const { return maxiter_; }
     void maxiter(Int i) { maxiter_ = i; }

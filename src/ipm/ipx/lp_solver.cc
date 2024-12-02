@@ -513,7 +513,8 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
     } else {
         ipm.maxiter(std::min(switchiter, control_.ipm_maxiter()));
     }
-    ipm.Driver(&kkt, iterate_.get(), &info_);
+    const bool diag = true;
+    ipm.Driver(&kkt, iterate_.get(), &info_, diag);
     switch (info_.status_ipm) {
     case IPX_STATUS_optimal:
         // If the IPM reached its termination criterion in the initial
@@ -580,7 +581,8 @@ void LpSolver::RunMainIPM(IPM& ipm) {
     Timer timer;
     ipm.maxiter(control_.ipm_maxiter());
     kkt.maxiter(control_.cr2_maxiter());
-    ipm.Driver(&kkt, iterate_.get(), &info_);
+    const bool diag = false;
+    ipm.Driver(&kkt, iterate_.get(), &info_, diag);
     info_.time_ipm2 = timer.Elapsed();
 }
 

@@ -553,7 +553,7 @@ struct HighsOptionsStruct {
         icrash_breakpoints(false),
         mip_detect_symmetry(false),
         mip_allow_restart(false),
-	mip_old_analytic_centre_method(false);
+	mip_old_analytic_centre_method(false),
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),
