@@ -729,7 +729,8 @@ TEST_CASE("ipx-stats", "[highs_lp_solver]") {
   REQUIRE(ipx_stats.num_row > 0);
   REQUIRE(ipx_stats.num_nz > 0);
   REQUIRE(ipx_stats.iteration_count > 0);
-  for (HighsInt iteration = 0; iteration < ipx_stats.iteration_count; iteration++) {
+  for (HighsInt iteration = 0; iteration < ipx_stats.iteration_count;
+       iteration++) {
     REQUIRE(ipx_stats.cr_count[iteration] > 0);
     if (ipx_stats.cr_type[iteration] == 2) {
       REQUIRE(ipx_stats.factored_basis_num_el[iteration] > 0);

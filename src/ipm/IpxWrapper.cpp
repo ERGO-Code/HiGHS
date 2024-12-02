@@ -1089,90 +1089,85 @@ void reportSolveData(const HighsLogOptions& log_options,
               ipx_info.volume_increase);
 }
 
-double HighsIpxStats::workEstimate() const {
-  return 0;
-}
+double HighsIpxStats::workEstimate() const { return 0; }
 
-void HighsIpxStats::report(FILE* file, const std::string message, const HighsInt style) const {
+void HighsIpxStats::report(FILE* file, const std::string message,
+                           const HighsInt style) const {
   if (style == HighsSolverStatsReportPretty) {
     fprintf(file, "\nIpx stats: %s\n", message.c_str());
     fprintf(file, "   valid                      = %d\n", this->valid);
-    fprintf(file, "   num_col                    = %d\n",
-            this->num_col);
-    fprintf(file, "   num_row                    = %d\n",
-            this->num_row);
-    fprintf(file, "   num_nz                     = %d\n",
-            this->num_nz);
+    fprintf(file, "   num_col                    = %d\n", this->num_col);
+    fprintf(file, "   num_row                    = %d\n", this->num_row);
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
     fprintf(file, "   iteration_count            = %d\n",
             this->iteration_count);
     if (this->iteration_count != HighsInt(cr_type.size()))
       printf("iteration_count = %d != %d = cr_type.size()\n",
-	     int(this->iteration_count),
-	     int(this->cr_type.size()));
+             int(this->iteration_count), int(this->cr_type.size()));
     if (this->iteration_count != HighsInt(cr_count.size()))
       printf("iteration_count = %d != %d = cr_count.size()\n",
-	     int(this->iteration_count),
-	     int(this->cr_count.size()));
+             int(this->iteration_count), int(this->cr_count.size()));
     if (this->iteration_count != HighsInt(invert_num_el.size()))
       printf("iteration_count = %d != %d = invert_num_el.size()\n",
-	     int(this->iteration_count),
-	     int(this->invert_num_el.size()));
+             int(this->iteration_count), int(this->invert_num_el.size()));
     if (this->iteration_count != HighsInt(factored_basis_num_el.size()))
       printf("iteration_count = %d != %d = factored_basis_num_el.size()\n",
-	     int(this->iteration_count),
-	     int(this->factored_basis_num_el.size()));
+             int(this->iteration_count),
+             int(this->factored_basis_num_el.size()));
     assert(this->iteration_count == HighsInt(this->cr_type.size()));
     assert(this->iteration_count == HighsInt(this->cr_count.size()));
     assert(this->iteration_count == HighsInt(this->invert_num_el.size()));
-    assert(this->iteration_count == HighsInt(this->factored_basis_num_el.size()));
+    assert(this->iteration_count ==
+           HighsInt(this->factored_basis_num_el.size()));
     fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
-    //rintf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
+    // rintf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
     for (HighsInt iteration = 0; iteration < iteration_count; iteration++) {
-      fprintf(file, "   %4d     %1d    %5d %7d  %7d\n",
-	      int(iteration),
-	      int(this->cr_type[iteration]),
-	      int(this->cr_count[iteration]),
-	      int(this->factored_basis_num_el[iteration]),
-	      int(this->invert_num_el[iteration]));
+      fprintf(file, "   %4d     %1d    %5d %7d  %7d\n", int(iteration),
+              int(this->cr_type[iteration]), int(this->cr_count[iteration]),
+              int(this->factored_basis_num_el[iteration]),
+              int(this->invert_num_el[iteration]));
     }
   } else if (style == HighsSolverStatsReportCsvHeader) {
-    fprintf(file, "valid,col,row,nz,iteration_count,cr_count,iteration_count, cr_count,matrix_nz,invert_nz,");
+    fprintf(file,
+            "valid,col,row,nz,iteration_count,cr_count,iteration_count, "
+            "cr_count,matrix_nz,invert_nz,");
   } else if (style == HighsSolverStatsReportCsvData) {
     HighsInt num_type1_iteration = 0;
     HighsInt num_type2_iteration = 0;
     double average_type1_cr_count = 0;
     double average_type2_cr_count = 0;
-    double average_type2_matrix_nz= 0;
+    double average_type2_matrix_nz = 0;
     double average_type2_invert_nz = 0;
-    for (HighsInt iteration = 0; iteration < this->iteration_count; iteration++) {
+    for (HighsInt iteration = 0; iteration < this->iteration_count;
+         iteration++) {
       if (this->cr_type[iteration] == 1) {
-	num_type1_iteration++;
-	average_type1_cr_count += this->cr_count[iteration];
+        num_type1_iteration++;
+        average_type1_cr_count += this->cr_count[iteration];
       } else {
-	num_type2_iteration++;
-	average_type2_cr_count += this->cr_count[iteration];
-	average_type2_matrix_nz += this->factored_basis_num_el[iteration];
-	average_type2_invert_nz += this->invert_num_el[iteration];
-       }
+        num_type2_iteration++;
+        average_type2_cr_count += this->cr_count[iteration];
+        average_type2_matrix_nz += this->factored_basis_num_el[iteration];
+        average_type2_invert_nz += this->invert_num_el[iteration];
+      }
     }
-    if (num_type1_iteration) 
-      average_type1_cr_count /= (1.0 *num_type1_iteration);
+    if (num_type1_iteration)
+      average_type1_cr_count /= (1.0 * num_type1_iteration);
     if (num_type2_iteration) {
-      average_type2_cr_count /= (1.0 *num_type2_iteration);
-      average_type2_matrix_nz /= (1.0 *num_type2_iteration);
-      average_type2_invert_nz /= (1.0 *num_type2_iteration);
-    }      
+      average_type2_cr_count /= (1.0 * num_type2_iteration);
+      average_type2_matrix_nz /= (1.0 * num_type2_iteration);
+      average_type2_invert_nz /= (1.0 * num_type2_iteration);
+    }
     fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", int(this->valid),
-	    int(this->num_col), int(this->num_row), int(this->num_nz), 
+            int(this->num_col), int(this->num_row), int(this->num_nz),
             int(num_type1_iteration), int(average_type1_cr_count),
-	    int(num_type2_iteration), int(average_type2_cr_count),
-	    int(average_type2_matrix_nz), int(average_type2_invert_nz));
+            int(num_type2_iteration), int(average_type2_cr_count),
+            int(average_type2_matrix_nz), int(average_type2_invert_nz));
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);
   }
 }
-   
+
 void HighsIpxStats::initialise() {
   valid = false;
   iteration_count = 0;

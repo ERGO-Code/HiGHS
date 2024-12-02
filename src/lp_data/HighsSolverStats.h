@@ -38,9 +38,8 @@ struct HighsSimplexStats {
   double row_ap_density;
   double row_DSE_density;
   double workEstimate() const;
-  void report(FILE* file,
-              const std::string message = "",
-	      const HighsInt style = HighsSolverStatsReportPretty) const;
+  void report(FILE* file, const std::string message = "",
+              const HighsInt style = HighsSolverStatsReportPretty) const;
   void initialise(const HighsInt iteration_count_ = 0);
 };
 
@@ -56,7 +55,7 @@ struct HighsIpxStats {
   std::vector<HighsInt> invert_num_el;
   double workEstimate() const;
   void report(FILE* file, const std::string message = "",
-	      const HighsInt style = HighsSolverStatsReportPretty) const;
+              const HighsInt style = HighsSolverStatsReportPretty) const;
   void initialise();
 };
 

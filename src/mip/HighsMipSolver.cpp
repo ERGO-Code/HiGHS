@@ -166,12 +166,13 @@ void HighsMipSolver::run() {
   analysis_.mipTimerStop(kMipClockRunSetup);
   if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "MIP-Timing: %11.2g - completed setup\n",
-		 timer_.read(timer_.total_clock));
+                 "MIP-Timing: %11.2g - completed setup\n",
+                 timer_.read(timer_.total_clock));
   if (!submip) {
     if (analysis_.analyse_mip_time) {
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "MIP-Timing: %11.2g - starting  relaxation simplex solve\n", timer_.read());
+                   "MIP-Timing: %11.2g - starting  relaxation simplex solve\n",
+                   timer_.read());
       analysis_.mipTimerStart(kMipClockRelaxationSimplexSolve);
       analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
     }
@@ -199,7 +200,8 @@ void HighsMipSolver::run() {
       analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
       analysis_.mipTimerStop(kMipClockRelaxationSimplexSolve);
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		   "MIP-Timing: %11.2g - completed relaxation simplex solve\n", timer_.read());
+                   "MIP-Timing: %11.2g - completed relaxation simplex solve\n",
+                   timer_.read());
     }
   }
 restart:

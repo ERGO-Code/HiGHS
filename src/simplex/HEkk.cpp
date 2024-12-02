@@ -4429,16 +4429,14 @@ void HEkk::passSimplexStats(const HighsSimplexStats simplex_stats) {
   this->simplex_stats_ = simplex_stats;
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt style) const {
+void HighsSimplexStats::report(FILE* file, std::string message,
+                               const HighsInt style) const {
   if (style == HighsSolverStatsReportPretty) {
     fprintf(file, "\nSimplex stats: %s\n", message.c_str());
     fprintf(file, "   valid                      = %d\n", this->valid);
-    fprintf(file, "   num_col                    = %d\n",
-            this->num_col);
-    fprintf(file, "   num_row                    = %d\n",
-            this->num_row);
-    fprintf(file, "   num_nz                     = %d\n",
-            this->num_nz);
+    fprintf(file, "   num_col                    = %d\n", this->num_col);
+    fprintf(file, "   num_row                    = %d\n", this->num_row);
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
     fprintf(file, "   iteration_count            = %d\n",
             this->iteration_count);
     fprintf(file, "   num_invert                 = %d\n", this->num_invert);
@@ -4453,16 +4451,16 @@ void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt s
             this->row_DSE_density);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
-            "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_num_el,last_invert_num_el,"
+            "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_"
+            "num_el,last_invert_num_el,"
             "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
             "density,");
   } else if (style == HighsSolverStatsReportCsvData) {
     fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
-	    int(this->num_col), int(this->num_row), int(this->num_nz), 
+            int(this->num_col), int(this->num_row), int(this->num_nz),
             int(this->iteration_count), int(this->num_invert),
             int(this->last_factored_basis_num_el),
-            int(this->last_invert_num_el),
-	    this->col_aq_density,
+            int(this->last_invert_num_el), this->col_aq_density,
             this->row_ep_density, this->row_ap_density, this->row_DSE_density);
   } else {
     fprintf(file, "Unknown simplex stats report style of %d\n", int(style));
@@ -4488,18 +4486,22 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
 double HighsSimplexStats::workEstimate() const {
   double work = 0;
   // INVERT
-  work += num_invert*(2*last_factored_basis_num_el + 2*num_row);
+  work += num_invert * (2 * last_factored_basis_num_el + 2 * num_row);
   // Compute primal
-  work += num_invert*(last_invert_num_el + num_nz-last_factored_basis_num_el);
+  work +=
+      num_invert * (last_invert_num_el + num_nz - last_factored_basis_num_el);
   // Compute dual
-  work += num_invert*(last_invert_num_el + num_nz-last_factored_basis_num_el);
+  work +=
+      num_invert * (last_invert_num_el + num_nz - last_factored_basis_num_el);
   // BTRAN
-  work += iteration_count*num_row*row_ep_density;
+  work += iteration_count * num_row * row_ep_density;
   // PRICE
-  work += iteration_count*row_ep_density*(num_nz-last_factored_basis_num_el) + num_col*row_ap_density;
+  work +=
+      iteration_count * row_ep_density * (num_nz - last_factored_basis_num_el) +
+      num_col * row_ap_density;
   // FTRAN
-  work += iteration_count*num_row*col_aq_density;
+  work += iteration_count * num_row * col_aq_density;
   // FTRAN_DSE
-  work += iteration_count*num_row*row_DSE_density;
+  work += iteration_count * num_row * row_DSE_density;
   return work;
 }

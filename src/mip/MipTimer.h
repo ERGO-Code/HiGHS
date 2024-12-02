@@ -97,7 +97,8 @@ class MipTimer {
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
     clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
     clock[kMipClockRunSetup] = timer_pointer->clock_def("Run setup");
-    clock[kMipClockRelaxationSimplexSolve] = timer_pointer->clock_def("Relaxation simplex solve");
+    clock[kMipClockRelaxationSimplexSolve] =
+        timer_pointer->clock_def("Relaxation simplex solve");
     clock[kMipClockTrivialHeuristics] =
         timer_pointer->clock_def("Trivial heuristics");
     clock[kMipClockEvaluateRootNode] =
@@ -257,7 +258,7 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{kMipClockInit,
                                                kMipClockRunPresolve,
                                                kMipClockRunSetup,
-					       kMipClockRelaxationSimplexSolve,
+                                               kMipClockRelaxationSimplexSolve,
                                                kMipClockTrivialHeuristics,
                                                kMipClockEvaluateRootNode,
                                                kMipClockPerformAging0,

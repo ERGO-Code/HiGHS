@@ -1527,7 +1527,7 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateInfo(), invalidateEkk(), invalidateIis(), 
+  // invalidateInfo(), invalidateEkk(), invalidateIis(),
   // invalidateSimplexStats() and invalidateIpxStats();
   void invalidateUserSolverData();
   //

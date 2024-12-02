@@ -1320,7 +1320,7 @@ HighsStatus Highs::solve() {
         solveLp(incumbent_lp, "Not presolved: solving the LP",
                 this_solve_original_lp_time);
         simplex_stats_ = this->ekk_instance_.getSimplexStats();
-	presolved_lp_simplex_stats_ = simplex_stats_;
+        presolved_lp_simplex_stats_ = simplex_stats_;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1334,7 +1334,7 @@ HighsStatus Highs::solve() {
         solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
                 this_solve_original_lp_time);
         simplex_stats_ = this->ekk_instance_.getSimplexStats();
-	presolved_lp_simplex_stats_ = simplex_stats_;
+        presolved_lp_simplex_stats_ = simplex_stats_;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -2334,8 +2334,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, ipx_stats_, callback_,
-                                        options_, timer_);
+                                        info_, ekk_instance_, ipx_stats_,
+                                        callback_, options_, timer_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3637,9 +3637,7 @@ void Highs::invalidateSimplexStats() {
   presolved_lp_simplex_stats_.initialise();
 }
 
-void Highs::invalidateIpxStats() {
-  ipx_stats_.initialise();
-}
+void Highs::invalidateIpxStats() { ipx_stats_.initialise(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
@@ -3782,8 +3780,8 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
-  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_, ipx_stats_,
-                                    callback_, options_, timer_);
+  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
+                                    ipx_stats_, callback_, options_, timer_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
