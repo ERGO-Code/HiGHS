@@ -128,6 +128,10 @@ Info LpSolver::GetInfo() const {
     return info_;
 }
 
+HighsIpxStats LpSolver::GetIpxStats() const {
+    return ipx_stats_;
+}
+
 Int LpSolver::GetInteriorSolution(double* x, double* xl, double* xu,
                                   double* slack, double* y, double* zl,
                                   double* zu) const {

@@ -99,12 +99,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         if (info->errflag)
             break;
         MakeStep(step);
-	//
-	// Get deeper IPX stats unavailable at this level
-	HighsIpxStats control_ipx_stats = control_.ipxStats();
-
 	HighsSimplexStats simplex_stats = control_.simplexStats();
-	//	simplex_stats.report(stdout, "In ipm.cpp");
 	double simplex_work_measure = simplex_stats.workEstimate();
 	//
         info->iter++;
@@ -126,7 +121,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
 	Int invert_nz = cr_type == 1 ? 0 : kkt_->basis()->invert_nz();
 	ipx_stats_->factored_basis_num_el.push_back(matrix_nz);
 	ipx_stats_->invert_num_el.push_back(invert_nz);
-	if (cr_type == 2) ipx_stats_->report(stdout, "IPM::Driver()");
+	//	if (cr_type == 2) ipx_stats_->report(stdout, "IPM::Driver()");
 
         PrintOutput();
     }
@@ -366,7 +361,7 @@ void IPM::ComputeStartingPoint() {
     ipx_stats_->cr_count.push_back(kktiter1);
     ipx_stats_->factored_basis_num_el.push_back(0);
     ipx_stats_->invert_num_el.push_back(0);
-    ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
+    //    ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
 }
 
 // Computes maximum alpha such that x + alpha*dx >= 0.

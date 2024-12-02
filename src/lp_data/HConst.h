@@ -46,11 +46,11 @@ const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
 enum MipAnalyticCentreCalulation {
-  kMipAnalyticCentreCalulationMin = 0,
-  kMipAnalyticCentreCalulationNo = kMipAnalyticCentreCalulationMin,
-  kMipAnalyticCentreCalulationOriginal,
-  kMipAnalyticCentreCalulationTrue,
-  kMipAnalyticCentreCalulationMax = kMipAnalyticCentreCalulationTrue
+  kMipAnalyticCentreCalulationMin = -1,
+  kMipAnalyticCentreCalulationChoose = kMipAnalyticCentreCalulationMin,
+  kMipAnalyticCentreCalulationOff,
+  kMipAnalyticCentreCalulationOn,
+  kMipAnalyticCentreCalulationMax = kMipAnalyticCentreCalulationOn
 };
 
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };

@@ -4453,11 +4453,12 @@ void HighsSimplexStats::report(FILE* file, std::string message, const HighsInt s
             this->row_DSE_density);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
-            "valid,iteration_count,num_invert,last_factored_basis_num_el,last_invert_num_el,"
+            "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_num_el,last_invert_num_el,"
             "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
             "density,");
   } else if (style == HighsSolverStatsReportCsvData) {
-    fprintf(file, "%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
+	    int(this->num_col), int(this->num_row), int(this->num_nz), 
             int(this->iteration_count), int(this->num_invert),
             int(this->last_factored_basis_num_el),
             int(this->last_invert_num_el),

@@ -26,14 +26,14 @@ HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
                     solver_object.lp_, solver_object.ekk_instance_,
                     solver_object.basis_, solver_object.solution_,
                     solver_object.model_status_, solver_object.highs_info_,
-                    solver_object.callback_);
+                    solver_object.ipx_stats_, solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, const HEkk& ekk_instance,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
-                       HighsCallback& callback) {
+                       HighsIpxStats& ipx_stats, HighsCallback& callback) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -184,6 +184,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   const bool report_solve_data =
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
+  ipx_stats = lps.GetIpxStats();
+  ipx_stats.valid = true;
   // Struct ipx_info defined in ipx/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
@@ -1133,6 +1135,41 @@ void HighsIpxStats::report(FILE* file, const std::string message, const HighsInt
 	      int(this->factored_basis_num_el[iteration]),
 	      int(this->invert_num_el[iteration]));
     }
+  } else if (style == HighsSolverStatsReportCsvHeader) {
+    fprintf(file, "valid,col,row,nz,iteration_count,cr_count,iteration_count, cr_count,matrix_nz,invert_nz,");
+  } else if (style == HighsSolverStatsReportCsvData) {
+    HighsInt num_type1_iteration = 0;
+    HighsInt num_type2_iteration = 0;
+    double average_type1_cr_count = 0;
+    double average_type2_cr_count = 0;
+    double average_type2_matrix_nz= 0;
+    double average_type2_invert_nz = 0;
+    for (HighsInt iteration = 0; iteration < this->iteration_count; iteration++) {
+      if (this->cr_type[iteration] == 1) {
+	num_type1_iteration++;
+	average_type1_cr_count += this->cr_count[iteration];
+      } else {
+	num_type2_iteration++;
+	average_type2_cr_count += this->cr_count[iteration];
+	average_type2_matrix_nz += this->factored_basis_num_el[iteration];
+	average_type2_invert_nz += this->invert_num_el[iteration];
+       }
+    }
+    if (num_type1_iteration) 
+      average_type1_cr_count /= (1.0 *num_type1_iteration);
+    if (num_type2_iteration) {
+      average_type2_cr_count /= (1.0 *num_type2_iteration);
+      average_type2_matrix_nz /= (1.0 *num_type2_iteration);
+      average_type2_invert_nz /= (1.0 *num_type2_iteration);
+    }      
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", int(this->valid),
+	    int(this->num_col), int(this->num_row), int(this->num_nz), 
+            int(num_type1_iteration), int(average_type1_cr_count),
+	    int(num_type2_iteration), int(average_type2_cr_count),
+	    int(average_type2_matrix_nz), int(average_type2_invert_nz));
+  } else {
+    fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
+    assert(123 == 456);
   }
 }
    

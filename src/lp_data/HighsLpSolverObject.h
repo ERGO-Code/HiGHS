@@ -21,7 +21,7 @@
 class HighsLpSolverObject {
  public:
   HighsLpSolverObject(HighsLp& lp, HighsBasis& basis, HighsSolution& solution,
-                      HighsInfo& highs_info, HEkk& ekk_instance,
+                      HighsInfo& highs_info, HEkk& ekk_instance, HighsIpxStats& ipx_stats,
                       HighsCallback& callback, HighsOptions& options,
                       HighsTimer& timer)
       : lp_(lp),
@@ -29,6 +29,7 @@ class HighsLpSolverObject {
         solution_(solution),
         highs_info_(highs_info),
         ekk_instance_(ekk_instance),
+	ipx_stats_(ipx_stats),
         callback_(callback),
         options_(options),
         timer_(timer) {}
@@ -38,6 +39,7 @@ class HighsLpSolverObject {
   HighsSolution& solution_;
   HighsInfo& highs_info_;
   HEkk& ekk_instance_;
+  HighsIpxStats& ipx_stats_;
   HighsCallback& callback_;
   HighsOptions& options_;
   HighsTimer& timer_;

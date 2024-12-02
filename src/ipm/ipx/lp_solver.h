@@ -75,6 +75,9 @@ public:
     // documentation for the meaning of Info values.
     Info GetInfo() const;
 
+    // Returns the IPX stats 
+    HighsIpxStats GetIpxStats() const;
+
     // Returns the final IPM iterate from the last call to Solve() into user
     // arrays. An iterate is available if GetInfo().status_ipm !=
     // IPX_STATUS_not_run. If no iterate is available, the method does nothing.

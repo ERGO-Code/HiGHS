@@ -414,6 +414,7 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   bool mip_detect_symmetry;
   bool mip_allow_restart;
+  bool mip_old_analytic_centre_method;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_start_nodes;
@@ -552,6 +553,7 @@ struct HighsOptionsStruct {
         icrash_breakpoints(false),
         mip_detect_symmetry(false),
         mip_allow_restart(false),
+	mip_old_analytic_centre_method(false);
         mip_max_nodes(0),
         mip_max_stall_nodes(0),
         mip_max_start_nodes(0),
@@ -947,6 +949,11 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &mip_allow_restart, true);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("mip_old_analytic_centre_method",
+                                       "Use origial or new analytic centre method in MIP",
+                                       advanced, &mip_old_analytic_centre_method, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -1042,10 +1049,9 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_compute_analytic_centre",
-        "Compute analytic centre for MIP: 0 => no; 1 => original (default) 2 "
-        "=> true",
+        "Compute analytic centre for MIP: -1 => choose; 0 => off; 1 => on (default)",
         advanced, &mip_compute_analytic_centre, kMipAnalyticCentreCalulationMin,
-        kMipAnalyticCentreCalulationOriginal, kMipAnalyticCentreCalulationMax);
+        kMipAnalyticCentreCalulationOn, kMipAnalyticCentreCalulationMax);
     records.push_back(record_int);
 
     record_int =

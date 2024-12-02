@@ -1236,6 +1236,17 @@ class Highs {
     this->simplex_stats_ = simplex_stats;
   }
 
+  const HighsIpxStats& getIpxStats() const { return ipx_stats_; }
+
+  void reportIpxStats(
+      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) const {
+    ipx_stats_.report(file, "Original LP", style);
+  }
+
+  void passIpxStats(const HighsIpxStats ipx_stats) {
+    this->ipx_stats_ = ipx_stats;
+  }
+
   /**
    * @brief Get the hot start basis data from the most recent simplex
    * solve. Advanced method: for HiGHS MIP solver
@@ -1453,6 +1464,7 @@ class Highs {
   HEkk ekk_instance_;
   HighsSimplexStats simplex_stats_;
   HighsSimplexStats presolved_lp_simplex_stats_;
+  HighsIpxStats ipx_stats_;
 
   HighsPresolveLog presolve_log_;
 
@@ -1515,8 +1527,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateInfo(), invalidateEkk(), invalidateIis() and
-  // invalidateSimplexStats();
+  // invalidateInfo(), invalidateEkk(), invalidateIis(), 
+  // invalidateSimplexStats() and invalidateIpxStats();
   void invalidateUserSolverData();
   //
   // Invalidates the model status, solution_ and info_
@@ -1545,6 +1557,9 @@ class Highs {
 
   // Invalidates simplex_stats_ and presolved_lp_simplex_stats_;
   void invalidateSimplexStats();
+
+  // Invalidates ipx_stats_
+  void invalidateIpxStats();
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);

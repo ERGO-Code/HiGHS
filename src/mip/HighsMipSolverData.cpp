@@ -302,12 +302,9 @@ void HighsMipSolverData::startAnalyticCenterComputation(
   taskGroup.spawn([&]() {
     // first check if the analytic centre computation should be cancelled, e.g.
     // due to early return in the root node evaluation
-    assert(mipsolver.options_mip_->mip_compute_analytic_centre >=
-           kMipAnalyticCentreCalulationOriginal);
     const bool ac_logging = !mipsolver.submip; // 2049 unset this
     Highs ipm;
-    if (mipsolver.options_mip_->mip_compute_analytic_centre ==
-        kMipAnalyticCentreCalulationOriginal) {
+    if (mipsolver.options_mip_->mip_old_analytic_centre_method) {
       // Original calculation is just IPM with crossover off
       ipm.setOptionValue("solver", "ipm");
       ipm.setOptionValue("run_crossover", kHighsOffString);

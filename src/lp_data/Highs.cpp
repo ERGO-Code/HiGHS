@@ -2334,7 +2334,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
+                                        info_, ekk_instance_, ipx_stats_, callback_,
                                         options_, timer_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
@@ -3592,6 +3592,7 @@ void Highs::invalidateUserSolverData() {
   invalidateEkk();
   invalidateIis();
   invalidateSimplexStats();
+  invalidateIpxStats();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
@@ -3634,6 +3635,10 @@ void Highs::invalidateIis() { iis_.invalidate(); }
 void Highs::invalidateSimplexStats() {
   simplex_stats_.initialise();
   presolved_lp_simplex_stats_.initialise();
+}
+
+void Highs::invalidateIpxStats() {
+  ipx_stats_.initialise();
 }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
@@ -3777,7 +3782,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
-  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
+  HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_, ipx_stats_,
                                     callback_, options_, timer_);
 
   // Check that the model is column-wise
