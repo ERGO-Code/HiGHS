@@ -16,6 +16,7 @@
 void HighsMipSolverData::feasibilityJump() {
   // This is the (presolved) model being solved
   const HighsLp* model = this->mipsolver.model_;
+  const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   printf("HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
          lower_bound);
 
@@ -92,6 +93,7 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
+    highsLogUser(log_options, HighsLogType::kInfo, "From Feasibility Jump callback\n");
     if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
@@ -111,7 +113,11 @@ void HighsMipSolverData::feasibilityJump() {
   if (found_integer_feasible_solution) {
     // Feasibility jump has found a solution, so call addIncumbent to
     // (possibly) update the incumbent
+    highsLogUser(log_options, HighsLogType::kInfo, "Feasibility Jump has found an integer feasible solution with objective value %g\n",
+		 objective_function_value);
     addIncumbent(col_value, objective_function_value,
                  kSolutionSourceFeasibilityJump);
+  } else {
+    highsLogUser(log_options, HighsLogType::kInfo, "Feasibility Jump has not found an integer feasible solution\n");
   }
 }
