@@ -20,7 +20,7 @@ void HighsMipSolverData::feasibilityJump() {
          lower_bound);
 
   const HighsInt MAX_TOTAL_EFFORT = 1e6;
-  const HighsInt MAX_EFFORT_SINCE_LAST_IMPOVEMENT = 1e3;
+  const HighsInt MAX_EFFORT_SINCE_LAST_IMPROVEMENT = 1e3;
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
@@ -98,7 +98,7 @@ void HighsMipSolverData::feasibilityJump() {
                                       status.solution + status.numVars);
       objective_function_value = status.solutionObjectiveValue;
     }
-    if (status.effortSinceLastImprovement > MAX_EFFORT_SINCE_LAST_IMPOVEMENT ||
+    if (status.effortSinceLastImprovement > MAX_EFFORT_SINCE_LAST_IMPROVEMENT ||
         status.totalEffort > MAX_TOTAL_EFFORT) {
       return external_feasibilityjump::CallbackControlFlow::Terminate;
     } else {
