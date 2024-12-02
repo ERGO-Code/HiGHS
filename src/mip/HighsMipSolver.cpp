@@ -168,7 +168,8 @@ void HighsMipSolver::run() {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed setup\n",
                  timer_.read(timer_.total_clock));
-  if (!submip) {
+  const bool initial_root_node_solve = false;
+  if (!submip && initial_root_node_solve) {
     if (analysis_.analyse_mip_time) {
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting  relaxation simplex solve\n",
