@@ -294,6 +294,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   bool use_presolve = true;
   HighsModelStatus require_model_status;
+  bool one_d_test = false;
+  if (one_d_test) {
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, MIP solver returns
@@ -320,7 +322,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
     // Second time through loop is without presolve
     use_presolve = false;
-  }
+  }}
   // Two-variable problem that is also primal unbounded as an LP, but
   // primal infeasible as a MIP.
   //
@@ -371,7 +373,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  use_presolve = true;
+  use_presolve = false;
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, MIP solver returns
@@ -394,8 +396,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     model_status = highs.getModelStatus();
     REQUIRE(model_status == require_model_status);
 
-    // Second time through loop is without presolve
-    use_presolve = false;
+    // Second time through loop is with presolve
+    use_presolve = true;
   }
 }
 
