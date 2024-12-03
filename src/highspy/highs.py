@@ -18,7 +18,7 @@ from ._core import (
 
 # backwards typing support information for HighspyArray
 np_version = tuple(map(int, np.__version__.split('.')))
-if sys.version_info >= (3, 9) and np_version >= (1.22.0):
+if sys.version_info >= (3, 9) and np_version >= (1,22,0):
     ndarray_object_type = np.ndarray[Any, np.dtype[np.object_]]
 else:
     ndarray_object_type = np.ndarray
