@@ -22,10 +22,10 @@ void HighsMipSolverData::feasibilityJump() {
       "HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
       lower_bound);
   if (sizeof(HighsInt) != sizeof(int)) {
-    highsLogUser(
-        log_options, HighsLogType::kInfo,
-        "Feasibility Jump currently uses 'int' which is %llu bytes while 'HighsInt' is %llu bytes. Skipping Feasibility Jump.\n",
-        sizeof(int), sizeof(HighsInt));
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Feasibility Jump currently uses 'int' which is %llu bytes "
+                 "while 'HighsInt' is %llu bytes. Skipping Feasibility Jump.\n",
+                 sizeof(int), sizeof(HighsInt));
     return;
   }
 
@@ -126,7 +126,7 @@ void HighsMipSolverData::feasibilityJump() {
         "objective value %g\n",
         objective_function_value);
     printf("DEBUG: Solution: [");
-    for(HighsInt iCol = 0; iCol < std::min(10, int(col_value.size())); iCol++)
+    for (HighsInt iCol = 0; iCol < std::min(10, int(col_value.size())); iCol++)
       printf(" %g", col_value[iCol]);
     printf("]\n");
     if (!trySolution(col_value, kSolutionSourceFeasibilityJump))
