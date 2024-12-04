@@ -1110,94 +1110,10 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
-  const double minEfficacy = 10 * feastol;
-
-  if (hasUnboundedInts) {
-    if (!cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale))
-      return false;
-  } else {
-    // 1. Determine a cover, cover does not need to be minimal as neither of
-    // the
-    //    lifting functions have minimality of the cover as necessary facet
-    //    condition
-    std::vector<double> tmpVals(vals, vals + rowlen);
-    std::vector<HighsInt> tmpInds(inds, inds + rowlen);
-    HighsCDouble tmpRhs = rhs;
-    bool success = false;
-    do {
-      if (!determineCover()) break;
-
-      // 2. use superadditive lifting function depending on structure of base
-      //    inequality:
-      //    We have 3 lifting functions available for pure binary knapsack sets,
-      //    for mixed-binary knapsack sets and for mixed integer knapsack sets.
-      if (!hasContinuous && !hasGeneralInts) {
-        separateLiftedKnapsackCover();
-        success = true;
-      } else if (hasGeneralInts) {
-        success = separateLiftedMixedIntegerCover();
-      } else {
-        assert(hasContinuous);
-        assert(!hasGeneralInts);
-        success = separateLiftedMixedBinaryCover();
-      }
-    } while (false);
-
-    double minMirEfficacy = minEfficacy;
-    if (success) {
-      double violation = -double(rhs);
-      double sqrnorm = 0.0;
-
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        updateViolationAndNorm(i, vals[i], violation, sqrnorm);
-      }
-
-      double efficacy = violation / std::sqrt(sqrnorm);
-      if (efficacy <= minEfficacy) {
-        success = false;
-        rhs = tmpRhs;
-      } else {
-        minMirEfficacy += efficacy;
-        // remove the complementation if it exists, so that the values stored
-        // are uncomplemented
-        removeComplementation();
-        std::swap(tmpRhs, rhs);
-      }
-    }
-
-    inds = tmpInds.data();
-    vals = tmpVals.data();
-
-    // save data that might otherwise be overwritten when calling the cmir
-    // separator
-    bool saveIntegalSupport = integralSupport;
-    bool saveIntegralCoefficients = integralCoefficients;
-
-    bool cmirSuccess =
-        cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale);
-
-    if (cmirSuccess) {
-      // take the cmir cut as it is better
-      inds_.swap(tmpInds);
-      vals_.swap(tmpVals);
-      inds = inds_.data();
-      vals = vals_.data();
-    } else if (success) {
-      // take the previous lifted cut as cmir could not improve
-      // as we already removed the complementation we simply clear
-      // the vector if altered by the cmir routine and restore the old
-      // right hand side and values
-      rhs = tmpRhs;
-      complementation.clear();
-      inds = inds_.data();
-      vals = vals_.data();
-      // restore indicators
-      integralSupport = saveIntegalSupport;
-      integralCoefficients = saveIntegralCoefficients;
-    } else
-      // neither cmir nor lifted cut successful
-      return false;
-  }
+  // try to generate a cut
+  if (!tryGenerateCut(inds_, vals_, hasUnboundedInts, hasGeneralInts,
+                      hasContinuous, 10 * feastol, onlyInitialCMIRScale))
+    return false;
 
   // remove the complementation if exists
   removeComplementation();
@@ -1312,81 +1228,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
                                 hasContinuous))
     return false;
 
-  if (hasUnboundedInts) {
-    if (!cmirCutGenerationHeuristic(feastol)) return false;
-  } else {
-    // 1. Determine a cover, cover does not need to be minimal as neither of
-    // the
-    //    lifting functions have minimality of the cover as necessary facet
-    //    condition
-    std::vector<double> tmpVals(vals, vals + rowlen);
-    std::vector<HighsInt> tmpInds(inds, inds + rowlen);
-    std::vector<uint8_t> tmpComplementation(complementation);
-    HighsCDouble tmpRhs = rhs;
-    bool success = false;
-    do {
-      if (!determineCover(false)) break;
-
-      // 2. use superadditive lifting function depending on structure of base
-      //    inequality:
-      //    We have 3 lifting functions available for pure binary knapsack sets,
-      //    for mixed-binary knapsack sets and for mixed integer knapsack sets.
-      if (!hasContinuous && !hasGeneralInts) {
-        separateLiftedKnapsackCover();
-        success = true;
-      } else if (hasGeneralInts) {
-        success = separateLiftedMixedIntegerCover();
-      } else {
-        assert(hasContinuous);
-        assert(!hasGeneralInts);
-        success = separateLiftedMixedBinaryCover();
-      }
-    } while (false);
-
-    double minEfficacy = feastol;
-    if (success) {
-      double violation = -double(rhs);
-      double sqrnorm = 0.0;
-
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        updateViolationAndNorm(i, vals[i], violation, sqrnorm);
-      }
-
-      minEfficacy = violation / std::sqrt(sqrnorm);
-      minEfficacy += feastol;
-      std::swap(tmpRhs, rhs);
-    }
-
-    inds = tmpInds.data();
-    vals = tmpVals.data();
-
-    // save data that might otherwise be overwritten when calling the cmir
-    // separator
-    bool saveIntegalSupport = integralSupport;
-    bool saveIntegralCoefficients = integralCoefficients;
-
-    bool cmirSuccess = cmirCutGenerationHeuristic(minEfficacy);
-
-    if (cmirSuccess) {
-      // take the cmir cut as it is better
-      proofinds.swap(tmpInds);
-      proofvals.swap(tmpVals);
-      inds = proofinds.data();
-      vals = proofvals.data();
-    } else if (success) {
-      // take the previous lifted cut as cmir could not improve
-      // we restore the old complementation vector, right hand side, and values
-      rhs = tmpRhs;
-      complementation.swap(tmpComplementation);
-      inds = proofinds.data();
-      vals = proofvals.data();
-      // restore indicators
-      integralSupport = saveIntegalSupport;
-      integralCoefficients = saveIntegralCoefficients;
-    } else
-      // neither cmir nor lifted cut successful
-      return false;
-  }
+  // try to generate a cut
+  if (!tryGenerateCut(proofinds, proofvals, hasUnboundedInts, hasGeneralInts,
+                      hasContinuous, feastol, false, false, false))
+    return false;
 
   // remove the complementation
   if (!complementation.empty()) {
@@ -1505,4 +1350,97 @@ void HighsCutGeneration::updateViolationAndNorm(HighsInt index, double aj,
   if (aj > 0 && solval[index] <= feastol) return;
   if (aj < 0 && solval[index] >= upper[index] - feastol) return;
   norm += aj * aj;
+}
+
+bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
+                                        std::vector<double>& vals_,
+                                        bool hasUnboundedInts,
+                                        bool hasGeneralInts, bool hasContinuous,
+                                        double minEfficacy,
+                                        bool onlyInitialCMIRScale,
+                                        bool allowRejectCut, bool lpSol) {
+  // use cmir if there are unbounded integer variables
+  if (hasUnboundedInts)
+    return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale);
+
+  // 1. Determine a cover, cover does not need to be minimal as neither of
+  //    the lifting functions have minimality of the cover as necessary facet
+  //    condition
+  std::vector<double> tmpVals(vals, vals + rowlen);
+  std::vector<HighsInt> tmpInds(inds, inds + rowlen);
+  std::vector<uint8_t> tmpComplementation(complementation);
+  std::vector<double> tmpSolval(solval);
+  HighsCDouble tmpRhs = rhs;
+  bool success = false;
+  do {
+    if (!determineCover(lpSol)) break;
+
+    // 2. use superadditive lifting function depending on structure of base
+    //    inequality:
+    //    We have 3 lifting functions available for pure binary knapsack sets,
+    //    for mixed-binary knapsack sets and for mixed integer knapsack sets.
+    if (!hasContinuous && !hasGeneralInts) {
+      separateLiftedKnapsackCover();
+      success = true;
+    } else if (hasGeneralInts) {
+      success = separateLiftedMixedIntegerCover();
+    } else {
+      assert(hasContinuous);
+      assert(!hasGeneralInts);
+      success = separateLiftedMixedBinaryCover();
+    }
+  } while (false);
+
+  double minMirEfficacy = minEfficacy;
+  if (success) {
+    double violation = -double(rhs);
+    double sqrnorm = 0.0;
+
+    for (HighsInt i = 0; i < rowlen; ++i) {
+      updateViolationAndNorm(i, vals[i], violation, sqrnorm);
+    }
+
+    double efficacy = violation / std::sqrt(sqrnorm);
+    if (allowRejectCut && efficacy <= minEfficacy) {
+      success = false;
+      rhs = tmpRhs;
+    } else {
+      minMirEfficacy += efficacy;
+      std::swap(tmpRhs, rhs);
+    }
+  }
+
+  inds = tmpInds.data();
+  vals = tmpVals.data();
+
+  // save data that might otherwise be overwritten when calling the cmir
+  // separator
+  bool saveIntegalSupport = integralSupport;
+  bool saveIntegralCoefficients = integralCoefficients;
+
+  if (cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale)) {
+    // take the cmir cut as it is better
+    inds_.swap(tmpInds);
+    vals_.swap(tmpVals);
+    inds = inds_.data();
+    vals = vals_.data();
+    return true;
+  } else if (success) {
+    // take the previous lifted cut as cmir could not improve
+    // we restore the old complementation vector, right hand side, and values
+    rhs = tmpRhs;
+    // note that the solution vector solval also needs to be restored because it
+    // depends on the complementation. it would be OK not to restore solval, if
+    // there would be a guarantee that it is not used from here on.
+    complementation.swap(tmpComplementation);
+    solval.swap(tmpSolval);
+    inds = inds_.data();
+    vals = vals_.data();
+    // restore indicators
+    integralSupport = saveIntegalSupport;
+    integralCoefficients = saveIntegralCoefficients;
+    return true;
+  } else
+    // neither cmir nor lifted cut successful
+    return false;
 }

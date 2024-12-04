@@ -80,6 +80,12 @@ class HighsCutGeneration {
   void updateViolationAndNorm(HighsInt index, double aj, double& violation,
                               double& norm);
 
+  bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
+                      bool hasUnboundedInts, bool hasGeneralInts,
+                      bool hasContinuous, double minEfficacy,
+                      bool onlyInitialCMIRScale = false,
+                      bool allowRejectCut = true, bool lpSol = true);
+
  public:
   HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
                      HighsCutPool& cutpool);
