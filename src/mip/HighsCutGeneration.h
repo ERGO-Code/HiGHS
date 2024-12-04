@@ -77,6 +77,9 @@ class HighsCutGeneration {
 
   void removeComplementation();
 
+  void updateViolationAndNorm(HighsInt index, double aj, double& violation,
+                              double& norm);
+
  public:
   HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
                      HighsCutPool& cutpool);

@@ -534,11 +534,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
         deltas.push_back(delta);
       }
     } else {
-      continuouscontribution += vals[i] * solval[i];
-
-      if (vals[i] > 0 && solval[i] <= feastol) continue;
-      if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
-      continuoussqrnorm += vals[i] * vals[i];
+      updateViolationAndNorm(i, vals[i], continuouscontribution,
+                             continuoussqrnorm);
     }
   }
 
@@ -591,12 +588,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
-
-      viol += aj * solval[j];
-
-      if (aj > 0 && solval[j] <= feastol) continue;
-      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
-      sqrnorm += aj * aj;
+      updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
     double efficacy = viol / sqrt(sqrnorm);
@@ -628,12 +620,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
-
-      viol += aj * solval[j];
-
-      if (aj > 0 && solval[j] <= feastol) continue;
-      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
-      sqrnorm += aj * aj;
+      updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
     double efficacy = viol / sqrt(sqrnorm);
@@ -677,12 +664,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
       double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
       double aj = downaj + std::max(0.0, fj - f0);
-
-      viol += aj * solval[j];
-
-      if (aj > 0 && solval[j] <= feastol) continue;
-      if (aj < 0 && solval[j] >= upper[j] - feastol) continue;
-      sqrnorm += aj * aj;
+      updateViolationAndNorm(j, aj, viol, sqrnorm);
     }
 
     double efficacy = viol / sqrt(sqrnorm);
@@ -1167,11 +1149,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       double sqrnorm = 0.0;
 
       for (HighsInt i = 0; i < rowlen; ++i) {
-        violation += vals[i] * solval[i];
-
-        if (vals[i] > 0 && solval[i] <= feastol) continue;
-        if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
-        sqrnorm += vals[i] * vals[i];
+        updateViolationAndNorm(i, vals[i], violation, sqrnorm);
       }
 
       double efficacy = violation / std::sqrt(sqrnorm);
@@ -1371,11 +1349,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       double sqrnorm = 0.0;
 
       for (HighsInt i = 0; i < rowlen; ++i) {
-        violation += vals[i] * solval[i];
-
-        if (vals[i] > 0 && solval[i] <= feastol) continue;
-        if (vals[i] < 0 && solval[i] >= upper[i] - feastol) continue;
-        sqrnorm += vals[i] * vals[i];
+        updateViolationAndNorm(i, vals[i], violation, sqrnorm);
       }
 
       minEfficacy = violation / std::sqrt(sqrnorm);
@@ -1519,4 +1493,16 @@ void HighsCutGeneration::removeComplementation() {
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (complementation[i]) flipComplementation(i);
   }
+}
+
+void HighsCutGeneration::updateViolationAndNorm(HighsInt index, double aj,
+                                                double& violation,
+                                                double& norm) {
+  // update violation
+  violation += aj * solval[index];
+
+  // update norm
+  if (aj > 0 && solval[index] <= feastol) return;
+  if (aj < 0 && solval[index] >= upper[index] - feastol) return;
+  norm += aj * aj;
 }
