@@ -22,6 +22,7 @@ void HighsMipSolverData::feasibilityJump() {
       "HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
       lower_bound);
 #ifdef HIGHSINT64
+  // TODO: make FJ work with 64-bit HighsInt
   highsLogUser(log_options, HighsLogType::kInfo,
                "Feasibility Jump code uses 'int' so isn't currently compatible "
                "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
@@ -52,8 +53,24 @@ void HighsMipSolverData::feasibilityJump() {
     }
     solver.addVar(fjVarType, model->col_lower_[i], model->col_upper_[i],
                   model->col_cost_[i]);
+    if (model->col_lower_[i] > model->col_upper_[i]) {
+      highsLogUser(
+          log_options, HighsLogType::kInfo,
+          "Detected infeasible column bounds. Skipping Feasibility Jump");
+      return;    
+    }
+    // TODO: any other cases where infinite bounds are problematic?
+    double initial_assignment = 0;
+    if (std::isfinite(model->col_lower_[i])) {
+      initial_assignment = model->col_lower_[i];
+    } else if (std::isfinite(model->col_upper_[i])) {
+      initial_assignment = model->col_upper_[i];
+    }
+    col_value[i] = initial_assignment;
   }
 
+
+  // TODO: make a row-wise copy of model->a_matrix_ and remove these buffers
   HighsInt row_num_nz;
   HighsInt* row_index_buffer = new HighsInt[model->num_col_];
   double* row_value_buffer = new double[model->num_col_];
@@ -64,17 +81,15 @@ void HighsMipSolverData::feasibilityJump() {
     if (hasFiniteLower || hasFiniteUpper) {
       model->a_matrix_.getRow(i, row_num_nz, row_index_buffer,
                               row_value_buffer);
-      // TODO: check if relax_continuous == 1 really is the right thing to
-      // pass
       if (hasFiniteLower) {
         solver.addConstraint(external_feasibilityjump::RowType::Gte,
                              model->row_lower_[i], row_num_nz, row_index_buffer,
-                             row_value_buffer, 1);
+                             row_value_buffer, /* relax_continuous = */ 0);
       }
       if (hasFiniteUpper) {
         solver.addConstraint(external_feasibilityjump::RowType::Lte,
                              model->row_upper_[i], row_num_nz, row_index_buffer,
-                             row_value_buffer, 1);
+                             row_value_buffer, /* relax_continuous = */ 0);
       }
     }
   }
@@ -114,8 +129,8 @@ void HighsMipSolverData::feasibilityJump() {
     }
   };
 
-  solver.solve(nullptr, fjControlCallback);
-
+  solver.solve(col_value.data(), fjControlCallback);
+  // TODO: remove all DEBUG
   if (found_integer_feasible_solution) {
     // Feasibility jump has found a solution, so call addIncumbent to
     // (possibly) update the incumbent
@@ -128,8 +143,12 @@ void HighsMipSolverData::feasibilityJump() {
     for (HighsInt iCol = 0; iCol < std::min(10, int(col_value.size())); iCol++)
       printf(" %g", col_value[iCol]);
     printf("]\n");
-    if (!trySolution(col_value, kSolutionSourceFeasibilityJump))
-      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");
+    if (!trySolution(col_value, kSolutionSourceFeasibilityJump)) {
+      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");    
+    } else {
+      printf("DEBUG: Feasibility Jump solution is integer feasible.\n");
+    }
+
   } else {
     //    highsLogUser(log_options, HighsLogType::kInfo,
     printf(
