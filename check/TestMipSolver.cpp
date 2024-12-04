@@ -371,34 +371,25 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  use_presolve = false;
-  for (HighsInt k = 0; k < 2; k++) {
-    if (use_presolve) {
-      // With use_presolve = true, MIP solver returns
-      // HighsModelStatus::kUnboundedOrInfeasible from presolve
-      highs.setOptionValue("presolve", kHighsOnString);
-      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-      highs.setOptionValue("output_flag", dev_run);
-    } else {
-      // With use_presolve = false, MIP solver returns
-      // HighsModelStatus::kUnboundedOrInfeasible
-      highs.setOptionValue("presolve", kHighsOffString);
-      require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-      highs.setOptionValue("output_flag", true);
-    }
+  // With(out) presolve, Highs::infeasibleBoundsOk() performs inwardd
+  // integer rounding of [0.25, 0.75] to [1, 0] so identifes
+  // infeasiblility. Hence MIP solver returns
+  // HighsModelStatus::kInfeasible
 
-    return_status = highs.passModel(lp);
-    REQUIRE(return_status == HighsStatus::kOk);
+  // Run with presolve off so that this example still propagates to FJ
+  highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("presolve", kHighsOffString);
 
-    return_status = highs.run();
-    REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.passModel(lp);
+  REQUIRE(return_status == HighsStatus::kOk);
 
-    model_status = highs.getModelStatus();
-    REQUIRE(model_status == require_model_status);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
 
-    // Second time through loop is with presolve
-    use_presolve = true;
-  }
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::kUnboundedOrInfeasible);
+  //  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {

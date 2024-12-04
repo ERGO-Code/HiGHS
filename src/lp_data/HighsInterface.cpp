@@ -3557,16 +3557,30 @@ bool Highs::infeasibleBoundsOk() {
     return false;
   };
 
+  const bool perform_inward_integer_rounding = false;
+  if (!perform_inward_integer_rounding)
+    printf("Highs::infeasibleBoundsOk() Not performing inward integer rounding of bounds\n");
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     if (has_integrality) {
-      // Semi-variables can have inconsistent bounds
+      // Semi-variables cannot have inconsistent bounds
       if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous ||
           lp.integrality_[iCol] == HighsVarType::kSemiInteger)
         continue;
+      if (perform_inward_integer_rounding &&
+	  lp.integrality_[iCol] == HighsVarType::kInteger) {
+	// Assess bounds after inward integer rounding
+	double integer_lower = std::ceil(lower);
+	double integer_upper = std::floor(lower);
+	assert(integer_lower >= lower);
+	assert(integer_upper <= upper);
+	lower = integer_lower;
+	upper = integer_upper;
+      }
     }
-    if (lp.col_lower_[iCol] > lp.col_upper_[iCol])
-      assessInfeasibleBound("Column", iCol, lp.col_lower_[iCol],
-                            lp.col_upper_[iCol]);
+    if (lower > upper)
+      assessInfeasibleBound("Column", iCol, lower, upper);
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
