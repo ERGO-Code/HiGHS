@@ -427,7 +427,7 @@ namespace external_feasibilityjump {
       double weightUpdateDecay;
       double weightUpdateIncrement = 1.0;
 
-      size_t nBumps;
+      size_t nBumps = 0;
 
       // The probability of choosing a random positive-score variable.
       const double randomVarProbability = 0.001;
