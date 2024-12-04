@@ -378,11 +378,13 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
       // HighsModelStatus::kUnboundedOrInfeasible from presolve
       highs.setOptionValue("presolve", kHighsOnString);
       require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+      highs.setOptionValue("output_flag", dev_run);
     } else {
       // With use_presolve = false, MIP solver returns
       // HighsModelStatus::kUnboundedOrInfeasible
       highs.setOptionValue("presolve", kHighsOffString);
       require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+      highs.setOptionValue("output_flag", true);
     }
 
     return_status = highs.passModel(lp);
