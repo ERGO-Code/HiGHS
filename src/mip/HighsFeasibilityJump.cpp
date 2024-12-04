@@ -24,8 +24,7 @@ void HighsMipSolverData::feasibilityJump() {
 #ifdef HIGHSINT64
   highsLogUser(log_options, HighsLogType::kInfo,
                "Feasibility Jump code uses 'int' so isn't currently compatible "
-               "with a 64-bit HighsInt. Skipping Feasibility Jump\n",
-               lower_bound);
+               "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
   return;
 #else
   const HighsInt kMaxTotalEffort = 1e6;
