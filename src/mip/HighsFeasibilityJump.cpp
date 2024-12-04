@@ -21,6 +21,13 @@ void HighsMipSolverData::feasibilityJump() {
       log_options, HighsLogType::kInfo,
       "HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
       lower_bound);
+  if (sizeof(HighsInt) != sizeof(int)) {
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "Feasibility Jump currently uses 'int' which is %llu bytes while 'HighsInt' is %llu bytes. Skipping Feasibility Jump.\n",
+        sizeof(int), sizeof(HighsInt));
+    return;
+  }
 
   const HighsInt kMaxTotalEffort = 1e6;
   const HighsInt kMaxEffortSinceLastImprovement = 1e3;
