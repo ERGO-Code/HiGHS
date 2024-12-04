@@ -138,6 +138,5 @@ void HighsMipSolverData::feasibilityJump() {
           "DEBUG: Feasibility Jump has not found an integer feasible "
           "solution\n");
     }
-  
   }
 }
