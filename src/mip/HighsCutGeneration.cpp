@@ -523,12 +523,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     if (isintegral[i]) {
       integerinds.push_back(i);
 
-      if (upper[i] < 2 * solval[i]) {
-        complementation[i] = 1 - complementation[i];
-        rhs -= upper[i] * vals[i];
-        vals[i] = -vals[i];
-        solval[i] = upper[i] - solval[i];
-      }
+      if (upper[i] < 2 * solval[i]) flipComplementation(i);
 
       if (onlyInitialCMIRScale) continue;
 
@@ -655,10 +650,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     if (upper[k] == kHighsInf) continue;
     if (solval[k] <= feastol) continue;
 
-    complementation[k] = 1 - complementation[k];
-    solval[k] = upper[k] - solval[k];
-    rhs -= upper[k] * vals[k];
-    vals[k] = -vals[k];
+    flipComplementation(k);
 
     double delta = bestdelta;
     double scale = 1.0 / delta;
@@ -667,20 +659,13 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
     double f0 = scalrhs - downrhs;
     if (f0 < f0min || f0 > f0max) {
-      complementation[k] = 1 - complementation[k];
-      solval[k] = upper[k] - solval[k];
-      rhs -= upper[k] * vals[k];
-      vals[k] = -vals[k];
-
+      flipComplementation(k);
       continue;
     }
 
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     if (oneoveroneminusf0 > maxCMirScale) {
-      complementation[k] = 1 - complementation[k];
-      solval[k] = upper[k] - solval[k];
-      rhs -= upper[k] * vals[k];
-      vals[k] = -vals[k];
+      flipComplementation(k);
       continue;
     }
 
@@ -704,10 +689,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     if (efficacy > bestefficacy) {
       bestefficacy = efficacy;
     } else {
-      complementation[k] = 1 - complementation[k];
-      solval[k] = upper[k] - solval[k];
-      rhs -= upper[k] * vals[k];
-      vals[k] = -vals[k];
+      flipComplementation(k);
     }
   }
 
@@ -944,9 +926,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       if (upper[i] - solval[i] < solval[i]) {
         if (complementation.empty()) complementation.resize(rowlen);
 
-        complementation[i] = 1 - complementation[i];
-        rhs -= upper[i] * vals[i];
-        vals[i] = -vals[i];
+        flipComplementation(i);
       }
 
       // relax positive continuous variables and those with small contributions
@@ -1144,10 +1124,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     for (HighsInt i = 0; i != rowlen; ++i) {
       if (vals[i] > 0 || !isintegral[i]) continue;
 
-      complementation[i] = 1 - complementation[i];
-      rhs -= upper[i] * vals[i];
-      vals[i] = -vals[i];
-      solval[i] = upper[i] - solval[i];
+      flipComplementation(i);
     }
   }
 
@@ -1203,17 +1180,9 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
         rhs = tmpRhs;
       } else {
         minMirEfficacy += efficacy;
-        if (!complementation.empty()) {
-          // remove the complementation if it exists, so that the values stored
-          // are uncomplemented
-          for (HighsInt i = 0; i != rowlen; ++i) {
-            if (complementation[i]) {
-              rhs -= upper[i] * vals[i];
-              vals[i] = -vals[i];
-              solval[i] = upper[i] - solval[i];
-            }
-          }
-        }
+        // remove the complementation if it exists, so that the values stored
+        // are uncomplemented
+        removeComplementation();
         std::swap(tmpRhs, rhs);
       }
     }
@@ -1252,15 +1221,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       return false;
   }
 
-  if (!complementation.empty()) {
-    // remove the complementation if exists
-    for (HighsInt i = 0; i != rowlen; ++i) {
-      if (complementation[i]) {
-        rhs -= upper[i] * vals[i];
-        vals[i] = -vals[i];
-      }
-    }
-  }
+  // remove the complementation if exists
+  removeComplementation();
 
   // remove zeros in place
   for (HighsInt i = rowlen - 1; i >= 0; --i) {
@@ -1541,4 +1503,21 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
   return cutindex != -1;
+}
+
+void HighsCutGeneration::flipComplementation(HighsInt index) {
+  // flip complementation
+  complementation[index] = 1 - complementation[index];
+  solval[index] = upper[index] - solval[index];
+  rhs -= upper[index] * vals[index];
+  vals[index] = -vals[index];
+}
+
+void HighsCutGeneration::removeComplementation() {
+  // remove complementation
+  if (complementation.empty()) return;
+  // remove the complementation if exists
+  for (HighsInt i = 0; i != rowlen; ++i) {
+    if (complementation[i]) flipComplementation(i);
+  }
 }

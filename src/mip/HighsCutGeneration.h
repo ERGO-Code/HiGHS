@@ -73,6 +73,10 @@ class HighsCutGeneration {
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
 
+  void flipComplementation(HighsInt index);
+
+  void removeComplementation();
+
  public:
   HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
                      HighsCutPool& cutpool);
