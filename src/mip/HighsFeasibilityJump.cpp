@@ -33,7 +33,7 @@ void HighsMipSolverData::feasibilityJump() {
   external_feasibilityjump::equalityTolerance = epsilon;
   external_feasibilityjump::violationTolerance = feastol;
 
-  auto solver = external_feasibilityjump::FeasibilityJumpSolver();
+  auto solver = external_feasibilityjump::FeasibilityJumpSolver(0, 1);
 
   for (int i = 0; i < model->num_col_; ++i) {
     assert(model->integrality_[i] == HighsVarType::kContinuous ||
@@ -108,20 +108,25 @@ void HighsMipSolverData::feasibilityJump() {
     }
   };
 
-  solver.solve(col_value.data(), fjControlCallback);
+  solver.solve(nullptr, fjControlCallback);
 
   if (found_integer_feasible_solution) {
     // Feasibility jump has found a solution, so call addIncumbent to
     // (possibly) update the incumbent
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Feasibility Jump has found an integer feasible solution with "
-                 "objective value %g\n",
-                 objective_function_value);
-    addIncumbent(col_value, objective_function_value,
-                 kSolutionSourceFeasibilityJump);
+    //    highsLogUser(log_options, HighsLogType::kInfo,
+    printf(
+        "DEBUG: Feasibility Jump has found an integer feasible solution with "
+        "objective value %g\n",
+        objective_function_value);
+    printf("DEBUG: Solution: [");
+    for(HighsInt iCol = 0; iCol < std::min(10, int(col_value.size())); iCol++)
+      printf(" %g", col_value[iCol]);
+    printf("]\n");
+    if (!trySolution(col_value, kSolutionSourceFeasibilityJump))
+      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");
   } else {
-    highsLogUser(
-        log_options, HighsLogType::kInfo,
-        "Feasibility Jump has not found an integer feasible solution\n");
+    //    highsLogUser(log_options, HighsLogType::kInfo,
+    printf(
+        "DEBUG: Feasibility Jump has not found an integer feasible solution\n");
   }
 }
