@@ -1363,14 +1363,16 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
   if (hasUnboundedInts)
     return cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale);
 
-  // 1. Determine a cover, cover does not need to be minimal as neither of
-  //    the lifting functions have minimality of the cover as necessary facet
-  //    condition
+  // 0. Save data before determining cover and applying lifting functions
   std::vector<double> tmpVals(vals, vals + rowlen);
   std::vector<HighsInt> tmpInds(inds, inds + rowlen);
   std::vector<uint8_t> tmpComplementation(complementation);
   std::vector<double> tmpSolval(solval);
   HighsCDouble tmpRhs = rhs;
+
+  // 1. Determine a cover, cover does not need to be minimal as neither of
+  //    the lifting functions have minimality of the cover as necessary facet
+  //    condition
   bool success = false;
   do {
     if (!determineCover(lpSol)) break;
@@ -1393,23 +1395,28 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
 
   double minMirEfficacy = minEfficacy;
   if (success) {
+    // compute violation and squared norm
     double violation = -double(rhs);
     double sqrnorm = 0.0;
-
     for (HighsInt i = 0; i < rowlen; ++i) {
       updateViolationAndNorm(i, vals[i], violation, sqrnorm);
     }
 
+    // compute efficacy (distance cut off)
     double efficacy = violation / std::sqrt(sqrnorm);
     if (allowRejectCut && efficacy <= minEfficacy) {
+      // reject cut
       success = false;
       rhs = tmpRhs;
     } else {
+      // accept cut and increase minimum efficiency requirement for cmir cut
       minMirEfficacy += efficacy;
       std::swap(tmpRhs, rhs);
     }
   }
 
+  // restore indices and values; lifting methods do not modify complementation
+  // and, thus, complementation-related data does not have to be restored here.
   inds = tmpInds.data();
   vals = tmpVals.data();
 
