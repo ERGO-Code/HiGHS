@@ -10,8 +10,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <climits>
 
-#include "lp_data/HighsModelUtils.h" // for typeToString Remove 1423
-
+#include "lp_data/HighsModelUtils.h"  // for typeToString Remove 1423
 #include "mip/HighsMipSolverData.h"
 #include "mip/feasibilityjump.hh"
 
@@ -47,16 +46,14 @@ void HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Integer;
     } else {
       printf(
-          "Feasibility Jump only supports continuous and integer variables, but integrality_[%d] is %s. "
-          "Skipping Feasibility Jump...\n", int(i), typeToString(model->integrality_[i]).c_str());
+          "Feasibility Jump only supports continuous and integer variables, "
+          "but integrality_[%d] is %s. "
+          "Skipping Feasibility Jump...\n",
+          int(i), typeToString(model->integrality_[i]).c_str());
       return;
     }
-    solver.addVar(
-      fjVarType,
-      model->col_lower_[i],
-      model->col_upper_[i],
-      model->col_cost_[i]
-    );
+    solver.addVar(fjVarType, model->col_lower_[i], model->col_upper_[i],
+                  model->col_cost_[i]);
   }
 
   printf("DEBUG: adding rows (constraints)\n");
@@ -81,7 +78,6 @@ void HighsMipSolverData::feasibilityJump() {
                              model->row_upper_[i], numNzThisRow, rowIndexBuffer,
                              rowValueBuffer, 1);
       }
-
     }
   }
 
@@ -94,7 +90,8 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
-    highsLogUser(log_options, HighsLogType::kInfo, "From Feasibility Jump callback\n");
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "From Feasibility Jump callback\n");
     if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
@@ -114,11 +111,16 @@ void HighsMipSolverData::feasibilityJump() {
   if (found_integer_feasible_solution) {
     // Feasibility jump has found a solution, so call addIncumbent to
     // (possibly) update the incumbent
-    highsLogUser(log_options, HighsLogType::kInfo, "Feasibility Jump has found an integer feasible solution with objective value %g\n",
-		 objective_function_value);
-    addIncumbent(col_value, objective_function_value,
-                 kSolutionSourceFeasibilityJump);
+    //    highsLogUser(log_options, HighsLogType::kInfo,
+    printf(
+        "DEBUG: Feasibility Jump has found an integer feasible solution with "
+        "objective value %g\n",
+        objective_function_value);
+    if (!trySolution(col_value, kSolutionSourceFeasibilityJump))
+      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");
   } else {
-    highsLogUser(log_options, HighsLogType::kInfo, "Feasibility Jump has not found an integer feasible solution\n");
+    //    highsLogUser(log_options, HighsLogType::kInfo,
+    printf(
+        "DEBUG: Feasibility Jump has not found an integer feasible solution\n");
   }
 }

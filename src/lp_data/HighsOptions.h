@@ -941,9 +941,10 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &mip_allow_restart, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip_allow_feasibility_jump",
-                                       "Whether MIP feasibility jump is permitted",
-                                       advanced, &mip_allow_feasibility_jump, true);
+    record_bool =
+        new OptionRecordBool("mip_allow_feasibility_jump",
+                             "Whether MIP feasibility jump is permitted",
+                             advanced, &mip_allow_feasibility_jump, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",

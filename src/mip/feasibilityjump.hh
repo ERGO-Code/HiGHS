@@ -108,7 +108,7 @@ namespace external_feasibilityjump {
       std::vector<uint32_t> violatedConstraints;
       bool usedRelaxContinuous = false;
 
-      size_t nNonzeros;
+      size_t nNonzeros = 0;
       double incumbentObjective = NAN;
 
       int addVar(VarType vartype, double lb, double ub, double objCoeff) {

@@ -292,10 +292,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.col_upper_ = {inf};
   lp.integrality_ = {HighsVarType::kInteger};
 
-  bool use_presolve = true;
+  bool use_presolve = false;
   HighsModelStatus require_model_status;
-  bool one_d_test = false;
-  if (one_d_test) {
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, MIP solver returns
@@ -304,15 +302,16 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
       require_model_status = HighsModelStatus::kUnboundedOrInfeasible;
     } else {
       // With use_presolve = false, MIP solver returns
-      // HighsModelStatus::kUnbounded
+      // HighsModelStatus::kUnbounded, because the all-zeros trivial
+      // heuristic finds a feasible point
+      //
+      // Feasibility jump appears to find one before the all-zeros
+      // trivial heuristic
       highs.setOptionValue("presolve", kHighsOffString);
       require_model_status = HighsModelStatus::kUnbounded;
     }
     return_status = highs.passModel(lp);
     REQUIRE(return_status == HighsStatus::kOk);
-
-    // Feasibility jump doesn't handle the unbounded MIP at present
-    //    highs.setOptionValue("mip_allow_feasibility_jump", dev_run);
 
     return_status = highs.run();
     REQUIRE(return_status == HighsStatus::kOk);
@@ -320,9 +319,9 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     model_status = highs.getModelStatus();
     REQUIRE(model_status == require_model_status);
 
-    // Second time through loop is without presolve
-    use_presolve = false;
-  }}
+    // Second time through loop is with presolve
+    use_presolve = true;
+  }
   // Two-variable problem that is also primal unbounded as an LP, but
   // primal infeasible as a MIP.
   //
@@ -342,13 +341,12 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {1, 2};
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
 
-  use_presolve = true;
+  use_presolve = false;
   for (HighsInt k = 0; k < 2; k++) {
     if (use_presolve) {
       // With use_presolve = true, LP solver returns
       // HighsModelStatus::kUnbounded because it solves the LP after
       // presolve has returned
-      // HighsModelStatus::kUnboundedOrInfeasible
       highs.setOptionValue("presolve", kHighsOnString);
       require_model_status = HighsModelStatus::kUnbounded;
     } else {
@@ -367,8 +365,8 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
     model_status = highs.getModelStatus();
     REQUIRE(model_status == require_model_status);
 
-    // Second time through loop is without presolve
-    use_presolve = false;
+    // Second time through loop is with presolve
+    use_presolve = true;
   }
 
   // Now as a MIP - infeasible
