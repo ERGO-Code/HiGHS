@@ -57,7 +57,7 @@ void HighsMipSolverData::feasibilityJump() {
       highsLogUser(
           log_options, HighsLogType::kInfo,
           "Detected infeasible column bounds. Skipping Feasibility Jump");
-      return;    
+      return;
     }
     // TODO: any other cases where infinite bounds are problematic?
     double initial_assignment = 0;
@@ -68,7 +68,6 @@ void HighsMipSolverData::feasibilityJump() {
     }
     col_value[i] = initial_assignment;
   }
-
 
   // TODO: make a row-wise copy of model->a_matrix_ and remove these buffers
   HighsInt row_num_nz;
@@ -144,7 +143,7 @@ void HighsMipSolverData::feasibilityJump() {
       printf(" %g", col_value[iCol]);
     printf("]\n");
     if (!trySolution(col_value, kSolutionSourceFeasibilityJump)) {
-      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");    
+      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");
     } else {
       printf("DEBUG: Feasibility Jump solution is integer feasible.\n");
     }
