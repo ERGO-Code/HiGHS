@@ -1514,9 +1514,8 @@ void HighsCutGeneration::flipComplementation(HighsInt index) {
 }
 
 void HighsCutGeneration::removeComplementation() {
-  // remove complementation
+  // remove the complementation if it exists
   if (complementation.empty()) return;
-  // remove the complementation if exists
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (complementation[i]) flipComplementation(i);
   }
