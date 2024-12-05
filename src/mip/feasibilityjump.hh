@@ -367,9 +367,12 @@ class JumpMove {
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
       }
     }
-
-    bestShiftBuffer.emplace_back(problem.vars[varIdx].lb, 0);
-    bestShiftBuffer.emplace_back(problem.vars[varIdx].ub, 0);
+    if (std::isfinite(problem.vars[varIdx].lb)) {
+      bestShiftBuffer.emplace_back(problem.vars[varIdx].lb, 0);
+    }
+    if (std::isfinite(problem.vars[varIdx].ub)) {
+      bestShiftBuffer.emplace_back(problem.vars[varIdx].ub, 0);
+    }
     std::sort(bestShiftBuffer.begin(), bestShiftBuffer.end());
 
     double bestScore = currentScore;
