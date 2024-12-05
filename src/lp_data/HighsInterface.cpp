@@ -3557,7 +3557,8 @@ bool Highs::infeasibleBoundsOk() {
     return false;
   };
 
-  const bool perform_inward_integer_rounding = false;
+  const bool perform_inward_integer_rounding =
+      !this->options_.solve_relaxation && false;
   if (!perform_inward_integer_rounding)
     printf(
         "Highs::infeasibleBoundsOk() Not performing inward integer rounding of "

@@ -389,7 +389,6 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kUnboundedOrInfeasible);
   //  REQUIRE(model_status == HighsModelStatus::kInfeasible);
-
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {

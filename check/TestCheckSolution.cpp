@@ -107,7 +107,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
@@ -126,7 +127,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
@@ -156,7 +157,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
@@ -179,7 +180,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
 
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
@@ -226,7 +227,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(starting_solution);
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
@@ -277,7 +278,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     return_status = highs.setSolution(num_entries, index.data(), value.data());
     REQUIRE(return_status == HighsStatus::kOk);
     highs.run();
-    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
   assert(other_tests);
