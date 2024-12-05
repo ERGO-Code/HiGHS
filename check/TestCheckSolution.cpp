@@ -108,7 +108,6 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     highs.run();
     if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
     REQUIRE(info.mip_node_count != scratch_num_nodes);
-    REQUIRE(info.mip_node_count != scratch_num_nodes);
     highs.clear();
   }
 
