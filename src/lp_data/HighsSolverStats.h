@@ -24,6 +24,19 @@ enum HighsSolverStatsReport {
   HighsSolverStatsReportCsvData
 };
 
+enum HighsSimplexWorkTerm {
+  HighsSimplexWorkTermInvertNumRow = 0,
+  HighsSimplexWorkTermInvertNumNz,
+  HighsSimplexWorkTermComputePD,
+  HighsSimplexWorkTermBtran,
+  HighsSimplexWorkTermPrice,
+  HighsSimplexWorkTermFtran,
+  HighsSimplexWorkTermFtranDse,
+  HighsSimplexWorkTermCount
+};
+
+const std::vector<double> kSimplexWorkCoefficients = {1.0,2.0,3.0,4.0,5.0,6.0,7.0};
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt num_col;
@@ -37,6 +50,7 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  void workTerms(double* terms) const;
   double workEstimate() const;
   void report(FILE* file, const std::string message = "",
               const HighsInt style = HighsSolverStatsReportPretty) const;

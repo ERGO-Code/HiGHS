@@ -4483,25 +4483,26 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_DSE_density = 0;
 }
 
+void HighsSimplexStats::workTerms(double* terms) const {
+  const double nonbasic_nz = double(this->num_nz + this->num_row - this->last_factored_basis_num_el);
+  terms[HighsSimplexWorkTermInvertNumRow] = double(this->num_invert) * double(this->num_row);
+  terms[HighsSimplexWorkTermInvertNumNz] = double(this->num_invert) * this->last_factored_basis_num_el;
+  terms[HighsSimplexWorkTermComputePD] = double(this->num_invert) * double(this->last_invert_num_el + nonbasic_nz);
+  terms[HighsSimplexWorkTermBtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_ep_density;
+  terms[HighsSimplexWorkTermPrice] = double(this->iteration_count) * nonbasic_nz * this->row_ep_density;
+  terms[HighsSimplexWorkTermFtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->col_aq_density;
+  terms[HighsSimplexWorkTermFtranDse] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_DSE_density;
+}
+
+
 double HighsSimplexStats::workEstimate() const {
-  double work = 0;
-  // INVERT
-  work += num_invert * (2 * last_factored_basis_num_el + 2 * num_row);
-  // Compute primal
-  work +=
-      num_invert * (last_invert_num_el + num_nz - last_factored_basis_num_el);
-  // Compute dual
-  work +=
-      num_invert * (last_invert_num_el + num_nz - last_factored_basis_num_el);
-  // BTRAN
-  work += iteration_count * num_row * row_ep_density;
-  // PRICE
-  work +=
-      iteration_count * row_ep_density * (num_nz - last_factored_basis_num_el) +
-      num_col * row_ap_density;
-  // FTRAN
-  work += iteration_count * num_row * col_aq_density;
-  // FTRAN_DSE
-  work += iteration_count * num_row * row_DSE_density;
-  return work;
+   double* terms = new double[HighsSimplexWorkTermCount];
+   this->workTerms(terms);
+   double work = 0;
+   for (HighsInt iX = 0; iX < HighsSimplexWorkTermCount; iX++) {
+     assert(terms[iX]>0);
+     work += terms[iX] * kSimplexWorkCoefficients[iX];
+   }
+   delete[] terms;
+   return work;
 }
