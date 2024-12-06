@@ -537,8 +537,8 @@ highs_getColsEntries(Highs* h, HighsInt num_set_entries,
                          py::cast(value));
 }
 
-std::tuple<HighsStatus, HighsVarType>
-highs_getColIntegrality(Highs* h, HighsInt col) {
+std::tuple<HighsStatus, HighsVarType> highs_getColIntegrality(Highs* h,
+                                                              HighsInt col) {
   HighsInt col_ = static_cast<HighsInt>(col);
   HighsVarType integrality;
   HighsStatus status = h->getColIntegrality(col_, integrality);
@@ -621,19 +621,23 @@ std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
 }
 
 // Wrap the setCallback function to appropriately handle user data.
-// pybind11 automatically ensures GIL is re-acquired when the callback is called.
+// pybind11 automatically ensures GIL is re-acquired when the callback is
+// called.
 HighsStatus highs_setCallback(
     Highs* h,
-    std::function<void(int, const std::string&, const HighsCallbackDataOut*, HighsCallbackDataIn*, py::handle)> fn,
+    std::function<void(int, const std::string&, const HighsCallbackDataOut*,
+                       HighsCallbackDataIn*, py::handle)>
+        fn,
     py::handle data) {
   if (static_cast<bool>(fn) == false)
     return h->setCallback((HighsCallbackFunctionType) nullptr, nullptr);
   else
     return h->setCallback(
         [fn](int callbackType, const std::string& msg,
-                   const HighsCallbackDataOut* dataOut,
-                   HighsCallbackDataIn* dataIn, void* d) {
-          return fn(callbackType, msg, dataOut, dataIn, py::handle(reinterpret_cast<PyObject*>(d)));
+             const HighsCallbackDataOut* dataOut, HighsCallbackDataIn* dataIn,
+             void* d) {
+          return fn(callbackType, msg, dataOut, dataIn,
+                    py::handle(reinterpret_cast<PyObject*>(d)));
         },
         data.ptr());
 }
@@ -749,7 +753,8 @@ PYBIND11_MODULE(_core, m) {
       .value("kHighsDebugLevelNone", HighsDebugLevel::kHighsDebugLevelNone)
       .value("kHighsDebugLevelCheap", HighsDebugLevel::kHighsDebugLevelCheap)
       .value("kHighsDebugLevelCostly", HighsDebugLevel::kHighsDebugLevelCostly)
-      .value("kHighsDebugLevelExpensive", HighsDebugLevel::kHighsDebugLevelExpensive)
+      .value("kHighsDebugLevelExpensive",
+             HighsDebugLevel::kHighsDebugLevelExpensive)
       .value("kHighsDebugLevelMin", HighsDebugLevel::kHighsDebugLevelMin)
       .value("kHighsDebugLevelMax", HighsDebugLevel::kHighsDebugLevelMax)
       .export_values();
@@ -833,8 +838,7 @@ PYBIND11_MODULE(_core, m) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
                      &HighsInfo::sum_complementarity_violations)
-      .def_readwrite("primal_dual_integral",
-                     &HighsInfo::primal_dual_integral);
+      .def_readwrite("primal_dual_integral", &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions")
       .def(py::init<>())
       .def_readwrite("presolve", &HighsOptions::presolve)
@@ -982,7 +986,8 @@ PYBIND11_MODULE(_core, m) {
           py::arg("local_upper_penalty") = py::none(),
           py::arg("local_rhs_penalty") = py::none())
       .def("getIis", &Highs::getIis)
-      .def("presolve", &Highs::presolve, py::call_guard<py::gil_scoped_release>())
+      .def("presolve", &Highs::presolve,
+           py::call_guard<py::gil_scoped_release>())
       .def("writeSolution", &highs_writeSolution)
       .def("readSolution", &Highs::readSolution)
       .def("setOptionValue",
@@ -1027,6 +1032,7 @@ PYBIND11_MODULE(_core, m) {
       // &highs_getModelStatus not needed once getModelStatus(const bool
       // scaled_model) disappears from, Highs.h
       .def("getModelStatus", &highs_getModelStatus)  //&Highs::getModelStatus)
+      .def("getSolutionStatus", &Highs::getSolutionStatus)
       .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
       .def("getRanging", &highs_getRanging)
       .def("getObjectiveValue", &Highs::getObjectiveValue)

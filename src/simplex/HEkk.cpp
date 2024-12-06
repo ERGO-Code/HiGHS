@@ -140,8 +140,8 @@ void HEkk::clearEkkData() {
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
   this->exit_algorithm_ = SimplexAlgorithm::kNone;
-  this->return_primal_solution_status_ = 0;
-  this->return_dual_solution_status_ = 0;
+  this->return_primal_solution_status_ = SolutionStatus::kSolutionStatusNone;
+  this->return_dual_solution_status_ = SolutionStatus::kSolutionStatusNone;
 
   this->proof_index_.clear();
   this->proof_value_.clear();
@@ -1411,6 +1411,10 @@ HighsSolution HEkk::getSolution() {
   solution.value_valid = true;
   solution.dual_valid = true;
   return solution;
+}
+
+std::pair<SolutionStatus, SolutionStatus> HEkk::getSolutionStatus() const {
+  return {return_primal_solution_status_, return_dual_solution_status_};
 }
 
 HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {

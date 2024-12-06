@@ -42,8 +42,8 @@ class HEkk {
         solve_bailout_(false),
         called_return_from_solve_(false),
         exit_algorithm_(SimplexAlgorithm::kNone),
-        return_primal_solution_status_(0),
-        return_dual_solution_status_(0),
+        return_primal_solution_status_(SolutionStatus::kSolutionStatusNone),
+        return_dual_solution_status_(SolutionStatus::kSolutionStatusNone),
         original_num_col_(0),
         original_num_row_(0),
         original_num_nz_(0),
@@ -131,6 +131,7 @@ class HEkk {
                          HVector& residual, double& residual_norm);
 
   HighsSolution getSolution();
+  std::pair<SolutionStatus, SolutionStatus> getSolutionStatus() const;
   HighsBasis getHighsBasis(HighsLp& use_lp) const;
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
@@ -206,8 +207,8 @@ class HEkk {
   bool solve_bailout_;
   bool called_return_from_solve_;
   SimplexAlgorithm exit_algorithm_;
-  HighsInt return_primal_solution_status_;
-  HighsInt return_dual_solution_status_;
+  SolutionStatus return_primal_solution_status_;
+  SolutionStatus return_dual_solution_status_;
 
   // Data to be retained after proving primal infeasibility
   vector<HighsInt> proof_index_;

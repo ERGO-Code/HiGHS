@@ -456,9 +456,13 @@ class Highs {
   const HighsModel& getModel() const { return model_; }
 
   /**
-   * @brief Return a const reference to the internal HighsSolution instance
+   * @brief Get the status of both primal and dual solutions
+   * @return A pair containing the primal solution status (first) and dual
+   * solution status (second)
    */
-  const HighsSolution& getSolution() const { return solution_; }
+  std::pair<SolutionStatus, SolutionStatus> getSolutionStatus() const {
+    return ekk_instance_.getSolutionStatus();
+  }
 
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
