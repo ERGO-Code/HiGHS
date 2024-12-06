@@ -28,6 +28,7 @@ void HighsMipSolverData::feasibilityJump() {
                "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
   return;
 #else
+  // TODO(BenChampion): pick more thoughtful values for these
   const HighsInt kMaxTotalEffort = 1e6;
   const HighsInt kMaxEffortSinceLastImprovement = 1e3;
 
@@ -51,6 +52,7 @@ void HighsMipSolverData::feasibilityJump() {
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
     }
+    // TODO(BenChampion): do we handle sense of objective correctly?
     solver.addVar(fjVarType, model->col_lower_[i], model->col_upper_[i],
                   model->col_cost_[i]);
     if (model->col_lower_[i] > model->col_upper_[i]) {
@@ -101,6 +103,7 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
+    // TODO(BenChampion): these are really debug, remove/reduce
     highsLogUser(log_options, HighsLogType::kInfo,
                  "From Feasibility Jump callback\n");
     highsLogUser(log_options, HighsLogType::kInfo, "Total effort: %d\n",
@@ -115,6 +118,7 @@ void HighsMipSolverData::feasibilityJump() {
                  status.solutionObjectiveValue);
     highsLogUser(log_options, HighsLogType::kInfo, "Solution found: %d\n",
                  status.solution != nullptr);
+    // TODO(BenChampion): which solution to pick? First? Last? Best?
     if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
