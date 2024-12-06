@@ -456,6 +456,11 @@ class Highs {
   const HighsModel& getModel() const { return model_; }
 
   /**
+   * @brief Return a const reference to the internal HighsSolution instance
+   */
+  const HighsSolution& getSolution() const { return solution_; }
+
+  /**
    * @brief Get the status of both primal and dual solutions
    * @return A pair containing the primal solution status (first) and dual
    * solution status (second)
