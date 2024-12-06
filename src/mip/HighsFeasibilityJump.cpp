@@ -69,7 +69,8 @@ void HighsMipSolverData::feasibilityJump() {
     col_value[i] = initial_assignment;
   }
 
-  // TODO(BenChampion): make a row-wise copy of model->a_matrix_ and remove these buffers
+  // TODO(BenChampion): make a row-wise copy of model->a_matrix_ and remove
+  // these buffers
   HighsInt row_num_nz;
   HighsInt* row_index_buffer = new HighsInt[model->num_col_];
   double* row_value_buffer = new double[model->num_col_];
