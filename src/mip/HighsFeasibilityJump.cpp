@@ -22,7 +22,7 @@ void HighsMipSolverData::feasibilityJump() {
       "HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
       lower_bound);
 #ifdef HIGHSINT64
-  // TODO: make FJ work with 64-bit HighsInt
+  // TODO(BenChampion): make FJ work with 64-bit HighsInt
   highsLogUser(log_options, HighsLogType::kInfo,
                "Feasibility Jump code uses 'int' so isn't currently compatible "
                "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
@@ -59,7 +59,7 @@ void HighsMipSolverData::feasibilityJump() {
           "Detected infeasible column bounds. Skipping Feasibility Jump");
       return;
     }
-    // TODO: any other cases where infinite bounds are problematic?
+    // TODO(BenChampion): any other cases where infinite bounds are problematic?
     double initial_assignment = 0;
     if (std::isfinite(model->col_lower_[i])) {
       initial_assignment = model->col_lower_[i];
@@ -69,7 +69,7 @@ void HighsMipSolverData::feasibilityJump() {
     col_value[i] = initial_assignment;
   }
 
-  // TODO: make a row-wise copy of model->a_matrix_ and remove these buffers
+  // TODO(BenChampion): make a row-wise copy of model->a_matrix_ and remove these buffers
   HighsInt row_num_nz;
   HighsInt* row_index_buffer = new HighsInt[model->num_col_];
   double* row_value_buffer = new double[model->num_col_];
@@ -129,7 +129,7 @@ void HighsMipSolverData::feasibilityJump() {
   };
 
   solver.solve(col_value.data(), fjControlCallback);
-  // TODO: remove all DEBUG
+  // TODO(BenChampion): remove all DEBUG
   if (found_integer_feasible_solution) {
     // Feasibility jump has found a solution, so call addIncumbent to
     // (possibly) update the incumbent
