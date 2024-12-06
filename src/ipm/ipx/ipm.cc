@@ -20,10 +20,11 @@ struct IPM::Step {
 
 IPM::IPM(const Control& control) : control_(control) {}
 
-void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info) {
+  void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info, HighsIpxStats* ipx_stats) {
     kkt_ = kkt;
     iterate_ = iterate;
     info_ = info;
+    ipx_stats_ = ipx_stats;
     PrintHeader();
     ComputeStartingPoint();
     if (info->errflag == 0)
@@ -42,7 +43,7 @@ void IPM::StartingPoint(KKTSolver* kkt, Iterate* iterate, Info* info) {
     }
 }
 
-void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
+void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info, const bool diag) {
     const Model& model = iterate->model();
     const Int m = model.rows();
     const Int n = model.cols();
@@ -86,6 +87,7 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         }
         if ((info->errflag = control_.InterruptCheck(info->iter)) != 0)
             break;
+	Int kktiter = diag ? -info_->kktiter1 : -info_->kktiter2;
         kkt->Factorize(iterate, info);
         if (info->errflag)
             break;
@@ -96,7 +98,23 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
         if (info->errflag)
             break;
         MakeStep(step);
+	HighsSimplexStats simplex_stats = control_.simplexStats();
+	double simplex_work_measure = simplex_stats.workEstimate();
+	//
         info->iter++;
+	
+	// Update IPX stats
+	kktiter += diag ? info_->kktiter1 : info_->kktiter2;
+	Int cr_type = diag ? 1 : 2;
+	ipx_stats_->iteration_count++;
+	ipx_stats_->cr_type.push_back(cr_type);
+	ipx_stats_->cr_count.push_back(kktiter);
+	Int matrix_nz = diag ? 0 : kkt_->basis()->matrix_nz();
+	Int invert_nz = diag ? 0 : kkt_->basis()->invert_nz();
+	ipx_stats_->factored_basis_num_el.push_back(matrix_nz);
+	ipx_stats_->invert_num_el.push_back(invert_nz);
+	//	if (cr_type == 2) ipx_stats_->report(stdout, "IPM::Driver()");
+
         PrintOutput();
     }
 
@@ -202,7 +220,9 @@ void IPM::ComputeStartingPoint() {
     Vector x(n+m), xl(n+m), xu(n+m), y(m), zl(n+m), zu(n+m);
     Vector rb(m);               // workspace
 
-    // Factorize the KKT matrix with the identity matrix in the (1,1) block.
+    // "Factorize" the KKT matrix with the identity matrix in the (1,1) block.
+    //
+    // Just inverts the diagonal of the normal matrix
     kkt_->Factorize(nullptr, info_);
     if (info_->errflag)
         return;
@@ -222,6 +242,7 @@ void IPM::ComputeStartingPoint() {
     }
     double tol = 0.1 * Infnorm(rb);
     zl = 0.0;
+    Int kktiter1 = -info_->kktiter1;
     kkt_->Solve(zl, rb, tol, xl, y, info_);
     if (info_->errflag)
         return;
@@ -324,6 +345,15 @@ void IPM::ComputeStartingPoint() {
     }
     iterate_->Initialize(x, xl, xu, y, zl, zu);
     best_complementarity_ = iterate_->complementarity();
+
+    // Update IPX stats
+    kktiter1 += info_->kktiter1;
+    ipx_stats_->iteration_count++;
+    ipx_stats_->cr_type.push_back(1);
+    ipx_stats_->cr_count.push_back(kktiter1);
+    ipx_stats_->factored_basis_num_el.push_back(0);
+    ipx_stats_->invert_num_el.push_back(0);
+    //    ipx_stats_->report(stdout, "IPM::ComputeStartingPoint()");
 }
 
 // Computes maximum alpha such that x + alpha*dx >= 0.
@@ -856,7 +886,7 @@ void IPM::PrintOutput() {
     control_.Debug()
       << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)
       << "  " << Format(kkt_->basis_changes(), 7)
-      << " "  << Format(kkt_->iter(), 7);
+      << " "  << Format(kkt_->iterSum(), 7);
     control_.Debug()
       << "  " << Format(info_->dual_dropped, 7)
       << " "  << Format(info_->primal_dropped, 7);

@@ -45,6 +45,14 @@ const double kExcessivelySmallCostValue = 1e-4;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
+enum MipAnalyticCentreCalulation {
+  kMipAnalyticCentreCalulationMin = -1,
+  kMipAnalyticCentreCalulationChoose = kMipAnalyticCentreCalulationMin,
+  kMipAnalyticCentreCalulationOff,
+  kMipAnalyticCentreCalulationOn,
+  kMipAnalyticCentreCalulationMax = kMipAnalyticCentreCalulationOn
+};
+
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 
 enum SimplexScaleStrategy {

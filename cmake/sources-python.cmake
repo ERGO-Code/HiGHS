@@ -312,6 +312,7 @@ set(highs_headers_python
     src/lp_data/HighsSolution.h
     src/lp_data/HighsSolutionDebug.h
     src/lp_data/HighsSolve.h
+    src/lp_data/HighsSolverStats.h
     src/lp_data/HighsStatus.h
     src/lp_data/HStruct.h
     src/mip/HighsCliqueTable.h
