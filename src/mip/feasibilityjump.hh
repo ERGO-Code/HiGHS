@@ -367,6 +367,7 @@ class JumpMove {
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
       }
     }
+    //TODO(BenChampion): is there a better way to handle non-finite bounds?
     if (std::isfinite(problem.vars[varIdx].lb)) {
       bestShiftBuffer.emplace_back(problem.vars[varIdx].lb, 0);
     }
@@ -564,7 +565,10 @@ class FeasibilityJumpSolver {
           bestVarIdx = cell.idx;
         }
       }
-      return bestVarIdx;
+      // TODO(BenChampion): is there a better way to handle or prevent this case?
+      if (bestVarIdx != UINT_MAX) {
+        return bestVarIdx;
+      }
     }
 
     // Fallback to random choice.
