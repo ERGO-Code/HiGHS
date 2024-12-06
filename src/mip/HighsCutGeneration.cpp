@@ -905,7 +905,9 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
         lpRelaxation.isColIntegral(inds[i]) && std::abs(vals[i]) > 10 * feastol;
 
     if (!isintegral[i]) {
-      if (upper[i] - solval[i] < solval[i]) {
+      // complement non-integer variable (cmir separation heuristic complements
+      // integral variables in the same way)
+      if (upper[i] < 2 * solval[i]) {
         if (complementation.empty()) complementation.resize(rowlen);
 
         flipComplementation(i);
