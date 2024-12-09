@@ -30,8 +30,8 @@ void HighsMipSolverData::feasibilityJump() {
   return;
 #else
   // TODO(BenChampion): pick more thoughtful values for these
-  const HighsInt kMaxTotalEffort = 1e6;
-  const HighsInt kMaxEffortSinceLastImprovement = 1e3;
+  const HighsInt kMaxTotalEffort = 1e7;
+  const HighsInt kMaxEffortSinceLastImprovement = 1e6;
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
