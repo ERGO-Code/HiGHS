@@ -62,6 +62,7 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double simplex_time;
   void workTerms(double* terms) const;
   double workEstimate() const;
   void report(FILE* file, const std::string message = "",
@@ -85,6 +86,8 @@ struct HighsIpxStats {
   double average_type2_cr_count;
   double average_type2_matrix_nz;
   double average_type2_invert_nz;
+  double ipm_time;
+  double crossover_time;  
   void workTerms(double* terms);
   double workEstimate();
   void averages();

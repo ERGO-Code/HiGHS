@@ -4449,19 +4449,22 @@ void HighsSimplexStats::report(FILE* file, std::string message,
     fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
     fprintf(file, "   row_DSE_density            = %g\n",
             this->row_DSE_density);
+    fprintf(file, "   dimplex time =             = %g\n",
+            this->simplex_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_"
             "num_el,last_invert_num_el,"
             "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
-            "density,");
+            "density,simplex_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
-    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
             int(this->num_col), int(this->num_row), int(this->num_nz),
             int(this->iteration_count), int(this->num_invert),
             int(this->last_factored_basis_num_el),
             int(this->last_invert_num_el), this->col_aq_density,
-            this->row_ep_density, this->row_ap_density, this->row_DSE_density);
+            this->row_ep_density, this->row_ap_density, this->row_DSE_density,
+	    this->simplex_time);
   } else {
     fprintf(file, "Unknown simplex stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -4481,6 +4484,7 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  simplex_time = 0;
 }
 
 void HighsSimplexStats::workTerms(double* terms) const {

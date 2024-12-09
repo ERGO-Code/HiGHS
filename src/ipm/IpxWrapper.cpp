@@ -185,6 +185,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
   ipx_stats = lps.GetIpxStats();
+  ipx_stats.averages();
   ipx_stats.valid = true;
   // Struct ipx_info defined in ipx/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
@@ -1173,17 +1174,19 @@ void HighsIpxStats::report(FILE* file, const std::string message,
               int(this->factored_basis_num_el[iteration]),
               int(this->invert_num_el[iteration]));
     }
+    fprintf(file, "IPM time = %g; crossover time = %g\n", this->ipm_time, this->crossover_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,cr_count,iteration_count, "
-            "cr_count,matrix_nz,invert_nz,");
+            "cr_count,matrix_nz,invert_nz,ipm_time,crossover_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     this->averages();
-    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,", int(this->valid),
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,", int(this->valid),
             int(this->num_col), int(this->num_row), int(this->num_nz),
             int(this->num_type1_iteration), int(this->average_type1_cr_count),
             int(this->num_type2_iteration), int(this->average_type2_cr_count),
-            int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz));
+            int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
+	    this->ipm_time, this->crossover_time);
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -1207,4 +1210,6 @@ void HighsIpxStats::initialise() {
   average_type2_cr_count = 0;
   average_type2_matrix_nz = 0;
   average_type2_invert_nz = 0;
+  ipm_time = 0;
+  crossover_time = 0;  
 }
