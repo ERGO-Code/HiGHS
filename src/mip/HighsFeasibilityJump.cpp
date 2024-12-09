@@ -53,22 +53,25 @@ void HighsMipSolverData::feasibilityJump() {
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
     }
-    // TODO(BenChampion): do we handle sense of objective correctly?
-    solver.addVar(fjVarType, model->col_lower_[col], model->col_upper_[col],
-                  model->col_cost_[col]);
+    // TODO(BenChampion): inward integer rounding will be done elsewhere
+    double lower = std::ceil(model->col_lower_[col]);
+    double upper = std::floor(model->col_upper_[col]);
     // TODO(BenChampion): what about other infeasibilities/unboundedness?
-    if (model->col_lower_[col] > model->col_upper_[col]) {
+    if (lower > upper) {
       highsLogUser(
           log_options, HighsLogType::kInfo,
-          "Detected infeasible column bounds. Skipping Feasibility Jump");
+          "Detected infeasible column bounds. Skipping Feasibility Jump.\n");
       return;
     }
+    // TODO(BenChampion): do we handle sense of objective correctly?
+    // (even if FJ has zero objective weight at the moment)
+    solver.addVar(fjVarType, lower, upper, model->col_cost_[col]);
     // TODO(BenChampion): any other cases where infinite bounds are problematic?
     double initial_assignment = 0;
-    if (std::isfinite(model->col_lower_[col])) {
-      initial_assignment = model->col_lower_[col];
-    } else if (std::isfinite(model->col_upper_[col])) {
-      initial_assignment = model->col_upper_[col];
+    if (std::isfinite(lower)) {
+      initial_assignment = lower;
+    } else if (std::isfinite(upper)) {
+      initial_assignment = upper;
     }
     col_value[col] = initial_assignment;
   }
