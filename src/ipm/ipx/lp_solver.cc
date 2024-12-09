@@ -55,7 +55,9 @@ Int LpSolver::Solve() {
     control_.OpenLogfile();
     control_.hLog("IPX version 1.0\n");
     try {
+        ipx_stats_.ipm_time = -control_.Elapsed();
         InteriorPointSolve();
+        ipx_stats_.ipm_time += control_.Elapsed();
 	const bool run_crossover_on = control_.run_crossover() == 1;
 	const bool run_crossover_choose = control_.run_crossover() == -1;
 	const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
@@ -73,8 +75,10 @@ Int LpSolver::Solve() {
 	  } else {
 	    assert(run_crossover_on || run_crossover_choose);
 	  }
+	  ipx_stats_.crossover_time = -control_.Elapsed();
 	  BuildCrossoverStartingPoint();
 	  RunCrossover();
+	  ipx_stats_.crossover_time += control_.Elapsed();
         }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();

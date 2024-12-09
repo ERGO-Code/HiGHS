@@ -183,6 +183,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // basis are taken from the unscaled solution of the scaled LP.
   bool solve_unscaled_lp = false;
   bool solved_unscaled_lp = false;
+  bool refine_solution = false;
   if (!incumbent_lp.scale_.has_scaling) {
     //
     // Solve the unscaled LP with unscaled NLA
@@ -206,7 +207,6 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   } else {
     // Indicate that there is no (current) need to refine the solution
     // by solving the unscaled LP with scaled NLA
-    bool refine_solution = false;
     if (options.simplex_unscaled_solution_strategy ==
             kSimplexUnscaledSolutionStrategyNone ||
         options.simplex_unscaled_solution_strategy ==
@@ -334,22 +334,24 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }
     if (solve_unscaled_lp) {
+      if (refine_solution) 
+	printf("GrepSolverStats: Model %s requires refinement due to num/max/sum primal "
+	       "(%" HIGHSINT_FORMAT "/%g/%g) and dual (%" HIGHSINT_FORMAT
+	       "/%g/%g) "
+	       "unscaled infeasibilities\n",
+	       incumbent_lp.model_name_.c_str(),
+	       highs_info.num_primal_infeasibilities,
+	       highs_info.max_primal_infeasibility,
+	       highs_info.sum_primal_infeasibilities,
+	       highs_info.num_dual_infeasibilities,
+	       highs_info.max_dual_infeasibility,
+	       highs_info.sum_dual_infeasibilities);
       // Save options/strategies that may be changed
       HighsInt simplex_strategy = options.simplex_strategy;
       double dual_simplex_cost_perturbation_multiplier =
           options.dual_simplex_cost_perturbation_multiplier;
       HighsInt simplex_dual_edge_weight_strategy =
           ekk_info.dual_edge_weight_strategy;
-      // #1865 exposed that this should not be
-      // HighsModelStatus::kObjectiveBound, but
-      // HighsModelStatus::kObjectiveTarget, since if the latter is
-      // the model status for the scaled LP, any primal
-      // infeasibilities should be small, but must be cleaned up
-      // before (hopefully) a few phase 2 primal simplex iterations
-      // are required to attain the target for the unscaled LP
-      //
-      // In #1865, phase 2 primal simplex was forced with large primal
-      // infeasibilities
       if (num_unscaled_primal_infeasibilities == 0 ||
           scaled_model_status == HighsModelStatus::kObjectiveTarget) {
         // Only dual infeasibilities, or objective target reached (in
