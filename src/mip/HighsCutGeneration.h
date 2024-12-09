@@ -78,7 +78,7 @@ class HighsCutGeneration {
   void removeComplementation();
 
   void updateViolationAndNorm(HighsInt index, double aj, double& violation,
-                              double& norm);
+                              double& norm) const;
 
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                       bool hasUnboundedInts, bool hasGeneralInts,

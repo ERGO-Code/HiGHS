@@ -1344,7 +1344,7 @@ void HighsCutGeneration::removeComplementation() {
 
 void HighsCutGeneration::updateViolationAndNorm(HighsInt index, double aj,
                                                 double& violation,
-                                                double& norm) {
+                                                double& norm) const {
   // update violation
   violation += aj * solval[index];
 
