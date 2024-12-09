@@ -1236,10 +1236,10 @@ class Highs {
     this->simplex_stats_ = simplex_stats;
   }
 
-  const HighsIpxStats& getIpxStats() const { return ipx_stats_; }
+  const HighsIpxStats& getIpxStats() { return ipx_stats_; }
 
   void reportIpxStats(
-      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) const {
+      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) {
     ipx_stats_.report(file, "Original LP", style);
   }
 

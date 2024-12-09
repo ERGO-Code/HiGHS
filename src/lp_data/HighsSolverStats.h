@@ -35,7 +35,19 @@ enum HighsSimplexWorkTerm {
   HighsSimplexWorkTermCount
 };
 
+const std::vector<std::string> kSimplexWorkNames = {"InvertNumRow", "InvertNumNz", "ComputePD", "Btran", "Price", "Ftran", "FtranDse"};
 const std::vector<double> kSimplexWorkCoefficients = {1.0,2.0,3.0,4.0,5.0,6.0,7.0};
+
+enum HighsIpxWorkTerm {
+  HighsIpxWorkTermCr1IterNumRow = 0,
+  HighsIpxWorkTermCr1IterNumNz,
+  HighsIpxWorkTermCr2IterNumRow,
+  HighsIpxWorkTermCr2IterNumNz,
+  HighsIpxWorkTermCount
+};
+
+const std::vector<std::string> kIpxWorkNames = {"CR1IterNumRow", "CR1IterNumNz", "CR2IterNumRow", "CR2IterNumNz"};
+const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 3.0, 4.0};
 
 struct HighsSimplexStats {
   bool valid;
@@ -67,9 +79,17 @@ struct HighsIpxStats {
   std::vector<HighsInt> cr_count;
   std::vector<HighsInt> factored_basis_num_el;
   std::vector<HighsInt> invert_num_el;
-  double workEstimate() const;
+  HighsInt num_type1_iteration;
+  HighsInt num_type2_iteration;
+  double average_type1_cr_count;
+  double average_type2_cr_count;
+  double average_type2_matrix_nz;
+  double average_type2_invert_nz;
+  void workTerms(double* terms);
+  double workEstimate();
+  void averages();
   void report(FILE* file, const std::string message = "",
-              const HighsInt style = HighsSolverStatsReportPretty) const;
+              const HighsInt style = HighsSolverStatsReportPretty);
   void initialise();
 };
 

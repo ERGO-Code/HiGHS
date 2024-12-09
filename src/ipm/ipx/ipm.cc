@@ -98,8 +98,8 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info, const bool diag) 
         if (info->errflag)
             break;
         MakeStep(step);
-	HighsSimplexStats simplex_stats = control_.simplexStats();
-	double simplex_work_measure = simplex_stats.workEstimate();
+	//	HighsSimplexStats simplex_stats = control_.simplexStats();
+	//	double simplex_work_measure = simplex_stats.workEstimate();
 	//
         info->iter++;
 	
