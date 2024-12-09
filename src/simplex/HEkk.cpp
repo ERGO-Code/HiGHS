@@ -3503,6 +3503,10 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   // reverts to its value given by options_
   if (analysis_.analyse_simplex_time) analysis_.reportSimplexTimer();
   simplex_stats_.valid = true;
+  simplex_stats_.num_col = lp_.num_col_;
+  simplex_stats_.num_row = lp_.num_row_;
+  simplex_stats_.num_nz = lp_.a_matrix_.numNz();
+
   // Since HEkk::iteration_count_ includes iteration on presolved LP,
   // simplex_stats_.iteration_count is initialised to -
   // HEkk::iteration_count_
@@ -4421,29 +4425,84 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message) const {
-  fprintf(file, "\nSimplex stats: %s\n", message.c_str());
-  fprintf(file, "   valid                      = %d\n", this->valid);
-  fprintf(file, "   iteration_count            = %d\n", this->iteration_count);
-  fprintf(file, "   num_invert                 = %d\n", this->num_invert);
-  fprintf(file, "   last_invert_num_el         = %d\n",
-          this->last_invert_num_el);
-  fprintf(file, "   last_factored_basis_num_el = %d\n",
-          this->last_factored_basis_num_el);
-  fprintf(file, "   col_aq_density             = %g\n", this->col_aq_density);
-  fprintf(file, "   row_ep_density             = %g\n", this->row_ep_density);
-  fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
-  fprintf(file, "   row_DSE_density            = %g\n", this->row_DSE_density);
+void HEkk::passSimplexStats(const HighsSimplexStats simplex_stats) {
+  this->simplex_stats_ = simplex_stats;
+}
+
+void HighsSimplexStats::report(FILE* file, std::string message,
+                               const HighsInt style) const {
+  if (style == HighsSolverStatsReportPretty) {
+    fprintf(file, "\nSimplex stats: %s\n", message.c_str());
+    fprintf(file, "   valid                      = %d\n", this->valid);
+    fprintf(file, "   num_col                    = %d\n", this->num_col);
+    fprintf(file, "   num_row                    = %d\n", this->num_row);
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
+    fprintf(file, "   iteration_count            = %d\n",
+            this->iteration_count);
+    fprintf(file, "   num_invert                 = %d\n", this->num_invert);
+    fprintf(file, "   last_factored_basis_num_el = %d\n",
+            this->last_factored_basis_num_el);
+    fprintf(file, "   last_invert_num_el         = %d\n",
+            this->last_invert_num_el);
+    fprintf(file, "   col_aq_density             = %g\n", this->col_aq_density);
+    fprintf(file, "   row_ep_density             = %g\n", this->row_ep_density);
+    fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
+    fprintf(file, "   row_DSE_density            = %g\n",
+            this->row_DSE_density);
+  } else if (style == HighsSolverStatsReportCsvHeader) {
+    fprintf(file,
+            "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_"
+            "num_el,last_invert_num_el,"
+            "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
+            "density,");
+  } else if (style == HighsSolverStatsReportCsvData) {
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,", int(this->valid),
+            int(this->num_col), int(this->num_row), int(this->num_nz),
+            int(this->iteration_count), int(this->num_invert),
+            int(this->last_factored_basis_num_el),
+            int(this->last_invert_num_el), this->col_aq_density,
+            this->row_ep_density, this->row_ap_density, this->row_DSE_density);
+  } else {
+    fprintf(file, "Unknown simplex stats report style of %d\n", int(style));
+    assert(123 == 456);
+  }
 }
 
 void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   valid = false;
   iteration_count = -iteration_count_;
+  num_col = 0;
+  num_row = 0;
+  num_nz = 0;
   num_invert = 0;
-  last_invert_num_el = 0;
   last_factored_basis_num_el = 0;
+  last_invert_num_el = 0;
   col_aq_density = 0;
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+}
+
+void HighsSimplexStats::workTerms(double* terms) const {
+  const double nonbasic_nz = double(this->num_nz + this->num_row - this->last_factored_basis_num_el);
+  terms[HighsSimplexWorkTermInvertNumRow] = double(this->num_invert) * double(this->num_row);
+  terms[HighsSimplexWorkTermInvertNumNz] = double(this->num_invert) * this->last_factored_basis_num_el;
+  terms[HighsSimplexWorkTermComputePD] = double(this->num_invert) * double(this->last_invert_num_el + nonbasic_nz);
+  terms[HighsSimplexWorkTermBtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_ep_density;
+  terms[HighsSimplexWorkTermPrice] = double(this->iteration_count) * nonbasic_nz * this->row_ep_density;
+  terms[HighsSimplexWorkTermFtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->col_aq_density;
+  terms[HighsSimplexWorkTermFtranDse] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_DSE_density;
+}
+
+
+double HighsSimplexStats::workEstimate() const {
+   double* terms = new double[HighsSimplexWorkTermCount];
+   this->workTerms(terms);
+   double work = 0;
+   for (HighsInt iX = 0; iX < HighsSimplexWorkTermCount; iX++) {
+     assert(terms[iX]>0);
+     work += terms[iX] * kSimplexWorkCoefficients[iX];
+   }
+   delete[] terms;
+   return work;
 }

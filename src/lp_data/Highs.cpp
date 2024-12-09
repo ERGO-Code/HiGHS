@@ -1275,6 +1275,7 @@ HighsStatus Highs::solve() {
     solveLp(incumbent_lp,
             "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
+    simplex_stats_ = this->ekk_instance_.getSimplexStats();
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
@@ -1318,6 +1319,8 @@ HighsStatus Highs::solve() {
         ekk_instance_.lp_name_ = "Original LP";
         solveLp(incumbent_lp, "Not presolved: solving the LP",
                 this_solve_original_lp_time);
+        simplex_stats_ = this->ekk_instance_.getSimplexStats();
+        presolved_lp_simplex_stats_ = simplex_stats_;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1330,6 +1333,8 @@ HighsStatus Highs::solve() {
         reportPresolveReductions(log_options, incumbent_lp, false);
         solveLp(incumbent_lp, "Problem not reduced by presolve: solving the LP",
                 this_solve_original_lp_time);
+        simplex_stats_ = this->ekk_instance_.getSimplexStats();
+        presolved_lp_simplex_stats_ = simplex_stats_;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1378,6 +1383,7 @@ HighsStatus Highs::solve() {
         options_.objective_bound = kHighsInf;
         solveLp(reduced_lp, "Solving the presolved LP",
                 this_solve_presolved_lp_time);
+        presolved_lp_simplex_stats_ = this->ekk_instance_.getSimplexStats();
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
@@ -1442,6 +1448,7 @@ HighsStatus Highs::solve() {
                 "Solving the original LP with primal simplex "
                 "to determine infeasible or unbounded",
                 this_solve_original_lp_time);
+        simplex_stats_ = this->ekk_instance_.getSimplexStats();
         // Recover the options
         options_ = save_options;
         if (return_status == HighsStatus::kError)
@@ -1579,6 +1586,7 @@ HighsStatus Highs::solve() {
             solveLp(incumbent_lp,
                     "Solving the original LP from the solution after postsolve",
                     this_solve_original_lp_time);
+            simplex_stats_ = this->ekk_instance_.getSimplexStats();
             // Determine the iteration count
             postsolve_iteration_count += info_.simplex_iteration_count;
             return_status =
@@ -2326,8 +2334,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       HighsBasis modifiable_basis = basis;
       modifiable_basis.was_alien = true;
       HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
-                                        options_, timer_);
+                                        info_, ekk_instance_, ipx_stats_,
+                                        callback_, options_, timer_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (return_status != HighsStatus::kOk) return HighsStatus::kError;
       // Update the HiGHS basis
@@ -3583,6 +3591,8 @@ void Highs::invalidateUserSolverData() {
   invalidateInfo();
   invalidateEkk();
   invalidateIis();
+  invalidateSimplexStats();
+  invalidateIpxStats();
 }
 
 void Highs::invalidateModelStatusSolutionAndInfo() {
@@ -3621,6 +3631,13 @@ void Highs::invalidateRanging() { ranging_.invalidate(); }
 void Highs::invalidateEkk() { ekk_instance_.invalidate(); }
 
 void Highs::invalidateIis() { iis_.invalidate(); }
+
+void Highs::invalidateSimplexStats() {
+  simplex_stats_.initialise();
+  presolved_lp_simplex_stats_.initialise();
+}
+
+void Highs::invalidateIpxStats() { ipx_stats_.initialise(); }
 
 HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Determine whether the current solution of a MIP is feasible and,
@@ -3764,7 +3781,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
 
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
-                                    callback_, options_, timer_);
+                                    ipx_stats_, callback_, options_, timer_);
 
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -4191,6 +4208,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
             "Solving the original LP from the solution after postsolve");
         // Determine the timing record
         timer_.stop(timer_.solve_clock);
+        simplex_stats_ = this->ekk_instance_.getSimplexStats();
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         // Recover the options
