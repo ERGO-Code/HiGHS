@@ -1,8 +1,3 @@
-// TODO(BenChampion): document all deviations from standard feasibilityjump.hh
-// including:
-// 1. Extra initializations
-// 2. Handling infinite bounds (2x locations in code)
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -13,6 +8,7 @@
 
 #define FJ_LOG_PREFIX "Feasibility Jump: "
 
+// Everything is in the global namespace in reference feasibilityjump.hh
 namespace external_feasibilityjump {
 
 enum RowType {
@@ -36,8 +32,8 @@ struct FJStatus {
   double* solution;
 };
 
-double violationTolerance = 1.0e-5;
-double equalityTolerance = 1.0e-5;
+double violationTolerance = 1.0e-5;  // const in reference feasibilityjump.hh
+double equalityTolerance = 1.0e-5;   // const in reference feasibilityjump.hh
 
 // Measures if two doubles are equal within a tolerance of 1.0e-5.
 bool eq(double a, double b) { return fabs(a - b) < equalityTolerance; }
@@ -112,7 +108,7 @@ struct Problem {
   std::vector<uint32_t> violatedConstraints;
   bool usedRelaxContinuous = false;
 
-  size_t nNonzeros = 0;
+  size_t nNonzeros = 0;  // no initialization in reference feasibilityjump.hh
   double incumbentObjective = NAN;
 
   int addVar(VarType vartype, double lb, double ub, double objCoeff) {
@@ -314,12 +310,17 @@ class JumpMove {
   void updateValue(Problem& problem, uint32_t varIdx) {
     bestShiftBuffer.clear();
     auto varIncumbentValue = problem.incumbentAssignment[varIdx];
-    // TODO(BenChampion): simplify this
-    double currentValue =
-        std::isfinite(problem.vars[varIdx].lb)
-            ? problem.vars[varIdx].lb
-            : (std::isfinite(problem.vars[varIdx].ub) ? problem.vars[varIdx].ub
-                                                      : 0.0);
+    // No finiteness checking in reference feasibilityjump.hh, which
+    // assumes finite bounds
+    double currentValue = 0.0;
+    double lower = problem.vars[varIdx].lb;
+    double upper = problem.vars[varIdx].ub;
+    if (std::isfinite(lower)) {
+      currentValue = lower;
+    } else if (std::isfinite(upper)) {
+      currentValue = upper;
+    }
+
     double currentScore = 0.0;
     double currentSlope = 0.0;
 
@@ -377,7 +378,8 @@ class JumpMove {
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
       }
     }
-    // TODO(BenChampion): is there a better way to handle non-finite bounds?
+    // No finiteness checking in the reference feasibilityjump.hh, which
+    // assumes finite bounds
     if (std::isfinite(problem.vars[varIdx].lb)) {
       bestShiftBuffer.emplace_back(problem.vars[varIdx].lb, 0);
     }
@@ -440,7 +442,7 @@ class FeasibilityJumpSolver {
   double weightUpdateDecay;
   double weightUpdateIncrement = 1.0;
 
-  size_t nBumps = 0;
+  size_t nBumps = 0;  // no initialization in reference feasibilityjump.hh
 
   // The probability of choosing a random positive-score variable.
   const double randomVarProbability = 0.001;
