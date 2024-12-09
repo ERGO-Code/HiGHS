@@ -55,6 +55,7 @@ void HighsMipSolverData::feasibilityJump() {
     // TODO(BenChampion): do we handle sense of objective correctly?
     solver.addVar(fjVarType, model->col_lower_[i], model->col_upper_[i],
                   model->col_cost_[i]);
+    // TODO(BenChampion): what about other infeasibilities/unboundedness?
     if (model->col_lower_[i] > model->col_upper_[i]) {
       highsLogUser(
           log_options, HighsLogType::kInfo,
