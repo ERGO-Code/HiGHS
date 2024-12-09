@@ -1,3 +1,8 @@
+// TODO(BenChampion): document all deviations from standard feasibilityjump.hh
+// including:
+// 1. Extra initializations
+// 2. Handling infinite bounds (2x locations in code)
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -309,7 +314,12 @@ class JumpMove {
   void updateValue(Problem& problem, uint32_t varIdx) {
     bestShiftBuffer.clear();
     auto varIncumbentValue = problem.incumbentAssignment[varIdx];
-    double currentValue = problem.vars[varIdx].lb;
+    // TODO(BenChampion): simplify this
+    double currentValue =
+        std::isfinite(problem.vars[varIdx].lb)
+            ? problem.vars[varIdx].lb
+            : (std::isfinite(problem.vars[varIdx].ub) ? problem.vars[varIdx].ub
+                                                      : 0.0);
     double currentScore = 0.0;
     double currentSlope = 0.0;
 
@@ -565,11 +575,7 @@ class FeasibilityJumpSolver {
           bestVarIdx = cell.idx;
         }
       }
-      // TODO(BenChampion): is there a better way to handle or prevent this
-      // case?
-      if (bestVarIdx != UINT_MAX) {
-        return bestVarIdx;
-      }
+      return bestVarIdx;
     }
 
     // Fallback to random choice.
