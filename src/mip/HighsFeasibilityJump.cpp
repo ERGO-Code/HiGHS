@@ -12,6 +12,7 @@
 
 #include "mip/HighsMipSolverData.h"
 #include "mip/feasibilityjump.hh"
+#include "util/HighsSparseMatrix.h"
 
 void HighsMipSolverData::feasibilityJump() {
   // This is the (presolved) model being solved
@@ -42,21 +43,21 @@ void HighsMipSolverData::feasibilityJump() {
 
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(0, 1);
 
-  for (int i = 0; i < model->num_col_; ++i) {
-    assert(model->integrality_[i] == HighsVarType::kContinuous ||
-           model->integrality_[i] == HighsVarType::kInteger ||
-           model->integrality_[i] == HighsVarType::kImplicitInteger);
+  for (HighsInt col = 0; col < model->num_col_; ++col) {
+    assert(model->integrality_[col] == HighsVarType::kContinuous ||
+           model->integrality_[col] == HighsVarType::kInteger ||
+           model->integrality_[col] == HighsVarType::kImplicitInteger);
     external_feasibilityjump::VarType fjVarType;
-    if (model->integrality_[i] == HighsVarType::kContinuous) {
+    if (model->integrality_[col] == HighsVarType::kContinuous) {
       fjVarType = external_feasibilityjump::VarType::Continuous;
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
     }
     // TODO(BenChampion): do we handle sense of objective correctly?
-    solver.addVar(fjVarType, model->col_lower_[i], model->col_upper_[i],
-                  model->col_cost_[i]);
+    solver.addVar(fjVarType, model->col_lower_[col], model->col_upper_[col],
+                  model->col_cost_[col]);
     // TODO(BenChampion): what about other infeasibilities/unboundedness?
-    if (model->col_lower_[i] > model->col_upper_[i]) {
+    if (model->col_lower_[col] > model->col_upper_[col]) {
       highsLogUser(
           log_options, HighsLogType::kInfo,
           "Detected infeasible column bounds. Skipping Feasibility Jump");
@@ -64,41 +65,36 @@ void HighsMipSolverData::feasibilityJump() {
     }
     // TODO(BenChampion): any other cases where infinite bounds are problematic?
     double initial_assignment = 0;
-    if (std::isfinite(model->col_lower_[i])) {
-      initial_assignment = model->col_lower_[i];
-    } else if (std::isfinite(model->col_upper_[i])) {
-      initial_assignment = model->col_upper_[i];
+    if (std::isfinite(model->col_lower_[col])) {
+      initial_assignment = model->col_lower_[col];
+    } else if (std::isfinite(model->col_upper_[col])) {
+      initial_assignment = model->col_upper_[col];
     }
-    col_value[i] = initial_assignment;
+    col_value[col] = initial_assignment;
   }
 
-  // TODO(BenChampion): make a row-wise copy of model->a_matrix_ and remove
-  // these buffers
-  HighsInt row_num_nz;
-  HighsInt* row_index_buffer = new HighsInt[model->num_col_];
-  double* row_value_buffer = new double[model->num_col_];
+  HighsSparseMatrix a_matrix;
+  a_matrix.createRowwise(model->a_matrix_);
 
-  for (int i = 0; i < model->num_row_; ++i) {
-    bool hasFiniteLower = std::isfinite(model->row_lower_[i]);
-    bool hasFiniteUpper = std::isfinite(model->row_upper_[i]);
+  for (HighsInt row = 0; row < model->num_row_; ++row) {
+    bool hasFiniteLower = std::isfinite(model->row_lower_[row]);
+    bool hasFiniteUpper = std::isfinite(model->row_upper_[row]);
     if (hasFiniteLower || hasFiniteUpper) {
-      model->a_matrix_.getRow(i, row_num_nz, row_index_buffer,
-                              row_value_buffer);
+      HighsInt row_num_nz = a_matrix.start_[row + 1] - a_matrix.start_[row];
+      auto row_index = a_matrix.index_.data() + a_matrix.start_[row];
+      auto row_value = a_matrix.value_.data() + a_matrix.start_[row];
       if (hasFiniteLower) {
         solver.addConstraint(external_feasibilityjump::RowType::Gte,
-                             model->row_lower_[i], row_num_nz, row_index_buffer,
-                             row_value_buffer, /* relax_continuous = */ 0);
+                             model->row_lower_[row], row_num_nz, row_index,
+                             row_value, /* relax_continuous = */ 0);
       }
       if (hasFiniteUpper) {
         solver.addConstraint(external_feasibilityjump::RowType::Lte,
-                             model->row_upper_[i], row_num_nz, row_index_buffer,
-                             row_value_buffer, /* relax_continuous = */ 0);
+                             model->row_upper_[row], row_num_nz, row_index,
+                             row_value, /* relax_continuous = */ 0);
       }
     }
   }
-
-  delete[] row_value_buffer;
-  delete[] row_index_buffer;
 
   auto fjControlCallback =
       [=, &col_value, &found_integer_feasible_solution,
