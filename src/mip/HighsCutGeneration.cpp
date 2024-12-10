@@ -1327,6 +1327,9 @@ bool HighsCutGeneration::finalizeAndAddCut(std::vector<HighsInt>& inds_,
 }
 
 void HighsCutGeneration::flipComplementation(HighsInt index) {
+  // only variables with finite upper bounds can be complemented
+  assert(upper[index] != kHighsInf);
+
   // flip complementation
   complementation[index] = 1 - complementation[index];
   solval[index] = upper[index] - solval[index];
