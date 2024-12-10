@@ -1166,15 +1166,23 @@ void HighsIpxStats::report(FILE* file, const std::string message,
     assert(this->iteration_count == HighsInt(this->invert_num_el.size()));
     assert(this->iteration_count ==
            HighsInt(this->factored_basis_num_el.size()));
-    fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
-    // rintf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
-    for (HighsInt iteration = 0; iteration < iteration_count; iteration++) {
+    if (iteration_count>0) 
+      fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
+    // printf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
+    for (HighsInt iteration = 0; iteration < iteration_count; iteration++) 
       fprintf(file, "   %4d     %1d    %5d %7d  %7d\n", int(iteration),
               int(this->cr_type[iteration]), int(this->cr_count[iteration]),
               int(this->factored_basis_num_el[iteration]),
               int(this->invert_num_el[iteration]));
-    }
-    fprintf(file, "IPM time = %g; crossover time = %g\n", this->ipm_time, this->crossover_time);
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
+    fprintf(file, "   Type 1 iteration           = %d\n", this->num_type1_iteration);
+    fprintf(file, "          mean CR count       = %g\n", this->average_type1_cr_count);
+    fprintf(file, "   Type 2 iteration           = %d\n", this->num_type2_iteration);
+    fprintf(file, "          mean CR count       = %g\n", this->average_type2_cr_count);
+    fprintf(file, "          mean CR matrix nz   = %g\n", this->average_type2_matrix_nz);
+    fprintf(file, "          mean CR INVERT nz   = %g\n", this->average_type2_invert_nz);
+    fprintf(file, "IPM time                      = %g\n", this->ipm_time);
+    fprintf(file, "Crossover time                = %g\n", this->crossover_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,cr_count,iteration_count, "

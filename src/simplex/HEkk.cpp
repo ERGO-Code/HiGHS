@@ -4449,7 +4449,7 @@ void HighsSimplexStats::report(FILE* file, std::string message,
     fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
     fprintf(file, "   row_DSE_density            = %g\n",
             this->row_DSE_density);
-    fprintf(file, "   dimplex time =             = %g\n",
+    fprintf(file, "   simplex time =             = %g\n",
             this->simplex_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
