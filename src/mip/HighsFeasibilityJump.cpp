@@ -18,6 +18,7 @@ void HighsMipSolverData::feasibilityJump() {
   // This is the (presolved) model being solved
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
+  double sense_multiplier = static_cast<double>(model->sense_);
 
 #ifdef HIGHSINT64
   // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
@@ -65,9 +66,8 @@ void HighsMipSolverData::feasibilityJump() {
           "Detected infeasible column bounds. Skipping Feasibility Jump.\n");
       return;
     }
-    // TODO(BenChampion): do we handle sense of objective correctly?
-    // (even if FJ has zero objective weight at the moment)
-    solver.addVar(fjVarType, lower, upper, model->col_cost_[col]);
+    solver.addVar(fjVarType, lower, upper,
+                  sense_multiplier * model->col_cost_[col]);
 
     double initial_assignment = 0.0;
     if (std::isfinite(lower)) {
@@ -110,7 +110,8 @@ void HighsMipSolverData::feasibilityJump() {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
                                       status.solution + status.numVars);
-      objective_function_value = status.solutionObjectiveValue;
+      objective_function_value =
+          sense_multiplier * status.solutionObjectiveValue;
     }
     if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
         status.totalEffort > kMaxTotalEffort) {
