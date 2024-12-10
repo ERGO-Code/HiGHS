@@ -19,7 +19,7 @@ void HighsMipSolverData::feasibilityJump() {
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   double sense_multiplier = static_cast<double>(model->sense_);
-  double infinity = std::numeric_limits<double>::infinity();
+  constexpr double infinity = std::numeric_limits<double>::infinity();
 
 #ifdef HIGHSINT64
   // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
