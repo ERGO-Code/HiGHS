@@ -27,7 +27,6 @@ void HighsMipSolverData::feasibilityJump() {
                "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
   return;
 #else
-  // TODO(BenChampion): pick more thoughtful values for these
   const HighsInt kMaxTotalEffort = 3e6;
   const HighsInt kMaxEffortSinceLastImprovement = 1e6;
 
@@ -54,12 +53,10 @@ void HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Continuous;
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
-      // TODO(BenChampion): inward integer rounding will be done elsewhere
       lower = std::ceil(lower);
       upper = std::floor(upper);
     }
 
-    // TODO(BenChampion): what about other infeasibilities/unboundedness?
     if (lower > upper) {
       highsLogUser(
           log_options, HighsLogType::kInfo,
@@ -105,7 +102,6 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
-    // TODO(BenChampion): which solution to pick? First? Last? Best?
     if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
       col_value = std::vector<double>(status.solution,
