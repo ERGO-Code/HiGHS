@@ -18,14 +18,11 @@ void HighsMipSolverData::feasibilityJump() {
   // This is the (presolved) model being solved
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
-  highsLogUser(
-      log_options, HighsLogType::kInfo,
-      "HighsMipSolverData::feasibilityJump called with primal bound of %g\n",
-      lower_bound);
+
 #ifdef HIGHSINT64
-  // TODO(BenChampion): make FJ work with 64-bit HighsInt
+  // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
   highsLogUser(log_options, HighsLogType::kInfo,
-               "Feasibility Jump code uses 'int' so isn't currently compatible "
+               "Feasibility Jump code isn't currently compatible "
                "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
   return;
 #else
@@ -41,9 +38,13 @@ void HighsMipSolverData::feasibilityJump() {
   external_feasibilityjump::equalityTolerance = epsilon;
   external_feasibilityjump::violationTolerance = feastol;
 
-  auto solver = external_feasibilityjump::FeasibilityJumpSolver(0, 1);
+  auto solver = external_feasibilityjump::FeasibilityJumpSolver(
+      /* seed = */ 0, /* verbosity = */ 0);
 
   for (HighsInt col = 0; col < model->num_col_; ++col) {
+    double lower = model->col_lower_[col];
+    double upper = model->col_upper_[col];
+
     assert(model->integrality_[col] == HighsVarType::kContinuous ||
            model->integrality_[col] == HighsVarType::kInteger ||
            model->integrality_[col] == HighsVarType::kImplicitInteger);
@@ -52,10 +53,11 @@ void HighsMipSolverData::feasibilityJump() {
       fjVarType = external_feasibilityjump::VarType::Continuous;
     } else {
       fjVarType = external_feasibilityjump::VarType::Integer;
+      // TODO(BenChampion): inward integer rounding will be done elsewhere
+      lower = std::ceil(lower);
+      upper = std::floor(upper);
     }
-    // TODO(BenChampion): inward integer rounding will be done elsewhere
-    double lower = std::ceil(model->col_lower_[col]);
-    double upper = std::floor(model->col_upper_[col]);
+
     // TODO(BenChampion): what about other infeasibilities/unboundedness?
     if (lower > upper) {
       highsLogUser(
@@ -66,8 +68,8 @@ void HighsMipSolverData::feasibilityJump() {
     // TODO(BenChampion): do we handle sense of objective correctly?
     // (even if FJ has zero objective weight at the moment)
     solver.addVar(fjVarType, lower, upper, model->col_cost_[col]);
-    // TODO(BenChampion): any other cases where infinite bounds are problematic?
-    double initial_assignment = 0;
+
+    double initial_assignment = 0.0;
     if (std::isfinite(lower)) {
       initial_assignment = lower;
     } else if (std::isfinite(upper)) {
@@ -103,21 +105,6 @@ void HighsMipSolverData::feasibilityJump() {
       [=, &col_value, &found_integer_feasible_solution,
        &objective_function_value](external_feasibilityjump::FJStatus status)
       -> external_feasibilityjump::CallbackControlFlow {
-    // TODO(BenChampion): these are really debug, remove/reduce
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "From Feasibility Jump callback\n");
-    highsLogUser(log_options, HighsLogType::kInfo, "Total effort: %d\n",
-                 status.totalEffort);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Effort since last improvement: %d\n",
-                 status.effortSinceLastImprovement);
-    highsLogUser(log_options, HighsLogType::kInfo, "Number of variables: %d\n",
-                 status.numVars);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Solution objective value: %0.2f\n",
-                 status.solutionObjectiveValue);
-    highsLogUser(log_options, HighsLogType::kInfo, "Solution found: %d\n",
-                 status.solution != nullptr);
     // TODO(BenChampion): which solution to pick? First? Last? Best?
     if (status.solution != nullptr) {
       found_integer_feasible_solution = true;
@@ -134,30 +121,10 @@ void HighsMipSolverData::feasibilityJump() {
   };
 
   solver.solve(col_value.data(), fjControlCallback);
-  // TODO(BenChampion): remove all DEBUG
-  if (found_integer_feasible_solution) {
-    // Feasibility jump has found a solution, so call addIncumbent to
-    // (possibly) update the incumbent
-    //    highsLogUser(log_options, HighsLogType::kInfo,
-    printf(
-        "DEBUG: Feasibility Jump has found an integer feasible solution with "
-        "objective value %g\n",
-        objective_function_value);
-    printf("DEBUG: Solution: [");
-    for (HighsInt iCol = 0; iCol < std::min(10, int(col_value.size())); iCol++)
-      printf(" %g", col_value[iCol]);
-    printf("]\n");
-    if (!trySolution(col_value, kSolutionSourceFeasibilityJump)) {
-      printf("DEBUG: Feasibility Jump solution was not integer feasible\n");
-    } else {
-      printf("DEBUG: Feasibility Jump solution is integer feasible.\n");
-    }
 
-  } else {
-    //    highsLogUser(log_options, HighsLogType::kInfo,
-    printf(
-        "DEBUG: Feasibility Jump has not found an integer feasible "
-        "solution\n");
+  if (found_integer_feasible_solution) {
+    addIncumbent(col_value, objective_function_value,
+                 kSolutionSourceFeasibilityJump);
   }
 #endif
 }
