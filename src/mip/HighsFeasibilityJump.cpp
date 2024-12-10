@@ -19,6 +19,7 @@ void HighsMipSolverData::feasibilityJump() {
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   double sense_multiplier = static_cast<double>(model->sense_);
+  double infinity = std::numeric_limits<double>::infinity();
 
 #ifdef HIGHSINT64
   // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
@@ -57,7 +58,8 @@ void HighsMipSolverData::feasibilityJump() {
       upper = std::floor(upper);
     }
 
-    if (lower > upper) {
+    if (lower > upper || lower == infinity || upper == -infinity ||
+        std::isnan(lower) || std::isnan(upper)) {
       highsLogUser(
           log_options, HighsLogType::kInfo,
           "Detected infeasible column bounds. Skipping Feasibility Jump.\n");
