@@ -145,12 +145,12 @@ struct HighsIllConditioning {
 };
 
 struct HighsLinearObjective {
-  double weight;
-  double offset;
+  double weight = 0;
+  double offset = 0;
   std::vector<double> coefficients;
-  double abs_tolerance;
-  double rel_tolerance;
-  HighsInt priority;
+  double abs_tolerance = -1;
+  double rel_tolerance = -1;
+  HighsInt priority = 0;
   void clear();
 };
 

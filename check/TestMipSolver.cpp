@@ -371,14 +371,10 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  // With(out) presolve, Highs::infeasibleBoundsOk() performs inwardd
+  // With(out) presolve, Highs::infeasibleBoundsOk() performs inward
   // integer rounding of [0.25, 0.75] to [1, 0] so identifes
   // infeasiblility. Hence MIP solver returns
   // HighsModelStatus::kInfeasible
-
-  // Run with presolve off so that this example still propagates to FJ
-  highs.setOptionValue("output_flag", true);
-  highs.setOptionValue("presolve", kHighsOffString);
 
   return_status = highs.passModel(lp);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -387,8 +383,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kUnboundedOrInfeasible);
-  //  REQUIRE(model_status == HighsModelStatus::kInfeasible);
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
@@ -683,9 +678,22 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
           required_model_status = HighsModelStatus::kUnbounded;
         }
       } else {
-        // Presolve on, and identifies primal infeasible or unbounded
-        required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        // Presolve on
+        if (l == 0) {
+          // Inward integer rounding proves infeasiblilty
+          required_model_status = HighsModelStatus::kInfeasible;
+        } else {
+          // Presolve identifies primal infeasible or unbounded
+          required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        }
       }
+      if (dev_run)
+        printf(
+            "For k = %d and l = %d, original bounds on col 1 are [%g, %g]: "
+            "model status is \"%s\" and required status is \"%s\"\n",
+            int(k), int(l), lp.col_lower_[1], lp.col_upper_[1],
+            highs.modelStatusToString(highs.getModelStatus()).c_str(),
+            highs.modelStatusToString(required_model_status).c_str());
       REQUIRE(highs.getModelStatus() == required_model_status);
     }
     highs.setOptionValue("presolve", kHighsOnString);
@@ -694,8 +702,8 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
 
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   Highs highs;
-  // No presolve
   highs.setOptionValue("output_flag", dev_run);
+  // No presolve
   highs.setOptionValue("presolve", "off");
 
   // IP without constraints and fractional bounds on variables
