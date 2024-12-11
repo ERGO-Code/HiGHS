@@ -19,7 +19,6 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
   double sense_multiplier = static_cast<double>(model->sense_);
-  constexpr double infinity = std::numeric_limits<double>::infinity();
 
 #ifdef HIGHSINT64
   // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
@@ -62,12 +61,12 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                               upper > -kHighsInf && !std::isnan(lower) &&
                               !std::isnan(upper);
     if (!legal_bounds) {
-      assert(legal_bounds);
       highsLogUser(log_options, HighsLogType::kInfo,
                    "HighsMipSolverData::feasibilityJump() has detected "
                    "infeasible/illegal bounds [%g, %g] for "
                    "column %d: MIP is infeasible\n",
                    lower, upper, int(col));
+      assert(legal_bounds);
       return HighsModelStatus::kInfeasible;
     }
     solver.addVar(fjVarType, lower, upper,
@@ -127,8 +126,16 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   solver.solve(col_value.data(), fjControlCallback);
 
   if (found_integer_feasible_solution) {
-    addIncumbent(col_value, objective_function_value,
-                 kSolutionSourceFeasibilityJump);
+    // Initial assignments that violate integrality or column bounds can lead to
+    // infeasible results. Even if those initial assignments should not occur,
+    // use trySolution rather than addIncumbent for an explicit check.
+    bool is_really_feasible =
+        trySolution(col_value, kSolutionSourceFeasibilityJump);
+    if (!is_really_feasible) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Discarding infeasible result from Feasibility Jump\n");
+    }
+    assert(is_really_feasible);
   }
   return HighsModelStatus::kNotset;
 #endif
