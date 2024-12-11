@@ -3591,6 +3591,8 @@ bool Highs::infeasibleBoundsOk() {
       }
     }
     if (lower > upper) assessInfeasibleBound("Column", iCol, lower, upper);
+    lp.col_lower_[iCol] = lower;
+    lp.col_upper_[iCol] = upper;
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
