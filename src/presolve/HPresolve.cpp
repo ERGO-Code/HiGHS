@@ -319,7 +319,7 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 }
 
 bool HPresolve::isImpliedInteger(HighsInt col) {
-  // check if a non-integer variable is implied integer
+  // check if a continuous variable is implied integer
   bool runDualDetection = true;
 
   assert(model->integrality_[col] == HighsVarType::kContinuous);
