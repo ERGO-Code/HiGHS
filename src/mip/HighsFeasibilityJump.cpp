@@ -28,7 +28,7 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   return HighsModelStatus::kNotset;
 #else
   const HighsInt kMaxTotalEffort = 3e6;
-  const HighsInt kMaxEffortSinceLastImprovement = 1e6;
+  const HighsInt kMaxEffortSinceLastImprovement = 1e3;
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
@@ -38,8 +38,9 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
   external_feasibilityjump::equalityTolerance = epsilon;
   external_feasibilityjump::violationTolerance = feastol;
 
+  int verbosity = mipsolver.submip ? 0 : mipsolver.options_mip_->log_dev_level;
   auto solver = external_feasibilityjump::FeasibilityJumpSolver(
-      /* seed = */ 0, /* verbosity = */ 0);
+      /* seed = */ 0, /* verbosity = */ verbosity);
 
   for (HighsInt col = 0; col < model->num_col_; ++col) {
     double lower = model->col_lower_[col];
@@ -114,6 +115,12 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                                       status.solution + status.numVars);
       objective_function_value =
           sense_multiplier * status.solutionObjectiveValue;
+      if (verbosity>0) {
+	printf("Feasibility Jump has found a solution [");
+	for (HighsInt col = 0; col < std::min(10, model->num_col_); ++col)
+	  printf(" %g", col_value[col]);
+	printf("] with objective %g\n", objective_function_value);
+      }
     }
     if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
         status.totalEffort > kMaxTotalEffort) {

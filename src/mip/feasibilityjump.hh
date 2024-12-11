@@ -485,14 +485,16 @@ class FeasibilityJumpSolver {
 
     init(initialValues);
 
+    int log_frequency = 1000;
     for (int step = 0; step < INT_MAX; step += 1) {
       if (user_terminate(callback, nullptr)) break;
 
-      if (step % 100000 == 0) {
+      if (step % log_frequency == 0) {
         if (verbosity >= 1)
-          printf(FJ_LOG_PREFIX "step %d viol %zd good %zd bumps %zd\n", step,
+          printf(FJ_LOG_PREFIX "step %8d; viol %4zd; good %4zd; bumps %8zd; effort %10zd (per step = %6zd) \n",
+		 step,
                  problem.violatedConstraints.size(), goodVarsSet.size(),
-                 nBumps);
+                 nBumps, totalEffort, step > 0 ? totalEffort/step : 0);
       }
 
       if (problem.violatedConstraints.size() < bestViolationScore) {

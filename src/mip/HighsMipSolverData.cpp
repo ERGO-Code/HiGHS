@@ -876,8 +876,8 @@ void HighsMipSolverData::runSetup() {
   checkObjIntegrality();
   rootlpsol.clear();
   firstlpsol.clear();
-  HighsInt numBin = 0;
-
+  HighsInt num_binary = 0;
+  HighsInt num_domain_fixed = 0;
   maxTreeSizeLog2 = 0;
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
@@ -892,6 +892,7 @@ void HighsMipSolverData::runSetup() {
         break;
       case HighsVarType::kInteger:
         if (domain.isFixed(i)) {
+	  num_domain_fixed++;
           if (fractionality(domain.col_lower_[i]) > feastol) {
             // integer variable is fixed to a fractional value -> infeasible
             mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
@@ -925,7 +926,7 @@ void HighsMipSolverData::runSetup() {
         // and I would have used the logical to begin with.
         //
         // Hence any compiler warning can be ignored safely
-        numBin +=
+        num_binary +=
             (static_cast<HighsInt>(mipsolver.model_->col_lower_[i] == 0.0) &
              static_cast<HighsInt>(mipsolver.model_->col_upper_[i] == 1.0));
         break;
@@ -942,31 +943,46 @@ void HighsMipSolverData::runSetup() {
   basisTransfer();
 
   numintegercols = integer_cols.size();
-  detectSymmetries = detectSymmetries && numBin > 0;
+  detectSymmetries = detectSymmetries && num_binary > 0;
   numCliqueEntriesAfterPresolve = cliquetable.getNumEntries();
-
+  HighsInt num_col = mipsolver.numCol();
+  HighsInt num_general_integer = numintegercols - num_binary;
+  HighsInt num_implied_integer = implint_cols.size();
+  HighsInt num_continuous = continuous_cols.size();
+  assert(num_col == num_continuous + num_binary + num_general_integer + num_implied_integer + num_domain_fixed);
   if (numRestarts == 0) {
     numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  // clang-format off
-               "\nSolving MIP model with:\n"
-               "   %" HIGHSINT_FORMAT " rows\n"
-               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int., %" HIGHSINT_FORMAT " continuous)\n"
-               "   %" HIGHSINT_FORMAT " nonzeros\n",
+		 "\nSolving MIP model with:\n"
+		 "   %" HIGHSINT_FORMAT " rows\n"
+		 "   %" HIGHSINT_FORMAT " cols ("
+		 "%" HIGHSINT_FORMAT" binary, "
+		 "%" HIGHSINT_FORMAT " integer, "
+		 "%" HIGHSINT_FORMAT" implied int., "
+		 "%" HIGHSINT_FORMAT " continuous, "
+		 "%" HIGHSINT_FORMAT " domain fixed)\n"
+		 "   %" HIGHSINT_FORMAT " nonzeros\n",
                  // clang-format on
-                 mipsolver.numRow(), mipsolver.numCol(), numBin,
-                 numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
+                 mipsolver.numRow(), num_col, num_binary,
+                 num_general_integer, num_implied_integer,
+                 num_continuous, num_domain_fixed, mipsolver.numNonzero());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Model after restart has %" HIGHSINT_FORMAT
-                 " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
-                 " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
-                 " impl., %" HIGHSINT_FORMAT " cont.), and %" HIGHSINT_FORMAT
-                 " nonzeros\n",
-                 mipsolver.numRow(), mipsolver.numCol(), numBin,
-                 numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
+                 "Model after restart has "
+                 // clang-format off
+		 "%" HIGHSINT_FORMAT " rows, "
+		 "%" HIGHSINT_FORMAT " cols ("
+		 "%" HIGHSINT_FORMAT " bin., "
+		 "%" HIGHSINT_FORMAT " int., "
+		 "%" HIGHSINT_FORMAT " impl., "
+		 "%" HIGHSINT_FORMAT " cont., "
+		 "%" HIGHSINT_FORMAT " dom.fix.), and "
+		 "%" HIGHSINT_FORMAT " nonzeros\n",
+                 // clang-format on
+                 mipsolver.numRow(), num_col, num_binary,
+                 num_general_integer, num_implied_integer,
+                 num_continuous, num_domain_fixed, mipsolver.numNonzero());
   }
 
   heuristics.setupIntCols();
