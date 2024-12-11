@@ -244,9 +244,9 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 
 bool HPresolve::isImpliedIntegral(HighsInt col) {
   // check if the integer constraint on a variable is implied by the model
-  bool runDualDetection = true;
-
   assert(model->integrality_[col] == HighsVarType::kInteger);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -320,9 +320,9 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 
 bool HPresolve::isImpliedInteger(HighsInt col) {
   // check if a continuous variable is implied integer
-  bool runDualDetection = true;
-
   assert(model->integrality_[col] == HighsVarType::kContinuous);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
