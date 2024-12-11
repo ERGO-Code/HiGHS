@@ -14,7 +14,7 @@
 #include "mip/feasibilityjump.hh"
 #include "util/HighsSparseMatrix.h"
 
-void HighsMipSolverData::feasibilityJump() {
+HighsModelStatus HighsMipSolverData::feasibilityJump() {
   // This is the (presolved) model being solved
   const HighsLp* model = this->mipsolver.model_;
   const HighsLogOptions& log_options = mipsolver.options_mip_->log_options;
@@ -25,8 +25,8 @@ void HighsMipSolverData::feasibilityJump() {
   // TODO(BenChampion,9999-12-31): make FJ work with 64-bit HighsInt
   highsLogUser(log_options, HighsLogType::kInfo,
                "Feasibility Jump code isn't currently compatible "
-               "with a 64-bit HighsInt. Skipping Feasibility Jump.\n");
-  return;
+               "with a 64-bit HighsInt: skipping Feasibility Jump\n");
+  return HighsModelStatus::kNotset;
 #else
   const HighsInt kMaxTotalEffort = 3e6;
   const HighsInt kMaxEffortSinceLastImprovement = 1e6;
@@ -58,12 +58,17 @@ void HighsMipSolverData::feasibilityJump() {
       upper = std::floor(upper);
     }
 
-    if (lower > upper || lower == infinity || upper == -infinity ||
-        std::isnan(lower) || std::isnan(upper)) {
-      highsLogUser(
-          log_options, HighsLogType::kInfo,
-          "Detected infeasible column bounds. Skipping Feasibility Jump.\n");
-      return;
+    const bool legal_bounds = lower <= upper && lower < kHighsInf &&
+                              upper > -kHighsInf && !std::isnan(lower) &&
+                              !std::isnan(upper);
+    if (!legal_bounds) {
+      assert(legal_bounds);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "HighsMipSolverData::feasibilityJump() has detected "
+                   "infeasible/illegal bounds [%g, %g] for "
+                   "column %d: MIP is infeasible\n",
+                   lower, upper, int(col));
+      return HighsModelStatus::kInfeasible;
     }
     solver.addVar(fjVarType, lower, upper,
                   sense_multiplier * model->col_cost_[col]);
@@ -125,5 +130,6 @@ void HighsMipSolverData::feasibilityJump() {
     addIncumbent(col_value, objective_function_value,
                  kSolutionSourceFeasibilityJump);
   }
+  return HighsModelStatus::kNotset;
 #endif
 }

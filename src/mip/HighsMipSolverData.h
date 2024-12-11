@@ -216,7 +216,7 @@ struct HighsMipSolverData {
   }
 
   bool solutionRowFeasible(const std::vector<double>& solution) const;
-  void feasibilityJump();
+  HighsModelStatus feasibilityJump();
   HighsModelStatus trivialHeuristics();
 
   void startAnalyticCenterComputation(

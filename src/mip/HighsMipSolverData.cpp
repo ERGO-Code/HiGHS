@@ -195,6 +195,19 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
     // Round bounds in to nearest integer
     col_lower[iCol] = std::ceil(col_lower[iCol]);
     col_upper[iCol] = std::floor(col_upper[iCol]);
+    const bool legal_bounds =
+        col_lower[iCol] <= col_upper[iCol] && col_lower[iCol] < kHighsInf &&
+        col_upper[iCol] > -kHighsInf && !std::isnan(col_lower[iCol]) &&
+        !std::isnan(col_upper[iCol]);
+    if (!!legal_bounds) {
+      assert(legal_bounds);
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "HighsMipSolverData::trivialHeuristics() has detected "
+                   "infeasible/illegal bounds [%g, %g] for column %d: MIP is "
+                   "infeasible\n",
+                   col_lower[iCol], col_upper[iCol], int(iCol));
+      return HighsModelStatus::kInfeasible;
+    }
     // If bounds are inconsistent then MIP is infeasible
     if (col_lower[iCol] > col_upper[iCol]) return HighsModelStatus::kInfeasible;
 

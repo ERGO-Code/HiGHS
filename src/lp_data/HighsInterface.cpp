@@ -3514,9 +3514,11 @@ bool Highs::infeasibleBoundsOk() {
   const bool has_integrality = lp.integrality_.size() > 0;
   bool performed_inward_integer_rounding = false;
   // Lambda for assessing infeasible bounds
-  auto assessInfeasibleBound = [&](const std::string type, const HighsInt iX,
-                                   double& lower, double& upper) {
+  auto infeasibleBoundOk = [&](const std::string type, const HighsInt iX,
+                               double& lower, double& upper) {
     double range = upper - lower;
+    // Should only be called if lower > upper, so range < 0
+    assert(range < 0);
     if (range >= 0) return true;
     if (range > -this->options_.primal_feasibility_tolerance) {
       // Infeasibility is less than feasibility tolerance, so fix
@@ -3590,14 +3592,26 @@ bool Highs::infeasibleBoundsOk() {
         upper = integer_upper;
       }
     }
-    if (lower > upper) assessInfeasibleBound("Column", iCol, lower, upper);
-    lp.col_lower_[iCol] = lower;
-    lp.col_upper_[iCol] = upper;
+    //
+    if (lower > upper) {
+      if (infeasibleBoundOk("Column", iCol, lower, upper)) {
+        // Bound infeasibility is OK (less than the tolerance), so can
+        // change the model data
+        lp.col_lower_[iCol] = lower;
+        lp.col_upper_[iCol] = upper;
+      }
+    }
+    // Note that any inward integer rounding can't be used to change
+    // the model data, since it may be a significant change and make
+    // the relaxation infeasible when previously it was feasible. In
+    // particular, when inward integer rounding leads to inconsistent
+    // bounds being propagated to the relaxation, this can prevent a
+    // dual ray from being constructed
   }
+  performed_inward_integer_rounding = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
-      assessInfeasibleBound("Row", iRow, lp.row_lower_[iRow],
-                            lp.row_upper_[iRow]);
+      infeasibleBoundOk("Row", iRow, lp.row_lower_[iRow], lp.row_upper_[iRow]);
   }
   if (num_ok_infeasible_bound > 0)
     highsLogUser(log_options, HighsLogType::kInfo,

@@ -178,8 +178,15 @@ restart:
     if (options_mip_->mip_allow_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
       analysis_.mipTimerStart(kMipClockFeasibilityJump);
-      mipdata_->feasibilityJump();
+      HighsModelStatus model_status = mipdata_->feasibilityJump();
       analysis_.mipTimerStop(kMipClockFeasibilityJump);
+      if (modelstatus_ == HighsModelStatus::kNotset &&
+          model_status == HighsModelStatus::kInfeasible) {
+        // feasibilityJump can spot trivial infeasibility, so act on it
+        modelstatus_ = model_status;
+        cleanupSolve();
+        return;
+      }
     }
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
