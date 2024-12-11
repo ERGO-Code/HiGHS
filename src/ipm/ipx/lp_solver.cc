@@ -411,18 +411,24 @@ void LpSolver::RunIPM() {
                              y_start_, zl_start_, zu_start_);
     }
     else {
+        ipx_stats_.type1_time = -control_.Elapsed();
         ComputeStartingPoint(ipm);
+        ipx_stats_.type1_time += control_.Elapsed();
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
         RunInitialIPM(ipm);
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
     }
+    ipx_stats_.basis0_time = -control_.Elapsed();
     BuildStartingBasis();
+    ipx_stats_.basis0_time += control_.Elapsed();
     if (info_.status_ipm != IPX_STATUS_not_run || 
         info_.centring_tried)
         return;
+    ipx_stats_.type2_time = -control_.Elapsed();
     RunMainIPM(ipm);
+    ipx_stats_.type2_time += control_.Elapsed();
 }
 
 void LpSolver::MakeIPMStartingPointValid() {

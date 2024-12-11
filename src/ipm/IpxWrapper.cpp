@@ -1181,20 +1181,23 @@ void HighsIpxStats::report(FILE* file, const std::string message,
     fprintf(file, "          mean CR count       = %g\n", this->average_type2_cr_count);
     fprintf(file, "          mean CR matrix nz   = %g\n", this->average_type2_matrix_nz);
     fprintf(file, "          mean CR INVERT nz   = %g\n", this->average_type2_invert_nz);
-    fprintf(file, "IPM time                      = %g\n", this->ipm_time);
-    fprintf(file, "Crossover time                = %g\n", this->crossover_time);
+    fprintf(file, "   Type 1                time = %g\n", this->type1_time);
+    fprintf(file, "   Starting basis        time = %g\n", this->basis0_time);
+    fprintf(file, "   Type 2                time = %g\n", this->type2_time);
+    fprintf(file, "   IPM                   time = %g\n", this->ipm_time);
+    fprintf(file, "   Crossover             time = %g\n", this->crossover_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,cr_count,iteration_count, "
-            "cr_count,matrix_nz,invert_nz,ipm_time,crossover_time,");
+            "cr_count,matrix_nz,invert_nz,type1_time,basis0_time,type2_time,ipm_time,crossover_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     this->averages();
-    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,", int(this->valid),
+    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
             int(this->num_col), int(this->num_row), int(this->num_nz),
             int(this->num_type1_iteration), int(this->average_type1_cr_count),
             int(this->num_type2_iteration), int(this->average_type2_cr_count),
             int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
-	    this->ipm_time, this->crossover_time);
+	    this->type1_time, this->basis0_time, this->type2_time, this->ipm_time, this->crossover_time);
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -1218,6 +1221,9 @@ void HighsIpxStats::initialise() {
   average_type2_cr_count = 0;
   average_type2_matrix_nz = 0;
   average_type2_invert_nz = 0;
+  type1_time = 0;
+  basis0_time = 0;
+  type2_time = 0;
   ipm_time = 0;
   crossover_time = 0;  
 }

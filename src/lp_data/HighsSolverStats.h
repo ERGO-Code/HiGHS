@@ -86,6 +86,9 @@ struct HighsIpxStats {
   double average_type2_cr_count;
   double average_type2_matrix_nz;
   double average_type2_invert_nz;
+  double type1_time;
+  double basis0_time;
+  double type2_time;
   double ipm_time;
   double crossover_time;  
   void workTerms(double* terms);
