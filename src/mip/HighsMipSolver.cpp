@@ -178,27 +178,27 @@ restart:
     if (options_mip_->mip_allow_feasibility_jump) {
       // Apply the feasibility jump before evaluating the root node
       analysis_.mipTimerStart(kMipClockFeasibilityJump);
-      HighsModelStatus model_status = mipdata_->feasibilityJump();
+      HighsModelStatus returned_model_status = mipdata_->feasibilityJump();
       analysis_.mipTimerStop(kMipClockFeasibilityJump);
       if (modelstatus_ == HighsModelStatus::kNotset &&
-          model_status == HighsModelStatus::kInfeasible) {
+          returned_model_status == HighsModelStatus::kInfeasible) {
         // feasibilityJump can spot trivial infeasibility, so act on it
-        modelstatus_ = model_status;
+        modelstatus_ = returned_model_status;
         cleanupSolve();
         return;
       }
     }
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
-    HighsModelStatus model_status = mipdata_->trivialHeuristics();
+    HighsModelStatus returned_model_status = mipdata_->trivialHeuristics();
+    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (modelstatus_ == HighsModelStatus::kNotset &&
-        model_status == HighsModelStatus::kInfeasible) {
+        returned_model_status == HighsModelStatus::kInfeasible) {
       // trivialHeuristics can spot trivial infeasibility, so act on it
-      modelstatus_ = model_status;
+      modelstatus_ = returned_model_status;
       cleanupSolve();
       return;
     }
-    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",

@@ -199,7 +199,7 @@ HighsModelStatus HighsMipSolverData::trivialHeuristics() {
         col_lower[iCol] <= col_upper[iCol] && col_lower[iCol] < kHighsInf &&
         col_upper[iCol] > -kHighsInf && !std::isnan(col_lower[iCol]) &&
         !std::isnan(col_upper[iCol]);
-    if (!!legal_bounds) {
+    if (!legal_bounds) {
       assert(legal_bounds);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "HighsMipSolverData::trivialHeuristics() has detected "
