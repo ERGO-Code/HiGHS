@@ -882,11 +882,17 @@ void HighsMipSolverData::runSetup() {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::kContinuous:
-        if (domain.isFixed(i)) continue;
+        if (domain.isFixed(i)) {
+          num_domain_fixed++;
+          continue;
+        }
         continuous_cols.push_back(i);
         break;
       case HighsVarType::kImplicitInteger:
-        if (domain.isFixed(i)) continue;
+        if (domain.isFixed(i)) {
+          num_domain_fixed++;
+          continue;
+        }
         implint_cols.push_back(i);
         integral_cols.push_back(i);
         break;
