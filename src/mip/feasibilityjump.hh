@@ -25,8 +25,8 @@ enum CallbackControlFlow {
 };
 
 struct FJStatus {
-  int totalEffort;
-  int effortSinceLastImprovement;
+  size_t totalEffort;
+  size_t effortSinceLastImprovement;
   int numVars;
   double solutionObjectiveValue;
   double* solution;
@@ -485,7 +485,7 @@ class FeasibilityJumpSolver {
 
     init(initialValues);
 
-    int log_frequency = 1000;
+    int log_frequency = 100000;
     for (int step = 0; step < INT_MAX; step += 1) {
       if (user_terminate(callback, nullptr)) break;
 
