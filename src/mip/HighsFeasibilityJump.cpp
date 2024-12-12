@@ -27,8 +27,10 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                "with a 64-bit HighsInt: skipping Feasibility Jump\n");
   return HighsModelStatus::kNotset;
 #else
-  const HighsInt kMaxTotalEffort = 3e6;
-  const HighsInt kMaxEffortSinceLastImprovement = 1e3;
+  const size_t kMaxTotalEffort = std::pow(2, 34);
+  const size_t kMaxEffortSinceLastImprovement = std::pow(2, 33);
+  printf("HighsMipSolverData::feasibilityJump: kMaxTotalEffort = %10zd; kMaxEffortSinceLastImprovement = %10zd\n",
+	 kMaxTotalEffort, kMaxEffortSinceLastImprovement);
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
@@ -122,10 +124,18 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
 	printf("] with objective %g\n", objective_function_value);
       }
     }
-    if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
-        status.totalEffort > kMaxTotalEffort) {
+    const bool exceeded_max_total_effort = status.totalEffort > kMaxTotalEffort;
+    const bool exceeded_max_improvement_effort = status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement;
+    printf("FJ Callback: effortSinceLastImprovement = %9d; totalEffort = %9d: logic (Total: %1d; Improvement %1d)",
+	   status.effortSinceLastImprovement, status.totalEffort,
+	   exceeded_max_total_effort, exceeded_max_improvement_effort);
+    
+    if (exceeded_max_improvement_effort ||
+	exceeded_max_total_effort) {
+      printf(": terminating\n");
       return external_feasibilityjump::CallbackControlFlow::Terminate;
     } else {
+      printf("\n");
       return external_feasibilityjump::CallbackControlFlow::Continue;
     }
   };

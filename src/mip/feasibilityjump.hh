@@ -491,10 +491,11 @@ class FeasibilityJumpSolver {
 
       if (step % log_frequency == 0) {
         if (verbosity >= 1)
-          printf(FJ_LOG_PREFIX "step %8d; viol %4zd; good %4zd; bumps %8zd; effort %10zd (per step = %6zd) \n",
+          printf(FJ_LOG_PREFIX "step %8d; viol %4zd; good %4zd; bumps %8zd; effort %10zd (per step = %6zd) Objective = %g\n",
 		 step,
                  problem.violatedConstraints.size(), goodVarsSet.size(),
-                 nBumps, totalEffort, step > 0 ? totalEffort/step : 0);
+                 nBumps, totalEffort, step > 0 ? totalEffort/step : 0,
+		 problem.incumbentObjective);
       }
 
       if (problem.violatedConstraints.size() < bestViolationScore) {
@@ -719,7 +720,7 @@ class FeasibilityJumpSolver {
 
   bool user_terminate(std::function<CallbackControlFlow(FJStatus)> callback,
                       double* solution) {
-    const int CALLBACK_EFFORT = 500000;
+    const int CALLBACK_EFFORT = 50000000;// 500000;
     if (solution != nullptr ||
         totalEffort - effortAtLastCallback > CALLBACK_EFFORT) {
       if (verbosity >= 2) printf(FJ_LOG_PREFIX "calling user termination.\n");
