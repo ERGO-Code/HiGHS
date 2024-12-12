@@ -282,40 +282,41 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 
   if (!runDualDetection) return false;
 
-  bool impliedIntegral = true;
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     // if row coefficients are not integral, variable is not (implied) integral
-    bool rowIntegral = rowCoefficientsIntegral(nz.index(), scale);
-    impliedIntegral = impliedIntegral && rowIntegral;
-    if (!rowIntegral) continue;
+    if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
     if (model->row_upper_[nz.index()] != kHighsInf) {
-      // scale, round down and unscale right-hand side again
+      // right-hand side: scale, round down and unscale again
       double rUpper =
           std::abs(nz.value()) *
           std::floor(model->row_upper_[nz.index()] * std::abs(scale) +
                      primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_upper_[nz.index()] - rUpper) >
           options->small_matrix_value) {
+        // update right-hand side and mark row as changed
         model->row_upper_[nz.index()] = rUpper;
         markChangedRow(nz.index());
       }
     }
     if (model->row_lower_[nz.index()] != -kHighsInf) {
-      // scale, round up and unscale left-hand side again
+      // left-hand side: scale, round up and unscale again
       double rLower =
           std::abs(nz.value()) *
           std::ceil(model->row_lower_[nz.index()] * std::abs(scale) -
                     primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_lower_[nz.index()] - rLower) >
           options->small_matrix_value) {
+        // update left-hand side and mark row as changed
         model->row_lower_[nz.index()] = rLower;
         markChangedRow(nz.index());
       }
     }
   }
 
-  return impliedIntegral;
+  return true;
 }
 
 bool HPresolve::isImpliedInteger(HighsInt col) {
