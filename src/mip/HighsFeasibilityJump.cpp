@@ -27,10 +27,9 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                "with a 64-bit HighsInt: skipping Feasibility Jump\n");
   return HighsModelStatus::kNotset;
 #else
-  const size_t kMaxTotalEffort = std::pow(2, 34);
-  const size_t kMaxEffortSinceLastImprovement = std::pow(2, 33);
-  printf("HighsMipSolverData::feasibilityJump: kMaxTotalEffort = %zd; kMaxEffortSinceLastImprovement = %zd\n",
-	 kMaxTotalEffort, kMaxEffortSinceLastImprovement);
+  const size_t kMaxTotalEffort = std::pow(2, 30);  // Originally 1e6
+  const size_t kMaxEffortSinceLastImprovement =
+      std::pow(2, 25);  // Originally 1e3
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
@@ -116,22 +115,31 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
       col_value = std::vector<double>(status.solution,
                                       status.solution + status.numVars);
       objective_function_value =
-          sense_multiplier * status.solutionObjectiveValue;
-      if (verbosity>0) {
-	printf("Feasibility Jump has found a solution [");
-	for (HighsInt col = 0; col < std::min(10, model->num_col_); ++col)
-	  printf(" %g", col_value[col]);
-	printf("] with objective %g\n", objective_function_value);
+          model->offset_ + sense_multiplier * status.solutionObjectiveValue;
+      if (verbosity > 0) {
+        printf("Feasibility Jump has found a solution");
+        if (model->num_col_ < 10) {
+          printf(" [");
+          for (HighsInt col = 0; col < std::min(10, model->num_col_); ++col)
+            printf(" %g", col_value[col]);
+          printf("]");
+        }
+        printf(" with objective %g\n", objective_function_value);
       }
     }
     if (status.effortSinceLastImprovement > kMaxEffortSinceLastImprovement ||
-	status.totalEffort > kMaxTotalEffort) {
+        status.totalEffort > kMaxTotalEffort) {
       return external_feasibilityjump::CallbackControlFlow::Terminate;
     } else {
       return external_feasibilityjump::CallbackControlFlow::Continue;
     }
   };
 
+  if (verbosity > 0)
+    printf(
+        "Feasibility Jump: kMaxTotalEffort = %zd; "
+        "kMaxEffortSinceLastImprovement = %zd\n",
+        kMaxTotalEffort, kMaxEffortSinceLastImprovement);
   solver.solve(col_value.data(), fjControlCallback);
 
   if (found_integer_feasible_solution) {

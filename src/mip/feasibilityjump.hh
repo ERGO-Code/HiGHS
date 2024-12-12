@@ -437,13 +437,16 @@ class FeasibilityJumpSolver {
   size_t bestViolationScore = SIZE_MAX;
   size_t effortAtLastCallback = 0;
   size_t effortAtLastImprovement = 0;
+  size_t effortAtLastLogging = 0;
   size_t totalEffort = 0;
 
   double weightUpdateDecay;
   double weightUpdateIncrement = 1.0;
 
   size_t nBumps = 0;  // no initialization in reference feasibilityjump.hh
-
+  
+  bool need_logging_header = true;
+  
   // The probability of choosing a random positive-score variable.
   const double randomVarProbability = 0.001;
 
@@ -455,6 +458,11 @@ class FeasibilityJumpSolver {
   // The number of moves to evaluate, if there are many positive-score
   // variables available.
   const size_t maxMovesToEvaluate = 25;
+
+  const int kLoggingFrequency = 100000; // Originally 100000
+  const int kLoggingHeaderFrequency = 50;
+  const size_t kMinEffortToLogging = 500 * kLoggingFrequency;
+  const double kMinRelativeObjectiveImprovement = 1e-4;
 
  public:
   FeasibilityJumpSolver(int seed = 0, int _verbosity = 0,
@@ -475,7 +483,7 @@ class FeasibilityJumpSolver {
                                  relax_continuous);
   }
 
-  int solve(double* initialValues,
+ int solve(double* initialValues,
             std::function<CallbackControlFlow(FJStatus)> callback) {
     assert(callback);
     if (verbosity >= 1)
@@ -485,17 +493,21 @@ class FeasibilityJumpSolver {
 
     init(initialValues);
 
-    int log_frequency = 100000;
+    effortAtLastLogging = -kMinEffortToLogging; // Enabling step=0 logging
+    int num_logging_lines_since_header = 0;
     for (int step = 0; step < INT_MAX; step += 1) {
       if (user_terminate(callback, nullptr)) break;
 
-      if (step % log_frequency == 0) {
-        if (verbosity >= 1)
-          printf(FJ_LOG_PREFIX "step %8d; viol %4zd; good %4zd; bumps %8zd; effort %10zd (per step = %6zd) Objective = %g\n",
-		 step,
-                 problem.violatedConstraints.size(), goodVarsSet.size(),
-                 nBumps, totalEffort, step > 0 ? totalEffort/step : 0,
-		 problem.incumbentObjective);
+      if (step % kLoggingFrequency == 0 &&
+	  totalEffort > effortAtLastLogging + kMinEffortToLogging &&
+	  verbosity >= 1) {
+	if (need_logging_header) {
+	  logging(0, true);
+	  num_logging_lines_since_header = 0;
+	}
+	logging(step);
+	num_logging_lines_since_header++;
+	need_logging_header = num_logging_lines_since_header == kLoggingHeaderFrequency;
       }
 
       if (problem.violatedConstraints.size() < bestViolationScore) {
@@ -505,9 +517,17 @@ class FeasibilityJumpSolver {
 
       if (problem.violatedConstraints.empty() &&
           problem.incumbentObjective < bestObjective) {
-        effortAtLastImprovement = totalEffort;
-        bestObjective = problem.incumbentObjective;
-        if (user_terminate(callback, problem.incumbentAssignment.data())) break;
+
+	double relative_objective_improvement =
+	  (bestObjective-problem.incumbentObjective) /
+	  std::max(1.0, std::fabs(problem.incumbentObjective));
+	if (relative_objective_improvement > kMinRelativeObjectiveImprovement) {
+	  effortAtLastImprovement = totalEffort;
+	  bestObjective = problem.incumbentObjective;
+	  if (user_terminate(callback, problem.incumbentAssignment.data())) break;
+	  // Repeat the header in case user callback logs new solution
+	  if (verbosity >= 1) need_logging_header = true;
+	}
       }
 
       if (problem.vars.size() == 0) break;
@@ -520,6 +540,19 @@ class FeasibilityJumpSolver {
   }
 
  private:
+  void logging(const int step, const bool header = false) {
+    if (header) {
+      printf(FJ_LOG_PREFIX "       step  violations     good    bumps       effort (per step)          Objective\n");
+    } else {
+      printf(FJ_LOG_PREFIX " %10d    %8zd   %6zd %8zd %12zd    %6zd          %10.4g\n",
+		 step,
+                 problem.violatedConstraints.size(), goodVarsSet.size(),
+                 nBumps, totalEffort, step > 0 ? totalEffort/step : 0,
+		 problem.incumbentObjective);
+      effortAtLastLogging = totalEffort;
+    }
+  }
+
   void init(double* initialValues) {
     problem.resetIncumbent(initialValues);
     jumpMove.init(problem);
@@ -720,7 +753,7 @@ class FeasibilityJumpSolver {
 
   bool user_terminate(std::function<CallbackControlFlow(FJStatus)> callback,
                       double* solution) {
-    const int CALLBACK_EFFORT = 50000000;// 500000;
+    const int CALLBACK_EFFORT = 500000;// Originally 500000
     if (solution != nullptr ||
         totalEffort - effortAtLastCallback > CALLBACK_EFFORT) {
       if (verbosity >= 2) printf(FJ_LOG_PREFIX "calling user termination.\n");

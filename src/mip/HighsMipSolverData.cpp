@@ -892,7 +892,7 @@ void HighsMipSolverData::runSetup() {
         break;
       case HighsVarType::kInteger:
         if (domain.isFixed(i)) {
-	  num_domain_fixed++;
+          num_domain_fixed++;
           if (fractionality(domain.col_lower_[i]) > feastol) {
             // integer variable is fixed to a fractional value -> infeasible
             mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
@@ -949,7 +949,8 @@ void HighsMipSolverData::runSetup() {
   HighsInt num_general_integer = numintegercols - num_binary;
   HighsInt num_implied_integer = implint_cols.size();
   HighsInt num_continuous = continuous_cols.size();
-  assert(num_col == num_continuous + num_binary + num_general_integer + num_implied_integer + num_domain_fixed);
+  assert(num_col == num_continuous + num_binary + num_general_integer +
+                        num_implied_integer + num_domain_fixed);
   if (numRestarts == 0) {
     numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -964,9 +965,9 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
 		 "   %" HIGHSINT_FORMAT " nonzeros\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary,
-                 num_general_integer, num_implied_integer,
-                 num_continuous, num_domain_fixed, mipsolver.numNonzero());
+                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
+                 num_implied_integer, num_continuous, num_domain_fixed,
+                 mipsolver.numNonzero());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
@@ -980,9 +981,9 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " dom.fix.), and "
 		 "%" HIGHSINT_FORMAT " nonzeros\n",
                  // clang-format on
-                 mipsolver.numRow(), num_col, num_binary,
-                 num_general_integer, num_implied_integer,
-                 num_continuous, num_domain_fixed, mipsolver.numNonzero());
+                 mipsolver.numRow(), num_col, num_binary, num_general_integer,
+                 num_implied_integer, num_continuous, num_domain_fixed,
+                 mipsolver.numNonzero());
   }
 
   heuristics.setupIntCols();
@@ -1671,6 +1672,16 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
     ub = mipsolver.options_mip_->objective_bound;
 
   auto print_lp_iters = convertToPrintString(total_lp_iterations);
+  // Before there is an LP relaxation, lp.numRows() = 0, yielding
+  // disturbing negative values for the number of cuts in the LP
+  const bool before_relaxation =
+      solution_source == kSolutionSourceTrivialZ ||
+      solution_source == kSolutionSourceTrivialL ||
+      solution_source == kSolutionSourceTrivialU ||
+      solution_source == kSolutionSourceTrivialP ||
+      solution_source == kSolutionSourceFeasibilityJump;
+  HighsInt num_cuts_in_lp =
+      before_relaxation ? 0 : lp.numRows() - lp.getNumModelRows();
   if (upper_bound != kHighsInf) {
     std::array<char, 22> gap_string = {};
     if (gap >= 9999.)
@@ -1696,8 +1707,8 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
         ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        num_cuts_in_lp, conflictPool.getNumConflicts(), print_lp_iters.data(),
+        time);
   } else {
     std::array<char, 22> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1716,9 +1727,8 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         // clang-format on
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
-        ub_string.data(), gap, cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        ub_string.data(), gap, cutpool.getNumCuts(), num_cuts_in_lp,
+        conflictPool.getNumConflicts(), print_lp_iters.data(), time);
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and
