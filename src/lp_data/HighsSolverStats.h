@@ -35,8 +35,11 @@ enum HighsSimplexWorkTerm {
   HighsSimplexWorkTermCount
 };
 
-const std::vector<std::string> kSimplexWorkNames = {"InvertNumRow", "InvertNumNz", "ComputePD", "Btran", "Price", "Ftran", "FtranDse"};
-const std::vector<double> kSimplexWorkCoefficients = {1.0,2.0,3.0,4.0,5.0,6.0,7.0};
+const std::vector<std::string> kSimplexWorkNames = {
+    "InvertNumRow", "InvertNumNz", "ComputePD", "Btran",
+    "Price",        "Ftran",       "FtranDse"};
+const std::vector<double> kSimplexWorkCoefficients = {1.0, 2.0, 3.0, 4.0,
+                                                      5.0, 6.0, 7.0};
 
 enum HighsIpxWorkTerm {
   HighsIpxWorkTermCr1IterNumRow = 0,
@@ -46,7 +49,8 @@ enum HighsIpxWorkTerm {
   HighsIpxWorkTermCount
 };
 
-const std::vector<std::string> kIpxWorkNames = {"CR1IterNumRow", "CR1IterNumNz", "CR2IterNumRow", "CR2IterNumNz"};
+const std::vector<std::string> kIpxWorkNames = {
+    "CR1IterNumRow", "CR1IterNumNz", "CR2IterNumRow", "CR2IterNumNz"};
 const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 3.0, 4.0};
 
 struct HighsSimplexStats {
@@ -90,7 +94,7 @@ struct HighsIpxStats {
   double basis0_time;
   double type2_time;
   double ipm_time;
-  double crossover_time;  
+  double crossover_time;
   void workTerms(double* terms);
   double workEstimate();
   void averages();

@@ -4449,8 +4449,7 @@ void HighsSimplexStats::report(FILE* file, std::string message,
     fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
     fprintf(file, "   row_DSE_density            = %g\n",
             this->row_DSE_density);
-    fprintf(file, "   simplex time =             = %g\n",
-            this->simplex_time);
+    fprintf(file, "   simplex time =             = %g\n", this->simplex_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_"
@@ -4464,7 +4463,7 @@ void HighsSimplexStats::report(FILE* file, std::string message,
             int(this->last_factored_basis_num_el),
             int(this->last_invert_num_el), this->col_aq_density,
             this->row_ep_density, this->row_ap_density, this->row_DSE_density,
-	    this->simplex_time);
+            this->simplex_time);
   } else {
     fprintf(file, "Unknown simplex stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -4488,25 +4487,35 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
 }
 
 void HighsSimplexStats::workTerms(double* terms) const {
-  const double nonbasic_nz = double(this->num_nz + this->num_row - this->last_factored_basis_num_el);
-  terms[HighsSimplexWorkTermInvertNumRow] = double(this->num_invert) * double(this->num_row);
-  terms[HighsSimplexWorkTermInvertNumNz] = double(this->num_invert) * this->last_factored_basis_num_el;
-  terms[HighsSimplexWorkTermComputePD] = double(this->num_invert) * double(this->last_invert_num_el + nonbasic_nz);
-  terms[HighsSimplexWorkTermBtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_ep_density;
-  terms[HighsSimplexWorkTermPrice] = double(this->iteration_count) * nonbasic_nz * this->row_ep_density;
-  terms[HighsSimplexWorkTermFtran] = double(this->iteration_count) * double(this->last_invert_num_el) * this->col_aq_density;
-  terms[HighsSimplexWorkTermFtranDse] = double(this->iteration_count) * double(this->last_invert_num_el) * this->row_DSE_density;
+  const double nonbasic_nz =
+      double(this->num_nz + this->num_row - this->last_factored_basis_num_el);
+  terms[HighsSimplexWorkTermInvertNumRow] =
+      double(this->num_invert) * double(this->num_row);
+  terms[HighsSimplexWorkTermInvertNumNz] =
+      double(this->num_invert) * this->last_factored_basis_num_el;
+  terms[HighsSimplexWorkTermComputePD] =
+      double(this->num_invert) * double(this->last_invert_num_el + nonbasic_nz);
+  terms[HighsSimplexWorkTermBtran] = double(this->iteration_count) *
+                                     double(this->last_invert_num_el) *
+                                     this->row_ep_density;
+  terms[HighsSimplexWorkTermPrice] =
+      double(this->iteration_count) * nonbasic_nz * this->row_ep_density;
+  terms[HighsSimplexWorkTermFtran] = double(this->iteration_count) *
+                                     double(this->last_invert_num_el) *
+                                     this->col_aq_density;
+  terms[HighsSimplexWorkTermFtranDse] = double(this->iteration_count) *
+                                        double(this->last_invert_num_el) *
+                                        this->row_DSE_density;
 }
 
-
 double HighsSimplexStats::workEstimate() const {
-   double* terms = new double[HighsSimplexWorkTermCount];
-   this->workTerms(terms);
-   double work = 0;
-   for (HighsInt iX = 0; iX < HighsSimplexWorkTermCount; iX++) {
-     assert(terms[iX]>0);
-     work += terms[iX] * kSimplexWorkCoefficients[iX];
-   }
-   delete[] terms;
-   return work;
+  double* terms = new double[HighsSimplexWorkTermCount];
+  this->workTerms(terms);
+  double work = 0;
+  for (HighsInt iX = 0; iX < HighsSimplexWorkTermCount; iX++) {
+    assert(terms[iX] > 0);
+    work += terms[iX] * kSimplexWorkCoefficients[iX];
+  }
+  delete[] terms;
+  return work;
 }

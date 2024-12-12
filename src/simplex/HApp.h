@@ -334,18 +334,20 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }
     if (solve_unscaled_lp) {
-      if (refine_solution) 
-	printf("GrepSolverStats: Model %s requires refinement due to num/max/sum primal "
-	       "(%" HIGHSINT_FORMAT "/%g/%g) and dual (%" HIGHSINT_FORMAT
-	       "/%g/%g) "
-	       "unscaled infeasibilities\n",
-	       incumbent_lp.model_name_.c_str(),
-	       highs_info.num_primal_infeasibilities,
-	       highs_info.max_primal_infeasibility,
-	       highs_info.sum_primal_infeasibilities,
-	       highs_info.num_dual_infeasibilities,
-	       highs_info.max_dual_infeasibility,
-	       highs_info.sum_dual_infeasibilities);
+      if (refine_solution)
+        printf(
+            "GrepSolverStats: Model %s requires refinement due to num/max/sum "
+            "primal "
+            "(%" HIGHSINT_FORMAT "/%g/%g) and dual (%" HIGHSINT_FORMAT
+            "/%g/%g) "
+            "unscaled infeasibilities\n",
+            incumbent_lp.model_name_.c_str(),
+            highs_info.num_primal_infeasibilities,
+            highs_info.max_primal_infeasibility,
+            highs_info.sum_primal_infeasibilities,
+            highs_info.num_dual_infeasibilities,
+            highs_info.max_dual_infeasibility,
+            highs_info.sum_dual_infeasibilities);
       // Save options/strategies that may be changed
       HighsInt simplex_strategy = options.simplex_strategy;
       double dual_simplex_cost_perturbation_multiplier =

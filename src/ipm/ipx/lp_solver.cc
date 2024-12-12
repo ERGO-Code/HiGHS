@@ -413,10 +413,12 @@ void LpSolver::RunIPM() {
     else {
         ipx_stats_.type1_time = -control_.Elapsed();
         ComputeStartingPoint(ipm);
-        ipx_stats_.type1_time += control_.Elapsed();
-        if (info_.status_ipm != IPX_STATUS_not_run)
-            return;
+        if (info_.status_ipm != IPX_STATUS_not_run) {
+	  ipx_stats_.type1_time += control_.Elapsed();
+	  return;
+	}
         RunInitialIPM(ipm);
+        ipx_stats_.type1_time += control_.Elapsed();
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
     }

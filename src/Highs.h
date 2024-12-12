@@ -1238,8 +1238,8 @@ class Highs {
 
   const HighsIpxStats& getIpxStats() { return ipx_stats_; }
 
-  void reportIpxStats(
-      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) {
+  void reportIpxStats(FILE* file,
+                      const HighsInt style = HighsSolverStatsReportPretty) {
     ipx_stats_.report(file, "Original LP", style);
   }
 

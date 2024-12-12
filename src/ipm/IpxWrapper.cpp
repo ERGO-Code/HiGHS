@@ -59,6 +59,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // then a basis and primal+dual solution are obtained.
   //
   //
+  const double entry_run_time = timer.readRunHighsClock();
   // Indicate that there is no valid primal solution, dual solution or basis
   highs_basis.valid = false;
   highs_solution.value_valid = false;
@@ -119,7 +120,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.analyse_basis_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
-  parameters.time_limit = options.time_limit - timer.readRunHighsClock();
+  parameters.time_limit = std::max(options.time_limit - entry_run_time, 0.0);
+
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   parameters.cr1_maxiter = options.cr1_iteration_limit;
@@ -1091,11 +1093,20 @@ void reportSolveData(const HighsLogOptions& log_options,
 }
 
 void HighsIpxStats::workTerms(double* terms) {
-  const double nonbasic_nz = double(this->num_nz + this->num_row - this->average_type2_matrix_nz);
-  terms[HighsIpxWorkTermCr1IterNumRow] = double(this->num_type1_iteration) * average_type1_cr_count * double(this->num_row);
-  terms[HighsIpxWorkTermCr1IterNumNz] = double(this->num_type1_iteration) * average_type1_cr_count * double(this->num_nz);
-  terms[HighsIpxWorkTermCr2IterNumRow] = double(this->num_type2_iteration) * average_type2_cr_count * double(this->num_row);
-  terms[HighsIpxWorkTermCr2IterNumNz] = double(this->num_type2_iteration) * average_type2_cr_count * (nonbasic_nz + average_type2_invert_nz);
+  const double nonbasic_nz =
+      double(this->num_nz + this->num_row - this->average_type2_matrix_nz);
+  terms[HighsIpxWorkTermCr1IterNumRow] = double(this->num_type1_iteration) *
+                                         average_type1_cr_count *
+                                         double(this->num_row);
+  terms[HighsIpxWorkTermCr1IterNumNz] = double(this->num_type1_iteration) *
+                                        average_type1_cr_count *
+                                        double(this->num_nz);
+  terms[HighsIpxWorkTermCr2IterNumRow] = double(this->num_type2_iteration) *
+                                         average_type2_cr_count *
+                                         double(this->num_row);
+  terms[HighsIpxWorkTermCr2IterNumNz] = double(this->num_type2_iteration) *
+                                        average_type2_cr_count *
+                                        (nonbasic_nz + average_type2_invert_nz);
 }
 
 double HighsIpxStats::workEstimate() {
@@ -1103,11 +1114,11 @@ double HighsIpxStats::workEstimate() {
   this->workTerms(terms);
   double work = 0;
   for (HighsInt iX = 0; iX < HighsIpxWorkTermCount; iX++) {
-    assert(terms[iX]>0);
+    assert(terms[iX] > 0);
     work += terms[iX] * kIpxWorkCoefficients[iX];
   }
   delete[] terms;
-  return work; 
+  return work;
 }
 
 void HighsIpxStats::averages() {
@@ -1117,8 +1128,7 @@ void HighsIpxStats::averages() {
   average_type2_cr_count = 0;
   average_type2_matrix_nz = 0;
   average_type2_invert_nz = 0;
-  for (HighsInt iteration = 0; iteration < this->iteration_count;
-       iteration++) {
+  for (HighsInt iteration = 0; iteration < this->iteration_count; iteration++) {
     if (this->cr_type[iteration] == 1) {
       num_type1_iteration++;
       average_type1_cr_count += this->cr_count[iteration];
@@ -1166,21 +1176,27 @@ void HighsIpxStats::report(FILE* file, const std::string message,
     assert(this->iteration_count == HighsInt(this->invert_num_el.size()));
     assert(this->iteration_count ==
            HighsInt(this->factored_basis_num_el.size()));
-    if (iteration_count>0) 
+    if (iteration_count > 0)
       fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
     // printf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
-    for (HighsInt iteration = 0; iteration < iteration_count; iteration++) 
+    for (HighsInt iteration = 0; iteration < iteration_count; iteration++)
       fprintf(file, "   %4d     %1d    %5d %7d  %7d\n", int(iteration),
               int(this->cr_type[iteration]), int(this->cr_count[iteration]),
               int(this->factored_basis_num_el[iteration]),
               int(this->invert_num_el[iteration]));
     fprintf(file, "   num_nz                     = %d\n", this->num_nz);
-    fprintf(file, "   Type 1 iteration           = %d\n", this->num_type1_iteration);
-    fprintf(file, "          mean CR count       = %g\n", this->average_type1_cr_count);
-    fprintf(file, "   Type 2 iteration           = %d\n", this->num_type2_iteration);
-    fprintf(file, "          mean CR count       = %g\n", this->average_type2_cr_count);
-    fprintf(file, "          mean CR matrix nz   = %g\n", this->average_type2_matrix_nz);
-    fprintf(file, "          mean CR INVERT nz   = %g\n", this->average_type2_invert_nz);
+    fprintf(file, "   Type 1 iteration           = %d\n",
+            this->num_type1_iteration);
+    fprintf(file, "          mean CR count       = %g\n",
+            this->average_type1_cr_count);
+    fprintf(file, "   Type 2 iteration           = %d\n",
+            this->num_type2_iteration);
+    fprintf(file, "          mean CR count       = %g\n",
+            this->average_type2_cr_count);
+    fprintf(file, "          mean CR matrix nz   = %g\n",
+            this->average_type2_matrix_nz);
+    fprintf(file, "          mean CR INVERT nz   = %g\n",
+            this->average_type2_invert_nz);
     fprintf(file, "   Type 1                time = %g\n", this->type1_time);
     fprintf(file, "   Starting basis        time = %g\n", this->basis0_time);
     fprintf(file, "   Type 2                time = %g\n", this->type2_time);
@@ -1189,15 +1205,18 @@ void HighsIpxStats::report(FILE* file, const std::string message,
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
             "valid,col,row,nz,iteration_count,cr_count,iteration_count, "
-            "cr_count,matrix_nz,invert_nz,type1_time,basis0_time,type2_time,ipm_time,crossover_time,");
+            "cr_count,matrix_nz,invert_nz,type1_time,basis0_time,type2_time,"
+            "ipm_time,crossover_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     this->averages();
-    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
-            int(this->num_col), int(this->num_row), int(this->num_nz),
-            int(this->num_type1_iteration), int(this->average_type1_cr_count),
-            int(this->num_type2_iteration), int(this->average_type2_cr_count),
-            int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
-	    this->type1_time, this->basis0_time, this->type2_time, this->ipm_time, this->crossover_time);
+    fprintf(
+        file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
+        int(this->num_col), int(this->num_row), int(this->num_nz),
+        int(this->num_type1_iteration), int(this->average_type1_cr_count),
+        int(this->num_type2_iteration), int(this->average_type2_cr_count),
+        int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
+        this->type1_time, this->basis0_time, this->type2_time, this->ipm_time,
+        this->crossover_time);
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -1225,5 +1244,5 @@ void HighsIpxStats::initialise() {
   basis0_time = 0;
   type2_time = 0;
   ipm_time = 0;
-  crossover_time = 0;  
+  crossover_time = 0;
 }
