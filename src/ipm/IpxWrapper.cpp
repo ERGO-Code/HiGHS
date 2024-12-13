@@ -1095,21 +1095,27 @@ void reportSolveData(const HighsLogOptions& log_options,
 void HighsIpxStats::workTerms(double* terms) {
   const double nonbasic_nz =
       double(this->num_nz + this->num_row - this->average_type2_matrix_nz);
+  terms[HighsIpxWorkTermCr1Constant] = 1;
   terms[HighsIpxWorkTermCr1IterNumRow] = double(this->num_type1_iteration) *
                                          average_type1_cr_count *
                                          double(this->num_row);
   terms[HighsIpxWorkTermCr1IterNumNz] = double(this->num_type1_iteration) *
                                         average_type1_cr_count *
                                         double(this->num_nz);
+  terms[HighsIpxWorkTermCr2Constant] = 1;
   terms[HighsIpxWorkTermCr2IterNumRow] = double(this->num_type2_iteration) *
                                          average_type2_cr_count *
                                          double(this->num_row);
   terms[HighsIpxWorkTermCr2IterNumNz] = double(this->num_type2_iteration) *
                                         average_type2_cr_count *
                                         (nonbasic_nz + average_type2_invert_nz);
+  terms[HighsIpxWorkTermCr2InvertNumNz] = double(this->num_type2_iteration) *
+    average_type2_invert_nz;
 }
 
 double HighsIpxStats::workEstimate() {
+  assert(static_cast<size_t>(HighsIpxWorkTermCount) == kIpxWorkNames.size());
+  assert(static_cast<size_t>(HighsIpxWorkTermCount) == kIpxWorkCoefficients.size());
   double* terms = new double[HighsIpxWorkTermCount];
   this->workTerms(terms);
   double work = 0;

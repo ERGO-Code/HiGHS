@@ -25,7 +25,8 @@ enum HighsSolverStatsReport {
 };
 
 enum HighsSimplexWorkTerm {
-  HighsSimplexWorkTermInvertNumRow = 0,
+  HighsSimplexWorkTermConstant = 0,
+  HighsSimplexWorkTermInvertNumRow,
   HighsSimplexWorkTermInvertNumNz,
   HighsSimplexWorkTermComputePD,
   HighsSimplexWorkTermBtran,
@@ -42,16 +43,19 @@ const std::vector<double> kSimplexWorkCoefficients = {1.0, 2.0, 3.0, 4.0,
                                                       5.0, 6.0, 7.0};
 
 enum HighsIpxWorkTerm {
-  HighsIpxWorkTermCr1IterNumRow = 0,
+  HighsIpxWorkTermCr1Constant = 0,
+  HighsIpxWorkTermCr1IterNumRow,
   HighsIpxWorkTermCr1IterNumNz,
+  HighsIpxWorkTermCr2Constant,
   HighsIpxWorkTermCr2IterNumRow,
   HighsIpxWorkTermCr2IterNumNz,
+  HighsIpxWorkTermCr2InvertNumNz,
   HighsIpxWorkTermCount
 };
 
 const std::vector<std::string> kIpxWorkNames = {
-    "CR1IterNumRow", "CR1IterNumNz", "CR2IterNumRow", "CR2IterNumNz"};
-const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 3.0, 4.0};
+    "CR1Constant", "CR1IterNumRow", "CR1IterNumNz", "CR2Constant", "CR2IterNumRow", "CR2IterNumNz", "CR2InvertNumNz"};
+const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 1.0, 2.0, 3.0, 3.0, 4.0};
 
 struct HighsSimplexStats {
   bool valid;
