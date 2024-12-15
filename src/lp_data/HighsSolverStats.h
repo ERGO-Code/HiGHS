@@ -54,8 +54,10 @@ enum HighsIpxWorkTerm {
 };
 
 const std::vector<std::string> kIpxWorkNames = {
-    "CR1Constant", "CR1IterNumRow", "CR1IterNumNz", "CR2Constant", "CR2IterNumRow", "CR2IterNumNz", "CR2InvertNumNz"};
-const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 1.0, 2.0, 3.0, 3.0, 4.0};
+    "CR1Constant",   "CR1IterNumRow", "CR1IterNumNz",  "CR2Constant",
+    "CR2IterNumRow", "CR2IterNumNz",  "CR2InvertNumNz"};
+const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 1.0, 2.0,
+                                                  3.0, 3.0, 4.0};
 
 struct HighsSimplexStats {
   bool valid;

@@ -1259,3 +1259,124 @@ bool highsPause(const bool pause_condition, const std::string message) {
   }
   return pause_condition;
 }
+
+bool comparison(std::pair<double, HighsInt> x1,
+                std::pair<double, HighsInt> x2) {
+  return x1.first <= x2.first;
+}
+
+std::vector<std::pair<double, HighsInt>> valueCount(
+    const std::vector<double> data, const double tolerance) {
+  std::vector<double> nonzero_value;
+  std::vector<HighsInt> nonzero_count;
+  std::unordered_map<double, HighsInt> value2index;
+  std::vector<std::pair<double, HighsInt>> value_count;
+
+  HighsInt data_size = data.size();
+
+  for (HighsInt iX = 0; iX < data_size; iX++) {
+    double data_ = data[iX];
+
+    auto emplace_result =
+        value2index.emplace(data_, HighsInt(nonzero_value.size()));
+    if (emplace_result.second) {
+      // New
+      nonzero_value.push_back(data_);
+      nonzero_count.push_back(1);
+    } else {
+      // Duplicate
+      auto& search = emplace_result.first;
+      assert(static_cast<size_t>(search->second) < value2index.size());
+      HighsInt iX = search->second;
+      nonzero_count[iX]++;
+      assert(nonzero_value[iX] == data_);
+    }
+  }
+  HighsInt max_count = 0;
+  HighsInt max_count_index;
+  for (HighsInt iX = 0; iX < HighsInt(nonzero_value.size()); iX++) {
+    if (max_count < nonzero_count[iX]) {
+      max_count = nonzero_count[iX];
+      max_count_index = iX;
+    }
+    value_count.push_back(std::make_pair(nonzero_value[iX], nonzero_count[iX]));
+  }
+  std::sort(value_count.begin(), value_count.end(), comparison);
+  // reportValueCount(value_count);
+
+  if (tolerance <= 0) return value_count;
+
+  const HighsInt num_distinct_value = nonzero_value.size();
+
+  HighsInt cluster_first_index = -1;
+  HighsInt num_cluster = 0;
+
+  // Lambda for new cluster
+  auto newCluster = [&](const HighsInt iX) {
+    double average_value = 0;
+    HighsInt cluster_size = iX - cluster_first_index;
+    assert(cluster_size > 0);
+    HighsInt cluster_count = 0;
+    for (HighsInt lc_iX = cluster_first_index; lc_iX < iX; lc_iX++) {
+      average_value += value_count[lc_iX].first;
+      cluster_count += value_count[lc_iX].second;
+    }
+    average_value /= cluster_size;
+    value_count[num_cluster].first = average_value;
+    value_count[num_cluster].second = cluster_count;
+    num_cluster++;
+    cluster_first_index = iX;
+  };
+
+  for (HighsInt iX = 0; iX < num_distinct_value; iX++) {
+    double value_ = value_count[iX].first;
+    if (cluster_first_index < 0) {
+      // First cluster started
+      cluster_first_index = iX;
+    } else if (value_ > value_count[iX - 1].first + tolerance) {
+      // New cluster started
+      newCluster(iX);
+    } else if (cluster_first_index < iX - 1 &&
+               value_ > value_count[cluster_first_index].first + tolerance) {
+      // Within tolerance of last entry in non-trivial cluster, but
+      // larger than the first entry by more than the tolernace
+      //
+      // Is value_ added to cluster in place of the first entry, or
+      // does it start a new cluster?
+      double first_diff = value_count[cluster_first_index + 1].first -
+                          value_count[cluster_first_index].first;
+      double last_diff = value_ - value_count[iX - 1].first;
+      assert(0 < first_diff && first_diff < tolerance);
+      assert(0 < last_diff && last_diff < tolerance);
+      if (first_diff <= last_diff) {
+        // New cluster started with value_
+        newCluster(iX);
+      } else {
+        // First value in cluster becomes trivial cluster, and value_ added to
+        // remainder of cluster
+        value_count[num_cluster].first = value_count[cluster_first_index].first;
+        value_count[num_cluster].second =
+            value_count[cluster_first_index].second;
+        num_cluster++;
+        cluster_first_index++;
+      }
+    }
+  }
+  double average_value = 0;
+  HighsInt cluster_size = num_distinct_value - cluster_first_index;
+  assert(cluster_size > 0);
+  HighsInt cluster_count = 0;
+  for (HighsInt lc_iX = cluster_first_index; lc_iX < num_distinct_value;
+       lc_iX++) {
+    average_value += value_count[lc_iX].first;
+    cluster_count += value_count[lc_iX].second;
+  }
+  average_value /= cluster_size;
+  value_count[num_cluster].first = average_value;
+  value_count[num_cluster].second = cluster_count;
+  num_cluster++;
+
+  value_count.resize(num_cluster);
+
+  return value_count;
+}

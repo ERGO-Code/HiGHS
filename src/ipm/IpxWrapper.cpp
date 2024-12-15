@@ -1109,13 +1109,14 @@ void HighsIpxStats::workTerms(double* terms) {
   terms[HighsIpxWorkTermCr2IterNumNz] = double(this->num_type2_iteration) *
                                         average_type2_cr_count *
                                         (nonbasic_nz + average_type2_invert_nz);
-  terms[HighsIpxWorkTermCr2InvertNumNz] = double(this->num_type2_iteration) *
-    average_type2_invert_nz;
+  terms[HighsIpxWorkTermCr2InvertNumNz] =
+      double(this->num_type2_iteration) * average_type2_invert_nz;
 }
 
 double HighsIpxStats::workEstimate() {
   assert(static_cast<size_t>(HighsIpxWorkTermCount) == kIpxWorkNames.size());
-  assert(static_cast<size_t>(HighsIpxWorkTermCount) == kIpxWorkCoefficients.size());
+  assert(static_cast<size_t>(HighsIpxWorkTermCount) ==
+         kIpxWorkCoefficients.size());
   double* terms = new double[HighsIpxWorkTermCount];
   this->workTerms(terms);
   double work = 0;

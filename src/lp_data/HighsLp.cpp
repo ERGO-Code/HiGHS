@@ -202,6 +202,7 @@ void HighsLp::clear() {
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
   this->has_infinite_cost_ = false;
+  this->stats_.clear();
   this->mods_.clear();
 }
 
@@ -509,6 +510,80 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
   this->deleteRowsFromVectors(new_num_row, index_collection);
   this->a_matrix_.deleteRows(index_collection);
   this->num_row_ = new_num_row;
+}
+
+void HighsLpStats::clear() {
+  relative_num_equations = 0;
+  relative_num_equal_a_matrix_nz = 0;
+  relative_num_equal_cost_nz = 0;
+  relative_num_equal_rhs_nz = 0;
+  relative_num_dense_row = 0;
+  relative_num_inf_upper = 0;
+  relative_max_matrix_entry = 0;
+  relative_max_cost_entry = 0;
+  relative_max_rhs_entry = 0;
+  a_matrix_density = 0;
+  a_matrix_col_density = 0;
+  a_matrix_row_density = 0;
+}
+
+void HighsLp::stats() {
+  double max_cost = 0;
+  double min_cost = kHighsInf;
+  std::vector<double> nonzero_value;
+  std::vector<HighsInt> nonzero_count;
+  std::unordered_map<double, int> value2index;
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    if (!this->col_cost_[iCol]) continue;
+    double cost = this->col_cost_[iCol];
+    double abs_cost = std::fabs(cost);
+    max_cost = std::max(abs_cost, max_cost);
+    min_cost = std::min(abs_cost, min_cost);
+
+    auto emplace_result =
+        value2index.emplace(cost, HighsInt(nonzero_value.size()));
+    if (emplace_result.second) {
+      // New
+      nonzero_value.push_back(cost);
+      nonzero_count.push_back(1);
+    } else {
+      // Duplicate
+      auto& search = emplace_result.first;
+      assert(static_cast<size_t>(search->second) < value2index.size());
+      HighsInt iX = search->second;
+      nonzero_count[iX]++;
+    }
+  }
+  // If there is a nonzero cost then min_cost and max_cost will both
+  // be positive and finite
+  assert(max_cost == 0 || (0 < min_cost && min_cost < kHighsInf));
+  this->stats_.relative_max_cost_entry = max_cost > 0 ? max_cost / min_cost : 0;
+
+  double max_rhs = 0;
+  double min_rhs = kHighsInf;
+  HighsInt num_equations = 0;
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    double lower = this->row_lower_[iRow];
+    double upper = this->row_upper_[iRow];
+    if (lower == upper) num_equations++;
+    if (lower > -kHighsInf && lower) {
+      double abs_rhs = std::fabs(lower);
+      max_rhs = std::max(abs_rhs, max_rhs);
+      min_rhs = std::min(abs_rhs, min_rhs);
+    }
+    if (upper < kHighsInf && upper) {
+      double abs_rhs = std::fabs(upper);
+      max_rhs = std::max(abs_rhs, max_rhs);
+      min_rhs = std::min(abs_rhs, min_rhs);
+    }
+  }
+  // If there is a nonzero rhs then min_rhs and max_rhs will both
+  // be positive and finite
+  assert(max_rhs == 0 || (0 < min_rhs && min_rhs < kHighsInf));
+  this->stats_.relative_max_rhs_entry = max_rhs > 0 ? max_rhs / min_rhs : 0;
+  if (this->num_row_)
+    this->stats_.relative_num_equations =
+        (1.0 * num_equations) / this->num_row_;
 }
 
 void HighsLp::unapplyMods() {

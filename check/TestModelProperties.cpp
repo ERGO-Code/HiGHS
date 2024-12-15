@@ -139,3 +139,109 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   highs.getIllConditioning(ill_conditioning, constraint);
   highs.getIllConditioning(ill_conditioning, !constraint);
 }
+
+std::vector<std::pair<double, HighsInt>> valueCountReport(
+    const std::vector<double> data, const double tolerance = 0.0);
+
+void reportValueCount(
+    const std::vector<std::pair<double, HighsInt>> value_count,
+    const double tolerance = 0.0);
+
+void reportData(const std::vector<double> data);
+
+TEST_CASE("value-count", "[highs_model_properties]") {
+  double tolerance;
+  std::vector<double> data;
+  data = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  reportData(data);
+  std::vector<std::pair<double, HighsInt>> value_count;
+  value_count = valueCountReport(data);
+  REQUIRE(value_count.size() == 9);
+
+  value_count = valueCountReport(data, 0.9);
+  REQUIRE(value_count.size() == 9);
+
+  value_count = valueCountReport(data, 1.1);
+  REQUIRE(value_count.size() == 5);
+  REQUIRE(value_count[0].second == 2);
+  REQUIRE(value_count[1].second == 2);
+  REQUIRE(value_count[2].second == 2);
+  REQUIRE(value_count[3].second == 2);
+  REQUIRE(value_count[4].second == 1);
+
+  value_count = valueCountReport(data, 2.1);
+  REQUIRE(value_count.size() == 3);
+  REQUIRE(value_count[0].second == 3);
+  REQUIRE(value_count[1].second == 3);
+  REQUIRE(value_count[2].second == 3);
+
+  value_count = valueCountReport(data, 3.1);
+  REQUIRE(value_count.size() == 3);
+  REQUIRE(value_count[0].second == 4);
+  REQUIRE(value_count[1].second == 4);
+  REQUIRE(value_count[2].second == 1);
+
+  data = {1, 5, 3, 1, 0, -1, 2.3, 2.6, 2.9, 2.5, 3.0};
+  reportData(data);
+  value_count = valueCountReport(data, 0.6);
+  REQUIRE(value_count.size() == 6);
+  REQUIRE(value_count[0].second == 1);
+  REQUIRE(value_count[1].second == 1);
+  REQUIRE(value_count[2].second == 2);
+  REQUIRE(value_count[3].second == 1);
+  REQUIRE(value_count[4].second == 5);
+  REQUIRE(value_count[5].second == 1);
+
+  data = {1, -1, 2.5, 0, 2.8, 5, 2.3, 2.4, 3, 1, 3.0};
+  reportData(data);
+  value_count = valueCountReport(data, 0.6);
+  REQUIRE(value_count.size() == 6);
+  REQUIRE(value_count[0].second == 1);
+  REQUIRE(value_count[1].second == 1);
+  REQUIRE(value_count[2].second == 2);
+  REQUIRE(value_count[3].second == 4);
+  REQUIRE(value_count[4].second == 2);
+  REQUIRE(value_count[5].second == 1);
+
+  data = {1, 2, 5, 3, 2, 1, 0, -1, 2, 2.999, 3.001};
+  reportData(data);
+  value_count = valueCountReport(data, 0.01);
+  REQUIRE(value_count.size() == 6);
+  REQUIRE(value_count[0].second == 1);
+  REQUIRE(value_count[1].second == 1);
+  REQUIRE(value_count[2].second == 2);
+  REQUIRE(value_count[3].second == 3);
+  REQUIRE(value_count[4].second == 3);
+  REQUIRE(value_count[5].second == 1);
+}
+
+void reportValueCount(
+    const std::vector<std::pair<double, HighsInt>> value_count,
+    const double tolerance) {
+  if (!dev_run) return;
+  printf("Index              Value Count");
+  if (tolerance > 0)
+    printf(": %s %g\n", ": tolerance = ", tolerance);
+  else
+    printf("\n");
+
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
+    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
+           int(value_count[iX].second));
+}
+
+std::vector<std::pair<double, HighsInt>> valueCountReport(
+    const std::vector<double> data, const double tolerance) {
+  std::vector<std::pair<double, HighsInt>> value_count =
+      valueCount(data, tolerance);
+  if (tolerance > 0) reportValueCount(value_count, tolerance);
+  return value_count;
+}
+
+void reportData(const std::vector<double> data) {
+  if (!dev_run) return;
+  printf("\nUsing data = {");
+  for (HighsInt iX = 0; iX < HighsInt(data.size()); iX++)
+    printf(" %g", data[iX]);
+  printf("}\n");
+}
