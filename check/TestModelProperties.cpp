@@ -143,9 +143,10 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
 std::vector<std::pair<double, HighsInt>> nonzeroCountReport(
     const std::vector<double> data, const double tolerance = 0.0);
 
-void reportNonzeroCount(
+/*void reportNonzeroCount(
     const std::vector<std::pair<double, HighsInt>> nonzero_count,
     const double tolerance = 0.0);
+*/
 
 void reportData(const std::vector<double> data);
 
@@ -197,41 +198,39 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   data = {1, 5, 3, 1, 0, -1, 2.3, 2.6, 2.9, 2.5, 3.0};
   reportData(data);
   nonzero_count = nonzeroCountReport(data, 0.6);
-  REQUIRE(nonzero_count.size() == 6);
+  REQUIRE(nonzero_count.size() == 5);
   REQUIRE(nonzero_count[0].second == 1);
-  REQUIRE(nonzero_count[1].second == 1);
-  REQUIRE(nonzero_count[2].second == 2);
-  REQUIRE(nonzero_count[3].second == 1);
-  REQUIRE(nonzero_count[4].second == 5);
-  REQUIRE(nonzero_count[5].second == 1);
-  REQUIRE(sumCount() == HighsInt(data.size()));
+  REQUIRE(nonzero_count[1].second == 2);
+  REQUIRE(nonzero_count[2].second == 1);
+  REQUIRE(nonzero_count[3].second == 5);
+  REQUIRE(nonzero_count[4].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()-1));
 
   data = {1, -1, 2.5, 0, 2.8, 5, 2.3, 2.4, 3, 1, 3.0};
   reportData(data);
   nonzero_count = nonzeroCountReport(data, 0.6);
-  REQUIRE(nonzero_count.size() == 6);
+  REQUIRE(nonzero_count.size() == 5);
   REQUIRE(nonzero_count[0].second == 1);
-  REQUIRE(nonzero_count[1].second == 1);
-  REQUIRE(nonzero_count[2].second == 2);
-  REQUIRE(nonzero_count[3].second == 4);
-  REQUIRE(nonzero_count[4].second == 2);
-  REQUIRE(nonzero_count[5].second == 1);
-  REQUIRE(sumCount() == HighsInt(data.size()));
+  REQUIRE(nonzero_count[1].second == 2);
+  REQUIRE(nonzero_count[2].second == 4);
+  REQUIRE(nonzero_count[3].second == 2);
+  REQUIRE(nonzero_count[4].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()-1));
 
   data = {1, 2, 5, 3, 2, 1, 0, -1, 2, 2.999, 3.001};
   reportData(data);
   nonzero_count = nonzeroCountReport(data, 0.01);
-  REQUIRE(nonzero_count.size() == 6);
+  REQUIRE(nonzero_count.size() == 5);
   REQUIRE(nonzero_count[0].second == 1);
-  REQUIRE(nonzero_count[1].second == 1);
-  REQUIRE(nonzero_count[2].second == 2);
+  REQUIRE(nonzero_count[1].second == 2);
+  REQUIRE(nonzero_count[2].second == 3);
   REQUIRE(nonzero_count[3].second == 3);
-  REQUIRE(nonzero_count[4].second == 3);
-  REQUIRE(nonzero_count[5].second == 1);
-  REQUIRE(sumCount() == HighsInt(data.size()));
+  REQUIRE(nonzero_count[4].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()-1));
 }
 
-void reportNonzeroCount(
+/*
+  void reportNonzeroCount(
     const std::vector<std::pair<double, HighsInt>> nonzero_count,
     const double tolerance) {
   if (!dev_run) return;
@@ -245,11 +244,12 @@ void reportNonzeroCount(
     printf("   %2d %18.12g    %2d\n", int(iX), nonzero_count[iX].first,
            int(nonzero_count[iX].second));
 }
+*/
 
 std::vector<std::pair<double, HighsInt>> nonzeroCountReport(
     const std::vector<double> data, const double tolerance) {
   std::vector<std::pair<double, HighsInt>> nonzero_count =
-      nonzeroCount(data, tolerance);
+    nonzeroCountSorted(data, true, tolerance);
   if (tolerance > 0) reportNonzeroCount(nonzero_count, tolerance);
   return nonzero_count;
 }

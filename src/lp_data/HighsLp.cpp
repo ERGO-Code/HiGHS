@@ -544,7 +544,7 @@ void HighsLpStats::report(FILE* file) {
   fprintf(file, "      Relative number of dense rows =               %g\n", relative_num_dense_row);
 }
 
-void reportNonzeroCount(
+/*void reportNonzeroCount(
     const std::vector<std::pair<double, HighsInt>> nonzero_count,
     const double tolerance) {
   printf("Index              Value Count");
@@ -557,6 +557,7 @@ void reportNonzeroCount(
     printf("   %2d %18.12g    %2d\n", int(iX), nonzero_count[iX].first,
            int(nonzero_count[iX].second));
 }
+*/
 
 void HighsLp::stats() {
   double max_cost = 0;
@@ -621,7 +622,7 @@ void HighsLp::stats() {
   const HighsInt num_nz = this->a_matrix_.numNz();
   if (num_nz > 0) {
     const double value_cluster_size = 1e-4;
-    nonzero_count = nonzeroCount(this->a_matrix_.value_, value_cluster_size);
+    nonzero_count = nonzeroCountSorted(this->a_matrix_.value_, true, value_cluster_size);
     reportNonzeroCount(nonzero_count, value_cluster_size);
     this->stats_.relative_num_equal_a_matrix_nz = (1.0 * nonzero_count.size()) / num_nz;
   }

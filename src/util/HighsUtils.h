@@ -217,8 +217,12 @@ inline T fractionality(T input, T* intval = nullptr) {
   if (intval != nullptr) *intval = val;
   return abs(input - val);
 }
-
-std::vector<std::pair<double, HighsInt>> nonzeroCount(
-    const std::vector<double> data, const double tolerance);
+void reportNonzeroCount(
+    const std::vector<std::pair<double, HighsInt>> nonzero_count,
+    const double tolerance = 0);
+std::vector<std::pair<double, HighsInt>> nonzeroCount(const std::vector<double> data);
+std::vector<std::pair<double, HighsInt>> nonzeroCountSorted(const std::vector<double> data,
+							    const bool by_value = true,
+							    const double tolerance = 0);
 
 #endif  // UTIL_HIGHSUTILS_H_
