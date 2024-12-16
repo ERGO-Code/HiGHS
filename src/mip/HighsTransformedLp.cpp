@@ -192,6 +192,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     if (lprelaxation.isColIntegral(col)) {
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0) {
+        // since we skip the handling of variable bound constraints for all
+        // binary and some general-integer variables, the bound type used should
+        // be a simple lower or upper bound
+        assert(oldBoundType == BoundType::kSimpleLb ||
+               oldBoundType == BoundType::kSimpleUb);
         i++;
         continue;
       }
