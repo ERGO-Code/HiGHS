@@ -560,34 +560,17 @@ void HighsLpStats::report(FILE* file) {
 */
 
 void HighsLp::stats() {
+  std::vector<std::pair<double, HighsInt>> nonzero_count;
+
   double max_cost = 0;
   double min_cost = kHighsInf;
-  std::vector<double> nonzero_value;
-  std::vector<HighsInt> local_nonzero_count;
-  std::vector<std::pair<double, HighsInt>> nonzero_count;
-  std::unordered_map<double, int> value2index;
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    if (!this->col_cost_[iCol]) continue;
-    double cost = this->col_cost_[iCol];
-    double abs_cost = std::fabs(cost);
+  nonzero_count = nonzeroCountSorted(this->col_cost_);
+  
+  for (HighsInt iX = 0; iX < HighsInt(nonzero_count.size()); iX++) {
+    double abs_cost = std::fabs(nonzero_count[iX].first);
     max_cost = std::max(abs_cost, max_cost);
     min_cost = std::min(abs_cost, min_cost);
-
-    auto emplace_result =
-        value2index.emplace(cost, HighsInt(nonzero_value.size()));
-    if (emplace_result.second) {
-      // New
-      nonzero_value.push_back(cost);
-      local_nonzero_count.push_back(1);
-    } else {
-      // Duplicate
-      auto& search = emplace_result.first;
-      assert(static_cast<size_t>(search->second) < value2index.size());
-      HighsInt iX = search->second;
-      local_nonzero_count[iX]++;
-    }
   }
-  
   // If there is a nonzero cost then min_cost and max_cost will both
   // be positive and finite
   assert(max_cost == 0 || (0 < min_cost && min_cost < kHighsInf));
@@ -625,6 +608,8 @@ void HighsLp::stats() {
     nonzero_count = nonzeroCountSorted(this->a_matrix_.value_, true, value_cluster_size);
     reportNonzeroCount(nonzero_count, value_cluster_size);
     this->stats_.relative_num_equal_a_matrix_nz = (1.0 * nonzero_count.size()) / num_nz;
+    nonzero_count = nonzeroCountSorted(this->a_matrix_.value_, false, value_cluster_size);
+    reportNonzeroCount(nonzero_count, value_cluster_size);
   }
 }
 
