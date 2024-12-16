@@ -218,7 +218,7 @@ inline T fractionality(T input, T* intval = nullptr) {
   return abs(input - val);
 }
 
-std::vector<std::pair<double, HighsInt>> valueCount(
+std::vector<std::pair<double, HighsInt>> nonzeroCount(
     const std::vector<double> data, const double tolerance);
 
 #endif  // UTIL_HIGHSUTILS_H_

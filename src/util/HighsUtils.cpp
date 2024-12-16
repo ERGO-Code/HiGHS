@@ -1265,12 +1265,12 @@ bool comparison(std::pair<double, HighsInt> x1,
   return x1.first <= x2.first;
 }
 
-std::vector<std::pair<double, HighsInt>> valueCount(
+std::vector<std::pair<double, HighsInt>> nonzeroCount(
     const std::vector<double> data, const double tolerance) {
-  std::vector<double> nonzero_value;
-  std::vector<HighsInt> nonzero_count;
+  std::vector<double> value;
+  std::vector<HighsInt> count;
   std::unordered_map<double, HighsInt> value2index;
-  std::vector<std::pair<double, HighsInt>> value_count;
+  std::vector<std::pair<double, HighsInt>> nonzero_count;
 
   HighsInt data_size = data.size();
 
@@ -1278,35 +1278,29 @@ std::vector<std::pair<double, HighsInt>> valueCount(
     double data_ = data[iX];
 
     auto emplace_result =
-        value2index.emplace(data_, HighsInt(nonzero_value.size()));
+        value2index.emplace(data_, HighsInt(value.size()));
     if (emplace_result.second) {
       // New
-      nonzero_value.push_back(data_);
-      nonzero_count.push_back(1);
+      value.push_back(data_);
+      count.push_back(1);
     } else {
       // Duplicate
       auto& search = emplace_result.first;
       assert(static_cast<size_t>(search->second) < value2index.size());
       HighsInt iX = search->second;
-      nonzero_count[iX]++;
-      assert(nonzero_value[iX] == data_);
+      count[iX]++;
+      assert(value[iX] == data_);
     }
   }
-  HighsInt max_count = 0;
-  HighsInt max_count_index;
-  for (HighsInt iX = 0; iX < HighsInt(nonzero_value.size()); iX++) {
-    if (max_count < nonzero_count[iX]) {
-      max_count = nonzero_count[iX];
-      max_count_index = iX;
-    }
-    value_count.push_back(std::make_pair(nonzero_value[iX], nonzero_count[iX]));
-  }
-  std::sort(value_count.begin(), value_count.end(), comparison);
-  // reportValueCount(value_count);
+  for (HighsInt iX = 0; iX < HighsInt(value.size()); iX++)
+    nonzero_count.push_back(std::make_pair(value[iX], count[iX]));
 
-  if (tolerance <= 0) return value_count;
+  std::sort(nonzero_count.begin(), nonzero_count.end(), comparison);
+  // reportNonzeroCount(nonzero_count);
 
-  const HighsInt num_distinct_value = nonzero_value.size();
+  if (tolerance <= 0) return nonzero_count;
+
+  const HighsInt num_distinct_value = value.size();
 
   HighsInt cluster_first_index = -1;
   HighsInt num_cluster = 0;
@@ -1318,34 +1312,34 @@ std::vector<std::pair<double, HighsInt>> valueCount(
     assert(cluster_size > 0);
     HighsInt cluster_count = 0;
     for (HighsInt lc_iX = cluster_first_index; lc_iX < iX; lc_iX++) {
-      average_value += value_count[lc_iX].first;
-      cluster_count += value_count[lc_iX].second;
+      average_value += nonzero_count[lc_iX].first;
+      cluster_count += nonzero_count[lc_iX].second;
     }
     average_value /= cluster_size;
-    value_count[num_cluster].first = average_value;
-    value_count[num_cluster].second = cluster_count;
+    nonzero_count[num_cluster].first = average_value;
+    nonzero_count[num_cluster].second = cluster_count;
     num_cluster++;
     cluster_first_index = iX;
   };
 
   for (HighsInt iX = 0; iX < num_distinct_value; iX++) {
-    double value_ = value_count[iX].first;
+    double value_ = nonzero_count[iX].first;
     if (cluster_first_index < 0) {
       // First cluster started
       cluster_first_index = iX;
-    } else if (value_ > value_count[iX - 1].first + tolerance) {
+    } else if (value_ > nonzero_count[iX - 1].first + tolerance) {
       // New cluster started
       newCluster(iX);
     } else if (cluster_first_index < iX - 1 &&
-               value_ > value_count[cluster_first_index].first + tolerance) {
+               value_ > nonzero_count[cluster_first_index].first + tolerance) {
       // Within tolerance of last entry in non-trivial cluster, but
       // larger than the first entry by more than the tolernace
       //
       // Is value_ added to cluster in place of the first entry, or
       // does it start a new cluster?
-      double first_diff = value_count[cluster_first_index + 1].first -
-                          value_count[cluster_first_index].first;
-      double last_diff = value_ - value_count[iX - 1].first;
+      double first_diff = nonzero_count[cluster_first_index + 1].first -
+                          nonzero_count[cluster_first_index].first;
+      double last_diff = value_ - nonzero_count[iX - 1].first;
       assert(0 < first_diff && first_diff < tolerance);
       assert(0 < last_diff && last_diff < tolerance);
       if (first_diff <= last_diff) {
@@ -1354,16 +1348,16 @@ std::vector<std::pair<double, HighsInt>> valueCount(
       } else {
         // First value in cluster becomes trivial cluster, and value_ added to
         // remainder of cluster
-        value_count[num_cluster].first = value_count[cluster_first_index].first;
-        value_count[num_cluster].second =
-            value_count[cluster_first_index].second;
+        nonzero_count[num_cluster].first = nonzero_count[cluster_first_index].first;
+        nonzero_count[num_cluster].second =
+            nonzero_count[cluster_first_index].second;
         num_cluster++;
         cluster_first_index++;
       }
     }
   }
   newCluster(num_distinct_value);
-  value_count.resize(num_cluster);
+  nonzero_count.resize(num_cluster);
 
-  return value_count;
+  return nonzero_count;
 }

@@ -544,8 +544,8 @@ void HighsLpStats::report(FILE* file) {
   fprintf(file, "      Relative number of dense rows =               %g\n", relative_num_dense_row);
 }
 
-void reportValueCount(
-    const std::vector<std::pair<double, HighsInt>> value_count,
+void reportNonzeroCount(
+    const std::vector<std::pair<double, HighsInt>> nonzero_count,
     const double tolerance) {
   printf("Index              Value Count");
   if (tolerance > 0)
@@ -553,16 +553,17 @@ void reportValueCount(
   else
     printf("\n");
 
-  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
-    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
-           int(value_count[iX].second));
+  for (HighsInt iX = 0; iX < HighsInt(nonzero_count.size()); iX++)
+    printf("   %2d %18.12g    %2d\n", int(iX), nonzero_count[iX].first,
+           int(nonzero_count[iX].second));
 }
 
 void HighsLp::stats() {
   double max_cost = 0;
   double min_cost = kHighsInf;
   std::vector<double> nonzero_value;
-  std::vector<HighsInt> nonzero_count;
+  std::vector<HighsInt> local_nonzero_count;
+  std::vector<std::pair<double, HighsInt>> nonzero_count;
   std::unordered_map<double, int> value2index;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     if (!this->col_cost_[iCol]) continue;
@@ -576,15 +577,16 @@ void HighsLp::stats() {
     if (emplace_result.second) {
       // New
       nonzero_value.push_back(cost);
-      nonzero_count.push_back(1);
+      local_nonzero_count.push_back(1);
     } else {
       // Duplicate
       auto& search = emplace_result.first;
       assert(static_cast<size_t>(search->second) < value2index.size());
       HighsInt iX = search->second;
-      nonzero_count[iX]++;
+      local_nonzero_count[iX]++;
     }
   }
+  
   // If there is a nonzero cost then min_cost and max_cost will both
   // be positive and finite
   assert(max_cost == 0 || (0 < min_cost && min_cost < kHighsInf));
@@ -619,9 +621,9 @@ void HighsLp::stats() {
   const HighsInt num_nz = this->a_matrix_.numNz();
   if (num_nz > 0) {
     const double value_cluster_size = 1e-4;
-    std::vector<std::pair<double, HighsInt>> value_count = valueCount(this->a_matrix_.value_, value_cluster_size);
-    reportValueCount(value_count, value_cluster_size);
-    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * value_count.size()) / num_nz;
+    nonzero_count = nonzeroCount(this->a_matrix_.value_, value_cluster_size);
+    reportNonzeroCount(nonzero_count, value_cluster_size);
+    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * nonzero_count.size()) / num_nz;
   }
 }
 
