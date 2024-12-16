@@ -155,11 +155,21 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   data = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   reportData(data);
   std::vector<std::pair<double, HighsInt>> value_count;
+   // Lambda for sum of counts
+  auto sumCount = [&]() {
+    HighsInt sum_count = 0;
+    for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
+      sum_count += value_count[iX].second;
+    return sum_count;
+  };
+  
   value_count = valueCountReport(data);
   REQUIRE(value_count.size() == 9);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   value_count = valueCountReport(data, 0.9);
   REQUIRE(value_count.size() == 9);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   value_count = valueCountReport(data, 1.1);
   REQUIRE(value_count.size() == 5);
@@ -168,18 +178,21 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(value_count[2].second == 2);
   REQUIRE(value_count[3].second == 2);
   REQUIRE(value_count[4].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   value_count = valueCountReport(data, 2.1);
   REQUIRE(value_count.size() == 3);
   REQUIRE(value_count[0].second == 3);
   REQUIRE(value_count[1].second == 3);
   REQUIRE(value_count[2].second == 3);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   value_count = valueCountReport(data, 3.1);
   REQUIRE(value_count.size() == 3);
   REQUIRE(value_count[0].second == 4);
   REQUIRE(value_count[1].second == 4);
   REQUIRE(value_count[2].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, 5, 3, 1, 0, -1, 2.3, 2.6, 2.9, 2.5, 3.0};
   reportData(data);
@@ -191,6 +204,7 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(value_count[3].second == 1);
   REQUIRE(value_count[4].second == 5);
   REQUIRE(value_count[5].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, -1, 2.5, 0, 2.8, 5, 2.3, 2.4, 3, 1, 3.0};
   reportData(data);
@@ -202,6 +216,7 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(value_count[3].second == 4);
   REQUIRE(value_count[4].second == 2);
   REQUIRE(value_count[5].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, 2, 5, 3, 2, 1, 0, -1, 2, 2.999, 3.001};
   reportData(data);
@@ -213,6 +228,7 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(value_count[3].second == 3);
   REQUIRE(value_count[4].second == 3);
   REQUIRE(value_count[5].second == 1);
+  REQUIRE(sumCount() == HighsInt(data.size()));
 }
 
 void reportValueCount(

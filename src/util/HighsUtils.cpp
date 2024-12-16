@@ -1362,20 +1362,7 @@ std::vector<std::pair<double, HighsInt>> valueCount(
       }
     }
   }
-  double average_value = 0;
-  HighsInt cluster_size = num_distinct_value - cluster_first_index;
-  assert(cluster_size > 0);
-  HighsInt cluster_count = 0;
-  for (HighsInt lc_iX = cluster_first_index; lc_iX < num_distinct_value;
-       lc_iX++) {
-    average_value += value_count[lc_iX].first;
-    cluster_count += value_count[lc_iX].second;
-  }
-  average_value /= cluster_size;
-  value_count[num_cluster].first = average_value;
-  value_count[num_cluster].second = cluster_count;
-  num_cluster++;
-
+  newCluster(num_distinct_value);
   value_count.resize(num_cluster);
 
   return value_count;
