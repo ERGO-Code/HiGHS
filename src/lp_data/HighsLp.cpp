@@ -513,18 +513,49 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
 }
 
 void HighsLpStats::clear() {
-  relative_num_equations = 0;
-  relative_num_equal_a_matrix_nz = 0;
-  relative_num_equal_cost_nz = 0;
-  relative_num_equal_rhs_nz = 0;
-  relative_num_dense_row = 0;
-  relative_num_inf_upper = 0;
-  relative_max_matrix_entry = 0;
-  relative_max_cost_entry = 0;
-  relative_max_rhs_entry = 0;
-  a_matrix_density = 0;
-  a_matrix_col_density = 0;
-  a_matrix_row_density = 0;
+  relative_max_cost_entry = -kHighsInf;//0;
+  relative_num_equal_cost_nz = -kHighsInf;//0;
+  relative_num_inf_upper = -kHighsInf;//0;
+  relative_num_equations = -kHighsInf;//0;
+  relative_max_rhs_entry = -kHighsInf;//0;
+  relative_num_equal_rhs_nz = -kHighsInf;//0;
+  a_matrix_density = -kHighsInf;//0;
+  a_matrix_col_density = -kHighsInf;//0;
+  a_matrix_row_density = -kHighsInf;//0;
+  relative_max_matrix_entry = -kHighsInf;//0;
+  relative_num_equal_a_matrix_nz = -kHighsInf;//0;
+  relative_num_dense_row = -kHighsInf;//0;
+}
+
+void HighsLpStats::report(FILE* file) {
+  fprintf(file, "LP stats\n");
+  fprintf(file, "   Relative maximum cost_entry =                     %g\n", relative_max_cost_entry);
+  fprintf(file, "   Relative number of equal_cost nonzeros =          %g\n", relative_num_equal_cost_nz);
+  fprintf(file, "   Relative number of infinite column upper bounds = %g\n", relative_num_inf_upper);
+  fprintf(file, "   Relative number of equations =                    %g\n", relative_num_equations);
+  fprintf(file, "   Relative maximum rhs entry =                      %g\n", relative_max_rhs_entry);
+  fprintf(file, "   Relative number of equal_rhs nonzeros =           %g\n", relative_num_equal_rhs_nz);
+  fprintf(file, "   Constraint matrix stats\n");
+  fprintf(file, "      Density =                                     %g\n", a_matrix_density);
+  fprintf(file, "      Column density =                              %g\n", a_matrix_col_density);
+  fprintf(file, "      Row density =                                 %g\n", a_matrix_row_density);
+  fprintf(file, "      Relative maximum entry =                      %g\n", relative_max_matrix_entry);
+  fprintf(file, "      Relative number of almost identical entries = %g\n", relative_num_equal_a_matrix_nz);
+  fprintf(file, "      Relative number of dense rows =               %g\n", relative_num_dense_row);
+}
+
+void reportValueCount(
+    const std::vector<std::pair<double, HighsInt>> value_count,
+    const double tolerance) {
+  printf("Index              Value Count");
+  if (tolerance > 0)
+    printf(": %s %g\n", ": tolerance = ", tolerance);
+  else
+    printf("\n");
+
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
+    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
+           int(value_count[iX].second));
 }
 
 void HighsLp::stats() {
@@ -584,6 +615,14 @@ void HighsLp::stats() {
   if (this->num_row_)
     this->stats_.relative_num_equations =
         (1.0 * num_equations) / this->num_row_;
+
+  const HighsInt num_nz = this->a_matrix_.numNz();
+  if (num_nz > 0) {
+    const double value_cluster_size = 1e-4;
+    std::vector<std::pair<double, HighsInt>> value_count = valueCount(this->a_matrix_.value_, value_cluster_size);
+    reportValueCount(value_count, value_cluster_size);
+    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * value_count.size()) / num_nz;
+  }
 }
 
 void HighsLp::unapplyMods() {

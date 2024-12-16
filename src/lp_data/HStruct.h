@@ -155,18 +155,19 @@ struct HighsLinearObjective {
 };
 
 struct HighsLpStats {
-  double relative_num_equations;
-  double relative_num_equal_a_matrix_nz;
-  double relative_num_equal_cost_nz;
-  double relative_num_equal_rhs_nz;
-  double relative_num_dense_row;
-  double relative_num_inf_upper;
-  double relative_max_matrix_entry;
   double relative_max_cost_entry;
+  double relative_num_equal_cost_nz;
+  double relative_num_inf_upper;
+  double relative_num_equations;
   double relative_max_rhs_entry;
+  double relative_num_equal_rhs_nz;
   double a_matrix_density;
   double a_matrix_col_density;
   double a_matrix_row_density;
+  double relative_max_matrix_entry;
+  double relative_num_equal_a_matrix_nz;
+  double relative_num_dense_row;
+  void report(FILE* file);
   void clear();
 };
 
