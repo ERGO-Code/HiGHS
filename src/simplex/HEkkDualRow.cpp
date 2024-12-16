@@ -587,9 +587,7 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
                 : ekk_instance_.info_.update_count < 20 ? 3e-8
                                                         : 1e-6;
     HighsInt move_out = workDelta < 0 ? -1 : 1;
-    set<HighsInt>::iterator sit;
-    for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iVar = *sit;
+    for (const HighsInt& iVar : freeList) {
       assert(iVar < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
       double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iVar);
       if (fabs(alpha) > Ta) {
@@ -603,9 +601,7 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
 }
 void HEkkDualRow::deleteFreemove() {
   if (!freeList.empty()) {
-    set<HighsInt>::iterator sit;
-    for (sit = freeList.begin(); sit != freeList.end(); sit++) {
-      HighsInt iVar = *sit;
+    for (const HighsInt& iVar : freeList) {
       assert(iVar < ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_);
       ekk_instance_.basis_.nonbasicMove_[iVar] = 0;
     }
