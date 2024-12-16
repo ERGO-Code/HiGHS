@@ -530,11 +530,11 @@ void HighsLpStats::clear() {
 void HighsLpStats::report(FILE* file) {
   fprintf(file, "LP stats\n");
   fprintf(file, "   Relative maximum cost_entry =                     %g\n", relative_max_cost_entry);
-  fprintf(file, "   Relative number of equal_cost nonzeros =          %g\n", relative_num_equal_cost_nz);
+  fprintf(file, "   Relative number of identical costs =              %g\n", relative_num_equal_cost_nz);
   fprintf(file, "   Relative number of infinite column upper bounds = %g\n", relative_num_inf_upper);
   fprintf(file, "   Relative number of equations =                    %g\n", relative_num_equations);
   fprintf(file, "   Relative maximum rhs entry =                      %g\n", relative_max_rhs_entry);
-  fprintf(file, "   Relative number of equal_rhs nonzeros =           %g\n", relative_num_equal_rhs_nz);
+  fprintf(file, "   Relative number of identical rhs entries =        %g\n", relative_num_equal_rhs_nz);
   fprintf(file, "   Constraint matrix stats\n");
   fprintf(file, "      Density =                                     %g\n", a_matrix_density);
   fprintf(file, "      Column density =                              %g\n", a_matrix_col_density);
@@ -544,8 +544,8 @@ void HighsLpStats::report(FILE* file) {
   fprintf(file, "      Relative number of dense rows =               %g\n", relative_num_dense_row);
 }
 
-/*void reportNonzeroCount(
-    const std::vector<std::pair<double, HighsInt>> nonzero_count,
+/*void reportValueCount(
+    const std::vector<std::pair<double, HighsInt>> value_count,
     const double tolerance) {
   printf("Index              Value Count");
   if (tolerance > 0)
@@ -553,21 +553,23 @@ void HighsLpStats::report(FILE* file) {
   else
     printf("\n");
 
-  for (HighsInt iX = 0; iX < HighsInt(nonzero_count.size()); iX++)
-    printf("   %2d %18.12g    %2d\n", int(iX), nonzero_count[iX].first,
-           int(nonzero_count[iX].second));
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
+    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
+           int(value_count[iX].second));
 }
 */
 
 void HighsLp::stats() {
-  std::vector<std::pair<double, HighsInt>> nonzero_count;
+  std::vector<std::pair<double, HighsInt>> value_count;
 
   double max_cost = 0;
   double min_cost = kHighsInf;
-  nonzero_count = nonzeroCountSorted(this->col_cost_);
-  
-  for (HighsInt iX = 0; iX < HighsInt(nonzero_count.size()); iX++) {
-    double abs_cost = std::fabs(nonzero_count[iX].first);
+  value_count = valueCountSorted(this->col_cost_);
+  reportValueCount(value_count, "Column cost");
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++) {
+    double cost = value_count[iX].first;
+    if (cost == 0) continue;
+    double abs_cost = std::fabs(cost);
     max_cost = std::max(abs_cost, max_cost);
     min_cost = std::min(abs_cost, min_cost);
   }
@@ -575,25 +577,53 @@ void HighsLp::stats() {
   // be positive and finite
   assert(max_cost == 0 || (0 < min_cost && min_cost < kHighsInf));
   this->stats_.relative_max_cost_entry = max_cost > 0 ? max_cost / min_cost : 0;
+  // Find the number of nonzeros that are identical - interpreting
+  // this as the number whose value has cound at least 2
+  HighsInt num_nonzero = 0;
+  HighsInt num_identical = 0;
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++) {
+    HighsInt count = value_count[iX].second;
+    num_nonzero += count;
+    if (count > 1) num_identical += (count-1);
+  }
+  if (this->num_col_ > 0) this->stats_.relative_num_equal_cost_nz = (1.0 * num_identical) / this->num_col_;
 
+  HighsInt num_inf_upper = 0;
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+    if (this->col_upper_[iCol] >= kHighsInf) num_inf_upper++;
+  if (this->num_col_ > 0) this->stats_.relative_num_inf_upper = (1.0 * num_inf_upper) / this->num_col_;
+
+  std::vector<double> rhs;
   double max_rhs = 0;
   double min_rhs = kHighsInf;
   HighsInt num_equations = 0;
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     double lower = this->row_lower_[iRow];
     double upper = this->row_upper_[iRow];
-    if (lower == upper) num_equations++;
-    if (lower > -kHighsInf && lower) {
-      double abs_rhs = std::fabs(lower);
-      max_rhs = std::max(abs_rhs, max_rhs);
-      min_rhs = std::min(abs_rhs, min_rhs);
-    }
-    if (upper < kHighsInf && upper) {
-      double abs_rhs = std::fabs(upper);
-      max_rhs = std::max(abs_rhs, max_rhs);
-      min_rhs = std::min(abs_rhs, min_rhs);
+    if (lower == upper) {
+      num_equations++;
+      rhs.push_back(lower);
+    } else {
+      if (lower > -kHighsInf) {
+	rhs.push_back(lower);
+	if (lower) {
+	  double abs_rhs = std::fabs(lower);
+	  max_rhs = std::max(abs_rhs, max_rhs);
+	  min_rhs = std::min(abs_rhs, min_rhs);
+	}
+      }
+      if (upper < kHighsInf) {
+	rhs.push_back(upper);
+	if (upper) {
+	  double abs_rhs = std::fabs(upper);
+	  max_rhs = std::max(abs_rhs, max_rhs);
+	  min_rhs = std::min(abs_rhs, min_rhs);
+	}
+      }
     }
   }
+  value_count = valueCountSorted(rhs);
+  reportValueCount(value_count, "RHS");
   // If there is a nonzero rhs then min_rhs and max_rhs will both
   // be positive and finite
   assert(max_rhs == 0 || (0 < min_rhs && min_rhs < kHighsInf));
@@ -605,11 +635,11 @@ void HighsLp::stats() {
   const HighsInt num_nz = this->a_matrix_.numNz();
   if (num_nz > 0) {
     const double value_cluster_size = 1e-4;
-    nonzero_count = nonzeroCountSorted(this->a_matrix_.value_, true, value_cluster_size);
-    reportNonzeroCount(nonzero_count, value_cluster_size);
-    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * nonzero_count.size()) / num_nz;
-    nonzero_count = nonzeroCountSorted(this->a_matrix_.value_, false, value_cluster_size);
-    reportNonzeroCount(nonzero_count, value_cluster_size);
+    value_count = valueCountSorted(this->a_matrix_.value_, true, value_cluster_size);
+    reportValueCount(value_count, "Matrix", value_cluster_size);
+    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * value_count.size()) / num_nz;
+    value_count = valueCountSorted(this->a_matrix_.value_, false, value_cluster_size);
+    reportValueCount(value_count, "Matrix", value_cluster_size);
   }
 }
 
