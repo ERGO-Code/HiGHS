@@ -317,8 +317,8 @@ class JumpMove {
     double currentSlope = 0.0;
 
     // printf(" updatevalue lb %g ub %g numcells %d\n",
-    //        problem.vars[varIdx].lb,
-    //        problem.vars[varIdx].ub, problem.vars[varIdx].coeffs.size());
+    //        lower,
+    //        upper, problem.vars[varIdx].coeffs.size());
 
     for (auto& cell : problem.vars[varIdx].coeffs) {
       auto& constraint = problem.constraints[cell.idx];
@@ -357,13 +357,13 @@ class JumpMove {
 
         if (validRange.first > currentValue) {
           currentSlope -= constraint.weight;
-          if (validRange.first < problem.vars[varIdx].ub)
+          if (validRange.first < upper)
             bestShiftBuffer.emplace_back(validRange.first, constraint.weight);
         }
 
         if (validRange.second <= currentValue) {
           currentSlope += constraint.weight;
-        } else if (validRange.second < problem.vars[varIdx].ub)
+        } else if (validRange.second < upper)
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
       }
     }
@@ -395,9 +395,8 @@ class JumpMove {
       // %g\n", currentScore,currentSlope, currentValue, bestScore, bestValue
       // );
 
-      if (eq(bestValue, problem.incumbentAssignment[varIdx]) ||
-          (!eq(currentValue, problem.incumbentAssignment[varIdx]) &&
-           currentScore < bestScore)) {
+      if (eq(bestValue, varIncumbentValue) ||
+          (!eq(currentValue, varIncumbentValue) && currentScore < bestScore)) {
         bestScore = currentScore;
         bestValue = currentValue;
       }
@@ -405,13 +404,11 @@ class JumpMove {
       // Slope is always increasing, so if we have a valid value, we can quit
       // as soon as the slope turns nonnegative, since we must already have
       // visited the minimum.
-      if (!eq(bestValue, problem.incumbentAssignment[varIdx]) &&
-          currentSlope >= 0.)
-        break;
+      if (!eq(bestValue, varIncumbentValue) && currentSlope >= 0.) break;
     }
 
     // printf("Setting jump for %d to from %g to %g\n", varIdx,
-    // problem.incumbentAssignment[varIdx], moves[varIdx].value);
+    // varIncumbentValue, moves[varIdx].value);
     moves[varIdx].value = bestValue;
   }
 };
