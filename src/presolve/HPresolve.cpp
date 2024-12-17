@@ -2050,8 +2050,7 @@ void HPresolve::storeRow(HighsInt row) {
   rowpositions.clear();
 
   auto rowVec = getSortedRowVector(row);
-  auto rowVecEnd = rowVec.end();
-  for (auto iter = rowVec.begin(); iter != rowVecEnd; ++iter)
+  for (auto iter = rowVec.begin(); iter != rowVec.end(); ++iter)
     rowpositions.push_back(iter.position());
 }
 

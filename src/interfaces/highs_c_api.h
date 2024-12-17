@@ -558,6 +558,72 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const double* value);
 
 /**
+ * Passes multiple linear objective data to HiGHS, clearing any such
+ * data already in HiGHS
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param weight        A pointer to the weights of the linear objective, with
+ *                      its positive/negative sign determining whether it is
+ *                      minimized or maximized during lexicographic optimization
+ * @param offset        A pointer to the objective offsets
+ * @param coefficients  A pointer to the objective coefficients
+ * @param abs_tolerance A pointer to the absolute tolerances used when
+ *                      constructing objective constraints during lexicographic
+ *                      optimization
+ * @param rel_tolerance A pointer to the relative tolerances used when
+ *                      constructing objective constraints during lexicographic
+ *                      optimization
+ * @param priority      A pointer to the priorities of the objectives during
+ *                      lexicographic optimization
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_passLinearObjectives(const void* highs,
+                                    const HighsInt num_linear_objective,
+                                    const double* weight, const double* offset,
+                                    const double* coefficients,
+                                    const double* abs_tolerance,
+                                    const double* rel_tolerance,
+                                    const HighsInt* priority);
+
+/**
+ * Adds linear objective data to HiGHS
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param weight        The weight of the linear objective, with its
+ *                      positive/negative sign determining whether it is
+ *                      minimized or maximized during lexicographic
+ *                      optimization
+ * @param offset        The objective offset
+ * @param coefficients  A pointer to the objective coefficients
+ * @param abs_tolerance The absolute tolerance used when constructing an
+ *                      objective constraint during lexicographic optimization
+ * @param rel_tolerance The relative tolerance used when constructing an
+ *                      objective constraint during lexicographic optimization
+ * @param priority      The priority of this objective during lexicographic
+ *                      optimization
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_addLinearObjective(const void* highs, const double weight,
+                                  const double offset,
+                                  const double* coefficients,
+                                  const double abs_tolerance,
+                                  const double rel_tolerance,
+                                  const HighsInt priority);
+
+/**
+ * Clears any multiple linear objective data in HiGHS
+ *
+ * @param highs A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_clearLinearObjectives(const void* highs);
+/**
  * Pass the name of a row.
  *
  * @param highs A pointer to the Highs instance.
@@ -945,7 +1011,7 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
  *                                                filled with the unboundedness
  *                                                direction.
  */
-HighsInt getDualUnboundednessDirection(
+HighsInt Highs_getDualUnboundednessDirection(
     const void* highs, HighsInt* has_dual_unboundedness_direction,
     double* dual_unboundedness_direction_value);
 
