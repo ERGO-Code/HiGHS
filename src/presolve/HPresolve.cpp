@@ -3080,6 +3080,20 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               continue;
             }
 
+            auto remDoubletonEq = [&](HighsInt col, HighsInt binCol,
+                                      HighsInt direction) {
+              double bound = direction >= 0 ? model->col_upper_[col]
+                                            : model->col_lower_[col];
+              double scale =
+                  direction * (model->col_lower_[col] - model->col_upper_[col]);
+              double offset = bound - model->col_lower_[binCol] * scale;
+              postsolve_stack.doubletonEquation(
+                  -1, col, binCol, 1.0, -scale, offset, model->col_lower_[col],
+                  model->col_upper_[col], 0.0, false, false,
+                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+              substitute(col, binCol, offset, scale);
+            };
+
             if (std::signbit(binCoef) == std::signbit(nonz.value())) {
               // binary coefficient is positive:
               // setting the binary to its upper bound
@@ -3095,16 +3109,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               // nonzCol = colUb - (colUb - colLb)(binCol - binLb)
               // nonzCol = colUb + binLb * (colUb - colLb) - (colUb - colLb) *
               // binCol
-              double scale = model->col_lower_[nonz.index()] -
-                             model->col_upper_[nonz.index()];
-              double offset = model->col_upper_[nonz.index()] -
-                              model->col_lower_[binCol] * scale;
-              postsolve_stack.doubletonEquation(
-                  -1, nonz.index(), binCol, 1.0, -scale, offset,
-                  model->col_lower_[nonz.index()],
-                  model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-              substitute(nonz.index(), binCol, offset, scale);
+              remDoubletonEq(nonz.index(), binCol, HighsInt{1});
             } else {
               // This case yields the following implications:
               // binCol = lb -> nonzCol = lb
@@ -3113,16 +3118,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               // nonzCol = colLb + (colUb - colLb)(binCol - binLb)
               // nonzCol =
               //    colLb - binLb*(colUb - colLb) + (colUb - colLb)*binCol
-              double scale = model->col_upper_[nonz.index()] -
-                             model->col_lower_[nonz.index()];
-              double offset = model->col_lower_[nonz.index()] -
-                              model->col_lower_[binCol] * scale;
-              postsolve_stack.doubletonEquation(
-                  -1, nonz.index(), binCol, 1.0, -scale, offset,
-                  model->col_lower_[nonz.index()],
-                  model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-              substitute(nonz.index(), binCol, offset, scale);
+              remDoubletonEq(nonz.index(), binCol, HighsInt{-1});
             }
           }
 
