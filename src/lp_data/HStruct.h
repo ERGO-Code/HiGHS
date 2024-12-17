@@ -156,11 +156,11 @@ struct HighsLinearObjective {
 
 struct HighsLpStats {
   double relative_max_cost_entry;
-  double relative_num_equal_cost_nz;
+  double relative_num_equal_cost;
   double relative_num_inf_upper;
   double relative_num_equations;
   double relative_max_rhs_entry;
-  double relative_num_equal_rhs_nz;
+  double relative_num_equal_rhs;
   double a_matrix_density;
   double a_matrix_col_density;
   double a_matrix_row_density;

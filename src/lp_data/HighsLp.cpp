@@ -513,35 +513,47 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
 }
 
 void HighsLpStats::clear() {
-  relative_max_cost_entry = -kHighsInf;//0;
-  relative_num_equal_cost_nz = -kHighsInf;//0;
-  relative_num_inf_upper = -kHighsInf;//0;
-  relative_num_equations = -kHighsInf;//0;
-  relative_max_rhs_entry = -kHighsInf;//0;
-  relative_num_equal_rhs_nz = -kHighsInf;//0;
-  a_matrix_density = -kHighsInf;//0;
-  a_matrix_col_density = -kHighsInf;//0;
-  a_matrix_row_density = -kHighsInf;//0;
-  relative_max_matrix_entry = -kHighsInf;//0;
-  relative_num_equal_a_matrix_nz = -kHighsInf;//0;
-  relative_num_dense_row = -kHighsInf;//0;
+  relative_max_cost_entry = -kHighsInf;         // 0;
+  relative_num_equal_cost = -kHighsInf;         // 0;
+  relative_num_inf_upper = -kHighsInf;          // 0;
+  relative_num_equations = -kHighsInf;          // 0;
+  relative_max_rhs_entry = -kHighsInf;          // 0;
+  relative_num_equal_rhs = -kHighsInf;          // 0;
+  a_matrix_density = -kHighsInf;                // 0;
+  a_matrix_col_density = -kHighsInf;            // 0;
+  a_matrix_row_density = -kHighsInf;            // 0;
+  relative_max_matrix_entry = -kHighsInf;       // 0;
+  relative_num_equal_a_matrix_nz = -kHighsInf;  // 0;
+  relative_num_dense_row = -kHighsInf;          // 0;
 }
 
 void HighsLpStats::report(FILE* file) {
   fprintf(file, "LP stats\n");
-  fprintf(file, "   Relative maximum cost_entry =                     %g\n", relative_max_cost_entry);
-  fprintf(file, "   Relative number of identical costs =              %g\n", relative_num_equal_cost_nz);
-  fprintf(file, "   Relative number of infinite column upper bounds = %g\n", relative_num_inf_upper);
-  fprintf(file, "   Relative number of equations =                    %g\n", relative_num_equations);
-  fprintf(file, "   Relative maximum rhs entry =                      %g\n", relative_max_rhs_entry);
-  fprintf(file, "   Relative number of identical rhs entries =        %g\n", relative_num_equal_rhs_nz);
+  fprintf(file, "   Relative maximum cost_entry =                     %g\n",
+          relative_max_cost_entry);
+  fprintf(file, "   Relative number of identical costs =              %g\n",
+          relative_num_equal_cost);
+  fprintf(file, "   Relative number of infinite column upper bounds = %g\n",
+          relative_num_inf_upper);
+  fprintf(file, "   Relative number of equations =                    %g\n",
+          relative_num_equations);
+  fprintf(file, "   Relative maximum rhs entry =                      %g\n",
+          relative_max_rhs_entry);
+  fprintf(file, "   Relative number of identical rhs entries =        %g\n",
+          relative_num_equal_rhs);
   fprintf(file, "   Constraint matrix stats\n");
-  fprintf(file, "      Density =                                     %g\n", a_matrix_density);
-  fprintf(file, "      Column density =                              %g\n", a_matrix_col_density);
-  fprintf(file, "      Row density =                                 %g\n", a_matrix_row_density);
-  fprintf(file, "      Relative maximum entry =                      %g\n", relative_max_matrix_entry);
-  fprintf(file, "      Relative number of almost identical entries = %g\n", relative_num_equal_a_matrix_nz);
-  fprintf(file, "      Relative number of dense rows =               %g\n", relative_num_dense_row);
+  fprintf(file, "      Density =                                     %g\n",
+          a_matrix_density);
+  fprintf(file, "      Column density =                              %g\n",
+          a_matrix_col_density);
+  fprintf(file, "      Row density =                                 %g\n",
+          a_matrix_row_density);
+  fprintf(file, "      Relative maximum entry =                      %g\n",
+          relative_max_matrix_entry);
+  fprintf(file, "      Relative number of almost identical entries = %g\n",
+          relative_num_equal_a_matrix_nz);
+  fprintf(file, "      Relative number of dense rows =               %g\n",
+          relative_num_dense_row);
 }
 
 /*void reportValueCount(
@@ -577,21 +589,39 @@ void HighsLp::stats() {
   // be positive and finite
   assert(max_cost == 0 || (0 < min_cost && min_cost < kHighsInf));
   this->stats_.relative_max_cost_entry = max_cost > 0 ? max_cost / min_cost : 0;
-  // Find the number of nonzeros that are identical - interpreting
-  // this as the number whose value has cound at least 2
-  HighsInt num_nonzero = 0;
-  HighsInt num_identical = 0;
-  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++) {
-    HighsInt count = value_count[iX].second;
-    num_nonzero += count;
-    if (count > 1) num_identical += (count-1);
-  }
-  if (this->num_col_ > 0) this->stats_.relative_num_equal_cost_nz = (1.0 * num_identical) / this->num_col_;
+  // Lambda for relative number of identical values
+  auto numRelativeIdentical = [&](const HighsInt num_value) {
+    if (num_value == 0) return 0.0;
+    if (value_count.size() == 1) {
+      // If all values are the same, the number of different values is
+      // 1, so the relative number of different values is 0, so the
+      // relative number of identical values is 1
+      //
+      // Yes, there's an inconsistency, in that the code below would
+      // return 1 - 1/num_value < 1
+      return 1.0;
+    } else {
+      // The relative number of identical values is (1 - relative
+      // number of different values), and the relative number of
+      // different values is
+      //
+      // (number of different values)/(number of values)
+      //
+      // Hence, if all values are different, the number of different
+      // values is the number of values, so the relative number of
+      // different values is 1, so the relative number of identical
+      // values is 0
+      return 1.0 - (1.0 * value_count.size()) / num_value;
+    }
+  };
+
+  this->stats_.relative_num_equal_cost = numRelativeIdentical(this->num_col_);
 
   HighsInt num_inf_upper = 0;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
     if (this->col_upper_[iCol] >= kHighsInf) num_inf_upper++;
-  if (this->num_col_ > 0) this->stats_.relative_num_inf_upper = (1.0 * num_inf_upper) / this->num_col_;
+  this->stats_.relative_num_inf_upper =
+      this->num_col_ > 0 ? (1.0 * num_inf_upper) / this->num_col_ : 0;
 
   std::vector<double> rhs;
   double max_rhs = 0;
@@ -605,42 +635,78 @@ void HighsLp::stats() {
       rhs.push_back(lower);
     } else {
       if (lower > -kHighsInf) {
-	rhs.push_back(lower);
-	if (lower) {
-	  double abs_rhs = std::fabs(lower);
-	  max_rhs = std::max(abs_rhs, max_rhs);
-	  min_rhs = std::min(abs_rhs, min_rhs);
-	}
+        rhs.push_back(lower);
+        if (lower) {
+          double abs_rhs = std::fabs(lower);
+          max_rhs = std::max(abs_rhs, max_rhs);
+          min_rhs = std::min(abs_rhs, min_rhs);
+        }
       }
       if (upper < kHighsInf) {
-	rhs.push_back(upper);
-	if (upper) {
-	  double abs_rhs = std::fabs(upper);
-	  max_rhs = std::max(abs_rhs, max_rhs);
-	  min_rhs = std::min(abs_rhs, min_rhs);
-	}
+        rhs.push_back(upper);
+        if (upper) {
+          double abs_rhs = std::fabs(upper);
+          max_rhs = std::max(abs_rhs, max_rhs);
+          min_rhs = std::min(abs_rhs, min_rhs);
+        }
       }
     }
   }
   value_count = valueCountSorted(rhs);
+  HighsInt num_rhs = rhs.size();
   reportValueCount(value_count, "RHS");
   // If there is a nonzero rhs then min_rhs and max_rhs will both
   // be positive and finite
   assert(max_rhs == 0 || (0 < min_rhs && min_rhs < kHighsInf));
   this->stats_.relative_max_rhs_entry = max_rhs > 0 ? max_rhs / min_rhs : 0;
-  if (this->num_row_)
-    this->stats_.relative_num_equations =
-        (1.0 * num_equations) / this->num_row_;
+  this->stats_.relative_num_equations =
+      this->num_row_ > 0 ? (1.0 * num_equations) / this->num_row_ : 0;
+
+  this->stats_.relative_num_equal_rhs = numRelativeIdentical(num_rhs);
 
   const HighsInt num_nz = this->a_matrix_.numNz();
+  const bool nontrivial_matrix = this->num_col_ > 0 && this->num_row_ > 0;
+  this->stats_.a_matrix_density =
+      nontrivial_matrix ? ((1.0 * num_nz) / this->num_col_) / this->num_row_
+                        : 0;
+  this->stats_.a_matrix_col_density =
+      nontrivial_matrix ? ((1.0 * num_nz) / this->num_col_) / this->num_col_
+                        : 0;
+  this->stats_.a_matrix_row_density =
+      nontrivial_matrix ? ((1.0 * num_nz) / this->num_row_) / this->num_row_
+                        : 0;
   if (num_nz > 0) {
     const double value_cluster_size = 1e-4;
-    value_count = valueCountSorted(this->a_matrix_.value_, true, value_cluster_size);
+    value_count =
+        valueCountSorted(this->a_matrix_.value_, true, value_cluster_size);
     reportValueCount(value_count, "Matrix", value_cluster_size);
-    this->stats_.relative_num_equal_a_matrix_nz = (1.0 * value_count.size()) / num_nz;
-    value_count = valueCountSorted(this->a_matrix_.value_, false, value_cluster_size);
-    reportValueCount(value_count, "Matrix", value_cluster_size);
+    this->stats_.relative_num_equal_a_matrix_nz = numRelativeIdentical(num_nz);
   }
+  double max_value = 0;
+  double min_value = kHighsInf;
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++) {
+    double value = value_count[iX].first;
+    if (value == 0) continue;
+    double abs_value = std::fabs(value);
+    max_value = std::max(abs_value, max_value);
+    min_value = std::min(abs_value, min_value);
+  }
+  // If there is a nonzero value then min_value and max_value will both
+  // be positive and finite
+  assert(max_value == 0 || (0 < min_value && min_value < kHighsInf));
+  this->stats_.relative_max_matrix_entry =
+      max_value > 0 ? max_value / min_value : 0;
+
+  const double kDenseRowTolerance = 0.5;
+  const HighsInt dense_row_count = this->num_col_ * kDenseRowTolerance;
+  std::vector<HighsInt> row_count;
+  this->a_matrix_.getRowCounts(row_count);
+  HighsInt num_dense_row = 0;
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++)
+    if (row_count[iRow] >= dense_row_count) num_dense_row++;
+
+  this->stats_.relative_num_dense_row =
+      this->num_row_ > 0 ? (1.0 * num_dense_row) / this->num_row_ : 0;
 }
 
 void HighsLp::unapplyMods() {

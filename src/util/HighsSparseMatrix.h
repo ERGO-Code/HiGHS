@@ -130,6 +130,9 @@ class HighsSparseMatrix {
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 
+  void getRowCounts(vector<HighsInt>& row_count);
+  void getColCounts(vector<HighsInt>& col_count);
+
  private:
   void priceByRowDenseResult(
       std::vector<double>& result, const HVector& column,

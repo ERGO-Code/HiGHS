@@ -1031,7 +1031,6 @@ HighsStatus Highs::solve() {
 
   model_.lp_.stats();
   model_.lp_.stats_.report(stdout);
-  
 
   if (model_.isMip() && solution_.value_valid) {
     // Determine whether the current (partial) solution of a MIP is

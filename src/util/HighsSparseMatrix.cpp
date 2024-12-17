@@ -1626,6 +1626,38 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
+void HighsSparseMatrix::getRowCounts(vector<HighsInt>& row_count) {
+  row_count.clear();
+  HighsInt num_col = this->num_col_;
+  HighsInt num_row = this->num_row_;
+  if (this->isRowwise()) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      row_count.push_back(this->start_[iRow + 1] - this->start_[iRow]);
+  } else {
+    row_count.assign(num_row, 0);
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        row_count[this->index_[iEl]]++;
+  }
+}
+
+void HighsSparseMatrix::getColCounts(vector<HighsInt>& col_count) {
+  col_count.clear();
+  HighsInt num_row = this->num_row_;
+  HighsInt num_col = this->num_col_;
+  if (this->isColwise()) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      col_count.push_back(this->start_[iCol + 1] - this->start_[iCol]);
+  } else {
+    col_count.assign(num_col, 0);
+    for (HighsInt iRow = 0; iRow < num_row; iRow++)
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
+        col_count[this->index_[iEl]]++;
+  }
+}
+
 void HighsSparseMatrix::priceByRowDenseResult(
     std::vector<double>& result, const HVector& column,
     const HighsInt from_index, const HighsInt debug_report) const {

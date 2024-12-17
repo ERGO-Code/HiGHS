@@ -1262,8 +1262,7 @@ bool highsPause(const bool pause_condition, const std::string message) {
 
 void reportValueCount(
     const std::vector<std::pair<double, HighsInt>> value_count,
-    const std::string message,
-    const double tolerance) {
+    const std::string message, const double tolerance) {
   if (message != "") printf("%s\n", message.c_str());
   printf("Index              Value Count");
   if (tolerance > 0)
@@ -1276,18 +1275,18 @@ void reportValueCount(
            int(value_count[iX].second));
 }
 
-std::vector<std::pair<double, HighsInt>> valueCount(const std::vector<double> data) {
+std::vector<std::pair<double, HighsInt>> valueCount(
+    const std::vector<double> data) {
   std::vector<double> value;
   std::vector<HighsInt> count;
   std::unordered_map<double, HighsInt> value2index;
   std::vector<std::pair<double, HighsInt>> value_count;
-  
+
   for (HighsInt iX = 0; iX < HighsInt(data.size()); iX++) {
     double data_ = data[iX];
     // Exclude infinite values
     if (data_ == kHighsInf || data_ == -kHighsInf) continue;
-    auto emplace_result =
-        value2index.emplace(data_, HighsInt(value.size()));
+    auto emplace_result = value2index.emplace(data_, HighsInt(value.size()));
     if (emplace_result.second) {
       // New
       value.push_back(data_);
@@ -1307,19 +1306,21 @@ std::vector<std::pair<double, HighsInt>> valueCount(const std::vector<double> da
 }
 
 bool increasingValue(std::pair<double, HighsInt> x1,
-                std::pair<double, HighsInt> x2) {
+                     std::pair<double, HighsInt> x2) {
   return x1.first <= x2.first;
 }
 
 bool decreasingCount(std::pair<double, HighsInt> x1,
-		     std::pair<double, HighsInt> x2) {
+                     std::pair<double, HighsInt> x2) {
   if (x1.second == x2.second) {
     return x1.first <= x2.first;
   }
   return x1.second > x2.second;
 }
 
-std::vector<std::pair<double, HighsInt>> valueCountSorted(const std::vector<double> data, const bool by_value, const double tolerance) {
+std::vector<std::pair<double, HighsInt>> valueCountSorted(
+    const std::vector<double> data, const bool by_value,
+    const double tolerance) {
   std::vector<std::pair<double, HighsInt>> value_count = valueCount(data);
 
   if (tolerance <= 0) {
@@ -1335,7 +1336,7 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(const std::vector<doub
   // the entries sorted by value
   std::sort(value_count.begin(), value_count.end(), increasingValue);
   reportValueCount(value_count);
-    
+
   const HighsInt num_distinct_value = value_count.size();
 
   HighsInt cluster_first_index = -1;

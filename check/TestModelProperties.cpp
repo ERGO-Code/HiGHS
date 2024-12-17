@@ -156,14 +156,14 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   data = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   reportData(data);
   std::vector<std::pair<double, HighsInt>> value_count;
-   // Lambda for sum of counts
+  // Lambda for sum of counts
   auto sumCount = [&]() {
     HighsInt sum_count = 0;
     for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
       sum_count += value_count[iX].second;
     return sum_count;
   };
-  
+
   value_count = valueCountReport(data);
   REQUIRE(value_count.size() == 9);
   REQUIRE(sumCount() == HighsInt(data.size()));
@@ -252,7 +252,7 @@ TEST_CASE("value-count", "[highs_model_properties]") {
 std::vector<std::pair<double, HighsInt>> valueCountReport(
     const std::vector<double> data, const double tolerance) {
   std::vector<std::pair<double, HighsInt>> value_count =
-    valueCountSorted(data, true, tolerance);
+      valueCountSorted(data, true, tolerance);
   if (tolerance > 0) reportValueCount(value_count, "", tolerance);
   return value_count;
 }

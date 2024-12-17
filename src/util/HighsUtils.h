@@ -219,11 +219,11 @@ inline T fractionality(T input, T* intval = nullptr) {
 }
 void reportValueCount(
     const std::vector<std::pair<double, HighsInt>> value_count,
-    const std::string message = "",
+    const std::string message = "", const double tolerance = 0);
+std::vector<std::pair<double, HighsInt>> valueCount(
+    const std::vector<double> data);
+std::vector<std::pair<double, HighsInt>> valueCountSorted(
+    const std::vector<double> data, const bool by_value = true,
     const double tolerance = 0);
-std::vector<std::pair<double, HighsInt>> valueCount(const std::vector<double> data);
-std::vector<std::pair<double, HighsInt>> valueCountSorted(const std::vector<double> data,
-							  const bool by_value = true,
-							  const double tolerance = 0);
 
 #endif  // UTIL_HIGHSUTILS_H_
