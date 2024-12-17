@@ -8,7 +8,7 @@
 
 #define FJ_LOG_PREFIX "Feasibility Jump: "
 
-// Everything is in the global namespace in reference feasibilityjump.hh
+// TIP: clang-format the reference feasibilityjump.hh before diffing with this
 namespace external_feasibilityjump {
 
 enum RowType {
@@ -32,8 +32,8 @@ struct FJStatus {
   double* solution;
 };
 
-double violationTolerance = 1.0e-5;  // const in reference feasibilityjump.hh
-double equalityTolerance = 1.0e-5;   // const in reference feasibilityjump.hh
+double violationTolerance = 1.0e-5;
+double equalityTolerance = 1.0e-5;
 
 // Measures if two doubles are equal within a tolerance of 1.0e-5.
 bool eq(double a, double b) { return fabs(a - b) < equalityTolerance; }
@@ -108,7 +108,7 @@ struct Problem {
   std::vector<uint32_t> violatedConstraints;
   bool usedRelaxContinuous = false;
 
-  size_t nNonzeros = 0;  // no initialization in reference feasibilityjump.hh
+  size_t nNonzeros = 0;
   double incumbentObjective = NAN;
 
   int addVar(VarType vartype, double lb, double ub, double objCoeff) {
@@ -367,8 +367,7 @@ class JumpMove {
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
       }
     }
-    // No finiteness checking in the reference feasibilityjump.hh, which
-    // assumes finite bounds
+
     if (std::isfinite(lower)) {
       bestShiftBuffer.emplace_back(lower, 0);
     }
@@ -438,7 +437,7 @@ class FeasibilityJumpSolver {
   double weightUpdateDecay;
   double weightUpdateIncrement = 1.0;
 
-  size_t nBumps = 0;  // no initialization in reference feasibilityjump.hh
+  size_t nBumps = 0;
 
   bool need_logging_header = true;
 
