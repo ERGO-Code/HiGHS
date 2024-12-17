@@ -310,18 +310,10 @@ class JumpMove {
   void updateValue(Problem& problem, uint32_t varIdx) {
     bestShiftBuffer.clear();
     auto varIncumbentValue = problem.incumbentAssignment[varIdx];
-    // No finiteness checking in reference feasibilityjump.hh, which
-    // assumes finite bounds
-    double currentValue = 0.0;
     double lower = problem.vars[varIdx].lb;
     double upper = problem.vars[varIdx].ub;
-    if (std::isfinite(lower)) {
-      currentValue = lower;
-    } else if (std::isfinite(upper)) {
-      currentValue = upper;
-    }
+    double currentValue = lower;  // can be -inf!
 
-    double currentScore = 0.0;
     double currentSlope = 0.0;
 
     // printf(" updatevalue lb %g ub %g numcells %d\n",
@@ -364,15 +356,12 @@ class JumpMove {
         if (validRange.first > validRange.second) continue;
 
         if (validRange.first > currentValue) {
-          currentScore += constraint.weight * (validRange.first - currentValue);
           currentSlope -= constraint.weight;
           if (validRange.first < problem.vars[varIdx].ub)
             bestShiftBuffer.emplace_back(validRange.first, constraint.weight);
         }
 
         if (validRange.second <= currentValue) {
-          currentScore +=
-              constraint.weight * (validRange.second - currentValue);
           currentSlope += constraint.weight;
         } else if (validRange.second < problem.vars[varIdx].ub)
           bestShiftBuffer.emplace_back(validRange.second, constraint.weight);
@@ -380,16 +369,22 @@ class JumpMove {
     }
     // No finiteness checking in the reference feasibilityjump.hh, which
     // assumes finite bounds
-    if (std::isfinite(problem.vars[varIdx].lb)) {
-      bestShiftBuffer.emplace_back(problem.vars[varIdx].lb, 0);
+    if (std::isfinite(lower)) {
+      bestShiftBuffer.emplace_back(lower, 0);
     }
-    if (std::isfinite(problem.vars[varIdx].ub)) {
-      bestShiftBuffer.emplace_back(problem.vars[varIdx].ub, 0);
+    if (std::isfinite(upper)) {
+      bestShiftBuffer.emplace_back(upper, 0);
     }
     std::sort(bestShiftBuffer.begin(), bestShiftBuffer.end());
 
+    // We only care about relative scores, so can pick an arbitrary start level
+    double currentScore = 0.0;
+    currentValue =
+        bestShiftBuffer.empty() ? varIncumbentValue : bestShiftBuffer[0].first;
+
     double bestScore = currentScore;
     double bestValue = currentValue;
+
     // printf("evaluating best shift buffer size %d \n",
     // bestShiftBuffer.size());
     for (auto& item : bestShiftBuffer) {
