@@ -732,6 +732,55 @@ TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 }
 
+TEST_CASE("MIP-2084", "[highs_test_mip_solver]") {
+  Highs h;
+  // No presolve
+  h.setOptionValue("output_flag", dev_run);
+
+  // Minimize
+  //   3x + y
+  // Subject to
+  //   47x + 19y = 10000000002226
+  //   23x + 57y = 10000000013254
+  // General
+  //   x y
+  // End
+
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {3, 1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {10000000002226, 10000000013254};
+  lp.row_upper_ = {10000000002226, 10000000013254};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {47, 23, 19, 57};
+
+  // Solve
+  h.passModel(lp);
+  h.setOptionValue("presolve", "off");
+  h.run();
+  HighsModelStatus require_model_status = h.getModelStatus();
+  if (dev_run)
+    printf("Solution is [%24.18g, %24.18g] with status %s\n",
+           h.getSolution().col_value[0], h.getSolution().col_value[1],
+           h.modelStatusToString(require_model_status).c_str());
+
+  h.clearSolver();
+
+  h.setOptionValue("presolve", "on");
+  h.run();
+  HighsModelStatus model_status = h.getModelStatus();
+  if (dev_run)
+    printf("Solution is [%24.18g, %24.18g] with status %s\n",
+           h.getSolution().col_value[0], h.getSolution().col_value[1],
+           h.modelStatusToString(model_status).c_str());
+  REQUIRE(model_status == require_model_status);
+}
+
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective, const bool dev_run) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
