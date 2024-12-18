@@ -525,8 +525,8 @@ void HighsLpStats::clear() {
   relative_max_rhs_entry = -kHighsInf;          // 0;
   relative_num_equal_rhs = -kHighsInf;          // 0;
   a_matrix_density = -kHighsInf;                // 0;
-  a_matrix_col_density = -kHighsInf;            // 0;
-  a_matrix_row_density = -kHighsInf;            // 0;
+  a_matrix_nz_per_col = -kHighsInf;             // 0;
+  a_matrix_nz_per_row = -kHighsInf;             // 0;
   relative_max_matrix_entry = -kHighsInf;       // 0;
   relative_num_equal_a_matrix_nz = -kHighsInf;  // 0;
   relative_num_dense_row = -kHighsInf;          // 0;
@@ -561,10 +561,10 @@ void HighsLpStats::report(FILE* file, std::string message,
     fprintf(file, "   Constraint matrix stats\n");
     fprintf(file, "      Density =                                     %g\n",
 	    a_matrix_density);
-    fprintf(file, "      Column density =                              %g\n",
-	    a_matrix_col_density);
-    fprintf(file, "      Row density =                                 %g\n",
-	    a_matrix_row_density);
+    fprintf(file, "      Nonzeros per column =                         %g\n",
+	    a_matrix_nz_per_col);
+    fprintf(file, "      Nonzeros per row =                            %g\n",
+	    a_matrix_nz_per_row);
     fprintf(file, "      Relative maximum entry =                      %g\n",
 	    relative_max_matrix_entry);
     fprintf(file, "      Relative number of almost identical entries = %g\n",
@@ -573,7 +573,7 @@ void HighsLpStats::report(FILE* file, std::string message,
 	    relative_num_dense_row);
   } else if (style == HighsLpStatsReportCsvHeader) {
     fprintf(file,
-            "valid,model,col,row,nz,relative_max_cost_entry,relative_num_equal_cost,relative_num_inf_upper,relative_num_equations,relative_max_rhs_entry,relative_num_equal_rhs,a_matrix_density,a_matrix_col_density,a_matrix_row_density,relative_max_matrix_entry,relative_num_equal_a_matrix_nz,relative_num_dense_row");
+            "valid,model,col,row,nz,relative_max_cost_entry,relative_num_equal_cost,relative_num_inf_upper,relative_num_equations,relative_max_rhs_entry,relative_num_equal_rhs,a_matrix_density,a_matrix_nz_per_col,a_matrix_nz_per_row,relative_max_matrix_entry,relative_num_equal_a_matrix_nz,relative_num_dense_row");
   } else if (style == HighsLpStatsReportCsvData) {
     fprintf(file, "%d,%s,%d,%d,%d,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g",
 	    int(this->valid), this->model.c_str(),
@@ -585,8 +585,8 @@ void HighsLpStats::report(FILE* file, std::string message,
 	    relative_max_rhs_entry,
 	    relative_num_equal_rhs,
 	    a_matrix_density,
-	    a_matrix_col_density,
-	    a_matrix_row_density,
+	    a_matrix_nz_per_col,
+	    a_matrix_nz_per_row,
 	    relative_max_matrix_entry,
 	    relative_num_equal_a_matrix_nz,
 	    relative_num_dense_row);	    
@@ -712,12 +712,10 @@ void HighsLp::stats() {
   this->stats_.a_matrix_density =
       nontrivial_matrix ? ((1.0 * num_nz) / this->num_col_) / this->num_row_
                         : 0;
-  this->stats_.a_matrix_col_density =
-      nontrivial_matrix ? ((1.0 * num_nz) / this->num_col_) / this->num_col_
-                        : 0;
-  this->stats_.a_matrix_row_density =
-      nontrivial_matrix ? ((1.0 * num_nz) / this->num_row_) / this->num_row_
-                        : 0;
+  this->stats_.a_matrix_nz_per_col =
+      nontrivial_matrix ? ((1.0 * num_nz) / this->num_col_) : 0;
+  this->stats_.a_matrix_nz_per_row =
+      nontrivial_matrix ? ((1.0 * num_nz) / this->num_row_) : 0;
   if (num_nz > 0) {
     const double value_cluster_size = 1e-4;
     value_count =

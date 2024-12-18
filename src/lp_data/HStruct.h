@@ -167,8 +167,8 @@ struct HighsLpStats {
   double relative_max_rhs_entry;
   double relative_num_equal_rhs;
   double a_matrix_density;
-  double a_matrix_col_density;
-  double a_matrix_row_density;
+  double a_matrix_nz_per_col;
+  double a_matrix_nz_per_row;
   double relative_max_matrix_entry;
   double relative_num_equal_a_matrix_nz;
   double relative_num_dense_row;

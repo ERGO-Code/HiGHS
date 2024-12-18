@@ -1271,7 +1271,7 @@ void reportValueCount(
     printf("\n");
 
   for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
-    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
+    printf(" %4d %18.12g  %4d\n", int(iX), value_count[iX].first,
            int(value_count[iX].second));
 }
 
@@ -1359,16 +1359,17 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
     cluster_first_index = iX;
   };
 
-  for (HighsInt iX = 0; iX < num_distinct_value; iX++) {
+  cluster_first_index = 0;
+  // Loop from 1, since first cluster starts at 0, and can only be
+  // completed when entry 1 is viewed
+  for (HighsInt iX = 1; iX < num_distinct_value; iX++) {
     double value_ = value_count[iX].first;
-    if (cluster_first_index < 0) {
-      // First cluster started
-      cluster_first_index = iX;
-    } else if (value_ > value_count[iX - 1].first + tolerance) {
+    double last_diff = value_ - value_count[iX - 1].first;
+    if (last_diff > tolerance) {
       // New cluster started
       newCluster(iX);
     } else if (cluster_first_index < iX - 1 &&
-               value_ > value_count[cluster_first_index].first + tolerance) {
+               value_ - value_count[cluster_first_index].first > tolerance) {
       // Within tolerance of last entry in non-trivial cluster, but
       // larger than the first entry by more than the tolernace
       //
@@ -1376,9 +1377,8 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
       // does it start a new cluster?
       double first_diff = value_count[cluster_first_index + 1].first -
                           value_count[cluster_first_index].first;
-      double last_diff = value_ - value_count[iX - 1].first;
-      assert(0 < first_diff && first_diff < tolerance);
-      assert(0 < last_diff && last_diff < tolerance);
+      assert(0 < first_diff && first_diff <= tolerance);
+      assert(0 < last_diff && last_diff <= tolerance);
       if (first_diff <= last_diff) {
         // New cluster started with value_
         newCluster(iX);
@@ -1394,6 +1394,10 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
     }
   }
   newCluster(num_distinct_value);
+  if (num_cluster < num_distinct_value) {
+    printf("grep valueCountSorted: num clusters = %d < %d = num distinct values\n",
+	   int(num_cluster), int(num_distinct_value))
+  }
   value_count.resize(num_cluster);
   if (!by_value)
     std::sort(value_count.begin(), value_count.end(), decreasingCount);
