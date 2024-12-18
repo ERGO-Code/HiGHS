@@ -243,9 +243,10 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 }
 
 bool HPresolve::isImpliedIntegral(HighsInt col) {
-  bool runDualDetection = true;
-
+  // check if the integer constraint on a variable is implied by the model
   assert(model->integrality_[col] == HighsVarType::kInteger);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -283,26 +284,33 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
+    // if row coefficients are not integral, variable is not (implied) integral
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
     if (model->row_upper_[nz.index()] != kHighsInf) {
+      // right-hand side: scale, round down and unscale again
       double rUpper =
           std::abs(nz.value()) *
           std::floor(model->row_upper_[nz.index()] * std::abs(scale) +
                      primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_upper_[nz.index()] - rUpper) >
           options->small_matrix_value) {
+        // update right-hand side and mark row as changed
         model->row_upper_[nz.index()] = rUpper;
         markChangedRow(nz.index());
       }
-    } else {
-      assert(model->row_lower_[nz.index()] != -kHighsInf);
+    }
+    if (model->row_lower_[nz.index()] != -kHighsInf) {
+      // left-hand side: scale, round up and unscale again
       double rLower =
           std::abs(nz.value()) *
-          std::ceil(model->row_upper_[nz.index()] * std::abs(scale) -
+          std::ceil(model->row_lower_[nz.index()] * std::abs(scale) -
                     primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_lower_[nz.index()] - rLower) >
           options->small_matrix_value) {
-        model->row_upper_[nz.index()] = rLower;
+        // update left-hand side and mark row as changed
+        model->row_lower_[nz.index()] = rLower;
         markChangedRow(nz.index());
       }
     }
@@ -312,9 +320,10 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 }
 
 bool HPresolve::isImpliedInteger(HighsInt col) {
-  bool runDualDetection = true;
-
+  // check if a continuous variable is implied integer
   assert(model->integrality_[col] == HighsVarType::kContinuous);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -361,11 +370,11 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     if (model->row_upper_[nz.index()] != kHighsInf &&
-        fractionality(model->row_upper_[nz.index()]) > primal_feastol)
+        fractionality(model->row_upper_[nz.index()] * scale) > primal_feastol)
       return false;
 
     if (model->row_lower_[nz.index()] != -kHighsInf &&
-        fractionality(model->row_lower_[nz.index()]) > primal_feastol)
+        fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
       return false;
 
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
