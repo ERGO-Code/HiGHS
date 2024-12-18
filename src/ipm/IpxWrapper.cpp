@@ -187,6 +187,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
   ipx_stats = lps.GetIpxStats();
+  ipx_stats.model = lp.model_name_;
   ipx_stats.averages();
   ipx_stats.valid = true;
   // Struct ipx_info defined in ipx/ipx_info.h
@@ -1209,21 +1210,23 @@ void HighsIpxStats::report(FILE* file, const std::string message,
     fprintf(file, "   Type 2                time = %g\n", this->type2_time);
     fprintf(file, "   IPM                   time = %g\n", this->ipm_time);
     fprintf(file, "   Crossover             time = %g\n", this->crossover_time);
+    fprintf(file, "   Solve                 time = %g\n", this->solve_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
-            "valid,col,row,nz,iteration_count,cr_count,iteration_count, "
+            "valid,model,col,row,nz,iteration_count,cr_count,iteration_count, "
             "cr_count,matrix_nz,invert_nz,type1_time,basis0_time,type2_time,"
-            "ipm_time,crossover_time,");
+            "ipm_time,crossover_time,solve_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     this->averages();
     fprintf(
-        file, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
+        file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
+	int(this->valid), this->model.c_str(),
         int(this->num_col), int(this->num_row), int(this->num_nz),
         int(this->num_type1_iteration), int(this->average_type1_cr_count),
         int(this->num_type2_iteration), int(this->average_type2_cr_count),
         int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
         this->type1_time, this->basis0_time, this->type2_time, this->ipm_time,
-        this->crossover_time);
+        this->crossover_time, this->solve_time);
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -1232,6 +1235,7 @@ void HighsIpxStats::report(FILE* file, const std::string message,
 
 void HighsIpxStats::initialise() {
   valid = false;
+  model = "";
   iteration_count = 0;
   num_col = 0;
   num_row = 0;
@@ -1252,4 +1256,5 @@ void HighsIpxStats::initialise() {
   type2_time = 0;
   ipm_time = 0;
   crossover_time = 0;
+  solve_time = 0;
 }

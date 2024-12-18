@@ -1266,7 +1266,7 @@ void reportValueCount(
   if (message != "") printf("%s\n", message.c_str());
   printf("Index              Value Count");
   if (tolerance > 0)
-    printf(": %s %g\n", ": tolerance = ", tolerance);
+    printf(": %s %g\n", "tolerance = ", tolerance);
   else
     printf("\n");
 

@@ -155,6 +155,11 @@ struct HighsLinearObjective {
 };
 
 struct HighsLpStats {
+  bool valid;
+  std::string model;
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
   double relative_max_cost_entry;
   double relative_num_equal_cost;
   double relative_num_inf_upper;
@@ -167,7 +172,7 @@ struct HighsLpStats {
   double relative_max_matrix_entry;
   double relative_num_equal_a_matrix_nz;
   double relative_num_dense_row;
-  void report(FILE* file);
+  void report(FILE* file, std::string message = "", const HighsInt style = HighsLpStatsReportPretty);
   void clear();
 };
 

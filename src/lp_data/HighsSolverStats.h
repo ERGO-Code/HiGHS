@@ -61,6 +61,7 @@ const std::vector<double> kIpxWorkCoefficients = {1.0, 2.0, 1.0, 2.0,
 
 struct HighsSimplexStats {
   bool valid;
+  std::string model;
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
@@ -73,6 +74,7 @@ struct HighsSimplexStats {
   double row_ap_density;
   double row_DSE_density;
   double simplex_time;
+  double solve_time;
   void workTerms(double* terms) const;
   double workEstimate() const;
   void report(FILE* file, const std::string message = "",
@@ -82,6 +84,7 @@ struct HighsSimplexStats {
 
 struct HighsIpxStats {
   bool valid;
+  std::string model;
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_nz;
@@ -101,6 +104,7 @@ struct HighsIpxStats {
   double type2_time;
   double ipm_time;
   double crossover_time;
+  double solve_time;
   void workTerms(double* terms);
   double workEstimate();
   void averages();

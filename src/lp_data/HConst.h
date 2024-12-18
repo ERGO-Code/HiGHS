@@ -327,4 +327,11 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+enum HighsLpStatsReport {
+  HighsLpStatsReportPretty = 0,
+  HighsLpStatsReportCsvHeader,
+  HighsLpStatsReportCsvData
+};
+
 #endif /* LP_DATA_HCONST_H_ */

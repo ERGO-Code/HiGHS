@@ -3503,6 +3503,7 @@ HighsStatus HEkk::returnFromEkkSolve(const HighsStatus return_status) {
   // reverts to its value given by options_
   if (analysis_.analyse_simplex_time) analysis_.reportSimplexTimer();
   simplex_stats_.valid = true;
+  simplex_stats_.model = lp_.model_name_;
   simplex_stats_.num_col = lp_.num_col_;
   simplex_stats_.num_row = lp_.num_row_;
   simplex_stats_.num_nz = lp_.a_matrix_.numNz();
@@ -4434,6 +4435,7 @@ void HighsSimplexStats::report(FILE* file, std::string message,
   if (style == HighsSolverStatsReportPretty) {
     fprintf(file, "\nSimplex stats: %s\n", message.c_str());
     fprintf(file, "   valid                      = %d\n", this->valid);
+    fprintf(file, "   model                      = %s\n", this->model.c_str());
     fprintf(file, "   num_col                    = %d\n", this->num_col);
     fprintf(file, "   num_row                    = %d\n", this->num_row);
     fprintf(file, "   num_nz                     = %d\n", this->num_nz);
@@ -4450,20 +4452,22 @@ void HighsSimplexStats::report(FILE* file, std::string message,
     fprintf(file, "   row_DSE_density            = %g\n",
             this->row_DSE_density);
     fprintf(file, "   simplex time =             = %g\n", this->simplex_time);
+    fprintf(file, "   solve time =               = %g\n", this->solve_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
     fprintf(file,
-            "valid,col,row,nz,iteration_count,num_invert,last_factored_basis_"
+            "valid,model,col,row,nz,iteration_count,num_invert,last_factored_basis_"
             "num_el,last_invert_num_el,"
             "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
-            "density,simplex_time,");
+            "density,simplex_time,solve_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
-    fprintf(file, "%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,", int(this->valid),
+    fprintf(file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
+	    int(this->valid), this->model.c_str(),
             int(this->num_col), int(this->num_row), int(this->num_nz),
             int(this->iteration_count), int(this->num_invert),
             int(this->last_factored_basis_num_el),
             int(this->last_invert_num_el), this->col_aq_density,
             this->row_ep_density, this->row_ap_density, this->row_DSE_density,
-            this->simplex_time);
+            this->simplex_time, this->solve_time);
   } else {
     fprintf(file, "Unknown simplex stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -4472,6 +4476,7 @@ void HighsSimplexStats::report(FILE* file, std::string message,
 
 void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   valid = false;
+  model = "";
   iteration_count = -iteration_count_;
   num_col = 0;
   num_row = 0;
@@ -4484,6 +4489,7 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ap_density = 0;
   row_DSE_density = 0;
   simplex_time = 0;
+  solve_time = 0;
 }
 
 void HighsSimplexStats::workTerms(double* terms) const {
