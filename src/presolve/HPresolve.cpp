@@ -5911,8 +5911,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     auto it = buckets.find(rowHashes[i]);
     decltype(it) last = it;
 
-    const HighsInt* numSingletonPtr = numRowSingletons.find(i);
-    HighsInt numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
+    auto getNumSingletons = [&](HighsInt row) {
+      const HighsInt* numSingletonPtr = numRowSingletons.find(row);
+      return (numSingletonPtr ? *numSingletonPtr : 0);
+    };
+
+    const HighsInt numSingleton = getNumSingletons(i);
 
 #if !ENABLE_SPARSIFY_FOR_LP
     if (mipsolver == nullptr && options->lp_presolve_requires_basis_postsolve &&
@@ -5925,9 +5929,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       HighsInt parallelRowCand = it->second;
       last = it++;
 
-      numSingletonPtr = numRowSingletons.find(parallelRowCand);
-      const HighsInt numSingletonCandidate =
-          numSingletonPtr ? *numSingletonPtr : 0;
+      const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
+
 #if !ENABLE_SPARSIFY_FOR_LP
       if (mipsolver == nullptr &&
           options->lp_presolve_requires_basis_postsolve &&
@@ -6068,31 +6071,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    HIGHSINT_FORMAT ")\n", numSingleton, numSingletonCandidate,
         //    model->row_lower_[parallelRowCand] ==
         //        model->row_upper_[parallelRowCand]);
-        postsolve_stack.equalityRowAddition(parallelRowCand, i, -rowScale,
-                                            getStoredRow());
-        for (const HighsSliceNonzero& rowNz : getStoredRow()) {
-          HighsInt pos = findNonzero(parallelRowCand, rowNz.index());
-          if (pos != -1)
-            unlink(pos);  // all common nonzeros are cancelled, as the rows are
-                          // parallel
-          else            // might introduce a singleton
-            addToMatrix(parallelRowCand, rowNz.index(),
-                        -rowScale * rowNz.value());
-        }
-
-        if (model->row_upper_[parallelRowCand] != kHighsInf)
-          model->row_upper_[parallelRowCand] =
-              double(model->row_upper_[parallelRowCand] -
-                     HighsCDouble(rowScale) * model->row_upper_[i]);
-        if (model->row_lower_[parallelRowCand] != -kHighsInf)
-          model->row_lower_[parallelRowCand] =
-              double(model->row_lower_[parallelRowCand] -
-                     HighsCDouble(rowScale) * model->row_upper_[i]);
-
-        // parallelRowCand is now a singleton row, doubleton equation, or a row
-        // that contains only singletons and we let the normal row presolve
-        // handle the cases
-        HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, parallelRowCand));
+        HPRESOLVE_CHECKED_CALL(equalityRowAddition(
+            postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
       } else if (model->row_lower_[parallelRowCand] ==
                  model->row_upper_[parallelRowCand]) {
@@ -6101,28 +6081,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
         //    row\n", numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
-        double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
-        postsolve_stack.equalityRowAddition(i, parallelRowCand, scale,
-                                            getRowVector(parallelRowCand));
-        for (const HighsSliceNonzero& rowNz : getRowVector(parallelRowCand)) {
-          HighsInt pos = findNonzero(i, rowNz.index());
-          if (pos != -1)
-            unlink(pos);  // all common nonzeros are cancelled, as the rows are
-                          // parallel
-          else            // might introduce a singleton
-            addToMatrix(i, rowNz.index(), scale * rowNz.value());
-        }
-
-        if (model->row_upper_[i] != kHighsInf)
-          model->row_upper_[i] =
-              double(model->row_upper_[i] +
-                     HighsCDouble(scale) * model->row_upper_[parallelRowCand]);
-        if (model->row_lower_[i] != -kHighsInf)
-          model->row_lower_[i] =
-              double(model->row_lower_[i] +
-                     HighsCDouble(scale) * model->row_upper_[parallelRowCand]);
-
-        HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
+        HPRESOLVE_CHECKED_CALL(equalityRowAddition(
+            postsolve_stack, parallelRowCand, i,
+            -rowMax[i].first / rowMax[parallelRowCand].first,
+            getRowVector(parallelRowCand)));
         delRow = i;
       } else {
         assert(numSingleton == 1);
@@ -6163,6 +6125,36 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   if (logging_on)
     analysis_.stopPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
 
+  return Result::kOk;
+}
+
+template <typename RowStorageFormat>
+HPresolve::Result HPresolve::equalityRowAddition(
+    HighsPostsolveStack& postsolve_stack, HighsInt stayrow, HighsInt removerow,
+    double scale, const HighsMatrixSlice<RowStorageFormat>& vector) {
+  postsolve_stack.equalityRowAddition(removerow, stayrow, scale, vector);
+  for (const auto& rowNz : vector) {
+    HighsInt pos = findNonzero(removerow, rowNz.index());
+    if (pos != -1)
+      unlink(pos);  // all common nonzeros are cancelled, as the rows are
+                    // parallel
+    else            // might introduce a singleton
+      addToMatrix(removerow, rowNz.index(), scale * rowNz.value());
+  }
+
+  if (model->row_upper_[removerow] != kHighsInf)
+    model->row_upper_[removerow] =
+        double(model->row_upper_[removerow] +
+               HighsCDouble(scale) * model->row_upper_[stayrow]);
+  if (model->row_lower_[removerow] != -kHighsInf)
+    model->row_lower_[removerow] =
+        double(model->row_lower_[removerow] +
+               HighsCDouble(scale) * model->row_upper_[stayrow]);
+
+  // row is now a singleton row, doubleton equation, or a row
+  // that contains only singletons and we let the normal row presolve
+  // handle the cases
+  HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, removerow));
   return Result::kOk;
 }
 
