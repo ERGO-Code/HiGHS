@@ -1,0 +1,52 @@
+name: test-python-install-sdist
+
+on: [push, pull_request]
+
+jobs:
+  build_sdist:
+    runs-on: ${{ matrix.os }}
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: python3 -m pip install dist/highspy*
+
+      - name: Test Python Examples
+        run: |
+         python3 ./examples/call_highs_from_python_highspy.py
+         python3 ./examples/call_highs_from_python_mps.py
+         python3 ./examples/call_highs_from_python.py
+         python3 ./examples/minimal.py
+
+  build_sdist_win:
+    runs-on: windows-latest 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        shell: bash
+        run: pipx run build --sdist
+
+      - name: check metadata
+        run: pipx run twine check dist/*
+
+      - name: install highspy
+        run: python -m pip install dist/highspy*
+
+      - name: Test Python Examples
+        run: |
+         python ./examples/call_highs_from_python_highspy.py
+         python ./examples/call_highs_from_python_mps.py
+         python ./examples/call_highs_from_python.py
+         python ./examples/minimal.py
