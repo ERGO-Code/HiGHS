@@ -362,6 +362,11 @@ class HPresolve {
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
 
+  template <typename RowStorageFormat>
+  Result equalityRowAddition(HighsPostsolveStack& postsolve_stack,
+                             HighsInt stayrow, HighsInt removerow, double scale,
+                             const HighsMatrixSlice<RowStorageFormat>& vector);
+
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 
   void setRelaxedImpliedBounds();
