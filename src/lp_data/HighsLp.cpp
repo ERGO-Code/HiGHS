@@ -514,10 +514,10 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
 
 void HighsLpStats::clear() {
   valid = false;
-  model = "Not set";// "";
-  num_col = -kHighsIInf;// 0;
-  num_row = -kHighsIInf;// 0;
-  num_nz = -kHighsIInf;// 0;
+  model = "Not set";                            // "";
+  num_col = -kHighsIInf;                        // 0;
+  num_row = -kHighsIInf;                        // 0;
+  num_nz = -kHighsIInf;                         // 0;
   relative_max_cost_entry = -kHighsInf;         // 0;
   relative_num_equal_cost = -kHighsInf;         // 0;
   relative_num_inf_upper = -kHighsInf;          // 0;
@@ -533,7 +533,7 @@ void HighsLpStats::clear() {
 }
 
 void HighsLpStats::report(FILE* file, std::string message,
-                               const HighsInt style) {
+                          const HighsInt style) {
   if (style == HighsLpStatsReportPretty) {
     fprintf(file, "\nLP stats\n");
     if (message == "") {
@@ -547,49 +547,46 @@ void HighsLpStats::report(FILE* file, std::string message,
     fprintf(file, "   Number of rows =    %d\n", num_row);
     fprintf(file, "   Number of entries = %d\n", num_nz);
     fprintf(file, "   Relative maximum cost_entry =                     %g\n",
-	    relative_max_cost_entry);
+            relative_max_cost_entry);
     fprintf(file, "   Relative number of identical costs =              %g\n",
-	    relative_num_equal_cost);
+            relative_num_equal_cost);
     fprintf(file, "   Relative number of infinite column upper bounds = %g\n",
-	    relative_num_inf_upper);
+            relative_num_inf_upper);
     fprintf(file, "   Relative number of equations =                    %g\n",
-	    relative_num_equations);
+            relative_num_equations);
     fprintf(file, "   Relative maximum rhs entry =                      %g\n",
-	    relative_max_rhs_entry);
+            relative_max_rhs_entry);
     fprintf(file, "   Relative number of identical rhs entries =        %g\n",
-	    relative_num_equal_rhs);
+            relative_num_equal_rhs);
     fprintf(file, "   Constraint matrix stats\n");
     fprintf(file, "      Density =                                     %g\n",
-	    a_matrix_density);
+            a_matrix_density);
     fprintf(file, "      Nonzeros per column =                         %g\n",
-	    a_matrix_nz_per_col);
+            a_matrix_nz_per_col);
     fprintf(file, "      Nonzeros per row =                            %g\n",
-	    a_matrix_nz_per_row);
+            a_matrix_nz_per_row);
     fprintf(file, "      Relative maximum entry =                      %g\n",
-	    relative_max_matrix_entry);
+            relative_max_matrix_entry);
     fprintf(file, "      Relative number of almost identical entries = %g\n",
-	    relative_num_equal_a_matrix_nz);
+            relative_num_equal_a_matrix_nz);
     fprintf(file, "      Relative number of dense rows =               %g\n",
-	    relative_num_dense_row);
+            relative_num_dense_row);
   } else if (style == HighsLpStatsReportCsvHeader) {
     fprintf(file,
-            "valid,model,col,row,nz,relative_max_cost_entry,relative_num_equal_cost,relative_num_inf_upper,relative_num_equations,relative_max_rhs_entry,relative_num_equal_rhs,a_matrix_density,a_matrix_nz_per_col,a_matrix_nz_per_row,relative_max_matrix_entry,relative_num_equal_a_matrix_nz,relative_num_dense_row");
+            "valid,model,col,row,nz,relative_max_cost_entry,relative_num_equal_"
+            "cost,relative_num_inf_upper,relative_num_equations,relative_max_"
+            "rhs_entry,relative_num_equal_rhs,a_matrix_density,a_matrix_nz_per_"
+            "col,a_matrix_nz_per_row,relative_max_matrix_entry,relative_num_"
+            "equal_a_matrix_nz,relative_num_dense_row");
   } else if (style == HighsLpStatsReportCsvData) {
     fprintf(file, "%d,%s,%d,%d,%d,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g",
-	    int(this->valid), this->model.c_str(),
-            int(this->num_col), int(this->num_row), int(this->num_nz),
-	    relative_max_cost_entry,
-	    relative_num_equal_cost,
-	    relative_num_inf_upper,
-	    relative_num_equations,
-	    relative_max_rhs_entry,
-	    relative_num_equal_rhs,
-	    a_matrix_density,
-	    a_matrix_nz_per_col,
-	    a_matrix_nz_per_row,
-	    relative_max_matrix_entry,
-	    relative_num_equal_a_matrix_nz,
-	    relative_num_dense_row);	    
+            int(this->valid), this->model.c_str(), int(this->num_col),
+            int(this->num_row), int(this->num_nz), relative_max_cost_entry,
+            relative_num_equal_cost, relative_num_inf_upper,
+            relative_num_equations, relative_max_rhs_entry,
+            relative_num_equal_rhs, a_matrix_density, a_matrix_nz_per_col,
+            a_matrix_nz_per_row, relative_max_matrix_entry,
+            relative_num_equal_a_matrix_nz, relative_num_dense_row);
   } else {
     fprintf(file, "Unknown LP stats report style of %d\n", int(style));
     assert(123 == 456);
@@ -747,7 +744,7 @@ void HighsLp::stats() {
     if (row_count[iRow] >= dense_row_count) num_dense_row++;
 
   this->stats_.relative_num_dense_row =
-    this->num_row_ > 0 ? (1.0 * num_dense_row) / this->num_row_ : 0;
+      this->num_row_ > 0 ? (1.0 * num_dense_row) / this->num_row_ : 0;
   this->stats_.valid = true;
 }
 

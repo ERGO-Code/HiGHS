@@ -1218,15 +1218,15 @@ void HighsIpxStats::report(FILE* file, const std::string message,
             "ipm_time,crossover_time,solve_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     this->averages();
-    fprintf(
-        file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
-	int(this->valid), this->model.c_str(),
-        int(this->num_col), int(this->num_row), int(this->num_nz),
-        int(this->num_type1_iteration), int(this->average_type1_cr_count),
-        int(this->num_type2_iteration), int(this->average_type2_cr_count),
-        int(this->average_type2_matrix_nz), int(this->average_type2_invert_nz),
-        this->type1_time, this->basis0_time, this->type2_time, this->ipm_time,
-        this->crossover_time, this->solve_time);
+    fprintf(file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
+            int(this->valid), this->model.c_str(), int(this->num_col),
+            int(this->num_row), int(this->num_nz),
+            int(this->num_type1_iteration), int(this->average_type1_cr_count),
+            int(this->num_type2_iteration), int(this->average_type2_cr_count),
+            int(this->average_type2_matrix_nz),
+            int(this->average_type2_invert_nz), this->type1_time,
+            this->basis0_time, this->type2_time, this->ipm_time,
+            this->crossover_time, this->solve_time);
   } else {
     fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
     assert(123 == 456);

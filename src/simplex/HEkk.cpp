@@ -4454,17 +4454,17 @@ void HighsSimplexStats::report(FILE* file, std::string message,
     fprintf(file, "   simplex time =             = %g\n", this->simplex_time);
     fprintf(file, "   solve time =               = %g\n", this->solve_time);
   } else if (style == HighsSolverStatsReportCsvHeader) {
-    fprintf(file,
-            "valid,model,col,row,nz,iteration_count,num_invert,last_factored_basis_"
-            "num_el,last_invert_num_el,"
-            "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
-            "density,simplex_time,solve_time,");
+    fprintf(
+        file,
+        "valid,model,col,row,nz,iteration_count,num_invert,last_factored_basis_"
+        "num_el,last_invert_num_el,"
+        "col_aq_density,row_ep_density,row_ap_density,row_DSE_"
+        "density,simplex_time,solve_time,");
   } else if (style == HighsSolverStatsReportCsvData) {
     fprintf(file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
-	    int(this->valid), this->model.c_str(),
-            int(this->num_col), int(this->num_row), int(this->num_nz),
-            int(this->iteration_count), int(this->num_invert),
-            int(this->last_factored_basis_num_el),
+            int(this->valid), this->model.c_str(), int(this->num_col),
+            int(this->num_row), int(this->num_nz), int(this->iteration_count),
+            int(this->num_invert), int(this->last_factored_basis_num_el),
             int(this->last_invert_num_el), this->col_aq_density,
             this->row_ep_density, this->row_ap_density, this->row_DSE_density,
             this->simplex_time, this->solve_time);

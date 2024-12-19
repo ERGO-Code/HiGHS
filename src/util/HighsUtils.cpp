@@ -1395,8 +1395,9 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
   }
   newCluster(num_distinct_value);
   if (num_cluster < num_distinct_value) {
-    printf("grep valueCountSorted: num clusters = %d < %d = num distinct values\n",
-	   int(num_cluster), int(num_distinct_value))
+    printf(
+        "grep valueCountSorted: num clusters = %d < %d = num distinct values\n",
+        int(num_cluster), int(num_distinct_value));
   }
   value_count.resize(num_cluster);
   if (!by_value)
