@@ -1871,7 +1871,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
-      this->writeModel("primal_ray_lp.mps");
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.status_.has_primal_ray;

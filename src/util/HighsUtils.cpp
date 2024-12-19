@@ -1335,7 +1335,6 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
   // Sorting by count with a positive tolerance requires analysis with
   // the entries sorted by value
   std::sort(value_count.begin(), value_count.end(), increasingValue);
-  reportValueCount(value_count);
 
   const HighsInt num_distinct_value = value_count.size();
 
@@ -1394,11 +1393,11 @@ std::vector<std::pair<double, HighsInt>> valueCountSorted(
     }
   }
   newCluster(num_distinct_value);
-  if (num_cluster < num_distinct_value) {
-    printf(
-        "grep valueCountSorted: num clusters = %d < %d = num distinct values\n",
-        int(num_cluster), int(num_distinct_value));
-  }
+  //  if (num_cluster < num_distinct_value) {
+  //    printf(
+  //        "grep valueCountSorted: num clusters = %d < %d = num distinct
+  //        values\n", int(num_cluster), int(num_distinct_value));
+  //  }
   value_count.resize(num_cluster);
   if (!by_value)
     std::sort(value_count.begin(), value_count.end(), decreasingCount);

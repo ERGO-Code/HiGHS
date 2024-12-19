@@ -618,7 +618,7 @@ void HighsLp::stats() {
   double max_cost = 0;
   double min_cost = kHighsInf;
   value_count = valueCountSorted(this->col_cost_);
-  reportValueCount(value_count, "Column cost");
+  //  reportValueCount(value_count, "Column cost");
   for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++) {
     double cost = value_count[iX].first;
     if (cost == 0) continue;
@@ -695,7 +695,7 @@ void HighsLp::stats() {
   }
   value_count = valueCountSorted(rhs);
   HighsInt num_rhs = rhs.size();
-  reportValueCount(value_count, "RHS");
+  //  reportValueCount(value_count, "RHS");
   // If there is a nonzero rhs then min_rhs and max_rhs will both
   // be positive and finite
   assert(max_rhs == 0 || (0 < min_rhs && min_rhs < kHighsInf));
@@ -717,7 +717,7 @@ void HighsLp::stats() {
     const double value_cluster_size = 1e-4;
     value_count =
         valueCountSorted(this->a_matrix_.value_, true, value_cluster_size);
-    reportValueCount(value_count, "Matrix", value_cluster_size);
+    //    reportValueCount(value_count, "Matrix", value_cluster_size);
     this->stats_.relative_num_equal_a_matrix_nz = numRelativeIdentical(num_nz);
   }
   double max_value = 0;

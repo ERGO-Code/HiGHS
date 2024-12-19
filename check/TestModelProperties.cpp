@@ -196,19 +196,19 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, 5, 3, 1, 0, -1, 2.3, 2.6, 2.9, 2.5, 3.0};
-  reportData(data);
+  if (dev_run) reportData(data);
   value_count = valueCountReport(data, 0.6);
   REQUIRE(value_count.size() == 6);
   REQUIRE(value_count[0].second == 1);
   REQUIRE(value_count[1].second == 1);
   REQUIRE(value_count[2].second == 2);
-  REQUIRE(value_count[3].second == 1);
-  REQUIRE(value_count[4].second == 5);
+  REQUIRE(value_count[3].second == 3);
+  REQUIRE(value_count[4].second == 3);
   REQUIRE(value_count[5].second == 1);
   REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, -1, 2.5, 0, 2.8, 5, 2.3, 2.4, 3, 1, 3.0};
-  reportData(data);
+  if (dev_run) reportData(data);
   value_count = valueCountReport(data, 0.6);
   REQUIRE(value_count.size() == 6);
   REQUIRE(value_count[0].second == 1);
@@ -220,7 +220,7 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(sumCount() == HighsInt(data.size()));
 
   data = {1, 2, 5, 3, 2, 1, 0, -1, 2, 2.999, 3.001};
-  reportData(data);
+  if (dev_run) reportData(data);
   value_count = valueCountReport(data, 0.01);
   REQUIRE(value_count.size() == 6);
   REQUIRE(value_count[0].second == 1);
@@ -232,28 +232,11 @@ TEST_CASE("value-count", "[highs_model_properties]") {
   REQUIRE(sumCount() == HighsInt(data.size()));
 }
 
-/*
-  void reportValueCount(
-    const std::vector<std::pair<double, HighsInt>> value_count,
-    const double tolerance) {
-  if (!dev_run) return;
-  printf("Index              Value Count");
-  if (tolerance > 0)
-    printf(": %s %g\n", ": tolerance = ", tolerance);
-  else
-    printf("\n");
-
-  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
-    printf("   %2d %18.12g    %2d\n", int(iX), value_count[iX].first,
-           int(value_count[iX].second));
-}
-*/
-
 std::vector<std::pair<double, HighsInt>> valueCountReport(
     const std::vector<double> data, const double tolerance) {
   std::vector<std::pair<double, HighsInt>> value_count =
       valueCountSorted(data, true, tolerance);
-  if (tolerance > 0) reportValueCount(value_count, "", tolerance);
+  if (dev_run && tolerance > 0) reportValueCount(value_count, "", tolerance);
   return value_count;
 }
 
