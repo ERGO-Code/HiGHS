@@ -4,9 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build_sdist:
-    runs-on: ${{ matrix.os }}
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
