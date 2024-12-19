@@ -334,4 +334,42 @@ enum HighsLpStatsReport {
   HighsLpStatsReportCsvData
 };
 
+enum HighsLpWorkTerm {
+  HighsLpWorkTermNumCol = 0,
+  HighsLpWorkTermNumRow,
+  HighsLpWorkTermNumNz,
+  HighsLpWorkTermRelativeMaxCostEntry,
+  HighsLpWorkTermRelativeNumEqualCost,
+  HighsLpWorkTermRelativeNumInfUpper,
+  HighsLpWorkTermRelativeNumEquations,
+  HighsLpWorkTermRelativeMaxRhsEntry,
+  HighsLpWorkTermRelativeNumEqualRhs,
+  HighsLpWorkTermMatrixDensity,
+  HighsLpWorkTermMatrixNzPerCol,
+  HighsLpWorkTermMatrixNzPerRow,
+  HighsLpWorkTermRelativemaxMatrixEntry,
+  HighsLpWorkTermRelativeNumEqualMatrixNz,
+  HighsLpWorkTermRelativeNumDenseRow,
+  HighsLpWorkTermCount
+};
+
+const std::vector<std::string> kLpWorkNames = {"NumCol",
+                                               "NumRow",
+                                               "NumNz",
+                                               "RelativeMaxCostEntry",
+                                               "RelativeNumEqualCost",
+                                               "RelativeNumInfUpper",
+                                               "RelativeNumEquations",
+                                               "RelativeMaxRhsEntry",
+                                               "RelativeNumEqualRhs",
+                                               "MatrixDensity",
+                                               "MatrixNzPerCol",
+                                               "MatrixNzPerRow",
+                                               "RelativemaxMatrixEntry",
+                                               "RelativeNumEqualMatrixNz",
+                                               "RelativeNumDenseRow"};
+
+const std::vector<double> kLpWorkCoefficients = {
+    1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+
 #endif /* LP_DATA_HCONST_H_ */
