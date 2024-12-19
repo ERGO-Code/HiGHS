@@ -1435,8 +1435,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // The LP has no invert to use, so have to set one up, but only
     // for the current basis, so return_value is the rank deficiency.
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
-                                      ekk_instance_, callback_, options_,
-                                      timer_);
+                                      ekk_instance_, ipx_stats_, callback_,
+                                      options_, timer_);
     const bool only_from_known_basis = true;
     return_status = interpretCallStatus(
         options_.log_options,
@@ -1871,7 +1871,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->setOptionValue("presolve", kHighsOffString);
       this->setOptionValue("solve_relaxation", true);
       this->setOptionValue("allow_unbounded_or_infeasible", false);
-      this->writeModel("primal_ray_lp.mps");
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.status_.has_primal_ray;
@@ -1945,7 +1944,8 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
 
 HighsStatus Highs::getRangingInterface() {
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_,
-                                    ekk_instance_, callback_, options_, timer_);
+                                    ekk_instance_, ipx_stats_, callback_,
+                                    options_, timer_);
   solver_object.model_status_ = model_status_;
   return getRangingData(this->ranging_, solver_object);
 }

@@ -55,7 +55,9 @@ Int LpSolver::Solve() {
     control_.OpenLogfile();
     control_.hLog("IPX version 1.0\n");
     try {
+        ipx_stats_.ipm_time = -control_.Elapsed();
         InteriorPointSolve();
+        ipx_stats_.ipm_time += control_.Elapsed();
 	const bool run_crossover_on = control_.run_crossover() == 1;
 	const bool run_crossover_choose = control_.run_crossover() == -1;
 	const bool run_crossover_not_off = run_crossover_choose || run_crossover_on;
@@ -65,16 +67,18 @@ Int LpSolver::Solve() {
 	//        if ((info_.status_ipm == IPX_STATUS_optimal ||
 	//             info_.status_ipm == IPX_STATUS_imprecise) && run_crossover_on) {
 	if (run_crossover) {
-	    if (run_crossover_on) {
-	      control_.hLog("Running crossover as requested\n");
-	    } else if (run_crossover_choose) {
-	      assert(info_.status_ipm == IPX_STATUS_imprecise);
-	      control_.hLog("Running crossover since IPX is imprecise\n");
-	    } else {
-	      assert(run_crossover_on || run_crossover_choose);
-	    }
-	    BuildCrossoverStartingPoint();
-            RunCrossover();
+	  if (run_crossover_on) {
+	    control_.hLog("Running crossover as requested\n");
+	  } else if (run_crossover_choose) {
+	    assert(info_.status_ipm == IPX_STATUS_imprecise);
+	    control_.hLog("Running crossover since IPX is imprecise\n");
+	  } else {
+	    assert(run_crossover_on || run_crossover_choose);
+	  }
+	  ipx_stats_.crossover_time = -control_.Elapsed();
+	  BuildCrossoverStartingPoint();
+	  RunCrossover();
+	  ipx_stats_.crossover_time += control_.Elapsed();
         }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();
@@ -126,6 +130,10 @@ Int LpSolver::Solve() {
 
 Info LpSolver::GetInfo() const {
     return info_;
+}
+
+HighsIpxStats LpSolver::GetIpxStats() const {
+    return ipx_stats_;
 }
 
 Int LpSolver::GetInteriorSolution(double* x, double* xl, double* xu,
@@ -392,24 +400,37 @@ void LpSolver::RunIPM() {
     info_.centring_tried = false;
     info_.centring_success = false;
 
+    ipx_stats_.initialise();
+    ipx_stats_.num_col = model_.cols();
+    ipx_stats_.num_row = model_.rows();
+    ipx_stats_.num_nz = model_.AI().entries();
+    
     if (x_start_.size() != 0) {
       control_.hLog(" Using starting point provided by user. Skipping initial iterations.\n");
         iterate_->Initialize(x_start_, xl_start_, xu_start_,
                              y_start_, zl_start_, zu_start_);
     }
     else {
+        ipx_stats_.type1_time = -control_.Elapsed();
         ComputeStartingPoint(ipm);
-        if (info_.status_ipm != IPX_STATUS_not_run)
-            return;
+        if (info_.status_ipm != IPX_STATUS_not_run) {
+	  ipx_stats_.type1_time += control_.Elapsed();
+	  return;
+	}
         RunInitialIPM(ipm);
+        ipx_stats_.type1_time += control_.Elapsed();
         if (info_.status_ipm != IPX_STATUS_not_run)
             return;
     }
+    ipx_stats_.basis0_time = -control_.Elapsed();
     BuildStartingBasis();
+    ipx_stats_.basis0_time += control_.Elapsed();
     if (info_.status_ipm != IPX_STATUS_not_run || 
         info_.centring_tried)
         return;
+    ipx_stats_.type2_time = -control_.Elapsed();
     RunMainIPM(ipm);
+    ipx_stats_.type2_time += control_.Elapsed();
 }
 
 void LpSolver::MakeIPMStartingPointValid() {
@@ -474,7 +495,7 @@ void LpSolver::ComputeStartingPoint(IPM& ipm) {
     // If the starting point procedure fails, then iterate_ remains as
     // initialized by the constructor, which is a valid state for
     // postprocessing/postsolving.
-    ipm.StartingPoint(&kkt, iterate_.get(), &info_);
+    ipm.StartingPoint(&kkt, iterate_.get(), &info_, &ipx_stats_);
     info_.time_ipm1 += timer.Elapsed();
 }
 
@@ -484,15 +505,28 @@ void LpSolver::RunInitialIPM(IPM& ipm) {
 
     Int switchiter = control_.switchiter();
     if (switchiter < 0) {
-        // Switch iteration not specified by user. Run as long as KKT solver
-        // converges within min(500,10+m/20) iterations.
+        // Switch iteration not specified by user. Run as long as KKT
+        // solver converges within
+        //
+        // min(control_.cr1_maxiter(), 500,10+m/20)
+        //
+        // iterations, ignoring control_.cr1_maxiter() if negative
+      //
+      // 2049 revert all this
         Int m = model_.rows();
-        kkt.maxiter(std::min(500l, (long) (10+m/20) ));
+	ipxint df_cr1_maxiter = std::min(500l, (long) (10+m/20));
+	ipxint cr1_maxiter = df_cr1_maxiter;
+	ipxint control_cr1_maxiter = control_.cr1_maxiter();
+	if (control_cr1_maxiter > 0) cr1_maxiter = std::min(control_cr1_maxiter, cr1_maxiter);
+	//	printf("LpSolver::RunInitialIPM Using kkt.maxiter = %d, from df_cr1_maxiter = %d and control_cr1_maxiter = %d\n",
+	//	       int(cr1_maxiter), int(df_cr1_maxiter), int(control_cr1_maxiter));
+        kkt.maxiter(cr1_maxiter);
         ipm.maxiter(control_.ipm_maxiter());
     } else {
         ipm.maxiter(std::min(switchiter, control_.ipm_maxiter()));
     }
-    ipm.Driver(&kkt, iterate_.get(), &info_);
+    const bool diag = true;
+    ipm.Driver(&kkt, iterate_.get(), &info_, diag);
     switch (info_.status_ipm) {
     case IPX_STATUS_optimal:
         // If the IPM reached its termination criterion in the initial
@@ -558,7 +592,9 @@ void LpSolver::RunMainIPM(IPM& ipm) {
     KKTSolverBasis kkt(control_, *basis_);
     Timer timer;
     ipm.maxiter(control_.ipm_maxiter());
-    ipm.Driver(&kkt, iterate_.get(), &info_);
+    kkt.maxiter(control_.cr2_maxiter());
+    const bool diag = false;
+    ipm.Driver(&kkt, iterate_.get(), &info_, diag);
     info_.time_ipm2 = timer.Elapsed();
 }
 

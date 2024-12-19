@@ -45,6 +45,14 @@ const double kExcessivelySmallCostValue = 1e-4;
 const bool kAllowDeveloperAssert = false;
 const bool kExtendInvertWhenAddingRows = false;
 
+enum MipAnalyticCentreCalulation {
+  kMipAnalyticCentreCalulationMin = -1,
+  kMipAnalyticCentreCalulationChoose = kMipAnalyticCentreCalulationMin,
+  kMipAnalyticCentreCalulationOff,
+  kMipAnalyticCentreCalulationOn,
+  kMipAnalyticCentreCalulationMax = kMipAnalyticCentreCalulationOn
+};
+
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 
 enum SimplexScaleStrategy {
@@ -319,4 +327,11 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+enum HighsLpStatsReport {
+  HighsLpStatsReportPretty = 0,
+  HighsLpStatsReportCsvHeader,
+  HighsLpStatsReportCsvData
+};
+
 #endif /* LP_DATA_HCONST_H_ */

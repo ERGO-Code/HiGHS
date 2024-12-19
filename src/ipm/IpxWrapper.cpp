@@ -23,16 +23,17 @@ using std::min;
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
   return solveLpIpx(solver_object.options_, solver_object.timer_,
-                    solver_object.lp_, solver_object.basis_,
-                    solver_object.solution_, solver_object.model_status_,
-                    solver_object.highs_info_, solver_object.callback_);
+                    solver_object.lp_, solver_object.ekk_instance_,
+                    solver_object.basis_, solver_object.solution_,
+                    solver_object.model_status_, solver_object.highs_info_,
+                    solver_object.ipx_stats_, solver_object.callback_);
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
+                       const HighsLp& lp, const HEkk& ekk_instance,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& model_status, HighsInfo& highs_info,
-                       HighsCallback& callback) {
+                       HighsIpxStats& ipx_stats, HighsCallback& callback) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -58,6 +59,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // then a basis and primal+dual solution are obtained.
   //
   //
+  const double entry_run_time = timer.readRunHighsClock();
   // Indicate that there is no valid primal solution, dual solution or basis
   highs_basis.valid = false;
   highs_solution.value_valid = false;
@@ -118,9 +120,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.analyse_basis_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
-  parameters.time_limit = options.time_limit - timer.readRunHighsClock();
+  parameters.time_limit = std::max(options.time_limit - entry_run_time, 0.0);
+
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
+  parameters.cr1_maxiter = options.cr1_iteration_limit;
+  parameters.cr2_maxiter = options.cr2_iteration_limit;
+  parameters.kkt_logging = options.kkt_logging;
   // Determine if crossover is to be run or not
   //
   // When doing analytic centring calculations, crossover must not be
@@ -145,6 +151,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.run_centring = options.run_centring ? 1 : 0;
   parameters.max_centring_steps = options.max_centring_steps;
   parameters.centring_ratio_tolerance = options.centring_ratio_tolerance;
+
+  parameters.simplex_stats = ekk_instance.getSimplexStats();
 
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
@@ -178,11 +186,17 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   const bool report_solve_data =
       kHighsAnalysisLevelSolverSummaryData & options.highs_analysis_level;
   // Get solver and solution information.
+  ipx_stats = lps.GetIpxStats();
+  ipx_stats.model = lp.model_name_;
+  ipx_stats.averages();
+  ipx_stats.valid = true;
   // Struct ipx_info defined in ipx/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
   highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  highs_info.max_cr_iteration_count1 = ipx_info.kkt_iter_max1;
+  highs_info.max_cr_iteration_count2 = ipx_info.kkt_iter_max2;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -960,6 +974,10 @@ void reportSolveData(const HighsLogOptions& log_options,
               (int)ipx_info.kktiter1);
   highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter 2 = %d\n",
               (int)ipx_info.kktiter2);
+  highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter max 1 = %d\n",
+              (int)ipx_info.kkt_iter_max1);
+  highsLogDev(log_options, HighsLogType::kInfo, "    KKT iter max 2 = %d\n",
+              (int)ipx_info.kkt_iter_max2);
   highsLogDev(log_options, HighsLogType::kInfo, "    Basis repairs = %d\n",
               (int)ipx_info.basis_repairs);
   highsLogDev(log_options, HighsLogType::kInfo, "    Updates start     = %d\n",
@@ -1073,4 +1091,170 @@ void reportSolveData(const HighsLogOptions& log_options,
   highsLogDev(log_options, HighsLogType::kInfo,
               "    Volume increase      = %11.4g\n\n",
               ipx_info.volume_increase);
+}
+
+void HighsIpxStats::workTerms(double* terms) {
+  const double nonbasic_nz =
+      double(this->num_nz + this->num_row - this->average_type2_matrix_nz);
+  terms[HighsIpxWorkTermCr1Constant] = 1;
+  terms[HighsIpxWorkTermCr1IterNumRow] = double(this->num_type1_iteration) *
+                                         average_type1_cr_count *
+                                         double(this->num_row);
+  terms[HighsIpxWorkTermCr1IterNumNz] = double(this->num_type1_iteration) *
+                                        average_type1_cr_count *
+                                        double(this->num_nz);
+  terms[HighsIpxWorkTermCr2Constant] = 1;
+  terms[HighsIpxWorkTermCr2IterNumRow] = double(this->num_type2_iteration) *
+                                         average_type2_cr_count *
+                                         double(this->num_row);
+  terms[HighsIpxWorkTermCr2IterNumNz] = double(this->num_type2_iteration) *
+                                        average_type2_cr_count *
+                                        (nonbasic_nz + average_type2_invert_nz);
+  terms[HighsIpxWorkTermCr2InvertNumNz] =
+      double(this->num_type2_iteration) * average_type2_invert_nz;
+}
+
+double HighsIpxStats::workEstimate() {
+  assert(static_cast<size_t>(HighsIpxWorkTermCount) == kIpxWorkNames.size());
+  assert(static_cast<size_t>(HighsIpxWorkTermCount) ==
+         kIpxWorkCoefficients.size());
+  double* terms = new double[HighsIpxWorkTermCount];
+  this->workTerms(terms);
+  double work = 0;
+  for (HighsInt iX = 0; iX < HighsIpxWorkTermCount; iX++) {
+    assert(terms[iX] > 0);
+    work += terms[iX] * kIpxWorkCoefficients[iX];
+  }
+  delete[] terms;
+  return work;
+}
+
+void HighsIpxStats::averages() {
+  num_type1_iteration = 0;
+  num_type2_iteration = 0;
+  average_type1_cr_count = 0;
+  average_type2_cr_count = 0;
+  average_type2_matrix_nz = 0;
+  average_type2_invert_nz = 0;
+  for (HighsInt iteration = 0; iteration < this->iteration_count; iteration++) {
+    if (this->cr_type[iteration] == 1) {
+      num_type1_iteration++;
+      average_type1_cr_count += this->cr_count[iteration];
+    } else {
+      num_type2_iteration++;
+      average_type2_cr_count += this->cr_count[iteration];
+      average_type2_matrix_nz += this->factored_basis_num_el[iteration];
+      average_type2_invert_nz += this->invert_num_el[iteration];
+    }
+  }
+  if (num_type1_iteration)
+    average_type1_cr_count /= (1.0 * num_type1_iteration);
+  if (num_type2_iteration) {
+    average_type2_cr_count /= (1.0 * num_type2_iteration);
+    average_type2_matrix_nz /= (1.0 * num_type2_iteration);
+    average_type2_invert_nz /= (1.0 * num_type2_iteration);
+  }
+}
+
+void HighsIpxStats::report(FILE* file, const std::string message,
+                           const HighsInt style) {
+  if (style == HighsSolverStatsReportPretty) {
+    fprintf(file, "\nIpx stats: %s\n", message.c_str());
+    fprintf(file, "   valid                      = %d\n", this->valid);
+    fprintf(file, "   num_col                    = %d\n", this->num_col);
+    fprintf(file, "   num_row                    = %d\n", this->num_row);
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
+    fprintf(file, "   iteration_count            = %d\n",
+            this->iteration_count);
+    if (this->iteration_count != HighsInt(cr_type.size()))
+      printf("iteration_count = %d != %d = cr_type.size()\n",
+             int(this->iteration_count), int(this->cr_type.size()));
+    if (this->iteration_count != HighsInt(cr_count.size()))
+      printf("iteration_count = %d != %d = cr_count.size()\n",
+             int(this->iteration_count), int(this->cr_count.size()));
+    if (this->iteration_count != HighsInt(invert_num_el.size()))
+      printf("iteration_count = %d != %d = invert_num_el.size()\n",
+             int(this->iteration_count), int(this->invert_num_el.size()));
+    if (this->iteration_count != HighsInt(factored_basis_num_el.size()))
+      printf("iteration_count = %d != %d = factored_basis_num_el.size()\n",
+             int(this->iteration_count),
+             int(this->factored_basis_num_el.size()));
+    assert(this->iteration_count == HighsInt(this->cr_type.size()));
+    assert(this->iteration_count == HighsInt(this->cr_count.size()));
+    assert(this->iteration_count == HighsInt(this->invert_num_el.size()));
+    assert(this->iteration_count ==
+           HighsInt(this->factored_basis_num_el.size()));
+    if (iteration_count > 0)
+      fprintf(file, "   Iter  type cr_count basisNz invertNz\n");
+    // printf(file, "   dddd     d    ddddd ddddddd  ddddddd\n");
+    for (HighsInt iteration = 0; iteration < iteration_count; iteration++)
+      fprintf(file, "   %4d     %1d    %5d %7d  %7d\n", int(iteration),
+              int(this->cr_type[iteration]), int(this->cr_count[iteration]),
+              int(this->factored_basis_num_el[iteration]),
+              int(this->invert_num_el[iteration]));
+    fprintf(file, "   num_nz                     = %d\n", this->num_nz);
+    fprintf(file, "   Type 1 iteration           = %d\n",
+            this->num_type1_iteration);
+    fprintf(file, "          mean CR count       = %g\n",
+            this->average_type1_cr_count);
+    fprintf(file, "   Type 2 iteration           = %d\n",
+            this->num_type2_iteration);
+    fprintf(file, "          mean CR count       = %g\n",
+            this->average_type2_cr_count);
+    fprintf(file, "          mean CR matrix nz   = %g\n",
+            this->average_type2_matrix_nz);
+    fprintf(file, "          mean CR INVERT nz   = %g\n",
+            this->average_type2_invert_nz);
+    fprintf(file, "   Type 1                time = %g\n", this->type1_time);
+    fprintf(file, "   Starting basis        time = %g\n", this->basis0_time);
+    fprintf(file, "   Type 2                time = %g\n", this->type2_time);
+    fprintf(file, "   IPM                   time = %g\n", this->ipm_time);
+    fprintf(file, "   Crossover             time = %g\n", this->crossover_time);
+    fprintf(file, "   Solve                 time = %g\n", this->solve_time);
+  } else if (style == HighsSolverStatsReportCsvHeader) {
+    fprintf(file,
+            "valid,model,col,row,nz,iteration_count,cr_count,iteration_count, "
+            "cr_count,matrix_nz,invert_nz,type1_time,basis0_time,type2_time,"
+            "ipm_time,crossover_time,solve_time,");
+  } else if (style == HighsSolverStatsReportCsvData) {
+    this->averages();
+    fprintf(file, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%g,%g,%g,%g,%g,%g,",
+            int(this->valid), this->model.c_str(), int(this->num_col),
+            int(this->num_row), int(this->num_nz),
+            int(this->num_type1_iteration), int(this->average_type1_cr_count),
+            int(this->num_type2_iteration), int(this->average_type2_cr_count),
+            int(this->average_type2_matrix_nz),
+            int(this->average_type2_invert_nz), this->type1_time,
+            this->basis0_time, this->type2_time, this->ipm_time,
+            this->crossover_time, this->solve_time);
+  } else {
+    fprintf(file, "Unknown IPX stats report style of %d\n", int(style));
+    assert(123 == 456);
+  }
+}
+
+void HighsIpxStats::initialise() {
+  valid = false;
+  model = "";
+  iteration_count = 0;
+  num_col = 0;
+  num_row = 0;
+  num_nz = 0;
+  iteration_count = 0;
+  cr_type.clear();
+  cr_count.clear();
+  factored_basis_num_el.clear();
+  invert_num_el.clear();
+  num_type1_iteration = 0;
+  num_type2_iteration = 0;
+  average_type1_cr_count = 0;
+  average_type2_cr_count = 0;
+  average_type2_matrix_nz = 0;
+  average_type2_invert_nz = 0;
+  type1_time = 0;
+  basis0_time = 0;
+  type2_time = 0;
+  ipm_time = 0;
+  crossover_time = 0;
+  solve_time = 0;
 }

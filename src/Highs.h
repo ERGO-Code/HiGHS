@@ -1216,11 +1216,35 @@ class Highs {
 
   // Start of advanced methods for HiGHS MIP solver
 
-  const HighsSimplexStats& getSimplexStats() const {
-    return ekk_instance_.getSimplexStats();
+  const HighsSimplexStats& getPresolvedLpSimplexStats() const {
+    return presolved_lp_simplex_stats_;
   }
-  void reportSimplexStats(FILE* file) const {
-    ekk_instance_.reportSimplexStats(file);
+
+  void reportPresolvedLpSimplexStats(
+      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) const {
+    presolved_lp_simplex_stats_.report(file, "Presolved LP", style);
+  }
+
+  const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
+
+  void reportSimplexStats(
+      FILE* file, const HighsInt style = HighsSolverStatsReportPretty) const {
+    simplex_stats_.report(file, "Original LP", style);
+  }
+
+  void passSimplexStats(const HighsSimplexStats simplex_stats) {
+    this->simplex_stats_ = simplex_stats;
+  }
+
+  const HighsIpxStats& getIpxStats() { return ipx_stats_; }
+
+  void reportIpxStats(FILE* file,
+                      const HighsInt style = HighsSolverStatsReportPretty) {
+    ipx_stats_.report(file, "Original LP", style);
+  }
+
+  void passIpxStats(const HighsIpxStats ipx_stats) {
+    this->ipx_stats_ = ipx_stats;
   }
 
   /**
@@ -1438,6 +1462,9 @@ class Highs {
   HighsSparseMatrix standard_form_matrix_;
 
   HEkk ekk_instance_;
+  HighsSimplexStats simplex_stats_;
+  HighsSimplexStats presolved_lp_simplex_stats_;
+  HighsIpxStats ipx_stats_;
 
   HighsPresolveLog presolve_log_;
 
@@ -1500,7 +1527,8 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateInfo() and invalidateEkk()
+  // invalidateInfo(), invalidateEkk(), invalidateIis(),
+  // invalidateSimplexStats() and invalidateIpxStats();
   void invalidateUserSolverData();
   //
   // Invalidates the model status, solution_ and info_
@@ -1526,6 +1554,12 @@ class Highs {
 
   // Invalidates iis_
   void invalidateIis();
+
+  // Invalidates simplex_stats_ and presolved_lp_simplex_stats_;
+  void invalidateSimplexStats();
+
+  // Invalidates ipx_stats_
+  void invalidateIpxStats();
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);

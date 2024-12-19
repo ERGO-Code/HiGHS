@@ -1259,3 +1259,147 @@ bool highsPause(const bool pause_condition, const std::string message) {
   }
   return pause_condition;
 }
+
+void reportValueCount(
+    const std::vector<std::pair<double, HighsInt>> value_count,
+    const std::string message, const double tolerance) {
+  if (message != "") printf("%s\n", message.c_str());
+  printf("Index              Value Count");
+  if (tolerance > 0)
+    printf(": %s %g\n", "tolerance = ", tolerance);
+  else
+    printf("\n");
+
+  for (HighsInt iX = 0; iX < HighsInt(value_count.size()); iX++)
+    printf(" %4d %18.12g  %4d\n", int(iX), value_count[iX].first,
+           int(value_count[iX].second));
+}
+
+std::vector<std::pair<double, HighsInt>> valueCount(
+    const std::vector<double> data) {
+  std::vector<double> value;
+  std::vector<HighsInt> count;
+  std::unordered_map<double, HighsInt> value2index;
+  std::vector<std::pair<double, HighsInt>> value_count;
+
+  for (HighsInt iX = 0; iX < HighsInt(data.size()); iX++) {
+    double data_ = data[iX];
+    // Exclude infinite values
+    if (data_ == kHighsInf || data_ == -kHighsInf) continue;
+    auto emplace_result = value2index.emplace(data_, HighsInt(value.size()));
+    if (emplace_result.second) {
+      // New
+      value.push_back(data_);
+      count.push_back(1);
+    } else {
+      // Duplicate
+      auto& search = emplace_result.first;
+      assert(static_cast<size_t>(search->second) < value2index.size());
+      HighsInt iX = search->second;
+      count[iX]++;
+      assert(value[iX] == data_);
+    }
+  }
+  for (HighsInt iX = 0; iX < HighsInt(value.size()); iX++)
+    value_count.push_back(std::make_pair(value[iX], count[iX]));
+  return value_count;
+}
+
+bool increasingValue(std::pair<double, HighsInt> x1,
+                     std::pair<double, HighsInt> x2) {
+  return x1.first <= x2.first;
+}
+
+bool decreasingCount(std::pair<double, HighsInt> x1,
+                     std::pair<double, HighsInt> x2) {
+  if (x1.second == x2.second) {
+    return x1.first <= x2.first;
+  }
+  return x1.second > x2.second;
+}
+
+std::vector<std::pair<double, HighsInt>> valueCountSorted(
+    const std::vector<double> data, const bool by_value,
+    const double tolerance) {
+  std::vector<std::pair<double, HighsInt>> value_count = valueCount(data);
+
+  if (tolerance <= 0) {
+    if (by_value) {
+      std::sort(value_count.begin(), value_count.end(), increasingValue);
+    } else {
+      std::sort(value_count.begin(), value_count.end(), decreasingCount);
+    }
+    return value_count;
+  }
+
+  // Sorting by count with a positive tolerance requires analysis with
+  // the entries sorted by value
+  std::sort(value_count.begin(), value_count.end(), increasingValue);
+
+  const HighsInt num_distinct_value = value_count.size();
+
+  HighsInt cluster_first_index = -1;
+  HighsInt num_cluster = 0;
+
+  // Lambda for new cluster
+  auto newCluster = [&](const HighsInt iX) {
+    double average_value = 0;
+    HighsInt cluster_size = iX - cluster_first_index;
+    assert(cluster_size > 0);
+    HighsInt cluster_count = 0;
+    for (HighsInt lc_iX = cluster_first_index; lc_iX < iX; lc_iX++) {
+      average_value += value_count[lc_iX].first;
+      cluster_count += value_count[lc_iX].second;
+    }
+    average_value /= cluster_size;
+    value_count[num_cluster].first = average_value;
+    value_count[num_cluster].second = cluster_count;
+    num_cluster++;
+    cluster_first_index = iX;
+  };
+
+  cluster_first_index = 0;
+  // Loop from 1, since first cluster starts at 0, and can only be
+  // completed when entry 1 is viewed
+  for (HighsInt iX = 1; iX < num_distinct_value; iX++) {
+    double value_ = value_count[iX].first;
+    double last_diff = value_ - value_count[iX - 1].first;
+    if (last_diff > tolerance) {
+      // New cluster started
+      newCluster(iX);
+    } else if (cluster_first_index < iX - 1 &&
+               value_ - value_count[cluster_first_index].first > tolerance) {
+      // Within tolerance of last entry in non-trivial cluster, but
+      // larger than the first entry by more than the tolernace
+      //
+      // Is value_ added to cluster in place of the first entry, or
+      // does it start a new cluster?
+      double first_diff = value_count[cluster_first_index + 1].first -
+                          value_count[cluster_first_index].first;
+      assert(0 < first_diff && first_diff <= tolerance);
+      assert(0 < last_diff && last_diff <= tolerance);
+      if (first_diff <= last_diff) {
+        // New cluster started with value_
+        newCluster(iX);
+      } else {
+        // First value in cluster becomes trivial cluster, and value_ added to
+        // remainder of cluster
+        value_count[num_cluster].first = value_count[cluster_first_index].first;
+        value_count[num_cluster].second =
+            value_count[cluster_first_index].second;
+        num_cluster++;
+        cluster_first_index++;
+      }
+    }
+  }
+  newCluster(num_distinct_value);
+  //  if (num_cluster < num_distinct_value) {
+  //    printf(
+  //        "grep valueCountSorted: num clusters = %d < %d = num distinct
+  //        values\n", int(num_cluster), int(num_distinct_value));
+  //  }
+  value_count.resize(num_cluster);
+  if (!by_value)
+    std::sort(value_count.begin(), value_count.end(), decreasingCount);
+  return value_count;
+}
