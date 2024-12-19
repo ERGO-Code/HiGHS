@@ -3,7 +3,7 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
+requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy", "ninja"]
 build-backend = "scikit_build_core.build"
 
 [project]
