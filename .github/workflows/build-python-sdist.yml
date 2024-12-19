@@ -1,4 +1,4 @@
-name: test-python-install-sdist
+name: build-python-sdist
 
 on: [push, pull_request]
 
@@ -17,7 +17,7 @@ jobs:
         run: pipx run twine check dist/*
 
       - name: install highspy
-        run: python3 -m pip install dist/*
+        run: python3 -m pip install dist/*.tar.gz
 
       - name: Test Python Examples
         run: |
@@ -40,7 +40,9 @@ jobs:
         run: pipx run twine check dist/*
 
       - name: install highspy
-        run: python -m pip install dist/highspy*
+        run: |
+          $item = Get-ChildItem dist
+          python -m pip install "$item"
 
       - name: Test Python Examples
         run: |

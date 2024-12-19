@@ -93,7 +93,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://testpypi.org/p/highspy
+      url: https://test.pypi.org/p/highspy
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
