@@ -25,7 +25,7 @@ jobs:
       
       - name: build bazel
         run: |
-          bazel build //...
+          bazel build --enable_bzlmod //...
       
       - name: test
         run: ./bazel-bin/call-highs-example
