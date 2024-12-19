@@ -17,7 +17,7 @@ jobs:
         run: pipx run twine check dist/*
 
       - name: install highspy
-        run: python3 -m pip install dist/highspy*
+        run: python3 -m pip install dist/*
 
       - name: Test Python Examples
         run: |
