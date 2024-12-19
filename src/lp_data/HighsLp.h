@@ -58,6 +58,7 @@ class HighsLp {
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
   HighsLpMods mods_;
+  HighsLpStats stats_;
 
   bool operator==(const HighsLp& lp) const;
   bool equalButForNames(const HighsLp& lp) const;
@@ -96,6 +97,7 @@ class HighsLp {
                              const HighsIndexCollection& index_collection);
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
+  void stats();
   void unapplyMods();
   void clear();
 };

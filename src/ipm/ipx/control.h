@@ -68,7 +68,10 @@ public:
     double ipm_optimality_tol() const { return parameters_.ipm_optimality_tol; }
     double ipm_drop_primal() const { return parameters_.ipm_drop_primal; }
     double ipm_drop_dual() const { return parameters_.ipm_drop_dual; }
+    bool kkt_logging() const { return parameters_.kkt_logging; }
     double kkt_tol() const { return parameters_.kkt_tol; }
+    ipxint cr1_maxiter() const { return parameters_.cr1_maxiter; }
+    ipxint cr2_maxiter() const { return parameters_.cr2_maxiter; }
     ipxint crash_basis() const { return parameters_.crash_basis; }
     double dependency_tol() const { return parameters_.dependency_tol; }
     double volume_tol() const { return parameters_.volume_tol; }
@@ -91,8 +94,10 @@ public:
     double centringRatioReduction() const {return parameters_.centring_ratio_reduction; }
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
+    HighsSimplexStats simplexStats() const{return parameters_.simplex_stats; }
+    HighsIpxStats ipxStats() const{return parameters_.ipx_stats; }
 
-    const Parameters& parameters() const;
+   const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);
     void callback(HighsCallback* callback);
 

@@ -92,10 +92,10 @@ class HighsMipSolver {
 
   ~HighsMipSolver();
 
-  void setModel(const HighsLp& model) {
-    model_ = &model;
-    solution_objective_ = kHighsInf;
-  }
+  //  void setModel(const HighsLp& model) {
+  //    model_ = &model;
+  //    solution_objective_ = kHighsInf;
+  //  }
 
   mutable HighsTimer timer_;
   void cleanupSolve();

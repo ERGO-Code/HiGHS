@@ -15,6 +15,7 @@
 #define SIMPLEX_HEKK_H_
 
 #include "lp_data/HighsCallback.h"
+#include "lp_data/HighsSolverStats.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HSet.h"
@@ -157,9 +158,12 @@ class HEkk {
                            const vector<double>& rowUpper);
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
+  void passSimplexStats(const HighsSimplexStats simplex_stats);
   void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
-  void reportSimplexStats(FILE* file, const std::string message = "") const {
-    simplex_stats_.report(file, message);
+  void reportSimplexStats(
+      FILE* file, const std::string message = "",
+      const HighsInt style = HighsSolverStatsReportPretty) const {
+    simplex_stats_.report(file, message, style);
   }
 
   // Make this private later

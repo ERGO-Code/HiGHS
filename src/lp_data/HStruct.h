@@ -154,18 +154,27 @@ struct HighsLinearObjective {
   void clear();
 };
 
-struct HighsSimplexStats {
+struct HighsLpStats {
   bool valid;
-  HighsInt iteration_count;
-  HighsInt num_invert;
-  HighsInt last_invert_num_el;
-  HighsInt last_factored_basis_num_el;
-  double col_aq_density;
-  double row_ep_density;
-  double row_ap_density;
-  double row_DSE_density;
-  void report(FILE* file, const std::string message = "") const;
-  void initialise(const HighsInt iteration_count_ = 0);
+  std::string model;
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
+  double relative_max_cost_entry;
+  double relative_num_equal_cost;
+  double relative_num_inf_upper;
+  double relative_num_equations;
+  double relative_max_rhs_entry;
+  double relative_num_equal_rhs;
+  double a_matrix_density;
+  double a_matrix_nz_per_col;
+  double a_matrix_nz_per_row;
+  double relative_max_matrix_entry;
+  double relative_num_equal_a_matrix_nz;
+  double relative_num_dense_row;
+  void report(FILE* file, std::string message = "",
+              const HighsInt style = HighsLpStatsReportPretty);
+  void clear();
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

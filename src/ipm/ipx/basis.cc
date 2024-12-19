@@ -130,6 +130,9 @@ Int Basis::Factorize() {
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false);
         num_factorizations_++;
+	matrix_nz_ = lu_->matrix_nz();
+	invert_nz_ = lu_->invert_nz();
+	double fill_factor = lu_->fill_factor();
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
             AdaptToSingularFactorization();
@@ -449,6 +452,21 @@ double Basis::time_update() const {
     return time_update_;
 }
 
+Int Basis::matrix_nz() const {
+  return matrix_nz_;
+}
+
+Int Basis::invert_nz() const {
+  return invert_nz_;
+}
+
+double Basis::current_fill() const {
+    if (fill_factors_.empty())
+        return 0.0;
+    Int num_factors = fill_factors_.size();
+    return fill_factors_[num_factors-1];
+}
+
 double Basis::mean_fill() const {
     if (fill_factors_.empty())
         return 0.0;
@@ -630,6 +648,8 @@ void Basis::CrashFactorize(Int* num_dropped) {
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true);
     num_factorizations_++;
+    matrix_nz_ = lu_->matrix_nz();
+    invert_nz_ = lu_->invert_nz();
     fill_factors_.push_back(lu_->fill_factor());
     Int ndropped = 0;
     if (flag & 2)
