@@ -20,7 +20,9 @@ jobs:
         run: pipx run twine check dist/*
 
       - name: install highspy
-        run: python3 -m pip install dist/*.tar.gz
+        run: |
+          python3 -m pip install --user scikit-build-core 
+          python3 -m pip install --user dist/*.tar.gz
 
       - name: Test Python Examples
         run: |

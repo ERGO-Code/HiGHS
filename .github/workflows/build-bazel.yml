@@ -3,7 +3,7 @@ name: build-bazel
 on: [push, pull_request]
 
 jobs:
-  bazel:
+  bazel_workspace:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -14,18 +14,37 @@ jobs:
 
       - uses: bazelbuild/setup-bazelisk@v3
 
-      - name: Mount bazel cache # Optional
-        uses: actions/cache@v3
-        with:
-          path: "~/.cache/bazel"
-          key: bazel
+      - name: bazel clean
+        run: bazel clean
+      
+      - name: build bazel
+        run: bazel build --enable_workspace //...
+      
+      - name: test all
+        run:  bazel test --enable_workspace //...
+
+      - name: test example
+        run: ./bazel-bin/call-highs-example
+
+  bazel_bzlmod:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
 
       - name: bazel clean
         run: bazel clean
       
       - name: build bazel
-        run: |
-          bazel build --enable_bzlmod //...
+        run: bazel build --enable_bzlmod //...
       
-      - name: test
+      - name: test all
+        run: bazel test --enable_bzlmod //...
+
+      - name: test example
         run: ./bazel-bin/call-highs-example
