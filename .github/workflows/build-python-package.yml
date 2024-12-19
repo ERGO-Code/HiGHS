@@ -194,7 +194,7 @@ jobs:
           python -m pip install pytest
           python -m pytest 
           
-  build_wheel_windows:
+  build_wheel_windows_313:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v4
