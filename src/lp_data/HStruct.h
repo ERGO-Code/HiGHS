@@ -172,6 +172,7 @@ struct HighsLpStats {
   double relative_max_matrix_entry;
   double relative_num_equal_a_matrix_nz;
   double relative_num_dense_row;
+  void workTerms(double* terms);
   void report(FILE* file, std::string message = "",
               const HighsInt style = HighsLpStatsReportPretty);
   void clear();

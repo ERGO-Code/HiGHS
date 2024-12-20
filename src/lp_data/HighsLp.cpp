@@ -593,6 +593,24 @@ void HighsLpStats::report(FILE* file, std::string message,
   }
 }
 
+void HighsLpStats::workTerms(double* terms) {
+  terms[HighsLpWorkTermNumCol] = this->num_col;
+  terms[HighsLpWorkTermNumRow] = this->num_row;
+  terms[HighsLpWorkTermNumNz] = this->num_nz;
+  terms[HighsLpWorkTermRelativeMaxCostEntry] = this->relative_max_cost_entry;
+  terms[HighsLpWorkTermRelativeNumEqualCost] = this->relative_num_equal_cost;
+  terms[HighsLpWorkTermRelativeNumInfUpper] = this->relative_num_inf_upper;
+  terms[HighsLpWorkTermRelativeNumEquations] = this->relative_num_equations;
+  terms[HighsLpWorkTermRelativeMaxRhsEntry] = this->relative_max_rhs_entry;
+  terms[HighsLpWorkTermRelativeNumEqualRhs] = this->relative_num_equal_rhs;
+  terms[HighsLpWorkTermMatrixDensity] = this->a_matrix_density;
+  terms[HighsLpWorkTermMatrixNzPerCol] = this->a_matrix_nz_per_col;
+  terms[HighsLpWorkTermMatrixNzPerRow] = this->a_matrix_nz_per_row;
+  terms[HighsLpWorkTermRelativemaxMatrixEntry] = this->relative_max_matrix_entry;
+  terms[HighsLpWorkTermRelativeNumEqualMatrixNz] = this->relative_num_equal_a_matrix_nz;
+  terms[HighsLpWorkTermRelativeNumDenseRow] = this->relative_num_dense_row;
+}
+
 /*void reportValueCount(
     const std::vector<std::pair<double, HighsInt>> value_count,
     const double tolerance) {
