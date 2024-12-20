@@ -1,5 +1,7 @@
 ## Build changes
 
+Python: Source Distribution update, added to PyPI
+
 ## Code changes
 
 HiGHS now handles multiple linear objectives by either blending using weights, or performing lexicographic optimization: see https://ergo-code.github.io/HiGHS/stable/guide/further/#guide-multi-objective-optimization
