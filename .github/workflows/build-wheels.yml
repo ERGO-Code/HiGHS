@@ -18,6 +18,9 @@ jobs:
         shell: bash
         run: pipx run build --sdist
 
+      - name: check metadata
+        run: pipx run twine check dist/*
+
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
     runs-on: ${{ matrix.buildplat[0] }}

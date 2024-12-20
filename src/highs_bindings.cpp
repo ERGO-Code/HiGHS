@@ -159,6 +159,10 @@ HighsStatus highs_passHessianPointers(Highs* h, const HighsInt dim,
                         q_value_ptr);
 }
 
+HighsStatus highs_addLinearObjective(Highs* h, const HighsLinearObjective& linear_objective) {
+  return h->addLinearObjective(linear_objective, -1);
+}
+
 HighsStatus highs_postsolve(Highs* h, const HighsSolution& solution,
                             const HighsBasis& basis) {
   return h->postsolve(solution, basis);
@@ -638,7 +642,7 @@ HighsStatus highs_setCallback(
         data.ptr());
 }
 
-PYBIND11_MODULE(_core, m) {
+PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   // To keep a smaller diff, for reviewers, the declarations are not moved, but
   // keep in mind:
   // C++ enum classes :: don't need .export_values()
@@ -939,6 +943,8 @@ PYBIND11_MODULE(_core, m) {
       .def("passModel", &highs_passLpPointers)
       .def("passHessian", &highs_passHessian)
       .def("passHessian", &highs_passHessianPointers)
+      .def("addLinearObjective", &highs_addLinearObjective)
+      .def("clearLinearObjectives", &Highs::clearLinearObjectives)
       .def("passColName", &Highs::passColName)
       .def("passRowName", &Highs::passRowName)
       .def("readModel", &Highs::readModel)
@@ -1148,6 +1154,14 @@ PYBIND11_MODULE(_core, m) {
       .def(py::init<>())
       .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
       .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
+  py::class_<HighsLinearObjective>(m, "HighsLinearObjective")
+      .def(py::init<>())
+      .def_readwrite("weight", &HighsLinearObjective::weight)
+      .def_readwrite("offset", &HighsLinearObjective::offset)
+      .def_readwrite("coefficients", &HighsLinearObjective::coefficients)
+      .def_readwrite("abs_tolerance", &HighsLinearObjective::abs_tolerance)
+      .def_readwrite("rel_tolerance", &HighsLinearObjective::rel_tolerance)
+      .def_readwrite("priority", &HighsLinearObjective::priority);
   // constants
   m.attr("kHighsInf") = kHighsInf;
   m.attr("kHighsIInf") = kHighsIInf;

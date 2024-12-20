@@ -130,7 +130,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt col_upper_size = lp.col_upper_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
-  bool legal_col_upper_size = col_lower_size >= num_col;
+  bool legal_col_upper_size = col_upper_size >= num_col;
   if (!legal_col_cost_size)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on col_cost.size() = %d < "

@@ -1866,9 +1866,11 @@ restart:
     mipsolver.analysis_.mipTimerStop(kMipClockStartSymmetryDetection);
   }
   if (compute_analytic_centre && !analyticCenterComputed) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - starting analytic centre calculation\n",
-                 mipsolver.timer_.read());
+    if (mipsolver.analysis_.analyse_mip_time)
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+          "MIP-Timing: %11.2g - starting analytic centre calculation\n",
+          mipsolver.timer_.read());
     mipsolver.analysis_.mipTimerStart(kMipClockStartAnalyticCentreComputation);
     startAnalyticCenterComputation(tg);
     mipsolver.analysis_.mipTimerStop(kMipClockStartAnalyticCentreComputation);
@@ -2501,7 +2503,8 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-double possInfRelDiff(const double v0, const double v1, const double den) {
+static double possInfRelDiff(const double v0, const double v1,
+                             const double den) {
   double rel_diff;
   if (std::fabs(v0) == kHighsInf) {
     if (std::fabs(v1) == kHighsInf) {
