@@ -3,30 +3,7 @@ name: build-bazel
 on: [push, pull_request]
 
 jobs:
-  bazel_workspace:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: bazelbuild/setup-bazelisk@v3
-
-      - name: bazel clean
-        run: bazel clean
-      
-      - name: build bazel
-        run: bazel build --enable_workspace //...
-      
-      - name: test all
-        run:  bazel test --enable_workspace //...
-
-      - name: test example
-        run: ./bazel-bin/call-highs-example
-
-  bazel_bzlmod:
+  bazel:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

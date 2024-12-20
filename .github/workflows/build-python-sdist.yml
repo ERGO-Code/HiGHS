@@ -11,6 +11,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         shell: bash
@@ -21,8 +22,8 @@ jobs:
 
       - name: install highspy
         run: |
-          python3 -m pip install --user scikit-build-core 
-          python3 -m pip install --user dist/*.tar.gz
+          python3 -m pip install scikit-build-core --user
+          python3 -m pip install dist/*.tar.gz --user 
 
       - name: Test Python Examples
         run: |

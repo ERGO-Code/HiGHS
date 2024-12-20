@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         run: |
@@ -20,6 +21,7 @@ jobs:
       - name: Install sdist
         run: |
           ls dist
+          python3 -m pip install scikit-build-core
           python3 -m pip install dist/*.tar.gz
 
       - name: Test highspy
