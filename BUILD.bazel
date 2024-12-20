@@ -18,7 +18,6 @@ cc_library(
     name = "highs",
     srcs = glob([
         "extern/filereaderlp/*.cpp",
-        "extern/zlib/*.cpp",
         "src/interfaces/highs_c_api.cpp",
         "src/io/*.cpp",
         "src/ipm/*.cpp",
@@ -37,7 +36,6 @@ cc_library(
         "src/util/*.cpp",
     ]),
     hdrs = glob([
-        "HConfig.h",
         "**/*.h",
         "src/qpsolver/*.hpp",
         "src/Highs.h",

@@ -74,9 +74,17 @@ sdist.exclude = [
   ".clang-format",
   "__setup.py",
   "BUILD.bazel",
-  "meson*",
+  "**meson**",
   "MODS.md",
   "WORKSPACE",
+  "nuget/",
+  "nuget/README.md",
+  "src/*.bazel*",
+  "src/*.meson*",
+  "interfaces/*csharp*",
+  "interfaces/*fortran*",
+  "flake.*",
+  "highs.pc.in"
 ]
 
 
@@ -90,9 +98,9 @@ sdist.exclude = [
 # # The versions of Ninja to allow. If Ninja is not present on the system or does
 # # not pass this specifier, it will be downloaded via PyPI if possible. An empty
 # # string will disable this check.
-# ninja.version = ">=1.5"
+# ninja.version = ">=1.5"
 
-# # If CMake is not present on the system or is older required, it will be
+# # If Ninja is not present on the system or is older required, it will be
 # # downloaded via PyPI if possible. An empty string will disable this check.
 # ninja.make-fallback = true
 
