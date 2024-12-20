@@ -22,7 +22,6 @@ jobs:
 
       - name: install highspy
         run: |
-          python3 -m pip install scikit-build-core --user
           python3 -m pip install dist/*.tar.gz --user 
 
       - name: Test Python Examples
@@ -53,11 +52,11 @@ jobs:
         run: |
           python3 -m venv path/to/venv
           source path/to/venv/bin/activate
-          python3 -m pip install scikit-build-core 
           python3 -m pip install dist/*.tar.gz 
 
       - name: Test Python Examples
         run: |
+         source path/to/venv/bin/activate
          python3 ./examples/call_highs_from_python_highspy.py
          python3 ./examples/call_highs_from_python_mps.py
          python3 ./examples/call_highs_from_python.py

@@ -21,7 +21,6 @@ jobs:
       - name: Install sdist
         run: |
           ls dist
-          python3 -m pip install scikit-build-core
           python3 -m pip install dist/*.tar.gz
 
       - name: Test highspy
