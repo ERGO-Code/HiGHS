@@ -606,8 +606,10 @@ void HighsLpStats::workTerms(double* terms) {
   terms[HighsLpWorkTermMatrixDensity] = this->a_matrix_density;
   terms[HighsLpWorkTermMatrixNzPerCol] = this->a_matrix_nz_per_col;
   terms[HighsLpWorkTermMatrixNzPerRow] = this->a_matrix_nz_per_row;
-  terms[HighsLpWorkTermRelativemaxMatrixEntry] = this->relative_max_matrix_entry;
-  terms[HighsLpWorkTermRelativeNumEqualMatrixNz] = this->relative_num_equal_a_matrix_nz;
+  terms[HighsLpWorkTermRelativemaxMatrixEntry] =
+      this->relative_max_matrix_entry;
+  terms[HighsLpWorkTermRelativeNumEqualMatrixNz] =
+      this->relative_num_equal_a_matrix_nz;
   terms[HighsLpWorkTermRelativeNumDenseRow] = this->relative_num_dense_row;
 }
 
