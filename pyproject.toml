@@ -3,7 +3,7 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["numpy", "pybind11", "scikit-build-core>=0.3.3"]
+requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -54,9 +54,9 @@ sdist.include = [
   "LICENSE",
   "README.md",
   "src/HConfig.h.in",
-  "src/",
-  "external/",
-  "cmake/",
+  "src",
+  "external",
+  "cmake",
 ]
 
 sdist.exclude = [
@@ -64,11 +64,11 @@ sdist.exclude = [
   ".gitattributes",
   ".gitignore",
   ".github",
-  "app/",
-  "build/",
-  "check/",
-  "docs/",
-  "subprojects/",
+  "app",
+  "build",
+  "check",
+  "docs",
+  "subprojects",
   ".coin-or",
   "build_webdemo.sh",
   ".clang-format",
@@ -98,11 +98,11 @@ sdist.exclude = [
 # # The versions of Ninja to allow. If Ninja is not present on the system or does
 # # not pass this specifier, it will be downloaded via PyPI if possible. An empty
 # # string will disable this check.
-ninja.version = ">=1.5"
+# ninja.version = ">=1.5"
 
 # # If Ninja is not present on the system or is older required, it will be
 # # downloaded via PyPI if possible. An empty string will disable this check.
-ninja.make-fallback = true
+# ninja.make-fallback = true
 
 # # The logging level to display, "DEBUG", "INFO", "WARNING", and "ERROR" are
 # # possible options.

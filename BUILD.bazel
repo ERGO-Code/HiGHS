@@ -117,16 +117,6 @@ cc_library(
     ],
 )
 
-# config_setting(
-#     name = "on_windows",
-#     constraint_values = ["@platforms//os:windows"],
-# )
-
-# config_setting(
-#     name = "on_linux",
-#     constraint_values = ["@platforms//os:linux"],
-# )
-
 TEST_NAMES = [
     "TestAlienBasis",
     "TestBasis",
@@ -166,13 +156,7 @@ TEST_NAMES = [
     "TestSort",
     "TestSpecialLps",
     "TestThrow",
-] 
-
-# PLATFORM_DEPENDENT_TESTS = select({
-#     "on_linux": ["TestLpSolvers.cpp"],
-#     "on_windows": ["TestLpSolvers.cpp"],
-#     "//conditions:default": [],
-# })
+]
 
 [cc_test(
     name = name,
@@ -187,4 +171,3 @@ TEST_NAMES = [
         ":test_lib",
     ],
 ) for name in TEST_NAMES]
-
