@@ -13,14 +13,14 @@
  * underlying matrix storage formats
  */
 
+#ifndef UTIL_HIGHS_MATRIX_SLICE_H_
+#define UTIL_HIGHS_MATRIX_SLICE_H_
+
 #include <cstddef>
 #include <iterator>
 #include <vector>
 
 #include "util/HighsInt.h"
-
-#ifndef UTIL_HIGHS_MATRIX_SLICE_H_
-#define UTIL_HIGHS_MATRIX_SLICE_H_
 
 template <typename StorageFormat>
 class HighsMatrixSlice;

@@ -66,6 +66,9 @@ class HighsSparseMatrix {
   void deleteRows(const HighsIndexCollection& index_collection);
   HighsStatus assessDimensions(const HighsLogOptions& log_options,
                                const std::string matrix_name);
+  HighsStatus assessStart(const HighsLogOptions& log_options);
+  HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
+
   HighsStatus assess(const HighsLogOptions& log_options,
                      const std::string matrix_name,
                      const double small_matrix_value,

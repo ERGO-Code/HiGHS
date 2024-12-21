@@ -494,3 +494,7 @@ print("row_bound:", iis.row_bound)
 
 print("col_index:", iis.col_index)
 print("col_bound:", iis.col_bound)
+
+# ~~~
+# Clear so that incumbent model is empty
+h.clear()

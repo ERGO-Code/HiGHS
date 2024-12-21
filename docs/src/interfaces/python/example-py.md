@@ -237,5 +237,11 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `presolveRuleTypeToString`
  * `postsolve`
  
- 
- 
+## Multi-objective optimization
+
+* `addLinearObjective`
+* `clearLinearObjectives`
+
+
+
+

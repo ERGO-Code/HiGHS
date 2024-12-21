@@ -315,9 +315,15 @@ class HPresolve {
 
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  void substituteFreeCol(HighsPostsolveStack& postsolve_stack, HighsInt row,
+                         HighsInt col, bool relaxRowDualBounds = false);
+
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
+  Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                            bool handleSingletonRows = true);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
@@ -355,6 +361,11 @@ class HPresolve {
   HighsInt detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
+
+  template <typename RowStorageFormat>
+  Result equalityRowAddition(HighsPostsolveStack& postsolve_stack,
+                             HighsInt stayrow, HighsInt removerow, double scale,
+                             const HighsMatrixSlice<RowStorageFormat>& vector);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 

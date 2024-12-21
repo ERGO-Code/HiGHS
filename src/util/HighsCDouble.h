@@ -289,6 +289,12 @@ class HighsCDouble {
   }
 
   friend HighsCDouble floor(const HighsCDouble& x) {
+    // Treat |x| < 1 as special case, as per (for example)
+    // https://github.com/shibatch/tlfloat: see #2041
+    if (abs(x) < 1) {
+      if (x == 0 || x > 0) return HighsCDouble(0.0);
+      return HighsCDouble(-1.0);
+    }
     double floor_x = std::floor(double(x));
     HighsCDouble res;
 
@@ -297,6 +303,12 @@ class HighsCDouble {
   }
 
   friend HighsCDouble ceil(const HighsCDouble& x) {
+    // Treat |x| < 1 as special case, as per (for example)
+    // https://github.com/shibatch/tlfloat: see #2041
+    if (abs(x) < 1) {
+      if (x == 0 || x < 0) return HighsCDouble(0.0);
+      return HighsCDouble(1.0);
+    }
     double ceil_x = std::ceil(double(x));
     HighsCDouble res;
 

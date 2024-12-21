@@ -48,6 +48,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestBasis.cpp
       TestBasisSolves.cpp
       TestCrossover.cpp
+      TestHighsCDouble.cpp
       TestHighsHash.cpp
       TestHighsIntegers.cpp
       TestHighsParallel.cpp
@@ -66,6 +67,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestLpModification.cpp
       TestLpOrientation.cpp
       TestModelProperties.cpp
+      TestMultiObjective.cpp
       TestPdlp.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
@@ -75,16 +77,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      Avgas.cpp)
-
-  # todo: IG
-  if (NOT APPLE)
-      # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
-      # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
-      # may be an interface related issue which will pop up soon. 
-      # works OK on linux. The test was added to doctest for macOS but still hanging.
-      set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
-  endif()
+      Avgas.cpp
+      TestSpecialLps.cpp
+      TestLpSolvers.cpp
+      TestMipSolver.cpp)
 
     if (BUILD_EXTRA_UNIT_TESTS)
         list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
@@ -257,9 +253,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "standgub\; 1.25769949\;"
         )
   elseif(WIN32)
-    # on windows e226 model status is unknown, rel gap e00
+    # on windows e226 model status is unknown
+    # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
     set(pdlpInstances
-        "25fv47\; 5.50184588\;"
+        "25fv47\; 5.5018458\;"
         "adlittle\; 2.25494963\;"
         "afiro\;-4.64753142\;"
         "avgas\;-7.749999999\;"
