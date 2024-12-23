@@ -46,7 +46,6 @@ jobs:
         path: build/coverage
 
     - name: Publish coverage to GitHub Pages
-      if: github.event_name == 'push'
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
