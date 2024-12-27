@@ -7,6 +7,8 @@ variables:
 
 coverage:
   stage: coverage
+  tags:
+    - code_coverage
   script:
     - mkdir build
     - cd build
