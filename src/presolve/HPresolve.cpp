@@ -6134,6 +6134,7 @@ HPresolve::Result HPresolve::equalityRowAddition(
     double scale, const HighsMatrixSlice<RowStorageFormat>& vector) {
   postsolve_stack.equalityRowAddition(removerow, stayrow, scale, vector);
   for (const auto& rowNz : vector) {
+    assert(rowNz.index() >= 0);
     HighsInt pos = findNonzero(removerow, rowNz.index());
     if (pos != -1)
       unlink(pos);  // all common nonzeros are cancelled, as the rows are
