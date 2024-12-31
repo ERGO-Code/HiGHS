@@ -77,16 +77,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      Avgas.cpp)
-
-  # todo: IG
-  if (NOT APPLE)
-      # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
-      # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
-      # may be an interface related issue which will pop up soon. 
-      # works OK on linux. The test was added to doctest for macOS but still hanging.
-      set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
-  endif()
+      Avgas.cpp
+      TestSpecialLps.cpp
+      TestLpSolvers.cpp
+      TestMipSolver.cpp)
 
     if (BUILD_EXTRA_UNIT_TESTS)
         list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
