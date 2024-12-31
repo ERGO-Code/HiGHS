@@ -6133,16 +6133,30 @@ HPresolve::Result HPresolve::equalityRowAddition(
     HighsPostsolveStack& postsolve_stack, HighsInt stayrow, HighsInt removerow,
     double scale, const HighsMatrixSlice<RowStorageFormat>& vector) {
   postsolve_stack.equalityRowAddition(removerow, stayrow, scale, vector);
+  // As exposed by #2095, adding to the matrix in the loop can corrupt
+  // vector, so possiblt accumulate the addiitons and perform then
+  // when vector is no longer needed
+  std::vector<std::pair<HighsInt, double>> add_index_value;
+  const bool add_to_matrix_after = true;
   for (const auto& rowNz : vector) {
     assert(rowNz.index() >= 0);
     HighsInt pos = findNonzero(removerow, rowNz.index());
-    if (pos != -1)
+    if (pos != -1) {
       unlink(pos);  // all common nonzeros are cancelled, as the rows are
                     // parallel
-    else            // might introduce a singleton
-      addToMatrix(removerow, rowNz.index(), scale * rowNz.value());
+    } else {        // might introduce a singleton
+      if (add_to_matrix_after) {
+        add_index_value.push_back(std::make_pair(rowNz.index(), rowNz.value()));
+      } else {
+        addToMatrix(removerow, rowNz.index(), scale * rowNz.value());
+      }
+    }
   }
-
+  if (add_to_matrix_after) {
+    for (HighsInt iX = 0; iX < HighsInt(add_index_value.size()); iX++)
+      addToMatrix(removerow, add_index_value[iX].first,
+                  scale * add_index_value[iX].second);
+  }
   if (model->row_upper_[removerow] != kHighsInf)
     model->row_upper_[removerow] =
         double(model->row_upper_[removerow] +
