@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -21,7 +18,7 @@
 #include "util/HighsInt.h"
 
 const std::string kHighsCopyrightStatement =
-    "Copyright (c) 2024 HiGHS under MIT licence terms";
+    "Copyright (c) 2025 HiGHS under MIT licence terms";
 
 const size_t kHighsSize_tInf = std::numeric_limits<size_t>::max();
 const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
