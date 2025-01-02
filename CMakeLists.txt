@@ -195,7 +195,6 @@ if (BUILD_CXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
   endif()  
 
-
   # Basic type
   include(CMakePushCheckState)
   cmake_push_check_state(RESET)
