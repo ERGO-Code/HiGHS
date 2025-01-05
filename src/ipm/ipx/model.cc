@@ -9,11 +9,11 @@ namespace ipx {
 
 Int Model::Load(const Control& control, Int num_constr, Int num_var,
                 const Int* Ap, const Int* Ai, const double* Ax,
-                const double* rhs, const char* constr_type, const double* obj,
-                const double* lbuser, const double* ubuser) {
+                const double* rhs, const char* constr_type, const double offset,
+		const double* obj, const double* lbuser, const double* ubuser) {
     clear();
     Int errflag = CopyInput(num_constr, num_var, Ap, Ai, Ax, rhs, constr_type,
-                            obj, lbuser, ubuser);
+                            offset, obj, lbuser, ubuser);
     if (errflag)
         return errflag;
     std::stringstream h_logging_stream;
@@ -541,7 +541,7 @@ static Int CheckMatrix(Int m, Int n, const Int *Ap, const Int *Ai, const double 
 
 Int Model::CopyInput(Int num_constr, Int num_var, const Int* Ap, const Int* Ai,
                      const double* Ax, const double* rhs,
-                     const char* constr_type, const double* obj,
+                     const char* constr_type,  const double offset, const double* obj,
                      const double* lbuser, const double* ubuser) {
     if (!(Ap && Ai && Ax && rhs && constr_type && obj && lbuser && ubuser)) {
         return IPX_ERROR_argument_null;
@@ -569,6 +569,7 @@ Int Model::CopyInput(Int num_constr, Int num_var, const Int* Ap, const Int* Ai,
             boxed_vars_.push_back(j);
     }
     constr_type_ = std::vector<char>(constr_type, constr_type+num_constr);
+    offset_ = offset;
     scaled_obj_ = Vector(obj, num_var);
     scaled_rhs_ = Vector(rhs, num_constr);
     scaled_lbuser_ = Vector(lbuser, num_var);

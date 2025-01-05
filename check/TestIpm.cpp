@@ -134,3 +134,27 @@ TEST_CASE("test-1966", "[highs_ipm]") {
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
   }
 }
+
+TEST_CASE("test-2087", "[highs_ipm]") {
+  // Make sure that presolve is performed when re-solving using IPM,
+  // since optimal basis cannot be used, and ensure that the offset is
+  // used in IPX
+  Highs h;
+  // h.setOptionValue("output_flag", dev_run);
+  // Use shell since it yields an offset after presolve
+  std::string model = "shell.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
+  h.readModel(filename);
+
+  h.setOptionValue("solver", kIpmString);
+  //  if (dev_run)
+  printf("\nFirst call to Highs::run() with presolve:\n");
+  h.run();
+    
+  //  if (dev_run)
+  printf("\nSecond call to Highs::run() with presolve:\n");
+  h.run();
+  
+
+
+}

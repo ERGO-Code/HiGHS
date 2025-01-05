@@ -22,6 +22,7 @@ using Int = ipxint;
 
 constexpr HighsInt num_var = 12;
 constexpr HighsInt num_constr = 9;
+const double offset = 0;
 const double obj[] = {-0.2194, 0.0, 0.0,   0.0,     0.0, 0.0,
                       0.0,     0.0, -0.32, -0.5564, 0.6, -0.48};
 const double lb[num_var] = {0.0};
@@ -47,7 +48,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   lps.SetParameters(parameters);
 
   // Solve the LP.
-  Int load_status = lps.LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax,
+  Int load_status = lps.LoadModel(num_var, offset, obj, lb, ub, num_constr, Ap, Ai, Ax,
                                   rhs, constr_type);
   REQUIRE(load_status == 0);
 
