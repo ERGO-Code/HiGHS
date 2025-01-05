@@ -373,6 +373,54 @@ highs_getReducedColumnSparse(Highs* h, HighsInt col) {
   return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
 }
 
+std::tuple<HighsStatus, bool> highs_getDualRayExist(Highs* h) {
+  bool has_dual_ray;
+  HighsStatus status = h->getDualRay(has_dual_ray);
+  return std::make_tuple(status, has_dual_ray);
+}
+
+std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualRay(Highs* h) {
+  HighsInt num_row = h->getNumRow();
+  bool has_dual_ray;
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> value(num_row);
+  double* value_ptr = static_cast<double*>(value.data());
+  if (num_row > 0) status = h->getDualRay(has_dual_ray, value_ptr);
+  return std::make_tuple(status, has_dual_ray, py::cast(value));
+}
+
+std::tuple<HighsStatus, bool> highs_getDualUnboundednessDirectionExist(Highs* h) {
+  bool has_dual_unboundedness_direction;
+  HighsStatus status = h->getDualUnboundednessDirection(has_dual_unboundedness_direction);
+  return std::make_tuple(status, has_dual_unboundedness_direction);
+}
+
+std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getDualUnboundednessDirection(Highs* h) {
+  HighsInt num_col = h->getNumCol();
+  bool has_dual_unboundedness_direction;
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> value(num_col);
+  double* value_ptr = static_cast<double*>(value.data());
+  if (num_col > 0) status = h->getDualUnboundednessDirection(has_dual_unboundedness_direction, value_ptr);
+  return std::make_tuple(status, has_dual_unboundedness_direction, py::cast(value));
+}
+
+std::tuple<HighsStatus, bool> highs_getPrimalRayExist(Highs* h) {
+  bool has_primal_ray;
+  HighsStatus status = h->getPrimalRay(has_primal_ray);
+  return std::make_tuple(status, has_primal_ray);
+}
+
+std::tuple<HighsStatus, bool, dense_array_t<double>> highs_getPrimalRay(Highs* h) {
+  HighsInt num_col = h->getNumCol();
+  bool has_primal_ray;
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> value(num_col);
+  double* value_ptr = static_cast<double*>(value.data());
+  if (num_col > 0) status = h->getPrimalRay(has_primal_ray, value_ptr);
+  return std::make_tuple(status, has_primal_ray, py::cast(value));
+}
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
                          HighsInt num_new_nz, dense_array_t<HighsInt> indices,
                          dense_array_t<double> values) {
@@ -1236,6 +1284,12 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getReducedRowSparse", &highs_getReducedRowSparse)
       .def("getReducedColumn", &highs_getReducedColumn)
       .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
+      .def("getDualRayExist", &highs_getDualRayExist)
+      .def("getDualRay", &highs_getDualRay)
+      .def("getDualUnboundednessDirectionExist", &highs_getDualUnboundednessDirectionExist)
+      .def("getDualUnboundednessDirection", &highs_getDualUnboundednessDirection)
+      .def("getPrimalRayExist", &highs_getPrimalRayExist)
+      .def("getPrimalRay", &highs_getPrimalRay)
       .def("getNumCol", &Highs::getNumCol)
       .def("getNumRow", &Highs::getNumRow)
       .def("getNumNz", &Highs::getNumNz)

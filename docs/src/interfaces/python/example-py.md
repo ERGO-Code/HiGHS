@@ -254,6 +254,14 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `getReducedColumn`
  * `getReducedColumnSparse`
 
+## Rays and unboundedness
+
+ * `getDualRayExist`
+ * `getDualRay`
+ * `getDualUnboundednessDirectionExist`
+ * `getDualUnboundednessDirection`
+ * `getPrimalRayExist`
+ * `getPrimalRay`
  
 ## Multi-objective optimization
 
