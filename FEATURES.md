@@ -8,3 +8,6 @@ If there is a valid basis when Highs::run() is called, presolve isn't skipped un
 
 Added basis solve methods to highspy
 
+Added methods to get primal/dual ray and dual unboundedness direction to highspy
+
+
