@@ -187,7 +187,8 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   return std::make_tuple(status, ranging);
 }
 
-std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(Highs* h) {
+std::tuple<HighsStatus, dense_array_t<HighsInt>>
+highs_getBasicVariables(Highs* h) {
   HighsInt num_row = h->getNumRow();
   
   HighsStatus status = HighsStatus::kOk;
@@ -197,7 +198,62 @@ std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(Highs* 
   return std::make_tuple(status, py::cast(basic_variables));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisSolve(Highs* h, dense_array_t<double> rhs) {
+std::tuple<HighsStatus, dense_array_t<double>>
+highs_getBasisInverseRow(Highs* h, HighsInt row) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> solution_vector(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+
+  if (num_row > 0) status = h->getBasisInverseRow(row, solution_vector_ptr);
+  return std::make_tuple(status, py::cast(solution_vector));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getBasisInverseRowSparse(Highs* h, HighsInt row) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  HighsInt solution_num_nz = 0;
+  std::vector<double> solution_vector(num_row);
+  std::vector<HighsInt> solution_index(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+  HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
+
+  if (num_row > 0) status = h->getBasisInverseRow(row, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>>
+highs_getBasisInverseCol(Highs* h, HighsInt col) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> solution_vector(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+
+  if (num_row > 0) status = h->getBasisInverseCol(col, solution_vector_ptr);
+  return std::make_tuple(status, py::cast(solution_vector));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getBasisInverseColSparse(Highs* h, HighsInt col) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  HighsInt solution_num_nz = 0;
+  std::vector<double> solution_vector(num_row);
+  std::vector<HighsInt> solution_index(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+  HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
+
+  if (num_row > 0) status = h->getBasisInverseCol(col, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>>
+highs_getBasisSolve(Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
@@ -211,7 +267,8 @@ std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisSolve(Highs* h, den
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>> highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getBasisSolveSparse(Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
@@ -242,7 +299,8 @@ std::tuple<HighsStatus, dense_array_t<double>> highs_getBasisTransposeSolve(High
   return std::make_tuple(status, py::cast(solution_vector));
 }
 
-std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>> highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
   HighsInt num_row = h->getNumRow();
 
   py::buffer_info rhs_info = rhs.request();
@@ -1110,10 +1168,10 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getObjectiveValue", &Highs::getObjectiveValue)
       .def("getDualObjectiveValue", &Highs::getDualObjectiveValue)
       .def("getBasicVariables", &highs_getBasicVariables)
-    //      .def("getBasisInverseRow", &highs_getBasisInverseRow)
-    //      .def("getBasisInverseRowSparse", &highs_getBasisInverseRowSparse)
-    //      .def("getBasisInverseCol", &highs_getBasisInverseCol)
-    //      .def("getBasisInverseColSparse", &highs_getBasisInverseColSparse)
+      .def("getBasisInverseRow", &highs_getBasisInverseRow)
+      .def("getBasisInverseRowSparse", &highs_getBasisInverseRowSparse)
+      .def("getBasisInverseCol", &highs_getBasisInverseCol)
+      .def("getBasisInverseColSparse", &highs_getBasisInverseColSparse)
       .def("getBasisSolve", &highs_getBasisSolve)
       .def("getBasisSolveSparse", &highs_getBasisSolveSparse)
       .def("getBasisTransposeSolve", &highs_getBasisTransposeSolve)
