@@ -317,6 +317,62 @@ highs_getBasisTransposeSolveSparse(Highs* h, dense_array_t<double> rhs) {
   return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
 }
 
+std::tuple<HighsStatus, dense_array_t<double>>
+highs_getReducedRow(Highs* h, HighsInt row) {
+  HighsInt num_col = h->getNumCol();
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> solution_vector(num_col);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+
+  if (num_row > 0) status = h->getReducedRow(row, solution_vector_ptr);
+  return std::make_tuple(status, py::cast(solution_vector));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getReducedRowSparse(Highs* h, HighsInt row) {
+  HighsInt num_col = h->getNumCol();
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  HighsInt solution_num_nz = 0;
+  std::vector<double> solution_vector(num_row);
+  std::vector<HighsInt> solution_index(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+  HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
+
+  if (num_row > 0) status = h->getReducedRow(row, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>>
+highs_getReducedColumn(Highs* h, HighsInt col) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  std::vector<double> solution_vector(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+
+  if (num_row > 0) status = h->getReducedColumn(col, solution_vector_ptr);
+  return std::make_tuple(status, py::cast(solution_vector));
+}
+
+std::tuple<HighsStatus, dense_array_t<double>, HighsInt, dense_array_t<HighsInt>>
+highs_getReducedColumnSparse(Highs* h, HighsInt col) {
+  HighsInt num_row = h->getNumRow();
+
+  HighsStatus status = HighsStatus::kOk;
+  HighsInt solution_num_nz = 0;
+  std::vector<double> solution_vector(num_row);
+  std::vector<HighsInt> solution_index(num_row);
+  double* solution_vector_ptr = static_cast<double*>(solution_vector.data());
+  HighsInt* solution_index_ptr = static_cast<HighsInt*>(solution_index.data());
+
+  if (num_row > 0) status = h->getReducedColumn(col, solution_vector_ptr, &solution_num_nz, solution_index_ptr);
+  return std::make_tuple(status, py::cast(solution_vector), solution_num_nz, py::cast(solution_index));
+}
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
                          HighsInt num_new_nz, dense_array_t<HighsInt> indices,
                          dense_array_t<double> values) {
@@ -1176,10 +1232,10 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getBasisSolveSparse", &highs_getBasisSolveSparse)
       .def("getBasisTransposeSolve", &highs_getBasisTransposeSolve)
       .def("getBasisTransposeSolveSparse", &highs_getBasisTransposeSolveSparse)
-    //      .def("getReducedRow", &highs_getReducedRow)
-    //      .def("getReducedRowSparse", &highs_getReducedRowSparse)
-    //      .def("getReducedColumn", &highs_getReducedColumn)
-    //      .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
+      .def("getReducedRow", &highs_getReducedRow)
+      .def("getReducedRowSparse", &highs_getReducedRowSparse)
+      .def("getReducedColumn", &highs_getReducedColumn)
+      .def("getReducedColumnSparse", &highs_getReducedColumnSparse)
       .def("getNumCol", &Highs::getNumCol)
       .def("getNumRow", &Highs::getNumRow)
       .def("getNumNz", &Highs::getNumNz)
