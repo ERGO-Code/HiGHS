@@ -187,6 +187,17 @@ std::tuple<HighsStatus, HighsRanging> highs_getRanging(Highs* h) {
   return std::make_tuple(status, ranging);
 }
 
+std::tuple<HighsStatus, dense_array_t<HighsInt>> highs_getBasicVariables(Highs* h) {
+  HighsInt num_row = h->getNumRow();
+  if (num_row == 0) return std::make_tuple(HighsStatus::kOk, py::cast(0));
+  
+  std::vector<HighsInt> basic_variables(num_row);
+  HighsInt* basic_variables_ptr = static_cast<HighsInt*>(basic_variables.data());
+  HighsStatus status = h->getBasicVariables(basic_variables_ptr);
+  return std::make_tuple(status, py::cast(basic_variables));
+}
+  
+
 HighsStatus highs_addRow(Highs* h, double lower, double upper,
                          HighsInt num_new_nz, dense_array_t<HighsInt> indices,
                          dense_array_t<double> values) {
@@ -1036,6 +1047,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("getModelPresolveStatus", &Highs::getModelPresolveStatus)
       .def("getRanging", &highs_getRanging)
       .def("getObjectiveValue", &Highs::getObjectiveValue)
+      .def("getDualObjectiveValue", &Highs::getDualObjectiveValue)
+      .def("getBasicVariables", &highs_getBasicVariables)       
       .def("getNumCol", &Highs::getNumCol)
       .def("getNumRow", &Highs::getNumRow)
       .def("getNumNz", &Highs::getNumNz)
