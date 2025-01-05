@@ -93,6 +93,9 @@ public:
     const SparseMatrix& AI() const { return AI_; }
     const SparseMatrix& AIt() const { return AIt_; }
 
+    // Returns the offset
+    const double offset() const { return offset_; }
+  
     // Returns a reference to a model vector.
     const Vector& b() const { return b_; }
     const Vector& c() const { return c_; }

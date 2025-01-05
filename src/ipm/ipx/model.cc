@@ -336,8 +336,8 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
     presidual = std::max(presidual, Infnorm(ru));
     double dresidual = Infnorm(rc);
 
-    double pobjective = Dot(scaled_obj_, x);
-    double dobjective = Dot(scaled_rhs_, y);
+    double pobjective = offset_ + Dot(scaled_obj_, x);
+    double dobjective = offset_ + Dot(scaled_rhs_, y);
     for (Int j = 0; j < num_var_; j++) {
         if (std::isfinite(scaled_lbuser_[j]))
             dobjective += scaled_lbuser_[j] * zl[j];
