@@ -1260,10 +1260,16 @@ HighsStatus Highs::solve() {
 
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
-  if (basis_.valid || options_.presolve == kHighsOffString ||
-      unconstrained_lp) {
+  // Even if options_.solver == kHighsChooseString in isolation will,
+  // untimately lead to a choice between simplex and IPM, if a basis
+  // is available, simplex should surely be chosen.
+  const bool solver_will_use_basis = options_.solver == kSimplexString ||
+                                     options_.solver == kHighsChooseString;
+  if ((basis_.valid || options_.presolve == kHighsOffString ||
+       unconstrained_lp) &&
+      solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
-    // has no constraint matrix
+    // has no constraint matrix, and the solver will use the basis
     ekk_instance_.lp_name_ =
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that

@@ -25,8 +25,8 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
 
-  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai, Av,
-                rhs, constraint_type);
+  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
+                Av, rhs, constraint_type);
   // if (res != IpxStatus::OK) return HighsStatus::kError;
 
   const HighsLogOptions& log_options = options.log_options;

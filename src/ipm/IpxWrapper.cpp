@@ -154,8 +154,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
-  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai, Av,
-                rhs, constraint_type);
+  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
+                Av, rhs, constraint_type);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
@@ -388,11 +388,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 }
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
-                   double& offset,
-                   std::vector<double>& obj, std::vector<double>& col_lb,
-                   std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
-                   std::vector<ipx::Int>& Ai, std::vector<double>& Ax,
-                   std::vector<double>& rhs,
+                   double& offset, std::vector<double>& obj,
+                   std::vector<double>& col_lb, std::vector<double>& col_ub,
+                   std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
+                   std::vector<double>& Ax, std::vector<double>& rhs,
                    std::vector<char>& constraint_type) {
   num_col = lp.num_col_;
   num_row = lp.num_row_;

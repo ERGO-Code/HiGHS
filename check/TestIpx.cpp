@@ -48,8 +48,8 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
   lps.SetParameters(parameters);
 
   // Solve the LP.
-  Int load_status = lps.LoadModel(num_var, offset, obj, lb, ub, num_constr, Ap, Ai, Ax,
-                                  rhs, constr_type);
+  Int load_status = lps.LoadModel(num_var, offset, obj, lb, ub, num_constr, Ap,
+                                  Ai, Ax, rhs, constr_type);
   REQUIRE(load_status == 0);
 
   highs::parallel::initialize_scheduler();

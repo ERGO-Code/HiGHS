@@ -140,21 +140,16 @@ TEST_CASE("test-2087", "[highs_ipm]") {
   // since optimal basis cannot be used, and ensure that the offset is
   // used in IPX
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   // Use shell since it yields an offset after presolve
   std::string model = "shell.mps";
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   h.readModel(filename);
 
   h.setOptionValue("solver", kIpmString);
-  //  if (dev_run)
-  printf("\nFirst call to Highs::run() with presolve:\n");
   h.run();
-    
-  //  if (dev_run)
-  printf("\nSecond call to Highs::run() with presolve:\n");
+  const HighsInt first_ipm_iteration_count = h.getInfo().ipm_iteration_count;
+
   h.run();
-  
-
-
+  REQUIRE(first_ipm_iteration_count == h.getInfo().ipm_iteration_count);
 }
