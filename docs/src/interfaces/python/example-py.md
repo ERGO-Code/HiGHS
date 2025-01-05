@@ -175,6 +175,8 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `getInfo`
  * `getSolution`
  * `getBasis`
+ * `getObjectiveValue`
+ * `getDualObjectiveValue`
 
 ## Report results
 
@@ -236,6 +238,22 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
  * `presolveStatusToString`
  * `presolveRuleTypeToString`
  * `postsolve`
+
+## Basis solves and tableau calculation
+ * `getBasicVariables`
+ * `getBasisInverseRow`
+ * `getBasisInverseRowSparse`
+ * `getBasisInverseCol`
+ * `getBasisInverseColSparse`
+ * `getBasisSolve`
+ * `getBasisSolveSparse`
+ * `getBasisTransposeSolve`
+ * `getBasisTransposeSolveSparse`
+ * `getReducedRow`
+ * `getReducedRowSparse`
+ * `getReducedColumn`
+ * `getReducedColumnSparse`
+
  
 ## Multi-objective optimization
 
