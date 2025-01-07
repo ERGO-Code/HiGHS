@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -153,18 +150,19 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   lps.SetCallback(&callback);
 
   ipx::Int num_col, num_row;
+  double offset;
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
-  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
-                rhs, constraint_type);
+  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
+                Av, rhs, constraint_type);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
                num_row, num_col, Ap[num_col]);
 
   ipx::Int load_status = lps.LoadModel(
-      num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
+      num_col, offset, objective.data(), col_lb.data(), col_ub.data(), num_row,
       Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
 
   if (load_status) {
@@ -390,10 +388,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 }
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
-                   std::vector<double>& obj, std::vector<double>& col_lb,
-                   std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
-                   std::vector<ipx::Int>& Ai, std::vector<double>& Ax,
-                   std::vector<double>& rhs,
+                   double& offset, std::vector<double>& obj,
+                   std::vector<double>& col_lb, std::vector<double>& col_ub,
+                   std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
+                   std::vector<double>& Ax, std::vector<double>& rhs,
                    std::vector<char>& constraint_type) {
   num_col = lp.num_col_;
   num_row = lp.num_row_;
@@ -520,6 +518,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
     col_ub[lp.num_col_ + slack] = lp.row_upper_[row];
   }
 
+  offset = HighsInt(lp.sense_) * lp.offset_;
   obj.resize(num_col);
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];

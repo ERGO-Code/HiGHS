@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -351,16 +348,17 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
         if (addedSubstitutionRows) continue;
 
+        // generate cut
         double rhs = 0;
-
         success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
         lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
         if (!aggregatedPath.empty() || bestOutArcCol != -1 ||
             bestInArcCol != -1)
           aggregatedPath.emplace_back(baseRowInds, baseRowVals);
-        rhs = 0;
 
+        // generate reverse cut
+        rhs = 0;
         success |= cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
         if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;

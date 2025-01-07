@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -3655,7 +3652,7 @@ bool Highs::hasRepeatedLinearObjectivePriorities(
   // O(n^2), but who will have more than O(1) linear objectives!
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
   if (num_linear_objective <= 0 ||
-      num_linear_objective <= 1 && !linear_objective)
+      (num_linear_objective <= 1 && !linear_objective))
     return false;
   for (HighsInt iObj0 = 0; iObj0 < num_linear_objective; iObj0++) {
     HighsInt priority0 = this->multi_linear_objective_[iObj0].priority;
@@ -3670,8 +3667,8 @@ bool Highs::hasRepeatedLinearObjectivePriorities(
   return false;
 }
 
-bool comparison(std::pair<HighsInt, HighsInt> x1,
-                std::pair<HighsInt, HighsInt> x2) {
+static bool comparison(std::pair<HighsInt, HighsInt> x1,
+                       std::pair<HighsInt, HighsInt> x2) {
   return x1.first >= x2.first;
 }
 

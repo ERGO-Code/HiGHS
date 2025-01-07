@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -361,6 +358,11 @@ class HPresolve {
   HighsInt detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
+
+  template <typename RowStorageFormat>
+  Result equalityRowAddition(HighsPostsolveStack& postsolve_stack,
+                             HighsInt stayrow, HighsInt removerow, double scale,
+                             const HighsMatrixSlice<RowStorageFormat>& vector);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 

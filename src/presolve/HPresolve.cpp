@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -243,9 +240,10 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 }
 
 bool HPresolve::isImpliedIntegral(HighsInt col) {
-  bool runDualDetection = true;
-
+  // check if the integer constraint on a variable is implied by the model
   assert(model->integrality_[col] == HighsVarType::kInteger);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -283,26 +281,33 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
+    // if row coefficients are not integral, variable is not (implied) integral
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
     if (model->row_upper_[nz.index()] != kHighsInf) {
+      // right-hand side: scale, round down and unscale again
       double rUpper =
           std::abs(nz.value()) *
           std::floor(model->row_upper_[nz.index()] * std::abs(scale) +
                      primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_upper_[nz.index()] - rUpper) >
           options->small_matrix_value) {
+        // update right-hand side and mark row as changed
         model->row_upper_[nz.index()] = rUpper;
         markChangedRow(nz.index());
       }
-    } else {
-      assert(model->row_lower_[nz.index()] != -kHighsInf);
+    }
+    if (model->row_lower_[nz.index()] != -kHighsInf) {
+      // left-hand side: scale, round up and unscale again
       double rLower =
           std::abs(nz.value()) *
-          std::ceil(model->row_upper_[nz.index()] * std::abs(scale) -
+          std::ceil(model->row_lower_[nz.index()] * std::abs(scale) -
                     primal_feastol);
+      // check if modification is large enough
       if (std::abs(model->row_lower_[nz.index()] - rLower) >
           options->small_matrix_value) {
-        model->row_upper_[nz.index()] = rLower;
+        // update left-hand side and mark row as changed
+        model->row_lower_[nz.index()] = rLower;
         markChangedRow(nz.index());
       }
     }
@@ -312,9 +317,10 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 }
 
 bool HPresolve::isImpliedInteger(HighsInt col) {
-  bool runDualDetection = true;
-
+  // check if a continuous variable is implied integer
   assert(model->integrality_[col] == HighsVarType::kContinuous);
+
+  bool runDualDetection = true;
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -361,11 +367,11 @@ bool HPresolve::isImpliedInteger(HighsInt col) {
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     double scale = 1.0 / nz.value();
     if (model->row_upper_[nz.index()] != kHighsInf &&
-        fractionality(model->row_upper_[nz.index()]) > primal_feastol)
+        fractionality(model->row_upper_[nz.index()] * scale) > primal_feastol)
       return false;
 
     if (model->row_lower_[nz.index()] != -kHighsInf &&
-        fractionality(model->row_lower_[nz.index()]) > primal_feastol)
+        fractionality(model->row_lower_[nz.index()] * scale) > primal_feastol)
       return false;
 
     if (!rowCoefficientsIntegral(nz.index(), scale)) return false;
@@ -2050,8 +2056,7 @@ void HPresolve::storeRow(HighsInt row) {
   rowpositions.clear();
 
   auto rowVec = getSortedRowVector(row);
-  auto rowVecEnd = rowVec.end();
-  for (auto iter = rowVec.begin(); iter != rowVecEnd; ++iter)
+  for (auto iter = rowVec.begin(); iter != rowVec.end(); ++iter)
     rowpositions.push_back(iter.position());
 }
 
@@ -3081,6 +3086,20 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               continue;
             }
 
+            auto remDoubletonEq = [&](HighsInt col, HighsInt binCol,
+                                      HighsInt direction) {
+              double bound = direction >= 0 ? model->col_upper_[col]
+                                            : model->col_lower_[col];
+              double scale =
+                  direction * (model->col_lower_[col] - model->col_upper_[col]);
+              double offset = bound - model->col_lower_[binCol] * scale;
+              postsolve_stack.doubletonEquation(
+                  -1, col, binCol, 1.0, -scale, offset, model->col_lower_[col],
+                  model->col_upper_[col], 0.0, false, false,
+                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
+              substitute(col, binCol, offset, scale);
+            };
+
             if (std::signbit(binCoef) == std::signbit(nonz.value())) {
               // binary coefficient is positive:
               // setting the binary to its upper bound
@@ -3096,16 +3115,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               // nonzCol = colUb - (colUb - colLb)(binCol - binLb)
               // nonzCol = colUb + binLb * (colUb - colLb) - (colUb - colLb) *
               // binCol
-              double scale = model->col_lower_[nonz.index()] -
-                             model->col_upper_[nonz.index()];
-              double offset = model->col_upper_[nonz.index()] -
-                              model->col_lower_[binCol] * scale;
-              postsolve_stack.doubletonEquation(
-                  -1, nonz.index(), binCol, 1.0, -scale, offset,
-                  model->col_lower_[nonz.index()],
-                  model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-              substitute(nonz.index(), binCol, offset, scale);
+              remDoubletonEq(nonz.index(), binCol, HighsInt{1});
             } else {
               // This case yields the following implications:
               // binCol = lb -> nonzCol = lb
@@ -3114,16 +3124,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               // nonzCol = colLb + (colUb - colLb)(binCol - binLb)
               // nonzCol =
               //    colLb - binLb*(colUb - colLb) + (colUb - colLb)*binCol
-              double scale = model->col_upper_[nonz.index()] -
-                             model->col_lower_[nonz.index()];
-              double offset = model->col_lower_[nonz.index()] -
-                              model->col_lower_[binCol] * scale;
-              postsolve_stack.doubletonEquation(
-                  -1, nonz.index(), binCol, 1.0, -scale, offset,
-                  model->col_lower_[nonz.index()],
-                  model->col_upper_[nonz.index()], 0.0, false, false,
-                  HighsPostsolveStack::RowType::kEq, HighsEmptySlice());
-              substitute(nonz.index(), binCol, offset, scale);
+              remDoubletonEq(nonz.index(), binCol, HighsInt{-1});
             }
           }
 
@@ -5907,8 +5908,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     auto it = buckets.find(rowHashes[i]);
     decltype(it) last = it;
 
-    const HighsInt* numSingletonPtr = numRowSingletons.find(i);
-    HighsInt numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
+    auto getNumSingletons = [&](HighsInt row) {
+      const HighsInt* numSingletonPtr = numRowSingletons.find(row);
+      return (numSingletonPtr ? *numSingletonPtr : 0);
+    };
+
+    const HighsInt numSingleton = getNumSingletons(i);
 
 #if !ENABLE_SPARSIFY_FOR_LP
     if (mipsolver == nullptr && options->lp_presolve_requires_basis_postsolve &&
@@ -5921,9 +5926,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       HighsInt parallelRowCand = it->second;
       last = it++;
 
-      numSingletonPtr = numRowSingletons.find(parallelRowCand);
-      const HighsInt numSingletonCandidate =
-          numSingletonPtr ? *numSingletonPtr : 0;
+      const HighsInt numSingletonCandidate = getNumSingletons(parallelRowCand);
+
 #if !ENABLE_SPARSIFY_FOR_LP
       if (mipsolver == nullptr &&
           options->lp_presolve_requires_basis_postsolve &&
@@ -6064,31 +6068,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    HIGHSINT_FORMAT ")\n", numSingleton, numSingletonCandidate,
         //    model->row_lower_[parallelRowCand] ==
         //        model->row_upper_[parallelRowCand]);
-        postsolve_stack.equalityRowAddition(parallelRowCand, i, -rowScale,
-                                            getStoredRow());
-        for (const HighsSliceNonzero& rowNz : getStoredRow()) {
-          HighsInt pos = findNonzero(parallelRowCand, rowNz.index());
-          if (pos != -1)
-            unlink(pos);  // all common nonzeros are cancelled, as the rows are
-                          // parallel
-          else            // might introduce a singleton
-            addToMatrix(parallelRowCand, rowNz.index(),
-                        -rowScale * rowNz.value());
-        }
-
-        if (model->row_upper_[parallelRowCand] != kHighsInf)
-          model->row_upper_[parallelRowCand] =
-              double(model->row_upper_[parallelRowCand] -
-                     HighsCDouble(rowScale) * model->row_upper_[i]);
-        if (model->row_lower_[parallelRowCand] != -kHighsInf)
-          model->row_lower_[parallelRowCand] =
-              double(model->row_lower_[parallelRowCand] -
-                     HighsCDouble(rowScale) * model->row_upper_[i]);
-
-        // parallelRowCand is now a singleton row, doubleton equation, or a row
-        // that contains only singletons and we let the normal row presolve
-        // handle the cases
-        HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, parallelRowCand));
+        HPRESOLVE_CHECKED_CALL(equalityRowAddition(
+            postsolve_stack, i, parallelRowCand, -rowScale, getStoredRow()));
         delRow = parallelRowCand;
       } else if (model->row_lower_[parallelRowCand] ==
                  model->row_upper_[parallelRowCand]) {
@@ -6097,28 +6078,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
         //    row\n", numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
-        double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
-        postsolve_stack.equalityRowAddition(i, parallelRowCand, scale,
-                                            getRowVector(parallelRowCand));
-        for (const HighsSliceNonzero& rowNz : getRowVector(parallelRowCand)) {
-          HighsInt pos = findNonzero(i, rowNz.index());
-          if (pos != -1)
-            unlink(pos);  // all common nonzeros are cancelled, as the rows are
-                          // parallel
-          else            // might introduce a singleton
-            addToMatrix(i, rowNz.index(), scale * rowNz.value());
-        }
-
-        if (model->row_upper_[i] != kHighsInf)
-          model->row_upper_[i] =
-              double(model->row_upper_[i] +
-                     HighsCDouble(scale) * model->row_upper_[parallelRowCand]);
-        if (model->row_lower_[i] != -kHighsInf)
-          model->row_lower_[i] =
-              double(model->row_lower_[i] +
-                     HighsCDouble(scale) * model->row_upper_[parallelRowCand]);
-
-        HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, i));
+        HPRESOLVE_CHECKED_CALL(equalityRowAddition(
+            postsolve_stack, parallelRowCand, i,
+            -rowMax[i].first / rowMax[parallelRowCand].first,
+            getRowVector(parallelRowCand)));
         delRow = i;
       } else {
         assert(numSingleton == 1);
@@ -6159,6 +6122,36 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   if (logging_on)
     analysis_.stopPresolveRuleLog(kPresolveRuleParallelRowsAndCols);
 
+  return Result::kOk;
+}
+
+template <typename RowStorageFormat>
+HPresolve::Result HPresolve::equalityRowAddition(
+    HighsPostsolveStack& postsolve_stack, HighsInt stayrow, HighsInt removerow,
+    double scale, const HighsMatrixSlice<RowStorageFormat>& vector) {
+  postsolve_stack.equalityRowAddition(removerow, stayrow, scale, vector);
+  for (const auto& rowNz : vector) {
+    HighsInt pos = findNonzero(removerow, rowNz.index());
+    if (pos != -1)
+      unlink(pos);  // all common nonzeros are cancelled, as the rows are
+                    // parallel
+    else            // might introduce a singleton
+      addToMatrix(removerow, rowNz.index(), scale * rowNz.value());
+  }
+
+  if (model->row_upper_[removerow] != kHighsInf)
+    model->row_upper_[removerow] =
+        double(model->row_upper_[removerow] +
+               HighsCDouble(scale) * model->row_upper_[stayrow]);
+  if (model->row_lower_[removerow] != -kHighsInf)
+    model->row_lower_[removerow] =
+        double(model->row_lower_[removerow] +
+               HighsCDouble(scale) * model->row_upper_[stayrow]);
+
+  // row is now a singleton row, doubleton equation, or a row
+  // that contains only singletons and we let the normal row presolve
+  // handle the cases
+  HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, removerow));
   return Result::kOk;
 }
 

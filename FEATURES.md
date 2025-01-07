@@ -2,13 +2,12 @@
 
 ## Code changes
 
-HiGHS now handles multiple linear objectives by either blending using weights, or performing lexicographic optimization: see https://ergo-code.github.io/HiGHS/stable/guide/further/#guide-multi-objective-optimization
+Any LP offset is communicated to the IPM solver, and used in logging and primal/dual objective calculations. 
 
-Fixed minor bug in bound checking in presolve
+If there is a valid basis when Highs::run() is called, presolve isn't skipped unless the solver option is "simplex" or "choose" (when simplex will always be chosen if there is an advanced basis).
 
-Fixed bug in `floor(HighsCDouble x)` and `ceil(HighsCDouble x)` when argument is small
+Added basis solve methods to highspy
 
-Added some sanity checks to Highs::writeLocalModel to prevent segfaults if called directly by a user
-
+Added methods to get primal/dual ray and dual unboundedness direction to highspy
 
 

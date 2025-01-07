@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -513,29 +510,31 @@ class Highs {
   }
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does and dual_ray is not nullptr
+   * @brief Indicate whether a dual unbounded ray exists, and (at the
+   * expense of solving an LP) gets it if it does not and
+   * dual_ray_value is not nullptr
    */
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does
+   * @brief Indicate whether a dual unbounded ray exists, and gets it
+   * if it does
    */
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
    * @brief Indicate whether a dual unboundedness direction exists,
-   * and gets it if it does and dual_unboundedness_direction is not
-   * nullptr
+   * and (at the expense of solving an LP) gets it if
+   * dual_unboundedness_direction is not nullptr
    */
   HighsStatus getDualUnboundednessDirection(
       bool& has_dual_unboundedness_direction,
       double* dual_unboundedness_direction_value = nullptr);
 
   /**
-   * @brief Indicate whether a primal unbounded ray exists, and gets
-   * it if it does and primal_ray is not nullptr
+   * @brief Indicate whether a primal unbounded ray exists, and (at
+   * the expense of solving an LP) gets it if primal_ray is not
+   * nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = nullptr);
