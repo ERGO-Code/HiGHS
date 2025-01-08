@@ -1482,11 +1482,6 @@ class Highs {
   // and basis data
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
-  //
-  // Sets model status, basis, solution and info from the
-  // highs_model_object
-  void setBasisValidity();
-  //
   // Clears the presolved model and its status
   void clearPresolve();
   //
