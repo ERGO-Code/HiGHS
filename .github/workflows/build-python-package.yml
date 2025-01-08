@@ -81,14 +81,11 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      strategy:
-        matrix:
-          python: [3.10]
 
       - name: Install correct python version
         uses: actions/setup-python@v5
-        # with:
-        #   python-version: ${{ matrix.python }}
+        with:
+          python-version: 3.10
 
       - name: Build wheel
         run: |

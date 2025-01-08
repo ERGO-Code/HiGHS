@@ -53,5 +53,10 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ERGO-Code/HiGHS
+          fail_ci_if_error: true # optional (default = false)
+          files: ${{runner.workspace}}/build/cov.info # optional
+          # name: codecov-umbrella # optional
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true # optional (default = false)
 
 
