@@ -21,7 +21,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{runner.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DHIGHS_COVERAGE=ON -DALL_TESTS=ON -DBUILD_SHARED_LIBS=OFF
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DHIGHS_COVERAGE=ON -DALL_TESTS=ON -DBUILD_SHARED_LIBS=OFF -D CMAKE_C_COMPILER=gcc -D CMAKE_CXX_COMPILER=g++
 
       - name: Build
         working-directory: ${{runner.workspace}}/build
@@ -48,5 +48,10 @@ jobs:
           lcov --remove cov.info "src/test*" -o cov.info
           lcov --list cov.info
 
-          
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ERGO-Code/HiGHS
+
 
