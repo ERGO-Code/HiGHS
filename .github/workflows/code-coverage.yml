@@ -57,5 +57,3 @@ jobs:
           files: ${{runner.workspace}}/build/cov.info # optional
           # name: codecov-umbrella # optional
           verbose: true # optional (default = false)
-
-
