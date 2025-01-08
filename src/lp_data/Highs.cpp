@@ -1492,9 +1492,10 @@ HighsStatus Highs::solve() {
 
     // Postsolve. Does nothing if there were no reductions during presolve.
 
-    if (have_optimal_solution) {
+    if (have_optimal_solution || (model_presolve_status_ == HighsPresolveStatus::kReduced && model_status_ == HighsModelStatus::kUnknown)) {
       // ToDo Put this in a separate method
       assert(model_status_ == HighsModelStatus::kOptimal ||
+	     model_status_ == HighsModelStatus::kUnknown || 
              model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
       if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
           model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty) {
@@ -1584,6 +1585,8 @@ HighsStatus Highs::solve() {
                     this_solve_original_lp_time);
             // Determine the iteration count
             postsolve_iteration_count += info_.simplex_iteration_count;
+	    //
+	    return_status = HighsStatus::kOk;
             return_status =
                 interpretCallStatus(options_.log_options, call_status,
                                     return_status, "callSolveLp");
