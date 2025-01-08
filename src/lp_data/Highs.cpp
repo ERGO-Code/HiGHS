@@ -1400,6 +1400,12 @@ HighsStatus Highs::solve() {
             model_status_ == HighsModelStatus::kTimeLimit ||
             model_status_ == HighsModelStatus::kIterationLimit ||
             model_status_ == HighsModelStatus::kInterrupt;
+	if (no_incumbent_lp_solution_or_basis) {
+	  // Postsolve won't be performed, so clear the HEkk data
+	  // corresponding to the (strictly reduced) presolved LP here
+	  ekk_instance_.clear();
+	  setHighsModelStatusAndClearSolutionAndBasis(model_status_);
+	}
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
@@ -1618,28 +1624,11 @@ HighsStatus Highs::solve() {
   }
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
-  if (no_incumbent_lp_solution_or_basis) {
-    // In solving the (strictly reduced) presolved LP, it is found to
-    // be infeasible or unbounded, the time/iteration limit has been
-    // reached, a user interrupt has occurred, or the status is unknown
-    // (cycling)
-    //
-    // Hence there's no incumbent lp solution or basis to drive dual
-    // postsolve
-    assert(model_status_ == HighsModelStatus::kInfeasible ||
-           model_status_ == HighsModelStatus::kUnbounded ||
-           model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
-           model_status_ == HighsModelStatus::kTimeLimit ||
-           model_status_ == HighsModelStatus::kIterationLimit ||
-           model_status_ == HighsModelStatus::kInterrupt ||
-           model_status_ == HighsModelStatus::kUnknown);
-    // The HEkk data correspond to the (strictly reduced) presolved LP
-    // so must be cleared
-    ekk_instance_.clear();
-    setHighsModelStatusAndClearSolutionAndBasis(model_status_);
-  } else {
+
+  // Unless the model status was determined using the strictly reduced LP, the HiGHS info is valid
+  if (!no_incumbent_lp_solution_or_basis)
     info_.valid = true;
-  }
+
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
