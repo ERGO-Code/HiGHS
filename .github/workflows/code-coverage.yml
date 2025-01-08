@@ -40,11 +40,12 @@ jobs:
         run: |
           lcov -d . -c -o cov.info --ignore-errors empty
           lcov --remove cov.info "/usr/include/*" -o cov.info
-          lcov --remove cov.info "/usr/include/*" -o cov.info
+          lcov --remove cov.info "/usr/lib/*" -o cov.info
           lcov --remove cov.info "extern/pdqsort/*" -o cov.info
           lcov --remove cov.info "extern/zstr/*" -o cov.info
+          lcov --remove cov.info "extern/catch*" -o cov.info
           lcov --remove cov.info "app/cxxopts*" -o cov.info
-          lcov --remove cov.info "/usr/lib/*" -o cov.info
+          lcov --remove cov.info "src/test*" -o cov.info
           lcov --list cov.info
 
           
