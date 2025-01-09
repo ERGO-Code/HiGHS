@@ -11,6 +11,7 @@
  * @brief Utilities for tests with AVGAS
  */
 #include "Avgas.h"
+#include "lp_data/HConst.h"
 
 #include <cassert>
 #include <cstdio>  // For printf
@@ -27,7 +28,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
   ARstart[num_row] = num_row_nz;
   if (row == 0) {
     rowLower[num_row] = -1;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -39,7 +40,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 1) {
     rowLower[num_row] = -1;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -51,7 +52,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 2) {
     rowLower[num_row] = -1;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -63,7 +64,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 3) {
     rowLower[num_row] = -1;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -75,7 +76,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 4) {
     rowLower[num_row] = -2;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -93,7 +94,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 5) {
     rowLower[num_row] = -2;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -111,7 +112,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 6) {
     rowLower[num_row] = 0;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 3;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -126,7 +127,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 7) {
     rowLower[num_row] = 0;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -144,7 +145,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 8) {
     rowLower[num_row] = 0;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
@@ -162,7 +163,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     num_row_nz++;
   } else if (row == 9) {
     rowLower[num_row] = 0;
-    rowUpper[num_row] = 1e31;
+    rowUpper[num_row] = kHighsInf;
     HighsInt num_new_nz = 3;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);

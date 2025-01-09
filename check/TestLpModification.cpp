@@ -6,6 +6,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
+#include "util/HighsTimer.h"
 
 const bool dev_run = false;
 // const double inf = kHighsInf;
@@ -1953,4 +1954,88 @@ TEST_CASE("zero-matrix-entries", "[highs_data]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 0, 0, 1};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+}
+
+TEST_CASE("row-wise-get-row-time", "[highs_data]") {
+  Highs h;
+
+  HighsTimer timer;
+  HighsStatus return_status;
+
+  HighsInt dim = 10;
+  const HighsInt max_k = 10;
+  for (HighsInt k = 0; k < max_k; k++) {
+    double time = -timer.getWallTime();
+    for (HighsInt i = 0; i < dim; i++) {
+      return_status = h.addCol(0.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
+    }
+    HighsInt index[2] = {0, 0};
+    double value[2] = {1.0, 1.0};
+    for (HighsInt i = 1; i < dim; i++) {
+      index[0] = i;
+      index[1] = i - 1;
+      return_status = h.addRow(0.0, kHighsInf, 2, index, value);
+    }
+    for (HighsInt i = 1; i < dim; i++) {
+      index[0] = i;
+      index[1] = i - 1;
+      return_status = h.addRow(0.0, kHighsInf, 2, index, value);
+    }
+    double lower = 0.0;
+    double upper = 0.0;
+    HighsInt num_row = 0;
+    HighsInt num_nz = 0;
+    HighsInt matrix_start[1] = {0};
+    HighsInt matrix_index[2] = {0, 0};
+    double matrix_value[2] = {0.0, 0.0};
+    for (HighsInt i = 0; i < dim - 1; i++) {
+      return_status = h.getRows(i, i, num_row, &lower, &upper,
+				num_nz, nullptr, nullptr, nullptr);
+      return_status = h.getRows(i, i, num_row, &lower, &upper,
+				num_nz, matrix_start, matrix_index,
+				matrix_value);
+    }
+    time += timer.getWallTime();
+    printf("Loop %2d: dim = %5d; time = %g\n", int(k), int(dim), time);
+    h.clear();
+    dim *= 2;
+  }
+
+}
+
+TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
+  Avgas avgas;
+  const HighsInt avgas_num_col = 8;
+  const HighsInt avgas_num_row = 10;
+
+  Highs h;
+  std::vector<double> colCost;
+  std::vector<double> colLower;
+  std::vector<double> colUpper;
+    std::vector<HighsInt> Astart;
+    std::vector<HighsInt> Aindex;
+    std::vector<double> Avalue;
+  for (HighsInt col = 0; col < avgas_num_col; col++) {
+    HighsInt num_col = 0;
+    HighsInt num_col_nz = 0;
+    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+              Aindex, Avalue);
+    REQUIRE(h.addCol(colCost[0], colLower[0], colUpper[0], 0, nullptr, nullptr) == HighsStatus::kOk);
+  }
+
+  std::vector<double> rowLower;
+  std::vector<double> rowUpper;
+  std::vector<HighsInt> ARstart;
+  std::vector<HighsInt> ARindex;
+  std::vector<double> ARvalue;
+
+  for (HighsInt row = 0; row < avgas_num_row; row++) {
+    HighsInt num_row = 0;
+    HighsInt num_row_nz = 0;
+    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+              ARvalue);
+     REQUIRE(h.addRow(rowLower[0], rowUpper[0], num_row_nz, ARindex.data(),
+		      ARvalue.data()) == HighsStatus::kOk);
+  }
+
 }
