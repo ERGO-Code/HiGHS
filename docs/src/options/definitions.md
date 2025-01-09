@@ -73,6 +73,18 @@
 - Range: [1e-12, inf]
 - Default: 1e-08
 
+## primal\_residual\_tolerance
+- Primal residual tolerance
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
+## dual\_residual\_tolerance
+- Dual residual tolerance
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
 ## objective\_bound
 - Objective bound for termination of the dual simplex solver
 - Type: double
@@ -198,6 +210,16 @@
 - Type: boolean
 - Default: "false"
 
+## write\_presolved\_model\_file
+- Write presolved model file
+- Type: string
+- Default: ""
+
+## write\_presolved\_model\_to\_file
+- Write the presolved model to a file
+- Type: boolean
+- Default: "false"
+
 ## mip\_detect\_symmetry
 - Whether MIP symmetry should be detected
 - Type: boolean
@@ -219,6 +241,12 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
+
+## mip\_max\_start\_nodes
+- MIP solver max number of nodes when completing a partial MIP start
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 500
 
 ## mip\_improving\_solution\_save
 - Whether improving MIP solutions should be saved
@@ -354,7 +382,7 @@
 - Default: 4000
 
 ## blend\_multi\_objectives
-- Blend multiple objectives or apply lexicographically
+- Blend multiple objectives or apply lexicographically: Default = true
 - Type: boolean
 - Default: "true"
 
