@@ -3131,3 +3131,137 @@ void getSubVectors(const HighsIndexCollection& index_collection,
   }
 }
 
+void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
+			    const HighsInt data_dim,
+			    const double* data0,
+			    const double* data1,
+			    const double* data2,
+			    const HighsSparseMatrix matrix,
+			    HighsInt& num_sub_vector,
+			    double* sub_vector_data0,
+			    double* sub_vector_data1,
+			    double* sub_vector_data2,
+			    HighsInt& sub_matrix_num_nz,
+			    HighsInt* sub_matrix_start,
+			    HighsInt* sub_matrix_index,
+			    double* sub_matrix_value) {
+  // Ensure that if there's no data0 then it's not required in the
+  // sub-vector
+  if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  // Surely this is checked elsewhere
+  assert(0 <= from_k && to_k < data_dim);
+  assert(from_k <= to_k);
+  // "Out" means not in the set to be extracted
+  // "In" means in the set to be extracted
+  HighsInt out_from_vector;
+  HighsInt out_to_vector;
+  HighsInt in_from_vector;
+  HighsInt in_to_vector = -1;
+  HighsInt current_set_entry = 0;
+  // Set up a mask so that entries to be got from the matrix can be
+  // identified and have their correct index.
+  vector<HighsInt> new_index;
+  new_index.resize(data_dim);
+
+  num_sub_vector = 0;
+  sub_matrix_num_nz = 0;
+  if (!index_collection.is_mask_) {
+    out_to_vector = -1;
+    current_set_entry = 0;
+    for (HighsInt k = from_k; k <= to_k; k++) {
+      updateOutInIndex(index_collection, in_from_vector, in_to_vector, out_from_vector,
+		       out_to_vector, current_set_entry);
+      if (k == from_k) {
+	// Account for any initial vectors not being extracted
+	for (HighsInt iVector = 0; iVector < in_from_vector; iVector++) {
+	  new_index[iVector] = -1;
+	}
+      }
+      for (HighsInt iVector = in_from_vector; iVector <= in_to_vector; iVector++) {
+	new_index[iVector] = num_sub_vector;
+	num_sub_vector++;
+      }
+      for (HighsInt iVector = out_from_vector; iVector <= out_to_vector; iVector++) {
+	new_index[iVector] = -1;
+      }
+      if (out_to_vector >= data_dim - 1) break;
+    }
+  } else {
+    for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
+      if (index_collection.mask_[iVector]) {
+	new_index[iVector] = num_sub_vector;
+	num_sub_vector++;
+      } else {
+	new_index[iVector] = -1;
+      }
+    }
+  }
+  
+  // Bail out if no vectors are to be extracted
+  if (num_sub_vector == 0) return;
+  
+  for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
+    HighsInt new_iVector = new_index[iVector];
+    if (new_iVector >= 0) {
+      assert(new_iVector < num_sub_vector);
+      if (sub_vector_data0 != NULL) sub_vector_data0[new_iVector] = data0[iVector];
+      if (sub_vector_data1 != NULL) sub_vector_data1[new_iVector] = data1[iVector];
+      if (sub_vector_data2 != NULL) sub_vector_data2[new_iVector] = data2[iVector];
+    }
+  }
+  const bool extract_start = sub_matrix_start != NULL;
+  const bool extract_index = sub_matrix_index != NULL;
+  const bool extract_value = sub_matrix_value != NULL;
+  const bool extract_matrix = extract_index || extract_value;
+  // Allocate an array of lengths for the sub-matrix to be
+  // extracted: necessary even if just the number of nonzeros is
+  // required
+  vector<HighsInt> sub_matrix_length;
+  sub_matrix_length.assign(num_sub_vector, 0);
+  // Identify the lengths of the vectors in the sub-matrix to be extracted
+  HighsInt num_vector = matrix.start_.size()-1;
+  for (HighsInt vector = 0; vector < num_vector; vector++) {
+    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1]; iEl++) {
+      HighsInt iVector = matrix.index_[iEl];
+      HighsInt new_iVector = new_index[iVector];
+      if (new_iVector >= 0) sub_matrix_length[new_iVector]++;
+    }
+  }
+  if (!extract_start) {
+    // bail out if no matrix starts are to be extracted, but only after
+    // computing the number of nonzeros
+    for (HighsInt iVector = 0; iVector < num_sub_vector; iVector++)
+      sub_matrix_num_nz += sub_matrix_length[iVector];
+    return;
+  }
+  // Allocate an array of lengths for the sub-matrix to be extracted
+  sub_matrix_start[0] = 0;
+  for (HighsInt iVector = 0; iVector < num_sub_vector - 1; iVector++) {
+    sub_matrix_start[iVector + 1] =
+      sub_matrix_start[iVector] + sub_matrix_length[iVector];
+    sub_matrix_length[iVector] = sub_matrix_start[iVector];
+  }
+  HighsInt iVector = num_sub_vector - 1;
+  sub_matrix_num_nz = sub_matrix_start[iVector] + sub_matrix_length[iVector];
+  // Bail out if matrix indices and values are not required
+  if (!extract_matrix) return;
+  sub_matrix_length[iVector] = sub_matrix_start[iVector];
+  // Fill the row-wise matrix with indices and values
+  for (HighsInt vector = 0; vector < num_vector; vector++) {
+    for (HighsInt iEl = matrix.start_[vector];
+	 iEl < matrix.start_[vector + 1]; iEl++) {
+      HighsInt iVector = matrix.index_[iEl];
+      HighsInt new_iVector = new_index[iVector];
+      if (new_iVector >= 0) {
+	HighsInt row_iEl = sub_matrix_length[new_iVector];
+	if (extract_index) sub_matrix_index[row_iEl] = vector;
+	if (extract_value) sub_matrix_value[row_iEl] = matrix.value_[iEl];
+	sub_matrix_length[new_iVector]++;
+      }
+    }
+  }
+}
