@@ -19,7 +19,7 @@
 
 const bool dev_run = false;
 
-void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
+void Avgas::addRow(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
                 std::vector<double>& rowLower, std::vector<double>& rowUpper,
                 std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
                 std::vector<double>& ARvalue) {
@@ -183,7 +183,18 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
   num_row++;
 }
 
-void Avgas::col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
+void Avgas::getRow(HighsInt row, 
+	    std::vector<double>& lower, std::vector<double>& upper,
+	    HighsInt& num_nz,
+	    std::vector<HighsInt>& index,
+	    std::vector<double>& value) {
+  HighsInt num_row = 0;
+  num_nz = 0;
+  std::vector<HighsInt>start(1);
+  addRow(row, num_row, num_nz, lower, upper, start, index, value);
+}
+
+void Avgas::addCol(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
                 std::vector<double>& colCost, std::vector<double>& colLower,
                 std::vector<double>& colUpper, std::vector<HighsInt>& Astart,
                 std::vector<HighsInt>& Aindex, std::vector<double>& Avalue) {
@@ -338,3 +349,15 @@ void Avgas::col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
   }
   num_col++;
 }
+
+void Avgas::getCol(HighsInt col, 
+		   std::vector<double>& cost, std::vector<double>& lower, std::vector<double>& upper,
+		   HighsInt& num_nz,
+		   std::vector<HighsInt>& index,
+		   std::vector<double>& value) {
+  HighsInt num_col = 0;
+  num_nz = 0;
+  std::vector<HighsInt>start(1);
+  addCol(col, num_col, num_nz, cost, lower, upper, start, index, value);
+}
+

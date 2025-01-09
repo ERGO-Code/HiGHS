@@ -173,7 +173,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<double> ARvalue;
 
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+    avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
   }
 
@@ -186,7 +186,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<HighsInt> Aindex;
   vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+    avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
   }
 

@@ -437,7 +437,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   std::vector<double> ARvalue;
 
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+    avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
   }
 
@@ -450,7 +450,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   std::vector<HighsInt> Aindex;
   std::vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+    avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
   }
 
@@ -2065,31 +2065,25 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   std::vector<double> colCost;
   std::vector<double> colLower;
   std::vector<double> colUpper;
-  std::vector<HighsInt> Astart;
   std::vector<HighsInt> Aindex;
   std::vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
-    HighsInt num_col = 0;
-    HighsInt num_col_nz = 0;
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
-              Aindex, Avalue);
+    HighsInt num_col_nz;
+    avgas.getCol(col, colCost, colLower, colUpper, num_col_nz, Aindex, Avalue);
     REQUIRE(h.addCol(colCost[0], colLower[0], colUpper[0], 0, nullptr,
                      nullptr) == HighsStatus::kOk);
   }
 
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
-  std::vector<HighsInt> ARstart;
   std::vector<HighsInt> ARindex;
   std::vector<double> ARvalue;
 
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    HighsInt num_row = 0;
-    HighsInt num_row_nz = 0;
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
-              ARvalue);
+    HighsInt num_row_nz;
+    avgas.getRow(row, rowLower, rowUpper, num_row_nz, ARindex, ARvalue);
     REQUIRE(h.addRow(rowLower[0], rowUpper[0], num_row_nz, ARindex.data(),
                      ARvalue.data()) == HighsStatus::kOk);
   }
-  
+  h.run();
 }

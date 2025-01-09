@@ -21,7 +21,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<double> ARvalue;
 
   for (HighsInt row = 0; row < avgas_num_row; row++)
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+    avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
 
   ARstart.resize(num_row + 1);
@@ -36,7 +36,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<HighsInt> Aindex;
   vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++)
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+    avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
   Astart.resize(num_col + 1);
   Astart[num_col] = num_col_nz;
@@ -110,7 +110,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   for (HighsInt row = 0; row < avgas_num_row; row++) {
     HighsInt one_row_numnz = 0;
     HighsInt one_row_numrow = 0;
-    avgas.row(row, one_row_numrow, one_row_numnz, one_row_Lower, one_row_Upper,
+    avgas.addRow(row, one_row_numrow, one_row_numnz, one_row_Lower, one_row_Upper,
               one_row_start, one_row_index, one_row_value);
     REQUIRE(highs.addRows(1, one_row_Lower.data(), one_row_Upper.data(),
                           one_row_numnz, one_row_start.data(),
