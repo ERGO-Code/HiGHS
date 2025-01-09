@@ -3079,15 +3079,13 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
 }
 
 void getSubVectors(const HighsIndexCollection& index_collection,
-		   const HighsInt data_dim,
-		   const double* data0,
-		   const double* data1,
-		   const double* data2,
-		   const HighsSparseMatrix matrix,
-		   HighsInt& num_sub_vector, double* sub_vector_data0, double* sub_vector_data1,
-		   double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
-		   HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
-		   double* sub_matrix_value) {
+                   const HighsInt data_dim, const double* data0,
+                   const double* data1, const double* data2,
+                   const HighsSparseMatrix matrix, HighsInt& num_sub_vector,
+                   double* sub_vector_data0, double* sub_vector_data1,
+                   double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
+                   HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
+                   double* sub_matrix_value) {
   // Ensure that if there's no data0 then it's not required in the
   // sub-vector
   if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
@@ -3106,25 +3104,30 @@ void getSubVectors(const HighsIndexCollection& index_collection,
   num_sub_vector = 0;
   sub_matrix_num_nz = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, out_from_vector, out_to_vector, in_from_vector,
-		     in_to_vector, current_set_entry);
+    updateOutInIndex(index_collection, out_from_vector, out_to_vector,
+                     in_from_vector, in_to_vector, current_set_entry);
     assert(out_to_vector < data_dim);
     assert(in_to_vector < data_dim);
-    for (HighsInt iVector = out_from_vector; iVector <= out_to_vector; iVector++) {
-      if (sub_vector_data0 != nullptr) sub_vector_data0[num_sub_vector] = data0[iVector];
-      if (sub_vector_data1 != nullptr) sub_vector_data1[num_sub_vector] = data1[iVector];
-      if (sub_vector_data2 != nullptr) sub_vector_data2[num_sub_vector] = data2[iVector];
+    for (HighsInt iVector = out_from_vector; iVector <= out_to_vector;
+         iVector++) {
+      if (sub_vector_data0 != nullptr)
+        sub_vector_data0[num_sub_vector] = data0[iVector];
+      if (sub_vector_data1 != nullptr)
+        sub_vector_data1[num_sub_vector] = data1[iVector];
+      if (sub_vector_data2 != nullptr)
+        sub_vector_data2[num_sub_vector] = data2[iVector];
       if (sub_matrix_start != nullptr)
-	sub_matrix_start[num_sub_vector] = sub_matrix_num_nz + matrix.start_[iVector] -
-	  matrix.start_[out_from_vector];
+        sub_matrix_start[num_sub_vector] = sub_matrix_num_nz +
+                                           matrix.start_[iVector] -
+                                           matrix.start_[out_from_vector];
       num_sub_vector++;
     }
     for (HighsInt iEl = matrix.start_[out_from_vector];
-	 iEl < matrix.start_[out_to_vector + 1]; iEl++) {
+         iEl < matrix.start_[out_to_vector + 1]; iEl++) {
       if (sub_matrix_index != nullptr)
-	sub_matrix_index[sub_matrix_num_nz] = matrix.index_[iEl];
+        sub_matrix_index[sub_matrix_num_nz] = matrix.index_[iEl];
       if (sub_matrix_value != nullptr)
-	sub_matrix_value[sub_matrix_num_nz] = matrix.value_[iEl];
+        sub_matrix_value[sub_matrix_num_nz] = matrix.value_[iEl];
       sub_matrix_num_nz++;
     }
     if (out_to_vector == data_dim - 1 || in_to_vector == data_dim - 1) break;
@@ -3132,19 +3135,15 @@ void getSubVectors(const HighsIndexCollection& index_collection,
 }
 
 void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
-			    const HighsInt data_dim,
-			    const double* data0,
-			    const double* data1,
-			    const double* data2,
-			    const HighsSparseMatrix matrix,
-			    HighsInt& num_sub_vector,
-			    double* sub_vector_data0,
-			    double* sub_vector_data1,
-			    double* sub_vector_data2,
-			    HighsInt& sub_matrix_num_nz,
-			    HighsInt* sub_matrix_start,
-			    HighsInt* sub_matrix_index,
-			    double* sub_matrix_value) {
+                            const HighsInt data_dim, const double* data0,
+                            const double* data1, const double* data2,
+                            const HighsSparseMatrix matrix,
+                            HighsInt& num_sub_vector, double* sub_vector_data0,
+                            double* sub_vector_data1, double* sub_vector_data2,
+                            HighsInt& sub_matrix_num_nz,
+                            HighsInt* sub_matrix_start,
+                            HighsInt* sub_matrix_index,
+                            double* sub_matrix_value) {
   // Ensure that if there's no data0 then it's not required in the
   // sub-vector
   if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
@@ -3173,44 +3172,49 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
     out_to_vector = -1;
     current_set_entry = 0;
     for (HighsInt k = from_k; k <= to_k; k++) {
-      updateOutInIndex(index_collection, in_from_vector, in_to_vector, out_from_vector,
-		       out_to_vector, current_set_entry);
+      updateOutInIndex(index_collection, in_from_vector, in_to_vector,
+                       out_from_vector, out_to_vector, current_set_entry);
       if (k == from_k) {
-	// Account for any initial vectors not being extracted
-	for (HighsInt iVector = 0; iVector < in_from_vector; iVector++) {
-	  new_index[iVector] = -1;
-	}
+        // Account for any initial vectors not being extracted
+        for (HighsInt iVector = 0; iVector < in_from_vector; iVector++) {
+          new_index[iVector] = -1;
+        }
       }
-      for (HighsInt iVector = in_from_vector; iVector <= in_to_vector; iVector++) {
-	new_index[iVector] = num_sub_vector;
-	num_sub_vector++;
+      for (HighsInt iVector = in_from_vector; iVector <= in_to_vector;
+           iVector++) {
+        new_index[iVector] = num_sub_vector;
+        num_sub_vector++;
       }
-      for (HighsInt iVector = out_from_vector; iVector <= out_to_vector; iVector++) {
-	new_index[iVector] = -1;
+      for (HighsInt iVector = out_from_vector; iVector <= out_to_vector;
+           iVector++) {
+        new_index[iVector] = -1;
       }
       if (out_to_vector >= data_dim - 1) break;
     }
   } else {
     for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
       if (index_collection.mask_[iVector]) {
-	new_index[iVector] = num_sub_vector;
-	num_sub_vector++;
+        new_index[iVector] = num_sub_vector;
+        num_sub_vector++;
       } else {
-	new_index[iVector] = -1;
+        new_index[iVector] = -1;
       }
     }
   }
-  
+
   // Bail out if no vectors are to be extracted
   if (num_sub_vector == 0) return;
-  
+
   for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
     HighsInt new_iVector = new_index[iVector];
     if (new_iVector >= 0) {
       assert(new_iVector < num_sub_vector);
-      if (sub_vector_data0 != NULL) sub_vector_data0[new_iVector] = data0[iVector];
-      if (sub_vector_data1 != NULL) sub_vector_data1[new_iVector] = data1[iVector];
-      if (sub_vector_data2 != NULL) sub_vector_data2[new_iVector] = data2[iVector];
+      if (sub_vector_data0 != NULL)
+        sub_vector_data0[new_iVector] = data0[iVector];
+      if (sub_vector_data1 != NULL)
+        sub_vector_data1[new_iVector] = data1[iVector];
+      if (sub_vector_data2 != NULL)
+        sub_vector_data2[new_iVector] = data2[iVector];
     }
   }
   const bool extract_start = sub_matrix_start != NULL;
@@ -3223,9 +3227,10 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
   vector<HighsInt> sub_matrix_length;
   sub_matrix_length.assign(num_sub_vector, 0);
   // Identify the lengths of the vectors in the sub-matrix to be extracted
-  HighsInt num_vector = matrix.start_.size()-1;
+  HighsInt num_vector = matrix.start_.size() - 1;
   for (HighsInt vector = 0; vector < num_vector; vector++) {
-    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1]; iEl++) {
+    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1];
+         iEl++) {
       HighsInt iVector = matrix.index_[iEl];
       HighsInt new_iVector = new_index[iVector];
       if (new_iVector >= 0) sub_matrix_length[new_iVector]++;
@@ -3242,7 +3247,7 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
   sub_matrix_start[0] = 0;
   for (HighsInt iVector = 0; iVector < num_sub_vector - 1; iVector++) {
     sub_matrix_start[iVector + 1] =
-      sub_matrix_start[iVector] + sub_matrix_length[iVector];
+        sub_matrix_start[iVector] + sub_matrix_length[iVector];
     sub_matrix_length[iVector] = sub_matrix_start[iVector];
   }
   HighsInt iVector = num_sub_vector - 1;
@@ -3252,15 +3257,15 @@ void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
   sub_matrix_length[iVector] = sub_matrix_start[iVector];
   // Fill the row-wise matrix with indices and values
   for (HighsInt vector = 0; vector < num_vector; vector++) {
-    for (HighsInt iEl = matrix.start_[vector];
-	 iEl < matrix.start_[vector + 1]; iEl++) {
+    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1];
+         iEl++) {
       HighsInt iVector = matrix.index_[iEl];
       HighsInt new_iVector = new_index[iVector];
       if (new_iVector >= 0) {
-	HighsInt row_iEl = sub_matrix_length[new_iVector];
-	if (extract_index) sub_matrix_index[row_iEl] = vector;
-	if (extract_value) sub_matrix_value[row_iEl] = matrix.value_[iEl];
-	sub_matrix_length[new_iVector]++;
+        HighsInt row_iEl = sub_matrix_length[new_iVector];
+        if (extract_index) sub_matrix_index[row_iEl] = vector;
+        if (extract_value) sub_matrix_value[row_iEl] = matrix.value_[iEl];
+        sub_matrix_length[new_iVector]++;
       }
     }
   }

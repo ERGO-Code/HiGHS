@@ -5,8 +5,8 @@
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsRandom.h"
-#include "util/HighsUtils.h"
 #include "util/HighsTimer.h"
+#include "util/HighsUtils.h"
 
 const bool dev_run = false;
 // const double inf = kHighsInf;
@@ -1982,71 +1982,73 @@ TEST_CASE("row-wise-get-row-time", "[highs_data]") {
       return_status = h.addRow(0.0, kHighsInf, 2, index, value);
     }
     std::vector<double> lower;
-   std::vector<double> upper;
+    std::vector<double> upper;
     HighsInt num_row = 0;
     HighsInt num_nz = 0;
     std::vector<HighsInt> matrix_start;
     std::vector<HighsInt> matrix_index;
     std::vector<double> matrix_value;
-    assert(h.getNumRow() == 2*dim-2);
+    assert(h.getNumRow() == 2 * dim - 2);
     for (HighsInt i = 0; i < dim - 1; i++) {
       return_status = h.getRows(i, i, num_row, lower.data(), upper.data(),
-				num_nz, nullptr, nullptr, nullptr);
+                                num_nz, nullptr, nullptr, nullptr);
       REQUIRE(num_row == 1);
       REQUIRE(num_nz == 2);
       matrix_start.resize(num_row);
       matrix_index.resize(num_nz);
       matrix_value.resize(num_nz);
       return_status = h.getRows(i, i, num_row, lower.data(), upper.data(),
-				num_nz, matrix_start.data(), matrix_index.data(),
-				matrix_value.data());
+                                num_nz, matrix_start.data(),
+                                matrix_index.data(), matrix_value.data());
       REQUIRE(matrix_start[0] == 0);
-      REQUIRE(matrix_index[0] == i+1);
+      REQUIRE(matrix_index[0] == i + 1);
       REQUIRE(matrix_index[1] == i);
       REQUIRE(matrix_value[0] == 1);
       REQUIRE(matrix_value[1] == 2);
 
-      std::vector<HighsInt> set = {i, 2*dim-3};
-      return_status = h.getRows(2, set.data(), num_row, lower.data(), upper.data(),
-				num_nz, nullptr, nullptr, nullptr);
+      std::vector<HighsInt> set = {i, 2 * dim - 3};
+      return_status =
+          h.getRows(2, set.data(), num_row, lower.data(), upper.data(), num_nz,
+                    nullptr, nullptr, nullptr);
       REQUIRE(num_row == 2);
       REQUIRE(num_nz == 4);
       matrix_start.resize(num_row);
       matrix_index.resize(num_nz);
       matrix_value.resize(num_nz);
-      return_status = h.getRows(2, set.data(), num_row, lower.data(), upper.data(),
-				num_nz, matrix_start.data(), matrix_index.data(),
-				matrix_value.data());
+      return_status = h.getRows(2, set.data(), num_row, lower.data(),
+                                upper.data(), num_nz, matrix_start.data(),
+                                matrix_index.data(), matrix_value.data());
       REQUIRE(matrix_start[0] == 0);
       REQUIRE(matrix_start[1] == 2);
-      REQUIRE(matrix_index[0] == i+1);
+      REQUIRE(matrix_index[0] == i + 1);
       REQUIRE(matrix_index[1] == i);
-      REQUIRE(matrix_index[2] == dim-1);
-      REQUIRE(matrix_index[3] == dim-2);
+      REQUIRE(matrix_index[2] == dim - 1);
+      REQUIRE(matrix_index[3] == dim - 2);
       REQUIRE(matrix_value[0] == 1);
       REQUIRE(matrix_value[1] == 2);
       REQUIRE(matrix_value[2] == 1);
       REQUIRE(matrix_value[3] == 2);
 
       std::vector<HighsInt> mask;
-      mask.assign(2*(dim-1), 0);
+      mask.assign(2 * (dim - 1), 0);
       mask[0] = 1;
-      mask[dim-1+i] = 1;
-      return_status = h.getRows(mask.data(), num_row, lower.data(), upper.data(),
-				num_nz, nullptr, nullptr, nullptr);
+      mask[dim - 1 + i] = 1;
+      return_status =
+          h.getRows(mask.data(), num_row, lower.data(), upper.data(), num_nz,
+                    nullptr, nullptr, nullptr);
       REQUIRE(num_row == 2);
       REQUIRE(num_nz == 4);
       matrix_start.resize(num_row);
       matrix_index.resize(num_nz);
       matrix_value.resize(num_nz);
-      return_status = h.getRows(mask.data(), num_row, lower.data(), upper.data(),
-				num_nz, matrix_start.data(), matrix_index.data(),
-				matrix_value.data());
+      return_status = h.getRows(mask.data(), num_row, lower.data(),
+                                upper.data(), num_nz, matrix_start.data(),
+                                matrix_index.data(), matrix_value.data());
       REQUIRE(matrix_start[0] == 0);
       REQUIRE(matrix_start[1] == 2);
       REQUIRE(matrix_index[0] == 1);
       REQUIRE(matrix_index[1] == 0);
-      REQUIRE(matrix_index[2] == i+1);
+      REQUIRE(matrix_index[2] == i + 1);
       REQUIRE(matrix_index[3] == i);
       REQUIRE(matrix_value[0] == 1);
       REQUIRE(matrix_value[1] == 2);
@@ -2058,7 +2060,6 @@ TEST_CASE("row-wise-get-row-time", "[highs_data]") {
     h.clear();
     dim *= 2;
   }
-
 }
 
 TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
@@ -2070,15 +2071,16 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   std::vector<double> colCost;
   std::vector<double> colLower;
   std::vector<double> colUpper;
-    std::vector<HighsInt> Astart;
-    std::vector<HighsInt> Aindex;
-    std::vector<double> Avalue;
+  std::vector<HighsInt> Astart;
+  std::vector<HighsInt> Aindex;
+  std::vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
     HighsInt num_col = 0;
     HighsInt num_col_nz = 0;
     avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
-    REQUIRE(h.addCol(colCost[0], colLower[0], colUpper[0], 0, nullptr, nullptr) == HighsStatus::kOk);
+    REQUIRE(h.addCol(colCost[0], colLower[0], colUpper[0], 0, nullptr,
+                     nullptr) == HighsStatus::kOk);
   }
 
   std::vector<double> rowLower;
@@ -2092,8 +2094,7 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
     HighsInt num_row_nz = 0;
     avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
-     REQUIRE(h.addRow(rowLower[0], rowUpper[0], num_row_nz, ARindex.data(),
-		      ARvalue.data()) == HighsStatus::kOk);
+    REQUIRE(h.addRow(rowLower[0], rowUpper[0], num_row_nz, ARindex.data(),
+                     ARvalue.data()) == HighsStatus::kOk);
   }
-
 }

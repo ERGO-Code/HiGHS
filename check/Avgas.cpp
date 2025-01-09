@@ -11,10 +11,11 @@
  * @brief Utilities for tests with AVGAS
  */
 #include "Avgas.h"
-#include "lp_data/HConst.h"
 
 #include <cassert>
 #include <cstdio>  // For printf
+
+#include "lp_data/HConst.h"
 
 const bool dev_run = false;
 
