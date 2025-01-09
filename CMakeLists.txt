@@ -103,6 +103,8 @@ if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
 
+option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
+
 # Address | Thread | Leak 
 # Linux atm
 # Only Debug is theted atm 
@@ -207,6 +209,14 @@ if (BUILD_CXX)
     # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
     option(STDCALL "Build highs with the __stdcall convention" OFF)
   endif()
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR 
+    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
+    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
+  endif()  
 
   # Basic type
   include(CMakePushCheckState)
@@ -347,16 +357,18 @@ if(NOT FAST_BUILD)
 endif()
 
 include(CheckCXXCompilerFlag)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)" AND NOT APPLE)
-    check_cxx_compiler_flag("-mpopcntd" COMPILER_SUPPORTS_POPCNTD)
-    if(COMPILER_SUPPORTS_POPCNTD)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
-    endif()
-else()
-    check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_POPCNT)
-    if(COMPILER_SUPPORTS_POPCNT)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
-    endif()
+if (NOT HIGHS_COVERAGE)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)" AND NOT APPLE)
+      check_cxx_compiler_flag("-mpopcntd" COMPILER_SUPPORTS_POPCNTD)
+      if(COMPILER_SUPPORTS_POPCNTD)
+          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
+      endif()
+  else()
+      check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_POPCNT)
+      if(COMPILER_SUPPORTS_POPCNT)
+          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
+      endif()
+  endif()
 endif()
 
 option(DEBUGSOL "check the debug solution" OFF)
@@ -492,6 +504,58 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
       -fno-omit-frame-pointer ")
 endif()
 
+# HiGHS coverage update in progress
+if(FAST_BUILD AND HIGHS_COVERAGE)
+  if(WIN32)
+    message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
+  endif()
+
+  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(FATAL_ERROR "Warning: to enable coverage, you must compile in Debug mode")
+  endif()
+
+  # Disable IPO
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+  message(STATUS "Building in coverage mode")
+
+  # Enable coverage flags
+  add_compile_options(-O0) 
+  add_compile_options(--coverage) 
+  add_compile_options(-fprofile-update=atomic) 
+
+  add_link_options(-O0) 
+  add_link_options(--coverage)    # Ensure coverage data is linked correctly
+
+  find_program(GCOV_PATH gcov)
+  find_program(LCOV_PATH lcov)
+  find_program(GENHTML_PATH genhtml)
+
+  if(NOT GCOV_PATH)
+    message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  if(NOT LCOV_PATH)
+    message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  if(NOT GENHTML_PATH)
+    message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  # add_custom_target(coverage
+  #   COMMAND ${LCOV_PATH} -d bin -c -o cov.info --ignore-errors empty
+  #   COMMAND ${LCOV_PATH} --remove "*/usr/include/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "*/usr/lib/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "extern/pdqsort/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "extern/zstr/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "app/cxxopts*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${GENHTML_PATH} ${CMAKE_BINARY_DIR}/cov.info.cleaned -o ${CMAKE_BINARY_DIR}/cov_report
+  #   VERBATIM
+  #   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  # COMMENT "Generating code coverage report v2025.")
+
+endif()
+
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)
@@ -514,7 +578,7 @@ if(NOT FAST_BUILD)
   endif()
 
   if(HIGHS_COVERAGE)
-    if(NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
       message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
     endif()
   endif()

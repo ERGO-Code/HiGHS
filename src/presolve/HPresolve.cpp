@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -2055,13 +2052,16 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
   return Result::kOk;
 }
 
-void HPresolve::storeRow(HighsInt row) {
-  rowpositions.clear();
+void HPresolve::getRowPositions(HighsInt row,
+                                std::vector<HighsInt>& myrowpositions) const {
+  myrowpositions.clear();
 
-  auto rowVec = getSortedRowVector(row);
-  for (auto iter = rowVec.begin(); iter != rowVec.end(); ++iter)
-    rowpositions.push_back(iter.position());
+  auto rowvector = getSortedRowVector(row);
+  for (auto rowiter = rowvector.begin(); rowiter != rowvector.end(); ++rowiter)
+    myrowpositions.push_back(rowiter.position());
 }
+
+void HPresolve::storeRow(HighsInt row) { getRowPositions(row, rowpositions); }
 
 HighsTripletPositionSlice HPresolve::getStoredRow() const {
   return HighsTripletPositionSlice(Acol.data(), Avalue.data(),
@@ -3545,19 +3545,27 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
                                  double maxCoefValue) {
-        for (const HighsSliceNonzero& nonz : getStoredRow()) {
-          if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
-            continue;
+        // iterate over non-zero positions instead of iterating over the
+        // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
+        // latter contains pointers to Acol and Avalue that may be invalidated
+        // if these vectors are reallocated (see std::vector::push_back
+        // performed in HPresolve::addToMatrix).
+        for (HighsInt rowiter : rowpositions) {
+          // get column index and coefficient
+          HighsInt col = Acol[rowiter];
+          double val = Avalue[rowiter];
 
-          if (direction * nonz.value() > maxCoefValue + primal_feastol) {
-            double delta = direction * maxCoefValue - nonz.value();
-            addToMatrix(row, nonz.index(), delta);
-            rhs += delta * model->col_upper_[nonz.index()];
-          } else if (direction * nonz.value() <
-                     -maxCoefValue - primal_feastol) {
-            double delta = -direction * maxCoefValue - nonz.value();
-            addToMatrix(row, nonz.index(), delta);
-            rhs += delta * model->col_lower_[nonz.index()];
+          // skip continuous variables
+          if (model->integrality_[col] == HighsVarType::kContinuous) continue;
+
+          if (direction * val > maxCoefValue + primal_feastol) {
+            double delta = direction * maxCoefValue - val;
+            addToMatrix(row, col, delta);
+            rhs += delta * model->col_upper_[col];
+          } else if (direction * val < -maxCoefValue - primal_feastol) {
+            double delta = -direction * maxCoefValue - val;
+            addToMatrix(row, col, delta);
+            rhs += delta * model->col_lower_[col];
           }
         }
       };
@@ -6131,15 +6139,25 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 template <typename RowStorageFormat>
 HPresolve::Result HPresolve::equalityRowAddition(
     HighsPostsolveStack& postsolve_stack, HighsInt stayrow, HighsInt removerow,
-    double scale, const HighsMatrixSlice<RowStorageFormat>& vector) {
-  postsolve_stack.equalityRowAddition(removerow, stayrow, scale, vector);
-  for (const auto& rowNz : vector) {
-    HighsInt pos = findNonzero(removerow, rowNz.index());
+    double scale, const HighsMatrixSlice<RowStorageFormat>& rowvector) {
+  // extract non-zero positions
+  std::vector<HighsInt> stay_rowpositions;
+  getRowPositions(stayrow, stay_rowpositions);
+
+  // update postsolve information
+  postsolve_stack.equalityRowAddition(removerow, stayrow, scale, rowvector);
+
+  // iterate over non-zero positions instead of iterating over the
+  // HighsMatrixSlice because the latter contains pointers to Acol and Avalue
+  // that may be invalidated if these vectors are reallocated
+  // (see std::vector::push_back performed in HPresolve::addToMatrix).
+  for (HighsInt rowiter : stay_rowpositions) {
+    HighsInt pos = findNonzero(removerow, Acol[rowiter]);
     if (pos != -1)
       unlink(pos);  // all common nonzeros are cancelled, as the rows are
                     // parallel
     else            // might introduce a singleton
-      addToMatrix(removerow, rowNz.index(), scale * rowNz.value());
+      addToMatrix(removerow, Acol[rowiter], scale * Avalue[rowiter]);
   }
 
   if (model->row_upper_[removerow] != kHighsInf)

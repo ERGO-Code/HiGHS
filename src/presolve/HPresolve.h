@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -214,6 +211,9 @@ class HPresolve {
 
   void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
              std::vector<HighsInt>& ARstart);
+
+  void getRowPositions(HighsInt row,
+                       std::vector<HighsInt>& myrowpositions) const;
 
   void storeRow(HighsInt row);
 

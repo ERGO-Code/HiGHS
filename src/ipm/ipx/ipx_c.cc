@@ -9,7 +9,8 @@ ipxint ipx_load_model(void* self, ipxint num_var, const double* obj,
                       const ipxint* Ap, const ipxint* Ai, const double* Ax,
                       const double* rhs, const char* constr_type) {
     LpSolver* solver = static_cast<LpSolver*>(self);
-    return solver->LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax, rhs,
+    const double offset = 0;
+    return solver->LoadModel(num_var, offset, obj, lb, ub, num_constr, Ap, Ai, Ax, rhs,
                              constr_type);
 }
 
