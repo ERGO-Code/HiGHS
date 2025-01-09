@@ -672,8 +672,6 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
                              HighsInt* col_matrix_index,
                              double* col_matrix_value) {
   HighsLp& lp = model_.lp_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -689,29 +687,33 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
   HighsInt col_dim = lp.num_col_;
   get_num_col = 0;
   get_num_nz = 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, out_from_col, out_to_col, in_from_col,
-                     in_to_col, current_set_entry);
-    assert(out_to_col < col_dim);
-    assert(in_to_col < col_dim);
-    for (HighsInt iCol = out_from_col; iCol <= out_to_col; iCol++) {
-      if (col_cost != NULL) col_cost[get_num_col] = lp.col_cost_[iCol];
-      if (col_lower != NULL) col_lower[get_num_col] = lp.col_lower_[iCol];
-      if (col_upper != NULL) col_upper[get_num_col] = lp.col_upper_[iCol];
-      if (col_matrix_start != NULL)
-        col_matrix_start[get_num_col] = get_num_nz + lp.a_matrix_.start_[iCol] -
-                                        lp.a_matrix_.start_[out_from_col];
-      get_num_col++;
+  if (lp.a_matrix_.isColwise()) {
+    for (HighsInt k = from_k; k <= to_k; k++) {
+      updateOutInIndex(index_collection, out_from_col, out_to_col, in_from_col,
+		       in_to_col, current_set_entry);
+      assert(out_to_col < col_dim);
+      assert(in_to_col < col_dim);
+      for (HighsInt iCol = out_from_col; iCol <= out_to_col; iCol++) {
+	if (col_cost != NULL) col_cost[get_num_col] = lp.col_cost_[iCol];
+	if (col_lower != NULL) col_lower[get_num_col] = lp.col_lower_[iCol];
+	if (col_upper != NULL) col_upper[get_num_col] = lp.col_upper_[iCol];
+	if (col_matrix_start != NULL)
+	  col_matrix_start[get_num_col] = get_num_nz + lp.a_matrix_.start_[iCol] -
+	    lp.a_matrix_.start_[out_from_col];
+	get_num_col++;
+      }
+      for (HighsInt iEl = lp.a_matrix_.start_[out_from_col];
+	   iEl < lp.a_matrix_.start_[out_to_col + 1]; iEl++) {
+	if (col_matrix_index != NULL)
+	  col_matrix_index[get_num_nz] = lp.a_matrix_.index_[iEl];
+	if (col_matrix_value != NULL)
+	  col_matrix_value[get_num_nz] = lp.a_matrix_.value_[iEl];
+	get_num_nz++;
+      }
+      if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
     }
-    for (HighsInt iEl = lp.a_matrix_.start_[out_from_col];
-         iEl < lp.a_matrix_.start_[out_to_col + 1]; iEl++) {
-      if (col_matrix_index != NULL)
-        col_matrix_index[get_num_nz] = lp.a_matrix_.index_[iEl];
-      if (col_matrix_value != NULL)
-        col_matrix_value[get_num_nz] = lp.a_matrix_.value_[iEl];
-      get_num_nz++;
-    }
-    if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
+  } else {
+    assert(111==222);
   }
 }
 
@@ -722,8 +724,6 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
                              HighsInt* row_matrix_index,
                              double* row_matrix_value) {
   HighsLp& lp = model_.lp_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -739,8 +739,6 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   HighsInt in_to_row = -1;
   HighsInt current_set_entry = 0;
   HighsInt row_dim = lp.num_row_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.
   vector<HighsInt> new_index;
@@ -748,98 +746,124 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
 
   get_num_row = 0;
   get_num_nz = 0;
-  if (!index_collection.is_mask_) {
-    out_to_row = -1;
-    current_set_entry = 0;
-    for (HighsInt k = from_k; k <= to_k; k++) {
-      updateOutInIndex(index_collection, in_from_row, in_to_row, out_from_row,
-                       out_to_row, current_set_entry);
-      if (k == from_k) {
-        // Account for any initial rows not being extracted
-        for (HighsInt iRow = 0; iRow < in_from_row; iRow++) {
-          new_index[iRow] = -1;
-        }
+  if (lp.a_matrix_.isColwise()) {
+    if (!index_collection.is_mask_) {
+      out_to_row = -1;
+      current_set_entry = 0;
+      for (HighsInt k = from_k; k <= to_k; k++) {
+	updateOutInIndex(index_collection, in_from_row, in_to_row, out_from_row,
+			 out_to_row, current_set_entry);
+	if (k == from_k) {
+	  // Account for any initial rows not being extracted
+	  for (HighsInt iRow = 0; iRow < in_from_row; iRow++) {
+	    new_index[iRow] = -1;
+	  }
+	}
+	for (HighsInt iRow = in_from_row; iRow <= in_to_row; iRow++) {
+	  new_index[iRow] = get_num_row;
+	  get_num_row++;
+	}
+	for (HighsInt iRow = out_from_row; iRow <= out_to_row; iRow++) {
+	  new_index[iRow] = -1;
+	}
+	if (out_to_row >= row_dim - 1) break;
       }
-      for (HighsInt iRow = in_from_row; iRow <= in_to_row; iRow++) {
-        new_index[iRow] = get_num_row;
-        get_num_row++;
+    } else {
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+	if (index_collection.mask_[iRow]) {
+	  new_index[iRow] = get_num_row;
+	  get_num_row++;
+	} else {
+	  new_index[iRow] = -1;
+	}
       }
-      for (HighsInt iRow = out_from_row; iRow <= out_to_row; iRow++) {
-        new_index[iRow] = -1;
-      }
-      if (out_to_row >= row_dim - 1) break;
     }
-  } else {
+
+    // Bail out if no rows are to be extracted
+    if (get_num_row == 0) return;
+
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (index_collection.mask_[iRow]) {
-        new_index[iRow] = get_num_row;
-        get_num_row++;
-      } else {
-        new_index[iRow] = -1;
-      }
-    }
-  }
-
-  // Bail out if no rows are to be extracted
-  if (get_num_row == 0) return;
-
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    HighsInt new_iRow = new_index[iRow];
-    if (new_iRow >= 0) {
-      assert(new_iRow < get_num_row);
-      if (row_lower != NULL) row_lower[new_iRow] = lp.row_lower_[iRow];
-      if (row_upper != NULL) row_upper[new_iRow] = lp.row_upper_[iRow];
-    }
-  }
-  const bool extract_start = row_matrix_start != NULL;
-  const bool extract_index = row_matrix_index != NULL;
-  const bool extract_value = row_matrix_value != NULL;
-  const bool extract_matrix = extract_index || extract_value;
-  // Allocate an array of lengths for the row-wise matrix to be
-  // extracted: necessary even if just the number of nonzeros is
-  // required
-  vector<HighsInt> row_matrix_length;
-  row_matrix_length.assign(get_num_row, 0);
-  // Identify the lengths of the rows in the row-wise matrix to be extracted
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[col];
-         iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt new_iRow = new_index[iRow];
-      if (new_iRow >= 0) row_matrix_length[new_iRow]++;
-    }
-  }
-  if (!extract_start) {
-    // bail out if no matrix starts are to be extracted, but only after
-    // computing the number of nonzeros
-    for (HighsInt iRow = 0; iRow < get_num_row; iRow++)
-      get_num_nz += row_matrix_length[iRow];
-    return;
-  }
-  // Allocate an array of lengths for the row-wise matrix to be extracted
-  row_matrix_start[0] = 0;
-  for (HighsInt iRow = 0; iRow < get_num_row - 1; iRow++) {
-    row_matrix_start[iRow + 1] =
-        row_matrix_start[iRow] + row_matrix_length[iRow];
-    row_matrix_length[iRow] = row_matrix_start[iRow];
-  }
-  HighsInt iRow = get_num_row - 1;
-  get_num_nz = row_matrix_start[iRow] + row_matrix_length[iRow];
-  // Bail out if matrix indices and values are not required
-  if (!extract_matrix) return;
-  row_matrix_length[iRow] = row_matrix_start[iRow];
-  // Fill the row-wise matrix with indices and values
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[col];
-         iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt new_iRow = new_index[iRow];
       if (new_iRow >= 0) {
-        HighsInt row_iEl = row_matrix_length[new_iRow];
-        if (extract_index) row_matrix_index[row_iEl] = col;
-        if (extract_value) row_matrix_value[row_iEl] = lp.a_matrix_.value_[iEl];
-        row_matrix_length[new_iRow]++;
+	assert(new_iRow < get_num_row);
+	if (row_lower != NULL) row_lower[new_iRow] = lp.row_lower_[iRow];
+	if (row_upper != NULL) row_upper[new_iRow] = lp.row_upper_[iRow];
       }
+    }
+    const bool extract_start = row_matrix_start != NULL;
+    const bool extract_index = row_matrix_index != NULL;
+    const bool extract_value = row_matrix_value != NULL;
+    const bool extract_matrix = extract_index || extract_value;
+    // Allocate an array of lengths for the row-wise matrix to be
+    // extracted: necessary even if just the number of nonzeros is
+    // required
+    vector<HighsInt> row_matrix_length;
+    row_matrix_length.assign(get_num_row, 0);
+    // Identify the lengths of the rows in the row-wise matrix to be extracted
+    for (HighsInt col = 0; col < lp.num_col_; col++) {
+      for (HighsInt iEl = lp.a_matrix_.start_[col];
+	   iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	HighsInt new_iRow = new_index[iRow];
+	if (new_iRow >= 0) row_matrix_length[new_iRow]++;
+      }
+    }
+    if (!extract_start) {
+      // bail out if no matrix starts are to be extracted, but only after
+      // computing the number of nonzeros
+      for (HighsInt iRow = 0; iRow < get_num_row; iRow++)
+	get_num_nz += row_matrix_length[iRow];
+      return;
+    }
+    // Allocate an array of lengths for the row-wise matrix to be extracted
+    row_matrix_start[0] = 0;
+    for (HighsInt iRow = 0; iRow < get_num_row - 1; iRow++) {
+      row_matrix_start[iRow + 1] =
+        row_matrix_start[iRow] + row_matrix_length[iRow];
+      row_matrix_length[iRow] = row_matrix_start[iRow];
+    }
+    HighsInt iRow = get_num_row - 1;
+    get_num_nz = row_matrix_start[iRow] + row_matrix_length[iRow];
+    // Bail out if matrix indices and values are not required
+    if (!extract_matrix) return;
+    row_matrix_length[iRow] = row_matrix_start[iRow];
+    // Fill the row-wise matrix with indices and values
+    for (HighsInt col = 0; col < lp.num_col_; col++) {
+      for (HighsInt iEl = lp.a_matrix_.start_[col];
+	   iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
+	HighsInt iRow = lp.a_matrix_.index_[iEl];
+	HighsInt new_iRow = new_index[iRow];
+	if (new_iRow >= 0) {
+	  HighsInt row_iEl = row_matrix_length[new_iRow];
+	  if (extract_index) row_matrix_index[row_iEl] = col;
+	  if (extract_value) row_matrix_value[row_iEl] = lp.a_matrix_.value_[iEl];
+	  row_matrix_length[new_iRow]++;
+	}
+      }
+    }
+  } else {
+    for (HighsInt k = from_k; k <= to_k; k++) {
+      updateOutInIndex(index_collection, out_from_row, out_to_row, in_from_row,
+		       in_to_row, current_set_entry);
+      assert(out_to_row < row_dim);
+      assert(in_to_row < row_dim);
+      for (HighsInt iRow = out_from_row; iRow <= out_to_row; iRow++) {
+	if (row_lower != NULL) row_lower[get_num_row] = lp.row_lower_[iRow];
+	if (row_upper != NULL) row_upper[get_num_row] = lp.row_upper_[iRow];
+	if (row_matrix_start != NULL)
+	  row_matrix_start[get_num_row] = get_num_nz + lp.a_matrix_.start_[iRow] -
+	    lp.a_matrix_.start_[out_from_row];
+	get_num_row++;
+      }
+      for (HighsInt iEl = lp.a_matrix_.start_[out_from_row];
+	   iEl < lp.a_matrix_.start_[out_to_row + 1]; iEl++) {
+	if (row_matrix_index != NULL)
+	  row_matrix_index[get_num_nz] = lp.a_matrix_.index_[iEl];
+	if (row_matrix_value != NULL)
+	  row_matrix_value[get_num_nz] = lp.a_matrix_.value_[iEl];
+	get_num_nz++;
+      }
+      if (out_to_row == row_dim - 1 || in_to_row == row_dim - 1) break;
     }
   }
 }
