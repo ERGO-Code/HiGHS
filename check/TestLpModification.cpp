@@ -1962,7 +1962,7 @@ TEST_CASE("row-wise-get-row-time", "[highs_data]") {
   HighsTimer timer;
   HighsStatus return_status;
 
-  HighsInt dim = 10;
+  HighsInt dim = 5;
   const HighsInt max_k = 10;
   for (HighsInt k = 0; k < max_k; k++) {
     double time = -timer.getWallTime();
@@ -1981,22 +1981,46 @@ TEST_CASE("row-wise-get-row-time", "[highs_data]") {
       index[1] = i - 1;
       return_status = h.addRow(0.0, kHighsInf, 2, index, value);
     }
-    double lower = 0.0;
-    double upper = 0.0;
+    std::vector<double> lower;
+   std::vector<double> upper;
     HighsInt num_row = 0;
     HighsInt num_nz = 0;
-    HighsInt matrix_start[1] = {0};
-    HighsInt matrix_index[2] = {0, 0};
-    double matrix_value[2] = {0.0, 0.0};
+    std::vector<HighsInt> matrix_start;
+    std::vector<HighsInt> matrix_index;
+    std::vector<double> matrix_value;
     for (HighsInt i = 0; i < dim - 1; i++) {
-      return_status = h.getRows(i, i, num_row, &lower, &upper,
+      return_status = h.getRows(i, i, num_row, lower.data(), upper.data(),
 				num_nz, nullptr, nullptr, nullptr);
-      return_status = h.getRows(i, i, num_row, &lower, &upper,
-				num_nz, matrix_start, matrix_index,
-				matrix_value);
+      matrix_start.resize(num_row+1);
+      matrix_index.resize(num_nz);
+      matrix_value.resize(num_nz);
+      return_status = h.getRows(i, i, num_row, lower.data(), upper.data(),
+				num_nz, matrix_start.data(), matrix_index.data(),
+				matrix_value.data());
+      std::vector<HighsInt> set = {i, dim-1};
+      return_status = h.getRows(2, set.data(), num_row, lower.data(), upper.data(),
+				num_nz, nullptr, nullptr, nullptr);
+      matrix_start.resize(num_row+1);
+      matrix_index.resize(num_nz);
+      matrix_value.resize(num_nz);
+      return_status = h.getRows(2, set.data(), num_row, lower.data(), upper.data(),
+				num_nz, matrix_start.data(), matrix_index.data(),
+				matrix_value.data());
+      std::vector<HighsInt> mask;
+      mask.assign(2*dim, 0);
+      mask[0] = 1;
+      mask[dim+i] = 1;
+      return_status = h.getRows(mask.data(), num_row, lower.data(), upper.data(),
+				num_nz, nullptr, nullptr, nullptr);
+      matrix_start.resize(num_row+1);
+      matrix_index.resize(num_nz);
+      matrix_value.resize(num_nz);
+      return_status = h.getRows(mask.data(), num_row, lower.data(), upper.data(),
+				num_nz, matrix_start.data(), matrix_index.data(),
+				matrix_value.data());
     }
     time += timer.getWallTime();
-    printf("Loop %2d: dim = %5d; time = %g\n", int(k), int(dim), time);
+    printf("Loop %2d: dim = %5d; time = %6.4f\n", int(k), int(dim), time);
     h.clear();
     dim *= 2;
   }
