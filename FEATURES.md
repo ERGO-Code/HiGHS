@@ -10,4 +10,9 @@ Added basis solve methods to highspy
 
 Added methods to get primal/dual ray and dual unboundedness direction to highspy
 
+When a presolved LP has model status kUnknown, rather than returning this to the user, it performs postsolve and then uses the basis to solve the original LP
+
+Fixed bug in presolve when pointers stored in HighsMatrixSlice get invalidated when the coefficient matrix is reallocated (e.g. when non-zeros are added in HPresolve::addToMatrix)
+
+Primal and dual residual tolerances - applied following IPM or PDLP solution - now documented as options
 
