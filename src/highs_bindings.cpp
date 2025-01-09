@@ -1408,7 +1408,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def(py::init<>())
       .def_readwrite("simplex_time", &HighsIisInfo::simplex_time)
       .def_readwrite("simplex_iterations", &HighsIisInfo::simplex_iterations);
-  py::class_<HighsLinearObjective>(m, "HighsLinearObjective")
+  py::class_<HighsLinearObjective>(m, "HighsLinearObjective", py::module_local())
       .def(py::init<>())
       .def_readwrite("weight", &HighsLinearObjective::weight)
       .def_readwrite("offset", &HighsLinearObjective::offset)
