@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: ctest --parallel --timeout 300 --output-on-failure 
 
-      - name: Generate report with lcov
+      - name: Generate Report
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
@@ -47,6 +47,12 @@ jobs:
           lcov --remove cov.info "app/cxxopts*" -o cov.info
           lcov --remove cov.info "src/test*" -o cov.info
           lcov --list cov.info
+
+      - name: Genhtml Results Summary 
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          genhtml -o coverage cov.info
 
       # Made it past the first token issue. 
       # May need some more time to porpagate on the codecov side. 
