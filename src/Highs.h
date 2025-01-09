@@ -1555,12 +1555,23 @@ class Highs {
   void deleteRowsInterface(HighsIndexCollection& index_collection);
 
   void getColsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_col, double* col_cost, double* col_lower,
-                        double* col_upper, HighsInt& num_nz,
-                        HighsInt* col_matrix_start, HighsInt* col_matrix_index,
-                        double* col_matrix_value);
+                        HighsInt& num_col, double* cost, double* lower,
+                        double* upper, HighsInt& num_nz,
+                        HighsInt* start, HighsInt* index,
+                        double* value);
+
+  void getColsInterfaceArch(const HighsIndexCollection& index_collection,
+			    HighsInt& num_col, double* cost, double* lower,
+			    double* upper, HighsInt& num_nz,
+			    HighsInt* start, HighsInt* index,
+			    double* value);
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
+			HighsInt& num_row, double* lower,
+			double* upper, HighsInt& num_nz,
+			HighsInt* start, HighsInt* index, double* value);
+
+  void getRowsInterfaceArch(const HighsIndexCollection& index_collection,
                         HighsInt& num_row, double* row_lower, double* row_upper,
                         HighsInt& num_nz, HighsInt* row_matrix_start,
                         HighsInt* row_matrix_index, double* row_matrix_value);

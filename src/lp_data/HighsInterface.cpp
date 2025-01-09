@@ -673,6 +673,7 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
                              double* col_matrix_value) {
   HighsLp& lp = model_.lp_;
   assert(ok(index_collection));
+  lp.ensureColwise();
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
@@ -718,6 +719,25 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
 }
 
 void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
+                             HighsInt& num_row, double* lower,
+                             double* upper, HighsInt& num_nz,
+                             HighsInt* start, HighsInt* index, double* value) {
+  const HighsLp& lp = model_.lp_;
+  if (lp.a_matrix_.isColwise()) {
+    getRowsInterfaceArch(index_collection, num_row, lower, upper, num_nz, start,
+			 index, value);
+  } else {
+    getSubVectors(index_collection,
+		  lp.num_row_,
+		  nullptr, lp.row_lower_.data(), lp.row_upper_.data(),
+		  lp.a_matrix_,
+		  num_row,
+		  nullptr, lower, upper,
+		  num_nz, start, index, value);		  
+  }
+}
+
+void Highs::getRowsInterfaceArch(const HighsIndexCollection& index_collection,
                              HighsInt& get_num_row, double* row_lower,
                              double* row_upper, HighsInt& get_num_nz,
                              HighsInt* row_matrix_start,
