@@ -494,7 +494,7 @@ if(FAST_BUILD AND HIGHS_COVERAGE)
   # Enable coverage flags
   add_compile_options(-O0) 
   add_compile_options(--coverage) 
-  # add_compile_options(-fprofile-update=atomic) 
+  add_compile_options(-fprofile-update=atomic) 
 
   add_link_options(-O0) 
   add_link_options(--coverage)    # Ensure coverage data is linked correctly
