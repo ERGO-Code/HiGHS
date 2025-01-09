@@ -3059,8 +3059,19 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                  int(from_row), int(to_row), int(model_.lp_.num_row_));
     return HighsStatus::kError;
   }
-  getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
-                   index, value);
+  const HighsLp& lp = model_.lp_;
+  if (lp.a_matrix_.isColwise()) {
+    getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
+		     index, value);
+  } else {
+    getSubVectors(index_collection,
+		  lp.num_row_,
+		  nullptr, lp.row_lower_.data(), lp.row_upper_.data(),
+		  lp.a_matrix_,
+		  num_row,
+		  nullptr, lower, upper,
+		  num_nz, start, index, value);		  
+  }
   return returnFromHighs(HighsStatus::kOk);
 }
 

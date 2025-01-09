@@ -3077,3 +3077,57 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
 }
+
+void getSubVectors(const HighsIndexCollection& index_collection,
+		   const HighsInt data_dim,
+		   const double* data0,
+		   const double* data1,
+		   const double* data2,
+		   const HighsSparseMatrix matrix,
+		   HighsInt& num_sub_vector, double* sub_vector_data0, double* sub_vector_data1,
+		   double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
+		   HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
+		   double* sub_matrix_value) {
+  // Ensure that if there's no data0 then it's not required in the
+  // sub-vector
+  if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  // Surely this is checked elsewhere
+  assert(0 <= from_k && to_k < data_dim);
+  assert(from_k <= to_k);
+  HighsInt out_from_vector;
+  HighsInt out_to_vector;
+  HighsInt in_from_vector;
+  HighsInt in_to_vector = -1;
+  HighsInt current_set_entry = 0;
+  num_sub_vector = 0;
+  sub_matrix_num_nz = 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, out_from_vector, out_to_vector, in_from_vector,
+		     in_to_vector, current_set_entry);
+    assert(out_to_vector < data_dim);
+    assert(in_to_vector < data_dim);
+    for (HighsInt iVector = out_from_vector; iVector <= out_to_vector; iVector++) {
+      if (sub_vector_data0 != nullptr) sub_vector_data0[num_sub_vector] = data0[iVector];
+      if (sub_vector_data1 != nullptr) sub_vector_data1[num_sub_vector] = data1[iVector];
+      if (sub_vector_data2 != nullptr) sub_vector_data2[num_sub_vector] = data2[iVector];
+      if (sub_matrix_start != nullptr)
+	sub_matrix_start[num_sub_vector] = sub_matrix_num_nz + matrix.start_[iVector] -
+	  matrix.start_[out_from_vector];
+      num_sub_vector++;
+    }
+    for (HighsInt iEl = matrix.start_[out_from_vector];
+	 iEl < matrix.start_[out_to_vector + 1]; iEl++) {
+      if (sub_matrix_index != nullptr)
+	sub_matrix_index[sub_matrix_num_nz] = matrix.index_[iEl];
+      if (sub_matrix_value != nullptr)
+	sub_matrix_value[sub_matrix_num_nz] = matrix.value_[iEl];
+      sub_matrix_num_nz++;
+    }
+    if (out_to_vector == data_dim - 1 || in_to_vector == data_dim - 1) break;
+  }
+}
+
