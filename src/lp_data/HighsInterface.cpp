@@ -681,8 +681,15 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
 		  cost, lower, upper,
 		  num_nz, start, index, value);		  
   } else {
-    getColsInterfaceArch(index_collection, num_col, cost, lower, upper, num_nz, start,
-			 index, value);
+    printf("Calling getSubVectorsTranspose from getColsInterface (Interval = %d; Set = %d; Mask = %d)\n",
+	   index_collection.is_interval_, index_collection.is_set_, index_collection.is_mask_);
+    getSubVectorsTranspose(index_collection,
+			   lp.num_col_,
+			   lp.col_cost_.data(), lp.col_lower_.data(), lp.col_upper_.data(),
+			   lp.a_matrix_,
+			   num_col,
+			   cost, lower, upper,
+			   num_nz, start, index, value);
   }
 }
 
