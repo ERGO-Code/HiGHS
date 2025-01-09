@@ -745,8 +745,15 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
                              HighsInt* start, HighsInt* index, double* value) {
   const HighsLp& lp = model_.lp_;
   if (lp.a_matrix_.isColwise()) {
-    getRowsInterfaceArch(index_collection, num_row, lower, upper, num_nz, start,
-			 index, value);
+    printf("Calling getSubVectorsTranspose from getRowsInterface (Interval = %d; Set = %d; Mask = %d)\n",
+	   index_collection.is_interval_, index_collection.is_set_, index_collection.is_mask_);
+    getSubVectorsTranspose(index_collection,
+			   lp.num_row_,
+			   nullptr, lp.row_lower_.data(), lp.row_upper_.data(),
+			   lp.a_matrix_,
+			   num_row,
+			   nullptr, lower, upper,
+			   num_nz, start, index, value);
   } else {
     getSubVectors(index_collection,
 		  lp.num_row_,
