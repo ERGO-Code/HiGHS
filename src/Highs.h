@@ -1048,10 +1048,15 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
-  HighsStatus ensureColwise() { this->model_.lp_.ensureColwise(); return HighsStatus::kOk; }
-  
-  HighsStatus ensureRowwise() { this->model_.lp_.ensureRowwise(); return HighsStatus::kOk; }
-  
+  HighsStatus ensureColwise() {
+    this->model_.lp_.ensureColwise();
+    return HighsStatus::kOk;
+  }
+
+  HighsStatus ensureRowwise() {
+    this->model_.lp_.ensureRowwise();
+    return HighsStatus::kOk;
+  }
 
   /**
    * @brief Delete multiple columns from the incumbent model given by an

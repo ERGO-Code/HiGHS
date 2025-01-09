@@ -20,7 +20,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
 
   for (HighsInt row = 0; row < avgas_num_row; row++)
     avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
-              ARvalue);
+                 ARvalue);
 
   ARstart.push_back(num_row_nz);
 
@@ -34,7 +34,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++)
     avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
-              Aindex, Avalue);
+                 Aindex, Avalue);
   Astart.push_back(num_col_nz);
 
   assert(num_col_nz == num_row_nz);
@@ -105,11 +105,12 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<double> one_row_value;
   HighsInt one_row_num_nz;
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    avgas.getRow(row, one_row_lower, one_row_upper, one_row_index, one_row_value);
+    avgas.getRow(row, one_row_lower, one_row_upper, one_row_index,
+                 one_row_value);
     one_row_num_nz = one_row_index.size();
-    REQUIRE(highs.addRow(one_row_lower, one_row_upper, one_row_num_nz, 
-			 one_row_index.data(),
-			 one_row_value.data()) == HighsStatus::kOk);
+    REQUIRE(highs.addRow(one_row_lower, one_row_upper, one_row_num_nz,
+                         one_row_index.data(),
+                         one_row_value.data()) == HighsStatus::kOk);
   }
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
