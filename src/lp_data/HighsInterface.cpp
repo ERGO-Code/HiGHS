@@ -666,11 +666,32 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
-                             HighsInt& get_num_col, double* col_cost,
-                             double* col_lower, double* col_upper,
-                             HighsInt& get_num_nz, HighsInt* col_matrix_start,
-                             HighsInt* col_matrix_index,
-                             double* col_matrix_value) {
+                             HighsInt& num_col, double* cost, double* lower,
+                             double* upper, HighsInt& num_nz,
+                             HighsInt* start, HighsInt* index, double* value) {
+  const HighsLp& lp = model_.lp_;
+  if (lp.a_matrix_.isColwise()) {
+    printf("Calling getSubVectors from getColsInterface (Interval = %d; Set = %d; Mask = %d)\n",
+	   index_collection.is_interval_, index_collection.is_set_, index_collection.is_mask_);
+    getSubVectors(index_collection,
+		  lp.num_col_,
+		  lp.col_cost_.data(), lp.col_lower_.data(), lp.col_upper_.data(),
+		  lp.a_matrix_,
+		  num_col,
+		  cost, lower, upper,
+		  num_nz, start, index, value);		  
+  } else {
+    getColsInterfaceArch(index_collection, num_col, cost, lower, upper, num_nz, start,
+			 index, value);
+  }
+}
+
+void Highs::getColsInterfaceArch(const HighsIndexCollection& index_collection,
+				 HighsInt& get_num_col, double* col_cost,
+				 double* col_lower, double* col_upper,
+				 HighsInt& get_num_nz, HighsInt* col_matrix_start,
+				 HighsInt* col_matrix_index,
+				 double* col_matrix_value) {
   HighsLp& lp = model_.lp_;
   assert(ok(index_collection));
   lp.ensureColwise();
