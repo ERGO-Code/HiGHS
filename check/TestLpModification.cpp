@@ -2062,28 +2062,21 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   const HighsInt avgas_num_row = 10;
 
   Highs h;
-  std::vector<double> colCost;
-  std::vector<double> colLower;
-  std::vector<double> colUpper;
-  std::vector<HighsInt> Aindex;
-  std::vector<double> Avalue;
+  double cost;
+  double lower;
+  double upper;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
-    HighsInt num_col_nz;
-    avgas.getCol(col, colCost, colLower, colUpper, num_col_nz, Aindex, Avalue);
-    REQUIRE(h.addCol(colCost[0], colLower[0], colUpper[0], 0, nullptr,
+    avgas.getCol(col, cost, lower, upper, index, value);
+    REQUIRE(h.addCol(cost, lower, upper, 0, nullptr,
                      nullptr) == HighsStatus::kOk);
   }
-
-  std::vector<double> rowLower;
-  std::vector<double> rowUpper;
-  std::vector<HighsInt> ARindex;
-  std::vector<double> ARvalue;
-
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    HighsInt num_row_nz;
-    avgas.getRow(row, rowLower, rowUpper, num_row_nz, ARindex, ARvalue);
-    REQUIRE(h.addRow(rowLower[0], rowUpper[0], num_row_nz, ARindex.data(),
-                     ARvalue.data()) == HighsStatus::kOk);
+    avgas.getRow(row, lower, upper, index, value);
+    HighsInt num_row_nz = index.size();
+    REQUIRE(h.addRow(lower, upper, num_row_nz, index.data(),
+                     value.data()) == HighsStatus::kOk);
   }
   h.run();
 }

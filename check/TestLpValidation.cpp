@@ -171,7 +171,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<HighsInt> ARstart;
   vector<HighsInt> ARindex;
   vector<double> ARvalue;
-
   for (HighsInt row = 0; row < avgas_num_row; row++) {
     avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
