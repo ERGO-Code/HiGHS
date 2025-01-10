@@ -129,6 +129,13 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
+
+  target_compile_definitions(highs
+            PUBLIC
+            # If the debug configuration pass the DEBUG define to the compiler
+            $<$<CONFIG:Debug>:CUPDLP_DEBUG>
+    )        
+    
   add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
   if(${BUILD_SHARED_LIBS})
