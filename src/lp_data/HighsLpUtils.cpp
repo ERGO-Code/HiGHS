@@ -23,7 +23,6 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
-#include "util/HighsTimer.h"
 
 using std::fabs;
 using std::max;
@@ -3081,7 +3080,7 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
 void getSubVectors(const HighsIndexCollection& index_collection,
                    const HighsInt data_dim, const double* data0,
                    const double* data1, const double* data2,
-                   const HighsSparseMatrix matrix, HighsInt& num_sub_vector,
+                   const HighsSparseMatrix& matrix, HighsInt& num_sub_vector,
                    double* sub_vector_data0, double* sub_vector_data1,
                    double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
                    HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
@@ -3137,7 +3136,7 @@ void getSubVectors(const HighsIndexCollection& index_collection,
 void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
                             const HighsInt data_dim, const double* data0,
                             const double* data1, const double* data2,
-                            const HighsSparseMatrix matrix,
+                            const HighsSparseMatrix& matrix,
                             HighsInt& num_sub_vector, double* sub_vector_data0,
                             double* sub_vector_data1, double* sub_vector_data2,
                             HighsInt& sub_matrix_num_nz,

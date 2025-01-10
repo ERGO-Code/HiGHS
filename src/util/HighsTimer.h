@@ -127,6 +127,16 @@ class HighsTimer {
   }
 
   /**
+   * @brief write all clocks
+   */
+  void writeAllClocks() {
+    for (HighsInt i = 0; i < num_clock; i++)
+      if (clock_num_call[i])
+        printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
+               int(clock_num_call[i]), int(i), clock_names[i].c_str());
+  }
+
+  /**
    * @brief Start a clock
    */
   void start(const HighsInt i_clock = 0  //!< Index of the clock to be started

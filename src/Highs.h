@@ -1316,6 +1316,14 @@ class Highs {
     return ekk_instance_.primal_phase1_dual_;
   }
 
+  /**
+   * @brief Development methods
+   */
+  HighsInt defineClock(const char* name) {
+    return this->timer_.clock_def(name);
+  }
+  void writeAllClocks() { this->timer_.writeAllClocks(); }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
