@@ -159,6 +159,8 @@ void Avgas::addCol(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
 void Avgas::getCol(const HighsInt col, double& cost, double& lower,
                    double& upper, std::vector<HighsInt>& index,
                    std::vector<double>& value) {
+  index.clear();
+  value.clear();
   lower = 0;
   upper = 1;
   if (col == 0) {

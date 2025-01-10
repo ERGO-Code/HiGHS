@@ -39,6 +39,11 @@ bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
 bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
                 const double infinite_bound);
 
+bool equalSparseVectors(const HighsInt dim, const HighsInt num_nz0,
+                        const HighsInt* index0, const double* value0,
+                        const HighsInt num_nz1, const HighsInt* index1,
+                        const double* value1);
+
 void testDeleteKeep(const HighsIndexCollection& index_collection);
 
 bool testAllDeleteKeep(HighsInt num_row);
@@ -426,8 +431,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  options.log_dev_level = kHighsLogDevLevelVerbose;
 
   Avgas avgas;
-  const HighsInt avgas_num_col = 8;
-  const HighsInt avgas_num_row = 10;
   HighsInt num_row = 0;
   HighsInt num_row_nz = 0;
   std::vector<double> rowLower;
@@ -1877,6 +1880,39 @@ TEST_CASE("mod-duplicate-indices", "[highs_data]") {
   REQUIRE(objective0 == -7.75);
 }
 
+bool equalSparseVectors(const HighsInt dim, const HighsInt num_nz0,
+                        const HighsInt* index0, const double* value0,
+                        const HighsInt num_nz1, const HighsInt* index1,
+                        const double* value1) {
+  if (num_nz0 != num_nz1) {
+    if (dev_run) printf("num_nz0 != num_nz1\n");
+    return false;
+  }
+  std::vector<double> full_vector;
+  full_vector.assign(dim, 0);
+  for (HighsInt iEl = 0; iEl < num_nz0; iEl++)
+    full_vector[index0[iEl]] = value0[iEl];
+  for (HighsInt iEl = 0; iEl < num_nz1; iEl++) {
+    HighsInt iRow = index1[iEl];
+    if (full_vector[iRow] != value1[iEl]) {
+      if (dev_run)
+        printf("vector0[%d] = %g <> %g = vector1[%d]\n", int(iRow),
+               full_vector[iRow], value1[iEl], int(iRow));
+      return false;
+    }
+
+    full_vector[iRow] = 0;
+  }
+  for (HighsInt iRow = 0; iRow < dim; iRow++)
+    if (full_vector[iRow]) {
+      if (dev_run)
+        printf("Full vector[%d] = %g, not zero\n", int(iRow),
+               full_vector[iRow]);
+      return false;
+    }
+  return true;
+}
+
 TEST_CASE("resize-integrality", "[highs_data]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -2015,12 +2051,13 @@ void testGetRows(Highs& h) {
 
 TEST_CASE("row-wise-get-row-time", "[highs_data]") {
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
 
   HighsTimer timer;
   HighsStatus return_status;
 
   HighsInt dim = 10;
-  const HighsInt max_k = 10;
+  const HighsInt max_k = 3;  // 10 for experiments
   for (HighsInt k = 0; k < max_k; k++) {
     for (HighsInt i = 0; i < dim; i++) {
       return_status = h.addCol(0.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
@@ -2048,10 +2085,259 @@ TEST_CASE("row-wise-get-row-time", "[highs_data]") {
     testGetRows(h);
     time_colwise += timer.getWallTime();
 
-    printf("Loop %2d: dim = %5d; time_rowwise = %6.4f; time_colwise = %6.4f\n",
-           int(k), int(dim), time_rowwise, time_colwise);
+    if (dev_run)
+      printf(
+          "Loop %2d: dim = %5d; time_rowwise = %6.4f; time_colwise = %6.4f\n",
+          int(k), int(dim), time_rowwise, time_colwise);
     h.clear();
     dim *= 2;
+  }
+}
+
+void testAvgasGetRow(Highs& h) {
+  Avgas avgas;
+  double cost;
+  double lower;
+  double upper;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
+  HighsInt get_num;
+  HighsInt lp_nnz;
+  std::vector<double> lp_cost(1);
+  std::vector<double> lp_lower(1);
+  std::vector<double> lp_upper(1);
+  std::vector<HighsInt> lp_start(1);
+  std::vector<HighsInt> lp_index(avgas_num_col);
+  std::vector<double> lp_value(avgas_num_col);
+  std::vector<HighsInt> set(1);
+  std::vector<HighsInt> mask(avgas_num_row);
+  for (HighsInt row = 0; row < avgas_num_row; row++) {
+    avgas.getRow(row, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    h.getRows(row, row, get_num, lp_lower.data(), lp_upper.data(), lp_nnz,
+              lp_start.data(), lp_index.data(), lp_value.data());
+    REQUIRE(lp_lower[0] == lower);
+    REQUIRE(lp_upper[0] == upper);
+    REQUIRE(equalSparseVectors(avgas_num_col, avgas_nnz, index.data(),
+                               value.data(), lp_nnz, lp_index.data(),
+                               lp_value.data()));
+  }
+  HighsInt from_row = 2;
+  HighsInt to_row = 5;
+  HighsInt num_row = to_row - from_row + 1;
+  lp_lower.resize(num_row);
+  lp_upper.resize(num_row);
+  lp_start.resize(num_row);
+  lp_index.resize(num_row * avgas_num_col);
+  lp_value.resize(num_row * avgas_num_col);
+  h.getRows(from_row, to_row, get_num, lp_lower.data(), lp_upper.data(), lp_nnz,
+            lp_start.data(), lp_index.data(), lp_value.data());
+  REQUIRE(get_num == num_row);
+  for (HighsInt row = 0; row < num_row; row++) {
+    HighsInt avgas_row = from_row + row;
+    avgas.getRow(avgas_row, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_lower[row] == lower);
+    REQUIRE(lp_upper[row] == upper);
+    HighsInt from_el = lp_start[row];
+    HighsInt lp_col_nnz =
+        row < num_row - 1 ? lp_start[row + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_col, avgas_nnz, index.data(),
+                               value.data(), lp_col_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+  }
+  set = {1, 2, 3, 6, 7};
+  num_row = set.size();
+  lp_lower.resize(num_row);
+  lp_upper.resize(num_row);
+  lp_start.resize(num_row);
+  lp_index.resize(num_row * avgas_num_col);
+  lp_value.resize(num_row * avgas_num_col);
+  h.getRows(num_row, set.data(), get_num, lp_lower.data(), lp_upper.data(),
+            lp_nnz, lp_start.data(), lp_index.data(), lp_value.data());
+  REQUIRE(get_num == num_row);
+  for (HighsInt row = 0; row < num_row; row++) {
+    HighsInt avgas_row = set[row];
+    avgas.getRow(avgas_row, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_lower[row] == lower);
+    REQUIRE(lp_upper[row] == upper);
+    HighsInt from_el = lp_start[row];
+    HighsInt lp_col_nnz =
+        row < num_row - 1 ? lp_start[row + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_col, avgas_nnz, index.data(),
+                               value.data(), lp_col_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+  }
+  mask[0] = 1;
+  mask[1] = 1;
+  mask[4] = 1;
+  mask[6] = 1;
+  mask[7] = 1;
+  num_row = 5;
+  lp_lower.resize(num_row);
+  lp_upper.resize(num_row);
+  lp_start.resize(num_row);
+  lp_index.resize(num_row * avgas_num_col);
+  lp_value.resize(num_row * avgas_num_col);
+  h.getRows(mask.data(), get_num, lp_lower.data(), lp_upper.data(), lp_nnz,
+            lp_start.data(), lp_index.data(), lp_value.data());
+  REQUIRE(get_num == num_row);
+  HighsInt row = 0;
+  for (HighsInt iRow = 0; iRow < avgas_num_row; iRow++) {
+    if (!mask[iRow]) continue;
+    HighsInt avgas_row = iRow;
+    avgas.getRow(avgas_row, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_lower[row] == lower);
+    REQUIRE(lp_upper[row] == upper);
+    HighsInt from_el = lp_start[row];
+    HighsInt lp_col_nnz =
+        row < num_row - 1 ? lp_start[row + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_col, avgas_nnz, index.data(),
+                               value.data(), lp_col_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+    row++;
+  }
+}
+
+void testAvgasGetCol(Highs& h) {
+  Avgas avgas;
+  double cost;
+  double lower;
+  double upper;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
+  HighsInt get_num;
+  HighsInt lp_nnz;
+  std::vector<double> lp_cost(1);
+  std::vector<double> lp_lower(1);
+  std::vector<double> lp_upper(1);
+  std::vector<HighsInt> lp_start(1);
+  std::vector<HighsInt> lp_index(avgas_num_row);
+  std::vector<double> lp_value(avgas_num_row);
+  std::vector<HighsInt> set(1);
+  std::vector<HighsInt> mask(avgas_num_col);
+  mask.assign(avgas_num_col, 0);
+  for (HighsInt col = 0; col < avgas_num_col; col++) {
+    avgas.getCol(col, cost, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    h.getCols(col, col, get_num, lp_cost.data(), lp_lower.data(),
+              lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+              lp_value.data());
+    REQUIRE(lp_cost[0] == cost);
+    REQUIRE(lp_lower[0] == lower);
+    REQUIRE(lp_upper[0] == upper);
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_nnz, lp_index.data(),
+                               lp_value.data()));
+    set[0] = col;
+    h.getCols(1, set.data(), get_num, lp_cost.data(), lp_lower.data(),
+              lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+              lp_value.data());
+    REQUIRE(lp_cost[0] == cost);
+    REQUIRE(lp_lower[0] == lower);
+    REQUIRE(lp_upper[0] == upper);
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_nnz, lp_index.data(),
+                               lp_value.data()));
+    mask[col] = 1;
+    h.getCols(mask.data(), get_num, lp_cost.data(), lp_lower.data(),
+              lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+              lp_value.data());
+    REQUIRE(lp_cost[0] == cost);
+    REQUIRE(lp_lower[0] == lower);
+    REQUIRE(lp_upper[0] == upper);
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_nnz, lp_index.data(),
+                               lp_value.data()));
+    mask[col] = 0;
+  }
+  HighsInt from_col = 2;
+  HighsInt to_col = 5;
+  HighsInt num_col = to_col - from_col + 1;
+  lp_cost.resize(num_col);
+  lp_lower.resize(num_col);
+  lp_upper.resize(num_col);
+  lp_start.resize(num_col);
+  lp_index.resize(num_col * avgas_num_row);
+  lp_value.resize(num_col * avgas_num_row);
+  h.getCols(from_col, to_col, get_num, lp_cost.data(), lp_lower.data(),
+            lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+            lp_value.data());
+  REQUIRE(get_num == num_col);
+  for (HighsInt col = 0; col < num_col; col++) {
+    HighsInt avgas_col = from_col + col;
+    avgas.getCol(avgas_col, cost, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_cost[col] == cost);
+    REQUIRE(lp_lower[col] == lower);
+    REQUIRE(lp_upper[col] == upper);
+    HighsInt from_el = lp_start[col];
+    HighsInt lp_row_nnz =
+        col < num_col - 1 ? lp_start[col + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_row_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+  }
+  set = {1, 2, 3, 6, 7};
+  num_col = set.size();
+  lp_cost.resize(num_col);
+  lp_lower.resize(num_col);
+  lp_upper.resize(num_col);
+  lp_start.resize(num_col);
+  lp_index.resize(num_col * avgas_num_row);
+  lp_value.resize(num_col * avgas_num_row);
+  h.getCols(num_col, set.data(), get_num, lp_cost.data(), lp_lower.data(),
+            lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+            lp_value.data());
+  REQUIRE(get_num == num_col);
+  for (HighsInt col = 0; col < num_col; col++) {
+    HighsInt avgas_col = set[col];
+    avgas.getCol(avgas_col, cost, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_cost[col] == cost);
+    REQUIRE(lp_lower[col] == lower);
+    REQUIRE(lp_upper[col] == upper);
+    HighsInt from_el = lp_start[col];
+    HighsInt lp_row_nnz =
+        col < num_col - 1 ? lp_start[col + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_row_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+  }
+  mask[0] = 1;
+  mask[1] = 1;
+  mask[4] = 1;
+  mask[6] = 1;
+  mask[7] = 1;
+  num_col = 5;
+  lp_cost.resize(num_col);
+  lp_lower.resize(num_col);
+  lp_upper.resize(num_col);
+  lp_start.resize(num_col);
+  lp_index.resize(num_col * avgas_num_row);
+  lp_value.resize(num_col * avgas_num_row);
+  h.getCols(mask.data(), get_num, lp_cost.data(), lp_lower.data(),
+            lp_upper.data(), lp_nnz, lp_start.data(), lp_index.data(),
+            lp_value.data());
+  REQUIRE(get_num == num_col);
+  HighsInt col = 0;
+  for (HighsInt iCol = 0; iCol < avgas_num_col; iCol++) {
+    if (!mask[iCol]) continue;
+    HighsInt avgas_col = iCol;
+    avgas.getCol(avgas_col, cost, lower, upper, index, value);
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(lp_cost[col] == cost);
+    REQUIRE(lp_lower[col] == lower);
+    REQUIRE(lp_upper[col] == upper);
+    HighsInt from_el = lp_start[col];
+    HighsInt lp_row_nnz =
+        col < num_col - 1 ? lp_start[col + 1] - from_el : lp_nnz - from_el;
+    REQUIRE(equalSparseVectors(avgas_num_row, avgas_nnz, index.data(),
+                               value.data(), lp_row_nnz, &lp_index[from_el],
+                               &lp_value[from_el]));
+    col++;
   }
 }
 
@@ -2061,11 +2347,13 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   const HighsInt avgas_num_row = 10;
 
   Highs h;
+  h.setOptionValue("output_flag", dev_run);
   double cost;
   double lower;
   double upper;
   std::vector<HighsInt> index;
   std::vector<double> value;
+
   for (HighsInt col = 0; col < avgas_num_col; col++) {
     avgas.getCol(col, cost, lower, upper, index, value);
     REQUIRE(h.addCol(cost, lower, upper, 0, nullptr, nullptr) ==
@@ -2073,9 +2361,18 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   }
   for (HighsInt row = 0; row < avgas_num_row; row++) {
     avgas.getRow(row, lower, upper, index, value);
-    HighsInt num_row_nz = index.size();
-    REQUIRE(h.addRow(lower, upper, num_row_nz, index.data(), value.data()) ==
+    HighsInt avgas_nnz = index.size();
+    REQUIRE(h.addRow(lower, upper, avgas_nnz, index.data(), value.data()) ==
             HighsStatus::kOk);
   }
-  h.run();
+
+  // Test extraction of rows and columns, with rowwise and colwise
+  // internal storage
+  h.ensureRowwise();
+  testAvgasGetRow(h);
+  testAvgasGetCol(h);
+
+  h.ensureColwise();
+  testAvgasGetRow(h);
+  testAvgasGetCol(h);
 }
