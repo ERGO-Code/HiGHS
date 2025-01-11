@@ -16,3 +16,4 @@ Fixed bug in presolve when pointers stored in HighsMatrixSlice get invalidated w
 
 Primal and dual residual tolerances - applied following IPM or PDLP solution - now documented as options
 
+Highs::getCols (Highs::getRows) now runs in linear time if the internal constraint matrix is stored column-wise (row-wise). Added ensureColwise/Rowwise to the Highs class, the C API and highspy so that users can set the internal constraint matrix storage orientation

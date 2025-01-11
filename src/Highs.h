@@ -1048,6 +1048,16 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
+  HighsStatus ensureColwise() {
+    this->model_.lp_.ensureColwise();
+    return HighsStatus::kOk;
+  }
+
+  HighsStatus ensureRowwise() {
+    this->model_.lp_.ensureRowwise();
+    return HighsStatus::kOk;
+  }
+
   /**
    * @brief Delete multiple columns from the incumbent model given by an
    * interval [from_col, to_col]
@@ -1306,6 +1316,14 @@ class Highs {
     return ekk_instance_.primal_phase1_dual_;
   }
 
+  /**
+   * @brief Development methods
+   */
+  HighsInt defineClock(const char* name) {
+    return this->timer_.clock_def(name);
+  }
+  void writeAllClocks() { this->timer_.writeAllClocks(); }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
@@ -1550,15 +1568,14 @@ class Highs {
   void deleteRowsInterface(HighsIndexCollection& index_collection);
 
   void getColsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_col, double* col_cost, double* col_lower,
-                        double* col_upper, HighsInt& num_nz,
-                        HighsInt* col_matrix_start, HighsInt* col_matrix_index,
-                        double* col_matrix_value);
+                        HighsInt& num_col, double* cost, double* lower,
+                        double* upper, HighsInt& num_nz, HighsInt* start,
+                        HighsInt* index, double* value);
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_row, double* row_lower, double* row_upper,
-                        HighsInt& num_nz, HighsInt* row_matrix_start,
-                        HighsInt* row_matrix_index, double* row_matrix_value);
+                        HighsInt& num_row, double* lower, double* upper,
+                        HighsInt& num_nz, HighsInt* start, HighsInt* index,
+                        double* value);
 
   void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
                                double& value);
