@@ -3459,9 +3459,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
-    // Start the MIP solver's total clock so that timeout in presolve
-    // can be identified
-    solver.timer_.start(timer_.total_clock);
+    // Start the MIP solver's timer so that timeout in presolve can be
+    // identified
+    solver.timer_.start();
     // Only place that HighsMipSolver::runPresolve is called
     solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();

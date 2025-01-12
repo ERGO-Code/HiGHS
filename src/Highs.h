@@ -411,7 +411,7 @@ class Highs {
   /**
    * @brief Get the run time of HiGHS
    */
-  double getRunTime() { return timer_.readRunHighsClock(); }
+  double getRunTime() { return timer_.read(); }
 
   /**
    * Methods for model output

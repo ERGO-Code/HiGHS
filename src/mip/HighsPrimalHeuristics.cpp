@@ -109,7 +109,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_max_stall_nodes = stallnodes;
   submipoptions.mip_pscost_minreliable = 0;
   submipoptions.time_limit -=
-      mipsolver.timer_.read(mipsolver.timer_.total_clock);
+      mipsolver.timer_.read();
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
 
   if (!mipsolver.submip) {
