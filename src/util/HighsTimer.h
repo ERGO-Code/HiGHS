@@ -233,26 +233,6 @@ class HighsTimer {
   }
 
   /**
-   * @brief Start the RunHighs clock
-   */
-  void startRunHighsClock() { start(run_highs_clock); }
-
-  /**
-   * @brief Stop the RunHighs clock
-   */
-  void stopRunHighsClock() { stop(run_highs_clock); }
-
-  /**
-   * @brief Read the RunHighs clock
-   */
-  double readRunHighsClock() { return read(run_highs_clock); }
-
-  /**
-   * @brief Test whether the RunHighs clock is running
-   */
-  bool runningRunHighsClock() { return running(run_highs_clock); }
-
-  /**
    * @brief Report timing information for the clock indices in the list
    */
   bool report(const char* grep_stamp,  //!< Character string used to extract
@@ -275,7 +255,7 @@ class HighsTimer {
              //!< before an individual clock is reported
   ) {
     size_t num_clock_list_entries = clock_list.size();
-    double current_run_highs_time = readRunHighsClock();
+    double current_run_highs_time = read();
     bool non_null_report = false;
 
     // Check validity of the clock list and check no clocks are still
@@ -385,8 +365,6 @@ class HighsTimer {
   std::vector<double> clock_time;
   std::vector<std::string> clock_names;
   std::vector<std::string> clock_ch3_names;
-  // The index of the RunHighsClock - should always be 0
-  HighsInt run_highs_clock;
   // Fundamental clocks
   HighsInt presolve_clock;
   HighsInt solve_clock;

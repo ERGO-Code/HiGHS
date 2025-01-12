@@ -115,7 +115,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.analyse_basis_data =
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   // Determine the run time allowed for IPX
-  parameters.time_limit = options.time_limit - timer.readRunHighsClock();
+  parameters.time_limit = options.time_limit - timer.read();
   parameters.ipm_maxiter =
       options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
