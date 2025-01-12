@@ -42,5 +42,6 @@ rm -rf ${build_dir} &&
 mkdir ${build_dir} &&
 cd ${build_dir} &&
 LDFLAGS=$LDFLAGS emcmake cmake .. \
--DCMAKE_BUILD_TYPE=Release -DEMSCRIPTEN_HTML=on &&
+-DCMAKE_BUILD_TYPE=Release -DEMSCRIPTEN_HTML=on \
+-DBUILD_SHARED_LIBS=OFF &&
 emmake make -j ${physical_cores}

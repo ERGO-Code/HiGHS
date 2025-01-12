@@ -54,10 +54,6 @@ else()
 
   target_link_libraries(highs libhighs)
 
-  if(EMSCRIPTEN AND EMSCRIPTEN_HTML)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    set_target_properties(highs PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/highs_webdemo_shell.html)
-  endif()
 
   target_include_directories(highs PRIVATE
     $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
@@ -66,4 +62,10 @@ else()
   # install the binary
   install(TARGETS highs EXPORT highs-targets
     RUNTIME)
+endif()
+
+# Add demo to FAST_BUILD as well. 
+if(EMSCRIPTEN AND EMSCRIPTEN_HTML)
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  set_target_properties(highs PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/highs_webdemo_shell.html)
 endif()
