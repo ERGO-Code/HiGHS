@@ -161,8 +161,7 @@ void HighsMipSolver::run() {
   analysis_.mipTimerStop(kMipClockRunSetup);
   if (analysis_.analyse_mip_time & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - completed setup\n",
-                 timer_.read());
+                 "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -802,8 +801,7 @@ void HighsMipSolver::cleanupSolve() {
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               timer_.read(),
-               analysis_.mipTimerRead(kMipClockPresolve),
+               timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
                int(max_submip_level), (long long unsigned)mipdata_->num_nodes,

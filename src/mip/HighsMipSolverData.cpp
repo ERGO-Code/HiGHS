@@ -1091,10 +1091,8 @@ try_again:
       }
     }
     this->total_repair_lp++;
-    double time_available =
-        std::max(mipsolver.options_mip_->time_limit -
-                     mipsolver.timer_.read(),
-                 0.1);
+    double time_available = std::max(
+        mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
     Highs tmpSolver;
     const bool debug_report = false;
     if (debug_report) {
@@ -2380,8 +2378,7 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
   //  const double time = mipsolver.timer_.read();
   //  printf("checkLimits: time = %g\n", time);
   if (options.time_limit < kHighsInf &&
-      mipsolver.timer_.read() >=
-          options.time_limit) {
+      mipsolver.timer_.read() >= options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Reached time limit\n");
@@ -2487,8 +2484,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   double primal_bound;
   double mip_rel_gap;
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
-  mipsolver.callback_->data_out.running_time =
-      mipsolver.timer_.read();
+  mipsolver.callback_->data_out.running_time = mipsolver.timer_.read();
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
