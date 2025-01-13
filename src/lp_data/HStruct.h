@@ -66,8 +66,8 @@ struct HighsBasis {
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
-  void deleteCols(const HighsIndexCollection& index_collection);
-  void deleteRows(const HighsIndexCollection& index_collection);
+  void print() const;
+  void printScalars() const;
   void invalidate();
   void clear();
 };

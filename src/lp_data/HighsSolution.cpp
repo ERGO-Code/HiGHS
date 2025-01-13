@@ -1605,6 +1605,23 @@ void HighsSolution::clear() {
 
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
+void HighsBasis::print() const {
+  this->printScalars();
+  for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
+    printf("Basis: col_status[%2d] = %d\n", int(iCol), int(this->col_status[iCol]));
+  for (HighsInt iRow = 0; iRow < HighsInt(this->row_status.size()); iRow++)
+    printf("Basis: row_status[%2d] = %d\n", int(iRow), int(this->row_status[iRow]));
+}
+
+void HighsBasis::printScalars() const {
+  printf("Basis: valid = %d\n", this->valid);
+  printf("Basis: alien = %d\n", this->alien);
+  printf("Basis: was_alien = %d\n", this->was_alien);
+  printf("Basis: debug_id = %d\n", int(this->debug_id));
+  printf("Basis: debug_update_count = %d\n", int(this->debug_update_count));
+  printf("Basis: debug_origin_name = %s\n", this->debug_origin_name.c_str());
+}
+
 void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;

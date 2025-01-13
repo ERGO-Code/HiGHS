@@ -576,6 +576,76 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   return return_status;
 }
 
+void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
+			bool& deleted_basic,
+			bool& deleted_nonbasic,
+			const HighsIndexCollection& index_collection,
+			const HighsInt entry_dim) {
+  assert(ok(index_collection));
+  assert(static_cast<size_t>(entry_dim) == status.size());
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
+
+  HighsInt delete_from_entry;
+  HighsInt delete_to_entry;
+  HighsInt keep_from_entry;
+  HighsInt keep_to_entry = -1;
+  HighsInt current_set_entry = 0;
+  HighsInt new_num_entry = 0;
+  deleted_basic = false;
+  deleted_nonbasic = false;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, delete_from_entry, delete_to_entry,
+                     keep_from_entry, keep_to_entry, current_set_entry);
+    // Account for the initial entries being kept
+    if (k == from_k) new_num_entry = delete_from_entry;
+    if (delete_to_entry >= entry_dim - 1) break;
+    assert(delete_to_entry < entry_dim);
+    // Identify whether a basic or a nonbasic entry has been deleted
+    for (HighsInt entry = delete_from_entry; entry <= delete_to_entry; entry++) {
+      if (status[entry] == HighsBasisStatus::kBasic) {
+	deleted_basic = true;
+      } else {
+	deleted_nonbasic = true;
+      }
+    }
+    for (HighsInt entry = keep_from_entry; entry <= keep_to_entry; entry++) {
+      status[new_num_entry] = status[entry];
+      new_num_entry++;
+    }
+    if (keep_to_entry >= entry_dim - 1) break;
+  }
+  status.resize(new_num_entry);
+}
+
+void deleteBasisCols(HighsBasis& basis, 
+		     const HighsIndexCollection& index_collection,
+		     const HighsInt original_num_col) {
+  bool deleted_basic;
+  bool deleted_nonbasic;
+  deleteBasisEntries(basis.col_status, 
+		     deleted_basic,
+		     deleted_nonbasic,
+		     index_collection, original_num_col);
+  if (deleted_basic) 
+    basis.valid = false;
+}
+
+void deleteBasisRows(HighsBasis& basis, 
+		     const HighsIndexCollection& index_collection,
+		     const HighsInt original_num_row) {
+  bool deleted_basic;
+  bool deleted_nonbasic;
+  deleteBasisEntries(basis.row_status,
+		     deleted_basic,
+		     deleted_nonbasic,
+		     index_collection, original_num_row);
+  if (deleted_nonbasic) 
+    basis.valid = false;
+}
+
 void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
@@ -592,11 +662,19 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
 
   assert(lp.num_col_ < original_num_col);
 
-  // Nontrivial deletion so reset the model_status and invalidate
-  // the Highs basis
+  // Nontrivial deletion so reset the model_status and update any
+  // Highs basis
   model_status_ = HighsModelStatus::kNotset;
+  if (basis_.col_status.size() == static_cast<size_t>(original_num_col)) {
+    // Have a full set of column basis status values, so maintain
+    // them, and only invalidate the basis if a basic column has been
+    // deleted
+    deleteBasisCols(basis_, index_collection, original_num_col);
+  } else {
+    assert(!basis.valid);
+  }
   basis.valid = false;
-
+  
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
@@ -640,9 +718,17 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 
   assert(lp.num_row_ < original_num_row);
 
-  // Nontrivial deletion so reset the model_status and invalidate
-  // the Highs basis
+  // Nontrivial deletion so reset the model_status and update any
+  // Highs basis
   model_status_ = HighsModelStatus::kNotset;
+  if (basis_.row_status.size() == static_cast<size_t>(original_num_row)) {
+    // Have a full set of row basis status values, so maintain them,
+    // and only invalidate the basis if a nonbasic row has been
+    // deleted
+    deleteBasisRows(basis_, index_collection, original_num_row);
+  } else {
+    assert(!basis.valid);
+  }
   basis.valid = false;
 
   if (lp.scale_.has_scaling) {
@@ -1175,17 +1261,21 @@ void Highs::setNonbasicStatusInterface(
 }
 
 void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
+  if (ext_num_new_col == 0) return;
   HighsBasis& highs_basis = basis_;
   if (!highs_basis.valid) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
+  const bool has_highs_basis = highs_basis.valid &&
+    highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
+    highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_);
+  if (!has_highs_basis && !has_simplex_basis) return;
 
   // Add nonbasic structurals
-  if (ext_num_new_col == 0) return;
   HighsInt newNumCol = lp.num_col_ + ext_num_new_col;
   HighsInt newNumTot = newNumCol + lp.num_row_;
-  highs_basis.col_status.resize(newNumCol);
+  if (has_highs_basis) highs_basis.col_status.resize(newNumCol);
   if (has_simplex_basis) {
     simplex_basis.nonbasicFlag_.resize(newNumTot);
     simplex_basis.nonbasicMove_.resize(newNumTot);
@@ -1239,7 +1329,7 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
       move = kNonbasicMoveZe;
     }
     assert(status != HighsBasisStatus::kNonbasic);
-    highs_basis.col_status[iCol] = status;
+    if (has_highs_basis) highs_basis.col_status[iCol] = status;
     if (has_simplex_basis) {
       assert(move != kIllegalMoveValue);
       simplex_basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
@@ -1249,18 +1339,25 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
 }
 
 void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
+  if (ext_num_new_row == 0) return;
   HighsBasis& highs_basis = basis_;
   if (!highs_basis.valid) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
+  const bool has_highs_basis = highs_basis.valid &&
+    highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
+    highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_);
+  if (!has_highs_basis && !has_simplex_basis) return;
+
   // Add basic logicals
-  if (ext_num_new_row == 0) return;
   // Add the new rows to the Highs basis
   HighsInt newNumRow = lp.num_row_ + ext_num_new_row;
-  highs_basis.row_status.resize(newNumRow);
-  for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++)
-    highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
+  if (has_highs_basis) {
+    highs_basis.row_status.resize(newNumRow);
+    for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++)
+      highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
+  }
   if (has_simplex_basis) {
     // Add the new rows to the simplex basis
     HighsInt newNumTot = lp.num_col_ + newNumRow;

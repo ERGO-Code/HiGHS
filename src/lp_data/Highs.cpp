@@ -1265,6 +1265,15 @@ HighsStatus Highs::solve() {
   // is available, simplex should surely be chosen.
   const bool solver_will_use_basis = options_.solver == kSimplexString ||
                                      options_.solver == kHighsChooseString;
+  const bool has_basis = 
+    basis_.col_status.size() == static_cast<size_t>(model_.lp_.num_col_) &&
+    basis_.row_status.size() == static_cast<size_t>(model_.lp_.num_row_);
+  if (has_basis && !basis_.valid) {
+    basis_.print();
+    printf("Highs::solve() has_basis && !basis_.valid\n");
+    assert(111==123);
+  }
+
   if ((basis_.valid || options_.presolve == kHighsOffString ||
        unconstrained_lp) &&
       solver_will_use_basis) {

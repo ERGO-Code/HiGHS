@@ -2279,6 +2279,7 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
 TEST_CASE("hot-start-after-delete", "[highs_data]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
+  const HighsLp& lp = h.getLp();
   const HighsInfo& info = h.getInfo();
   const HighsBasis& basis = h.getBasis();
   const HighsSolution& solution = h.getSolution();
@@ -2290,26 +2291,48 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
   printf("Initial solve takes %d iterations and yields objective = %g\n",
 	 int(info.simplex_iteration_count), info.objective_function_value); 
   h.writeSolution("", 1);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
+    printf("Col %2d is %s\n", int(iCol), basis.col_status[iCol] == HighsBasisStatus::kBasic ? "basic" : "nonbasic");
+  printf("\n");
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
+    printf("Row %2d is %s\n", int(iRow), basis.row_status[iRow] == HighsBasisStatus::kBasic ? "basic" : "nonbasic");
+
   double cost;
   double lower;
   double upper;
   HighsInt nnz;
   std::vector<HighsInt> start(1);
-  std::vector<HighsInt> index(h.getNumRow());
-  std::vector<double> value(h.getNumRow());
+  std::vector<HighsInt> index(lp.num_row_);
+  std::vector<double> value(lp.num_row_);
   HighsInt get_num;
 
   HighsInt use_col = 1;
-  printf("Deleting and adding column %1d with status \"%s\" and value %g\n",
+  printf("\nDeleting and adding column %1d with status \"%s\" and value %g\n",
 	 int(use_col), h.basisStatusToString(basis.col_status[use_col]).c_str(), solution.col_value[use_col]);
   
   h.getCols(use_col, use_col, get_num, &cost, &lower, &upper, nnz, start.data(), index.data(), value.data());
   
   h.deleteCols(use_col, use_col);
+  basis.printScalars();
 
   h.addCol(cost, lower, upper, nnz, index.data(), value.data());
   
   h.run();
   printf("After deleting and adding column %1d, solve takes %d iterations and yields objective = %g\n",
 	 int(use_col), int(info.simplex_iteration_count), info.objective_function_value); 
+
+  HighsInt use_row = 1;
+  printf("\nDeleting and adding row %1d with status \"%s\" and value %g\n",
+	 int(use_row), h.basisStatusToString(basis.row_status[use_row]).c_str(), solution.row_value[use_row]);
+  
+  h.getRows(use_row, use_row, get_num, &lower, &upper, nnz, start.data(), index.data(), value.data());
+  
+  h.deleteRows(use_row, use_row);
+  basis.printScalars();
+
+  h.addRow(lower, upper, nnz, index.data(), value.data());
+  
+  h.run();
+  printf("After deleting and adding row %1d, solve takes %d iterations and yields objective = %g\n",
+	 int(use_row), int(info.simplex_iteration_count), info.objective_function_value); 
 }
