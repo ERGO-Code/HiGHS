@@ -58,7 +58,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
 #ifdef CUPDLP_CPU
     *dPrimalFeasibility = fabs(primalResidual[index]);
 #else
-    double res_value = get_fabs_value(primalResidual, index);
+    double res_value = get_fabs_value(primalResidual, index, lp->nRows);
     *dPrimalFeasibility = fabs(res_value);   
 #endif
   } else {
@@ -171,7 +171,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
 #ifdef CUPDLP_CPU
     *dDualFeasibility = fabs(dualResidual[index]);
 #else
-    double res_value = get_fabs_value(dualResidual, index);
+    double res_value = get_fabs_value(dualResidual, index, lp->nCols);
     *dDualFeasibility = fabs(res_value);   
 #endif
   } else {

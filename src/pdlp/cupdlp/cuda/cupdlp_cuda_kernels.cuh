@@ -139,6 +139,18 @@ typedef double cupdlp_float;
 
 dim3 cuda_gridsize(cupdlp_int n);
 
+#define get_gpu_vec(vec_ptr, index, result, success)       \
+  {                                                                \
+    cublasStatus_t stat =                                          \
+      cublasGetVector(N, sizeof(*vec_ptr), vec_ptr, 1, result, 1); \
+    if (stat != CUBLAS_STATUS_SUCCESS) {                           \
+      printf("data upload failed");                                \
+      *success = 0;                                                 \
+    } else {                                                       \
+      *success = 1;                                                 \
+    }                                                              \
+  }
+
 #define get_gpu_vec_element(vec_ptr, index, result, success)       \
   {                                                                \
     cublasStatus_t stat =                                          \
