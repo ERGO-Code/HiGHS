@@ -142,10 +142,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // that is not validated
     assert(basis.col_status.size() == static_cast<size_t>(incumbent_lp.num_col_));
     assert(basis.row_status.size() == static_cast<size_t>(incumbent_lp.num_row_));
-    basis.print("Before formSimplexLpBasisAndFactor");
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
-    basis.print("After  formSimplexLpBasisAndFactor");
     basis.valid = true;
   }
   // Move the LP to EKK, updating other EKK pointers and any simplex

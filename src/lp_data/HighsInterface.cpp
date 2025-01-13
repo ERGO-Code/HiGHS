@@ -729,7 +729,6 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   } else {
     assert(!basis.valid);
   }
-  basis.valid = false;
 
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
