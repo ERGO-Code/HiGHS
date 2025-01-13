@@ -27,10 +27,6 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
                "with a 64-bit HighsInt: skipping Feasibility Jump\n");
   return HighsModelStatus::kNotset;
 #else
-  const size_t kMaxTotalEffort =
-      std::pow(2, 20);  // 30 for larger probs; Originally 1e6
-  const size_t kMaxEffortSinceLastImprovement =
-      std::pow(2, 15);  // 25 for larger probs; Originally 1e3
 
   bool found_integer_feasible_solution = false;
   std::vector<double> col_value(model->num_col_, 0.0);
@@ -106,6 +102,10 @@ HighsModelStatus HighsMipSolverData::feasibilityJump() {
       }
     }
   }
+
+  const HighsInt nnz = a_matrix.numNz();
+  const size_t kMaxTotalEffort = (size_t)nnz << 10;
+  const size_t kMaxEffortSinceLastImprovement = (size_t)nnz << 8;
 
   auto fjControlCallback =
       [=, &col_value, &found_integer_feasible_solution,
