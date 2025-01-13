@@ -587,13 +587,16 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
 
   lp.deleteCols(index_collection);
   model_.hessian_.deleteCols(index_collection);
-  assert(lp.num_col_ <= original_num_col);
-  if (lp.num_col_ < original_num_col) {
-    // Nontrivial deletion so reset the model_status and invalidate
-    // the Highs basis
-    model_status_ = HighsModelStatus::kNotset;
-    basis.valid = false;
-  }
+  // Bail out if no columns were actually deleted
+  if (lp.num_col_ == original_num_col) return;
+
+  assert(lp.num_col_ < original_num_col);
+
+  // Nontrivial deletion so reset the model_status and invalidate
+  // the Highs basis
+  model_status_ = HighsModelStatus::kNotset;
+  basis.valid = false;
+
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
@@ -632,13 +635,16 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   HighsInt original_num_row = lp.num_row_;
 
   lp.deleteRows(index_collection);
-  assert(lp.num_row_ <= original_num_row);
-  if (lp.num_row_ < original_num_row) {
-    // Nontrivial deletion so reset the model_status and invalidate
-    // the Highs basis
-    model_status_ = HighsModelStatus::kNotset;
-    basis.valid = false;
-  }
+  // Bail out if no rows were actually deleted
+  if (lp.num_row_ == original_num_row) return;
+
+  assert(lp.num_row_ < original_num_row);
+
+  // Nontrivial deletion so reset the model_status and invalidate
+  // the Highs basis
+  model_status_ = HighsModelStatus::kNotset;
+  basis.valid = false;
+
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
     lp.scale_.row.resize(lp.num_row_);

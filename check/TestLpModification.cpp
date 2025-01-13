@@ -2273,4 +2273,43 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   h.ensureColwise();
   testAvgasGetRow(h);
   testAvgasGetCol(h);
+
+}
+
+TEST_CASE("hot-start-after-delete", "[highs_data]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const HighsBasis& basis = h.getBasis();
+  const HighsSolution& solution = h.getSolution();
+  std::string model = "avgas";
+  std::string model_file =
+    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  h.readModel(model_file);
+  h.run();
+  printf("Initial solve takes %d iterations and yields objective = %g\n",
+	 int(info.simplex_iteration_count), info.objective_function_value); 
+  h.writeSolution("", 1);
+  double cost;
+  double lower;
+  double upper;
+  HighsInt nnz;
+  std::vector<HighsInt> start(1);
+  std::vector<HighsInt> index(h.getNumRow());
+  std::vector<double> value(h.getNumRow());
+  HighsInt get_num;
+
+  HighsInt use_col = 1;
+  printf("Deleting and adding column %1d with status \"%s\" and value %g\n",
+	 int(use_col), h.basisStatusToString(basis.col_status[use_col]).c_str(), solution.col_value[use_col]);
+  
+  h.getCols(use_col, use_col, get_num, &cost, &lower, &upper, nnz, start.data(), index.data(), value.data());
+  
+  h.deleteCols(use_col, use_col);
+
+  h.addCol(cost, lower, upper, nnz, index.data(), value.data());
+  
+  h.run();
+  printf("After deleting and adding column %1d, solve takes %d iterations and yields objective = %g\n",
+	 int(use_col), int(info.simplex_iteration_count), info.objective_function_value); 
 }
