@@ -171,7 +171,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #ifdef CUPDLP_CPU
   cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
-#else CUPDLP_GPU
+#else 
   CUPDLP_COPY_VEC(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   CUPDLP_COPY_VEC(w->colScale, scaling->colScale, cupdlp_float, nCols);
 #endif
@@ -542,12 +542,21 @@ cupdlp_retcode problem_alloc(
   cupdlp_float begin = getTimeStamp();
 
   cupdlp_init_data(prob->data, 1);
+
   cupdlp_init_vec_double(prob->cost, nCols);
   cupdlp_init_vec_double(prob->rhs, nRows);
   cupdlp_init_vec_double(prob->lower, nCols);
   cupdlp_init_vec_double(prob->upper, nCols);
   cupdlp_init_zero_vec_double(prob->hasLower, nCols);
   cupdlp_init_zero_vec_double(prob->hasUpper, nCols);
+// #elif defined(CUPDLP_GPU)
+//   CUPDLP_INIT_VEC(prob->cost, nCols);
+//   CUPDLP_INIT_VEC(prob->rhs, nRows);
+//   CUPDLP_INIT_VEC(prob->lower, nCols);
+//   CUPDLP_INIT_VEC(prob->upper, nCols);
+//   CUPDLP_INIT_ZERO_VEC(prob->hasLower, nCols);
+//   CUPDLP_INIT_ZERO_VEC(prob->hasUpper, nCols);
+// #endif
 
   data_alloc(prob->data, nRows, nCols, matrix, src_matrix_format,
              dst_matrix_format);
@@ -557,7 +566,7 @@ cupdlp_retcode problem_alloc(
       infNorm(((CUPDLPcsc*)matrix)->colMatElem, ((CUPDLPcsc*)matrix)->nMatElem);
 
   begin = getTimeStamp();
-#ifndef CUPDLP_GPU
+#ifdef CUPDLP_CPU
   cupdlp_copy_vec(prob->cost, cost, cupdlp_float, nCols);
   cupdlp_copy_vec(prob->rhs, rhs, cupdlp_float, nRows);
   cupdlp_copy_vec(prob->lower, lower, cupdlp_float, nCols);
@@ -577,6 +586,7 @@ cupdlp_retcode problem_alloc(
 
   // TODO: cal dMaxCost, dMaxRhs, dMaxRowBound
 
+exit_cleanup:
   return retcode;
 }
 

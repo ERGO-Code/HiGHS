@@ -64,47 +64,8 @@ extern "C" {
 #endif
 
 // for cuda
-#ifndef CUPDLP_CPU
+#ifdef CUPDLP_CPU
 
-// #define CUPDLP_FREE_VEC(x) \
-//   {                        \
-//     cudaFree(x);           \
-//     x = cupdlp_NULL;       \
-//   }
-
-#define CUPDLP_COPY_VEC(dst, src, type, size) \
-  cudaMemcpy(dst, src, sizeof(type) * (size), cudaMemcpyDefault)
-
-// #define CUPDLP_INIT_VEC(var, size)                                             \
-//   {                                                                            \
-//     cusparseStatus_t status =                                                  \
-//         cudaMalloc((void **)&var, (size) * sizeof(typeof(*var)));              \
-//     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-//       printf("CUSPARSE API failed at line %d with error: %s (%d)\n", __LINE__, \
-//              cusparseGetErrorString(status), status);                          \
-//       goto exit_cleanup;                                                       \
-//     }                                                                          \
-//   }
-// #define CUPDLP_INIT_ZERO_VEC(var, size)                                        \
-//   {                                                                            \
-//     cusparseStatus_t status =                                                  \
-//         cudaMalloc((void **)&var, (size) * sizeof(typeof(*var)));              \
-//     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-//       printf("CUSPARSE API failed at line %d with error: %s (%d)\n", __LINE__, \
-//              cusparseGetErrorString(status), status);                          \
-//       goto exit_cleanup;                                                       \
-//     }                                                                          \
-//     status = cudaMemset(var, 0, (size) * sizeof(typeof(*var)));                \
-//     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-//       printf("CUSPARSE API failed at line %d with error: %s (%d)\n", __LINE__, \
-//              cusparseGetErrorString(status), status);                          \
-//       goto exit_cleanup;                                                       \
-//     }                                                                          \
-//   }
-// #define CUPDLP_ZERO_VEC(var, type, size) \
-//   cudaMemset(var, 0, sizeof(type) * (size))
-
-#else
 #define CUPDLP_COPY_VEC(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
 
@@ -126,7 +87,7 @@ extern "C" {
 //      goto exit_cleanup;                                     \
 //    }                                                        \
 //  }
-#define CUPDLP_INIT_ZERO_DOUBLE_VEC(var, size)                      \
+#define cupdlp_init_zero_vec_double(var, size)                      \
   {                                                          \
     (var) = (double*)calloc(size, sizeof(double));	     \
     if ((var) == cupdlp_NULL) {                              \
@@ -134,7 +95,7 @@ extern "C" {
       goto exit_cleanup;                                     \
     }                                                        \
   }
-#define CUPDLP_INIT_ZERO_INT_VEC(var, size)                      \
+#define cupdlp_init_zero_vec_int(var, size)                      \
   {                                                          \
     (var) = (int*)calloc(size, sizeof(int));	     \
     if ((var) == cupdlp_NULL) {                              \

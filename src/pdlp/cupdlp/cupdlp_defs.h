@@ -1,8 +1,9 @@
 #ifndef CUPDLP_H_GUARD
 #define CUPDLP_H_GUARD
 
+// The below already defined in CMake.
 // #define CUPDLP_CPU
-#define CUPDLP_DEBUG (1)
+// #define CUPDLP_DEBUG (1)
 #define CUPDLP_TIMER
 
 #include "HConfig.h"

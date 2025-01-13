@@ -6,6 +6,23 @@ add_library(cudalin SHARED
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cuh
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cu
 )
+
+target_compile_options(cudalin PRIVATE 
+        "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+
+# target_compile_options(cudalin PRIVATE "-G")
+# target_compile_options(cudalin 
+#         PUBLIC 
+#         $<$<CONFIG:Debug>: "-g")
+# target_compile_options(cudalin 
+#         PUBLIC 
+#         $<$<CONFIG:Debug>: "-G")
+
+# if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     target_compile_options(cudalin PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G>)
+
+# endif()
+
 set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 # target_include_directories(cudalin PUBLIC "/usr/local/cuda/include")
 target_compile_definitions(cudalin

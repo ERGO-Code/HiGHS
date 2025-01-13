@@ -826,24 +826,24 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
                             cupdlp_int ncols, cupdlp_int nrows) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->primalResidual, nrows);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualResidual, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->primalResidualAverage, nrows);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualResidualAverage, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dSlackPos, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dSlackNeg, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dSlackPosAverage, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dSlackNegAverage, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dLowerFiltered, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dUpperFiltered, ncols);
+  cupdlp_init_zero_vec_double(resobj->primalResidual, nrows);
+  cupdlp_init_zero_vec_double(resobj->dualResidual, ncols);
+  cupdlp_init_zero_vec_double(resobj->primalResidualAverage, nrows);
+  cupdlp_init_zero_vec_double(resobj->dualResidualAverage, ncols);
+  cupdlp_init_zero_vec_double(resobj->dSlackPos, ncols);
+  cupdlp_init_zero_vec_double(resobj->dSlackNeg, ncols);
+  cupdlp_init_zero_vec_double(resobj->dSlackPosAverage, ncols);
+  cupdlp_init_zero_vec_double(resobj->dSlackNegAverage, ncols);
+  cupdlp_init_zero_vec_double(resobj->dLowerFiltered, ncols);
+  cupdlp_init_zero_vec_double(resobj->dUpperFiltered, ncols);
 
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->primalInfeasRay, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->primalInfeasConstr, nrows);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->primalInfeasBound, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualInfeasRay, nrows);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualInfeasLbRay, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualInfeasUbRay, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(resobj->dualInfeasConstr, ncols);
+  cupdlp_init_zero_vec_double(resobj->primalInfeasRay, ncols);
+  cupdlp_init_zero_vec_double(resobj->primalInfeasConstr, nrows);
+  cupdlp_init_zero_vec_double(resobj->primalInfeasBound, ncols);
+  cupdlp_init_zero_vec_double(resobj->dualInfeasRay, nrows);
+  cupdlp_init_zero_vec_double(resobj->dualInfeasLbRay, ncols);
+  cupdlp_init_zero_vec_double(resobj->dualInfeasUbRay, ncols);
+  cupdlp_init_zero_vec_double(resobj->dualInfeasConstr, ncols);
   // CUPDLP_INIT_DOUBLE_ZERO_VEC(resobj->dualInfeasBound, nrows);
 
   // need to translate to cuda type
@@ -910,10 +910,10 @@ cupdlp_retcode iterates_Alloc(CUPDLPiterates *iterates, cupdlp_int ncols,
   iterates->nCols = ncols;
   iterates->nRows = nrows;
 
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->xSum, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->ySum, nrows);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->xLastRestart, ncols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(iterates->yLastRestart, nrows);
+  cupdlp_init_zero_vec_double(iterates->xSum, ncols);
+  cupdlp_init_zero_vec_double(iterates->ySum, nrows);
+  cupdlp_init_zero_vec_double(iterates->xLastRestart, ncols);
+  cupdlp_init_zero_vec_double(iterates->yLastRestart, nrows);
 
   CUPDLP_INIT_CUPDLP_VEC(iterates->x, 1);
   CUPDLP_INIT_CUPDLP_VEC(iterates->xUpdate, 1);
@@ -1022,7 +1022,7 @@ exit_cleanup:
 
 cupdlp_retcode vec_Alloc(CUPDLPvec *vec, cupdlp_int n) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(vec->data, n);
+  cupdlp_init_zero_vec_double(vec->data, n);
   vec->len = n;
 #ifndef CUPDLP_CPU
   CHECK_CUSPARSE(
@@ -1048,14 +1048,14 @@ cupdlp_retcode PDHG_Alloc(CUPDLPwork *w) {
   // buffer
   CUPDLP_INIT_CUPDLP_VEC(w->buffer, 1);
   CUPDLP_CALL(vec_Alloc(w->buffer, w->problem->data->nRows));
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(w->buffer2,
+  cupdlp_init_zero_vec_double(w->buffer2,
                        MAX(w->problem->data->nCols, w->problem->data->nRows));
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(w->buffer3,
+  cupdlp_init_zero_vec_double(w->buffer3,
                        MAX(w->problem->data->nCols, w->problem->data->nRows));
 
   // for scaling
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(w->colScale, w->problem->data->nCols);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(w->rowScale, w->problem->data->nRows);
+  cupdlp_init_zero_vec_double(w->colScale, w->problem->data->nCols);
+  cupdlp_init_zero_vec_double(w->rowScale, w->problem->data->nRows);
 
   CUPDLP_CALL(settings_Alloc(w->settings));
   CUPDLP_CALL(resobj_Alloc(w->resobj, w->problem, w->problem->data->nCols,
@@ -1344,7 +1344,7 @@ cupdlp_retcode dense_alloc_matrix(CUPDLPdense *dense, cupdlp_int nRows,
                                   cupdlp_int nCols, void *src,
                                   CUPDLP_MATRIX_FORMAT src_matrix_format) {
   cupdlp_retcode retcode = RETCODE_OK;
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
+  cupdlp_init_zero_vec_double(dense->data, nRows * nCols);
 
   switch (src_matrix_format) {
     case DENSE:
@@ -1382,9 +1382,9 @@ cupdlp_retcode csr_alloc_matrix(CUPDLPcsr *csr, cupdlp_int nRows,
       break;
   }
   // todo make sure this is right
-  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
-  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(csr->rowMatElem, nnz);
+  cupdlp_init_zero_vec_int(csr->rowMatBeg, nRows + 1);
+  cupdlp_init_zero_vec_int(csr->rowMatIdx, nnz);
+  cupdlp_init_zero_vec_double(csr->rowMatElem, nnz);
 
   switch (src_matrix_format) {
     case DENSE:
@@ -1433,9 +1433,9 @@ cupdlp_retcode csc_alloc_matrix(CUPDLPcsc *csc, cupdlp_int nRows,
   status3 = cudaMemset(csc->colMatElem, 0, (nnz) * sizeof(double));        
   if (status || status2 || status3) return 2;
 #else
-  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
-  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
+  cupdlp_init_zero_vec_int(csc->colMatBeg, nCols + 1);
+  cupdlp_init_zero_vec_int(csc->colMatIdx, nnz);
+  cupdlp_init_zero_vec_double(csc->colMatElem, nnz);
 #endif
 
   switch (src_matrix_format) {
@@ -1461,7 +1461,7 @@ cupdlp_retcode dense_alloc(CUPDLPdense *dense, cupdlp_int nRows,
   dense->nRows = nRows;
   dense->nCols = nCols;
   dense->data = cupdlp_NULL;
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(dense->data, nRows * nCols);
+  cupdlp_init_zero_vec_double(dense->data, nRows * nCols);
 
   CUPDLP_COPY_VEC(dense->data, val, cupdlp_float, nRows * nCols);
 exit_cleanup:
@@ -1479,9 +1479,9 @@ cupdlp_retcode csr_alloc(CUPDLPcsr *csr, cupdlp_int nRows, cupdlp_int nCols,
   csr->rowMatIdx = cupdlp_NULL;
   csr->rowMatElem = cupdlp_NULL;
 
-  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatBeg, nRows + 1);
-  CUPDLP_INIT_ZERO_INT_VEC(csr->rowMatIdx, nnz);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(csr->rowMatElem, nnz);
+  cupdlp_init_zero_vec_int(csr->rowMatBeg, nRows + 1);
+  cupdlp_init_zero_vec_int(csr->rowMatIdx, nnz);
+  cupdlp_init_zero_vec_double(csr->rowMatElem, nnz);
 
   CUPDLP_COPY_VEC(csr->rowMatBeg, row_ptr, cupdlp_int, nRows + 1);
   CUPDLP_COPY_VEC(csr->rowMatIdx, col_ind, cupdlp_int, nnz);
@@ -1500,9 +1500,9 @@ cupdlp_retcode csc_alloc(CUPDLPcsc *csc, cupdlp_int nRows, cupdlp_int nCols,
   csc->colMatBeg = cupdlp_NULL;
   csc->colMatIdx = cupdlp_NULL;
   csc->colMatElem = cupdlp_NULL;
-  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatBeg, nCols + 1);
-  CUPDLP_INIT_ZERO_INT_VEC(csc->colMatIdx, nnz);
-  CUPDLP_INIT_ZERO_DOUBLE_VEC(csc->colMatElem, nnz);
+  cupdlp_init_zero_vec_int(csc->colMatBeg, nCols + 1);
+  cupdlp_init_zero_vec_int(csc->colMatIdx, nnz);
+  cupdlp_init_zero_vec_double(csc->colMatElem, nnz);
 
   CUPDLP_COPY_VEC(csc->colMatBeg, col_ptr, cupdlp_int, nCols + 1);
   CUPDLP_COPY_VEC(csc->colMatIdx, row_ind, cupdlp_int, nnz);
