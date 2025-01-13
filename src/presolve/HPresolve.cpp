@@ -4109,7 +4109,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // the timer is well defined, and that its total time clock is
     // running
     assert(this->timer);
-    assert(this->timer->runningRunHighsClock());
+    assert(this->timer->running());
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 

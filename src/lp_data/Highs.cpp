@@ -1048,7 +1048,7 @@ HighsStatus Highs::solve() {
   // Zero the iteration counts
   zeroIterationCounts();
   // Start the HiGHS run clock
-  timer_.startRunHighsClock();
+  timer_.start();
   // Return immediately if the model has no columns
   if (!model_.lp_.num_col_) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
@@ -1166,7 +1166,7 @@ HighsStatus Highs::solve() {
   //
   // Record the initial time and set the component times and postsolve
   // iteration count to -1 to identify whether they are not required
-  double initial_time = timer_.readRunHighsClock();
+  double initial_time = timer_.read();
   double this_presolve_time = -1;
   double this_solve_presolved_lp_time = -1;
   double this_postsolve_time = -1;
@@ -1222,7 +1222,7 @@ HighsStatus Highs::solve() {
         return returnFromRun(crossover_status, undo_mods);
       assert(options_.simplex_strategy == kSimplexStrategyPrimal);
     }
-    // timer_.stopRunHighsClock();
+    // timer_.stop();
     // run();
 
     // todo: add "dual" values
@@ -1629,7 +1629,7 @@ HighsStatus Highs::solve() {
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) info_.valid = true;
 
-  double lp_solve_final_time = timer_.readRunHighsClock();
+  double lp_solve_final_time = timer_.read();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
     highsLogDev(log_options, HighsLogType::kInfo, "Postsolve  : \n");
@@ -3431,9 +3431,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Ensure that the RunHighsClock is running
-  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
-  double start_presolve = timer_.readRunHighsClock();
+  // Ensure that the timer is running
+  if (!timer_.running()) timer_.start();
+  double start_presolve = timer_.read();
 
   // Set time limit.
   if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
@@ -3459,9 +3459,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
-    // Start the MIP solver's total clock so that timeout in presolve
-    // can be identified
-    solver.timer_.start(timer_.total_clock);
+    // Start the MIP solver's timer so that timeout in presolve can be
+    // identified
+    solver.timer_.start();
     // Only place that HighsMipSolver::runPresolve is called
     solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
@@ -3475,7 +3475,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     presolve_.init(original_lp, timer_);
     presolve_.options_ = &options_;
     if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
-      double current = timer_.readRunHighsClock();
+      double current = timer_.read();
       double time_init = current - start_presolve;
       double left = presolve_.options_->time_limit - time_init;
       if (left <= 0) {
@@ -4530,7 +4530,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(called_return_from_run);
   }
   // Stop the HiGHS run clock if it is running
-  if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
+  if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
       lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
@@ -4594,7 +4594,7 @@ void Highs::reportSolvedLpQpStats() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
   }
-  double run_time = timer_.readRunHighsClock();
+  double run_time = timer_.read();
   highsLogUser(log_options, HighsLogType::kInfo,
                "HiGHS run time      : %13.2f\n", run_time);
 }

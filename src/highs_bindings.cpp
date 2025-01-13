@@ -1330,6 +1330,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("addCols", &highs_addCols)
       .def("addVar", &highs_addVar)
       .def("addVars", &highs_addVars)
+      .def("ensureColwise", &Highs::ensureColwise)
+      .def("ensureRowwise", &Highs::ensureRowwise)
       .def("changeColsCost", &highs_changeColsCost)
       .def("changeColsBounds", &highs_changeColsBounds)
       .def("changeColsIntegrality", &highs_changeColsIntegrality)

@@ -208,6 +208,8 @@ print('Basis validity = ', h.basisValidityToString(info.basis_validity))
 
 ## Modify model data
 
+ * `EnsureColwise`
+ * `EnsureRowwise`
  * `changeObjectiveSense`
  * `changeColCost`
  * `changeColBounds`
