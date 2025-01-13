@@ -18,10 +18,10 @@ target_compile_options(cudalin PRIVATE
 #         PUBLIC 
 #         $<$<CONFIG:Debug>: "-G")
 
-# if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     target_compile_options(cudalin PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G>)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(cudalin PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G>)
 
-# endif()
+endif()
 
 set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 # target_include_directories(cudalin PUBLIC "/usr/local/cuda/include")

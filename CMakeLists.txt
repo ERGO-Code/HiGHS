@@ -391,6 +391,7 @@ if(NOT(${HIGHS_NO_DEFAULT_THREADS} STREQUAL "OFF"))
 endif()
 
 add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+add_compile_options("-g3")
 
 # If Visual Studio targets are being built.
 if(MSVC)
