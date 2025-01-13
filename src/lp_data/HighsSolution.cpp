@@ -677,7 +677,7 @@ double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
 // and any solution values
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
-  assert(basis.valid);
+  assert(basis.useful);
   assert(isBasisRightSize(lp, basis));
   const bool have_highs_solution = solution.value_valid;
 

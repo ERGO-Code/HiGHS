@@ -1282,7 +1282,7 @@ HighsStatus Highs::solve() {
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
-    if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
+    if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
     solveLp(incumbent_lp,
             "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);

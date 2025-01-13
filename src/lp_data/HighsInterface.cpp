@@ -471,7 +471,8 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsScale& scale = lp.scale_;
-  bool& valid_basis = basis.valid;
+  bool& useful_basis = basis.useful;
+  
   bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -559,7 +560,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                                        &scale.row[lp.num_row_]);
   }
   // Update the basis corresponding to new basic rows
-  if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
+  if (useful_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
   // Possibly add row names
   lp.addRowNames("", ext_num_new_row);
@@ -1343,27 +1344,20 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
 void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
   if (ext_num_new_row == 0) return;
   HighsBasis& highs_basis = basis_;
-  if (!highs_basis.valid) return;
+  if (!highs_basis.useful) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
-  const bool has_highs_basis = highs_basis.valid && highs_basis.useful;
 
-  if (has_highs_basis) {
-    assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
-    assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
-  }
-
-  if (!has_highs_basis && !has_simplex_basis) return;
+  assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
 
   // Add basic logicals
   // Add the new rows to the Highs basis
   HighsInt newNumRow = lp.num_row_ + ext_num_new_row;
-  if (has_highs_basis) {
-    highs_basis.row_status.resize(newNumRow);
-    for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++)
-      highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
-  }
+  highs_basis.row_status.resize(newNumRow);
+  for (HighsInt iRow = lp.num_row_; iRow < newNumRow; iRow++)
+    highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
   if (has_simplex_basis) {
     // Add the new rows to the simplex basis
     HighsInt newNumTot = lp.num_col_ + newNumRow;

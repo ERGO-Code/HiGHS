@@ -144,6 +144,9 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(basis.row_status.size() == static_cast<size_t>(incumbent_lp.num_row_));
     HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
     if (return_status != HighsStatus::kOk) return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
+    // formSimplexLpBasisAndFactor may introduce variables with
+    // HighsBasisStatus::kNonbasic, so refine it
+    refineBasis(incumbent_lp, solution, basis);
     basis.valid = true;
   }
   // Move the LP to EKK, updating other EKK pointers and any simplex
