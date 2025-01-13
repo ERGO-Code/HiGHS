@@ -2273,7 +2273,6 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   h.ensureColwise();
   testAvgasGetRow(h);
   testAvgasGetCol(h);
-
 }
 
 TEST_CASE("hot-start-after-delete", "[highs_data]") {
@@ -2285,54 +2284,194 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
   const HighsSolution& solution = h.getSolution();
   std::string model = "avgas";
   std::string model_file =
-    std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   h.readModel(model_file);
   h.run();
-  printf("Initial solve takes %d iterations and yields objective = %g\n",
-	 int(info.simplex_iteration_count), info.objective_function_value); 
-  h.writeSolution("", 1);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) 
-    printf("Col %2d is %s\n", int(iCol), basis.col_status[iCol] == HighsBasisStatus::kBasic ? "basic" : "nonbasic");
-  printf("\n");
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) 
-    printf("Row %2d is %s\n", int(iRow), basis.row_status[iRow] == HighsBasisStatus::kBasic ? "basic" : "nonbasic");
+  HighsInt ieration_count0 = info.simplex_iteration_count;
+  if (dev_run)
+    printf("Initial solve takes %d iterations and yields objective = %g\n",
+           int(info.simplex_iteration_count), info.objective_function_value);
 
-  double cost;
-  double lower;
-  double upper;
+  HighsInt max_dim = std::max(lp.num_col_, lp.num_row_);
+  std::vector<double> cost(1);
+  std::vector<double> lower(1);
+  std::vector<double> upper(1);
   HighsInt nnz;
   std::vector<HighsInt> start(1);
-  std::vector<HighsInt> index(lp.num_row_);
-  std::vector<double> value(lp.num_row_);
+  std::vector<HighsInt> index(max_dim);
+  std::vector<double> value(max_dim);
   HighsInt get_num;
+  HighsInt use_col, use_row;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        printf("Col %2d is %s\n", int(iCol),
+               basis.col_status[iCol] == HighsBasisStatus::kBasic ? "basic"
+                                                                  : "nonbasic");
+      printf("\n");
+    }
+    if (k == 0) {
+      use_col = 1;  // Nonbasic
+    } else {
+      use_col = 4;  // Basic
+    }
+    if (dev_run)
+      printf(
+          "\nDeleting and adding column %1d with status \"%s\" and value %g\n",
+          int(use_col),
+          h.basisStatusToString(basis.col_status[use_col]).c_str(),
+          solution.col_value[use_col]);
 
-  HighsInt use_col = 1;
-  printf("\nDeleting and adding column %1d with status \"%s\" and value %g\n",
-	 int(use_col), h.basisStatusToString(basis.col_status[use_col]).c_str(), solution.col_value[use_col]);
-  
-  h.getCols(use_col, use_col, get_num, &cost, &lower, &upper, nnz, start.data(), index.data(), value.data());
-  
-  h.deleteCols(use_col, use_col);
-  basis.printScalars();
+    h.getCols(use_col, use_col, get_num, cost.data(), lower.data(),
+              upper.data(), nnz, start.data(), index.data(), value.data());
 
-  h.addCol(cost, lower, upper, nnz, index.data(), value.data());
-  
+    h.deleteCols(use_col, use_col);
+    if (dev_run) basis.printScalars();
+
+    h.addCol(cost[0], lower[0], upper[0], nnz, index.data(), value.data());
+
+    h.run();
+    if (dev_run)
+      printf(
+          "After deleting and adding column %1d, solve takes %d iterations and "
+          "yields objective = %g\n",
+          int(use_col), int(info.simplex_iteration_count),
+          info.objective_function_value);
+    REQUIRE(info.simplex_iteration_count < ieration_count0);
+  }
+
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run) {
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+        printf("Row %2d is %s\n", int(iRow),
+               basis.row_status[iRow] == HighsBasisStatus::kBasic ? "basic"
+                                                                  : "nonbasic");
+    }
+    if (k == 0) {
+      use_row = 1;  // Nonbasic
+    } else {
+      use_row = 8;  // Basic
+    }
+    if (dev_run)
+      printf("\nDeleting and adding row %1d with status \"%s\" and value %g\n",
+             int(use_row),
+             h.basisStatusToString(basis.row_status[use_row]).c_str(),
+             solution.row_value[use_row]);
+
+    h.getRows(use_row, use_row, get_num, lower.data(), upper.data(), nnz,
+              start.data(), index.data(), value.data());
+
+    h.deleteRows(use_row, use_row);
+    if (dev_run) basis.printScalars();
+
+    h.addRow(lower[0], upper[0], nnz, index.data(), value.data());
+
+    h.run();
+    if (dev_run)
+      printf(
+          "After deleting and adding row %1d, solve takes %d iterations and "
+          "yields objective = %g\n",
+          int(use_row), int(info.simplex_iteration_count),
+          info.objective_function_value);
+    REQUIRE(info.simplex_iteration_count < ieration_count0);
+  }
+  std::vector<HighsInt> set = {1, 3, 4};
+  HighsInt num_set_en = set.size();
+  cost.resize(num_set_en);
+  lower.resize(num_set_en);
+  upper.resize(num_set_en);
+  start.resize(num_set_en);
+  index.resize(num_set_en * max_dim);
+  value.resize(num_set_en * max_dim);
+
+  h.getCols(num_set_en, set.data(), get_num, cost.data(), lower.data(),
+            upper.data(), nnz, start.data(), index.data(), value.data());
+
+  h.deleteCols(num_set_en, set.data());
+  if (dev_run) basis.printScalars();
+
+  h.addCols(get_num, cost.data(), lower.data(), upper.data(), nnz, start.data(),
+            index.data(), value.data());
+
   h.run();
-  printf("After deleting and adding column %1d, solve takes %d iterations and yields objective = %g\n",
-	 int(use_col), int(info.simplex_iteration_count), info.objective_function_value); 
+  if (dev_run)
+    printf(
+        "After deleting and adding %d columns in set, solve takes %d "
+        "iterations and yields objective = %g\n",
+        int(get_num), int(info.simplex_iteration_count),
+        info.objective_function_value);
+  //  REQUIRE(info.simplex_iteration_count < ieration_count0);
 
-  HighsInt use_row = 1;
-  printf("\nDeleting and adding row %1d with status \"%s\" and value %g\n",
-	 int(use_row), h.basisStatusToString(basis.row_status[use_row]).c_str(), solution.row_value[use_row]);
-  
-  h.getRows(use_row, use_row, get_num, &lower, &upper, nnz, start.data(), index.data(), value.data());
-  
-  h.deleteRows(use_row, use_row);
-  basis.printScalars();
+  h.getRows(num_set_en, set.data(), get_num, lower.data(), upper.data(), nnz,
+            start.data(), index.data(), value.data());
 
-  h.addRow(lower, upper, nnz, index.data(), value.data());
-  
+  h.deleteRows(num_set_en, set.data());
+  if (dev_run) basis.printScalars();
+
+  h.addRows(get_num, lower.data(), upper.data(), nnz, start.data(),
+            index.data(), value.data());
+
   h.run();
-  printf("After deleting and adding row %1d, solve takes %d iterations and yields objective = %g\n",
-	 int(use_row), int(info.simplex_iteration_count), info.objective_function_value); 
+  if (dev_run)
+    printf(
+        "After deleting and adding %d rows in set, solve takes %d iterations "
+        "and yields objective = %g\n",
+        int(get_num), int(info.simplex_iteration_count),
+        info.objective_function_value);
+  //  REQUIRE(info.simplex_iteration_count < ieration_count0);
+  std::vector<HighsInt> mask;
+  mask.assign(max_dim, 0);
+  mask[1] = 1;
+  mask[4] = 1;
+  mask[5] = 1;
+
+  h.getCols(mask.data(), get_num, cost.data(), lower.data(), upper.data(), nnz,
+            start.data(), index.data(), value.data());
+
+  h.deleteCols(mask.data());
+  if (dev_run) basis.printScalars();
+
+  h.addCols(get_num, cost.data(), lower.data(), upper.data(), nnz, start.data(),
+            index.data(), value.data());
+
+  h.run();
+  if (dev_run)
+    printf(
+        "After deleting and adding %d columns in mask, solve takes %d "
+        "iterations and yields objective = %g\n",
+        int(get_num), int(info.simplex_iteration_count),
+        info.objective_function_value);
+  //  REQUIRE(info.simplex_iteration_count < ieration_count0);
+
+  mask.assign(max_dim, 0);
+  mask[1] = 1;
+  mask[4] = 1;
+  mask[5] = 1;
+  mask[8] = 1;
+  mask[9] = 1;
+  HighsInt num_mask_en = mask.size();
+  cost.resize(num_mask_en);
+  lower.resize(num_mask_en);
+  upper.resize(num_mask_en);
+  start.resize(num_mask_en);
+  index.resize(num_mask_en * max_dim);
+  value.resize(num_mask_en * max_dim);
+
+  h.getRows(mask.data(), get_num, lower.data(), upper.data(), nnz, start.data(),
+            index.data(), value.data());
+
+  h.deleteRows(mask.data());
+  if (dev_run) basis.printScalars();
+
+  h.addRows(get_num, lower.data(), upper.data(), nnz, start.data(),
+            index.data(), value.data());
+
+  h.run();
+  if (dev_run)
+    printf(
+        "After deleting and adding %d rows in mask, solve takes %d iterations "
+        "and yields objective = %g\n",
+        int(get_num), int(info.simplex_iteration_count),
+        info.objective_function_value);
+  //  REQUIRE(info.simplex_iteration_count < ieration_count0);
 }

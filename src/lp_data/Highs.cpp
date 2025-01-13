@@ -1268,13 +1268,14 @@ HighsStatus Highs::solve() {
                                      options_.solver == kHighsChooseString;
   const bool has_basis = basis_.useful;
   if (has_basis) {
-    assert(basis_.col_status.size() == static_cast<size_t>(incumbent_lp.num_col_));
-    assert(basis_.row_status.size() == static_cast<size_t>(incumbent_lp.num_row_));
+    assert(basis_.col_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_col_));
+    assert(basis_.row_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_row_));
   }
   if (basis_.valid) assert(basis_.useful);
 
-  if ((has_basis || options_.presolve == kHighsOffString ||
-       unconstrained_lp) &&
+  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
       solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
     // has no constraint matrix, and the solver will use the basis

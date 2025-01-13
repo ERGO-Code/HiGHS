@@ -1357,8 +1357,7 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   // If new scaling is performed, the hot start information is
   // no longer valid
   if (new_scaling) ekk_instance.clearHotStart();
-  const bool check_basis = basis.alien ||
-    (!basis.valid && basis.useful);
+  const bool check_basis = basis.alien || (!basis.valid && basis.useful);
   if (check_basis) {
     // The basis needs to be checked for rank deficiency, and possibly
     // completed if it is rectangular
@@ -1616,9 +1615,11 @@ void HighsBasis::print(std::string message) const {
   if (!this->useful) return;
   this->printScalars(message);
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
-    printf("Basis: col_status[%2d] = %d\n", int(iCol), int(this->col_status[iCol]));
+    printf("Basis: col_status[%2d] = %d\n", int(iCol),
+           int(this->col_status[iCol]));
   for (HighsInt iRow = 0; iRow < HighsInt(this->row_status.size()); iRow++)
-    printf("Basis: row_status[%2d] = %d\n", int(iRow), int(this->row_status[iRow]));
+    printf("Basis: row_status[%2d] = %d\n", int(iRow),
+           int(this->row_status[iRow]));
 }
 
 void HighsBasis::printScalars(std::string message) const {

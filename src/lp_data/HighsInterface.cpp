@@ -472,7 +472,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   HighsBasis& basis = basis_;
   HighsScale& scale = lp.scale_;
   bool& useful_basis = basis.useful;
-  
+
   bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -578,10 +578,9 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
 }
 
 void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
-			bool& deleted_basic,
-			bool& deleted_nonbasic,
-			const HighsIndexCollection& index_collection,
-			const HighsInt entry_dim) {
+                        bool& deleted_basic, bool& deleted_nonbasic,
+                        const HighsIndexCollection& index_collection,
+                        const HighsInt entry_dim) {
   assert(ok(index_collection));
   assert(static_cast<size_t>(entry_dim) == status.size());
   HighsInt from_k;
@@ -603,11 +602,12 @@ void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
     // Account for the initial entries being kept
     if (k == from_k) new_num_entry = delete_from_entry;
     // Identify whether a basic or a nonbasic entry has been deleted
-    for (HighsInt entry = delete_from_entry; entry <= delete_to_entry; entry++) {
+    for (HighsInt entry = delete_from_entry; entry <= delete_to_entry;
+         entry++) {
       if (status[entry] == HighsBasisStatus::kBasic) {
-	deleted_basic = true;
+        deleted_basic = true;
       } else {
-	deleted_nonbasic = true;
+        deleted_nonbasic = true;
       }
     }
     if (delete_to_entry >= entry_dim - 1) break;
@@ -620,30 +620,24 @@ void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
   status.resize(new_num_entry);
 }
 
-void deleteBasisCols(HighsBasis& basis, 
-		     const HighsIndexCollection& index_collection,
-		     const HighsInt original_num_col) {
+void deleteBasisCols(HighsBasis& basis,
+                     const HighsIndexCollection& index_collection,
+                     const HighsInt original_num_col) {
   bool deleted_basic;
   bool deleted_nonbasic;
-  deleteBasisEntries(basis.col_status, 
-		     deleted_basic,
-		     deleted_nonbasic,
-		     index_collection, original_num_col);
-  if (deleted_basic) 
-    basis.valid = false;
+  deleteBasisEntries(basis.col_status, deleted_basic, deleted_nonbasic,
+                     index_collection, original_num_col);
+  if (deleted_basic) basis.valid = false;
 }
 
-void deleteBasisRows(HighsBasis& basis, 
-		     const HighsIndexCollection& index_collection,
-		     const HighsInt original_num_row) {
+void deleteBasisRows(HighsBasis& basis,
+                     const HighsIndexCollection& index_collection,
+                     const HighsInt original_num_row) {
   bool deleted_basic;
   bool deleted_nonbasic;
-  deleteBasisEntries(basis.row_status,
-		     deleted_basic,
-		     deleted_nonbasic,
-		     index_collection, original_num_row);
-  if (deleted_nonbasic) 
-    basis.valid = false;
+  deleteBasisEntries(basis.row_status, deleted_basic, deleted_nonbasic,
+                     index_collection, original_num_row);
+  if (deleted_nonbasic) basis.valid = false;
 }
 
 void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
@@ -674,7 +668,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   } else {
     assert(!basis.valid);
   }
- 
+
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
@@ -2044,13 +2038,13 @@ HighsStatus Highs::elasticityFilterReturn(
 
   run_status = this->deleteCols(original_num_col, lp.num_col_ - 1);
   assert(run_status == HighsStatus::kOk);
-  // 
+  //
   // Now that deleteRows and deleteCols may yield a valid basis, the
   // lack of dual values triggers an assert in
   // getKktFailures. Ultimately (#2081) the dual values will be
   // available but, for now, make the basis invalid.
   basis_.valid = false;
-  
+
   run_status =
       this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
   assert(run_status == HighsStatus::kOk);
