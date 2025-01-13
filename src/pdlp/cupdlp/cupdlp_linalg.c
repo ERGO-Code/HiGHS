@@ -788,3 +788,16 @@ void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
   cupdlp_sub(w->buffer3, iterates->aty->data, iterates->atyUpdate->data, nCols);
   cupdlp_dot(w, nCols, w->buffer2, w->buffer3, dInteraction);
 }
+
+double get_fabs_value(double* vec, int index) {
+#ifdef CUPDLP_CPU
+  return vec[index];
+#else 
+  double result = 0;
+  int status = -1; 
+  get_gpu_vec_element(vec, index, &result, &status);
+  if (!status)
+    return 0;
+  return result;
+#endif
+}

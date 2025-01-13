@@ -63,8 +63,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       0.0;  // true objVal = sig * c'x - offset, sig = 1 (min) or -1 (max)
   double sense_origin = 1;  // 1 (min) or -1 (max)
   int* constraint_new_idx = NULL;
-  cupdlp_float* x_origin = cupdlp_NULL;
-  cupdlp_float* y_origin = cupdlp_NULL;
 
   void* model = NULL;
   void* presolvedmodel = NULL;
@@ -187,8 +185,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   //   CUPDLP_CALL(LP_SolvePDHG(prob, ifChangeIntParam, intParam,
   //                               ifChangeFloatParam, floatParam, fp));
 
-  cupdlp_init_double(x_origin, nCols_origin);
-  cupdlp_init_double(y_origin, nRows);
   // Resize the highs_solution so cuPDLP-c can use it internally
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
@@ -236,19 +232,31 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   analysePdlpSolution(options, lp, highs_solution);
 #endif
 
-  free(cost);
-  free(lower);
-  free(upper);
-  free(csc_beg);
-  free(csc_idx);
-  free(csc_val);
-  free(rhs);
+  // free(cost);
+  // free(lower);
+  // free(upper);
+  // free(csc_beg);
+  // free(csc_idx);
+  // free(csc_val);
+  // free(rhs);
 
-  free(x_origin);
-  free(y_origin);
+  // free(constraint_new_idx);
 
-  free(constraint_new_idx);
+  // Scaling
+#ifdef CUPDLP_CPU
 
+  if (scaling->rowScale != nullptr) free(scaling->rowScale);
+  if (scaling->colScale != nullptr) free(scaling->colScale);
+  free(scaling);
+
+#else
+  // free problem
+  if (scaling) {
+    scaling_clear(scaling);
+  }
+#endif
+
+#ifdef CUPDLP_CPU
   free(prob->cost);
   free(prob->lower);
   free(prob->upper);
@@ -276,10 +284,23 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   free(csc_cpu->colMatElem);
 
   free(csc_cpu);
+#endif
 
-  if (scaling->rowScale != nullptr) free(scaling->rowScale);
-  if (scaling->colScale != nullptr) free(scaling->colScale);
-  free(scaling);
+  if (cost != NULL) cupdlp_free(cost);
+  if (csc_beg != NULL) cupdlp_free(csc_beg);
+  if (csc_idx != NULL) cupdlp_free(csc_idx);
+  if (csc_val != NULL) cupdlp_free(csc_val);
+  if (rhs != NULL) cupdlp_free(rhs);
+  if (lower != NULL) cupdlp_free(lower);
+  if (upper != NULL) cupdlp_free(upper);
+  if (constraint_new_idx != NULL) cupdlp_free(constraint_new_idx);
+
+  // constraint type is std::vector
+  // if (constraint_type != NULL) cupdlp_free(constraint_type);
+
+  // free memory
+  csc_clear(csc_cpu);
+  problem_clear(prob);
 
   return HighsStatus::kOk;
 }
