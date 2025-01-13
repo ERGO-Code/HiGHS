@@ -1319,6 +1319,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
   highs_basis.valid = true;
+  highs_basis.useful = true;
   return HighsStatus::kOk;
 }
 
@@ -1606,6 +1607,7 @@ void HighsSolution::clear() {
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
 void HighsBasis::print() const {
+  if (!this->useful) return;
   this->printScalars();
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
     printf("Basis: col_status[%2d] = %d\n", int(iCol), int(this->col_status[iCol]));
@@ -1616,6 +1618,7 @@ void HighsBasis::print() const {
 void HighsBasis::printScalars() const {
   printf("Basis: valid = %d\n", this->valid);
   printf("Basis: alien = %d\n", this->alien);
+  printf("Basis: useful = %d\n", this->useful);
   printf("Basis: was_alien = %d\n", this->was_alien);
   printf("Basis: debug_id = %d\n", int(this->debug_id));
   printf("Basis: debug_update_count = %d\n", int(this->debug_update_count));
@@ -1625,6 +1628,7 @@ void HighsBasis::printScalars() const {
 void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;
+  this->useful = false;
   this->was_alien = true;
   this->debug_id = -1;
   this->debug_update_count = -1;

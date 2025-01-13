@@ -6330,6 +6330,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     temp_sol.row_value.resize(model.num_row_);
     calculateRowValuesQuad(model, sol);
     temp_basis.valid = true;
+    temp_basis.useful = true;
     refineBasis(model, temp_sol, temp_basis);
     Highs highs;
     highs.passOptions(options);

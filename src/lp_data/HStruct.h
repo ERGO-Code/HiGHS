@@ -60,6 +60,7 @@ struct HotStart {
 struct HighsBasis {
   bool valid = false;
   bool alien = true;
+  bool useful = false;
   bool was_alien = true;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;

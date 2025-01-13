@@ -665,7 +665,8 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   // Nontrivial deletion so reset the model_status and update any
   // Highs basis
   model_status_ = HighsModelStatus::kNotset;
-  if (basis_.col_status.size() == static_cast<size_t>(original_num_col)) {
+  if (basis_.useful) {
+    assert(basis_.col_status.size() == static_cast<size_t>(original_num_col));
     // Have a full set of column basis status values, so maintain
     // them, and only invalidate the basis if a basic column has been
     // deleted
@@ -721,7 +722,8 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   // Nontrivial deletion so reset the model_status and update any
   // Highs basis
   model_status_ = HighsModelStatus::kNotset;
-  if (basis_.row_status.size() == static_cast<size_t>(original_num_row)) {
+  if (basis_.useful) {
+    assert(basis_.row_status.size() == static_cast<size_t>(original_num_row));
     // Have a full set of row basis status values, so maintain them,
     // and only invalidate the basis if a nonbasic row has been
     // deleted
@@ -1267,9 +1269,12 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
-  const bool has_highs_basis = highs_basis.valid &&
-    highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
-    highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_);
+  const bool has_highs_basis = highs_basis.valid && highs_basis.useful;
+
+  if (has_highs_basis) {
+    assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+    assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+  }
   if (!has_highs_basis && !has_simplex_basis) return;
 
   // Add nonbasic structurals
@@ -1345,9 +1350,13 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
-  const bool has_highs_basis = highs_basis.valid &&
-    highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_) &&
-    highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_);
+  const bool has_highs_basis = highs_basis.valid && highs_basis.useful;
+
+  if (has_highs_basis) {
+    assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+    assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+  }
+
   if (!has_highs_basis && !has_simplex_basis) return;
 
   // Add basic logicals
@@ -1641,6 +1650,7 @@ HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
     nonbasicMove[num_col + iRow] = move;
   }
   basis_.valid = true;
+  basis_.useful = true;
   ekk_instance_.status_.has_basis = true;
   ekk_instance_.setNlaRefactorInfo();
   ekk_instance_.updateStatus(LpAction::kHotStart);
