@@ -3,6 +3,7 @@
 
 #include "cupdlp_defs.h"
 #include "cupdlp_utils.h"
+
 #ifndef CUPDLP_CPU
 #include "cuda/cupdlp_cudalinalg.cuh"
 #endif
@@ -162,11 +163,11 @@ void cupdlp_projPos(cupdlp_float *x, const cupdlp_int len);
 /* xout = min(x, 0) */
 void cupdlp_projNeg(cupdlp_float *x, const cupdlp_int len);
 
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
-                  const cupdlp_float bound, const cupdlp_int len);
+// void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+//                   const cupdlp_float bound, const cupdlp_int len);
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
-                  const cupdlp_float bound, const cupdlp_int len);
+// void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+//                   const cupdlp_float bound, const cupdlp_int len);
 
 void cupdlp_filterlb(cupdlp_float *x, const cupdlp_float *lb,
                      const cupdlp_float bound, const cupdlp_int len);

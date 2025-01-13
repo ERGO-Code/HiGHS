@@ -5,8 +5,8 @@
 #ifndef CUPDLP_SCALING_CUDA_H
 #define CUPDLP_SCALING_CUDA_H
 
-#include "cupdlp_defs.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
+#include "pdlp/cupdlp/glbopts.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

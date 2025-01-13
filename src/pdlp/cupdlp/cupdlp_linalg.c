@@ -1,5 +1,5 @@
 
-#include "cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
 
 /**
  * The function `ScatterCol` performs a scatter operation on a specific
@@ -363,19 +363,6 @@ void ScaleVector(cupdlp_float weight, cupdlp_float *x, cupdlp_int n) {
 #endif
 }
 
-void cupdlp_hasLower(cupdlp_float *haslb, const cupdlp_float *lb,
-                     const cupdlp_float bound, const cupdlp_int len) {
-  for (int i = 0; i < len; i++) {
-    haslb[i] = lb[i] > bound ? 1.0 : 0.0;
-  }
-}
-
-void cupdlp_hasUpper(cupdlp_float *hasub, const cupdlp_float *ub,
-                     const cupdlp_float bound, const cupdlp_int len) {
-  for (int i = 0; i < len; i++) {
-    hasub[i] = ub[i] < bound ? 1.0 : 0.0;
-  }
-}
 
 void cupdlp_filter_lower_bound(cupdlp_float *x, const cupdlp_float *lb,
                                const cupdlp_float bound, const cupdlp_int len) {
@@ -725,23 +712,23 @@ void cupdlp_projNeg(cupdlp_float *x, const cupdlp_int len) {
   cupdlp_projSameub(x, 0.0, len);
 }
 
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
-                  const cupdlp_float bound, const cupdlp_int len) {
-#ifndef CUPDLP_CPU
-  cupdlp_haslb_cuda(haslb, lb, bound, len);
-#else
-  cupdlp_hasLower(haslb, lb, bound, len);
-#endif
-}
+// void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+// #ifndef CUPDLP_CPU
+//   cupdlp_haslb_cuda(haslb, lb, bound, len);
+// #else
+//   cupdlp_hasLower(haslb, lb, bound, len);
+// #endif
+// }
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
-                  const cupdlp_float bound, const cupdlp_int len) {
-#ifndef CUPDLP_CPU
-  cupdlp_hasub_cuda(hasub, ub, bound, len);
-#else
-  cupdlp_hasUpper(hasub, ub, bound, len);
-#endif
-}
+// void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+// #ifndef CUPDLP_CPU
+//   cupdlp_hasub_cuda(hasub, ub, bound, len);
+// #else
+//   cupdlp_hasUpper(hasub, ub, bound, len);
+// #endif
+// }
 
 void cupdlp_filterlb(cupdlp_float *x, const cupdlp_float *lb,
                      const cupdlp_float bound, const cupdlp_int len) {

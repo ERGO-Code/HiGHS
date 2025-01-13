@@ -2,16 +2,16 @@
 // Created by chuwen on 23-11-28.
 //
 
-#include "cupdlp_proj.h"
+#include "pdlp/cupdlp/cupdlp_proj.h"
 
-#include "cupdlp_defs.h"
-#include "cupdlp_linalg.h"
-#include "cupdlp_restart.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_restart.h"
 // #include "cupdlp_scaling.h"
-#include "cupdlp_solver.h"
-#include "cupdlp_step.h"
-#include "cupdlp_utils.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_solver.h"
+#include "pdlp/cupdlp/cupdlp_step.h"
+#include "pdlp/cupdlp/cupdlp_utils.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 // primal projection: project x to [lower, upper]
 void PDHG_Project_Bounds(CUPDLPwork *work, cupdlp_float *r) {

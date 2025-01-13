@@ -1,7 +1,7 @@
 #ifndef CUPDLP_CS_H
 #define CUPDLP_CS_H
 
-#include "cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
 
 /* sparse matrix in column-oriented form used in reading mps*/
 typedef struct cupdlp_cs_sparse {

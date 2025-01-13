@@ -592,23 +592,57 @@ exit_cleanup:
 
 // ToDo: Why can linker not pick up infNorm, cupdlp_haslb and
 // cupdlp_hasub from pdlp/cupdlp/cupdlp_linalg.c?
+
 double infNorm(double* x, cupdlp_int n) {
   double norm = 0;
   for (HighsInt iX = 0; iX < n; iX++) norm = std::max(std::fabs(x[iX]), norm);
   return norm;
 }
-void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,
-                  const cupdlp_float bound, const cupdlp_int len) {
+
+// void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+//   for (int i = 0; i < len; i++) {
+//     haslb[i] = lb[i] > bound ? 1.0 : 0.0;
+//   }
+// }
+
+// void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+//   for (int i = 0; i < len; i++) {
+//     hasub[i] = ub[i] < bound ? 1.0 : 0.0;
+//   }
+// }
+
+void cupdlp_hasLower(cupdlp_float *haslb, const cupdlp_float *lb,
+                     const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     haslb[i] = lb[i] > bound ? 1.0 : 0.0;
   }
 }
 
-void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
-                  const cupdlp_float bound, const cupdlp_int len) {
+void cupdlp_hasUpper(cupdlp_float *hasub, const cupdlp_float *ub,
+                     const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     hasub[i] = ub[i] < bound ? 1.0 : 0.0;
   }
+}
+
+void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+                  const cupdlp_float bound, const cupdlp_int len) {
+#ifndef CUPDLP_CPU
+  cupdlp_haslb_cuda(haslb, lb, bound, len);
+#else
+  cupdlp_hasLower(haslb, lb, bound, len);
+#endif
+}
+
+void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+                  const cupdlp_float bound, const cupdlp_int len) {
+#ifndef CUPDLP_CPU
+  cupdlp_hasub_cuda(hasub, ub, bound, len);
+#else
+  cupdlp_hasUpper(hasub, ub, bound, len);
+#endif
 }
 
 void getUserParamsFromOptions(const HighsOptions& options,

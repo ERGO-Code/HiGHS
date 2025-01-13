@@ -2,16 +2,16 @@
 // Created by chuwen on 23-11-26.
 //
 
-#include "cupdlp_utils.h"
+#include "pdlp/cupdlp/cupdlp_utils.h"
 
 #include <limits.h>
 #include <stdio.h>
 
 #include <time.h>
 
-#include "cupdlp_cs.h"
-#include "cupdlp_linalg.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_cs.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 #ifndef CUPDLP_CPU
 

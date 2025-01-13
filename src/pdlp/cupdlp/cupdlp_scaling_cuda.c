@@ -3,11 +3,11 @@
 // Same as the JULIA CPU version
 //
 
-#include "cupdlp_scaling_cuda.h"
+#include "pdlp/cupdlp/cupdlp_scaling_cuda.h"
 
-#include "cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
 // #include "cupdlp_scaling.h"
-#include "cupdlp_utils.h"
+#include "pdlp/cupdlp/cupdlp_utils.h"
 
 // This version disable dScalingTarget, which is the target of scaled matrix
 // elements cupdlp_retcode scale_problem(CUPDLPwork *w, cupdlp_float

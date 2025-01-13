@@ -5,13 +5,13 @@
 #ifndef CUPDLP_CUPDLP_RESTART_H
 #define CUPDLP_CUPDLP_RESTART_H
 
-#include "cupdlp_defs.h"
-#include "cupdlp_linalg.h"
-#include "cupdlp_proj.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_proj.h"
 // #include "cupdlp_scaling.h"
-#include "cupdlp_step.h"
-#include "cupdlp_utils.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_step.h"
+#include "pdlp/cupdlp/cupdlp_utils.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 typedef enum {
   PDHG_NO_RESTART = 0,

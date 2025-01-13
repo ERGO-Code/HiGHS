@@ -9,7 +9,7 @@
 #ifdef CUPDLP_TIMER
 #include <time.h>
 #endif
-#include "cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
 
 #ifdef __cplusplus
 extern "C" {

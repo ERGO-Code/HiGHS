@@ -5,9 +5,9 @@
 #ifndef CUPDLP_CUPDLP_STEP_H
 #define CUPDLP_CUPDLP_STEP_H
 
-#include "cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
 // #include "cupdlp_scaling.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 cupdlp_retcode PDHG_Power_Method(CUPDLPwork *work, double *lambda);
 
