@@ -601,8 +601,6 @@ void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
                      keep_from_entry, keep_to_entry, current_set_entry);
     // Account for the initial entries being kept
     if (k == from_k) new_num_entry = delete_from_entry;
-    if (delete_to_entry >= entry_dim - 1) break;
-    assert(delete_to_entry < entry_dim);
     // Identify whether a basic or a nonbasic entry has been deleted
     for (HighsInt entry = delete_from_entry; entry <= delete_to_entry; entry++) {
       if (status[entry] == HighsBasisStatus::kBasic) {
@@ -611,6 +609,7 @@ void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
 	deleted_nonbasic = true;
       }
     }
+    if (delete_to_entry >= entry_dim - 1) break;
     for (HighsInt entry = keep_from_entry; entry <= keep_to_entry; entry++) {
       status[new_num_entry] = status[entry];
       new_num_entry++;
@@ -674,8 +673,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   } else {
     assert(!basis.valid);
   }
-  basis.valid = false;
-  
+ 
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
@@ -2057,7 +2055,13 @@ HighsStatus Highs::elasticityFilterReturn(
 
   run_status = this->deleteCols(original_num_col, lp.num_col_ - 1);
   assert(run_status == HighsStatus::kOk);
-
+  // 
+  // Now that deleteRows and deleteCols may yield a valid basis, the
+  // lack of dual values triggers an assert in
+  // getKktFailures. Ultimately (#2081) the dual values will be
+  // available but, for now, make the basis invalid.
+  basis_.valid = false;
+  
   run_status =
       this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
   assert(run_status == HighsStatus::kOk);
