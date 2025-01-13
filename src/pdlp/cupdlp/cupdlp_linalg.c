@@ -794,9 +794,9 @@ double get_fabs_value(double* vec, int index) {
   return vec[index];
 #else 
   double result = 0;
-  int status = -1; 
-  get_gpu_vec_element(vec, index, &result, &status);
-  if (!status)
+  int success = -1; 
+  get_gpu_vec_element(vec, index, &result, &success);
+  if (!success)
     return 0;
   return result;
 #endif
