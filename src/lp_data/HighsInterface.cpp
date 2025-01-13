@@ -305,7 +305,7 @@ HighsStatus Highs::addColsInterface(
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsScale& scale = lp.scale_;
-  bool& valid_basis = basis.valid;
+  bool& useful_basis = basis.useful;
   bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -415,7 +415,7 @@ HighsStatus Highs::addColsInterface(
                                       &scale.col[lp.num_col_]);
   }
   // Update the basis corresponding to new nonbasic columns
-  if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
+  if (useful_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
   // Possibly add column names
   lp.addColNames("", ext_num_new_col);
@@ -1263,22 +1263,18 @@ void Highs::setNonbasicStatusInterface(
 void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
   if (ext_num_new_col == 0) return;
   HighsBasis& highs_basis = basis_;
-  if (!highs_basis.valid) return;
+  if (!highs_basis.useful) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
-  const bool has_highs_basis = highs_basis.valid && highs_basis.useful;
 
-  if (has_highs_basis) {
-    assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
-    assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
-  }
-  if (!has_highs_basis && !has_simplex_basis) return;
+  assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
 
   // Add nonbasic structurals
   HighsInt newNumCol = lp.num_col_ + ext_num_new_col;
   HighsInt newNumTot = newNumCol + lp.num_row_;
-  if (has_highs_basis) highs_basis.col_status.resize(newNumCol);
+  highs_basis.col_status.resize(newNumCol);
   if (has_simplex_basis) {
     simplex_basis.nonbasicFlag_.resize(newNumTot);
     simplex_basis.nonbasicMove_.resize(newNumTot);
@@ -1332,7 +1328,7 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
       move = kNonbasicMoveZe;
     }
     assert(status != HighsBasisStatus::kNonbasic);
-    if (has_highs_basis) highs_basis.col_status[iCol] = status;
+    highs_basis.col_status[iCol] = status;
     if (has_simplex_basis) {
       assert(move != kIllegalMoveValue);
       simplex_basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
