@@ -56,12 +56,12 @@ jobs:
 
       # Made it past the first token issue. 
       # May need some more time to porpagate on the codecov side. 
-      # - name: Upload coverage reports to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     slug: ERGO-Code/HiGHS
-      #     fail_ci_if_error: true # optional (default = false)
-      #     files: ${{runner.workspace}}/build/cov.info # optional
-      #     # name: codecov-umbrella # optional
-      #     verbose: true # optional (default = false)
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ERGO-Code/HiGHS
+          fail_ci_if_error: true # optional (default = false)
+          files: ${{runner.workspace}}/build/cov.info # optional
+          # name: codecov-umbrella # optional
+          verbose: true # optional (default = false)
