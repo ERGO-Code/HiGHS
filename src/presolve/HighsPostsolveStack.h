@@ -785,8 +785,9 @@ class HighsPostsolveStack {
 
   // Only used for debugging
   void undoUntil(const HighsOptions& options,
-                 const std::vector<HighsInt>& flagRow,
-                 const std::vector<HighsInt>& flagCol, HighsSolution& solution,
+                 [[maybe_unused]] const std::vector<HighsInt>& flagRow,
+                 [[maybe_unused]] const std::vector<HighsInt>& flagCol,
+                 HighsSolution& solution,
                  HighsBasis& basis, size_t numReductions) {
     reductionValues.resetPosition();
 
