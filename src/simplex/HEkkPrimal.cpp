@@ -1212,11 +1212,11 @@ void HEkkPrimal::phase1ChooseRow() {
 
   analysis->simplexTimerStart(Chuzr2Clock);
   pdqsort(ph1SorterR.begin(), ph1SorterR.end());
-  double dMaxTheta = ph1SorterR.at(0).first;
+  double dMaxTheta = ph1SorterR[0].first;
   double dGradient = fabs(theta_dual);
   for (size_t i = 0; i < ph1SorterR.size(); i++) {
-    double dMyTheta = ph1SorterR.at(i).first;
-    HighsInt index = ph1SorterR.at(i).second;
+    double dMyTheta = ph1SorterR[i].first;
+    HighsInt index = ph1SorterR[i].second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     dGradient -= fabs(col_aq.array[iRow]);
     // Stop when the gradient start to decrease
@@ -1231,8 +1231,8 @@ void HEkkPrimal::phase1ChooseRow() {
   double dMaxAlpha = 0.0;
   size_t iLast = ph1SorterT.size();
   for (size_t i = 0; i < ph1SorterT.size(); i++) {
-    double dMyTheta = ph1SorterT.at(i).first;
-    HighsInt index = ph1SorterT.at(i).second;
+    double dMyTheta = ph1SorterT[i].first;
+    HighsInt index = ph1SorterT[i].second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     double dAbsAlpha = fabs(col_aq.array[iRow]);
     // Stop when the theta is too large
@@ -1251,7 +1251,7 @@ void HEkkPrimal::phase1ChooseRow() {
   variable_out = -1;
   move_out = 0;
   for (size_t i = iLast; i > 0; i--) {
-    HighsInt index = ph1SorterT.at(i - 1).second;
+    HighsInt index = ph1SorterT[i - 1].second;
     HighsInt iRow = index >= 0 ? index : index + num_row;
     double dAbsAlpha = fabs(col_aq.array[iRow]);
     if (dAbsAlpha > dMaxAlpha * 0.1) {
