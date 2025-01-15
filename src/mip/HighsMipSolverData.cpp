@@ -1265,6 +1265,7 @@ void HighsMipSolverData::performRestart() {
     root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
+    root_basis.useful = true;
 
     for (HighsInt i = 0; i < mipsolver.model_->num_col_; ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
@@ -1379,6 +1380,7 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
     firstrootbasis.valid = true;
     firstrootbasis.alien = true;
+    firstrootbasis.useful = true;
 
     for (HighsInt i = 0; i < numRow; ++i) {
       HighsBasisStatus status =
@@ -1929,6 +1931,7 @@ restart:
     firstrootbasis.row_status.assign(mipsolver.numRow(),
                                      HighsBasisStatus::kBasic);
     firstrootbasis.valid = true;
+    firstrootbasis.useful = true;
   }
 
   if (cutpool.getNumCuts() != 0) {

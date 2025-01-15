@@ -1465,6 +1465,7 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
+  highs_basis.useful = true;
   highs_basis.was_alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
