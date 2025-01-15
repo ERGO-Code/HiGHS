@@ -58,14 +58,27 @@ struct HotStart {
 };
 
 struct HighsBasis {
+  // Logical flags for a HiGHS basis:
+  //
+  // valid: has been factored by HiGHS
+  //
+  // alien: a basis that's been set externally, so cannot be assumed
+  // to even have the right number of basic and nonbasic variables
+  //
+  // useful: a basis that may be useful
+  //
+  // Need useful since, by default, a basis is alien but not useful
   bool valid = false;
   bool alien = true;
+  bool useful = false;
   bool was_alien = true;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void print(std::string message = "") const;
+  void printScalars(std::string message = "") const;
   void invalidate();
   void clear();
 };

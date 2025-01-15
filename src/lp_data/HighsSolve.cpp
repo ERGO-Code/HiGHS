@@ -390,6 +390,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
+  basis.useful = true;
   highs_info.basis_validity = kBasisValidityValid;
   setSolutionStatus(highs_info);
   if (highs_info.num_primal_infeasibilities) {
