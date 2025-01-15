@@ -139,7 +139,8 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
-                                const bool report_only_deviations) const {
+                                const bool report_only_deviations) {
+  this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   HighsFileType file_type;
@@ -148,15 +149,16 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       openWriteFile(filename, "writeOptions", file, file_type), return_status,
       "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  if (filename == "") file_type = HighsFileType::kMinimal;
   // Report to user that options are being written to a file
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the option values to %s\n", filename.c_str());
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          writeOptionsToFile(file, options_.records,
-                                             report_only_deviations, file_type),
-                          return_status, "writeOptionsToFile");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      writeOptionsToFile(file, options_.log_options, options_.records,
+                         report_only_deviations, file_type),
+      return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }

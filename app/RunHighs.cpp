@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
   // settings defined in any options file.
   highs.passOptions(loaded_options);
   //  highs.writeOptions("Options.md");
+  highs.writeOptions("", true);
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
