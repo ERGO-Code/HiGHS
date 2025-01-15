@@ -47,12 +47,13 @@ jobs:
           lcov --remove cov.info "app/cxxopts*" -o cov.info
           lcov --remove cov.info "src/test*" -o cov.info
           lcov --list cov.info
+          mv cov.info coverage.info
 
       - name: Genhtml Results Summary 
         working-directory: ${{runner.workspace}}/build
         shell: bash
         run: |
-          genhtml -o coverage cov.info
+          genhtml -o coverage coverage.info
 
       # Made it past the first token issue. 
       # May need some more time to porpagate on the codecov side. 
@@ -62,6 +63,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ERGO-Code/HiGHS
           fail_ci_if_error: true # optional (default = false)
-          files: ${{runner.workspace}}/build/cov.info # optional
+          files: ${{runner.workspace}}/build/coverage.info # optional
           # name: codecov-umbrella # optional
           verbose: true # optional (default = false)
