@@ -181,7 +181,7 @@ restart:
         cleanupSolve();
         return;
       }
-      const bool bailout_after_feasibility_jump = true;
+      const bool bailout_after_feasibility_jump = false;
       if (bailout_after_feasibility_jump) {
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                      "HighsMipSolver: Bailing out after Feasibility Jump with "
