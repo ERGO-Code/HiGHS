@@ -181,13 +181,13 @@ restart:
         cleanupSolve();
         return;
       }
-      const bool bailout_after_feasibility_jump = false;
+      const bool bailout_after_feasibility_jump = true;
       if (bailout_after_feasibility_jump) {
         highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                      "HighsMipSolver: Bailing out after Feasibility Jump with "
                      "model status = %s\n",
                      utilModelStatusToString(returned_model_status).c_str());
-        modelstatus_ = returned_model_status;
+        modelstatus_ = HighsModelStatus::kInterrupt;
         cleanupSolve();
         return;
       }
