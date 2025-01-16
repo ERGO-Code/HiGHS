@@ -113,9 +113,7 @@ void HighsMipSolver::run() {
     analysis_.timer_ = &this->timer_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
-  // Start the total_clock for the timer that is local to the HighsMipSolver
-  // instance
-  timer_.start(timer_.total_clock);
+  timer_.start();
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -136,7 +134,7 @@ void HighsMipSolver::run() {
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
-      timer_.read(timer_.total_clock) >= options_mip_->time_limit)
+      timer_.read() >= options_mip_->time_limit)
     modelstatus_ = HighsModelStatus::kTimeLimit;
 
   if (modelstatus_ != HighsModelStatus::kNotset) {
@@ -163,8 +161,7 @@ void HighsMipSolver::run() {
   analysis_.mipTimerStop(kMipClockRunSetup);
   if (analysis_.analyse_mip_time & !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - completed setup\n",
-                 timer_.read(timer_.total_clock));
+                 "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -199,7 +196,7 @@ restart:
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
-                   timer_.read(timer_.total_clock));
+                   timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
@@ -211,7 +208,7 @@ restart:
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
-                   timer_.read(timer_.total_clock));
+                   timer_.read());
     // age 5 times to remove stored but never violated cuts after root
     // separation
     analysis_.mipTimerStart(kMipClockPerformAging0);
@@ -731,7 +728,7 @@ void HighsMipSolver::cleanupSolve() {
   }
 
   analysis_.mipTimerStop(kMipClockPostsolve);
-  timer_.stop(timer_.total_clock);
+  timer_.stop();
 
   std::string solutionstatus = "-";
 
@@ -817,8 +814,7 @@ void HighsMipSolver::cleanupSolve() {
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               timer_.read(timer_.total_clock),
-               analysis_.mipTimerRead(kMipClockPresolve),
+               timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
                analysis_.mipTimerRead(kMipClockSolve),
                analysis_.mipTimerRead(kMipClockPostsolve),
                int(max_submip_level), (long long unsigned)mipdata_->num_nodes,

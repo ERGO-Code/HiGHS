@@ -1465,6 +1465,7 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
+  highs_basis.useful = true;
   highs_basis.was_alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
@@ -3468,7 +3469,7 @@ bool HEkk::bailout() {
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
   } else if (options_->time_limit < kHighsInf &&
-             timer_->readRunHighsClock() > options_->time_limit) {
+             timer_->read() > options_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {

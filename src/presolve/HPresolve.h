@@ -212,6 +212,9 @@ class HPresolve {
   void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
              std::vector<HighsInt>& ARstart);
 
+  void getRowPositions(HighsInt row,
+                       std::vector<HighsInt>& myrowpositions) const;
+
   void storeRow(HighsInt row);
 
   HighsTripletPositionSlice getStoredRow() const;

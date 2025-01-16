@@ -1427,6 +1427,25 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const HighsInt* index, const double* value);
 
 /**
+ * Ensure that the constraint matrix of the incumbent model is stored
+ * column-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureColwise(void* highs);
+
+/**
+ * Ensure that the constraint matrix of the incumbent model is stored row-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureRowwise(void* highs);
+
+/**
  * Change the objective sense of the model.
  *
  * @param highs     A pointer to the Highs instance.

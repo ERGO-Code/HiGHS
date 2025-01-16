@@ -233,22 +233,28 @@ OptionStatus getLocalOptionType(
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(
-    FILE* file, const std::vector<OptionRecord*>& option_records,
+    FILE* file, const HighsLogOptions& report_log_options,
+    const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
     const HighsFileType file_type = HighsFileType::kFull);
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
+void reportOptions(FILE* file, const HighsLogOptions& report_log_options,
+                   const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations = false,
                    const HighsFileType file_type = HighsFileType::kFull);
-void reportOption(FILE* file, const OptionRecordBool& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordInt& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordInt& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordDouble& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordDouble& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordString& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordString& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
 
@@ -299,6 +305,8 @@ struct HighsOptionsStruct {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
+  double primal_residual_tolerance;
+  double dual_residual_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -390,8 +398,6 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
   bool run_centring;
-  double primal_residual_tolerance;
-  double dual_residual_tolerance;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
 
@@ -453,6 +459,8 @@ struct HighsOptionsStruct {
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
         ipm_optimality_tolerance(0.0),
+        primal_residual_tolerance(0.0),
+        dual_residual_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -529,8 +537,6 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
         run_centring(false),
-        primal_residual_tolerance(0.0),
-        dual_residual_tolerance(0.0),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),
         icrash(false),
@@ -707,6 +713,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
         &ipm_optimality_tolerance, 1e-12, 1e-8, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_residual_tolerance", "Primal residual tolerance", advanced,
+        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_residual_tolerance", "Dual residual tolerance", advanced,
+        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1405,16 +1421,6 @@ class HighsOptions : public HighsOptionsStruct {
         "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
         "this tolerance (default = 100)",
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     // Set up the log_options aliases
