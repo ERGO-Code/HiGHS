@@ -181,6 +181,14 @@ restart:
         cleanupSolve();
         return;
       }
+      const bool bailout_after_feasibility_jump = true;
+      if (bailout_after_feasibility_jump) {
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "HighsMipSolver: Bailing out after Feasibility Jump\n");
+        modelstatus_ = returned_model_status;
+        cleanupSolve();
+        return;
+      }
     }
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
