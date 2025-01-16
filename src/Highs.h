@@ -312,11 +312,11 @@ class Highs {
 
   /**
    * @brief Write (deviations from default values of) the options to a
-   * file, with the extension ".html" producing HTML, otherwise using
-   * the standard format used to read options from a file.
+   * file, using the standard format used to read options from a file.
+   * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false) const;
+                           const bool report_only_deviations = false);
 
   /**
    * @brief Returns the number of user-settable options
@@ -1323,6 +1323,11 @@ class Highs {
     return this->timer_.clock_def(name);
   }
   void writeAllClocks() { this->timer_.writeAllClocks(); }
+  HighsStatus clearModelNames() {
+    this->model_.lp_.col_names_.clear();
+    this->model_.lp_.row_names_.clear();
+    return HighsStatus::kOk;
+  }
 
   // Start of deprecated methods
 

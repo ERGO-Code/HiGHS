@@ -116,6 +116,7 @@ static QpAsmStatus quass2highs(Instance& instance, Settings& settings,
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
+  highs_basis.useful = true;
   return qp_asm_return_status;
 }
 

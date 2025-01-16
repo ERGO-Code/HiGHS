@@ -139,7 +139,8 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
-                                const bool report_only_deviations) const {
+                                const bool report_only_deviations) {
+  this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   HighsFileType file_type;
@@ -148,15 +149,16 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       openWriteFile(filename, "writeOptions", file, file_type), return_status,
       "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  if (filename == "") file_type = HighsFileType::kMinimal;
   // Report to user that options are being written to a file
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the option values to %s\n", filename.c_str());
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          writeOptionsToFile(file, options_.records,
-                                             report_only_deviations, file_type),
-                          return_status, "writeOptionsToFile");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      writeOptionsToFile(file, options_.log_options, options_.records,
+                         report_only_deviations, file_type),
+      return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -716,6 +718,7 @@ HighsStatus Highs::readBasis(const std::string& filename) {
   // Update the HiGHS basis and invalidate any simplex basis for the model
   basis_ = read_basis;
   basis_.valid = true;
+  basis_.useful = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1265,8 +1268,16 @@ HighsStatus Highs::solve() {
   // is available, simplex should surely be chosen.
   const bool solver_will_use_basis = options_.solver == kSimplexString ||
                                      options_.solver == kHighsChooseString;
-  if ((basis_.valid || options_.presolve == kHighsOffString ||
-       unconstrained_lp) &&
+  const bool has_basis = basis_.useful;
+  if (has_basis) {
+    assert(basis_.col_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_col_));
+    assert(basis_.row_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_row_));
+  }
+  if (basis_.valid) assert(basis_.useful);
+
+  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
       solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
     // has no constraint matrix, and the solver will use the basis
@@ -1274,7 +1285,7 @@ HighsStatus Highs::solve() {
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
-    if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
+    if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
     solveLp(incumbent_lp,
             "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
@@ -1416,6 +1427,7 @@ HighsStatus Highs::solve() {
         basis_.debug_origin_name = "Presolve to empty";
         basis_.valid = true;
         basis_.alien = false;
+        basis_.useful = true;
         basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
@@ -1551,6 +1563,7 @@ HighsStatus Highs::solve() {
           solution_.dual_valid = true;
           // Set basis and its status
           basis_.valid = true;
+          basis_.useful = true;
           basis_.col_status = presolve_.data_.recovered_basis_.col_status;
           basis_.row_status = presolve_.data_.recovered_basis_.row_status;
           basis_.debug_origin_name += ": after postsolve";
@@ -2339,6 +2352,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
     basis_ = basis;
   }
   basis_.valid = true;
+  basis_.useful = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
   assert(!basis_.alien);
@@ -4157,6 +4171,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       // Set basis and its status
       //
       // basis_.valid = true;
+      // basis_.useful = true;
       // basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       // basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
@@ -4270,10 +4285,12 @@ void Highs::forceHighsSolutionBasisSize() {
   if (basis_.col_status.size() != static_cast<size_t>(model_.lp_.num_col_)) {
     basis_.col_status.resize(model_.lp_.num_col_);
     basis_.valid = false;
+    basis_.useful = false;
   }
   if (basis_.row_status.size() != static_cast<size_t>(model_.lp_.num_row_)) {
     basis_.row_status.resize(model_.lp_.num_row_);
     basis_.valid = false;
+    basis_.useful = false;
   }
 }
 
