@@ -39,9 +39,6 @@ typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 #define cupdlp_init_vec_double(var, size) \
   { (var) = (double*)malloc((size) * sizeof(double)); }
 
-// #define cupdlp_init_zero_vec_double(var, size) \
-//   { (var) = (double*)calloc(size, sizeof(double)); }
-
 #define cupdlp_copy_vec(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
 

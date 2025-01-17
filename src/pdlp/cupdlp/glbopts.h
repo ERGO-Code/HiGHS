@@ -3,7 +3,7 @@
 
 #include "HConfig.h"
 
-// #ifdef CUPDLP_GPU
+// #ifndef CUPDLP_CPU
 // #include <cublas_v2.h>         // cublas
 // #include <cuda_runtime_api.h>  // cudaMalloc, cudaMemcpy, etc.
 // #include <cusparse.h>          // cusparseSpMV

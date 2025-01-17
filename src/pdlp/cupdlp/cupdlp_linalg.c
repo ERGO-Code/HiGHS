@@ -789,25 +789,26 @@ void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
   cupdlp_dot(w, nCols, w->buffer2, w->buffer3, dInteraction);
 }
 
-double get_fabs_value(double* vec, int index, int N) {
-#ifdef CUPDLP_CPU
-  return vec[index];
-#else 
-  int success = -1; 
+// WIP iinfnormabslocaltermination
+// double get_fabs_value(double* vec, int index, int N) {
+// #ifdef CUPDLP_CPU
+//   return vec[index];
+// #else 
+//   int success = -1; 
 
-  // double result = 0;
-  // get_gpu_vec_element(vec, index, &result, &success);
+//   // double result = 0;
+//   // get_gpu_vec_element(vec, index, &result, &success);
 
-  double * b;
-  b = (double *)malloc (N * sizeof (*b));
-  get_gpu_vec(vec, index, b, &success);
+//   double * b;
+//   b = (double *)malloc (N * sizeof (*b));
+//   get_gpu_vec(vec, index, b, &success);
 
-  if (!success)
-    return 0;
+//   if (!success)
+//     return 0;
 
-  // return result;
+//   // return result;
 
-  return b[index];
+//   return b[index];
 
-#endif
-}
+// #endif
+// }
