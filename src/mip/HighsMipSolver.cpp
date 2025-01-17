@@ -309,7 +309,7 @@ restart:
         const HighsSearch::NodeResult search_dive_result = search.dive();
         analysis_.mipTimerStop(kMipClockTheDive);
         if (analysis_.analyse_mip_time) {
-          this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+	  this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
           analysis_.dive_time.push_back(this_dive_time);
         }
         if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
