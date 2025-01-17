@@ -811,15 +811,17 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
   }
 }
 
-HighsStatus writeOptionsToFile(FILE* file,
+HighsStatus writeOptionsToFile(FILE* file, const HighsLogOptions& log_options,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_deviations,
                                const HighsFileType file_type) {
-  reportOptions(file, option_records, report_only_deviations, file_type);
+  reportOptions(file, log_options, option_records, report_only_deviations,
+                file_type);
   return HighsStatus::kOk;
 }
 
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
+void reportOptions(FILE* file, const HighsLogOptions& log_options,
+                   const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations,
                    const HighsFileType file_type) {
   HighsInt num_options = option_records.size();
@@ -831,22 +833,27 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
       if (!kAdvancedInDocumentation) continue;
     }
     if (type == HighsOptionType::kBool) {
-      reportOption(file, ((OptionRecordBool*)option_records[index])[0],
+      reportOption(file, log_options,
+                   ((OptionRecordBool*)option_records[index])[0],
                    report_only_deviations, file_type);
     } else if (type == HighsOptionType::kInt) {
-      reportOption(file, ((OptionRecordInt*)option_records[index])[0],
+      reportOption(file, log_options,
+                   ((OptionRecordInt*)option_records[index])[0],
                    report_only_deviations, file_type);
     } else if (type == HighsOptionType::kDouble) {
-      reportOption(file, ((OptionRecordDouble*)option_records[index])[0],
+      reportOption(file, log_options,
+                   ((OptionRecordDouble*)option_records[index])[0],
                    report_only_deviations, file_type);
     } else {
-      reportOption(file, ((OptionRecordString*)option_records[index])[0],
+      reportOption(file, log_options,
+                   ((OptionRecordString*)option_records[index])[0],
                    report_only_deviations, file_type);
     }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordBool& option,
+void reportOption(FILE* file, const HighsLogOptions& log_options,
+                  const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
@@ -865,40 +872,53 @@ void reportOption(FILE* file, const OptionRecordBool& option,
       fprintf(file, "%s = %s\n", option.name.c_str(),
               highsBoolToString(*option.value).c_str());
     } else {
-      fprintf(file, "%s = %s\n", option.name.c_str(),
-              highsBoolToString(*option.value).c_str());
+      std::string line =
+          highsFormatToString("Set option %s to %s\n", option.name.c_str(),
+                              highsBoolToString(*option.value).c_str());
+      if (file == stdout) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s", line.c_str());
+      } else {
+        fprintf(file, "%s", line.c_str());
+      }
     }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordInt& option,
+void reportOption(FILE* file, const HighsLogOptions& log_options,
+                  const OptionRecordInt& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
     if (file_type == HighsFileType::kMd) {
-      fprintf(file,
-              "## %s\n- %s\n- Type: integer\n- Range: {%" HIGHSINT_FORMAT
-              ", %" HIGHSINT_FORMAT "}\n- Default: %" HIGHSINT_FORMAT "\n\n",
-              highsInsertMdEscapes(option.name).c_str(),
-              highsInsertMdEscapes(option.description).c_str(),
-              option.lower_bound, option.upper_bound, option.default_value);
+      fprintf(
+          file,
+          "## %s\n- %s\n- Type: integer\n- Range: {%d, %d}\n- Default: %d\n\n",
+          highsInsertMdEscapes(option.name).c_str(),
+          highsInsertMdEscapes(option.description).c_str(),
+          int(option.lower_bound), int(option.upper_bound),
+          int(option.default_value));
     } else if (file_type == HighsFileType::kFull) {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
               "# [type: integer, advanced: %s, range: {%" HIGHSINT_FORMAT
-              ", %" HIGHSINT_FORMAT "}, default: %" HIGHSINT_FORMAT "]\n",
+              ", %d}, default: %d]\n",
               highsBoolToString(option.advanced).c_str(), option.lower_bound,
-              option.upper_bound, option.default_value);
-      fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", option.name.c_str(),
-              *option.value);
+              int(option.upper_bound), int(option.default_value));
+      fprintf(file, "%s = %d\n", option.name.c_str(), int(*option.value));
     } else {
-      fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", option.name.c_str(),
-              *option.value);
+      std::string line = highsFormatToString(
+          "Set option %s to %d\n", option.name.c_str(), int(*option.value));
+      if (file == stdout) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s", line.c_str());
+      } else {
+        fprintf(file, "%s", line.c_str());
+      }
     }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordDouble& option,
+void reportOption(FILE* file, const HighsLogOptions& log_options,
+                  const OptionRecordDouble& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
   if (!report_only_deviations || option.default_value != *option.value) {
@@ -917,12 +937,19 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
               option.upper_bound, option.default_value);
       fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
     } else {
-      fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
+      std::string line = highsFormatToString(
+          "Set option %s to %g\n", option.name.c_str(), *option.value);
+      if (file == stdout) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s", line.c_str());
+      } else {
+        fprintf(file, "%s", line.c_str());
+      }
     }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordString& option,
+void reportOption(FILE* file, const HighsLogOptions& log_options,
+                  const OptionRecordString& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type) {
   // Don't report for the options file if writing to an options file
@@ -943,7 +970,14 @@ void reportOption(FILE* file, const OptionRecordString& option,
               option.default_value.c_str());
       fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
     } else {
-      fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
+      std::string line =
+          highsFormatToString("Set option %s to \"%s\"\n", option.name.c_str(),
+                              (*option.value).c_str());
+      if (file == stdout) {
+        highsLogUser(log_options, HighsLogType::kInfo, "%s", line.c_str());
+      } else {
+        fprintf(file, "%s", line.c_str());
+      }
     }
   }
 }

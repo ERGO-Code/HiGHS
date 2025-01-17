@@ -4109,7 +4109,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     // the timer is well defined, and that its total time clock is
     // running
     assert(this->timer);
-    assert(this->timer->runningRunHighsClock());
+    assert(this->timer->running());
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolve_stack));
 
@@ -6307,8 +6307,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     sol = reducedsol;
     basis = reducedbasis;
-    postsolve_stack.undoUntil(options, flagRow, flagCol, sol, basis,
-                              tmp.numReductions());
+    postsolve_stack.undoUntil(options, sol, basis, tmp.numReductions());
 
     HighsBasis temp_basis;
     HighsSolution temp_sol;
@@ -6330,6 +6329,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     temp_sol.row_value.resize(model.num_row_);
     calculateRowValuesQuad(model, sol);
     temp_basis.valid = true;
+    temp_basis.useful = true;
     refineBasis(model, temp_sol, temp_basis);
     Highs highs;
     highs.passOptions(options);
@@ -6353,8 +6353,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
                          ARstart, ARindex, ARvalue);
     sol = reducedsol;
     basis = reducedbasis;
-    postsolve_stack.undoUntil(options, flagRow, flagCol, sol, basis,
-                              reductionLim);
+    postsolve_stack.undoUntil(options, sol, basis, reductionLim);
 
     calculateRowValuesQuad(model, sol);
     kktinfo = dev_kkt_check::initInfo();

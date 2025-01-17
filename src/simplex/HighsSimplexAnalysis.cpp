@@ -380,7 +380,7 @@ void HighsSimplexAnalysis::userInvertReport(const bool force) {
 
 void HighsSimplexAnalysis::userInvertReport(const bool header,
                                             const bool force) {
-  const double highs_run_time = timer_->readRunHighsClock();
+  const double highs_run_time = timer_->read();
   if (!force && highs_run_time < last_user_log_time + delta_user_log_time)
     return;
   analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
