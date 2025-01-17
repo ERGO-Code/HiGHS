@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include "mip/MipTimer.h"
+#include "util/HighsUtils.h"
 
 const HighsInt check_mip_clock = -4;
 
@@ -153,4 +154,8 @@ void HighsMipAnalysis::reportMipTimer() {
   reportMipSolveLpClock(true);
   mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
   reportMipSolveLpClock(false);
+  analyseVectorValues(nullptr, "Node search time",
+                      HighsInt(node_search_time.size()), node_search_time);
+  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
+                      dive_time);
 }
