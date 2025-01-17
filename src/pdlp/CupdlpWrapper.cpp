@@ -706,13 +706,20 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
 
   // for the moment only native termination is allowed with GPU
-#ifdef CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE
+#ifdef CUPDLP_CPU 
+#ifdef CUPDLP_FORCE_NATIVE
+  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
+  if (!options.pdlp_native_termination) {
+    printf("Warning: CUPDLP_FORCE_NATIVE is on. Forcing pdlp_native_termination=on.\n");
+  }
+#else
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
   intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
+#endif
 #else
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
   if (!options.pdlp_native_termination) {
-    printf("Warning: GPU only supports pdlp_native_termination=on. Ignoring parameter.\n");
+    printf("Warning: GPU only supports pdlp_native_termination=on. Forcing pdlp_native_termination=on.\n");
   }
 #endif
 }
