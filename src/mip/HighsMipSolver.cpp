@@ -304,10 +304,14 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
+        double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
         analysis_.mipTimerStart(kMipClockTheDive);
         const HighsSearch::NodeResult search_dive_result = search.dive();
         analysis_.mipTimerStop(kMipClockTheDive);
-
+        if (analysis_.analyse_mip_time) {
+          this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+          analysis_.dive_time.push_back(this_dive_time);
+        }
         if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;
@@ -507,6 +511,7 @@ restart:
     // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
+    double this_node_search_time = -analysis_.mipTimerRead(kMipClockNodeSearch);
     analysis_.mipTimerStart(kMipClockNodeSearch);
 
     while (!mipdata_->nodequeue.empty()) {
@@ -651,7 +656,10 @@ restart:
       break;
     }  // while(!mipdata_->nodequeue.empty())
     analysis_.mipTimerStop(kMipClockNodeSearch);
-
+    if (analysis_.analyse_mip_time) {
+      this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+      analysis_.node_search_time.push_back(this_node_search_time);
+    }
     if (limit_reached) break;
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
