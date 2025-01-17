@@ -260,21 +260,40 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       )
 
   if (UNIX AND NOT APPLE)
-    set(pdlpInstances
-        "25fv47\; 5.50184588\;"
-        "adlittle\; 2.254949631\;"
-        "afiro\;-4.64753142\;"
-        "avgas\;-7.749999999\;"
-        "blending\;-3.19999999\;"
-        "chip\;-9.000000001\;"
-        "e226\;-1.16389293\;"
-        "scrs8\; 9.042969511\;"
-        "sctest\; 5.749999936\;"
-        "shell\; 1.2088253460\;"
-        "stair\;-2.51266951\;"
-        "standata\; 1.257699499\;"
-        "standgub\; 1.25769949\;"
-        )
+    if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
+        set(pdlpInstances
+            "25fv47\; 5.50184588\;"
+            "adlittle\; 2.254949631\;"
+            "afiro\;-4.64753142\;"
+            "avgas\;-7.749999999\;"
+            "blending\;-3.19999999\;"
+            "chip\;-9.000000001\;"
+            "e226\;-1.16389293\;"
+            "scrs8\; 9.042969511\;"
+            "sctest\; 5.749999936\;"
+            "shell\; 1.2088253460\;"
+            "stair\;-2.51266951\;"
+            "standata\; 1.257699499\;"
+            "standgub\; 1.25769949\;"
+            )
+    else()
+        # CUPDLP_GPU or CPU with native termination.
+        set(pdlpInstances
+            "25fv47\; 5.5018360\;"
+            "adlittle\; 2.254953\;"
+            "afiro\;-4.64753126\;"
+            "avgas\;-7.75000038\;"
+            "blending\;-3.19999999\;"
+            "chip\;-9.000000020\;"
+            "e226\;-1.163892070\;"
+            "scrs8\; 9.042970154\;"
+            "sctest\; 5.750000001\;"
+            "shell\; 1.2088253471\;"
+            "stair\;-2.512669020\;"
+            "standata\; 1.257699155\;"
+            "standgub\; 1.257700132\;"
+            )
+    endif()
   elseif(WIN32)
     # on windows e226 model status is unknown
     # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03

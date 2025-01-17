@@ -706,7 +706,7 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
 
   // for the moment only native termination is allowed with GPU
-#ifdef CUPDLP_CPU
+#ifdef CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
   intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
 #else

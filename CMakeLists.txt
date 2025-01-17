@@ -135,6 +135,10 @@ else()
     set(CUDA_LIBRARY-NOTFOUND true)
 endif()
 
+# option to force native termination, mostly for testing new GPU code
+# in comparison with the CPU
+option(CUPDLP_FORCE_NATIVE "Build pdlp with native termination" OFF)
+
 if (BUILD_CXX)
   # Default Build Type to be Release
   get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
