@@ -680,8 +680,7 @@ void HPresolve::resetColImpliedBounds(HighsInt row) {
       if (upperSource == row) changeImplColUpper(col, kHighsInf, -1);
     } else if (!rowDeleted[row]) {
       // remove column from row-wise implied bound storage
-      if (lowerSource == row) colImplSourceByRow[row].erase(col);
-      if (upperSource == row) colImplSourceByRow[row].erase(col);
+      colImplSourceByRow[row].erase(col);
     }
   }
 }
@@ -704,8 +703,7 @@ void HPresolve::resetRowDualImpliedBounds(HighsInt col) {
       if (upperSource == col) changeImplRowDualUpper(row, kHighsInf, -1);
     } else if (!colDeleted[col]) {
       // remove row from column-wise implied bound storage
-      if (lowerSource == col) implRowDualSourceByCol[col].erase(row);
-      if (upperSource == col) implRowDualSourceByCol[col].erase(row);
+      implRowDualSourceByCol[col].erase(row);
     }
   }
 }
