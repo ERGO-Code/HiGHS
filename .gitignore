@@ -291,3 +291,6 @@ highs-problem-set
 
 # debug nvidia
 build-cpu
+
+# Generated HiGHS options file
+Options.md

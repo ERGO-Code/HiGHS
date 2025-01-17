@@ -704,8 +704,17 @@ void getUserParamsFromOptions(const HighsOptions& options,
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
   //
+
+  // for the moment only native termination is allowed with GPU
+#ifdef CUPDLP_CPU
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
   intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
+#else
+  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
+  if (!options.pdlp_native_termination) {
+    printf("Warning: GPU only supports pdlp_native_termination=on. Ignoring parameter.\n");
+  }
+#endif
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,

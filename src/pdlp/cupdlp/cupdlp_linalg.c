@@ -799,7 +799,7 @@ double get_fabs_value(double* vec, int index, int N) {
   // get_gpu_vec_element(vec, index, &result, &success);
 
   double * b;
-  b = (float *)malloc (N * sizeof (*b));
+  b = (double *)malloc (N * sizeof (*b));
   get_gpu_vec(vec, index, b, &success);
 
   if (!success)
