@@ -479,16 +479,17 @@ void HPresolve::unlink(HighsInt pos) {
     impliedRowBounds.remove(Arow[pos], Acol[pos], Avalue[pos]);
   }
 
+  // remove implied bounds on row duals that where implied by this column's dual
+  // constraint
+  resetRowDualImpliedBounds(Acol[pos]);
+
+  // remove implied bounds on columns that where implied by this row
+  resetColImpliedBounds(Arow[pos]);
+
+  // remove non-zero
   Avalue[pos] = 0;
 
   freeslots.push_back(pos);
-
-  // remove implied bounds on the row dual that where implied by this
-  // columns dual constraint
-  resetRowDualImpliedBounds(Acol[pos]);
-
-  // remove implied bounds on the column that where implied by this row
-  resetColImpliedBounds(Arow[pos]);
 }
 
 void HPresolve::markChangedRow(HighsInt row) {
@@ -1695,11 +1696,11 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
     link(pos);
 
-    // remove implied bounds on the row dual that where implied by this
-    // columns dual constraint
+    // remove implied bounds on row duals that where implied by this column's
+    // dual constraint
     resetRowDualImpliedBounds(col);
 
-    // remove implied bounds on the column that where implied by this row
+    // remove implied bounds on columns that where implied by this row
     resetColImpliedBounds(row);
 
   } else {
@@ -1707,11 +1708,11 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      // remove implied bounds on the row dual that where implied by this
-      // columns dual constraint
+      // remove implied bounds on row duals that where implied by this column's
+      // dual constraint
       resetRowDualImpliedBounds(col);
 
-      // remove implied bounds on the column that where implied by this row
+      // remove implied bounds on columns that where implied by this row
       resetColImpliedBounds(row);
 
       // remove the locks and contribution to implied (dual) row bounds, then
