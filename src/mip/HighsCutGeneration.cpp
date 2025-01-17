@@ -215,6 +215,10 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
 }
 
 bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
+  // initialize indicators
+  integralSupport = false;
+  integralCoefficients = false;
+
   HighsInt coversize = cover.size();
   std::vector<double> S;
   S.resize(coversize);
@@ -275,6 +279,10 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
 }
 
 bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
+  // initialize indicators
+  integralSupport = false;
+  integralCoefficients = false;
+
   HighsInt coversize = cover.size();
 
   HighsInt l = -1;
@@ -500,6 +508,10 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   using std::floor;
   using std::max;
   using std::sqrt;
+
+  // initialize indicators
+  integralSupport = false;
+  integralCoefficients = false;
 
   double continuouscontribution = 0.0;
   double continuoussqrnorm = 0.0;

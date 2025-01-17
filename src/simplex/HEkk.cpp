@@ -4422,12 +4422,14 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
 void HighsSimplexStats::report(FILE* file, std::string message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
-  fprintf(file, "   iteration_count            = %d\n", this->iteration_count);
-  fprintf(file, "   num_invert                 = %d\n", this->num_invert);
+  fprintf(file, "   iteration_count            = %d\n",
+          static_cast<int>(this->iteration_count));
+  fprintf(file, "   num_invert                 = %d\n",
+          static_cast<int>(this->num_invert));
   fprintf(file, "   last_invert_num_el         = %d\n",
-          this->last_invert_num_el);
+          static_cast<int>(this->last_invert_num_el));
   fprintf(file, "   last_factored_basis_num_el = %d\n",
-          this->last_factored_basis_num_el);
+          static_cast<int>(this->last_factored_basis_num_el));
   fprintf(file, "   col_aq_density             = %g\n", this->col_aq_density);
   fprintf(file, "   row_ep_density             = %g\n", this->row_ep_density);
   fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);
