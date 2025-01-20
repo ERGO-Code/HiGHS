@@ -677,7 +677,7 @@ double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
 // and any solution values
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
-  assert(basis.valid);
+  assert(basis.useful);
   assert(isBasisRightSize(lp, basis));
   const bool have_highs_solution = solution.value_valid;
 
@@ -1319,6 +1319,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
   highs_basis.valid = true;
+  highs_basis.useful = true;
   return HighsStatus::kOk;
 }
 
@@ -1356,9 +1357,14 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   // If new scaling is performed, the hot start information is
   // no longer valid
   if (new_scaling) ekk_instance.clearHotStart();
-  if (basis.alien) {
-    // An alien basis needs to be checked for rank deficiency, and
-    // possibly completed if it is rectangular
+  const bool check_basis = basis.alien || (!basis.valid && basis.useful);
+  if (check_basis) {
+    // The basis needs to be checked for rank deficiency, and possibly
+    // completed if it is rectangular
+    //
+    // If it's not valid but useful, but not alien,
+    // accommodateAlienBasis will assert, so make the basis alien
+    basis.alien = true;
     assert(!only_from_known_basis);
     accommodateAlienBasis(solver_object);
     basis.alien = false;
@@ -1605,9 +1611,32 @@ void HighsSolution::clear() {
 
 void HighsObjectiveSolution::clear() { this->col_value.clear(); }
 
+void HighsBasis::print(std::string message) const {
+  if (!this->useful) return;
+  this->printScalars(message);
+  for (HighsInt iCol = 0; iCol < HighsInt(this->col_status.size()); iCol++)
+    printf("Basis: col_status[%2d] = %d\n", int(iCol),
+           int(this->col_status[iCol]));
+  for (HighsInt iRow = 0; iRow < HighsInt(this->row_status.size()); iRow++)
+    printf("Basis: row_status[%2d] = %d\n", int(iRow),
+           int(this->row_status[iRow]));
+}
+
+void HighsBasis::printScalars(std::string message) const {
+  printf("\nBasis: %s\n", message.c_str());
+  printf(" valid = %d\n", this->valid);
+  printf(" alien = %d\n", this->alien);
+  printf(" useful = %d\n", this->useful);
+  printf(" was_alien = %d\n", this->was_alien);
+  printf(" debug_id = %d\n", int(this->debug_id));
+  printf(" debug_update_count = %d\n", int(this->debug_update_count));
+  printf(" debug_origin_name = %s\n", this->debug_origin_name.c_str());
+}
+
 void HighsBasis::invalidate() {
   this->valid = false;
   this->alien = true;
+  this->useful = false;
   this->was_alien = true;
   this->debug_id = -1;
   this->debug_update_count = -1;

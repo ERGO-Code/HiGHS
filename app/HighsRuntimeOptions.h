@@ -145,7 +145,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         case HighsLoadOptionsStatus::kError:
           return false;
         case HighsLoadOptionsStatus::kEmpty:
-          writeOptionsToFile(stdout, options.records);
+          writeOptionsToFile(stdout, options.log_options, options.records);
           return false;
         default:
           break;

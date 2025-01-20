@@ -1043,9 +1043,9 @@ void HighsLpRelaxation::setObjectiveLimit(double objlim) {
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
-  lpsolver.setOptionValue(
-      "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
-                        mipsolver.timer_.read(mipsolver.timer_.total_clock));
+  lpsolver.setOptionValue("time_limit", lpsolver.getRunTime() +
+                                            mipsolver.options_mip_->time_limit -
+                                            mipsolver.timer_.read());
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
   const HighsInt simplex_solve_clock = valid_basis

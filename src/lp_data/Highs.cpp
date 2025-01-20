@@ -139,7 +139,8 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string& filename,
-                                const bool report_only_deviations) const {
+                                const bool report_only_deviations) {
+  this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   HighsFileType file_type;
@@ -148,15 +149,16 @@ HighsStatus Highs::writeOptions(const std::string& filename,
       openWriteFile(filename, "writeOptions", file, file_type), return_status,
       "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
+  if (filename == "") file_type = HighsFileType::kMinimal;
   // Report to user that options are being written to a file
   if (filename != "")
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Writing the option values to %s\n", filename.c_str());
-  return_status =
-      interpretCallStatus(options_.log_options,
-                          writeOptionsToFile(file, options_.records,
-                                             report_only_deviations, file_type),
-                          return_status, "writeOptionsToFile");
+  return_status = interpretCallStatus(
+      options_.log_options,
+      writeOptionsToFile(file, options_.log_options, options_.records,
+                         report_only_deviations, file_type),
+      return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;
 }
@@ -716,6 +718,7 @@ HighsStatus Highs::readBasis(const std::string& filename) {
   // Update the HiGHS basis and invalidate any simplex basis for the model
   basis_ = read_basis;
   basis_.valid = true;
+  basis_.useful = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1048,7 +1051,7 @@ HighsStatus Highs::solve() {
   // Zero the iteration counts
   zeroIterationCounts();
   // Start the HiGHS run clock
-  timer_.startRunHighsClock();
+  timer_.start();
   // Return immediately if the model has no columns
   if (!model_.lp_.num_col_) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
@@ -1166,7 +1169,7 @@ HighsStatus Highs::solve() {
   //
   // Record the initial time and set the component times and postsolve
   // iteration count to -1 to identify whether they are not required
-  double initial_time = timer_.readRunHighsClock();
+  double initial_time = timer_.read();
   double this_presolve_time = -1;
   double this_solve_presolved_lp_time = -1;
   double this_postsolve_time = -1;
@@ -1222,7 +1225,7 @@ HighsStatus Highs::solve() {
         return returnFromRun(crossover_status, undo_mods);
       assert(options_.simplex_strategy == kSimplexStrategyPrimal);
     }
-    // timer_.stopRunHighsClock();
+    // timer_.stop();
     // run();
 
     // todo: add "dual" values
@@ -1265,8 +1268,16 @@ HighsStatus Highs::solve() {
   // is available, simplex should surely be chosen.
   const bool solver_will_use_basis = options_.solver == kSimplexString ||
                                      options_.solver == kHighsChooseString;
-  if ((basis_.valid || options_.presolve == kHighsOffString ||
-       unconstrained_lp) &&
+  const bool has_basis = basis_.useful;
+  if (has_basis) {
+    assert(basis_.col_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_col_));
+    assert(basis_.row_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_row_));
+  }
+  if (basis_.valid) assert(basis_.useful);
+
+  if ((has_basis || options_.presolve == kHighsOffString || unconstrained_lp) &&
       solver_will_use_basis) {
     // There is a valid basis for the problem, presolve is off, or LP
     // has no constraint matrix, and the solver will use the basis
@@ -1274,7 +1285,7 @@ HighsStatus Highs::solve() {
         "LP without presolve, or with basis, or unconstrained";
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
-    if (basis_.valid) refineBasis(incumbent_lp, solution_, basis_);
+    if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
     solveLp(incumbent_lp,
             "Solving LP without presolve, or with basis, or unconstrained",
             this_solve_original_lp_time);
@@ -1400,6 +1411,12 @@ HighsStatus Highs::solve() {
             model_status_ == HighsModelStatus::kTimeLimit ||
             model_status_ == HighsModelStatus::kIterationLimit ||
             model_status_ == HighsModelStatus::kInterrupt;
+        if (no_incumbent_lp_solution_or_basis) {
+          // Postsolve won't be performed, so clear the HEkk data
+          // corresponding to the (strictly reduced) presolved LP here
+          ekk_instance_.clear();
+          setHighsModelStatusAndClearSolutionAndBasis(model_status_);
+        }
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
@@ -1410,6 +1427,7 @@ HighsStatus Highs::solve() {
         basis_.debug_origin_name = "Presolve to empty";
         basis_.valid = true;
         basis_.alien = false;
+        basis_.useful = true;
         basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
@@ -1449,10 +1467,7 @@ HighsStatus Highs::solve() {
         options_ = save_options;
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status, undo_mods);
-        // ToDo Eliminate setBasisValidity once ctest passes. Asserts
-        // verify that it does nothing - other than setting
-        // info_.valid = true;
-        setBasisValidity();
+        info_.valid = true;
         assert(model_status_ == HighsModelStatus::kInfeasible ||
                model_status_ == HighsModelStatus::kUnbounded);
         return returnFromRun(return_status, undo_mods);
@@ -1492,152 +1507,142 @@ HighsStatus Highs::solve() {
 
     // Postsolve. Does nothing if there were no reductions during presolve.
 
-    if (have_optimal_solution) {
+    const bool have_optimal_reduced_solution =
+        model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
+        (model_presolve_status_ == HighsPresolveStatus::kReduced &&
+         model_status_ == HighsModelStatus::kOptimal);
+    const bool have_unknown_reduced_solution =
+        model_presolve_status_ == HighsPresolveStatus::kReduced &&
+        model_status_ == HighsModelStatus::kUnknown;
+
+    if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
       // ToDo Put this in a separate method
       assert(model_status_ == HighsModelStatus::kOptimal ||
+             model_status_ == HighsModelStatus::kUnknown ||
              model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
-      if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
-          model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty) {
-        // If presolve is nontrivial, extract the optimal solution
-        // and basis for the presolved problem in order to generate
-        // the solution and basis for postsolve to use to generate a
-        // solution(?) and basis that is, hopefully, optimal. This is
-        // confirmed or corrected by hot-starting the simplex solver
-        presolve_.data_.recovered_solution_ = solution_;
-        presolve_.data_.recovered_basis_ = basis_;
+      assert(model_presolve_status_ == HighsPresolveStatus::kReduced ||
+             model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
+      if (have_unknown_reduced_solution)
+        highsLogUser(
+            options_.log_options, HighsLogType::kWarning,
+            "Running postsolve on non-optimal solution of reduced LP\n");
+      // If presolve is nontrivial, extract the optimal solution
+      // and basis for the presolved problem in order to generate
+      // the solution and basis for postsolve to use to generate a
+      // solution(?) and basis that is, hopefully, optimal. This is
+      // confirmed or corrected by hot-starting the simplex solver
+      presolve_.data_.recovered_solution_ = solution_;
+      presolve_.data_.recovered_basis_ = basis_;
 
-        this_postsolve_time = -timer_.read(timer_.postsolve_clock);
-        timer_.start(timer_.postsolve_clock);
-        HighsPostsolveStatus postsolve_status = runPostsolve();
-        timer_.stop(timer_.postsolve_clock);
-        this_postsolve_time += -timer_.read(timer_.postsolve_clock);
-        presolve_.info_.postsolve_time = this_postsolve_time;
+      this_postsolve_time = -timer_.read(timer_.postsolve_clock);
+      timer_.start(timer_.postsolve_clock);
+      HighsPostsolveStatus postsolve_status = runPostsolve();
+      timer_.stop(timer_.postsolve_clock);
+      this_postsolve_time += -timer_.read(timer_.postsolve_clock);
+      presolve_.info_.postsolve_time = this_postsolve_time;
 
-        if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-          highsLogDev(log_options, HighsLogType::kVerbose,
-                      "Postsolve finished\n");
-          // Set solution and its status
-          solution_.clear();
-          solution_ = presolve_.data_.recovered_solution_;
-          solution_.value_valid = true;
-          //          if (ipx_no_crossover) {
-          if (!basis_.valid) {
-            // Have a primal-dual solution, but no basis, since IPX
-            // was used without crossover, either because
-            // run_crossover was "off" or "choose" and IPX determined
-            // optimality
-            solution_.dual_valid = true;
-            basis_.invalidate();
-          } else {
-            //
-            // Hot-start the simplex solver for the incumbent LP
-            //
-            solution_.dual_valid = true;
-            // Set basis and its status
-            basis_.valid = true;
-            basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-            basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-            basis_.debug_origin_name += ": after postsolve";
-            // Basic primal activities are wrong after postsolve, so
-            // possibly skip KKT check
-            const bool perform_kkt_check = true;
-            if (perform_kkt_check) {
-              // Possibly force debug to perform KKT check on what's
-              // returned from postsolve
-              const bool force_debug = false;
-              HighsInt save_highs_debug_level = options_.highs_debug_level;
-              if (force_debug)
-                options_.highs_debug_level = kHighsDebugLevelCostly;
-              if (debugHighsSolution("After returning from postsolve", options_,
-                                     model_, solution_,
-                                     basis_) == HighsDebugStatus::kLogicalError)
-                return returnFromRun(HighsStatus::kError, undo_mods);
-              options_.highs_debug_level = save_highs_debug_level;
-            }
-            // Save the options to allow the best simplex strategy to
-            // be used
-            HighsOptions save_options = options_;
-            const bool full_logging = false;
-            if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
-            // Force the use of simplex to clean up if IPM has been used
-            // to solve the presolved problem
-            if (options_.solver == kIpmString) options_.solver = kSimplexString;
-            options_.simplex_strategy = kSimplexStrategyChoose;
-            // Ensure that the parallel solver isn't used
-            options_.simplex_min_concurrency = 1;
-            options_.simplex_max_concurrency = 1;
-            // Use any pivot threshold resulting from solving the presolved LP
-            if (factor_pivot_threshold > 0)
-              options_.factor_pivot_threshold = factor_pivot_threshold;
-            // The basis returned from postsolve is just basic/nonbasic
-            // and EKK expects a refined basis, so set it up now
-            refineBasis(incumbent_lp, solution_, basis_);
-            // Scrap the EKK data from solving the presolved LP
-            ekk_instance_.invalidate();
-            ekk_instance_.lp_name_ = "Postsolve LP";
-            // Set up the iteration count and timing records so that
-            // adding the corresponding values after callSolveLp gives
-            // difference
-            postsolve_iteration_count = -info_.simplex_iteration_count;
-            solveLp(incumbent_lp,
-                    "Solving the original LP from the solution after postsolve",
-                    this_solve_original_lp_time);
-            // Determine the iteration count
-            postsolve_iteration_count += info_.simplex_iteration_count;
-            return_status =
-                interpretCallStatus(options_.log_options, call_status,
-                                    return_status, "callSolveLp");
-            // Recover the options
-            options_ = save_options;
-            if (return_status == HighsStatus::kError)
-              return returnFromRun(return_status, undo_mods);
-            if (postsolve_iteration_count > 0)
-              highsLogUser(options_.log_options, HighsLogType::kInfo,
-                           "Required %d simplex iterations after postsolve\n",
-                           int(postsolve_iteration_count));
-          }
+      if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
+        highsLogDev(log_options, HighsLogType::kVerbose,
+                    "Postsolve finished\n");
+        // Set solution and its status
+        solution_.clear();
+        solution_ = presolve_.data_.recovered_solution_;
+        solution_.value_valid = true;
+        //          if (ipx_no_crossover) {
+        if (!basis_.valid) {
+          // Have a primal-dual solution, but no basis, since IPX
+          // was used without crossover, either because
+          // run_crossover was "off" or "choose" and IPX determined
+          // optimality
+          solution_.dual_valid = true;
+          basis_.invalidate();
         } else {
-          highsLogUser(log_options, HighsLogType::kError,
-                       "Postsolve return status is %d\n",
-                       (int)postsolve_status);
-          setHighsModelStatusAndClearSolutionAndBasis(
-              HighsModelStatus::kPostsolveError);
-          return returnFromRun(HighsStatus::kError, undo_mods);
+          //
+          // Hot-start the simplex solver for the incumbent LP
+          //
+          solution_.dual_valid = true;
+          // Set basis and its status
+          basis_.valid = true;
+          basis_.useful = true;
+          basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+          basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+          basis_.debug_origin_name += ": after postsolve";
+          // Basic primal activities are wrong after postsolve, so
+          // possibly skip KKT check
+          const bool perform_kkt_check = true;
+          if (perform_kkt_check) {
+            // Possibly force debug to perform KKT check on what's
+            // returned from postsolve
+            const bool force_debug = false;
+            HighsInt save_highs_debug_level = options_.highs_debug_level;
+            if (force_debug)
+              options_.highs_debug_level = kHighsDebugLevelCostly;
+            if (debugHighsSolution("After returning from postsolve", options_,
+                                   model_, solution_,
+                                   basis_) == HighsDebugStatus::kLogicalError)
+              return returnFromRun(HighsStatus::kError, undo_mods);
+            options_.highs_debug_level = save_highs_debug_level;
+          }
+          // Save the options to allow the best simplex strategy to
+          // be used
+          HighsOptions save_options = options_;
+          const bool full_logging = false;
+          if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
+          // Force the use of simplex to clean up if IPM has been used
+          // to solve the presolved problem
+          if (options_.solver == kIpmString) options_.solver = kSimplexString;
+          options_.simplex_strategy = kSimplexStrategyChoose;
+          // Ensure that the parallel solver isn't used
+          options_.simplex_min_concurrency = 1;
+          options_.simplex_max_concurrency = 1;
+          // Use any pivot threshold resulting from solving the presolved LP
+          if (factor_pivot_threshold > 0)
+            options_.factor_pivot_threshold = factor_pivot_threshold;
+          // The basis returned from postsolve is just basic/nonbasic
+          // and EKK expects a refined basis, so set it up now
+          refineBasis(incumbent_lp, solution_, basis_);
+          // Scrap the EKK data from solving the presolved LP
+          ekk_instance_.invalidate();
+          ekk_instance_.lp_name_ = "Postsolve LP";
+          // Set up the iteration count and timing records so that
+          // adding the corresponding values after callSolveLp gives
+          // difference
+          postsolve_iteration_count = -info_.simplex_iteration_count;
+          solveLp(incumbent_lp,
+                  "Solving the original LP from the solution after postsolve",
+                  this_solve_original_lp_time);
+          // Determine the iteration count
+          postsolve_iteration_count += info_.simplex_iteration_count;
+          //
+          return_status = HighsStatus::kOk;
+          return_status = interpretCallStatus(options_.log_options, call_status,
+                                              return_status, "callSolveLp");
+          // Recover the options
+          options_ = save_options;
+          if (return_status == HighsStatus::kError)
+            return returnFromRun(return_status, undo_mods);
+          if (postsolve_iteration_count > 0)
+            highsLogUser(options_.log_options, HighsLogType::kInfo,
+                         "Required %d simplex iterations after postsolve\n",
+                         int(postsolve_iteration_count));
         }
       } else {
-        // LP was not reduced by presolve, so have simply solved the original LP
-        assert(model_presolve_status_ == HighsPresolveStatus::kNotReduced);
+        highsLogUser(log_options, HighsLogType::kError,
+                     "Postsolve return status is %d\n", (int)postsolve_status);
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kPostsolveError);
+        return returnFromRun(HighsStatus::kError, undo_mods);
       }
     }
   }
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
-  if (no_incumbent_lp_solution_or_basis) {
-    // In solving the (strictly reduced) presolved LP, it is found to
-    // be infeasible or unbounded, the time/iteration limit has been
-    // reached, a user interrupt has occurred, or the status is unknown
-    // (cycling)
-    //
-    // Hence there's no incumbent lp solution or basis to drive dual
-    // postsolve
-    assert(model_status_ == HighsModelStatus::kInfeasible ||
-           model_status_ == HighsModelStatus::kUnbounded ||
-           model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
-           model_status_ == HighsModelStatus::kTimeLimit ||
-           model_status_ == HighsModelStatus::kIterationLimit ||
-           model_status_ == HighsModelStatus::kInterrupt ||
-           model_status_ == HighsModelStatus::kUnknown);
-    // The HEkk data correspond to the (strictly reduced) presolved LP
-    // so must be cleared
-    ekk_instance_.clear();
-    setHighsModelStatusAndClearSolutionAndBasis(model_status_);
-  } else {
-    // ToDo Eliminate setBasisValidity once ctest passes. Asserts
-    // verify that it does nothing - other than setting info_.valid =
-    // true;
-    setBasisValidity();
-  }
-  double lp_solve_final_time = timer_.readRunHighsClock();
+
+  // Unless the model status was determined using the strictly reduced LP, the
+  // HiGHS info is valid
+  if (!no_incumbent_lp_solution_or_basis) info_.valid = true;
+
+  double lp_solve_final_time = timer_.read();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
     highsLogDev(log_options, HighsLogType::kInfo, "Postsolve  : \n");
@@ -2347,6 +2352,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
     basis_ = basis;
   }
   basis_.valid = true;
+  basis_.useful = true;
   if (origin != "") basis_.debug_origin_name = origin;
   assert(basis_.debug_origin_name != "");
   assert(!basis_.alien);
@@ -3439,9 +3445,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Ensure that the RunHighsClock is running
-  if (!timer_.runningRunHighsClock()) timer_.startRunHighsClock();
-  double start_presolve = timer_.readRunHighsClock();
+  // Ensure that the timer is running
+  if (!timer_.running()) timer_.start();
+  double start_presolve = timer_.read();
 
   // Set time limit.
   if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
@@ -3467,9 +3473,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
     HighsMipSolver solver(callback_, options_, original_lp, solution_);
-    // Start the MIP solver's total clock so that timeout in presolve
-    // can be identified
-    solver.timer_.start(timer_.total_clock);
+    // Start the MIP solver's timer so that timeout in presolve can be
+    // identified
+    solver.timer_.start();
     // Only place that HighsMipSolver::runPresolve is called
     solver.runPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
@@ -3483,7 +3489,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     presolve_.init(original_lp, timer_);
     presolve_.options_ = &options_;
     if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
-      double current = timer_.readRunHighsClock();
+      double current = timer_.read();
       double time_init = current - start_presolve;
       double left = presolve_.options_->time_limit - time_init;
       if (left <= 0) {
@@ -4165,6 +4171,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       // Set basis and its status
       //
       // basis_.valid = true;
+      // basis_.useful = true;
       // basis_.col_status = presolve_.data_.recovered_basis_.col_status;
       // basis_.row_status = presolve_.data_.recovered_basis_.row_status;
       basis_.debug_origin_name += ": after postsolve";
@@ -4278,10 +4285,12 @@ void Highs::forceHighsSolutionBasisSize() {
   if (basis_.col_status.size() != static_cast<size_t>(model_.lp_.num_col_)) {
     basis_.col_status.resize(model_.lp_.num_col_);
     basis_.valid = false;
+    basis_.useful = false;
   }
   if (basis_.row_status.size() != static_cast<size_t>(model_.lp_.num_row_)) {
     basis_.row_status.resize(model_.lp_.num_row_);
     basis_.valid = false;
+    basis_.useful = false;
   }
 }
 
@@ -4290,17 +4299,6 @@ void Highs::setHighsModelStatusAndClearSolutionAndBasis(
   model_status_ = model_status;
   invalidateSolution();
   invalidateBasis();
-  info_.valid = true;
-}
-
-void Highs::setBasisValidity() {
-  if (basis_.valid) {
-    assert(info_.basis_validity == kBasisValidityValid);
-    info_.basis_validity = kBasisValidityValid;
-  } else {
-    assert(info_.basis_validity == kBasisValidityInvalid);
-    info_.basis_validity = kBasisValidityInvalid;
-  }
   info_.valid = true;
 }
 
@@ -4549,7 +4547,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(called_return_from_run);
   }
   // Stop the HiGHS run clock if it is running
-  if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
+  if (timer_.running()) timer_.stop();
   const bool dimensions_ok =
       lpDimensionsOk("returnFromHighs", model_.lp_, options_.log_options);
   if (!dimensions_ok) {
@@ -4613,7 +4611,7 @@ void Highs::reportSolvedLpQpStats() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
   }
-  double run_time = timer_.readRunHighsClock();
+  double run_time = timer_.read();
   highsLogUser(log_options, HighsLogType::kInfo,
                "HiGHS run time      : %13.2f\n", run_time);
 }
