@@ -482,6 +482,9 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
   const double kLowerBoundMu = 10.0;
+
+  std::vector<HighsInt>& save_non_semi_variable_index =
+    lp.mods_.save_non_semi_variable_index;
   std::vector<HighsInt>& inconsistent_semi_variable_index =
       lp.mods_.save_inconsistent_semi_variable_index;
   std::vector<double>& inconsistent_semi_variable_lower_bound_value =
@@ -515,7 +518,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       // Semi-variables with zero lower bound are not semi
       if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
-        lp.mods_.save_non_semi_variable_index.push_back(iCol);
+        save_non_semi_variable_index.push_back(iCol);
         // Semi-integer become integer so still have a non-continuous variable
         if (lp.integrality_[iCol] == HighsVarType::kSemiInteger)
           num_non_continuous_variables++;
@@ -580,6 +583,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       assert(num_illegal_lower || num_illegal_upper);
       tightened_semi_variable_upper_bound_index.clear();
       tightened_semi_variable_upper_bound_value.clear();
+      num_modified_upper = 0;
     } else {
       // Apply the upper bound tightenings, saving the over-written
       // values
@@ -599,6 +603,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       inconsistent_semi_variable_lower_bound_value.clear();
       inconsistent_semi_variable_upper_bound_value.clear();
       inconsistent_semi_variable_type.clear();
+      num_inconsistent_semi = 0;
     } else {
       for (HighsInt k = 0; k < num_inconsistent_semi; k++) {
         const HighsInt iCol = inconsistent_semi_variable_index[k];
@@ -611,10 +616,10 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   if (num_non_semi) {
     if (has_illegal_bounds) {
       // Don't apply type changes if there are illegal bounds
-      lp.mods_.save_non_semi_variable_index.clear();
+      save_non_semi_variable_index.clear();
     } else {
       for (HighsInt k = 0; k < num_non_semi; k++) {
-        const HighsInt iCol = lp.mods_.save_non_semi_variable_index[k];
+        const HighsInt iCol = save_non_semi_variable_index[k];
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
@@ -643,9 +648,15 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     return_status = HighsStatus::kError;
   }
   made_semi_variable_mods =
-      lp.mods_.save_non_semi_variable_index.size() > 0 ||
-      inconsistent_semi_variable_index.size() > 0 ||
-      tightened_semi_variable_upper_bound_index.size() > 0;
+    num_non_semi > 0 ||
+    num_inconsistent_semi > 0 ||
+    num_modified_upper > 0;
+  assert(num_non_semi <= save_non_semi_variable_index.size());
+  assert(num_inconsistent_semi <= inconsistent_semi_variable_index.size());
+  assert(num_modified_upper <= tightened_semi_variable_upper_bound_index.size());
+    //      save_non_semi_variable_index.size() > 0 ||
+    //      inconsistent_semi_variable_index.size() > 0 ||
+    //      tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
