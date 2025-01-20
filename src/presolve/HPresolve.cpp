@@ -481,7 +481,7 @@ void HPresolve::unlink(HighsInt pos) {
 
   // remove implied bounds on row duals that where implied by this column's dual
   // constraint
-  resetRowDualImpliedBounds(Acol[pos]);
+  resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
 
   // remove implied bounds on columns that where implied by this row
   resetColImpliedBounds(Arow[pos]);
@@ -1711,10 +1711,10 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
     // remove implied bounds on row duals that where implied by this column's
     // dual constraint
-    resetRowDualImpliedBounds(col);
+    resetRowDualImpliedBoundsDerivedFromCol(col);
 
     // remove implied bounds on columns that where implied by this row
-    resetColImpliedBounds(row);
+    resetColImpliedBoundsDerivedFromRow(row);
 
   } else {
     double sum = Avalue[pos] + val;
@@ -1723,10 +1723,10 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     } else {
       // remove implied bounds on row duals that where implied by this column's
       // dual constraint
-      resetRowDualImpliedBounds(col);
+      resetRowDualImpliedBoundsDerivedFromCol(col);
 
       // remove implied bounds on columns that where implied by this row
-      resetColImpliedBounds(row);
+      resetColImpliedBoundsDerivedFromRow(row);
 
       // remove the locks and contribution to implied (dual) row bounds, then
       // add then again
