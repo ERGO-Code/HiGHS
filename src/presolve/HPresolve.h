@@ -154,7 +154,7 @@ class HPresolve {
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  void resetColImpliedBounds(HighsInt col, HighsInt row = 1);
+  void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
 
   void resetRowDualImpliedBounds(HighsInt row, HighsInt col = -1);
 
