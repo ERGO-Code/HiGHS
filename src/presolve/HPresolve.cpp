@@ -484,7 +484,7 @@ void HPresolve::unlink(HighsInt pos) {
   resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
 
   // remove implied bounds on columns that where implied by this row
-  resetColImpliedBounds(Arow[pos]);
+  resetColImpliedBoundsDerivedFromRow(Arow[pos]);
 
   // remove non-zero
   Avalue[pos] = 0;
