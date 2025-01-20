@@ -32,7 +32,13 @@ cupdlp_int csc_clear(CUPDLPcsc *csc) {
   if (csc) {
 #ifndef CUPDLP_CPU
     if (csc->cuda_csc != NULL) {
-      CHECK_CUSPARSE(cusparseDestroySpMat(csc->cuda_csc))
+      // CHECK_CUSPARSE(cusparseDestroySpMat(csc->cuda_csc))
+      cusparseStatus_t status = (cusparseDestroySpMat(csc->cuda_csc));                                      
+      if (status != CUSPARSE_STATUS_SUCCESS) {                               
+        printf("CUSPARSE API failed at line %d of %s with error: %s (%d)\n", 
+              __LINE__, __FILE__, cusparseGetErrorString(status), status);  
+        return EXIT_FAILURE;                                                 
+    }
     }
 #endif
     if (csc->colMatBeg) {
@@ -1156,10 +1162,20 @@ cupdlp_int csc_copy(CUPDLPcsc *dst, CUPDLPcsc *src) {
 
 #ifndef CUPDLP_CPU
   // Pointer to GPU csc matrix
-  CHECK_CUSPARSE(cusparseCreateCsc(
+  // CHECK_CUSPARSE(cusparseCreateCsc(
+  //     &dst->cuda_csc, src->nRows, src->nCols, src->nMatElem, dst->colMatBeg,
+  //     dst->colMatIdx, dst->colMatElem, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
+  //     CUSPARSE_INDEX_BASE_ZERO, CudaComputeType));
+  
+cusparseStatus_t status = cusparseCreateCsc(
       &dst->cuda_csc, src->nRows, src->nCols, src->nMatElem, dst->colMatBeg,
       dst->colMatIdx, dst->colMatElem, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
-      CUSPARSE_INDEX_BASE_ZERO, CudaComputeType));
+      CUSPARSE_INDEX_BASE_ZERO, CudaComputeType);
+  if (status != CUSPARSE_STATUS_SUCCESS) {                               
+      printf("CUSPARSE API failed at line %d of %s with error: %s (%d)\n", 
+             __LINE__, __FILE__, cusparseGetErrorString(status), status);  
+      return 1;                                                 
+    }                                  
 #endif
 
   return 0;
@@ -1327,14 +1343,14 @@ exit_cleanup:
 
 cupdlp_retcode csc_create(CUPDLPcsc **csc) {
   cupdlp_retcode retcode = RETCODE_OK;
-#ifdef CUPDLP_CPU
+
   CUPDLP_INIT_CSC_MATRIX(*csc, 1);
-#else
-  // CUPDLP_INIT(*csc, 1);
-  // (*csc) = typeof(CUPDLPcsc) (malloc((1) * sizeof(CUPDLPcsc)); 
-  (*csc) = (typeof(*csc))malloc((1) * sizeof(typeof(**csc))); if ((*csc) == 0) { retcode = (1); goto exit_cleanup; }
-  // if ((*csc) == 0) { retcode = (1); goto exit_cleanup; } 
-#endif
+
+// #ifdef CUPDLP_CPU
+//   CUPDLP_INIT_CSC_MATRIX(*csc, 1);
+// #else
+//    CUPDLP_INIT(*csc, 1);
+// #endif
 
 exit_cleanup:
   return retcode;

@@ -3,9 +3,12 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
+#include "HConfig.h"
+
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-3;
 
+#ifdef CUPDLP_CPU
 TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   SpecialLps special_lps;
   HighsLp lp;
@@ -61,6 +64,69 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == 79);
 }
+#else
+// CUPDLP_GPU
+TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
+  SpecialLps special_lps;
+  HighsLp lp;
+
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.distillationLp(lp, require_model_status, optimal_objective);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = highs.getInfo();
+  const HighsOptions& options = highs.getOptions();
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  highs.setOptionValue("solver", kPdlpString);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("primal_feasibility_tolerance", 1e-4);
+  highs.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  HighsStatus run_status = HighsStatus::kOk;
+  // First pass uses (HiGHS default) termination for PDLP solver to
+  // satisfy HiGHS primal/dual feasibility tolerances
+  bool optimal = true;
+
+  // IG native termination not yet supported.
+  // for (HighsInt k = 0; k < 2; k++) {
+  //   if (k == 1) {
+  //     // In second pass use native termination for PDLP solver,
+  //     // failing HiGHS optimality test
+  //     highs.setOptionValue("pdlp_native_termination", true);
+  //     optimal = false;
+  //   }
+
+    run_status = highs.run();
+    if (dev_run) highs.writeSolution("", 1);
+    REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+            double_equal_tolerance);
+    if (optimal) {
+      REQUIRE(run_status == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    } else {
+      REQUIRE(run_status == HighsStatus::kWarning);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
+    }
+
+  // IG todo add iteration count 
+  // HighsInt pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  // REQUIRE(pdlp_iteration_count > 0);
+  // REQUIRE(pdlp_iteration_count == 160);
+
+  // Now run with half the iteration count as the limit to test
+  // iteration limit termination
+
+  // highs.setOptionValue("pdlp_iteration_limit", pdlp_iteration_count / 2);
+  // run_status = highs.run();
+
+  // REQUIRE(run_status == HighsStatus::kWarning);
+  // REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+  // pdlp_iteration_count = highs.getInfo().pdlp_iteration_count;
+  // REQUIRE(pdlp_iteration_count > 0);
+  // REQUIRE(pdlp_iteration_count == 79);
+}
+#endif
 
 TEST_CASE("pdlp-3d-lp", "[pdlp]") {
   SpecialLps special_lps;
