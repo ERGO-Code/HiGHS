@@ -212,26 +212,25 @@ restart:
   }
 
   std::shared_ptr<const HighsBasis> basis;
-  HighsSearch search{*this, mipdata_->pseudocost};
-  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
-  HighsSeparation sepa(*this);
+  //  HighsSearch search{*this, mipdata_->pseudocost};
+  //  search.setLpRelaxation(&mipdata_->lp);
+  //  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
 
-  search.setLpRelaxation(&mipdata_->lp);
+  HighsSeparation sepa(*this);
   sepa.setLpRelaxation(&mipdata_->lp);
 
-  // Set up a vector of HighsSearch instances - HOW?
-  assert(options_mip_->mip_search_concurrency <= 2);
-  std::vector<HighsSearch*> multiple_search;
-  multiple_search.push_back(&search);
-  if (options_mip_->mip_search_concurrency > 1) {
-    for (HighsInt iSearch = 1; iSearch < options_mip_->mip_search_concurrency; iSearch++) {
-      HighsSearch local_search{*this, mipdata_->pseudocost};
-      multiple_search.push_back(&local_search);
-    }
+  // Set up a vector of HighsSearch instances, with a
+  // HighsLpRelaxation for each concurrent search
+  std::vector<HighsSearch> multiple_search;
+  std::vector<HighsLpRelaxation> multiple_lp;
+  for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
+       iSearch++) {
+    multiple_search.push_back(HighsSearch{*this, mipdata_->pseudocost});
+    //    multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+    //    multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch]);
+    multiple_search[iSearch].setLpRelaxation(&mipdata_->lp);
   }
-  // Set up the HighsLpRelaxation for each concurrent search: also doesn't work
-  HighsLpRelaxation local_lp;
-  local_search.setLpRelaxation(&local_lp);
+  HighsSearch& search = multiple_search[0];
 
   double prev_lower_bound = mipdata_->lower_bound;
 
