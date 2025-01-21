@@ -224,11 +224,15 @@ restart:
   std::vector<HighsSearch*> multiple_search;
   multiple_search.push_back(&search);
   if (options_mip_->mip_search_concurrency > 1) {
-  //  for (HighsInt iSearch = 1; iSearch < options_mip_->mip_search_concurrency; iSearch++) {
-    HighsSearch local_search{*this, mipdata_->pseudocost};
-    multiple_search.push_back(&local_search);
-    //  }
-}
+    for (HighsInt iSearch = 1; iSearch < options_mip_->mip_search_concurrency; iSearch++) {
+      HighsSearch local_search{*this, mipdata_->pseudocost};
+      multiple_search.push_back(&local_search);
+    }
+  }
+  // Set up the HighsLpRelaxation for each concurrent search: also doesn't work
+  HighsLpRelaxation local_lp;
+  local_search.setLpRelaxation(&local_lp);
+
   double prev_lower_bound = mipdata_->lower_bound;
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
