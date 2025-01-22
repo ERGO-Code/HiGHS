@@ -221,7 +221,10 @@ restart:
 
   // Set up a vector of HighsSearch instances, with a
   // HighsLpRelaxation for each concurrent search beyond the master
-  // search
+  // search, and a flag for whether the HighsSearch instance has a
+  // node from which to dive
+  std::vector<bool> search_has_node;
+  std::vector<HighsSearch::NodeResult> search_evaluate_node_result;
   std::vector<HighsSearch> multiple_search;
   std::vector<HighsLpRelaxation> multiple_lp;
   for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
@@ -247,6 +250,13 @@ restart:
                                        mipdata_->upper_bound);
 
   mipdata_->printDisplayLine();
+  int64_t num_nodes = mipdata_->nodequeue.numNodes();
+  if (num_nodes > 1) {
+    // Should be exactly one node on the queue?
+    printf("HighsMipSolver::run() popping node from nodequeue with %d > 1 nodes\n", HighsInt(num_nodes));
+    assert(num_nodes == 1);
+  }
+
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
@@ -532,8 +542,6 @@ restart:
     analysis_.mipTimerStart(kMipClockNodeSearch);
 
     while (!mipdata_->nodequeue.empty()) {
-      // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
-      // (HighsInt)nodequeue.size());
       assert(!search.hasNode());
 
       if (numQueueLeaves - lastLbLeave >= 10) {
