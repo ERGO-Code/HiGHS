@@ -219,17 +219,23 @@ restart:
   HighsSeparation sepa(*this);
   sepa.setLpRelaxation(&mipdata_->lp);
 
-  // Set up a vector of HighsSearch instances, with a
+  // Set up a vector of HighsParallelSearch instances, with a
   // HighsLpRelaxation for each concurrent search beyond the master
-  // search, and a flag for whether the HighsSearch instance has a
-  // node from which to dive
+  // search
   std::vector<HighsParallelSearch> multiple_search;
+  std::vector<HighsLpRelaxation> multiple_lp;
   for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
        iSearch++) {
     if (iSearch == 0) {
-      multiple_search.push_back(HighsParallelSearch{*this, mipdata_->pseudocost});
+      multiple_search.push_back(
+          HighsParallelSearch{*this, mipdata_->pseudocost});
+      multiple_search[iSearch].search.setLpRelaxation(&mipdata_->lp);
     } else {
-      multiple_search.push_back(HighsParallelSearch{*this, mipdata_->pseudocost});
+      multiple_search.push_back(
+          HighsParallelSearch{*this, mipdata_->pseudocost});
+      multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+      multiple_search[iSearch].search.setLpRelaxation(
+          &multiple_lp[iSearch - 1]);
     }
   }
   HighsSearch& search = multiple_search[0].search;
@@ -248,7 +254,9 @@ restart:
   int64_t num_nodes = mipdata_->nodequeue.numNodes();
   if (num_nodes > 1) {
     // Should be exactly one node on the queue?
-    printf("HighsMipSolver::run() popping node from nodequeue with %d > 1 nodes\n", HighsInt(num_nodes));
+    printf(
+        "HighsMipSolver::run() popping node from nodequeue with %d > 1 nodes\n",
+        HighsInt(num_nodes));
     assert(num_nodes == 1);
   }
 

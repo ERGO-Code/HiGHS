@@ -66,12 +66,9 @@ enum MipSolutionSource : int {
 struct HighsParallelSearch {
   HighsSearch::NodeResult evaluate_node_result;
   HighsSearch search;
-  //  HighsLpRelaxation lp;
   HighsParallelSearch(HighsMipSolver& solver, HighsPseudocost& pseudocost)
-    : evaluate_node_result(HighsSearch::NodeResult::kOpen),
-      search(solver, pseudocost) {
-      //    lp(lp)      
-  }
+      : evaluate_node_result(HighsSearch::NodeResult::kOpen),
+        search(solver, pseudocost) {}
 };
 
 struct HighsMipSolverData {
