@@ -346,10 +346,12 @@ class MipTimer {
                      const HighsTimerClock& mip_timer_clock) {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     HighsInt iClock = mip_timer_clock.clock_[kMipClockFeasibilityJump];
-    printf("grepFK,%s,%s,%d,%g\n", model.c_str(),
+    const double fj_time = timer_pointer->read(iClock);
+    const double total_time = timer_pointer->read();
+    const double pct = total_time > 0 ? 1e2 * fj_time / total_time : 0;
+    printf("grepFK,%s,%s,%d,%g,%g\n", model.c_str(),
            timer_pointer->clock_names[iClock].c_str(),
-           int(timer_pointer->clock_num_call[iClock]),
-           timer_pointer->read(iClock));
+           int(timer_pointer->clock_num_call[iClock]), fj_time, pct);
   }
 };
 
