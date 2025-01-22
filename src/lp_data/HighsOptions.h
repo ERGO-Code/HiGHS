@@ -1083,7 +1083,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "mip_search_concurrency", "Concurrency to use in MIP search", advanced,
-        &mip_search_concurrency, 1, 1, kMipSearchConcurrencyLimit);
+        &mip_search_concurrency, 1, 2, kMipSearchConcurrencyLimit);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

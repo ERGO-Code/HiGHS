@@ -220,15 +220,19 @@ restart:
   sepa.setLpRelaxation(&mipdata_->lp);
 
   // Set up a vector of HighsSearch instances, with a
-  // HighsLpRelaxation for each concurrent search
+  // HighsLpRelaxation for each concurrent search beyond the master
+  // search
   std::vector<HighsSearch> multiple_search;
   std::vector<HighsLpRelaxation> multiple_lp;
   for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
        iSearch++) {
     multiple_search.push_back(HighsSearch{*this, mipdata_->pseudocost});
-    //    multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
-    //    multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch]);
-    multiple_search[iSearch].setLpRelaxation(&mipdata_->lp);
+    if (iSearch == 0) {
+      multiple_search[iSearch].setLpRelaxation(&mipdata_->lp);
+    } else {
+      multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+      multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch-1]);
+    }
   }
   HighsSearch& search = multiple_search[0];
 
