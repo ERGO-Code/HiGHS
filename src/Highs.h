@@ -1323,6 +1323,11 @@ class Highs {
     return this->timer_.clock_def(name);
   }
   void writeAllClocks() { this->timer_.writeAllClocks(); }
+  HighsStatus clearModelNames() {
+    this->model_.lp_.col_names_.clear();
+    this->model_.lp_.row_names_.clear();
+    return HighsStatus::kOk;
+  }
 
   // Start of deprecated methods
 

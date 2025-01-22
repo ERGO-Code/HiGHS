@@ -338,7 +338,7 @@ class MipTimer {
                    const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockRunPresolve, kMipClockEvaluateRootNode,
-        kMipClockPrimalHeuristics, kMipClockTheDive};
+        kMipClockPrimalHeuristics, kMipClockTheDive, kMipClockNodeSearch};
     csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal,
                     header, end_line);
   };
