@@ -342,6 +342,15 @@ class MipTimer {
     csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal,
                     header, end_line);
   };
+  void reportFjClock(std::string& model,
+                     const HighsTimerClock& mip_timer_clock) {
+    HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
+    HighsInt iClock = mip_timer_clock.clock_[kMipClockFeasibilityJump];
+    printf("grepFK,%s,%s,%d,%g\n", model.c_str(),
+           timer_pointer->clock_names[iClock].c_str(),
+           int(timer_pointer->clock_num_call[iClock]),
+           timer_pointer->read(iClock));
+  }
 };
 
 #endif /* MIP_MIPTIMER_H_ */

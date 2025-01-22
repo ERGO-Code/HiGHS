@@ -158,4 +158,5 @@ void HighsMipAnalysis::reportMipTimer() {
                       HighsInt(node_search_time.size()), node_search_time);
   analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
                       dive_time);
+  mip_timer.reportFjClock(this->model_name, mip_clocks);
 }
