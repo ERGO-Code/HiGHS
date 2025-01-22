@@ -16,6 +16,9 @@ target_compile_options(cudalin PRIVATE
 # endif()
 
 set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+target_include_directories(cudalin PUBLIC "${CMAKE_CUDA_PATH}/include")
+
 # target_include_directories(cudalin PUBLIC "/usr/local/cuda/include")
 target_compile_definitions(cudalin
         PUBLIC

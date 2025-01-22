@@ -160,6 +160,8 @@ else()
     # $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
   )
 
+  target_include_directories(highs PUBLIC "${CMAKE_CUDA_PATH}/include")
+
   # target_include_directories(highs PRIVATE
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/io>

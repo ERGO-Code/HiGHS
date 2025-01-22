@@ -118,6 +118,8 @@ option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 # message(STATUS "Build pdlp with CPU: ${CUPDLP_CPU}")
 
 option(CUPDLP_GPU "Build pdlp with GPU" OFF)
+set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
 if (NOT LINUX)
@@ -395,8 +397,15 @@ if(NOT(${HIGHS_NO_DEFAULT_THREADS} STREQUAL "OFF"))
 endif()
 
 # For debug of cuda locally
-# add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
-# add_compile_options("-g3")
+add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+# add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
+
+add_compile_options("-Wno-deprecated-declarations")
+# add_compile_options("-Wno-implicit-function-declaration")
+
+# set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
+set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+
 
 # If Visual Studio targets are being built.
 if(MSVC)

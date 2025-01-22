@@ -1,9 +1,9 @@
 
 set(CUDA_LIBRARY-NOTFOUND, OFF)
 message(NOTICE "Finding CUDA environment")
-message(NOTICE "    - CUDA Home detected at $ENV{CUDA_HOME}")
+message(NOTICE "    - CUDA Home detected at ${CUDA_HOME}")
 set(CMAKE_CUDA_ARCHITECTURES "all")
-set(CMAKE_CUDA_PATH "$ENV{CUDA_HOME}")
+set(CMAKE_CUDA_PATH "${CUDA_HOME}")
 set(CMAKE_CUDA_COMPILER "${CMAKE_CUDA_PATH}/bin/nvcc")
 
 enable_language(CUDA)
@@ -24,9 +24,9 @@ find_library(CUDA_LIBRARY_BLS
         REQUIRED
 )
 if (${CUDA_LIBRARY-NOTFOUND})
-    message(WARNING "    - CUDA Libraries not detected at $ENV{CUDA_HOME}")
+    message(WARNING "    - CUDA Libraries not detected at ${CUDA_HOME}")
 else ()
-    message(NOTICE "    - CUDA Libraries detected at $ENV{CUDA_HOME}")
+    message(NOTICE "    - CUDA Libraries detected at ${CUDA_HOME}")
     set(CUDA_LIBRARY ${CUDA_LIBRARY_ART} ${CUDA_LIBRARY_SPS} ${CUDA_LIBRARY_BLS})
     message(NOTICE "    -   :${CUDA_LIBRARY}")
 endif ()
