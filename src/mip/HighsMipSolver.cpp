@@ -223,21 +223,16 @@ restart:
   // HighsLpRelaxation for each concurrent search beyond the master
   // search, and a flag for whether the HighsSearch instance has a
   // node from which to dive
-  std::vector<bool> search_has_node;
-  std::vector<HighsSearch::NodeResult> search_evaluate_node_result;
-  std::vector<HighsSearch> multiple_search;
-  std::vector<HighsLpRelaxation> multiple_lp;
+  std::vector<HighsParallelSearch> multiple_search;
   for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
        iSearch++) {
-    multiple_search.push_back(HighsSearch{*this, mipdata_->pseudocost});
     if (iSearch == 0) {
-      multiple_search[iSearch].setLpRelaxation(&mipdata_->lp);
+      multiple_search.push_back(HighsParallelSearch{*this, mipdata_->pseudocost});
     } else {
-      multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
-      multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch - 1]);
+      multiple_search.push_back(HighsParallelSearch{*this, mipdata_->pseudocost});
     }
   }
-  HighsSearch& search = multiple_search[0];
+  HighsSearch& search = multiple_search[0].search;
 
   double prev_lower_bound = mipdata_->lower_bound;
 
