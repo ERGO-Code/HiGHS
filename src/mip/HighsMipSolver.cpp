@@ -231,7 +231,7 @@ restart:
       multiple_search[iSearch].setLpRelaxation(&mipdata_->lp);
     } else {
       multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
-      multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch-1]);
+      multiple_search[iSearch].setLpRelaxation(&multiple_lp[iSearch - 1]);
     }
   }
   HighsSearch& search = multiple_search[0];
