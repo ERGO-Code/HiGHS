@@ -272,6 +272,9 @@ restart:
       HighsSearch& search =
           master_search;  // iSearch == 0 ? master_search : worker_search;
 
+      if (!search.hasNode()) continue;
+
+
       analysis_.mipTimerStart(kMipClockPerformAging1);
       mipdata_->conflictPool.performAging();
       analysis_.mipTimerStop(kMipClockPerformAging1);
@@ -699,7 +702,7 @@ restart:
         analysis_.node_search_time.push_back(this_node_search_time);
       }
       if (limit_reached) break;
-    }
+    } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency-1
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
