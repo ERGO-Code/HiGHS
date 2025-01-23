@@ -263,14 +263,16 @@ restart:
 
     HighsSearch worker_search{worker_solver,
                               worker_solver.mipdata_->pseudocost};
-    worker_search.setLpRelaxation(&mipdata_->lp);
+
+    std::vector<HighsLpRelaxation> multiple_lp;
+    multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+
+    worker_search.setLpRelaxation(&multiple_lp[0]);
 
     for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
          iSearch++) {
-      HighsMipSolver& use_solver =
-          *this;  //= iSearch == 0 ? *this : worker_solver;
-      HighsSearch& search =
-          master_search;  // iSearch == 0 ? master_search : worker_search;
+      HighsMipSolver& use_solver = iSearch == 0 ? *this : worker_solver;
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
 
       if (!search.hasNode()) continue;
 
