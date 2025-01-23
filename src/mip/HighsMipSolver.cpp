@@ -212,43 +212,12 @@ restart:
   }
 
   std::shared_ptr<const HighsBasis> basis;
-  //  HighsSearch search{*this, mipdata_->pseudocost};
-  //  search.setLpRelaxation(&mipdata_->lp);
-  //  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
+  HighsSearch master_search{*this, mipdata_->pseudocost};
+  master_search.setLpRelaxation(&mipdata_->lp);
+  mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
 
   HighsSeparation sepa(*this);
   sepa.setLpRelaxation(&mipdata_->lp);
-
-  // Set up a vector of HighsParallelSearch instances, with a
-  // HighsLpRelaxation for each concurrent search beyond the master
-  // search
-  std::vector<HighsParallelSearch> multiple_search;
-  std::vector<HighsLpRelaxation> worker_lp;
-
-  HighsSolution null_solution;
-  HighsMipSolver solver1(*callback_, *options_mip_, *model_, null_solution, false, 0);
-  solver1.rootbasis = this->rootbasis;
-  HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
-  solver1.pscostinit = &pscostinit;
-  solver1.clqtableinit = &mipdata_->cliquetable;
-  solver1.implicinit = &mipdata_->implications;
-  solver1.mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  
-  for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
-       iSearch++) {
-    if (iSearch == 0) {
-      multiple_search.push_back(
-          HighsParallelSearch{*this, mipdata_->pseudocost});
-      multiple_search[iSearch].search.setLpRelaxation(&mipdata_->lp);
-    } else {
-      multiple_search.push_back(
-          HighsParallelSearch{solver1, mipdata_->pseudocost});
-      worker_lp.push_back(HighsLpRelaxation{mipdata_->lp});
-      multiple_search[iSearch].search.setLpRelaxation(
-          &worker_lp[iSearch - 1]);
-    }
-  }
-  HighsSearch& search = multiple_search[0].search;
 
   double prev_lower_bound = mipdata_->lower_bound;
 
@@ -270,7 +239,7 @@ restart:
     assert(num_nodes == 1);
   }
 
-  search.installNode(mipdata_->nodequeue.popBestBoundNode());
+  master_search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
@@ -281,7 +250,26 @@ restart:
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
-  while (search.hasNode()) {
+  while (master_search.hasNode()) {
+
+
+    HighsSolution null_solution;
+    HighsMipSolver worker_solver(*callback_, *options_mip_, *model_, null_solution, false, 0);
+    worker_solver.rootbasis = this->rootbasis;
+    HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
+    worker_solver.pscostinit = &pscostinit;
+    worker_solver.clqtableinit = &mipdata_->cliquetable;
+    worker_solver.implicinit = &mipdata_->implications;
+    worker_solver.mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+
+    HighsSearch worker_search{worker_solver, worker_solver.mipdata_->pseudocost};
+    worker_search.setLpRelaxation(&mipdata_->lp);
+  
+    for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
+	 iSearch++) {
+      HighsMipSolver& use_solver = *this;//= iSearch == 0 ? *this : worker_solver;
+      HighsSearch& search = master_search;//iSearch == 0 ? master_search : worker_search;
+
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
     analysis_.mipTimerStop(kMipClockPerformAging1);
@@ -301,51 +289,45 @@ restart:
     bool considerHeuristics = true;
     analysis_.mipTimerStart(kMipClockDive);
     while (true) {
-      for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
-	   iSearch++) {
-	HighsParallelSearch& parallel_search = multiple_search[iSearch];
-	if (parallel_search.search.hasNode()) {
-	  // Possibly apply primal heuristics
-	  if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-	    analysis_.mipTimerStart(kMipClockEvaluateNode);
-	    parallel_search.evaluate_node_result = parallel_search.search.evaluateNode();
-	    analysis_.mipTimerStop(kMipClockEvaluateNode);
+      if (search.hasNode()) {
+	// Possibly apply primal heuristics
+	if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+	  analysis_.mipTimerStart(kMipClockEvaluateNode);
+	  const HighsSearch::NodeResult evaluate_node_result = search.evaluateNode();
+	  analysis_.mipTimerStop(kMipClockEvaluateNode);
 
-	    if (parallel_search.evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
-	      printf("HighsMipSolver::run() evaluate_node_result == HighsSearch::NodeResult::kSubOptimal\n");
-	      assert(345==678);
-	      continue;
+	  if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	    printf("HighsMipSolver::run() evaluate_node_result == HighsSearch::NodeResult::kSubOptimal\n");
+	    assert(345==678);
+	    break;
+	  }
+
+	  if (search.currentNodePruned()) {
+	    ++mipdata_->num_leaves;
+	    search.flushStatistics();
+	  } else {
+	    analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+	    if (mipdata_->incumbent.empty()) {
+	      analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+	      mipdata_->heuristics.randomizedRounding(mipdata_->lp.getLpSolver().getSolution().col_value);
+	      analysis_.mipTimerStop(kMipClockRandomizedRounding0);
 	    }
-
-	    if (parallel_search.search.currentNodePruned()) {
-	      ++mipdata_->num_leaves;
-	      parallel_search.search.flushStatistics();
+	    
+	    if (mipdata_->incumbent.empty()) {
+	      analysis_.mipTimerStart(kMipClockRens);
+	      mipdata_->heuristics.RENS(mipdata_->lp.getLpSolver().getSolution().col_value);
+	      analysis_.mipTimerStop(kMipClockRens);
 	    } else {
-	      analysis_.mipTimerStart(kMipClockPrimalHeuristics);
-	      if (mipdata_->incumbent.empty()) {
-		analysis_.mipTimerStart(kMipClockRandomizedRounding0);
-		mipdata_->heuristics.randomizedRounding(mipdata_->lp.getLpSolver().getSolution().col_value);
-		analysis_.mipTimerStop(kMipClockRandomizedRounding0);
-	      }
-	      
-	      if (mipdata_->incumbent.empty()) {
-		analysis_.mipTimerStart(kMipClockRens);
-		mipdata_->heuristics.RENS(mipdata_->lp.getLpSolver().getSolution().col_value);
-		analysis_.mipTimerStop(kMipClockRens);
-	      } else {
-		analysis_.mipTimerStart(kMipClockRins);
-		mipdata_->heuristics.RINS(mipdata_->lp.getLpSolver().getSolution().col_value);
-		analysis_.mipTimerStop(kMipClockRins);
-	      }
-
-	      mipdata_->heuristics.flushStatistics();
-	      analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+	      analysis_.mipTimerStart(kMipClockRins);
+	      mipdata_->heuristics.RINS(mipdata_->lp.getLpSolver().getSolution().col_value);
+	      analysis_.mipTimerStop(kMipClockRins);
 	    }
+	    
+	    mipdata_->heuristics.flushStatistics();
+	    analysis_.mipTimerStop(kMipClockPrimalHeuristics);
 	  }
 	}
       }
-      if (multiple_search[0].evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
-      
       considerHeuristics = false;
 
       if (mipdata_->domain.infeasible()) break;
@@ -706,6 +688,7 @@ restart:
       analysis_.node_search_time.push_back(this_node_search_time);
     }
     if (limit_reached) break;
+    }
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
