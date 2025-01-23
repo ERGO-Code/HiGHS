@@ -291,44 +291,49 @@ restart:
     bool considerHeuristics = true;
     analysis_.mipTimerStart(kMipClockDive);
     while (true) {
-      // Possibly apply primal heuristics
-      if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        analysis_.mipTimerStart(kMipClockEvaluateNode);
-        const HighsSearch::NodeResult evaluate_node_result =
-            search.evaluateNode();
-        analysis_.mipTimerStop(kMipClockEvaluateNode);
+      for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
+	   iSearch++) {
+	HighsParallelSearch& parallel_search = multiple_search[iSearch];
+	if (parallel_search.search.hasNode()) {
+	  // Possibly apply primal heuristics
+	  if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+	    analysis_.mipTimerStart(kMipClockEvaluateNode);
+	    const HighsSearch::NodeResult evaluate_node_result =
+	      parallel_search.search.evaluateNode();
+	    analysis_.mipTimerStop(kMipClockEvaluateNode);
 
-        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
+	    if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	      assert(345==678);
+	      break;
+	    }
 
-        if (search.currentNodePruned()) {
-          ++mipdata_->num_leaves;
-          search.flushStatistics();
-        } else {
-          analysis_.mipTimerStart(kMipClockPrimalHeuristics);
-          if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockRandomizedRounding0);
-            mipdata_->heuristics.randomizedRounding(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRandomizedRounding0);
-          }
+	    if (parallel_search.search.currentNodePruned()) {
+	      ++mipdata_->num_leaves;
+	      parallel_search.search.flushStatistics();
+	    } else {
+	      analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+	      if (mipdata_->incumbent.empty()) {
+		analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+		mipdata_->heuristics.randomizedRounding(mipdata_->lp.getLpSolver().getSolution().col_value);
+		analysis_.mipTimerStop(kMipClockRandomizedRounding0);
+	      }
+	      
+	      if (mipdata_->incumbent.empty()) {
+		analysis_.mipTimerStart(kMipClockRens);
+		mipdata_->heuristics.RENS(mipdata_->lp.getLpSolver().getSolution().col_value);
+		analysis_.mipTimerStop(kMipClockRens);
+	      } else {
+		analysis_.mipTimerStart(kMipClockRins);
+		mipdata_->heuristics.RINS(mipdata_->lp.getLpSolver().getSolution().col_value);
+		analysis_.mipTimerStop(kMipClockRins);
+	      }
 
-          if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockRens);
-            mipdata_->heuristics.RENS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRens);
-          } else {
-            analysis_.mipTimerStart(kMipClockRins);
-            mipdata_->heuristics.RINS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRins);
-          }
-
-          mipdata_->heuristics.flushStatistics();
-          analysis_.mipTimerStop(kMipClockPrimalHeuristics);
-        }
+	      mipdata_->heuristics.flushStatistics();
+	      analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+	    }
+	  }
+	}
       }
-
       considerHeuristics = false;
 
       if (mipdata_->domain.infeasible()) break;
