@@ -298,13 +298,13 @@ restart:
 	  // Possibly apply primal heuristics
 	  if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
 	    analysis_.mipTimerStart(kMipClockEvaluateNode);
-	    const HighsSearch::NodeResult evaluate_node_result =
-	      parallel_search.search.evaluateNode();
+	    parallel_search.evaluate_node_result = parallel_search.search.evaluateNode();
 	    analysis_.mipTimerStop(kMipClockEvaluateNode);
 
-	    if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	    if (parallel_search.evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	      printf("HighsMipSolver::run() evaluate_node_result == HighsSearch::NodeResult::kSubOptimal\n");
 	      assert(345==678);
-	      break;
+	      continue;
 	    }
 
 	    if (parallel_search.search.currentNodePruned()) {
@@ -334,6 +334,8 @@ restart:
 	  }
 	}
       }
+      if (multiple_search[0].evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
+      
       considerHeuristics = false;
 
       if (mipdata_->domain.infeasible()) break;
