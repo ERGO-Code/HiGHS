@@ -225,7 +225,9 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  NodeResult dive();
+  void dive(bool& limit_reached);
+  //  void nodeSearch();
+  NodeResult theDive();
 
   HighsDomain& getLocalDomain() { return localdom; }
 

@@ -13,6 +13,7 @@
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/MipTimer.h"
 
 HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
     : mipsolver(mipsolver),
@@ -1945,7 +1946,122 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive() {
+void HighsSearch::dive(bool& limit_reached) {
+  HighsMipAnalysis& analysis_ = mipsolver.analysis_;
+  const HighsOptions* options_mip_ = mipsolver.options_mip_;
+  analysis_.mipTimerStart(kMipClockPerformAging1);
+  mipsolver.mipdata_->conflictPool.performAging();
+  analysis_.mipTimerStop(kMipClockPerformAging1);
+  // set iteration limit for each lp solve during the dive to 10 times the
+  // average nodes
+
+  HighsInt iterlimit = 10 * std::max(mipsolver.mipdata_->lp.getAvgSolveIters(),
+				     mipsolver.mipdata_->avgrootlpiters);
+  iterlimit = std::max({HighsInt{10000}, iterlimit,
+      HighsInt((3 * mipsolver.mipdata_->firstrootlpiters) / 2)});
+
+  mipsolver.mipdata_->lp.setIterationLimit(iterlimit);
+
+  // perform the dive and put the open nodes to the queue
+  size_t plungestart = mipsolver.mipdata_->num_nodes;
+  bool considerHeuristics = true;
+  analysis_.mipTimerStart(kMipClockDive);
+  while (true) {
+    // Possibly apply primal heuristics
+    if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
+      analysis_.mipTimerStart(kMipClockEvaluateNode);
+      const HighsSearch::NodeResult evaluate_node_result =
+	this->evaluateNode();
+      analysis_.mipTimerStop(kMipClockEvaluateNode);
+      
+      if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	printf(
+	       "HighsMipSolver::run() evaluate_node_result == "
+	       "HighsSearch::NodeResult::kSubOptimal\n");
+	assert(345 == 678);
+	break;
+      }
+      
+      if (this->currentNodePruned()) {
+	++mipsolver.mipdata_->num_leaves;
+	this->flushStatistics();
+      } else {
+	analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+	if (mipsolver.mipdata_->incumbent.empty()) {
+	  analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+	  mipsolver.mipdata_->heuristics.randomizedRounding(
+						  mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+	  analysis_.mipTimerStop(kMipClockRandomizedRounding0);
+	}
+	
+	if (mipsolver.mipdata_->incumbent.empty()) {
+	  analysis_.mipTimerStart(kMipClockRens);
+	  mipsolver.mipdata_->heuristics.RENS(
+				    mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+	  analysis_.mipTimerStop(kMipClockRens);
+	} else {
+	  analysis_.mipTimerStart(kMipClockRins);
+	  mipsolver.mipdata_->heuristics.RINS(
+				    mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+	  analysis_.mipTimerStop(kMipClockRins);
+	}
+	
+	mipsolver.mipdata_->heuristics.flushStatistics();
+	analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+      }
+    }
+    
+    considerHeuristics = false;
+    
+    if (mipsolver.mipdata_->domain.infeasible()) break;
+    
+    if (!this->currentNodePruned()) {
+      double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
+      analysis_.mipTimerStart(kMipClockTheDive);
+      const HighsSearch::NodeResult search_dive_result = this->theDive();
+      analysis_.mipTimerStop(kMipClockTheDive);
+      if (analysis_.analyse_mip_time) {
+	this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
+	analysis_.dive_time.push_back(this_dive_time);
+      }
+      if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
+      
+      ++mipsolver.mipdata_->num_leaves;
+      
+      this->flushStatistics();
+    }
+    
+    if (mipsolver.mipdata_->checkLimits()) {
+      limit_reached = true;
+      break;
+    }
+
+    HighsInt numPlungeNodes = mipsolver.mipdata_->num_nodes - plungestart;
+    if (numPlungeNodes >= 100) break;
+    
+    analysis_.mipTimerStart(kMipClockBacktrackPlunge);
+    const bool backtrack_plunge =
+      this->backtrackPlunge(mipsolver.mipdata_->nodequeue);
+    analysis_.mipTimerStop(kMipClockBacktrackPlunge);
+    if (!backtrack_plunge) break;
+    
+    assert(this->hasNode());
+    
+    if (mipsolver.mipdata_->conflictPool.getNumConflicts() >
+	options_mip_->mip_pool_soft_limit) {
+      analysis_.mipTimerStart(kMipClockPerformAging2);
+      mipsolver.mipdata_->conflictPool.performAging();
+      analysis_.mipTimerStop(kMipClockPerformAging2);
+    }
+    
+    this->flushStatistics();
+    mipsolver.mipdata_->printDisplayLine();
+    // printf("continue plunging due to good estimate\n");
+  } 
+  analysis_.mipTimerStop(kMipClockDive);
+}
+
+HighsSearch::NodeResult HighsSearch::theDive() {
   reliableatnode.clear();
 
   do {
@@ -1965,7 +2081,7 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
   do {
     if (maxbacktracks == 0) break;
 
-    NodeResult result = dive();
+    NodeResult result = theDive();
     // if a limit was reached the result might be open
     if (result == NodeResult::kOpen) break;
 

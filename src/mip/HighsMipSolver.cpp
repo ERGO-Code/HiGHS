@@ -273,121 +273,12 @@ restart:
          iSearch++) {
       HighsMipSolver& use_solver = iSearch == 0 ? *this : worker_solver;
       HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-
       if (!search.hasNode()) continue;
 
-
-      analysis_.mipTimerStart(kMipClockPerformAging1);
-      mipdata_->conflictPool.performAging();
-      analysis_.mipTimerStop(kMipClockPerformAging1);
-      // set iteration limit for each lp solve during the dive to 10 times the
-      // average nodes
-
-      HighsInt iterlimit = 10 * std::max(mipdata_->lp.getAvgSolveIters(),
-                                         mipdata_->avgrootlpiters);
-      iterlimit = std::max({HighsInt{10000}, iterlimit,
-                            HighsInt((3 * mipdata_->firstrootlpiters) / 2)});
-
-      mipdata_->lp.setIterationLimit(iterlimit);
-
-      // perform the dive and put the open nodes to the queue
-      size_t plungestart = mipdata_->num_nodes;
       bool limit_reached = false;
-      bool considerHeuristics = true;
-      analysis_.mipTimerStart(kMipClockDive);
-      while (true) {
-        // Possibly apply primal heuristics
-        if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-          analysis_.mipTimerStart(kMipClockEvaluateNode);
-          const HighsSearch::NodeResult evaluate_node_result =
-              search.evaluateNode();
-          analysis_.mipTimerStop(kMipClockEvaluateNode);
+      search.dive(limit_reached);
 
-          if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
-            printf(
-                "HighsMipSolver::run() evaluate_node_result == "
-                "HighsSearch::NodeResult::kSubOptimal\n");
-            assert(345 == 678);
-            break;
-          }
 
-          if (search.currentNodePruned()) {
-            ++mipdata_->num_leaves;
-            search.flushStatistics();
-          } else {
-            analysis_.mipTimerStart(kMipClockPrimalHeuristics);
-            if (mipdata_->incumbent.empty()) {
-              analysis_.mipTimerStart(kMipClockRandomizedRounding0);
-              mipdata_->heuristics.randomizedRounding(
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockRandomizedRounding0);
-            }
-
-            if (mipdata_->incumbent.empty()) {
-              analysis_.mipTimerStart(kMipClockRens);
-              mipdata_->heuristics.RENS(
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockRens);
-            } else {
-              analysis_.mipTimerStart(kMipClockRins);
-              mipdata_->heuristics.RINS(
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockRins);
-            }
-
-            mipdata_->heuristics.flushStatistics();
-            analysis_.mipTimerStop(kMipClockPrimalHeuristics);
-          }
-        }
-
-        considerHeuristics = false;
-
-        if (mipdata_->domain.infeasible()) break;
-
-        if (!search.currentNodePruned()) {
-          double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
-          analysis_.mipTimerStart(kMipClockTheDive);
-          const HighsSearch::NodeResult search_dive_result = search.dive();
-          analysis_.mipTimerStop(kMipClockTheDive);
-          if (analysis_.analyse_mip_time) {
-            this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
-            analysis_.dive_time.push_back(this_dive_time);
-          }
-          if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
-
-          ++mipdata_->num_leaves;
-
-          search.flushStatistics();
-        }
-
-        if (mipdata_->checkLimits()) {
-          limit_reached = true;
-          break;
-        }
-
-        HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
-        if (numPlungeNodes >= 100) break;
-
-        analysis_.mipTimerStart(kMipClockBacktrackPlunge);
-        const bool backtrack_plunge =
-            search.backtrackPlunge(mipdata_->nodequeue);
-        analysis_.mipTimerStop(kMipClockBacktrackPlunge);
-        if (!backtrack_plunge) break;
-
-        assert(search.hasNode());
-
-        if (mipdata_->conflictPool.getNumConflicts() >
-            options_mip_->mip_pool_soft_limit) {
-          analysis_.mipTimerStart(kMipClockPerformAging2);
-          mipdata_->conflictPool.performAging();
-          analysis_.mipTimerStop(kMipClockPerformAging2);
-        }
-
-        search.flushStatistics();
-        mipdata_->printDisplayLine();
-        // printf("continue plunging due to good estimate\n");
-      }  // while (true)
-      analysis_.mipTimerStop(kMipClockDive);
 
       analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
       search.openNodesToQueue(mipdata_->nodequeue);
