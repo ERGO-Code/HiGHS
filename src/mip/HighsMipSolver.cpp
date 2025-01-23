@@ -213,10 +213,10 @@ restart:
 
   std::shared_ptr<const HighsBasis> basis;
   HighsSearch master_search{*this, mipdata_->pseudocost};
-  master_search.setLpRelaxation(&mipdata_->lp);
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
-
   HighsSeparation sepa(*this);
+
+  master_search.setLpRelaxation(&mipdata_->lp);
   sepa.setLpRelaxation(&mipdata_->lp);
 
   double prev_lower_bound = mipdata_->lower_bound;
@@ -289,45 +289,48 @@ restart:
     bool considerHeuristics = true;
     analysis_.mipTimerStart(kMipClockDive);
     while (true) {
-      if (search.hasNode()) {
-	// Possibly apply primal heuristics
-	if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-	  analysis_.mipTimerStart(kMipClockEvaluateNode);
-	  const HighsSearch::NodeResult evaluate_node_result = search.evaluateNode();
-	  analysis_.mipTimerStop(kMipClockEvaluateNode);
+      // Possibly apply primal heuristics
+      if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
+        analysis_.mipTimerStart(kMipClockEvaluateNode);
+        const HighsSearch::NodeResult evaluate_node_result =
+            search.evaluateNode();
+        analysis_.mipTimerStop(kMipClockEvaluateNode);
 
-	  if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
-	    printf("HighsMipSolver::run() evaluate_node_result == HighsSearch::NodeResult::kSubOptimal\n");
-	    assert(345==678);
-	    break;
-	  }
-
-	  if (search.currentNodePruned()) {
-	    ++mipdata_->num_leaves;
-	    search.flushStatistics();
-	  } else {
-	    analysis_.mipTimerStart(kMipClockPrimalHeuristics);
-	    if (mipdata_->incumbent.empty()) {
-	      analysis_.mipTimerStart(kMipClockRandomizedRounding0);
-	      mipdata_->heuristics.randomizedRounding(mipdata_->lp.getLpSolver().getSolution().col_value);
-	      analysis_.mipTimerStop(kMipClockRandomizedRounding0);
-	    }
-	    
-	    if (mipdata_->incumbent.empty()) {
-	      analysis_.mipTimerStart(kMipClockRens);
-	      mipdata_->heuristics.RENS(mipdata_->lp.getLpSolver().getSolution().col_value);
-	      analysis_.mipTimerStop(kMipClockRens);
-	    } else {
-	      analysis_.mipTimerStart(kMipClockRins);
-	      mipdata_->heuristics.RINS(mipdata_->lp.getLpSolver().getSolution().col_value);
-	      analysis_.mipTimerStop(kMipClockRins);
-	    }
-	    
-	    mipdata_->heuristics.flushStatistics();
-	    analysis_.mipTimerStop(kMipClockPrimalHeuristics);
-	  }
+	if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	  printf("HighsMipSolver::run() evaluate_node_result == HighsSearch::NodeResult::kSubOptimal\n");
+	  assert(345==678);
+	  break;
 	}
+
+        if (search.currentNodePruned()) {
+          ++mipdata_->num_leaves;
+          search.flushStatistics();
+        } else {
+          analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+          if (mipdata_->incumbent.empty()) {
+            analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+            mipdata_->heuristics.randomizedRounding(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+            analysis_.mipTimerStop(kMipClockRandomizedRounding0);
+          }
+
+          if (mipdata_->incumbent.empty()) {
+            analysis_.mipTimerStart(kMipClockRens);
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+            analysis_.mipTimerStop(kMipClockRens);
+          } else {
+            analysis_.mipTimerStart(kMipClockRins);
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+            analysis_.mipTimerStop(kMipClockRins);
+          }
+
+          mipdata_->heuristics.flushStatistics();
+          analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+        }
       }
+
       considerHeuristics = false;
 
       if (mipdata_->domain.infeasible()) break;
