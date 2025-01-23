@@ -223,7 +223,17 @@ restart:
   // HighsLpRelaxation for each concurrent search beyond the master
   // search
   std::vector<HighsParallelSearch> multiple_search;
-  std::vector<HighsLpRelaxation> multiple_lp;
+  std::vector<HighsLpRelaxation> worker_lp;
+
+  HighsSolution null_solution;
+  HighsMipSolver solver1(*callback_, *options_mip_, *model_, null_solution, false, 0);
+  solver1.rootbasis = this->rootbasis;
+  HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
+  solver1.pscostinit = &pscostinit;
+  solver1.clqtableinit = &mipdata_->cliquetable;
+  solver1.implicinit = &mipdata_->implications;
+  solver1.mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  
   for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
        iSearch++) {
     if (iSearch == 0) {
@@ -232,10 +242,10 @@ restart:
       multiple_search[iSearch].search.setLpRelaxation(&mipdata_->lp);
     } else {
       multiple_search.push_back(
-          HighsParallelSearch{*this, mipdata_->pseudocost});
-      multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+          HighsParallelSearch{solver1, mipdata_->pseudocost});
+      worker_lp.push_back(HighsLpRelaxation{mipdata_->lp});
       multiple_search[iSearch].search.setLpRelaxation(
-          &multiple_lp[iSearch - 1]);
+          &worker_lp[iSearch - 1]);
     }
   }
   HighsSearch& search = multiple_search[0].search;
