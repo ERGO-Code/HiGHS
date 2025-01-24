@@ -105,7 +105,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
-  const bool debug_logging = false;  // true;
+  const bool debug_logging = true;//false;  // true;
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {
@@ -338,6 +338,16 @@ restart:
 
       // the search datastructure should have no installed node now
       assert(!search.hasNode());
+
+      // >>>
+      /*
+   }
+    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      if (!performedDive(search, iSearch)) continue;
+      */
+      // <<<>
+
 
       // propagate the global domain
       analysis_.mipTimerStart(kMipClockDomainPropgate);
