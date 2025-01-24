@@ -386,14 +386,6 @@ restart:
         break;
       }
 
-      // >>>
-    }
-    if (breakSearch()) break;
-    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-      if (!performedDive(search, iSearch)) continue;
-      // <<<>
-
       double prev_lower_bound = mipdata_->lower_bound;
 
       mipdata_->lower_bound = std::min(mipdata_->upper_bound,
@@ -411,6 +403,14 @@ restart:
         search.break_search_ = true;
         break;
       }
+
+      // >>>
+    }
+    if (breakSearch()) break;
+    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      if (!performedDive(search, iSearch)) continue;
+      // <<<>
 
       // if global propagation found bound changes, we update the local domain
       if (!mipdata_->domain.getChangedCols().empty()) {
@@ -511,15 +511,6 @@ restart:
       // remove the iteration limit when installing a new node
       // mipdata_->lp.setIterationLimit();
 
-      /*
-          } // HighsInt iSearch = 0...use_mip_concurrency
-
-      // loop to install the next node for the search
-
-          for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
-            HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-          if (!performedDive(search, iSearch)) continue;
-      */
       double this_node_search_time =
           -analysis_.mipTimerRead(kMipClockNodeSearch);
       analysis_.mipTimerStart(kMipClockNodeSearch);
