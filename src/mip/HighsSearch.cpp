@@ -30,6 +30,8 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   inheuristic = false;
   inbranching = false;
   countTreeWeight = true;
+  limit_reached_ = false;
+  performed_dive_ = false;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -1946,7 +1948,14 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-void HighsSearch::dive(bool& limit_reached) {
+void HighsSearch::dive() {
+  limit_reached_ = false;
+  if (this->hasNode()) {
+    performed_dive_ = true;
+  } else {
+    performed_dive_ = false;
+    return;
+  }
   HighsMipAnalysis& analysis_ = mipsolver.analysis_;
   const HighsOptions* options_mip_ = mipsolver.options_mip_;
   analysis_.mipTimerStart(kMipClockPerformAging1);
@@ -2032,7 +2041,7 @@ void HighsSearch::dive(bool& limit_reached) {
     }
     
     if (mipsolver.mipdata_->checkLimits()) {
-      limit_reached = true;
+      limit_reached_ = true;
       break;
     }
 

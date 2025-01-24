@@ -67,6 +67,10 @@ class HighsSearch {
     kOpen,
   };
 
+  // Data members for parallel search
+  bool limit_reached_;
+  bool performed_dive_;
+
  private:
   ChildSelectionRule childselrule;
 
@@ -225,7 +229,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  void dive(bool& limit_reached);
+  void dive();
   //  void nodeSearch();
   NodeResult theDive();
 

@@ -105,6 +105,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
+  const bool debug_logging = true;
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {
@@ -233,7 +234,7 @@ restart:
   int64_t num_nodes = mipdata_->nodequeue.numNodes();
   if (num_nodes > 1) {
     // Should be exactly one node on the queue?
-    printf(
+    if (debug_logging) printf(
         "HighsMipSolver::run() popping node from nodequeue with %d > 1 nodes\n",
         HighsInt(num_nodes));
     assert(num_nodes == 1);
@@ -269,16 +270,33 @@ restart:
 
     worker_search.setLpRelaxation(&multiple_lp[0]);
 
+    // Perform concurrent dives
     for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
          iSearch++) {
-      HighsMipSolver& use_solver = iSearch == 0 ? *this : worker_solver;
       HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-      if (!search.hasNode()) continue;
+      search.dive();
 
-      bool limit_reached = false;
-      search.dive(limit_reached);
+      assert(iSearch == 0 || !search.performed_dive_);
 
+      
+    }
+    // Identify whether algorithmic limits have been reached in one of
+    // the dives
+    bool limit_reached = false;
+    for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency; iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      limit_reached = limit_reached || search.limit_reached_;
+    }
 
+    for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
+         iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      if (iSearch == 0) {
+	assert(search.performed_dive_);
+      } else {
+	assert(!search.performed_dive_);
+      }
+      if (!search.performed_dive_) continue;
 
       analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
       search.openNodesToQueue(mipdata_->nodequeue);
@@ -298,6 +316,7 @@ restart:
               prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
               mipdata_->upper_bound);
         mipdata_->printDisplayLine();
+	if (debug_logging) printf("HighsMipSolver::run() break on limit_reached - 0\n");
         break;
       }
 
@@ -329,6 +348,7 @@ restart:
               prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
               mipdata_->upper_bound);
         mipdata_->printDisplayLine();
+	if (debug_logging) printf("HighsMipSolver::run() break on mipdata_->domain.infeasible() - 0\n");
         break;
       }
 
@@ -342,7 +362,10 @@ restart:
             prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
             mipdata_->upper_bound);
       mipdata_->printDisplayLine();
-      if (mipdata_->nodequeue.empty()) break;
+      if (mipdata_->nodequeue.empty()) {
+	if (debug_logging) printf("HighsMipSolver::run() break on mipdata_->nodequeue.empty()\n");
+	break;
+      }
 
       // if global propagation found bound changes, we update the local domain
       if (!mipdata_->domain.getChangedCols().empty()) {
@@ -473,6 +496,7 @@ restart:
               numStallNodes >= options_mip_->mip_max_stall_nodes) {
             limit_reached = true;
             modelstatus_ = HighsModelStatus::kSolutionLimit;
+	    if (debug_logging) printf("HighsMipSolver::run() break on HighsModelStatus::kSolutionLimit\n");
             break;
           }
         } else
@@ -513,11 +537,13 @@ restart:
               mipdata_->updatePrimalDualIntegral(
                   prev_lower_bound, mipdata_->lower_bound,
                   mipdata_->upper_bound, mipdata_->upper_bound);
+	    if (debug_logging) printf("HighsMipSolver::run() break on mipdata_->domain.infeasible() - 1\n");
             break;
           }
 
           if (mipdata_->checkLimits()) {
             limit_reached = true;
+	    if (debug_logging) printf("HighsMipSolver::run() break on limit_reached - 1\n");
             break;
           }
 
@@ -570,6 +596,7 @@ restart:
             mipdata_->updatePrimalDualIntegral(
                 prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
                 mipdata_->upper_bound);
+	  if (debug_logging) printf("HighsMipSolver::run() break on mipdata_->domain.infeasible() - 2\n");
           break;
         }
 
@@ -587,6 +614,7 @@ restart:
           mipdata_->lp.setStoredBasis(basis);
         }
 
+	if (debug_logging) printf("HighsMipSolver::run() break on completed node search\n");
         break;
       }  // while(!mipdata_->nodequeue.empty())
       analysis_.mipTimerStop(kMipClockNodeSearch);
@@ -594,8 +622,11 @@ restart:
         this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
         analysis_.node_search_time.push_back(this_node_search_time);
       }
-      if (limit_reached) break;
-    } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency-1
+      if (limit_reached) {
+	if (debug_logging) printf("HighsMipSolver::run() break on limit_reached - 2\n");
+	break;
+      }
+    } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
