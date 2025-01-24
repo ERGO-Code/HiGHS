@@ -404,14 +404,6 @@ restart:
         break;
       }
 
-      // >>>
-    }
-    if (breakSearch()) break;
-    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-      if (!performedDive(search, iSearch)) continue;
-      // <<<>
-
       // if global propagation found bound changes, we update the local domain
       if (!mipdata_->domain.getChangedCols().empty()) {
         analysis_.mipTimerStart(kMipClockUpdateLocalDomain);
@@ -429,84 +421,94 @@ restart:
         mipdata_->removeFixedIndices();
         analysis_.mipTimerStop(kMipClockUpdateLocalDomain);
       }
+    }
+    if (breakSearch()) break;
 
-      if (!submip && mipdata_->num_nodes >= nextCheck) {
-        auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
-        double currNodeEstim =
-            numNodesLastCheck - mipdata_->num_nodes_before_run +
-            (mipdata_->num_nodes - numNodesLastCheck) *
-                double(1.0 - mipdata_->pruned_treeweight) /
-                std::max(
-                    double(mipdata_->pruned_treeweight - treeweightLastCheck),
-                    mipdata_->epsilon);
-        // printf(
-        //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
-        //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
-        //     numHugeTreeEstim: %d, numLeavesThisRun:
-        //     "
-        //     "%ld\n",
-        //     nTreeRestarts, mipdata_->num_nodes -
-        //     mipdata_->num_nodes_before_run, numNodesLastCheck -
-        //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
-        //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
-        //     numHugeTreeEstim,
-        //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
+    // By now, let's assume that all consequences of the dive have
+    // been incorporated into the master solver
 
-        bool doRestart = false;
+    if (!submip && mipdata_->num_nodes >= nextCheck) {
+      auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
+      double currNodeEstim =
+	numNodesLastCheck - mipdata_->num_nodes_before_run +
+	(mipdata_->num_nodes - numNodesLastCheck) *
+	double(1.0 - mipdata_->pruned_treeweight) /
+	std::max(
+		 double(mipdata_->pruned_treeweight - treeweightLastCheck),
+		 mipdata_->epsilon);
+      // printf(
+      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
+      //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
+      //     numHugeTreeEstim: %d, numLeavesThisRun:
+      //     "
+      //     "%ld\n",
+      //     nTreeRestarts, mipdata_->num_nodes -
+      //     mipdata_->num_nodes_before_run, numNodesLastCheck -
+      //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
+      //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
+      //     numHugeTreeEstim,
+      //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
 
-        double activeIntegerRatio =
-            1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
-        activeIntegerRatio *= activeIntegerRatio;
+      bool doRestart = false;
 
-        if (!doRestart) {
-          double gapReduction = 1.0;
-          if (mipdata_->upper_limit != kHighsInf) {
-            double oldGap = upperLimLastCheck - lowerBoundLastCheck;
-            double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
-            gapReduction = oldGap / newGap;
-          }
+      double activeIntegerRatio =
+	1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
+      activeIntegerRatio *= activeIntegerRatio;
+      
+      if (!doRestart) {
+	double gapReduction = 1.0;
+	if (mipdata_->upper_limit != kHighsInf) {
+	  double oldGap = upperLimLastCheck - lowerBoundLastCheck;
+	  double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
+	  gapReduction = oldGap / newGap;
+	}
+	
+	if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
+	    currNodeEstim >=
+	    activeIntegerRatio * 20 *
+	    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+	  nextCheck = mipdata_->num_nodes + 100;
+	  ++numHugeTreeEstim;
+	} else {
+	  numHugeTreeEstim = 0;
+	  treeweightLastCheck = double(mipdata_->pruned_treeweight);
+	  numNodesLastCheck = mipdata_->num_nodes;
+	  upperLimLastCheck = mipdata_->upper_limit;
+	  lowerBoundLastCheck = mipdata_->lower_bound;
+	}
+	
+	// Possibly prevent restart - necessary for debugging presolve
+	// errors: see #1553
+	if (options_mip_->mip_allow_restart) {
+	  int64_t minHugeTreeOffset =
+	    (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
+	  int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+								   activeIntegerRatio * (10 + minHugeTreeOffset) *
+								   std::pow(1.5, nTreeRestarts));
+	  
+	  doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+	} else {
+	  doRestart = false;
+	}
+      } else {
+	// count restart due to many fixings within the first 1000 nodes as
+	// root restart
+	++mipdata_->numRestartsRoot;
+      }
+      
+      if (doRestart) {
+	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		     "\nRestarting search from the root node\n");
+	mipdata_->performRestart();
+	analysis_.mipTimerStop(kMipClockSearch);
+	goto restart;
+      }
+    }  // if (!submip && mipdata_->num_nodes >= nextCheck))
 
-          if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
-              currNodeEstim >=
-                  activeIntegerRatio * 20 *
-                      (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
-            nextCheck = mipdata_->num_nodes + 100;
-            ++numHugeTreeEstim;
-          } else {
-            numHugeTreeEstim = 0;
-            treeweightLastCheck = double(mipdata_->pruned_treeweight);
-            numNodesLastCheck = mipdata_->num_nodes;
-            upperLimLastCheck = mipdata_->upper_limit;
-            lowerBoundLastCheck = mipdata_->lower_bound;
-          }
-
-          // Possibly prevent restart - necessary for debugging presolve
-          // errors: see #1553
-          if (options_mip_->mip_allow_restart) {
-            int64_t minHugeTreeOffset =
-                (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
-            int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
-                activeIntegerRatio * (10 + minHugeTreeOffset) *
-                std::pow(1.5, nTreeRestarts));
-
-            doRestart = numHugeTreeEstim >= minHugeTreeEstim;
-          } else {
-            doRestart = false;
-          }
-        } else {
-          // count restart due to many fixings within the first 1000 nodes as
-          // root restart
-          ++mipdata_->numRestartsRoot;
-        }
-
-        if (doRestart) {
-          highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                       "\nRestarting search from the root node\n");
-          mipdata_->performRestart();
-          analysis_.mipTimerStop(kMipClockSearch);
-          goto restart;
-        }
-      }  // if (!submip && mipdata_->num_nodes >= nextCheck))
+    // Now perform the node search
+    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      if (!performedDive(search, iSearch)) continue;
 
       // remove the iteration limit when installing a new node
       // mipdata_->lp.setIterationLimit();
