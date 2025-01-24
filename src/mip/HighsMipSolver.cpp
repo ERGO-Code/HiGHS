@@ -105,7 +105,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
-  const bool debug_logging = true;
+  const bool debug_logging = false;//true;
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {
@@ -465,11 +465,27 @@ restart:
 
       // remove the iteration limit when installing a new node
       // mipdata_->lp.setIterationLimit();
+      //    } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency
 
       // loop to install the next node for the search
       double this_node_search_time =
           -analysis_.mipTimerRead(kMipClockNodeSearch);
       analysis_.mipTimerStart(kMipClockNodeSearch);
+
+
+      //    for (HighsInt iSearch = 0; iSearch < options_mip_->mip_search_concurrency;
+      //         iSearch++) {
+      //      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      //      if (iSearch == 0) {
+      //	assert(search.performed_dive_);
+      //      } else {
+      //	assert(!search.performed_dive_);
+      //      }
+      //      if (!search.performed_dive_) continue;
+
+
+
+
 
       while (!mipdata_->nodequeue.empty()) {
         assert(!search.hasNode());
@@ -617,15 +633,16 @@ restart:
 	if (debug_logging) printf("HighsMipSolver::run() break on completed node search\n");
         break;
       }  // while(!mipdata_->nodequeue.empty())
-      analysis_.mipTimerStop(kMipClockNodeSearch);
-      if (analysis_.analyse_mip_time) {
-        this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
-        analysis_.node_search_time.push_back(this_node_search_time);
-      }
-      if (limit_reached) {
-	if (debug_logging) printf("HighsMipSolver::run() break on limit_reached - 2\n");
-	break;
-      }
+      //    } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency
+    analysis_.mipTimerStop(kMipClockNodeSearch);
+    if (analysis_.analyse_mip_time) {
+      this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+      analysis_.node_search_time.push_back(this_node_search_time);
+    }
+    if (limit_reached) {
+      if (debug_logging) printf("HighsMipSolver::run() break on limit_reached - 2\n");
+      break;
+    }
     } // HighsInt iSearch = 0...options_mip_->mip_search_concurrency
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
