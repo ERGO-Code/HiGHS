@@ -335,6 +335,7 @@ struct HighsOptionsStruct {
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
+  bool timeless_log;
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
@@ -486,6 +487,7 @@ struct HighsOptionsStruct {
         write_presolved_model_file(""),
         output_flag(false),
         log_to_console(false),
+        timeless_log(false),
         ipm_iteration_limit(0),
         pdlp_native_termination(false),
         pdlp_scaling(false),
@@ -847,6 +849,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("log_to_console",
                                        "Enables or disables console logging",
                                        advanced, &log_to_console, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "timeless_log", "Suppression of time-based data in logging", true,
+        &timeless_log, false);  // true); //
     records.push_back(record_bool);
 
     record_string =

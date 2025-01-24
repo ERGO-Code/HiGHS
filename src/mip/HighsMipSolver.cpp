@@ -756,6 +756,7 @@ void HighsMipSolver::cleanupSolve() {
                     gapValString.data());
   }
 
+  bool timeless_log = options_mip_->timeless_log;
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n");
   if (this->orig_model_->model_name_.length())
@@ -766,12 +767,15 @@ void HighsMipSolver::cleanupSolve() {
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
-               "  Gap               %s\n"
-               "  P-D integral      %.12g\n"
-               "  Solution status   %s\n",
+               "  Gap               %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data(),
-               mipdata_->primal_dual_integral.value, solutionstatus.c_str());
+               dual_bound_, gapString.data());
+  if (!timeless_log)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  P-D integral      %.12g\n",
+                 mipdata_->primal_dual_integral.value);
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "  Solution status   %s\n", solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
@@ -780,11 +784,16 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
+  if (!timeless_log)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  Timing            %.2f (total)\n"
+                 "                    %.2f (presolve)\n"
+                 "                    %.2f (solve)\n"
+                 "                    %.2f (postsolve)\n",
+                 timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
+                 analysis_.mipTimerRead(kMipClockSolve),
+                 analysis_.mipTimerRead(kMipClockPostsolve));
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Timing            %.2f (total)\n"
-               "                    %.2f (presolve)\n"
-               "                    %.2f (solve)\n"
-               "                    %.2f (postsolve)\n"
                "  Max sub-MIP depth %d\n"
                "  Nodes             %llu\n"
                "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
@@ -792,9 +801,6 @@ void HighsMipSolver::cleanupSolve() {
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
-               analysis_.mipTimerRead(kMipClockSolve),
-               analysis_.mipTimerRead(kMipClockPostsolve),
                int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_repair_lp,
                (long long unsigned)mipdata_->total_repair_lp_feasible,
@@ -804,7 +810,7 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
-  analysis_.reportMipTimer();
+  if (!timeless_log) analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }
