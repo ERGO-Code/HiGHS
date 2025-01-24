@@ -283,17 +283,6 @@ restart:
       return limit_reached;
     };
 
-    // Lambda checking whether loop pass is to be skipped
-    auto performedDive = [&](const HighsSearch& search,
-                             const HighsInt iSearch) -> bool {
-      if (iSearch == 0) {
-        assert(search.performed_dive_);
-      } else {
-        assert(!search.performed_dive_);
-      }
-      return search.performed_dive_;
-    };
-
     // Lambda checking whether to break out of search 
     auto breakSearch = [&]() -> bool {
       bool break_search = false;
@@ -302,6 +291,20 @@ restart:
         break_search = break_search || search.break_search_;
       }
       return break_search;
+    };
+
+    // Lambda checking whether loop pass is to be skipped
+    auto performedDive = [&](const HighsSearch& search,
+                             const HighsInt iSearch) -> bool {
+      if (iSearch == 0) {
+        assert(search.performed_dive_);
+      } else {
+        assert(!search.performed_dive_);
+      }
+      // Make sure that if a dive has been performed, we're not
+      // continuing after breaking from the search
+      if (search.performed_dive_) assert(!breakSearch());
+      return search.performed_dive_;
     };
 
     // Perform concurrent dives
@@ -343,21 +346,12 @@ restart:
         mipdata_->printDisplayLine();
         if (debug_logging)
           printf("HighsMipSolver::run() break on limit_reached - 0\n");
+        search.break_search_ = true;
         break;
       }
 
       // the search datastructure should have no installed node now
       assert(!search.hasNode());
-
-      // >>>
-      /*
-   }
-    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-      if (!performedDive(search, iSearch)) continue;
-      */
-      // <<<>
-
 
       // propagate the global domain
       analysis_.mipTimerStart(kMipClockDomainPropgate);
@@ -388,8 +382,17 @@ restart:
           printf(
               "HighsMipSolver::run() break on mipdata_->domain.infeasible() - "
               "0\n");
+        search.break_search_ = true;
         break;
       }
+
+      // >>>
+    }
+    if (breakSearch()) break;
+    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
+      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      if (!performedDive(search, iSearch)) continue;
+      // <<<>
 
       double prev_lower_bound = mipdata_->lower_bound;
 
@@ -405,6 +408,7 @@ restart:
         if (debug_logging)
           printf(
               "HighsMipSolver::run() break on mipdata_->nodequeue.empty()\n");
+        search.break_search_ = true;
         break;
       }
 
@@ -549,6 +553,7 @@ restart:
               printf(
                   "HighsMipSolver::run() break on "
                   "HighsModelStatus::kSolutionLimit\n");
+        search.break_search_ = true;
             break;
           }
         } else
@@ -593,6 +598,7 @@ restart:
               printf(
                   "HighsMipSolver::run() break on "
                   "mipdata_->domain.infeasible() - 1\n");
+        search.break_search_ = true;
             break;
           }
 
@@ -600,6 +606,7 @@ restart:
             limit_reached = true;
             if (debug_logging)
               printf("HighsMipSolver::run() break on limit_reached - 1\n");
+        search.break_search_ = true;
             break;
           }
 
@@ -656,6 +663,7 @@ restart:
             printf(
                 "HighsMipSolver::run() break on mipdata_->domain.infeasible() "
                 "- 2\n");
+        search.break_search_ = true;
           break;
         }
 
@@ -675,6 +683,7 @@ restart:
 
         if (debug_logging)
           printf("HighsMipSolver::run() break on completed node search\n");
+        search.break_search_ = true;
         break;
       }  // while(!mipdata_->nodequeue.empty())
       analysis_.mipTimerStop(kMipClockNodeSearch);
