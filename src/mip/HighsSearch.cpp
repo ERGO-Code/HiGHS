@@ -32,6 +32,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   countTreeWeight = true;
   limit_reached_ = false;
   performed_dive_ = false;
+  break_search_ = false;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -1952,8 +1953,10 @@ void HighsSearch::dive() {
   limit_reached_ = false;
   if (this->hasNode()) {
     performed_dive_ = true;
+    break_search_ = false;
   } else {
     performed_dive_ = false;
+    break_search_ = false;
     return;
   }
   HighsMipAnalysis& analysis_ = mipsolver.analysis_;

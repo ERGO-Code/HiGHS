@@ -70,6 +70,7 @@ class HighsSearch {
   // Data members for parallel search
   bool limit_reached_;
   bool performed_dive_;
+  bool break_search_;
 
  private:
   ChildSelectionRule childselrule;

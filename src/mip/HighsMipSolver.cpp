@@ -105,7 +105,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
-  const bool debug_logging = true;//false;  // true;
+  const bool debug_logging = false;  // true;
   modelstatus_ = HighsModelStatus::kNotset;
 
   if (submip) {
@@ -283,7 +283,7 @@ restart:
       return limit_reached;
     };
 
-    // Lambda checking whether lopp pass is to be skipped
+    // Lambda checking whether loop pass is to be skipped
     auto performedDive = [&](const HighsSearch& search,
                              const HighsInt iSearch) -> bool {
       if (iSearch == 0) {
@@ -292,6 +292,16 @@ restart:
         assert(!search.performed_dive_);
       }
       return search.performed_dive_;
+    };
+
+    // Lambda checking whether to break out of search 
+    auto breakSearch = [&]() -> bool {
+      bool break_search = false;
+      for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
+        HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+        break_search = break_search || search.break_search_;
+      }
+      return break_search;
     };
 
     // Perform concurrent dives
