@@ -118,6 +118,7 @@ struct HighsMipSolverData {
 
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;
+  double disptime;
   double last_disptime;
   int64_t firstrootlpiters;
   int64_t num_nodes;
@@ -183,6 +184,7 @@ struct HighsMipSolverData {
         maxTreeSizeLog2(0),
         pruned_treeweight(0),
         avgrootlpiters(0.0),
+        disptime(0.0),
         last_disptime(0.0),
         firstrootlpiters(0),
         num_nodes(0),

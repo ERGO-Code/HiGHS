@@ -4098,6 +4098,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 #else
         std::string time_str = " " + std::to_string(int(run_time)) + "s";
 #endif
+        if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
                      "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                      " cols, %" HIGHSINT_FORMAT " nonzeros %s\n",
