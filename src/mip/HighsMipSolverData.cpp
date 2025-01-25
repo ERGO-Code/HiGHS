@@ -372,7 +372,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     }
     if (nfixed > 0)
       highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                  "Fixing %d columns (%d integers) sitting at bound at analytic center\n",
+                  "Fixing %d columns (%d integers) sitting at bound at "
+                  "analytic center\n",
                   int(nfixed), int(nintfixed));
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
@@ -404,11 +405,12 @@ void HighsMipSolverData::finishSymmetryDetection(
   taskGroup.sync();
 
   symmetries = std::move(symData->symmetries);
-  std::string symmetry_time = mipsolver.options_mip_->timeless_log ? "" :
-    highsFormatToString(" %.1fs", symData->detectionTime);
+  std::string symmetry_time =
+      mipsolver.options_mip_->timeless_log
+          ? ""
+          : highsFormatToString(" %.1fs", symData->detectionTime);
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               "\nSymmetry detection completed in%s\n",
-               symmetry_time.c_str());
+               "\nSymmetry detection completed in%s\n", symmetry_time.c_str());
 
   if (symmetries.numGenerators == 0) {
     detectSymmetries = false;
@@ -416,17 +418,15 @@ void HighsMipSolverData::finishSymmetryDetection(
                  "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Found %d generator(s)\n\n",
-                 int(symmetries.numGenerators));
+                 "Found %d generator(s)\n\n", int(symmetries.numGenerators));
 
   } else {
     if (symmetries.numPerms != 0) {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "Found %d generator(s) and %d full orbitope(s) acting on %d columns\n\n",
-          int(symmetries.numPerms),
-	  int(symmetries.orbitopes.size()),
-          int(symmetries.columnToOrbitope.size()));
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Found %d generator(s) and %d full orbitope(s) acting on %d "
+                   "columns\n\n",
+                   int(symmetries.numPerms), int(symmetries.orbitopes.size()),
+                   int(symmetries.columnToOrbitope.size()));
     } else {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Found %d full orbitope(s) acting on %d columns\n\n",
