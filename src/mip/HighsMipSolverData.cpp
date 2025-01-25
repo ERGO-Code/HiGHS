@@ -372,10 +372,9 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     }
     if (nfixed > 0)
       highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                  "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
-                  " integers) sitting at bound at "
+                  "Fixing %d columns (%d integers) sitting at bound at "
                   "analytic center\n",
-                  nfixed, nintfixed);
+                  int(nfixed), int(nintfixed));
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   }
@@ -406,9 +405,12 @@ void HighsMipSolverData::finishSymmetryDetection(
   taskGroup.sync();
 
   symmetries = std::move(symData->symmetries);
+  std::string symmetry_time =
+      mipsolver.options_mip_->timeless_log
+          ? ""
+          : highsFormatToString(" %.1fs", symData->detectionTime);
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               "\nSymmetry detection completed in %.1fs\n",
-               symData->detectionTime);
+               "\nSymmetry detection completed in%s\n", symmetry_time.c_str());
 
   if (symmetries.numGenerators == 0) {
     detectSymmetries = false;
@@ -416,24 +418,20 @@ void HighsMipSolverData::finishSymmetryDetection(
                  "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Found %" HIGHSINT_FORMAT " generator(s)\n\n",
-                 symmetries.numGenerators);
+                 "Found %d generator(s)\n\n", int(symmetries.numGenerators));
 
   } else {
     if (symmetries.numPerms != 0) {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "Found %" HIGHSINT_FORMAT " generator(s) and %" HIGHSINT_FORMAT
-          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
-          symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-          (HighsInt)symmetries.columnToOrbitope.size());
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Found %d generator(s) and %d full orbitope(s) acting on %d "
+                   "columns\n\n",
+                   int(symmetries.numPerms), int(symmetries.orbitopes.size()),
+                   int(symmetries.columnToOrbitope.size()));
     } else {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Found %" HIGHSINT_FORMAT
-                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                   " columns\n\n",
-                   (HighsInt)symmetries.orbitopes.size(),
-                   (HighsInt)symmetries.columnToOrbitope.size());
+                   "Found %d full orbitope(s) acting on %d columns\n\n",
+                   int(symmetries.orbitopes.size()),
+                   int(symmetries.columnToOrbitope.size()));
     }
   }
   symData.reset();
