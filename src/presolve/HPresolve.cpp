@@ -458,11 +458,6 @@ void HPresolve::unlink(HighsInt pos) {
       markChangedCol(Acol[pos]);
 
     impliedDualRowBounds.remove(Acol[pos], Arow[pos], Avalue[pos]);
-    if (colUpperSource[Acol[pos]] == Arow[pos])
-      changeImplColUpper(Acol[pos], kHighsInf, -1);
-
-    if (colLowerSource[Acol[pos]] == Arow[pos])
-      changeImplColLower(Acol[pos], -kHighsInf, -1);
   }
 
   auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
@@ -482,14 +477,16 @@ void HPresolve::unlink(HighsInt pos) {
     else
       markChangedRow(Arow[pos]);
     impliedRowBounds.remove(Arow[pos], Acol[pos], Avalue[pos]);
-
-    if (rowDualUpperSource[Arow[pos]] == Acol[pos])
-      changeImplRowDualUpper(Arow[pos], kHighsInf, -1);
-
-    if (rowDualLowerSource[Arow[pos]] == Acol[pos])
-      changeImplRowDualLower(Arow[pos], -kHighsInf, -1);
   }
 
+  // remove implied bounds on row duals that where implied by this column's dual
+  // constraint
+  resetRowDualImpliedBoundsDerivedFromCol(Acol[pos]);
+
+  // remove implied bounds on columns that where implied by this row
+  resetColImpliedBoundsDerivedFromRow(Arow[pos]);
+
+  // remove non-zero
   Avalue[pos] = 0;
 
   freeslots.push_back(pos);
@@ -666,43 +663,60 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
                       HighsInt{-1});
 }
 
-void HPresolve::recomputeColImpliedBounds(HighsInt row) {
-  // recompute implied column bounds affected by a modification in a row
+void HPresolve::resetColImpliedBounds(HighsInt col, HighsInt row) {
+  assert(row == -1 || colLowerSource[col] == row || colUpperSource[col] == row);
+  if (!colDeleted[col]) {
+    // set implied bounds to infinite values if (1) they were deduced from the
+    // given row or (2) no row was given
+    if (colLowerSource[col] != -1 && (row == -1 || colLowerSource[col] == row))
+      changeImplColLower(col, -kHighsInf, -1);
+    if (colUpperSource[col] != -1 && (row == -1 || colUpperSource[col] == row))
+      changeImplColUpper(col, kHighsInf, -1);
+  } else if (row != -1 && !rowDeleted[row]) {
+    // remove column from row-wise implied bound storage
+    colImplSourceByRow[row].erase(col);
+  }
+}
+
+void HPresolve::resetRowDualImpliedBounds(HighsInt row, HighsInt col) {
+  assert(col == -1 || rowDualLowerSource[row] == col ||
+         rowDualUpperSource[row] == col);
+  if (!rowDeleted[row]) {
+    // set implied bounds to infinite values if (1) they were deduced from the
+    // given column or (2) no column was given
+    if (rowDualLowerSource[row] != -1 &&
+        (col == -1 || rowDualLowerSource[row] == col))
+      changeImplRowDualLower(row, -kHighsInf, -1);
+    if (rowDualUpperSource[row] != -1 &&
+        (col == -1 || rowDualUpperSource[row] == col))
+      changeImplRowDualUpper(row, kHighsInf, -1);
+  } else if (col != -1 && !colDeleted[col]) {
+    // remove row from column-wise implied bound storage
+    implRowDualSourceByCol[col].erase(row);
+  }
+}
+
+void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
+  // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
   std::set<HighsInt> affectedCols(colImplSourceByRow[row]);
   for (const HighsInt& col : affectedCols) {
-    // set implied bounds to infinite values if they were deduced from the given
-    // row
-    if (colLowerSource[col] == row) changeImplColLower(col, -kHighsInf, -1);
-    if (colUpperSource[col] == row) changeImplColUpper(col, kHighsInf, -1);
-
-    // iterate over column and recompute the implied bounds
-    for (const HighsSliceNonzero& nonz : getColumnVector(col)) {
-      updateColImpliedBounds(nonz.index(), col, nonz.value());
-    }
+    // set implied bounds to infinite values if they were deduced from the
+    // given row
+    resetColImpliedBounds(col, row);
   }
 }
 
-void HPresolve::recomputeRowDualImpliedBounds(HighsInt col) {
-  // recompute implied row dual bounds affected by a modification in a column
+void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
+  // reset implied row dual bounds affected by a modification in a column
   // (removed / added non-zeros, etc.)
   if (implRowDualSourceByCol[col].empty()) return;
   std::set<HighsInt> affectedRows(implRowDualSourceByCol[col]);
   for (const HighsInt& row : affectedRows) {
-    // set implied bounds to infinite values if they were deduced from the given
-    // column
-    if (rowDualLowerSource[row] == col)
-      changeImplRowDualLower(row, -kHighsInf, -1);
-    if (rowDualUpperSource[row] == col)
-      changeImplRowDualUpper(row, kHighsInf, -1);
-
-    // iterate over row and recompute the implied bounds
-    for (const HighsSliceNonzero& nonz : getRowVector(row)) {
-      // integer columns cannot be used to tighten bounds on dual multipliers
-      if (model->integrality_[nonz.index()] != HighsVarType::kInteger)
-        updateRowDualImpliedBounds(row, nonz.index(), nonz.value());
-    }
+    // set implied bounds to infinite values if they were deduced from the
+    // given column
+    resetRowDualImpliedBounds(row, col);
   }
 }
 
@@ -1652,23 +1666,25 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     }
 
     link(pos);
+
+    // remove implied bounds on row duals that where implied by this column's
+    // dual constraint
+    resetRowDualImpliedBoundsDerivedFromCol(col);
+
+    // remove implied bounds on columns that where implied by this row
+    resetColImpliedBoundsDerivedFromRow(row);
+
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      // remove implied bounds on the row dual that where implied by this
-      // columns dual constraint
-      if (rowDualUpperSource[row] == col)
-        changeImplRowDualUpper(row, kHighsInf, -1);
+      // remove implied bounds on row duals that where implied by this column's
+      // dual constraint
+      resetRowDualImpliedBoundsDerivedFromCol(col);
 
-      if (rowDualLowerSource[row] == col)
-        changeImplRowDualLower(row, -kHighsInf, -1);
-
-      // remove implied bounds on the column that where implied by this row
-      if (colUpperSource[col] == row) changeImplColUpper(col, kHighsInf, -1);
-
-      if (colLowerSource[col] == row) changeImplColLower(col, -kHighsInf, -1);
+      // remove implied bounds on columns that where implied by this row
+      resetColImpliedBoundsDerivedFromRow(row);
 
       // remove the locks and contribution to implied (dual) row bounds, then
       // add then again
@@ -1711,25 +1727,15 @@ void HPresolve::markRowDeleted(HighsInt row) {
   changedRowFlag[row] = true;
   rowDeleted[row] = true;
   ++numDeletedRows;
-
-  // remove row from column-wise implied bound storage
-  if (rowDualLowerSource[row] != -1)
-    implRowDualSourceByCol[rowDualLowerSource[row]].erase(row);
-  if (rowDualUpperSource[row] != -1)
-    implRowDualSourceByCol[rowDualUpperSource[row]].erase(row);
 }
 
 void HPresolve::markColDeleted(HighsInt col) {
   assert(!colDeleted[col]);
+
   // prevents col from being added to change vector
   changedColFlag[col] = true;
   colDeleted[col] = true;
   ++numDeletedCols;
-  // remove column from row-wise implied bound storage
-  if (colLowerSource[col] != -1)
-    colImplSourceByRow[colLowerSource[col]].erase(col);
-  if (colUpperSource[col] != -1)
-    colImplSourceByRow[colUpperSource[col]].erase(col);
 }
 
 void HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -2437,9 +2443,6 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
         addToMatrix(colrow, Acol[rowiter], scale * Avalue[rowiter]);
     }
 
-    // recompute implied column bounds affected by the substitution
-    recomputeColImpliedBounds(colrow);
-
     // check if this is an equation row and it now has a different size
     reinsertEquation(colrow);
     // printf("after substitution: ");
@@ -2467,12 +2470,6 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
            std::max(options->dual_feasibility_tolerance,
                     kHighsTiny * std::abs(double(objscale))));
     model->col_cost_[col] = 0.0;
-  }
-
-  // recompute implied row dual bounds affected by substitution
-  for (HighsInt rowiter : rowpositions) {
-    if (Acol[rowiter] == col) continue;
-    recomputeRowDualImpliedBounds(Acol[rowiter]);
   }
 
   // finally remove the entries of the row that was used for substitution
@@ -2973,15 +2970,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
     assert(model->col_cost_[col] != 0.0);
     if (colsize[col] != 1) return;
     if (model->col_cost_[col] > 0) {
-      assert(model->col_lower_[col] == -kHighsInf ||
-             (model->col_lower_[col] <= implColLower[col] + primal_feastol &&
-              colLowerSource[col] == row));
+      assert(model->col_lower_[col] == -kHighsInf || !isLowerImplied(col) ||
+             colLowerSource[col] == row);
       if (model->col_lower_[col] > implColLower[col] - primal_feastol)
         changeColLower(col, -kHighsInf);
     } else {
-      assert(model->col_upper_[col] == kHighsInf ||
-             (model->col_upper_[col] >= implColUpper[col] - primal_feastol &&
-              colUpperSource[col] == row));
+      assert(model->col_upper_[col] == kHighsInf || !isUpperImplied(col) ||
+             colUpperSource[col] == row);
       if (model->col_upper_[col] < implColUpper[col] + primal_feastol)
         changeColUpper(col, kHighsInf);
     }
@@ -5876,10 +5871,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           // remove implied bounds, since they might in general not be valid
           // anymore
-          if (colLowerSource[col] != -1)
-            changeImplColLower(col, -kHighsInf, -1);
-
-          if (colUpperSource[col] != -1) changeImplColUpper(col, kHighsInf, -1);
+          resetColImpliedBounds(col);
 
           // if an implicit integer and an integer column were merged, check if
           // merged continuous column is implicit integer after merge
@@ -6059,10 +6051,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             model->row_lower_[parallelRowCand] = newLower;
           }
         }
-        if (rowDualLowerSource[parallelRowCand] != -1)
-          changeImplRowDualLower(parallelRowCand, -kHighsInf, -1);
-        if (rowDualUpperSource[parallelRowCand] != -1)
-          changeImplRowDualUpper(parallelRowCand, kHighsInf, -1);
+        // remove implied bounds, since they might in general not be valid
+        // anymore
+        resetRowDualImpliedBounds(parallelRowCand);
 
         postsolve_stack.duplicateRow(parallelRowCand, rowUpperTightened,
                                      rowLowerTightened, i, rowScale);
