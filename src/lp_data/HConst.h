@@ -321,10 +321,10 @@ const int8_t kPivotMarkowitz = 4;
 enum PdlpFeaturesOff {
   kPdlpAllFeaturesOn = 0,
   kPdlpScalingOff = 1,
-  kPdlpRestartsOff = 2,
+  kPdlpRestartOff = 2,
   kPdlpAdaptiveStepSizeOff = 4,
   kPdlpPrimalWeightUpdateOff = 8,
-  kPdlpAllFeaturesOff = kPdlpScalingOff + kPdlpRestartsOff +
+  kPdlpAllFeaturesOff = kPdlpScalingOff + kPdlpRestartOff +
                         kPdlpAdaptiveStepSizeOff + kPdlpPrimalWeightUpdateOff
 };
 

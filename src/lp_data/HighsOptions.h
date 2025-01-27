@@ -1086,7 +1086,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "pdlp_features_off",
-        "Mask for switching PDLP features off: 1 => Scaling; 2 => Restarts; 4 "
+        "Mask for switching PDLP features off: 1 => Scaling; 2 => Restart; 4 "
         "=> AdaptiveStepSize; 8 => PrimalWeightUpdate",
         advanced, &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn,
         kPdlpAllFeaturesOff);
@@ -1105,8 +1105,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt("pdlp_e_restart_method",
                                      "Restart mode for PDLP solver: 0 => none; "
-                                     "1 => GPU (default); 2 => CPU ",
-                                     advanced, &pdlp_e_restart_method, 0, 1, 2);
+                                     "1 => GPU",
+                                     advanced, &pdlp_e_restart_method, 0, 1, 1);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
