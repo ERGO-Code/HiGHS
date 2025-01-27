@@ -486,7 +486,7 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         ipm_iteration_limit(0),
-	pdlp_features_off(0),
+        pdlp_features_off(0),
         pdlp_native_termination(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
@@ -1085,8 +1085,11 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "pdlp_features_off", "Mask for switching PDLP features off: 1 => Scaling; 2 => Restarts; 4 => AdaptiveStepSize; 8 => PrimalWeightUpdate", advanced,
-        &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn, kPdlpAllFeaturesOff);
+        "pdlp_features_off",
+        "Mask for switching PDLP features off: 1 => Scaling; 2 => Restarts; 4 "
+        "=> AdaptiveStepSize; 8 => PrimalWeightUpdate",
+        advanced, &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn,
+        kPdlpAllFeaturesOff);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
