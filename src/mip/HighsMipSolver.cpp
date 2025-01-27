@@ -283,7 +283,7 @@ restart:
       return limit_reached;
     };
 
-    // Lambda checking whether to break out of search 
+    // Lambda checking whether to break out of search
     auto breakSearch = [&]() -> bool {
       bool break_search = false;
       for (HighsInt iSearch = 0; iSearch < use_mip_concurrency; iSearch++) {
@@ -430,12 +430,12 @@ restart:
     if (!submip && mipdata_->num_nodes >= nextCheck) {
       auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
       double currNodeEstim =
-	numNodesLastCheck - mipdata_->num_nodes_before_run +
-	(mipdata_->num_nodes - numNodesLastCheck) *
-	double(1.0 - mipdata_->pruned_treeweight) /
-	std::max(
-		 double(mipdata_->pruned_treeweight - treeweightLastCheck),
-		 mipdata_->epsilon);
+          numNodesLastCheck - mipdata_->num_nodes_before_run +
+          (mipdata_->num_nodes - numNodesLastCheck) *
+              double(1.0 - mipdata_->pruned_treeweight) /
+              std::max(
+                  double(mipdata_->pruned_treeweight - treeweightLastCheck),
+                  mipdata_->epsilon);
       // printf(
       //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
       //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
@@ -452,56 +452,56 @@ restart:
       bool doRestart = false;
 
       double activeIntegerRatio =
-	1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
+          1.0 - mipdata_->percentageInactiveIntegers() / 100.0;
       activeIntegerRatio *= activeIntegerRatio;
-      
+
       if (!doRestart) {
-	double gapReduction = 1.0;
-	if (mipdata_->upper_limit != kHighsInf) {
-	  double oldGap = upperLimLastCheck - lowerBoundLastCheck;
-	  double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
-	  gapReduction = oldGap / newGap;
-	}
-	
-	if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
-	    currNodeEstim >=
-	    activeIntegerRatio * 20 *
-	    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
-	  nextCheck = mipdata_->num_nodes + 100;
-	  ++numHugeTreeEstim;
-	} else {
-	  numHugeTreeEstim = 0;
-	  treeweightLastCheck = double(mipdata_->pruned_treeweight);
-	  numNodesLastCheck = mipdata_->num_nodes;
-	  upperLimLastCheck = mipdata_->upper_limit;
-	  lowerBoundLastCheck = mipdata_->lower_bound;
-	}
-	
-	// Possibly prevent restart - necessary for debugging presolve
-	// errors: see #1553
-	if (options_mip_->mip_allow_restart) {
-	  int64_t minHugeTreeOffset =
-	    (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
-	  int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
-								   activeIntegerRatio * (10 + minHugeTreeOffset) *
-								   std::pow(1.5, nTreeRestarts));
-	  
-	  doRestart = numHugeTreeEstim >= minHugeTreeEstim;
-	} else {
-	  doRestart = false;
-	}
+        double gapReduction = 1.0;
+        if (mipdata_->upper_limit != kHighsInf) {
+          double oldGap = upperLimLastCheck - lowerBoundLastCheck;
+          double newGap = mipdata_->upper_limit - mipdata_->lower_bound;
+          gapReduction = oldGap / newGap;
+        }
+
+        if (gapReduction < 1.0 + (0.05 / activeIntegerRatio) &&
+            currNodeEstim >=
+                activeIntegerRatio * 20 *
+                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+          nextCheck = mipdata_->num_nodes + 100;
+          ++numHugeTreeEstim;
+        } else {
+          numHugeTreeEstim = 0;
+          treeweightLastCheck = double(mipdata_->pruned_treeweight);
+          numNodesLastCheck = mipdata_->num_nodes;
+          upperLimLastCheck = mipdata_->upper_limit;
+          lowerBoundLastCheck = mipdata_->lower_bound;
+        }
+
+        // Possibly prevent restart - necessary for debugging presolve
+        // errors: see #1553
+        if (options_mip_->mip_allow_restart) {
+          int64_t minHugeTreeOffset =
+              (mipdata_->num_leaves - mipdata_->num_leaves_before_run) / 1000;
+          int64_t minHugeTreeEstim = HighsIntegers::nearestInteger(
+              activeIntegerRatio * (10 + minHugeTreeOffset) *
+              std::pow(1.5, nTreeRestarts));
+
+          doRestart = numHugeTreeEstim >= minHugeTreeEstim;
+        } else {
+          doRestart = false;
+        }
       } else {
-	// count restart due to many fixings within the first 1000 nodes as
-	// root restart
-	++mipdata_->numRestartsRoot;
+        // count restart due to many fixings within the first 1000 nodes as
+        // root restart
+        ++mipdata_->numRestartsRoot;
       }
-      
+
       if (doRestart) {
-	highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		     "\nRestarting search from the root node\n");
-	mipdata_->performRestart();
-	analysis_.mipTimerStop(kMipClockSearch);
-	goto restart;
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "\nRestarting search from the root node\n");
+        mipdata_->performRestart();
+        analysis_.mipTimerStop(kMipClockSearch);
+        goto restart;
       }
     }  // if (!submip && mipdata_->num_nodes >= nextCheck))
 
@@ -546,7 +546,7 @@ restart:
               printf(
                   "HighsMipSolver::run() break on "
                   "HighsModelStatus::kSolutionLimit\n");
-        search.break_search_ = true;
+            search.break_search_ = true;
             break;
           }
         } else
@@ -591,7 +591,7 @@ restart:
               printf(
                   "HighsMipSolver::run() break on "
                   "mipdata_->domain.infeasible() - 1\n");
-        search.break_search_ = true;
+            search.break_search_ = true;
             break;
           }
 
@@ -599,7 +599,7 @@ restart:
             limit_reached = true;
             if (debug_logging)
               printf("HighsMipSolver::run() break on limit_reached - 1\n");
-        search.break_search_ = true;
+            search.break_search_ = true;
             break;
           }
 
@@ -656,7 +656,7 @@ restart:
             printf(
                 "HighsMipSolver::run() break on mipdata_->domain.infeasible() "
                 "- 2\n");
-        search.break_search_ = true;
+          search.break_search_ = true;
           break;
         }
 
