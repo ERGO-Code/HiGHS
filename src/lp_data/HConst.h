@@ -316,4 +316,15 @@ const int8_t kPivotUnit = 1;
 const int8_t kPivotRowSingleton = 2;
 const int8_t kPivotColSingleton = 3;
 const int8_t kPivotMarkowitz = 4;
+
+// Mask for switching off PDLP features
+enum PdlpFeaturesOff {
+  kPdlpAllFeaturesOn = 0,
+  kPdlpScalingOff = 1,
+  kPdlpRestartsOff = 2,
+  kPdlpAdaptiveStepSizeOff = 4,
+  kPdlpPrimalWeightUpdateOff = 8,
+  kPdlpAllFeaturesOff = kPdlpScalingOff + kPdlpRestartsOff + kPdlpAdaptiveStepSizeOff + kPdlpPrimalWeightUpdateOff
+};
+
 #endif /* LP_DATA_HCONST_H_ */

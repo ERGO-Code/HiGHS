@@ -86,8 +86,15 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                      solver_object.basis_, solver_object.highs_info_);
     if (solver_object.model_status_ == HighsModelStatus::kOptimal &&
         (solver_object.highs_info_.num_primal_infeasibilities > 0 ||
-         solver_object.highs_info_.num_dual_infeasibilities))
+         solver_object.highs_info_.num_dual_infeasibilities)) {
+      highsLogUser(
+            options.log_options, HighsLogType::kWarning,
+	    "Solver %s claims optimality, but there are %d primal and %d dual infeasibilities, so setting model status to Unknown\n",
+	    options.solver.c_str(),
+	    int(solver_object.highs_info_.num_primal_infeasibilities),
+	    int(solver_object.highs_info_.num_dual_infeasibilities));
       solver_object.model_status_ = HighsModelStatus::kUnknown;
+    }
     if (options.solver == kIpmString || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpIpx

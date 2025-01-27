@@ -340,8 +340,8 @@ struct HighsOptionsStruct {
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
+  HighsInt pdlp_features_off;
   bool pdlp_native_termination;
-  bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
   HighsInt pdlp_e_restart_method;
   double pdlp_d_gap_tol;
@@ -486,8 +486,8 @@ struct HighsOptionsStruct {
         output_flag(false),
         log_to_console(false),
         ipm_iteration_limit(0),
+	pdlp_features_off(0),
         pdlp_native_termination(false),
-        pdlp_scaling(false),
         pdlp_iteration_limit(0),
         pdlp_e_restart_method(0),
         pdlp_d_gap_tol(0.0),
@@ -1084,15 +1084,15 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "pdlp_features_off", "Mask for switching PDLP features off: 1 => Scaling; 2 => Restarts; 4 => AdaptiveStepSize; 8 => PrimalWeightUpdate", advanced,
+        &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn, kPdlpAllFeaturesOff);
+    records.push_back(record_int);
+
     record_bool = new OptionRecordBool(
         "pdlp_native_termination",
         "Use native termination for PDLP solver: Default = false", advanced,
         &pdlp_native_termination, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
-        advanced, &pdlp_scaling, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(

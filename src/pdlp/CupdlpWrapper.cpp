@@ -111,7 +111,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
   H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
-  cupdlp_int ifScaling = 1;
+  cupdlp_int ifScaling = intParam[IF_SCALING];
 
   CUPDLPwork* w = cupdlp_NULL;
   cupdlp_init_work(w, 1);
@@ -578,7 +578,9 @@ void getUserParamsFromOptions(const HighsOptions& options,
   intParam[N_LOG_LEVEL] = getCupdlpLogLevel(options);
   //
   ifChangeIntParam[IF_SCALING] = true;
-  intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
+  cupdlp_int scaling_off = options.pdlp_features_off & kPdlpScalingOff;
+  cupdlp_int scaling_on = scaling_off == 0 ? 1 : 0;
+  intParam[IF_SCALING] = scaling_on;
   //
   ifChangeFloatParam[D_PRIMAL_TOL] = true;
   floatParam[D_PRIMAL_TOL] = options.primal_feasibility_tolerance;
