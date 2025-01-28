@@ -1087,7 +1087,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_features_off",
         "Mask for switching PDLP features off: 1 => Scaling; 2 => Restart; 4 "
-        "=> AdaptiveStepSize; 8 => PrimalWeightUpdate",
+        "=> AdaptiveStepSize",
         advanced, &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn,
         kPdlpAllFeaturesOff);
     records.push_back(record_int);

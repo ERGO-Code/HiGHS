@@ -323,9 +323,8 @@ enum PdlpFeaturesOff {
   kPdlpScalingOff = 1,
   kPdlpRestartOff = 2,
   kPdlpAdaptiveStepSizeOff = 4,
-  kPdlpPrimalWeightUpdateOff = 8,
-  kPdlpAllFeaturesOff = kPdlpScalingOff + kPdlpRestartOff +
-                        kPdlpAdaptiveStepSizeOff + kPdlpPrimalWeightUpdateOff
+  kPdlpAllFeaturesOff =
+      kPdlpScalingOff + kPdlpRestartOff + kPdlpAdaptiveStepSizeOff
 };
 
 #endif /* LP_DATA_HCONST_H_ */
