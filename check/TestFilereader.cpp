@@ -420,7 +420,7 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
 TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
   std::string write_model_file = "temp.mps";
   Highs h;
-  //    h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.addCol(1, -kHighsInf, 1, 0, nullptr, nullptr);
   h.changeColIntegrality(0, HighsVarType::kInteger);
   h.passColName(0, "x");
@@ -437,5 +437,5 @@ TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
   h.readModel(write_model_file);
   h.run();
   REQUIRE(required_objective_value == h.getInfo().objective_function_value);
-  // std::remove(write_model_file.c_str());
+  std::remove(write_model_file.c_str());
 }
