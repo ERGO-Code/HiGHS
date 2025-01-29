@@ -243,6 +243,10 @@ class HighsSearch {
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(int64_t maxbacktracks = 1);
+
+  HighsInt getNnodes() const {
+    return nnodes;
+  }  // For parallel-tree-search study
 };
 
 #endif
