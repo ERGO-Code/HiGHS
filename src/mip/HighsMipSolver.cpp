@@ -257,22 +257,34 @@ restart:
   while (master_search.hasNode()) {
     const HighsInt use_mip_concurrency = options_mip_->mip_search_concurrency;
     HighsSolution null_solution;
-    HighsMipSolver worker_solver(*callback_, *options_mip_, *model_,
-                                 null_solution, false, 0);
-    worker_solver.rootbasis = this->rootbasis;
+
+    // I'd like to do this, since it extends to multiple workers...
+    //
+    //    std::vector<HighsMipSolver> worker_mipsolvers;
+    //    worker_mipsolvers.push_back(HighsMipSolver{*callback_, *options_mip_,
+    //    *model_,
+    //					       null_solution, false, 0});
+    //    HighsMipSolver& worker_mipsolver = worker_mipsolvers[0];
+
+    // ... but currently can only do this
+    //
+    HighsMipSolver worker_mipsolver(*callback_, *options_mip_, *model_,
+                                    null_solution, false, 0);
+    worker_mipsolver.rootbasis = this->rootbasis;
     HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
-    worker_solver.pscostinit = &pscostinit;
-    worker_solver.clqtableinit = &mipdata_->cliquetable;
-    worker_solver.implicinit = &mipdata_->implications;
-    worker_solver.mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+    worker_mipsolver.pscostinit = &pscostinit;
+    worker_mipsolver.clqtableinit = &mipdata_->cliquetable;
+    worker_mipsolver.implicinit = &mipdata_->implications;
+    worker_mipsolver.mipdata_ =
+        decltype(mipdata_)(new HighsMipSolverData(*this));
 
-    HighsSearch worker_search{worker_solver,
-                              worker_solver.mipdata_->pseudocost};
+    HighsSearch worker_search{worker_mipsolver,
+                              worker_mipsolver.mipdata_->pseudocost};
 
-    std::vector<HighsLpRelaxation> multiple_lp;
-    multiple_lp.push_back(HighsLpRelaxation{mipdata_->lp});
+    std::vector<HighsLpRelaxation> worker_lp;
+    worker_lp.push_back(HighsLpRelaxation{mipdata_->lp});
 
-    worker_search.setLpRelaxation(&multiple_lp[0]);
+    worker_search.setLpRelaxation(&worker_lp[0]);
 
     // Lambda for combining limit_reached across searches
     auto limitReached = [&]() -> bool {

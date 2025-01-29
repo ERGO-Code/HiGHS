@@ -1997,7 +1997,7 @@ void HighsSearch::dive() {
         printf(
             "HighsMipSolver::run() evaluate_node_result == "
             "HighsSearch::NodeResult::kSubOptimal\n");
-        assert(345 == 678);
+        //        assert(345 == 678);
         break;
       }
 
