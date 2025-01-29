@@ -1,5 +1,6 @@
 stages:
   - coverage
+  - upload
 
 variables:
   COVERAGE_FILE: "coverage.info"
@@ -18,3 +19,14 @@ coverage:
     paths:
       - build/${COVERAGE_REPORT_DIR}
     expire_in: 1 week
+
+upload_coverage:
+  stage: upload
+  tags:
+    -code_coverage
+  script:
+    - curl -Os https://uploader.codecov.io/latest/linux/codecov
+    - chmod +x codecov
+    - ./codecov -t ${CODECOV_TOKEN} -f build/${COVERAGE_REPORT_DIR}/${COVERAGE_FILE}
+  dependencies:
+    - coverage
