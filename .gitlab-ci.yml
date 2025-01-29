@@ -23,7 +23,7 @@ coverage:
 upload_coverage:
   stage: upload
   tags:
-    -code_coverage
+    - code_coverage
   script:
     - curl -Os https://uploader.codecov.io/latest/linux/codecov
     - chmod +x codecov
