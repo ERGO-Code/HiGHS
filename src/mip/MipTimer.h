@@ -303,7 +303,7 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1,        kMipClockDive,
-        kMipClockOpenNodesToQueue0,     kMipClockDomainPropgate,
+        kMipClockOpenNodesToQueue0,    kMipClockDomainPropgate,
         kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
         kMipClockNodeSearch,
         //	kMipClock@
