@@ -2009,6 +2009,7 @@ HighsStatus Highs::getIisInterface() {
       max_iterations = std::max(iterations, max_iterations);
     }
     highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 " %d cols, %d rows, %d LPs solved"
                  " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
                  " and time (%6.2f / %6.2f / % 6.2f) \n",
                  int(this->iis_.col_index_.size()),
