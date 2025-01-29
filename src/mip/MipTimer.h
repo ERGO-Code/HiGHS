@@ -303,7 +303,7 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1,        kMipClockDive,
-        kMipClockOpenNodesToQueue,     kMipClockDomainPropgate,
+        kMipClockOpenNodesToQueue0,     kMipClockDomainPropgate,
         kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
         kMipClockNodeSearch,
         //	kMipClock@
@@ -314,7 +314,7 @@ class MipTimer {
 
   void reportMipDiveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockEvaluateNode, kMipClockPrimalHeuristics, kMipClockTheDive,
+        kMipClockEvaluateNode0, kMipClockPrimalHeuristics, kMipClockTheDive,
         kMipClockBacktrackPlunge, kMipClockPerformAging2};
     reportMipClockList("MipDive_", mip_clock_list, mip_timer_clock,
                        kMipClockDive, tolerance_percent_report);

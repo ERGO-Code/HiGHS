@@ -173,6 +173,7 @@ restart:
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus model_status = mipdata_->trivialHeuristics();
+    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (modelstatus_ == HighsModelStatus::kNotset &&
         model_status == HighsModelStatus::kInfeasible) {
       // trivialHeuristics can spot trivial infeasibility, so act on it
@@ -180,7 +181,6 @@ restart:
       cleanupSolve();
       return;
     }
-    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (analysis_.analyse_mip_time & !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
@@ -253,6 +253,7 @@ restart:
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
+  const bool search_logging = false;
   while (master_search.hasNode()) {
     const HighsInt use_mip_concurrency = options_mip_->mip_search_concurrency;
     HighsSolution null_solution;
@@ -321,9 +322,9 @@ restart:
       HighsSearch& search = iSearch == 0 ? master_search : worker_search;
       if (!performedDive(search, iSearch)) continue;
 
-      analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
+      analysis_.mipTimerStart(kMipClockOpenNodesToQueue0);
       search.openNodesToQueue(mipdata_->nodequeue);
-      analysis_.mipTimerStop(kMipClockOpenNodesToQueue);
+      analysis_.mipTimerStop(kMipClockOpenNodesToQueue0);
 
       search.flushStatistics();
     }
@@ -520,6 +521,15 @@ restart:
       while (!mipdata_->nodequeue.empty()) {
         assert(!search.hasNode());
 
+	if (!submip) {
+	  if (search_logging) {
+	    printf(
+		   "HighsMipSolver::run() NodeSearch nodes %5d; numQueueLeaves %5d; "
+		   "lastLbLeave %d; numQueueLeaves - lastLbLeave %d\n",
+		   int(search.getNnodes()), int(numQueueLeaves), int(lastLbLeave),
+		   int(numQueueLeaves - lastLbLeave));
+	  }
+	}
         if (numQueueLeaves - lastLbLeave >= 10) {
           search.installNode(mipdata_->nodequeue.popBestBoundNode());
           lastLbLeave = numQueueLeaves;
@@ -558,14 +568,24 @@ restart:
         // because we first want to check if the node is not fathomed due to
         // new global information before we perform separation rounds for the
         // node
-        if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
+	analysis_.mipTimerStart(kMipClockEvaluateNode1);
+	const HighsSearch::NodeResult evaluate_node_result =
+          search.evaluateNode();
+	analysis_.mipTimerStop(kMipClockEvaluateNode1);
+        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	  analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
           search.currentNodeToQueue(mipdata_->nodequeue);
+	  analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
+	}
 
         // if the node was pruned we remove it from the search and install the
         // next node from the queue
+      analysis_.mipTimerStart(kMipClockNodePrunedLoop);
         if (search.currentNodePruned()) {
-          search.backtrack();
-          ++mipdata_->num_leaves;
+        analysis_.mipTimerStart(kMipClockSearchBacktrack);
+         search.backtrack();
+         analysis_.mipTimerStop(kMipClockSearchBacktrack);
+         ++mipdata_->num_leaves;
           ++mipdata_->num_nodes;
           search.flushStatistics();
 
@@ -592,6 +612,7 @@ restart:
                   "HighsMipSolver::run() break on "
                   "mipdata_->domain.infeasible() - 1\n");
             search.break_search_ = true;
+          analysis_.mipTimerStop(kMipClockNodePrunedLoop);
             break;
           }
 
@@ -603,6 +624,7 @@ restart:
             break;
           }
 
+        analysis_.mipTimerStart(kMipClockStoreBasis);
           double prev_lower_bound = mipdata_->lower_bound;
 
           mipdata_->lower_bound = std::min(
@@ -630,16 +652,23 @@ restart:
             mipdata_->domain.clearChangedCols();
             mipdata_->removeFixedIndices();
           }
+	  analysis_.mipTimerStop(kMipClockStoreBasis);
 
+	  analysis_.mipTimerStop(kMipClockNodePrunedLoop);
           continue;
         }
+	analysis_.mipTimerStop(kMipClockNodePrunedLoop);
 
         // the node is still not fathomed, so perform separation
+	analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
         sepa.separate(search.getLocalDomain());
+	analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
 
         if (mipdata_->domain.infeasible()) {
           search.cutoffNode();
-          search.openNodesToQueue(mipdata_->nodequeue);
+	  analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
+	  search.openNodesToQueue(mipdata_->nodequeue);
+	  analysis_.mipTimerStop(kMipClockOpenNodesToQueue1);
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
 

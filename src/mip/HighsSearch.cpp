@@ -1961,6 +1961,13 @@ void HighsSearch::dive() {
   }
   HighsMipAnalysis& analysis_ = mipsolver.analysis_;
   const HighsOptions* options_mip_ = mipsolver.options_mip_;
+  const bool search_logging = false;
+  if (!mipsolver.submip) {
+    if (search_logging) {
+      printf("\nHighsMipSolver::run() Number of active nodes %d\n",
+	     int(mipsolver.mipdata_->nodequeue.numActiveNodes()));
+    }
+  }
   analysis_.mipTimerStart(kMipClockPerformAging1);
   mipsolver.mipdata_->conflictPool.performAging();
   analysis_.mipTimerStop(kMipClockPerformAging1);
@@ -1982,9 +1989,9 @@ void HighsSearch::dive() {
   while (true) {
     // Possibly apply primal heuristics
     if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
-      analysis_.mipTimerStart(kMipClockEvaluateNode);
+      analysis_.mipTimerStart(kMipClockEvaluateNode0);
       const HighsSearch::NodeResult evaluate_node_result = this->evaluateNode();
-      analysis_.mipTimerStop(kMipClockEvaluateNode);
+      analysis_.mipTimerStop(kMipClockEvaluateNode0);
 
       if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
         printf(
@@ -2040,6 +2047,13 @@ void HighsSearch::dive() {
 
       ++mipsolver.mipdata_->num_leaves;
 
+      if (!mipsolver.submip) {
+	if (search_logging) {
+	  //	  printf("HighsMipSolver::run() Dive nodes %5d; ",
+	  // int(search.getNnodes()));
+	}
+      }
+
       this->flushStatistics();
     }
 
@@ -2049,6 +2063,13 @@ void HighsSearch::dive() {
     }
 
     HighsInt numPlungeNodes = mipsolver.mipdata_->num_nodes - plungestart;
+      if (!mipsolver.submip) {
+        if (search_logging) {
+          const bool plunge_break = numPlungeNodes >= 100;
+          printf("plunge nodes%3d: break = %s\n", int(numPlungeNodes),
+                 highsBoolToString(plunge_break).c_str());
+        }
+      }
     if (numPlungeNodes >= 100) break;
 
     analysis_.mipTimerStart(kMipClockBacktrackPlunge);
