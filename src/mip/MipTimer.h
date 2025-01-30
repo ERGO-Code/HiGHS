@@ -84,7 +84,7 @@ class MipTimer {
     HighsTimer* timer_pointer = mip_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = mip_timer_clock.clock_;
     clock.resize(kNumMipClock);
-    clock[kMipClockTotal] = timer_pointer->total_clock;
+    clock[kMipClockTotal] = 0;
     clock[kMipClockPresolve] = timer_pointer->clock_def("MIP presolve");
     clock[kMipClockSolve] = timer_pointer->clock_def("MIP solve");
     clock[kMipClockPostsolve] = timer_pointer->clock_def("MIP postsolve");
@@ -334,7 +334,7 @@ class MipTimer {
                    const bool end_line) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockRunPresolve, kMipClockEvaluateRootNode,
-        kMipClockPrimalHeuristics, kMipClockTheDive};
+        kMipClockPrimalHeuristics, kMipClockTheDive, kMipClockNodeSearch};
     csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal,
                     header, end_line);
   };

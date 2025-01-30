@@ -312,11 +312,11 @@ class Highs {
 
   /**
    * @brief Write (deviations from default values of) the options to a
-   * file, with the extension ".html" producing HTML, otherwise using
-   * the standard format used to read options from a file.
+   * file, using the standard format used to read options from a file.
+   * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false) const;
+                           const bool report_only_deviations = false);
 
   /**
    * @brief Returns the number of user-settable options
@@ -411,7 +411,7 @@ class Highs {
   /**
    * @brief Get the run time of HiGHS
    */
-  double getRunTime() { return timer_.readRunHighsClock(); }
+  double getRunTime() { return timer_.read(); }
 
   /**
    * Methods for model output
@@ -510,29 +510,31 @@ class Highs {
   }
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does and dual_ray is not nullptr
+   * @brief Indicate whether a dual unbounded ray exists, and (at the
+   * expense of solving an LP) gets it if it does not and
+   * dual_ray_value is not nullptr
    */
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does
+   * @brief Indicate whether a dual unbounded ray exists, and gets it
+   * if it does
    */
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
    * @brief Indicate whether a dual unboundedness direction exists,
-   * and gets it if it does and dual_unboundedness_direction is not
-   * nullptr
+   * and (at the expense of solving an LP) gets it if
+   * dual_unboundedness_direction is not nullptr
    */
   HighsStatus getDualUnboundednessDirection(
       bool& has_dual_unboundedness_direction,
       double* dual_unboundedness_direction_value = nullptr);
 
   /**
-   * @brief Indicate whether a primal unbounded ray exists, and gets
-   * it if it does and primal_ray is not nullptr
+   * @brief Indicate whether a primal unbounded ray exists, and (at
+   * the expense of solving an LP) gets it if primal_ray is not
+   * nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = nullptr);
@@ -1046,6 +1048,16 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
+  HighsStatus ensureColwise() {
+    this->model_.lp_.ensureColwise();
+    return HighsStatus::kOk;
+  }
+
+  HighsStatus ensureRowwise() {
+    this->model_.lp_.ensureRowwise();
+    return HighsStatus::kOk;
+  }
+
   /**
    * @brief Delete multiple columns from the incumbent model given by an
    * interval [from_col, to_col]
@@ -1304,6 +1316,19 @@ class Highs {
     return ekk_instance_.primal_phase1_dual_;
   }
 
+  /**
+   * @brief Development methods
+   */
+  HighsInt defineClock(const char* name) {
+    return this->timer_.clock_def(name);
+  }
+  void writeAllClocks() { this->timer_.writeAllClocks(); }
+  HighsStatus clearModelNames() {
+    this->model_.lp_.col_names_.clear();
+    this->model_.lp_.row_names_.clear();
+    return HighsStatus::kOk;
+  }
+
   // Start of deprecated methods
 
   std::string compilationDate() const { return "deprecated"; }
@@ -1446,7 +1471,7 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
-  bool written_log_header = false;
+  bool written_log_header_ = false;
 
   HighsStatus solve();
 
@@ -1480,11 +1505,6 @@ class Highs {
   // and basis data
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
-  //
-  // Sets model status, basis, solution and info from the
-  // highs_model_object
-  void setBasisValidity();
-  //
   // Clears the presolved model and its status
   void clearPresolve();
   //
@@ -1553,15 +1573,14 @@ class Highs {
   void deleteRowsInterface(HighsIndexCollection& index_collection);
 
   void getColsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_col, double* col_cost, double* col_lower,
-                        double* col_upper, HighsInt& num_nz,
-                        HighsInt* col_matrix_start, HighsInt* col_matrix_index,
-                        double* col_matrix_value);
+                        HighsInt& num_col, double* cost, double* lower,
+                        double* upper, HighsInt& num_nz, HighsInt* start,
+                        HighsInt* index, double* value);
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_row, double* row_lower, double* row_upper,
-                        HighsInt& num_nz, HighsInt* row_matrix_start,
-                        HighsInt* row_matrix_index, double* row_matrix_value);
+                        HighsInt& num_row, double* lower, double* upper,
+                        HighsInt& num_nz, HighsInt* start, HighsInt* index,
+                        double* value);
 
   void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
                                double& value);

@@ -372,10 +372,9 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     }
     if (nfixed > 0)
       highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                  "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
-                  " integers) sitting at bound at "
+                  "Fixing %d columns (%d integers) sitting at bound at "
                   "analytic center\n",
-                  nfixed, nintfixed);
+                  int(nfixed), int(nintfixed));
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   }
@@ -406,9 +405,12 @@ void HighsMipSolverData::finishSymmetryDetection(
   taskGroup.sync();
 
   symmetries = std::move(symData->symmetries);
+  std::string symmetry_time =
+      mipsolver.options_mip_->timeless_log
+          ? ""
+          : highsFormatToString(" %.1fs", symData->detectionTime);
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               "\nSymmetry detection completed in %.1fs\n",
-               symData->detectionTime);
+               "\nSymmetry detection completed in%s\n", symmetry_time.c_str());
 
   if (symmetries.numGenerators == 0) {
     detectSymmetries = false;
@@ -416,24 +418,20 @@ void HighsMipSolverData::finishSymmetryDetection(
                  "No symmetry present\n\n");
   } else if (symmetries.orbitopes.size() == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Found %" HIGHSINT_FORMAT " generator(s)\n\n",
-                 symmetries.numGenerators);
+                 "Found %d generator(s)\n\n", int(symmetries.numGenerators));
 
   } else {
     if (symmetries.numPerms != 0) {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "Found %" HIGHSINT_FORMAT " generator(s) and %" HIGHSINT_FORMAT
-          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n\n",
-          symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-          (HighsInt)symmetries.columnToOrbitope.size());
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Found %d generator(s) and %d full orbitope(s) acting on %d "
+                   "columns\n\n",
+                   int(symmetries.numPerms), int(symmetries.orbitopes.size()),
+                   int(symmetries.columnToOrbitope.size()));
     } else {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Found %" HIGHSINT_FORMAT
-                   " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                   " columns\n\n",
-                   (HighsInt)symmetries.orbitopes.size(),
-                   (HighsInt)symmetries.columnToOrbitope.size());
+                   "Found %d full orbitope(s) acting on %d columns\n\n",
+                   int(symmetries.orbitopes.size()),
+                   int(symmetries.columnToOrbitope.size()));
     }
   }
   symData.reset();
@@ -678,6 +676,7 @@ void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
 
   last_disptime = -kHighsInf;
+  disptime = 0;
 
   // Transform the reference of the objective limit and lower/upper
   // bounds from the original model to the current model, undoing the
@@ -1091,10 +1090,8 @@ try_again:
       }
     }
     this->total_repair_lp++;
-    double time_available =
-        std::max(mipsolver.options_mip_->time_limit -
-                     mipsolver.timer_.read(mipsolver.timer_.total_clock),
-                 0.1);
+    double time_available = std::max(
+        mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
     Highs tmpSolver;
     const bool debug_report = false;
     if (debug_report) {
@@ -1267,6 +1264,7 @@ void HighsMipSolverData::performRestart() {
     root_basis.row_status.resize(postSolveStack.getOrigNumRow(),
                                  HighsBasisStatus::kBasic);
     root_basis.valid = true;
+    root_basis.useful = true;
 
     for (HighsInt i = 0; i < mipsolver.model_->num_col_; ++i)
       root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
@@ -1381,6 +1379,7 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
     firstrootbasis.valid = true;
     firstrootbasis.alien = true;
+    firstrootbasis.useful = true;
 
     for (HighsInt i = 0; i < numRow; ++i) {
       HighsBasisStatus status =
@@ -1598,21 +1597,26 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   bool output_flag = *mipsolver.options_mip_->log_options.output_flag;
   if (!output_flag) return;
 
-  double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
+  bool timeless_log = mipsolver.options_mip_->timeless_log;
+  disptime = timeless_log ? disptime + 1 : mipsolver.timer_.read();
   if (solution_source == kSolutionSourceNone &&
-      time - last_disptime < mipsolver.options_mip_->mip_min_logging_interval)
+      disptime - last_disptime <
+          mipsolver.options_mip_->mip_min_logging_interval)
     return;
-  last_disptime = time;
+  last_disptime = disptime;
+  std::string time_string =
+      timeless_log ? "" : highsFormatToString(" %7.1fs", disptime);
 
   if (num_disp_lines % 20 == 0) {
     if (num_disp_lines == 0) printSolutionSourceKey();
-    highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-        // clang-format off
-	"\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
-          "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
-        // clang-format on
-    );
+    std::string work_string0 = timeless_log ? "   Work" : "      Work      ";
+    std::string work_string1 = timeless_log ? "LpIters" : "LpIters     Time";
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 // clang-format off
+	"\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints | %s\n"
+	  "Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | %s\n\n",
+                 // clang-format on
+                 work_string0.c_str(), work_string1.c_str());
 
     //"   %7s | %10s | %10s | %10s | %10s | %-15s | %-15s | %7s | %7s "
     //"| %8s | %8s\n",
@@ -1656,13 +1660,13 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-                 " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8s   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s%s\n",
         // clang-format on
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
         ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        print_lp_iters.data(), time_string.c_str());
   } else {
     std::array<char, 22> ub_string;
     if (mipsolver.options_mip_->objective_bound < ub) {
@@ -1677,13 +1681,13 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        " %s %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s%s\n",
         // clang-format on
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
         ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time);
+        print_lp_iters.data(), time_string.c_str());
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and
@@ -1931,6 +1935,7 @@ restart:
     firstrootbasis.row_status.assign(mipsolver.numRow(),
                                      HighsBasisStatus::kBasic);
     firstrootbasis.valid = true;
+    firstrootbasis.useful = true;
   }
 
   if (cutpool.getNumCuts() != 0) {
@@ -1959,6 +1964,7 @@ restart:
 
   // make sure first line after solving root LP is printed
   last_disptime = -kHighsInf;
+  disptime = 0;
 
   mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
   heuristics.randomizedRounding(firstlpsol);
@@ -2377,11 +2383,10 @@ bool HighsMipSolverData::checkLimits(int64_t nodeOffset) const {
     return true;
   }
 
-  //  const double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
+  //  const double time = mipsolver.timer_.read();
   //  printf("checkLimits: time = %g\n", time);
   if (options.time_limit < kHighsInf &&
-      mipsolver.timer_.read(mipsolver.timer_.total_clock) >=
-          options.time_limit) {
+      mipsolver.timer_.read() >= options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "Reached time limit\n");
@@ -2487,8 +2492,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   double primal_bound;
   double mip_rel_gap;
   limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
-  mipsolver.callback_->data_out.running_time =
-      mipsolver.timer_.read(mipsolver.timer_.total_clock);
+  mipsolver.callback_->data_out.running_time = mipsolver.timer_.read();
   mipsolver.callback_->data_out.objective_function_value =
       mipsolver_objective_value;
   mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
@@ -2617,7 +2621,7 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
       assert(gap_consistent);
     }
     if (to_gap < kHighsInf) {
-      double time = mipsolver.timer_.read(mipsolver.timer_.total_clock);
+      double time = mipsolver.timer_.read();
       if (from_gap < kHighsInf) {
         // Need to update the P-D integral
         double time_diff = time - pdi.prev_time;

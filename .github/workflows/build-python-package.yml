@@ -75,13 +75,10 @@ jobs:
           python -m pytest 
              
   build_wheel_linux:
-    # ubuntu 22 has a latest version of cmake, but setup-python 
-    # does not seem to provide all necessary modules to find python
-    # from cmake. works on my machine, test the wheels manually
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
         matrix:
-          python: [3.12]
+          python: [3.11]
     steps:
       - uses: actions/checkout@v4
 
@@ -110,7 +107,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     strategy:
         matrix:
-          python: [3.12]
+          python: [3.11]
     steps:
       - uses: actions/checkout@v4
 

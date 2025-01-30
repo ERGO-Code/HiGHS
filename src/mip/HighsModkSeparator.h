@@ -54,7 +54,7 @@ class HighsModkSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsModkSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "Mod-k sepa", "Mod") {}
+      : HighsSeparator(mipsolver, "Mod-k sepa") {}
 };
 
 #endif
