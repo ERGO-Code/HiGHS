@@ -27,6 +27,6 @@ upload_coverage:
   script:
     - curl -Os https://uploader.codecov.io/latest/linux/codecov
     - chmod +x codecov
-    - ./codecov -t ${CODECOV_TOKEN} -f build/../${COVERAGE_FILE}
+    - ./codecov -t ${CODECOV_TOKEN} -f build/${COVERAGE_FILE}
   dependencies:
     - coverage
