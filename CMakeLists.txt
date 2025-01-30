@@ -665,11 +665,19 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info --ignore-errors gcov,source,empty
         #COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${CMAKE_COMMAND} -E echo "Checking for coverage.info"
-        COMMAND ${CMAKE_COMMAND} -E test -f  ${CMAKE_BINARY_DIR}/coverage.info
+        if (EXISTS "${CMAKE_BINARY_DIR}/coverage.info")
+          message("File exists")
+        else()
+          message("File doesn't exist")
+        endif()
         COMMAND ${CMAKE_COMMAND} -E echo "Copying coverage.info to parent directory"
-        COMMAND cp ${CMAKE_BINARY_DIR}/coverage.info ${CMAKE_BINARY_DIR}/../
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/coverage.info ${CMAKE_BINARY_DIR}/../
         COMMAND ${CMAKE_COMMAND} -E echo "Checking for coverage.info in parent directory"
-        COMMAND ${CMAKE_COMMAND} -E test -f  ${CMAKE_BINARY_DIR}/../coverage.info        
+        if (EXISTS "${CMAKE_BINARY_DIR}/../coverage.info")
+          message("File exists")
+        else()
+          message("File doesn't exist")
+        endif()       
         COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info
         #COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info
         VERBATIM
