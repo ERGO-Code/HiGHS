@@ -148,7 +148,7 @@ void HighsMipSolver::run() {
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
   // Identify whether time limit has been reached (in presolve)
@@ -172,13 +172,13 @@ void HighsMipSolver::run() {
 
   analysis_.mipTimerStart(kMipClockSolve);
 
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
   mipdata_->runSetup();
   analysis_.mipTimerStop(kMipClockRunSetup);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 restart:
@@ -199,7 +199,7 @@ restart:
       cleanupSolve();
       return;
     }
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
                    timer_.read());
@@ -211,7 +211,7 @@ restart:
     if (analysis_.analyse_mip_time &&
         analysis_.mipTimerRunning(kMipClockIpmSolveLp))
       analysis_.mipTimerStop(kMipClockIpmSolveLp);
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
                    timer_.read());
