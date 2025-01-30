@@ -21,7 +21,7 @@ coverage:
       - build/${COVERAGE_FILE}
     expire_in: 1 week
 
-upload_coverage:
+pages:
   stage: upload
   tags:
     - code_coverage
