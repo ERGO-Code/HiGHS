@@ -3875,10 +3875,13 @@ HighsStatus Highs::callSolveQp() {
   // Define the QP solver iteration logging function
   settings.iteration_log.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
+    std::string time_string =
+        options_.timeless_log ? ""
+                              : highsFormatToString(" %9.2fs", stats.time[rep]);
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%11d  %15.8g           %6d %9.2fs\n",
-                 int(stats.iteration[rep]), stats.objval[rep],
-                 int(stats.nullspacedimension[rep]), stats.time[rep]);
+                 "%11d  %15.8g           %6d%s\n", int(stats.iteration[rep]),
+                 stats.objval[rep], int(stats.nullspacedimension[rep]),
+                 time_string.c_str());
   });
 
   // Define the QP nullspace limit logging function
@@ -4613,9 +4616,11 @@ void Highs::reportSolvedLpQpStats() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
   }
-  double run_time = timer_.read();
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "HiGHS run time      : %13.2f\n", run_time);
+  if (!options_.timeless_log) {
+    double run_time = timer_.read();
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "HiGHS run time      : %13.2f\n", run_time);
+  }
 }
 
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {
