@@ -233,7 +233,7 @@ restart:
   std::shared_ptr<const HighsBasis> basis;
 
   HighsSearch master_search{*this, mipdata_->pseudocost};
-  
+
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
   HighsSeparation sepa(*this);
 
@@ -278,32 +278,28 @@ restart:
     const HighsInt use_mip_concurrency = options_mip_->mip_search_concurrency;
     HighsSolution null_solution;
     std::vector<HighsMipSolver> worker_mipsolvers;
-    for (HighsInt iSearch = 1; iSearch < use_mip_concurrency; iSearch++) {
-      worker_mipsolvers.push_back(HighsMipSolver{*this});
-    //    worker_mipsolvers.push_back(HighsMipSolver{callback_, options_mip_, model_});
-    //    worker_mipsolvers.push_back(HighsMipSolver{
-    //        *callback_, *options_mip_, *model_, null_solution, false, 0});
-      HighsMipSolver& worker_mipsolver = worker_mipsolvers[0];
-
-    }
-    assert(worker_mipsolvers.size() > 0);
-    HighsMipSolver& worker_mipsolver = worker_mipsolvers[0];
-
-    worker_mipsolver.rootbasis = this->rootbasis;
-    HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
-    worker_mipsolver.pscostinit = &pscostinit;
-    worker_mipsolver.clqtableinit = &mipdata_->cliquetable;
-    worker_mipsolver.implicinit = &mipdata_->implications;
-    worker_mipsolver.mipdata_ =
-        decltype(mipdata_)(new HighsMipSolverData(*this));
-
     std::vector<HighsSearch> worker_searches;
     std::vector<HighsLpRelaxation> worker_lps;
-    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency-1; iSearch++) {
-      worker_searches.push_back(HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
+    for (HighsInt iSearch = 0; iSearch < use_mip_concurrency - 1; iSearch++) {
+      worker_mipsolvers.push_back(HighsMipSolver{*this});
+      //    worker_mipsolvers.push_back(HighsMipSolver{callback_, options_mip_,
+      //    model_}); worker_mipsolvers.push_back(HighsMipSolver{
+      //        *callback_, *options_mip_, *model_, null_solution, false, 0});
+      HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
+      worker_mipsolver.rootbasis = this->rootbasis;
+      HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
+      worker_mipsolver.pscostinit = &pscostinit;
+      worker_mipsolver.clqtableinit = &mipdata_->cliquetable;
+      worker_mipsolver.implicinit = &mipdata_->implications;
+      worker_mipsolver.mipdata_ =
+          decltype(mipdata_)(new HighsMipSolverData(*this));
+      worker_searches.push_back(
+          HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
       worker_lps.push_back(HighsLpRelaxation{mipdata_->lp});
       worker_searches[iSearch].setLpRelaxation(&worker_lps[iSearch]);
     }
+
+    assert(worker_mipsolvers.size() > 0);
     assert(worker_searches.size() > 0);
     HighsSearch& worker_search = worker_searches[0];
 

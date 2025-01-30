@@ -86,9 +86,9 @@ class HighsMipSolver {
   // Contstructor from reference.
   HighsMipSolver(const HighsMipSolver& mip_solver_);
 
-  // Constructor without solution. 
-  HighsMipSolver(HighsCallback* callback,
-                 const HighsOptions* options, const HighsLp* lp);
+  // Constructor without solution.
+  HighsMipSolver(HighsCallback* callback, const HighsOptions* options,
+                 const HighsLp* lp);
 
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
