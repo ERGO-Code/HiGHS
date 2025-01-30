@@ -22,7 +22,7 @@ coverage:
     expire_in: 1 week
 
 upload_coverage:
-  stage: deploy
+  stage: upload
   tags:
     - code_coverage
   script:
