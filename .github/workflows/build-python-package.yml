@@ -75,7 +75,7 @@ jobs:
           python -m pytest 
              
   build_wheel_linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
         matrix:
           python: [3.11]
