@@ -34,10 +34,10 @@ jobs:
         buildplat:
           - [ubuntu-20.04, manylinux_x86_64]
           - [ubuntu-20.04, manylinux_i686]
-          - [ubuntu-20.04-arm, manylinux_aarch64]
+          - [ubuntu-24.04-arm, manylinux_aarch64]
           - [ubuntu-20.04, musllinux_x86_64] # No OpenBlas, no test
           - [ubuntu-20.04, musllinux_i686]
-          - [ubuntu-20.04-arm, musllinux_aarch64]
+          - [ubuntu-24.04-arm, musllinux_aarch64]
           - [macos-13, macosx_x86_64]
           - [macos-14, macosx_arm64]
           - [windows-2019, win_amd64]
