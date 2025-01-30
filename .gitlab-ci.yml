@@ -22,12 +22,15 @@ coverage:
     expire_in: 1 week
 
 upload_coverage:
-  stage: upload
+  stage: deploy
   tags:
     - code_coverage
   script:
-    - curl -Os https://uploader.codecov.io/latest/linux/codecov
-    - chmod +x codecov
-    - ./codecov -t ${CODECOV_TOKEN} -f build/${COVERAGE_FILE}
+    - mv build/${COVERAGE_REPORT_DIR} public
+  artifacts:
+    paths:
+      - public
+  only:
+    - CodeCoverage
   dependencies:
     - coverage
