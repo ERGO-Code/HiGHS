@@ -18,7 +18,7 @@ coverage:
   artifacts:
     paths:
       - build/${COVERAGE_REPORT_DIR}
-      - build/${COVERAGE_REPORT_DIR}/${COVERAGE_FILE}
+      - build/${COVERAGE_FILE}
     expire_in: 1 week
 
 upload_coverage:
