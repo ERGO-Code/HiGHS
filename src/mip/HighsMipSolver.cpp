@@ -276,17 +276,12 @@ restart:
     const HighsInt use_mip_concurrency = options_mip_->mip_search_concurrency;
     HighsSolution null_solution;
 
-    // I'd like to do this, since it extends to multiple workers...
-    //
     std::vector<HighsMipSolver> worker_mipsolvers;
-    worker_mipsolvers.push_back(HighsMipSolver{
-        *callback_, *options_mip_, *model_, null_solution, false, 0});
+    worker_mipsolvers.push_back(HighsMipSolver{*this});
+    //    worker_mipsolvers.push_back(HighsMipSolver{callback_, options_mip_, model_});
+    //    worker_mipsolvers.push_back(HighsMipSolver{
+    //        *callback_, *options_mip_, *model_, null_solution, false, 0});
     HighsMipSolver& worker_mipsolver = worker_mipsolvers[0];
-
-    // ... but currently can only do this
-    //
-    // HighsMipSolver worker_mipsolver(*callback_, *options_mip_, *model_,
-    //                                 null_solution, false, 0);
 
     worker_mipsolver.rootbasis = this->rootbasis;
     HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
