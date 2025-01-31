@@ -118,13 +118,14 @@ option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 # message(STATUS "Build pdlp with CPU: ${CUPDLP_CPU}")
 
 option(CUPDLP_GPU "Build pdlp with GPU" OFF)
-set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+# set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+set(CUDA_HOME "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6" CACHE STRING "Cuda path to install")
 
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
 if (NOT LINUX)
-  set (CUPDLP_GPU OFF)
-  message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
+  # set (CUPDLP_GPU OFF)
+  # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
 endif()
 
 if (CUPDLP_GPU)
@@ -400,7 +401,9 @@ endif()
 add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
 
+if (CUPDLP_GPU)
 add_compile_options("-Wno-deprecated-declarations")
+endif()
 # add_compile_options("-Wno-implicit-function-declaration")
 
 # set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
