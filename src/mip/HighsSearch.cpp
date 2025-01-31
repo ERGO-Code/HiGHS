@@ -2126,6 +2126,7 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
 void HighsSearch::nodeSearch(HighsSearchData& master_search_data) {
 
   const bool search_logging = false;
+  const bool debug_logging = false;
   int64_t& numStallNodes = master_search_data.numStallNodes;
   int64_t& lastLbLeave = master_search_data.lastLbLeave;
   int64_t& numQueueLeaves = master_search_data.numQueueLeaves;
@@ -2136,9 +2137,11 @@ void HighsSearch::nodeSearch(HighsSearchData& master_search_data) {
   double& upperLimLastCheck = master_search_data.upperLimLastCheck;
   double& lowerBoundLastCheck = master_search_data.lowerBoundLastCheck;
 
+  HighsMipAnalysis& analysis_ = mipsolver.analysis_;
+  const HighsOptions* options_mip_ = mipsolver.options_mip_;
+  bool limit_reached = false;
   
   /*
-
       while (!mipsolver.mipdata_->nodequeue.empty()) {
         assert(!this->hasNode());
 
@@ -2335,7 +2338,6 @@ void HighsSearch::nodeSearch(HighsSearchData& master_search_data) {
         this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
         analysis_.node_search_time.push_back(this_node_search_time);
       }
-
   */
 }
 

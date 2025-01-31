@@ -267,19 +267,6 @@ restart:
 
   master_search.installNode(mipdata_->nodequeue.popBestBoundNode());
   master_search.initialiseHighsSearchData();
-
-  /*
-  int64_t numStallNodes = 0;
-  int64_t lastLbLeave = 0;
-  int64_t numQueueLeaves = 0;
-  HighsInt numHugeTreeEstim = 0;
-  int64_t numNodesLastCheck = mipdata_->num_nodes;
-  int64_t nextCheck = mipdata_->num_nodes;
-  double treeweightLastCheck = 0.0;
-  double upperLimLastCheck = mipdata_->upper_limit;
-  double lowerBoundLastCheck = mipdata_->lower_bound;
-  */
-
   int64_t& numStallNodes = master_search.search_data_.numStallNodes;
   int64_t& lastLbLeave = master_search.search_data_.lastLbLeave;
   int64_t& numQueueLeaves = master_search.search_data_.numQueueLeaves;
@@ -573,6 +560,9 @@ restart:
       double this_node_search_time =
           -analysis_.mipTimerRead(kMipClockNodeSearch);
       analysis_.mipTimerStart(kMipClockNodeSearch);
+
+      // Here is where parallel node search loop will go
+      search.nodeSearch(master_search.search_data_);
 
       while (!mipdata_->nodequeue.empty()) {
         assert(!search.hasNode());
