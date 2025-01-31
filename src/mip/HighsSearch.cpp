@@ -2123,9 +2123,20 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
   } while (backtrack());
 }
 
-void HighsSearch::nodeSearch() {
+void HighsSearch::nodeSearch(HighsSearchData& master_search_data) {
 
   const bool search_logging = false;
+  int64_t& numStallNodes = master_search_data.numStallNodes;
+  int64_t& lastLbLeave = master_search_data.lastLbLeave;
+  int64_t& numQueueLeaves = master_search_data.numQueueLeaves;
+  HighsInt& numHugeTreeEstim = master_search_data.numHugeTreeEstim;
+  int64_t& numNodesLastCheck = master_search_data.numNodesLastCheck;
+  int64_t& nextCheck = master_search_data.nextCheck;
+  double& treeweightLastCheck = master_search_data.treeweightLastCheck;
+  double& upperLimLastCheck = master_search_data.upperLimLastCheck;
+  double& lowerBoundLastCheck = master_search_data.lowerBoundLastCheck;
+
+  
   /*
 
       while (!mipsolver.mipdata_->nodequeue.empty()) {

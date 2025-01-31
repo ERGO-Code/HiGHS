@@ -247,7 +247,7 @@ class HighsSearch {
   void printDisplayLine(char first, bool header = false);
 
   void dive();
-  void nodeSearch();
+  void nodeSearch(HighsSearchData& master_search_data);
   NodeResult theDive();
   void initialiseHighsSearchData();
 
