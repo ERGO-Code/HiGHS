@@ -43,7 +43,8 @@ class HighsMipAnalysis {
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;
   std::vector<double> dive_time;
-  std::vector<double> node_search_time;
+  std::vector<double> node_search_separation_time;
+  std::vector<double> node_search_evaluate_time;
 };
 
 #endif /* MIP_HIGHSMIPANALYSIS_H_ */

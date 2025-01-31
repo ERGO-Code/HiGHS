@@ -266,19 +266,15 @@ restart:
   }
 
   master_search.installNode(mipdata_->nodequeue.popBestBoundNode());
-  master_search.initialiseHighsSearchData();
-  int64_t& numStallNodes = master_search.search_data_.numStallNodes;
-  int64_t& lastLbLeave = master_search.search_data_.lastLbLeave;
-  int64_t& numQueueLeaves = master_search.search_data_.numQueueLeaves;
-  HighsInt& numHugeTreeEstim = master_search.search_data_.numHugeTreeEstim;
-  int64_t& numNodesLastCheck = master_search.search_data_.numNodesLastCheck;
-  int64_t& nextCheck = master_search.search_data_.nextCheck;
-  double& treeweightLastCheck = master_search.search_data_.treeweightLastCheck;
-  double& upperLimLastCheck = master_search.search_data_.upperLimLastCheck;
-  double& lowerBoundLastCheck = master_search.search_data_.lowerBoundLastCheck;
-
-  
-
+  int64_t numStallNodes = 0;
+  int64_t lastLbLeave = 0;
+  int64_t numQueueLeaves = 0;
+  HighsInt numHugeTreeEstim = 0;
+  int64_t numNodesLastCheck = mipdata_->num_nodes;
+  int64_t nextCheck = mipdata_->num_nodes;
+  double treeweightLastCheck = 0.0;
+  double upperLimLastCheck = mipdata_->upper_limit;
+  double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   const bool search_logging = false;
   while (master_search.hasNode()) {
@@ -557,12 +553,7 @@ restart:
       // remove the iteration limit when installing a new node
       // mipdata_->lp.setIterationLimit();
 
-      double this_node_search_time =
-          -analysis_.mipTimerRead(kMipClockNodeSearch);
       analysis_.mipTimerStart(kMipClockNodeSearch);
-
-      // Here is where parallel node search loop will go
-      search.nodeSearch(master_search.search_data_);
 
       while (!mipdata_->nodequeue.empty()) {
         assert(!search.hasNode());
@@ -615,10 +606,16 @@ restart:
         // because we first want to check if the node is not fathomed due to
         // new global information before we perform separation rounds for the
         // node
+	double this_node_search_evaluate_time =
+          -analysis_.mipTimerRead(kMipClockEvaluateNode1);
         analysis_.mipTimerStart(kMipClockEvaluateNode1);
         const HighsSearch::NodeResult evaluate_node_result =
             search.evaluateNode();
         analysis_.mipTimerStop(kMipClockEvaluateNode1);
+	if (analysis_.analyse_mip_time) {
+	  this_node_search_evaluate_time += analysis_.mipTimerRead(kMipClockEvaluateNode1);
+	  analysis_.node_search_evaluate_time.push_back(this_node_search_evaluate_time);
+	}
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
           analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
           search.currentNodeToQueue(mipdata_->nodequeue);
@@ -707,9 +704,15 @@ restart:
         analysis_.mipTimerStop(kMipClockNodePrunedLoop);
 
         // the node is still not fathomed, so perform separation
+	double this_node_search_separation_time =
+          -analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
         analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
         sepa.separate(search.getLocalDomain());
         analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
+	if (analysis_.analyse_mip_time) {
+	  this_node_search_separation_time += analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
+	  analysis_.node_search_separation_time.push_back(this_node_search_separation_time);
+	}
 
         if (mipdata_->domain.infeasible()) {
           search.cutoffNode();
@@ -756,10 +759,6 @@ restart:
         break;
       }  // while(!mipdata_->nodequeue.empty())
       analysis_.mipTimerStop(kMipClockNodeSearch);
-      if (analysis_.analyse_mip_time) {
-        this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
-        analysis_.node_search_time.push_back(this_node_search_time);
-      }
     }  // HighsInt iSearch = 0...mip_search_concurrency
 
     /*

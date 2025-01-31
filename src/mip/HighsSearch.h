@@ -26,18 +26,6 @@ class HighsMipSolver;
 class HighsImplications;
 class HighsCliqueTable;
 
-struct HighsSearchData {
-  int64_t numStallNodes;
-  int64_t lastLbLeave;
-  int64_t numQueueLeaves;
-  HighsInt numHugeTreeEstim;
-  int64_t numNodesLastCheck;
-  int64_t nextCheck;
-  double treeweightLastCheck;
-  double upperLimLastCheck;
-  double lowerBoundLastCheck;
-};
-
 class HighsSearch {
   HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
@@ -83,8 +71,6 @@ class HighsSearch {
   bool limit_reached_;
   bool performed_dive_;
   bool break_search_;
-
-  HighsSearchData search_data_;
 
  private:
   ChildSelectionRule childselrule;
@@ -247,9 +233,7 @@ class HighsSearch {
   void printDisplayLine(char first, bool header = false);
 
   void dive();
-  void nodeSearch(HighsSearchData& master_search_data);
   NodeResult theDive();
-  void initialiseHighsSearchData();
 
   HighsDomain& getLocalDomain() { return localdom; }
 

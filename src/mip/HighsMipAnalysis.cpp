@@ -155,8 +155,10 @@ void HighsMipAnalysis::reportMipTimer() {
   reportMipSolveLpClock(true);
   mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
   reportMipSolveLpClock(false);
-  analyseVectorValues(nullptr, "Node search time",
-                      HighsInt(node_search_time.size()), node_search_time);
   analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
                       dive_time);
+  analyseVectorValues(nullptr, "Node search evaluate time",
+                      HighsInt(node_search_evaluate_time.size()), node_search_evaluate_time);
+  analyseVectorValues(nullptr, "Node search separation time",
+                      HighsInt(node_search_separation_time.size()), node_search_separation_time);
 }
