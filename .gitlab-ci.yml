@@ -14,6 +14,7 @@ coverage:
     - mkdir build
     - cd build
     - /mathworks/devel/sandbox/dozyurt/3PForR2024b/3p/install/unknown/glnxa64/cmake-bin/glnxa64/bin/cmake -DCMAKE_BUILD_TYPE=DEBUG -DALL_TESTS=ON -DBUILD_SHARED_LIBS=OFF -DHIGHS_COVERAGE=ON -DLCOV_PATH=/home/dozyurt/Downloads/bin/lcov -DGENHTML_PATH=/home/dozyurt/Downloads/bin/genhtml -DCI=OFF -DFAST_BUILD=OFF ..
+    - make
     - /mathworks/devel/sandbox/dozyurt/3PForR2024b/3p/install/unknown/glnxa64/cmake-bin/glnxa64/bin/cmake --build . --target coverage
   artifacts:
     paths:
