@@ -319,20 +319,16 @@ restart:
     // Lambda for combining limit_reached across searches
     auto limitReached = [&]() -> bool {
       bool limit_reached = false;
-      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-        HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-        limit_reached = limit_reached || search.limit_reached_;
-      }
+      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
+        limit_reached = limit_reached || concurrent_searches[iSearch]->limit_reached_;
       return limit_reached;
     };
 
     // Lambda checking whether to break out of search
     auto breakSearch = [&]() -> bool {
       bool break_search = false;
-      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-        HighsSearch& search = iSearch == 0 ? master_search : worker_search;
-        break_search = break_search || search.break_search_;
-      }
+      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) 
+        break_search = break_search || concurrent_searches[iSearch]->break_search_;
       return break_search;
     };
 
@@ -352,7 +348,7 @@ restart:
 
     // Perform concurrent dives
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      HighsSearch& search = *concurrent_searches[iSearch];
       search.dive();
       assert(iSearch == 0 || !search.performed_dive_);
     }
@@ -361,7 +357,7 @@ restart:
     bool limit_reached = limitReached();
 
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      HighsSearch& search = *concurrent_searches[iSearch];
       if (!performedDive(search, iSearch)) continue;
 
       analysis_.mipTimerStart(kMipClockOpenNodesToQueue0);
@@ -372,9 +368,10 @@ restart:
     }
 
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      HighsSearch& search = *concurrent_searches[iSearch];
+      
       if (!performedDive(search, iSearch)) continue;
-
+      //      HighsMipSolverData& mipdata = *search.getMipSolver()->mipdata_;
       if (limit_reached) {
         double prev_lower_bound = mipdata_->lower_bound;
 
@@ -550,7 +547,7 @@ restart:
 
     // Now perform the node search
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      HighsSearch& search = *concurrent_searches[iSearch];
       if (!performedDive(search, iSearch)) continue;
 
       // remove the iteration limit when installing a new node
@@ -760,7 +757,7 @@ restart:
 
     /*
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      HighsSearch& search = iSearch == 0 ? master_search : worker_search;
+      HighsSearch& search = *concurrent_searches[iSearch];
       if (!performedDive(search, iSearch)) continue;
     */
     limit_reached = limitReached();

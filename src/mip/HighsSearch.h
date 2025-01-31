@@ -145,6 +145,8 @@ class HighsSearch {
  public:
   HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
 
+  HighsMipSolver* getMipSolver() { return &mipsolver; }
+
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);
 
