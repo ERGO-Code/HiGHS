@@ -275,6 +275,9 @@ restart:
   double treeweightLastCheck = 0.0;
   double upperLimLastCheck = mipdata_->upper_limit;
   double lowerBoundLastCheck = mipdata_->lower_bound;
+
+  master_search.initialiseHighsSearchData();
+
   analysis_.mipTimerStart(kMipClockSearch);
   const bool search_logging = false;
   while (master_search.hasNode()) {

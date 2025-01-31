@@ -2122,3 +2122,220 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
 
   } while (backtrack());
 }
+
+void HighsSearch::nodeSearch() {
+
+  const bool search_logging = false;
+  /*
+
+      while (!mipsolver.mipdata_->nodequeue.empty()) {
+        assert(!this->hasNode());
+
+        if (!mipsolver.submip) {
+          if (search_logging) {
+            printf(
+                "HighsMipSolver::run() NodeSearch nodes %5d; numQueueLeaves "
+                "%5d; "
+                "lastLbLeave %d; numQueueLeaves - lastLbLeave %d\n",
+                int(this->getNnodes()), int(numQueueLeaves), int(lastLbLeave),
+                int(numQueueLeaves - lastLbLeave));
+          }
+        }
+        if (numQueueLeaves - lastLbLeave >= 10) {
+          this->installNode(mipsolver.mipdata_->nodequeue.popBestBoundNode());
+          lastLbLeave = numQueueLeaves;
+        } else {
+          HighsInt bestBoundNodeStackSize =
+              mipsolver.mipdata_->nodequeue.getBestBoundDomchgStackSize();
+          double bestBoundNodeLb = mipsolver.mipdata_->nodequeue.getBestLowerBound();
+          HighsNodeQueue::OpenNode nextNode(mipsolver.mipdata_->nodequeue.popBestNode());
+          if (nextNode.lower_bound == bestBoundNodeLb &&
+              (HighsInt)nextNode.domchgstack.size() == bestBoundNodeStackSize)
+            lastLbLeave = numQueueLeaves;
+          this->installNode(std::move(nextNode));
+        }
+
+        ++numQueueLeaves;
+
+        if (this->getCurrentEstimate() >= mipsolver.mipdata_->upper_limit) {
+          ++numStallNodes;
+          if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
+              numStallNodes >= options_mip_->mip_max_stall_nodes) {
+            limit_reached = true;
+            modelstatus_ = HighsModelStatus::kSolutionLimit;
+            if (debug_logging)
+              printf(
+                  "HighsMipSolver::run() break on "
+                  "HighsModelStatus::kSolutionLimit\n");
+            this->break_search_ = true;
+            break;
+          }
+        } else
+          numStallNodes = 0;
+
+        assert(this->hasNode());
+
+        // we evaluate the node directly here instead of performing a dive
+        // because we first want to check if the node is not fathomed due to
+        // new global information before we perform separation rounds for the
+        // node
+        analysis_.mipTimerStart(kMipClockEvaluateNode1);
+        const HighsSearch::NodeResult evaluate_node_result =
+            this->evaluateNode();
+        analysis_.mipTimerStop(kMipClockEvaluateNode1);
+        if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+          analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
+          this->currentNodeToQueue(mipsolver.mipdata_->nodequeue);
+          analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
+        }
+
+        // if the node was pruned we remove it from the search and install the
+        // next node from the queue
+        analysis_.mipTimerStart(kMipClockNodePrunedLoop);
+        if (this->currentNodePruned()) {
+          analysis_.mipTimerStart(kMipClockSearchBacktrack);
+          this->backtrack();
+          analysis_.mipTimerStop(kMipClockSearchBacktrack);
+          ++mipsolver.mipdata_->num_leaves;
+          ++mipsolver.mipdata_->num_nodes;
+          this->flushStatistics();
+
+          mipsolver.mipdata_->domain.propagate();
+          mipsolver.mipdata_->pruned_treeweight +=
+              mipsolver.mipdata_->nodequeue.pruneInfeasibleNodes(mipsolver.mipdata_->domain,
+                                                       mipsolver.mipdata_->feastol);
+
+          if (mipsolver.mipdata_->domain.infeasible()) {
+            mipsolver.mipdata_->nodequeue.clear();
+            mipsolver.mipdata_->pruned_treeweight = 1.0;
+
+            double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+
+            mipsolver.mipdata_->lower_bound = std::min(kHighsInf, mipsolver.mipdata_->upper_bound);
+
+            bool bound_change = mipsolver.mipdata_->lower_bound != prev_lower_bound;
+            if (!mipsolver.submip && bound_change)
+              mipsolver.mipdata_->updatePrimalDualIntegral(
+                  prev_lower_bound, mipsolver.mipdata_->lower_bound,
+                  mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->upper_bound);
+            if (debug_logging)
+              printf(
+                  "HighsMipSolver::run() break on "
+                  "mipsolver.mipdata_->domain.infeasible() - 1\n");
+            this->break_search_ = true;
+            analysis_.mipTimerStop(kMipClockNodePrunedLoop);
+            break;
+          }
+
+          if (mipsolver.mipdata_->checkLimits()) {
+            limit_reached = true;
+            if (debug_logging)
+              printf("HighsMipSolver::run() break on limit_reached - 1\n");
+            this->break_search_ = true;
+            break;
+          }
+
+          analysis_.mipTimerStart(kMipClockStoreBasis);
+          double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+
+          mipsolver.mipdata_->lower_bound = std::min(
+              mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->nodequeue.getBestLowerBound());
+
+          bool bound_change = mipsolver.mipdata_->lower_bound != prev_lower_bound;
+          if (!mipsolver.submip && bound_change)
+            mipsolver.mipdata_->updatePrimalDualIntegral(
+                prev_lower_bound, mipsolver.mipdata_->lower_bound, mipsolver.mipdata_->upper_bound,
+                mipsolver.mipdata_->upper_bound);
+          mipsolver.mipdata_->printDisplayLine();
+
+          if (!mipsolver.mipdata_->domain.getChangedCols().empty()) {
+            highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
+                        "added %" HIGHSINT_FORMAT " global bound changes\n",
+                        (HighsInt)mipsolver.mipdata_->domain.getChangedCols().size());
+            mipsolver.mipdata_->cliquetable.cleanupFixed(mipsolver.mipdata_->domain);
+            for (HighsInt col : mipsolver.mipdata_->domain.getChangedCols())
+              mipsolver.mipdata_->implications.cleanupVarbounds(col);
+
+            mipsolver.mipdata_->domain.setDomainChangeStack(
+                std::vector<HighsDomainChange>());
+            this->resetLocalDomain();
+
+            mipsolver.mipdata_->domain.clearChangedCols();
+            mipsolver.mipdata_->removeFixedIndices();
+          }
+          analysis_.mipTimerStop(kMipClockStoreBasis);
+
+          analysis_.mipTimerStop(kMipClockNodePrunedLoop);
+          continue;
+        }
+        analysis_.mipTimerStop(kMipClockNodePrunedLoop);
+
+        // the node is still not fathomed, so perform separation
+        analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
+        sepa.separate(this->getLocalDomain());
+        analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
+
+        if (mipsolver.mipdata_->domain.infeasible()) {
+          this->cutoffNode();
+          analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
+          this->openNodesToQueue(mipsolver.mipdata_->nodequeue);
+          analysis_.mipTimerStop(kMipClockOpenNodesToQueue1);
+          mipsolver.mipdata_->nodequeue.clear();
+          mipsolver.mipdata_->pruned_treeweight = 1.0;
+
+          double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+
+          mipsolver.mipdata_->lower_bound = std::min(kHighsInf, mipsolver.mipdata_->upper_bound);
+
+          bool bound_change = mipsolver.mipdata_->lower_bound != prev_lower_bound;
+          if (!mipsolver.submip && bound_change)
+            mipsolver.mipdata_->updatePrimalDualIntegral(
+                prev_lower_bound, mipsolver.mipdata_->lower_bound, mipsolver.mipdata_->upper_bound,
+                mipsolver.mipdata_->upper_bound);
+          if (debug_logging)
+            printf(
+                "HighsMipSolver::run() break on mipsolver.mipdata_->domain.infeasible() "
+                "- 2\n");
+          this->break_search_ = true;
+          break;
+        }
+
+        // after separation we store the new basis and proceed with the outer
+        // loop to perform a dive from this node
+        if (mipsolver.mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kError &&
+            mipsolver.mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kNotSet)
+          mipsolver.mipdata_->lp.storeBasis();
+
+        basis = mipsolver.mipdata_->lp.getStoredBasis();
+        if (!basis || !isBasisConsistent(mipsolver.mipdata_->lp.getLp(), *basis)) {
+          HighsBasis b = mipsolver.mipdata_->firstrootbasis;
+          b.row_status.resize(mipsolver.mipdata_->lp.numRows(), HighsBasisStatus::kBasic);
+          basis = std::make_shared<const HighsBasis>(std::move(b));
+          mipsolver.mipdata_->lp.setStoredBasis(basis);
+        }
+
+        if (debug_logging)
+          printf("HighsMipSolver::run() break on completed node search\n");
+        this->break_search_ = true;
+        break;
+      }  // while(!mipsolver.mipdata_->nodequeue.empty())
+      analysis_.mipTimerStop(kMipClockNodeSearch);
+      if (analysis_.analyse_mip_time) {
+        this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+        analysis_.node_search_time.push_back(this_node_search_time);
+      }
+
+  */
+}
+
+void HighsSearch::initialiseHighsSearchData() {
+  this->search_data_.numStallNodes = 0;
+  this->search_data_.lastLbLeave = 0;
+  this->search_data_.numQueueLeaves = 0;
+  this->search_data_.numHugeTreeEstim = 0;
+  this->search_data_.numNodesLastCheck = mipsolver.mipdata_->num_nodes;
+  this->search_data_.nextCheck = mipsolver.mipdata_->num_nodes;
+  this->search_data_.treeweightLastCheck = 0.0;
+  this->search_data_.upperLimLastCheck = mipsolver.mipdata_->upper_limit;
+  this->search_data_.lowerBoundLastCheck = mipsolver.mipdata_->lower_bound;
+}
