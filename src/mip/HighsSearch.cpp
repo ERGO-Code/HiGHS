@@ -33,6 +33,8 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   limit_reached_ = false;
   performed_dive_ = false;
   break_search_ = false;
+  evaluate_node_global_max_recursion_level_ = 0;
+  evaluate_node_local_max_recursion_level_ = 0;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -959,7 +961,12 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
   depthoffset = node.depth - 1;
 }
 
-HighsSearch::NodeResult HighsSearch::evaluateNode() {
+HighsSearch::NodeResult HighsSearch::evaluateNode(const HighsInt recursion_level) {
+  if (recursion_level == 0) 
+    evaluate_node_local_max_recursion_level_ = 0;
+  evaluate_node_local_max_recursion_level_ = std::max(recursion_level, evaluate_node_local_max_recursion_level_);
+  evaluate_node_global_max_recursion_level_ = std::max(recursion_level, evaluate_node_global_max_recursion_level_);
+  
   assert(!nodestack.empty());
   NodeData& currnode = nodestack.back();
   const NodeData* parent = getParentNodeData();
@@ -1109,7 +1116,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
               localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
             } else if (!localdom.getChangedCols().empty()) {
-              return evaluateNode();
+              return evaluateNode(recursion_level+1);
             }
           } else {
             if (!inheuristic) {
@@ -1129,7 +1136,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
                 localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
               } else if (!localdom.getChangedCols().empty()) {
-                return evaluateNode();
+                return evaluateNode(recursion_level+1);
               }
             }
           }
@@ -1418,7 +1425,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     }
 
     assert(!localdom.getChangedCols().empty());
-    result = evaluateNode();
+    result = evaluateNode(0);
     if (result == NodeResult::kSubOptimal) break;
   }
   inbranching = false;
@@ -1535,21 +1542,21 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
     // reevaluate the node with LP presolve enabled
     lp->getLpSolver().setOptionValue("presolve", "on");
-    result = evaluateNode();
+    result = evaluateNode(0);
 
     if (result == NodeResult::kOpen) {
       // LP still not solved, reevaluate with primal simplex
       lp->getLpSolver().clearSolver();
       lp->getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyPrimal);
-      result = evaluateNode();
+      result = evaluateNode(0);
       lp->getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyDual);
       if (result == NodeResult::kOpen) {
         // LP still not solved, reevaluate with IPM instead of simplex
         lp->getLpSolver().clearSolver();
         lp->getLpSolver().setOptionValue("solver", "ipm");
-        result = evaluateNode();
+        result = evaluateNode(0);
 
         if (result == NodeResult::kOpen) {
           highsLogUser(mipsolver.options_mip_->log_options,
@@ -1990,7 +1997,7 @@ void HighsSearch::dive() {
     // Possibly apply primal heuristics
     if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
       analysis_.mipTimerStart(kMipClockEvaluateNode0);
-      const HighsSearch::NodeResult evaluate_node_result = this->evaluateNode();
+      const HighsSearch::NodeResult evaluate_node_result = this->evaluateNode(0);
       analysis_.mipTimerStop(kMipClockEvaluateNode0);
 
       if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
@@ -2099,7 +2106,15 @@ HighsSearch::NodeResult HighsSearch::theDive() {
 
   do {
     ++nnodes;
-    NodeResult result = evaluateNode();
+    if (!mipsolver.submip && nnodes == 10) {
+      printf("HighsSearch::theDive() nnodes = 10\n");
+    }
+    NodeResult result = evaluateNode(0);
+    if (!mipsolver.submip && evaluate_node_local_max_recursion_level_ > 0) {
+      printf("HighsSearch::theDive() nnodes = %4d; evaluate_node_local_max_recursion_level_ = %1d\n",
+	     int(nnodes),
+	     int(evaluate_node_local_max_recursion_level_));
+    }
 
     if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 

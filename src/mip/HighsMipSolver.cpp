@@ -62,6 +62,7 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
       implicinit(nullptr) {
   assert(!submip || submip_level > 0);
   max_submip_level = 0;
+  evaluate_node_max_recursion_level_ = 0;
   if (solution.value_valid) {
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
@@ -541,6 +542,7 @@ restart:
                      "\nRestarting search from the root node\n");
         mipdata_->performRestart();
         analysis_.mipTimerStop(kMipClockSearch);
+	evaluate_node_max_recursion_level_ = std::max(master_search.evaluate_node_global_max_recursion_level_, evaluate_node_max_recursion_level_);
         goto restart;
       }
     }  // if (!submip && mipdata_->num_nodes >= nextCheck))
@@ -610,7 +612,7 @@ restart:
           -analysis_.mipTimerRead(kMipClockEvaluateNode1);
         analysis_.mipTimerStart(kMipClockEvaluateNode1);
         const HighsSearch::NodeResult evaluate_node_result =
-            search.evaluateNode();
+            search.evaluateNode(0);
         analysis_.mipTimerStop(kMipClockEvaluateNode1);
 	if (analysis_.analyse_mip_time) {
 	  this_node_search_evaluate_time += analysis_.mipTimerRead(kMipClockEvaluateNode1);
@@ -776,6 +778,7 @@ restart:
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
+    evaluate_node_max_recursion_level_ = master_search.evaluate_node_global_max_recursion_level_;
   cleanupSolve();
 }
 
@@ -938,6 +941,8 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+	       "  Evaluate node max recursion level = %d\n", int(evaluate_node_max_recursion_level_));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

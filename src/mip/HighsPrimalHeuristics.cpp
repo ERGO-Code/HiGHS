@@ -366,7 +366,7 @@ retry:
   assert(heur.hasNode());
   while (true) {
     // printf("evaluating node\n");
-    heur.evaluateNode();
+    heur.evaluateNode(0);
     // printf("done evaluating node\n");
     if (heur.currentNodePruned()) {
       ++nbacktracks;
@@ -613,7 +613,7 @@ retry:
   assert(heur.hasNode());
 
   while (true) {
-    heur.evaluateNode();
+    heur.evaluateNode(0);
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");

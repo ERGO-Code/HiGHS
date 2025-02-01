@@ -71,6 +71,8 @@ class HighsSearch {
   bool limit_reached_;
   bool performed_dive_;
   bool break_search_;
+  HighsInt evaluate_node_global_max_recursion_level_;
+  HighsInt evaluate_node_local_max_recursion_level_;
 
  private:
   ChildSelectionRule childselrule;
@@ -214,7 +216,7 @@ class HighsSearch {
 
   const NodeData* getParentNodeData() const;
 
-  NodeResult evaluateNode();
+  NodeResult evaluateNode(const HighsInt recursion_level);
 
   NodeResult branch();
 

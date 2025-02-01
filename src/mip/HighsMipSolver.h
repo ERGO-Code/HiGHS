@@ -39,13 +39,14 @@ class HighsMipSolver {
   int64_t node_count_;
   int64_t total_lp_iterations_;
   double primal_dual_integral_;
-
+  
   FILE* improving_solution_file_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
   HighsInt submip_level;
   HighsInt max_submip_level;
+  HighsInt evaluate_node_max_recursion_level_;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
   const HighsCliqueTable* clqtableinit;
