@@ -768,7 +768,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
-        &highs_analysis_level, kHighsAnalysisLevelMin, kHighsAnalysisLevelMipTime,//kHighsAnalysisLevelMin,//
+        &highs_analysis_level, kHighsAnalysisLevelMin,
+        kHighsAnalysisLevelMipTime,  // kHighsAnalysisLevelMin,//
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
@@ -853,7 +854,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "timeless_log", "Suppression of time-based data in logging", true,
-        &timeless_log, false);//true);//
+        &timeless_log, false);  // true);//
     records.push_back(record_bool);
 
     record_string =

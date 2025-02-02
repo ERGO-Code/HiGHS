@@ -235,7 +235,7 @@ restart:
 
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
-  
+
   HighsSearch master_search{*this, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
@@ -321,15 +321,17 @@ restart:
     auto limitReached = [&]() -> bool {
       bool limit_reached = false;
       for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
-        limit_reached = limit_reached || concurrent_searches[iSearch]->limit_reached_;
+        limit_reached =
+            limit_reached || concurrent_searches[iSearch]->limit_reached_;
       return limit_reached;
     };
 
     // Lambda checking whether to break out of search
     auto breakSearch = [&]() -> bool {
       bool break_search = false;
-      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) 
-        break_search = break_search || concurrent_searches[iSearch]->break_search_;
+      for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++)
+        break_search =
+            break_search || concurrent_searches[iSearch]->break_search_;
       return break_search;
     };
 
@@ -370,7 +372,7 @@ restart:
 
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
       HighsSearch& search = *concurrent_searches[iSearch];
-      
+
       if (!performedDive(search, iSearch)) continue;
       //      HighsMipSolverData& mipdata = *search.getMipSolver()->mipdata_;
       if (limit_reached) {
@@ -542,7 +544,9 @@ restart:
                      "\nRestarting search from the root node\n");
         mipdata_->performRestart();
         analysis_.mipTimerStop(kMipClockSearch);
-	evaluate_node_max_recursion_level_ = std::max(master_search.evaluate_node_global_max_recursion_level_, evaluate_node_max_recursion_level_);
+        evaluate_node_max_recursion_level_ =
+            std::max(master_search.evaluate_node_global_max_recursion_level_,
+                     evaluate_node_max_recursion_level_);
         goto restart;
       }
     }  // if (!submip && mipdata_->num_nodes >= nextCheck))
@@ -608,16 +612,18 @@ restart:
         // because we first want to check if the node is not fathomed due to
         // new global information before we perform separation rounds for the
         // node
-	double this_node_search_evaluate_time =
-          -analysis_.mipTimerRead(kMipClockEvaluateNode1);
+        double this_node_search_evaluate_time =
+            -analysis_.mipTimerRead(kMipClockEvaluateNode1);
         analysis_.mipTimerStart(kMipClockEvaluateNode1);
         const HighsSearch::NodeResult evaluate_node_result =
             search.evaluateNode(0);
         analysis_.mipTimerStop(kMipClockEvaluateNode1);
-	if (analysis_.analyse_mip_time) {
-	  this_node_search_evaluate_time += analysis_.mipTimerRead(kMipClockEvaluateNode1);
-	  analysis_.node_search_evaluate_time.push_back(this_node_search_evaluate_time);
-	}
+        if (analysis_.analyse_mip_time) {
+          this_node_search_evaluate_time +=
+              analysis_.mipTimerRead(kMipClockEvaluateNode1);
+          analysis_.node_search_evaluate_time.push_back(
+              this_node_search_evaluate_time);
+        }
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
           analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
           search.currentNodeToQueue(mipdata_->nodequeue);
@@ -706,15 +712,17 @@ restart:
         analysis_.mipTimerStop(kMipClockNodePrunedLoop);
 
         // the node is still not fathomed, so perform separation
-	double this_node_search_separation_time =
-          -analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
+        double this_node_search_separation_time =
+            -analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
         analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
         sepa.separate(search.getLocalDomain());
         analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
-	if (analysis_.analyse_mip_time) {
-	  this_node_search_separation_time += analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
-	  analysis_.node_search_separation_time.push_back(this_node_search_separation_time);
-	}
+        if (analysis_.analyse_mip_time) {
+          this_node_search_separation_time +=
+              analysis_.mipTimerRead(kMipClockNodeSearchSeparation);
+          analysis_.node_search_separation_time.push_back(
+              this_node_search_separation_time);
+        }
 
         if (mipdata_->domain.infeasible()) {
           search.cutoffNode();
@@ -778,7 +786,8 @@ restart:
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
 
-    evaluate_node_max_recursion_level_ = master_search.evaluate_node_global_max_recursion_level_;
+  evaluate_node_max_recursion_level_ =
+      master_search.evaluate_node_global_max_recursion_level_;
   cleanupSolve();
 }
 
@@ -942,7 +951,8 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-	       "  Evaluate node max recursion level = %d\n", int(evaluate_node_max_recursion_level_));
+               "  Evaluate node max recursion level = %d\n",
+               int(evaluate_node_max_recursion_level_));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

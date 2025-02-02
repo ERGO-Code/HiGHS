@@ -961,27 +961,25 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
   depthoffset = node.depth - 1;
 }
 
-HighsSearch::NodeResult HighsSearch::evaluateNode(const HighsInt recursion_level) {
-  if (recursion_level == 0) 
-    evaluate_node_local_max_recursion_level_ = 0;
-  evaluate_node_local_max_recursion_level_ = std::max(recursion_level, evaluate_node_local_max_recursion_level_);
-  evaluate_node_global_max_recursion_level_ = std::max(recursion_level, evaluate_node_global_max_recursion_level_);
+HighsSearch::NodeResult HighsSearch::evaluateNode(
+    const HighsInt recursion_level) {
+  if (recursion_level == 0) evaluate_node_local_max_recursion_level_ = 0;
+  evaluate_node_local_max_recursion_level_ =
+      std::max(recursion_level, evaluate_node_local_max_recursion_level_);
+  evaluate_node_global_max_recursion_level_ =
+      std::max(recursion_level, evaluate_node_global_max_recursion_level_);
   HighsMipAnalysis& analysis_ = mipsolver.analysis_;
   if (recursion_level == 0) {
     assert(!analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
     analysis_.mipTimerStart(kMipClockEvaluateNodeInner);
-    if (nnodes == 1) {
-      printf("HighsSearch::evaluateNode(0) has nnodes = %d\n", int(nnodes));
-    }
-    if (analysis_.analyse_mip_time) assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
+    if (analysis_.analyse_mip_time)
+      assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
   } else if (analysis_.analyse_mip_time) {
-    const bool evaluate_node_inner_running = analysis_.mipTimerRunning(kMipClockEvaluateNodeInner);
-    if (!evaluate_node_inner_running) {
-      printf("HighsSearch::evaluateNode(%d) has nnodes = %d\n", int(recursion_level), int(nnodes));
-    }
+    const bool evaluate_node_inner_running =
+        analysis_.mipTimerRunning(kMipClockEvaluateNodeInner);
     assert(evaluate_node_inner_running);
   }
-  
+
   assert(!nodestack.empty());
   NodeData& currnode = nodestack.back();
   const NodeData* parent = getParentNodeData();
@@ -1134,10 +1132,12 @@ HighsSearch::NodeResult HighsSearch::evaluateNode(const HighsInt recursion_level
 
               localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
             } else if (!localdom.getChangedCols().empty()) {
-	      if (analysis_.analyse_mip_time) assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
-	      const HighsSearch::NodeResult evaluate_node_result = evaluateNode(recursion_level+1);
-	      if (recursion_level == 0)
-		analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+              if (analysis_.analyse_mip_time)
+                assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
+              const HighsSearch::NodeResult evaluate_node_result =
+                  evaluateNode(recursion_level + 1);
+              if (recursion_level == 0)
+                analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
               return evaluate_node_result;
             }
           } else {
@@ -1158,10 +1158,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode(const HighsInt recursion_level
 
                 localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
               } else if (!localdom.getChangedCols().empty()) {
-		const HighsSearch::NodeResult evaluate_node_result = evaluateNode(recursion_level+1);
-		if (recursion_level == 0)
-		  analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
-		return evaluate_node_result;
+                const HighsSearch::NodeResult evaluate_node_result =
+                    evaluateNode(recursion_level + 1);
+                if (recursion_level == 0)
+                  analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+                return evaluate_node_result;
               }
             }
           }
@@ -1207,8 +1208,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode(const HighsInt recursion_level
     }
   }
 
-  if (recursion_level == 0)
-    analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+  if (recursion_level == 0) analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
   return result;
 }
 
@@ -2024,7 +2024,8 @@ void HighsSearch::dive() {
     // Possibly apply primal heuristics
     if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
       analysis_.mipTimerStart(kMipClockEvaluateNode0);
-      const HighsSearch::NodeResult evaluate_node_result = this->evaluateNode(0);
+      const HighsSearch::NodeResult evaluate_node_result =
+          this->evaluateNode(0);
       analysis_.mipTimerStop(kMipClockEvaluateNode0);
 
       if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
@@ -2133,15 +2134,7 @@ HighsSearch::NodeResult HighsSearch::theDive() {
 
   do {
     ++nnodes;
-    if (!mipsolver.submip && nnodes == 10) {
-      printf("HighsSearch::theDive() nnodes = 10\n");
-    }
     NodeResult result = evaluateNode(0);
-    if (!mipsolver.submip && evaluate_node_local_max_recursion_level_ > 0) {
-      printf("HighsSearch::theDive() nnodes = %4d; evaluate_node_local_max_recursion_level_ = %1d\n",
-	     int(nnodes),
-	     int(evaluate_node_local_max_recursion_level_));
-    }
 
     if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 

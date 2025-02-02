@@ -202,8 +202,9 @@ class MipTimer {
     clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
 
     // Inner clock for evaluateNode
-    clock[kMipClockEvaluateNodeInner] = timer_pointer->clock_def("Evaluate node (inner)");
-    
+    clock[kMipClockEvaluateNodeInner] =
+        timer_pointer->clock_def("Evaluate node (inner)");
+
     // Primal heuristic sub-MIP clocks
     clock[kMipClockSolveSubMipRENS] =
         timer_pointer->clock_def("Solve sub-MIP - RENS");
