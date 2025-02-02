@@ -15,6 +15,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"

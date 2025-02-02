@@ -212,6 +212,7 @@ set(highs_sources
     mip/HighsMipAnalysis.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
+    mip/HighsMipWorker.cpp
     mip/HighsModkSeparator.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsObjectiveFunction.cpp
@@ -333,6 +334,7 @@ set(highs_headers
     mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
+    mip/HighsMipWorker.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
     mip/HighsObjectiveFunction.h
