@@ -74,6 +74,8 @@ enum iClockMip {
   kMipClockSeparationCentralRounding,
   kMipClockSeparationEvaluateRootLp,
 
+  kMipClockEvaluateNodeInner,
+
   kMipClockSimplexBasisSolveLp,
   kMipClockSimplexNoBasisSolveLp,
   kMipClockIpmSolveLp,
@@ -199,6 +201,9 @@ class MipTimer {
         timer_pointer->clock_def("Solve LP - simplex no basis");
     clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
 
+    // Inner clock for evaluateNode
+    clock[kMipClockEvaluateNodeInner] = timer_pointer->clock_def("Evaluate node (inner)");
+    
     // Primal heuristic sub-MIP clocks
     clock[kMipClockSolveSubMipRENS] =
         timer_pointer->clock_def("Solve sub-MIP - RENS");
@@ -291,6 +296,12 @@ class MipTimer {
                                                kMipClockSimplexNoBasisSolveLp,
                                                kMipClockIpmSolveLp};
     reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
+                       kMipClockTotal);  //, tolerance_percent_report);
+  };
+
+  void reportMipEvaluateNodeClock(const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{kMipClockEvaluateNodeInner};
+    reportMipClockList("MipEvlNd", mip_clock_list, mip_timer_clock,
                        kMipClockTotal);  //, tolerance_percent_report);
   };
 
