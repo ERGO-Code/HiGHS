@@ -257,6 +257,8 @@ struct HighsMipSolverData {
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;
+  std::vector<std::tuple<HighsInt, HighsInt, double>>
+      getInfeasibleRows(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
                    const int solution_source = kSolutionSourceNone);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,

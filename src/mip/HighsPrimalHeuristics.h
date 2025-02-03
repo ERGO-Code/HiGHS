@@ -65,6 +65,11 @@ class HighsPrimalHeuristics {
                           const int solution_source);
 
   void randomizedRounding(const std::vector<double>& relaxationsol);
+
+  void Shifting(const std::vector<double>& relaxationsol);
+  
+  void ZIRound(const std::vector<double>& relaxationsol);
+  
 };
 
 #endif

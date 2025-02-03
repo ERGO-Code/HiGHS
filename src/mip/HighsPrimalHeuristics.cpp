@@ -1052,6 +1052,373 @@ void HighsPrimalHeuristics::randomizedRounding(
                                     kSolutionSourceRandomizedRounding);
   }
 }
+void HighsPrimalHeuristics::Shifting(
+    const std::vector<double>& relaxationsol) {
+    if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+
+    std::vector<double> currRelSol = relaxationsol;
+    HighsInt t = 0;
+    const HighsLp& currentLp = *mipsolver.model_;
+    HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
+    std::vector<std::pair<HighsInt, double>> currentFracInt = lprelax.getFractionalIntegers();
+    std::vector<std::tuple<HighsInt, HighsInt, double>> currentInfeasibleRows = mipsolver.mipdata_->getInfeasibleRows(currRelSol);
+    HighsInt prevInfeasibleRowsSize = currentInfeasibleRows.size();
+    bool hasInfeasibleConstraints = currentInfeasibleRows.size() != 0;
+    HighsInt iterationsWithoutReductions = 0;
+    HighsInt maxIterationsWithoutReductions = 5;
+    std::unordered_map<HighsInt, std::vector<HighsInt>> ShiftIterationsSet;
+    std::vector<HighsInt> shifts = {};
+
+    auto findPairByIndex = [](std::vector<std::pair<HighsInt, double>>& vec, HighsInt k) {
+        return std::find_if(vec.begin(), vec.end(),
+            [k](const std::pair<HighsInt, double>& p) {
+                return p.first == k;
+            });
+    };
+
+    auto findShiftsByIndex = [](const std::unordered_map < HighsInt, std::vector<HighsInt>>& shifts, HighsInt k) -> std::vector<HighsInt> {
+        auto it = shifts.find(k);
+        if (it != shifts.end()) {
+            return it->second;
+        }
+        return {};
+    };
+
+    while ((currentFracInt.size() > 0 || hasInfeasibleConstraints) &&
+           iterationsWithoutReductions <= maxIterationsWithoutReductions |
+           t <= mipsolver.mipdata_->integer_cols.size()) {
+    t++;
+    bool fracIntReduced = false;
+    iterationsWithoutReductions++;
+    if (hasInfeasibleConstraints) {
+      // find an infeasible row that has a non-zero coefficient a(row,col) where
+      // col in currentFractInt
+      bool fractIntFound = false;
+      HighsInt rInd = 0;
+      while (!fractIntFound && rInd != currentInfeasibleRows.size()) {
+        HighsInt r = std::get<0>(currentInfeasibleRows[rInd]);
+        HighsInt start = mipsolver.mipdata_->ARstart_[r];
+        HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
+        for (HighsInt jInd = start; jInd != end; ++jInd) {
+          auto it = findPairByIndex(currentFracInt,
+                                    mipsolver.mipdata_->ARindex_[jInd]);
+          if (it != currentFracInt.end()) {
+            fractIntFound = true;
+            break;
+          }
+        }
+        rInd++;
+      }
+      HighsInt rowInd = rInd - 1;
+      if (!fractIntFound) {
+        // otherwise select a random infeasible row
+        rowInd = randgen.integer(currentInfeasibleRows.size());
+      }
+
+      HighsInt row = std::get<0>(currentInfeasibleRows[rowInd]);
+      HighsInt rowSense = std::get<1>(currentInfeasibleRows[rowInd]);
+      double infeasibility = std::get<2>(currentInfeasibleRows[rowInd]);
+      double sig_min = kHighsInf;
+      HighsInt j_min = std::numeric_limits<HighsInt>::max();
+      double x_j_min = kHighsInf;
+      double aij_min = 0.0;
+      double sig = 0.0;
+      bool moveValueUp = false;
+      bool AtLowerBound = false;
+      bool AtUpperBound = false;
+      HighsInt start = mipsolver.mipdata_->ARstart_[row];
+      HighsInt end = mipsolver.mipdata_->ARstart_[row + 1];
+      for (HighsInt jInd = start; jInd != end; ++jInd) {
+        HighsInt j = mipsolver.mipdata_->ARindex_[jInd];
+
+        // skip fixed variables
+        if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
+        // check if the values are at the bounds
+        if (currentLp.integrality_[j] == HighsVarType::kInteger) {
+            AtLowerBound = std::abs(currRelSol[j] - std::ceil(currentLp.col_lower_[j] - mipsolver.mipdata_->feastol)) <= mipsolver.mipdata_->feastol;
+            AtUpperBound = std::abs(std::floor(currentLp.col_upper_[j] + mipsolver.mipdata_->feastol) - currRelSol[j]) <= mipsolver.mipdata_->feastol;
+        }
+        else
+        {
+            AtLowerBound = std::abs(currRelSol[j] - currentLp.col_lower_[j]) <= mipsolver.mipdata_->feastol;
+            AtUpperBound = std::abs(currentLp.col_upper_[j] - currRelSol[j]) <= mipsolver.mipdata_->feastol;
+        }
+
+        auto it = findPairByIndex(currentFracInt, j);
+        if ((rowSense > 0 && mipsolver.mipdata_->ARvalue_[jInd] < 0) ||
+            (rowSense < 0 && mipsolver.mipdata_->ARvalue_[jInd] > 0)) {
+          // repair with up-rounding
+          if (it != currentFracInt.end()) {
+            double xi = mipsolver.mipdata_->downlocks[it->first];
+            sig = -1.0 + 1.0 / (xi + 1);
+          } else {
+            it->first = j;
+            it->second = currRelSol[j];
+            shifts = findShiftsByIndex(ShiftIterationsSet, j);
+            sig = currentLp.col_cost_[j];
+            if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
+            if (!shifts.empty()) {
+              sig = 0.0;
+              for (HighsInt s = 0; s != shifts.size(); ++s) {
+                if (shifts[s] > 0) {
+                  sig += pow(1.1, shifts[s] - t);
+                }
+              }
+            }
+            if (currentLp.integrality_[j] == HighsVarType::kInteger)
+                sig += 1;
+          }
+          if (!AtUpperBound && sig < sig_min) {
+              sig_min = sig;
+              j_min = j;
+              aij_min = mipsolver.mipdata_->ARvalue_[jInd];              
+              x_j_min = it->second;
+              moveValueUp = true;
+          }
+        }
+        if ((rowSense > 0 && mipsolver.mipdata_->ARvalue_[jInd] > 0) ||
+            (rowSense < 0 && mipsolver.mipdata_->ARvalue_[jInd] < 0)) {
+          // repair with down-rounding
+          if (it != currentFracInt.end()) {
+            double xi = mipsolver.mipdata_->uplocks[it->first];
+            sig = -1.0 + 1.0 / (xi + 1);
+          } else {
+            it->first = j;
+            it->second = currRelSol[j];
+            shifts = findShiftsByIndex(ShiftIterationsSet, j);
+            sig = -currentLp.col_cost_[j];
+            if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
+            if (!shifts.empty()) {
+              sig = 0.0;
+              for (HighsInt s = 0; s != shifts.size(); ++s) {
+                if (shifts[s] < 0) {
+                  sig += pow(1.1, std::abs(shifts[s]) - t);
+                }
+              }
+            }
+            if (currentLp.integrality_[j] == HighsVarType::kInteger)
+                sig += 1;
+          }
+          if (!AtLowerBound && sig < sig_min) {
+              sig_min = sig;
+              j_min = j;
+              aij_min = mipsolver.mipdata_->ARvalue_[jInd];
+              x_j_min = it->second;
+              moveValueUp = false;
+          }
+        }
+      }
+      if (j_min != std::numeric_limits<HighsInt>::max()) {
+        // Update CurrentFracInt
+        auto it = findPairByIndex(currentFracInt, j_min);
+        if (it != currentFracInt.end()) {
+          currentFracInt.erase(it);
+          fracIntReduced = true;
+        }
+        // Update currRelSol and ShiftIterationsSet (for not fractional integers)
+        if (moveValueUp) {
+            if (fracIntReduced) {
+                currRelSol[j_min] = std::ceil(x_j_min - mipsolver.mipdata_->feastol);
+            }
+            else {
+                if (currentLp.integrality_[j_min] == HighsVarType::kInteger) {
+                    // variable is integer and not at the upper bound, so increment by 1.
+                    currRelSol[j_min] = x_j_min + 1.0;
+                }
+                else {
+                    currRelSol[j_min] = std::min(x_j_min + infeasibility / std::abs(aij_min), currentLp.col_upper_[j_min] + mipsolver.mipdata_->feastol);
+                }
+                ShiftIterationsSet[j_min].push_back(t);
+            }
+        } else {
+            if (fracIntReduced) {
+                currRelSol[j_min] = std::floor(x_j_min + mipsolver.mipdata_->feastol);
+            }
+            else {
+                if (currentLp.integrality_[j_min] == HighsVarType::kInteger) {
+                    // variable is integer and not at the lower bound, so decrement by 1.
+                    currRelSol[j_min] = x_j_min - 1.0;
+                }
+                else {
+                    currRelSol[j_min] = std::max(x_j_min - infeasibility / std::abs(aij_min), currentLp.col_lower_[j_min] - mipsolver.mipdata_->feastol);
+                }
+                ShiftIterationsSet[j_min].push_back(-t);
+            }          
+        }
+      }
+    } else {
+      double xi_max = -1;
+      double delta_c_min = kHighsInf;
+      HighsInt pind_j_min = std::numeric_limits<HighsInt>::max();
+      HighsInt j_min = std::numeric_limits<HighsInt>::max();
+      double x_j_min = kHighsInf;
+      HighsInt sigma = 0;
+      for (HighsInt i = 0; i != currentFracInt.size(); ++i) {
+        std::pair<HighsInt, double> it = currentFracInt[i];
+        HighsInt col = it.first;
+        assert(col >= 0);
+        assert(col < mipsolver.numCol());
+        double xi = mipsolver.mipdata_->uplocks[col];
+        double downval = std::floor(it.second + mipsolver.mipdata_->feastol);
+        double c_min = currentLp.col_cost_[col] * (downval - it.second);
+        if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
+          xi_max = xi;
+          delta_c_min = c_min;
+          pind_j_min = i;
+          j_min = col;
+          x_j_min = downval;
+          sigma = -1;
+        }
+        xi = mipsolver.mipdata_->downlocks[col];
+        double upval = std::ceil(it.second - mipsolver.mipdata_->feastol);
+        c_min = currentLp.col_cost_[col] * (upval - it.second);
+        if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
+          xi_max = xi;
+          delta_c_min = c_min;
+          pind_j_min = i;
+          j_min = col;
+          x_j_min = upval;
+          sigma = 1;
+        }
+      }
+      if (sigma != 0) {
+        currRelSol[j_min] = x_j_min;
+      }
+      if (pind_j_min != std::numeric_limits<HighsInt>::max()) {
+        currentFracInt.erase(currentFracInt.begin() + pind_j_min);
+        fracIntReduced = true;
+      }
+    }
+    currentInfeasibleRows = mipsolver.mipdata_->getInfeasibleRows(currRelSol);
+    hasInfeasibleConstraints = currentInfeasibleRows.size() != 0;
+    if (currentInfeasibleRows.size() < prevInfeasibleRowsSize || fracIntReduced)
+      iterationsWithoutReductions = 0;
+    prevInfeasibleRowsSize = currentInfeasibleRows.size();
+    }
+    // re-check for feasibility and add incumbent
+    // mipsolver.mipdata_->trySolution(currRelSol, 'I');
+    tryRoundedPoint(currRelSol, 'I');
+}
+
+void HighsPrimalHeuristics::ZIRound(
+    const std::vector<double>& relaxationsol) {
+    //if (mipsolver.submip) return;
+    if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+
+    std::vector<double> currRelSol = relaxationsol;
+
+    auto ZI = [](double x) {
+        return std::min(std::ceil(x) - x, x - std::floor(x));
+    };
+
+    //auto localdom = mipsolver.mipdata_->domain;
+    double ZI_total = 0.0; // todo: change to HighsCDouble
+    for (HighsInt i : intcols) {
+        ZI_total += ZI(relaxationsol[i]);
+    }
+
+    if (ZI_total < mipsolver.mipdata_->feastol) return;
+
+    std::vector<double> rowActivities;
+    const HighsLp& currentLp = *mipsolver.model_;
+    double UB = 0.0;
+    double LB = 0.0;
+    std::unique_ptr<double[]> XrowLower(new double[currentLp.num_row_]);
+    std::unique_ptr<double[]> XrowUpper(new double[currentLp.num_row_]);
+    HighsInt loopCount = 0;
+    HighsInt max_loop_count = 5;
+    double prev_ZI_total;
+    double improvementInFeasibility = kHighsInf;
+
+    while (ZI_total > mipsolver.mipdata_->feastol &&
+        improvementInFeasibility > mipsolver.mipdata_->feastol &&
+        loopCount <= max_loop_count)
+    {
+        prev_ZI_total = ZI_total;
+        loopCount++;
+        double relSol;
+        double aij = 0.0;
+        getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.get(), XrowUpper.get());
+
+        for (HighsInt j : intcols) {
+
+            relSol = currRelSol[j];
+            if (std::abs(relSol - std::floor(relSol + 0.5)) <= mipsolver.mipdata_->feastol) continue;
+
+            rowActivities.clear();
+            rowActivities.resize(currentLp.num_row_, 0.0);
+            calculateRowValuesQuad(currentLp, currRelSol, rowActivities);
+            double XcolLower = currentLp.col_lower_[j];
+            double XcolUpper = currentLp.col_upper_[j];
+
+
+            double minRowRatioForUB = kHighsInf;
+            double minRowRatioForLB = kHighsInf;
+            for (HighsInt i = 0; i < currentLp.num_row_; ++i) {
+                getLpMatrixCoefficient(currentLp, i, j, &aij);
+                double siUB = XrowUpper.get()[i] - rowActivities[i];
+                double siLB = rowActivities[i] - XrowLower.get()[i];
+                if (aij > 0) {
+                    minRowRatioForUB = std::min(minRowRatioForUB, siUB / aij);
+                    minRowRatioForLB = std::min(minRowRatioForLB, siLB / aij);
+                };
+                if (aij < 0) {
+                    minRowRatioForLB = std::min(minRowRatioForLB, -siUB / aij);
+                    minRowRatioForUB = std::min(minRowRatioForUB, -siLB / aij);
+                };
+            }
+
+            UB = std::min(XcolUpper - relSol, minRowRatioForUB);
+            LB = std::min(relSol - XcolLower, minRowRatioForLB);
+
+            if (std::abs(ZI(relSol + UB) - ZI(relSol - LB)) <= mipsolver.mipdata_->feastol &&
+                ZI(relSol + UB) < ZI(relSol))
+            {
+                double XcolCost = currentLp.col_cost_[j];
+                if (currentLp.sense_ == ObjSense::kMinimize) // for minimization
+                {
+                    if (XcolCost * (relSol + UB) <= XcolCost * (relSol - LB))
+                    {
+                        currRelSol[j] = relSol + UB;
+                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
+                    }
+                    else
+                    {
+                        currRelSol[j] = relSol - LB;
+                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
+                    }
+                }
+                else // for maximization
+                {
+                    if (XcolCost * (relSol + UB) <= XcolCost * (relSol - LB))
+                    {
+                        currRelSol[j] = relSol - LB;
+                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
+                    }
+                    else
+                    {
+                        currRelSol[j] = relSol + UB;
+                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
+                    }
+                }
+            }
+            else if (ZI(relSol + UB) < ZI(relSol - LB) && ZI(relSol + UB) < ZI(relSol))
+            {
+                currRelSol[j] = relSol + UB;
+                ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
+            }
+            else if (ZI(relSol + UB) > ZI(relSol - LB) && ZI(relSol - LB) < ZI(relSol))
+            {
+                currRelSol[j] = relSol - LB;
+                ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
+            };
+        }
+        improvementInFeasibility = prev_ZI_total - ZI_total;
+    }
+    // re-check for feasibility and add incumbent
+    mipsolver.mipdata_->trySolution(currRelSol, 'Z');
+
+}
 
 void HighsPrimalHeuristics::feasibilityPump() {
   HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
