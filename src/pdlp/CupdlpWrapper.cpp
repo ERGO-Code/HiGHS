@@ -110,7 +110,8 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
-  H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
+  H_Init_Scaling(local_log_level, options.pdlp_scaling_mode, scaling, nCols,
+                 nRows, cost, rhs);
   cupdlp_int ifScaling = intParam[IF_SCALING];
 
   CUPDLPwork* w = cupdlp_NULL;

@@ -343,6 +343,7 @@ struct HighsOptionsStruct {
   HighsInt pdlp_features_off;
   bool pdlp_native_termination;
   HighsInt pdlp_iteration_limit;
+  HighsInt pdlp_scaling_mode;
   HighsInt pdlp_e_restart_method;
   double pdlp_d_gap_tol;
 
@@ -489,6 +490,7 @@ struct HighsOptionsStruct {
         pdlp_features_off(0),
         pdlp_native_termination(false),
         pdlp_iteration_limit(0),
+        pdlp_scaling_mode(0),
         pdlp_e_restart_method(0),
         pdlp_d_gap_tol(0.0),
         qp_iteration_limit(0),
@@ -1101,6 +1103,12 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("pdlp_scaling_mode",
+                                     "Scaling mode for PDLP solver (default = "
+                                     "5): 1 => Ruiz; 2 => L2; 4 => PC",
+                                     advanced, &pdlp_scaling_mode, 0, 5, 7);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("pdlp_e_restart_method",

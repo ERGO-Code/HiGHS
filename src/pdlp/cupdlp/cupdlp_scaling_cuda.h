@@ -18,6 +18,7 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
 				      cupdlp_float *rhs);
 
 cupdlp_retcode H_Init_Scaling(cupdlp_int log_level,
+			      cupdlp_int scaling_mode,
 			      CUPDLPscaling *scaling, cupdlp_int ncols,
 			      cupdlp_int nrows, cupdlp_float *cost,
 			      cupdlp_float *rhs);

@@ -396,15 +396,27 @@ exit_cleanup:
 }
 
 cupdlp_retcode H_Init_Scaling(cupdlp_int log_level,
+			      cupdlp_int scaling_mode,
 			      CUPDLPscaling *scaling, cupdlp_int ncols,
 			      cupdlp_int nrows, cupdlp_float *cost,
 			      cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-  scaling->ifRuizScaling = 1;
-  scaling->ifL2Scaling = 0;
-  scaling->ifPcScaling = 1;
-
+  if (scaling_mode & 1) {
+    scaling->ifRuizScaling = 1; // Default
+  } else {
+    scaling->ifRuizScaling = 0;
+  }
+  if (scaling_mode & 2) {
+    scaling->ifL2Scaling = 1;
+  } else {
+    scaling->ifL2Scaling = 0; // Default
+  }
+  if (scaling_mode & 4) {
+    scaling->ifPcScaling = 1;  // Default
+   } else {
+    scaling->ifPcScaling = 0;
+  }
   // todo, read these paras
   scaling->RuizTimes = 10;
   scaling->RuizNorm = INFINITY;
