@@ -28,7 +28,9 @@ class HighsMipWorker {
   HighsConflictPool conflictpool_;
   HighsCliqueTable cliquetable_;
   HighsSearch search_;
+
+public:
+  HighsMipWorker(const HighsMipSolver& mipsolver);
 };
 
-HighsMipWorker(const HighsMipSolver& mipsolver);
 #endif

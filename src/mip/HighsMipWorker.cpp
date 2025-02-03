@@ -7,13 +7,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipWorker.h"
 
-HighsMipWorker::HighsMipWorker(HighsMipSolver& mipsolver)
-  : mipsolver_(mipsolver)//,
-    //    cutpool_(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
-    //                mipsolver.options_mip_->mip_pool_soft_limit),
-    //    conflictPool_(5 * mipsolver.options_mip_->mip_pool_age_limit,
-    //		 mipsolver.options_mip_->mip_pool_soft_limit),
-    //    cliquetable_(mipsolver.numCol()),
-    //    lprelaxation_(mipsolver)
-{}
+HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver)
+    : mipsolver_(mipsolver),
 
+      cutpool_(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
+               mipsolver.options_mip_->mip_pool_soft_limit),
+
+      conflictPool_(5 * mipsolver.options_mip_->mip_pool_age_limit,
+
+                    mipsolver.options_mip_->mip_pool_soft_limit),
+
+      cliquetable_(mipsolver.numCol()),
+
+      lprelaxation_(mipsolver) {}
