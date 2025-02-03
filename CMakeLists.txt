@@ -420,8 +420,12 @@ if(MSVC)
 
   # Try to split large pdb files into objects. 
   # https://github.com/tensorflow/tensorflow/issues/31610
-  add_compile_options("/Z7")
-  add_link_options("/DEBUG:FASTLINK")
+  # add_compile_options("/Z7")
+  # add_link_options("/DEBUG:FASTLINK")
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+
   if(STDCALL)
     # /Gz - stdcall calling convention
     add_definitions(/Gz)
