@@ -29,7 +29,7 @@ class HighsMipWorker {
   HighsCliqueTable cliquetable_;
 
   // Not sure if this should be here or elsewhere.
-  HighsMipSolver mipsolver;
+  // HighsMipSolver mipsolver;
 
   // Not sure if this should be here or in HighsSearch.
   HighsPseudocost pseudocost;
@@ -37,9 +37,9 @@ class HighsMipWorker {
   HighsSearch search_;
 
 public:
-  HighsMipWorker(const HighsMipSolver& mipsolver);
+  HighsMipWorker(const HighsMipSolver& mipsolver__);
 
-  HighsMipSolver& getMipSolver();
+  const HighsMipSolver& getMipSolver();
 };
 
 #endif

@@ -15,10 +15,12 @@
 #include "mip/HighsMipSolverData.h"
 #include "mip/MipTimer.h"
 
-HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
-    : mipsolver(mipsolver),
+// HighsSearch::HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
+HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
+    : mipworker(mipworker),
+      mipsolver(mipworker.getMipSolver()),
       lp(nullptr),
-      localdom(mipsolver.mipdata_->domain),
+      localdom(mipworker.getMipSolver().mipdata_->domain),
       pseudocost(pseudocost) {
   nnodes = 0;
   treeweight = 0.0;
@@ -35,8 +37,10 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   break_search_ = false;
   evaluate_node_global_max_recursion_level_ = 0;
   evaluate_node_local_max_recursion_level_ = 0;
-  childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
+  childselrule = mipworker.getMipSolver().submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
+  
+
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
 
@@ -968,7 +972,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode(
       std::max(recursion_level, evaluate_node_local_max_recursion_level_);
   evaluate_node_global_max_recursion_level_ =
       std::max(recursion_level, evaluate_node_global_max_recursion_level_);
-  HighsMipAnalysis& analysis_ = mipsolver.analysis_;
+
+  // IG make a copy? 
+  HighsMipAnalysis analysis_ = mipsolver.analysis_;
   if (recursion_level == 0) {
     assert(!analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
     analysis_.mipTimerStart(kMipClockEvaluateNodeInner);
@@ -1993,7 +1999,9 @@ void HighsSearch::dive() {
     break_search_ = false;
     return;
   }
-  HighsMipAnalysis& analysis_ = mipsolver.analysis_;
+
+  // IG make a copy? After const mip solver in highs search.
+  HighsMipAnalysis analysis_ = mipsolver.analysis_;
   const HighsOptions* options_mip_ = mipsolver.options_mip_;
   const bool search_logging = false;
   if (!mipsolver.submip) {

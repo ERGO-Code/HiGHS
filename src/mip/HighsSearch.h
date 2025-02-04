@@ -15,7 +15,8 @@
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
-#include "mip/HighsMipSolver.h"
+// #include "mip/HighsMipSolver.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
@@ -27,9 +28,13 @@ class HighsImplications;
 class HighsCliqueTable;
 
 class HighsSearch {
-  HighsMipSolver& mipsolver;
+  // Make reference constant.
+  // const HighsMipSolver& mipsolver;
+
   // replace HighsMipSolver with HighsMipWorker
-  // HighsMipWorker& mipworker;
+  HighsMipWorker& mipworker;
+  // points to mipworker.getMipSolver() for minimal changes.
+  const HighsMipSolver& mipsolver;
 
   HighsLpRelaxation* lp;
   HighsDomain localdom;
@@ -148,9 +153,10 @@ class HighsSearch {
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
  public:
-  HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
+  // HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
+  HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost);
 
-  HighsMipSolver* getMipSolver() { return &mipsolver; }
+  const HighsMipSolver* getMipSolver() { return &(mipworker.getMipSolver()); }
 
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);

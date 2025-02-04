@@ -237,7 +237,8 @@ restart:
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
 
-  HighsSearch master_search{*this, mipdata_->pseudocost};
+  HighsMipWorker main_worker(*this);
+  HighsSearch master_search{main_worker, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
   HighsSeparation sepa(*this);
@@ -304,17 +305,20 @@ restart:
       //    *options_mip_, *model_, null_solution, false, 0});
 
       // HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
-      HighsMipSolver& worker_mipsolver = mipworkers[iSearch].getMipSolver();
+      const HighsMipSolver& worker_mipsolver = mipworkers[iSearch].getMipSolver();
 
       worker_mipsolver.rootbasis = this->rootbasis;
       HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
       worker_mipsolver.pscostinit = &pscostinit;
       worker_mipsolver.clqtableinit = &mipdata_->cliquetable;
       worker_mipsolver.implicinit = &mipdata_->implications;
+
       worker_mipsolver.mipdata_ =
           decltype(mipdata_)(new HighsMipSolverData(*this));
+
       worker_searches.push_back(
           HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
+          
       worker_lps.push_back(HighsLpRelaxation{mipdata_->lp});
       worker_searches[iSearch].setLpRelaxation(&worker_lps[iSearch]);
       concurrent_searches.push_back(&worker_searches[iSearch]);
