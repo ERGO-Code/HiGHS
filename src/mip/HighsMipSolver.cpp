@@ -238,7 +238,10 @@ restart:
   const HighsInt num_worker = mip_search_concurrency - 1;
 
   HighsMipWorker main_worker(*this);
-  HighsSearch master_search{main_worker, mipdata_->pseudocost};
+
+  // HighsSearch master_search{main_worker, mipdata_->pseudocost};
+
+  HighsSearch master_search{*this, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
   HighsSeparation sepa(*this);
@@ -280,6 +283,7 @@ restart:
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   const bool search_logging = false;
+
   while (master_search.hasNode()) {
     // Set up multiple, HighsMipSolver, HighsSearch and
     // HighsLpRelaxation instances for the parallel search,
@@ -289,10 +293,13 @@ restart:
     // std::vector<HighsMipSolver> worker_mipsolvers;
     std::vector<HighsMipWorker> mipworkers;
 
-    std::vector<HighsSearch> worker_searches;
-    std::vector<HighsLpRelaxation> worker_lps;
+    // std::vector<HighsSearch> worker_searches;
+    // std::vector<HighsLpRelaxation> worker_lps;
+
     std::vector<HighsSearch*> concurrent_searches;
+
     concurrent_searches.push_back(&master_search);
+
     for (HighsInt iSearch = 0; iSearch < num_worker; iSearch++) {
 
       // worker_mipsolvers.push_back(HighsMipSolver{*this});
@@ -307,30 +314,32 @@ restart:
       // HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
       const HighsMipSolver& worker_mipsolver = mipworkers[iSearch].getMipSolver();
 
-      worker_mipsolver.rootbasis = this->rootbasis;
-      HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
-      worker_mipsolver.pscostinit = &pscostinit;
-      worker_mipsolver.clqtableinit = &mipdata_->cliquetable;
-      worker_mipsolver.implicinit = &mipdata_->implications;
+      // Do we need root basis?
+      // worker_mipsolver.rootbasis = this->rootbasis;
 
-      worker_mipsolver.mipdata_ =
-          decltype(mipdata_)(new HighsMipSolverData(*this));
+      // Moved these into HighsMipWorker.
+      // HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
+      // mipworker.pscostinit = &pscostinit;
+      // mipworker.clqtableinit = &mipdata_->cliquetable;
+      // mipworker.implicinit = &mipdata_->implications;
 
-      worker_searches.push_back(
-          HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
-          
-      worker_lps.push_back(HighsLpRelaxation{mipdata_->lp});
-      worker_searches[iSearch].setLpRelaxation(&worker_lps[iSearch]);
-      concurrent_searches.push_back(&worker_searches[iSearch]);
+      // worker_mipsolver.mipdata_ =
+      //     decltype(mipdata_)(new HighsMipSolverData(*this));
+
+      // worker_searches.push_back( HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
+      // worker_lps.push_back(HighsLpRelaxation{mipdata_->lp});
+      // worker_searches[iSearch].setLpRelaxation(&worker_lps[iSearch]);
+
+      concurrent_searches.push_back(&(mipworkers[iSearch].getSearch()));
     }
 
     // assert(worker_mipsolvers.size() == num_worker);
     assert(mipworkers.size() == num_worker);
 
-    assert(worker_searches.size() == num_worker);
+    // assert(worker_searches.size() == num_worker);
     assert(concurrent_searches.size() == mip_search_concurrency);
 
-    HighsSearch& worker_search = worker_searches[0];
+    HighsSearch& worker_search = mipworkers[0].getSearch();
 
     // Lambda for combining limit_reached across searches
     auto limitReached = [&]() -> bool {

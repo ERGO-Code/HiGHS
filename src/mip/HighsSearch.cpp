@@ -15,12 +15,15 @@
 #include "mip/HighsMipSolverData.h"
 #include "mip/MipTimer.h"
 
-// HighsSearch::HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
-HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
-    : mipworker(mipworker),
-      mipsolver(mipworker.getMipSolver()),
+// HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
+//     : mipworker(mipworker),
+//       mipsolver(mipworker.getMipSolver()),
+//      localdom(mipworker.getMipSolver().mipdata_->domain),
+
+HighsSearch::HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
+    : mipsolver(mipsolver),
       lp(nullptr),
-      localdom(mipworker.getMipSolver().mipdata_->domain),
+      localdom(mipsolver.mipdata_->domain),
       pseudocost(pseudocost) {
   nnodes = 0;
   treeweight = 0.0;
@@ -37,9 +40,12 @@ HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
   break_search_ = false;
   evaluate_node_global_max_recursion_level_ = 0;
   evaluate_node_local_max_recursion_level_ = 0;
-  childselrule = mipworker.getMipSolver().submip ? ChildSelectionRule::kHybridInferenceCost
+
+  childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
-  
+
+  // childselrule = mipworker.getMipSolver().submip ? ChildSelectionRule::kHybridInferenceCost
+  //                                 : ChildSelectionRule::kRootSol;
 
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
