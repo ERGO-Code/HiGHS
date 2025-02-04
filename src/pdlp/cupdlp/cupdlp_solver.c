@@ -11,6 +11,15 @@
 #include "cupdlp_utils.h"
 #include "glbopts.h"
 
+const cupdlp_int check_iter = 440;
+
+void debugPrintDouble(char* name, const cupdlp_int dim, const double* value) {
+  printf("%-50s = [", name);
+  for (cupdlp_int iCol = 0; iCol < dim; iCol++) 
+    printf("%11.4g ", value[iCol]);
+  printf("]\n");
+}
+
 void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
                                      const double *ax, const double *x,
                                      double *dPrimalFeasibility,
@@ -83,9 +92,17 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
   //  |max(-y, 0)|  + |(I-\Pi)(c-Α'\nu)|
   // compute c - A'y
 
+  if (work->timers->nIter == check_iter) {
+    debugPrintDouble("PDHG_Compute_Dual_Feasibility 0: aty", problem->data->nCols, aty);
+  }
+
   CUPDLP_COPY_VEC(dualResidual, aty, cupdlp_float, lp->nCols);
   cupdlp_float alpha = -1.0;
   cupdlp_scaleVector(work, alpha, dualResidual, lp->nCols);
+
+  if (work->timers->nIter == check_iter) {
+    debugPrintDouble("PDHG_Compute_Dual_Feasibility 0: dualResidual", problem->data->nCols, dualResidual);
+  }
 
   alpha = 1.0;
   cupdlp_axpy(work, lp->nCols, &alpha, problem->cost, dualResidual);
@@ -255,6 +272,10 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_float pConstrResSq = 0.0;
   cupdlp_float pBoundLbResSq = 0.0;
   cupdlp_float pBoundUbResSq = 0.0;
+
+  if (work->timers->nIter == check_iter) {
+    debugPrintDouble("dDualInfeasRes 0", problem->data->nCols, dDualInfeasRes);
+  }
 
   // x ray
   CUPDLP_COPY_VEC(resobj->primalInfeasRay, x, cupdlp_float,
