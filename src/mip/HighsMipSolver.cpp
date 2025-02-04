@@ -285,19 +285,27 @@ restart:
     // accumulating pointers to the all the HighsSearch instances
     // (master and workers) in concurrent_searches, allowing loops
     // over all concurrent searches to be simplified
-    std::vector<HighsMipSolver> worker_mipsolvers;
+    // std::vector<HighsMipSolver> worker_mipsolvers;
+    std::vector<HighsMipWorker> mipworkers;
+
     std::vector<HighsSearch> worker_searches;
     std::vector<HighsLpRelaxation> worker_lps;
     std::vector<HighsSearch*> concurrent_searches;
     concurrent_searches.push_back(&master_search);
     for (HighsInt iSearch = 0; iSearch < num_worker; iSearch++) {
-      worker_mipsolvers.push_back(HighsMipSolver{*this});
+
+      // worker_mipsolvers.push_back(HighsMipSolver{*this});
+      mipworkers.push_back(HighsMipWorker(*this));
+
       //    worker_mipsolvers.push_back(HighsMipSolver{callback_,
       //    options_mip_, model_});
       //
       //    worker_mipsolvers.push_back(HighsMipSolver{*callback_,
       //    *options_mip_, *model_, null_solution, false, 0});
-      HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
+
+      // HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
+      HighsMipSolver& worker_mipsolver = mipworkers[iSearch].getMipSolver();
+
       worker_mipsolver.rootbasis = this->rootbasis;
       HighsPseudocostInitialization pscostinit(mipdata_->pseudocost, 1);
       worker_mipsolver.pscostinit = &pscostinit;
@@ -312,7 +320,9 @@ restart:
       concurrent_searches.push_back(&worker_searches[iSearch]);
     }
 
-    assert(worker_mipsolvers.size() == num_worker);
+    // assert(worker_mipsolvers.size() == num_worker);
+    assert(mipworkers.size() == num_worker);
+
     assert(worker_searches.size() == num_worker);
     assert(concurrent_searches.size() == mip_search_concurrency);
 

@@ -28,6 +28,9 @@ class HighsCliqueTable;
 
 class HighsSearch {
   HighsMipSolver& mipsolver;
+  // replace HighsMipSolver with HighsMipWorker
+  // HighsMipWorker& mipworker;
+
   HighsLpRelaxation* lp;
   HighsDomain localdom;
   HighsPseudocost& pseudocost;

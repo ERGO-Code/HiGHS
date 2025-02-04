@@ -27,10 +27,19 @@ class HighsMipWorker {
   HighsCutPool cutpool_;
   HighsConflictPool conflictpool_;
   HighsCliqueTable cliquetable_;
+
+  // Not sure if this should be here or elsewhere.
+  HighsMipSolver mipsolver;
+
+  // Not sure if this should be here or in HighsSearch.
+  HighsPseudocost pseudocost;
+  
   HighsSearch search_;
 
 public:
   HighsMipWorker(const HighsMipSolver& mipsolver);
+
+  HighsMipSolver& getMipSolver();
 };
 
 #endif
