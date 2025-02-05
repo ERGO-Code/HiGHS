@@ -14,11 +14,7 @@ https://developer.nvidia.com/cuda-toolkit
 nvidia-smi
 ``
 
-This should print a table of GPU-related stats. If it doesn't, you should install the “nvidia-utils” package which will also contain the “nvidia-smi” tool inside it. To install this package, run the command in the terminal:
-
-``
-sudo apt install nvidia-utils-515
-``
+This should print a table of GPU-related stats. If it doesn't, get in touch with Ivet, because trying to install drivers separately from the cuda toolkit can lead to a lot of trouble on different Ubuntu setups.
 
 * Run the following in a terminal
 
