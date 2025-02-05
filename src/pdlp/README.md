@@ -6,7 +6,7 @@
 
 https://developer.nvidia.com/cuda-toolkit
 
-#### nvidia-smi Check drivers
+#### nvidia-smi check drivers
 
 To utilize the maximum potential of any hardware, relevant drivers for that hardware are installed onto the system. There exists a tool named “nvidia-smi” which helps to manage NVidia GPU hardware all through the terminal on the Linux operating system. 
 
