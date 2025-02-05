@@ -1,0 +1,46 @@
+## Building HiGHS to run PDLP on a GPU
+
+### Installation
+
+#### CUDA-Toolkit 
+
+https://developer.nvidia.com/cuda-toolkit
+
+#### Check and further installation
+
+* Before installing anything more, run the following in a terminal
+
+``
+nvidia-smi
+``
+
+This should print a table of GPU-related stats. What if it doesn't?
+
+* Run the following in a terminal
+
+``
+nvcc --version
+``
+
+This should give you details about the cuda compiler driver. If it doesn't then run
+
+``
+apt install nvidia-cuda-toolkit
+``
+
+When both work, you should check that `/usr/local/cuda` exists. 
+
+#### Build
+
+* Checkout the HiGHS codebase from Github, and use the branch `cuda-updates`
+* From your HiGHS build directory, run
+
+``
+cmake -DCUPDLP_GPU=ON -DALL_TESTS=ON ..; make
+``
+
+
+
+
+
+
