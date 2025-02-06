@@ -732,11 +732,8 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
   redundant = false;
   infeasible = false;
 
-  // return if there is no variable bound
-  if (vlbCol == -1) return;
-
-  // return if variable is fixed
-  if (ub == lb) return;
+  // return if variable is fixed or there is no variable bound
+  if (ub == lb || vlbCol == -1) return;
 
   HighsCDouble maxlb = kHighsInf;
   HighsCDouble minlb = -kHighsInf;
@@ -790,11 +787,8 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
   redundant = false;
   infeasible = false;
 
-  // return if there is no variable bound
-  if (vubCol == -1) return;
-
-  // return if variable is fixed
-  if (ub == lb) return;
+  // return if variable is fixed or there is no variable bound
+  if (ub == lb || vubCol == -1) return;
 
   HighsCDouble maxub = kHighsInf;
   HighsCDouble minub = -kHighsInf;
