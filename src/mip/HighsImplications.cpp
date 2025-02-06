@@ -699,40 +699,11 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) {
     mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
                                                vub.constant);
-
-    if (vub.coef > 0) {
-      double minub = vub.constant;
-      double maxub = vub.constant + vub.coef;
-      if (minub >= ub - mipsolver.mipdata_->feastol)
-        delVbds.push_back(vubCol);  // variable bound is redundant
-      else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-        vub.coef = ub - vub.constant;  // coefficient can be tightened
-        mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                   vub.constant);
-      } else if (maxub < ub - mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, col, maxub,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    } else {
-      HighsCDouble minub = HighsCDouble(vub.constant) + vub.coef;
-      double maxub = vub.constant;
-      if (minub >= ub - mipsolver.mipdata_->feastol)
-        delVbds.push_back(vubCol);  // variable bound is redundant
-      else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-        // variable bound can be tightened
-        vub.constant = ub;
-        vub.coef = double(minub - ub);
-        mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                   vub.constant);
-      } else if (maxub < ub - mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, col, maxub,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    }
+    bool redundant = false;
+    bool infeasible = false;
+    cleanupVub(col, vubCol, vub, lb, ub, redundant, infeasible);
+    if (redundant) delVbds.push_back(vubCol);
+    if (infeasible) return;
   });
 
   if (!delVbds.empty()) {
@@ -743,42 +714,128 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
     mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
                                                vlb.constant);
-
-    if (vlb.coef > 0) {
-      HighsCDouble maxlb = HighsCDouble(vlb.constant) + vlb.coef;
-      double minlb = vlb.constant;
-      if (maxlb <= lb + mipsolver.mipdata_->feastol)
-        delVbds.push_back(vlbCol);  // variable bound is redundant
-      else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-        // variable bound can be tightened
-        vlb.constant = lb;
-        vlb.coef = double(maxlb - lb);
-        mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                   vlb.constant);
-      } else if (minlb > lb + mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, col, minlb,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-
-    } else {
-      double maxlb = vlb.constant;
-      double minlb = vlb.constant + vlb.coef;
-      if (maxlb <= lb + mipsolver.mipdata_->feastol)
-        delVbds.push_back(vlbCol);  // variable bound is redundant
-      else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-        vlb.coef = lb - vlb.constant;  // variable bound can be tightened
-        mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                   vlb.constant);
-      } else if (minlb > lb + mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, col, minlb,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    }
+    bool redundant = false;
+    bool infeasible = false;
+    cleanupVlb(col, vlbCol, vlb, lb, ub, redundant, infeasible);
+    if (redundant) delVbds.push_back(vlbCol);
+    if (infeasible) return;
   });
 
   for (HighsInt vlbCol : delVbds) vlbs[col].erase(vlbCol);
+}
+
+void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
+                                   HighsImplications::VarBound& vlb, double lb,
+                                   double ub, bool& redundant, bool& infeasible,
+                                   bool allowBoundChanges) const {
+  // initialize
+  redundant = false;
+  infeasible = false;
+
+  // return if there is no variable bound
+  if (vlbCol == -1) return;
+
+  // return if variable is fixed
+  if (ub == lb) return;
+
+  HighsCDouble maxlb = kHighsInf;
+  HighsCDouble minlb = -kHighsInf;
+  bool checkTightenBnd = false;
+
+  if (vlb.coef > 0) {
+    minlb = vlb.constant;
+    maxlb = minlb + vlb.coef;
+    if (maxlb <= lb + mipsolver.mipdata_->feastol) {
+      // variable bound is redundant
+      redundant = true;
+    } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
+      // variable bound can be tightened
+      vlb.constant = lb;
+      vlb.coef = static_cast<double>(maxlb - lb);
+      mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                                 vlb.constant);
+    } else {
+      checkTightenBnd = true;
+    }
+  } else {
+    maxlb = vlb.constant;
+    minlb = maxlb + vlb.coef;
+    if (maxlb <= lb + mipsolver.mipdata_->feastol) {
+      // variable bound is redundant
+      redundant = true;
+    } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
+      // variable bound can be tightened
+      vlb.coef = static_cast<double>(lb - maxlb);
+      mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                                 vlb.constant);
+    } else {
+      checkTightenBnd = true;
+    }
+  }
+
+  if (allowBoundChanges && checkTightenBnd &&
+      minlb > lb + mipsolver.mipdata_->epsilon) {
+    mipsolver.mipdata_->domain.changeBound(HighsBoundType::kLower, col,
+                                           static_cast<double>(minlb),
+                                           HighsDomain::Reason::unspecified());
+    infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
+}
+
+void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
+                                   HighsImplications::VarBound& vub, double lb,
+                                   double ub, bool& redundant, bool& infeasible,
+                                   bool allowBoundChanges) const {
+  // initialize
+  redundant = false;
+  infeasible = false;
+
+  // return if there is no variable bound
+  if (vubCol == -1) return;
+
+  // return if variable is fixed
+  if (ub == lb) return;
+
+  HighsCDouble maxub = kHighsInf;
+  HighsCDouble minub = -kHighsInf;
+  bool checkTightenBnd = false;
+
+  if (vub.coef > 0) {
+    minub = vub.constant;
+    maxub = minub + vub.coef;
+    if (minub >= ub - mipsolver.mipdata_->feastol) {
+      // variable bound is redundant
+      redundant = true;
+    } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
+      // coefficient can be tightened
+      vub.coef = static_cast<double>(ub - minub);
+      mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                                 vub.constant);
+    } else {
+      checkTightenBnd = true;
+    }
+  } else {
+    maxub = vub.constant;
+    minub = maxub + vub.coef;
+    if (minub >= ub - mipsolver.mipdata_->feastol) {
+      // variable bound is redundant
+      redundant = true;
+    } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
+      // variable bound can be tightened
+      vub.constant = ub;
+      vub.coef = static_cast<double>(minub - ub);
+      mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                                 vub.constant);
+    } else {
+      checkTightenBnd = true;
+    }
+  }
+
+  if (allowBoundChanges && checkTightenBnd &&
+      maxub < ub - mipsolver.mipdata_->epsilon) {
+    mipsolver.mipdata_->domain.changeBound(HighsBoundType::kUpper, col,
+                                           static_cast<double>(maxub),
+                                           HighsDomain::Reason::unspecified());
+    infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
 }

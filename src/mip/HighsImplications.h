@@ -148,6 +148,18 @@ class HighsImplications {
                              HighsCutPool& cutpool, double feastol);
 
   void cleanupVarbounds(HighsInt col);
+
+  void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
+                                     HighsImplications::VarBound& vlb,
+                                     double lb, double ub, bool& redundant,
+                                     bool& infeasible,
+                                     bool allowBoundChanges = true) const;
+
+  void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
+                                     HighsImplications::VarBound& vub,
+                                     double lb, double ub, bool& redundant,
+                                     bool& infeasible,
+                                     bool allowBoundChanges = true) const;
 };
 
 #endif

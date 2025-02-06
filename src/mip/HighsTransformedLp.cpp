@@ -175,6 +175,30 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       return false;
     }
 
+    // update best variable upper bound (this is done to take into account any
+    // new bound changes derived during cut generation)
+    if (bestVub[col].first != -1) {
+      bool redundant = false;
+      bool infeasible = false;
+      mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
+                                            bestVub[col].second, lb, ub,
+                                            redundant, infeasible, false);
+      if (redundant)
+        bestVub[col] = std::make_pair(-1, HighsImplications::VarBound());
+    }
+
+    // update best variable lower bound (this is done to take into account any
+    // new bound changes derived during cut generation)
+    if (bestVlb[col].first != -1) {
+      bool redundant = false;
+      bool infeasible = false;
+      mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
+                                            bestVlb[col].second, lb, ub,
+                                            redundant, infeasible, false);
+      if (redundant)
+        bestVlb[col] = std::make_pair(-1, HighsImplications::VarBound());
+    }
+
     // store the old bound type so that we can restore it if the continuous
     // column is relaxed out anyways. This allows to correctly transform and
     // then untransform multiple base rows which is useful to compute cuts based
