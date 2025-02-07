@@ -1818,11 +1818,15 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
-  if (oldUpperSource != -1 && oldUpperSource != colLowerSource[col])
-    colImplSourceByRow[oldUpperSource].erase(col);
-  if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
+  if (oldUpperSource != originRow) {
+    if (oldUpperSource != -1 && oldUpperSource != colLowerSource[col])
+      colImplSourceByRow[oldUpperSource].erase(col);
+    if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
-  colUpperSource[col] = originRow;
+    colUpperSource[col] = originRow;
+  }
+
+  // update implied bound
   implColUpper[col] = newUpper;
 
   // if the old and the new implied bound are not better than the upper bound,
@@ -1858,11 +1862,15 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
-  if (oldLowerSource != -1 && oldLowerSource != colUpperSource[col])
-    colImplSourceByRow[oldLowerSource].erase(col);
-  if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
+  if (oldLowerSource != originRow) {
+    if (oldLowerSource != -1 && oldLowerSource != colUpperSource[col])
+      colImplSourceByRow[oldLowerSource].erase(col);
+    if (originRow != -1) colImplSourceByRow[originRow].emplace(col);
 
-  colLowerSource[col] = originRow;
+    colLowerSource[col] = originRow;
+  }
+
+  // update implied bound
   implColLower[col] = newLower;
 
   // if the old and the new implied bound are not better than the lower bound,
@@ -1897,12 +1905,15 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
-  if (rowDualUpperSource[row] != -1 &&
-      rowDualLowerSource[row] != rowDualUpperSource[row])
-    implRowDualSourceByCol[rowDualUpperSource[row]].erase(row);
-  if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
+  if (oldUpperSource != originCol) {
+    if (oldUpperSource != -1 && oldUpperSource != rowDualLowerSource[row])
+      implRowDualSourceByCol[oldUpperSource].erase(row);
+    if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
 
-  rowDualUpperSource[row] = originCol;
+    rowDualUpperSource[row] = originCol;
+  }
+
+  // update implied bound
   implRowDualUpper[row] = newUpper;
 
   // nothing needs to be updated
@@ -1935,12 +1946,15 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
-  if (rowDualLowerSource[row] != -1 &&
-      rowDualLowerSource[row] != rowDualUpperSource[row])
-    implRowDualSourceByCol[rowDualLowerSource[row]].erase(row);
-  if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
+  if (oldLowerSource != originCol) {
+    if (oldLowerSource != -1 && oldLowerSource != rowDualUpperSource[row])
+      implRowDualSourceByCol[oldLowerSource].erase(row);
+    if (originCol != -1) implRowDualSourceByCol[originCol].emplace(row);
 
-  rowDualLowerSource[row] = originCol;
+    rowDualLowerSource[row] = originCol;
+  }
+
+  // update implied bound
   implRowDualLower[row] = newLower;
 
   // nothing needs to be updated
