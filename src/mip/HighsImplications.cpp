@@ -697,8 +697,6 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   std::vector<HighsInt> delVbds;
 
   vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) {
-    mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                               vub.constant);
     bool redundant = false;
     bool infeasible = false;
     cleanupVub(col, vubCol, vub, lb, ub, redundant, infeasible);
@@ -712,8 +710,6 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   }
 
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
-    mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                               vlb.constant);
     bool redundant = false;
     bool infeasible = false;
     cleanupVlb(col, vlbCol, vlb, lb, ub, redundant, infeasible);
@@ -732,46 +728,32 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
   redundant = false;
   infeasible = false;
 
-  // return if variable is fixed or there is no variable bound
-  if (ub == lb || vlbCol == -1) return;
+  // return if there is no variable bound
+  if (vlbCol == -1) return;
 
-  HighsCDouble maxlb = kHighsInf;
-  HighsCDouble minlb = -kHighsInf;
-  bool checkTightenBnd = false;
+  // check variable lower bound
+  mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                             vlb.constant);
 
-  if (vlb.coef > 0) {
-    minlb = vlb.constant;
-    maxlb = minlb + vlb.coef;
-    if (maxlb <= lb + mipsolver.mipdata_->feastol) {
-      // variable bound is redundant
-      redundant = true;
-    } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-      // variable bound can be tightened
+  HighsCDouble maxlb = vlb.maxValue();
+  HighsCDouble minlb = vlb.minValue();
+
+  if (maxlb <= lb + mipsolver.mipdata_->feastol) {
+    // variable bound is redundant
+    redundant = true;
+  } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
+    // coefficient can be tightened
+    double newcoef = static_cast<double>(lb - maxlb);
+    if (vlb.coef < 0) {
+      vlb.coef = newcoef;
+    } else {
       vlb.constant = lb;
-      vlb.coef = static_cast<double>(maxlb - lb);
-      mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                 vlb.constant);
-    } else {
-      checkTightenBnd = true;
+      vlb.coef = -newcoef;
     }
-  } else {
-    maxlb = vlb.constant;
-    minlb = maxlb + vlb.coef;
-    if (maxlb <= lb + mipsolver.mipdata_->feastol) {
-      // variable bound is redundant
-      redundant = true;
-    } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-      // variable bound can be tightened
-      vlb.coef = static_cast<double>(lb - maxlb);
-      mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                 vlb.constant);
-    } else {
-      checkTightenBnd = true;
-    }
-  }
-
-  if (allowBoundChanges && checkTightenBnd &&
-      minlb > lb + mipsolver.mipdata_->epsilon) {
+    // check tightened variable lower bound
+    mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                               vlb.constant);
+  } else if (allowBoundChanges && minlb > lb + mipsolver.mipdata_->epsilon) {
     mipsolver.mipdata_->domain.changeBound(HighsBoundType::kLower, col,
                                            static_cast<double>(minlb),
                                            HighsDomain::Reason::unspecified());
@@ -787,46 +769,32 @@ void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
   redundant = false;
   infeasible = false;
 
-  // return if variable is fixed or there is no variable bound
-  if (ub == lb || vubCol == -1) return;
+  // return if there is no variable bound
+  if (vubCol == -1) return;
 
-  HighsCDouble maxub = kHighsInf;
-  HighsCDouble minub = -kHighsInf;
-  bool checkTightenBnd = false;
+  // check variable upper bound
+  mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                             vub.constant);
 
-  if (vub.coef > 0) {
-    minub = vub.constant;
-    maxub = minub + vub.coef;
-    if (minub >= ub - mipsolver.mipdata_->feastol) {
-      // variable bound is redundant
-      redundant = true;
-    } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-      // coefficient can be tightened
-      vub.coef = static_cast<double>(ub - minub);
-      mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                 vub.constant);
+  HighsCDouble maxub = vub.maxValue();
+  HighsCDouble minub = vub.minValue();
+
+  if (minub >= ub - mipsolver.mipdata_->feastol) {
+    // variable bound is redundant
+    redundant = true;
+  } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
+    // coefficient can be tightened
+    double newcoef = static_cast<double>(ub - minub);
+    if (vub.coef > 0) {
+      vub.coef = newcoef;
     } else {
-      checkTightenBnd = true;
-    }
-  } else {
-    maxub = vub.constant;
-    minub = maxub + vub.coef;
-    if (minub >= ub - mipsolver.mipdata_->feastol) {
-      // variable bound is redundant
-      redundant = true;
-    } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-      // variable bound can be tightened
       vub.constant = ub;
-      vub.coef = static_cast<double>(minub - ub);
-      mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                 vub.constant);
-    } else {
-      checkTightenBnd = true;
+      vub.coef = -newcoef;
     }
-  }
-
-  if (allowBoundChanges && checkTightenBnd &&
-      maxub < ub - mipsolver.mipdata_->epsilon) {
+    // check tightened variable upper bound
+    mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                               vub.constant);
+  } else if (allowBoundChanges && maxub < ub - mipsolver.mipdata_->epsilon) {
     mipsolver.mipdata_->domain.changeBound(HighsBoundType::kUpper, col,
                                            static_cast<double>(maxub),
                                            HighsDomain::Reason::unspecified());
