@@ -699,7 +699,7 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) {
     bool redundant = false;
     bool infeasible = false;
-    cleanupVub(col, vubCol, vub, lb, ub, redundant, infeasible);
+    cleanupVub(col, vubCol, vub, ub, redundant, infeasible);
     if (redundant) delVbds.push_back(vubCol);
     if (infeasible) return;
   });
@@ -712,7 +712,7 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
     bool redundant = false;
     bool infeasible = false;
-    cleanupVlb(col, vlbCol, vlb, lb, ub, redundant, infeasible);
+    cleanupVlb(col, vlbCol, vlb, lb, redundant, infeasible);
     if (redundant) delVbds.push_back(vlbCol);
     if (infeasible) return;
   });
@@ -722,7 +722,7 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
 
 void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
                                    HighsImplications::VarBound& vlb, double lb,
-                                   double ub, bool& redundant, bool& infeasible,
+                                   bool& redundant, bool& infeasible,
                                    bool allowBoundChanges) const {
   // initialize
   redundant = false;
@@ -762,8 +762,8 @@ void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
 }
 
 void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
-                                   HighsImplications::VarBound& vub, double lb,
-                                   double ub, bool& redundant, bool& infeasible,
+                                   HighsImplications::VarBound& vub, double ub,
+                                   bool& redundant, bool& infeasible,
                                    bool allowBoundChanges) const {
   // initialize
   redundant = false;

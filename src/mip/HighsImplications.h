@@ -156,14 +156,12 @@ class HighsImplications {
   void cleanupVarbounds(HighsInt col);
 
   void cleanupVlb(HighsInt col, HighsInt vlbCol,
-                  HighsImplications::VarBound& vlb, double lb, double ub,
-                  bool& redundant, bool& infeasible,
-                  bool allowBoundChanges = true) const;
+                  HighsImplications::VarBound& vlb, double lb, bool& redundant,
+                  bool& infeasible, bool allowBoundChanges = true) const;
 
   void cleanupVub(HighsInt col, HighsInt vubCol,
-                  HighsImplications::VarBound& vub, double lb, double ub,
-                  bool& redundant, bool& infeasible,
-                  bool allowBoundChanges = true) const;
+                  HighsImplications::VarBound& vub, double ub, bool& redundant,
+                  bool& infeasible, bool allowBoundChanges = true) const;
 };
 
 #endif
