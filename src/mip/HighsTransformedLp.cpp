@@ -175,28 +175,28 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       return false;
     }
 
-    // update best variable upper bound (this is done to take into account any
-    // new bound changes derived during cut generation)
-    if (bestVub[col].first != -1) {
+    // tighten best variable upper bound. the code below assumes that variable
+    // upper bounds are tight, which may not be the case due to bound changes
+    // derived during cut generation.
+    if (bestVub[col].first != -1 &&
+        bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
       mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
                                             bestVub[col].second, lb, ub,
                                             redundant, infeasible, false);
-      if (redundant)
-        bestVub[col] = std::make_pair(-1, HighsImplications::VarBound());
     }
 
-    // update best variable lower bound (this is done to take into account any
-    // new bound changes derived during cut generation)
-    if (bestVlb[col].first != -1) {
+    // tighten best variable lower bound. the code below assumes that variable
+    // lower bounds are tight, which may not be the case due to bound changes
+    // derived during cut generation.
+    if (bestVlb[col].first != -1 &&
+        bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
       bool infeasible = false;
       mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
                                             bestVlb[col].second, lb, ub,
                                             redundant, infeasible, false);
-      if (redundant)
-        bestVlb[col] = std::make_pair(-1, HighsImplications::VarBound());
     }
 
     // store the old bound type so that we can restore it if the continuous
