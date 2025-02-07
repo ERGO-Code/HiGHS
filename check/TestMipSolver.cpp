@@ -805,5 +805,5 @@ TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
   highs.readModel(filename);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -187612.944194;
-  solve(highs, kHighsOnString, require_model_status, optimal_objective)
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
