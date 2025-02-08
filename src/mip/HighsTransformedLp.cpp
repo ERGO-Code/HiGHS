@@ -175,6 +175,36 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       return false;
     }
 
+    // the code below uses the difference between the column upper and lower
+    // bounds as the upper bound for the slack from the variable upper bound
+    // constraint (upper[j] = ub - lb) and thus assumes that the variable upper
+    // bound constraints are tight. this assumption may not be satisfied when
+    // new bound changes were derived during cut generation and, therefore, we
+    // tighten the best variable upper bound.
+    if (bestVub[col].first != -1 &&
+        bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
+      bool redundant = false;
+      bool infeasible = false;
+      mip.mipdata_->implications.cleanupVub(col, bestVub[col].first,
+                                            bestVub[col].second, ub, redundant,
+                                            infeasible, false);
+    }
+
+    // the code below uses the difference between the column upper and lower
+    // bounds as the upper bound for the slack from the variable lower bound
+    // constraint (upper[j] = ub - lb) and thus assumes that the variable lower
+    // bound constraints are tight. this assumption may not be satisfied when
+    // new bound changes were derived during cut generation and, therefore, we
+    // tighten the best variable lower bound.
+    if (bestVlb[col].first != -1 &&
+        bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
+      bool redundant = false;
+      bool infeasible = false;
+      mip.mipdata_->implications.cleanupVlb(col, bestVlb[col].first,
+                                            bestVlb[col].second, lb, redundant,
+                                            infeasible, false);
+    }
+
     // store the old bound type so that we can restore it if the continuous
     // column is relaxed out anyways. This allows to correctly transform and
     // then untransform multiple base rows which is useful to compute cuts based
