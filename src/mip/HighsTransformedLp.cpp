@@ -175,9 +175,12 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       return false;
     }
 
-    // tighten best variable upper bound. the code below assumes that variable
-    // upper bounds are tight, which may not be the case due to bound changes
-    // derived during cut generation.
+    // the code below uses the difference between the column upper and lower
+    // bounds as the upper bound for the slack from the variable upper bound
+    // constraint (upper[j] = ub - lb) and thus assumes that the variable upper
+    // bound constraints are tight. this assumption may not be satisfied when
+    // new bound changes were derived during cut generation and, therefore, we
+    // tighten the best variable upper bound.
     if (bestVub[col].first != -1 &&
         bestVub[col].second.maxValue() > ub + mip.mipdata_->feastol) {
       bool redundant = false;
@@ -187,9 +190,12 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                             infeasible, false);
     }
 
-    // tighten best variable lower bound. the code below assumes that variable
-    // lower bounds are tight, which may not be the case due to bound changes
-    // derived during cut generation.
+    // the code below uses the difference between the column upper and lower
+    // bounds as the upper bound for the slack from the variable lower bound
+    // constraint (upper[j] = ub - lb) and thus assumes that the variable lower
+    // bound constraints are tight. this assumption may not be satisfied when
+    // new bound changes were derived during cut generation and, therefore, we
+    // tighten the best variable lower bound.
     if (bestVlb[col].first != -1 &&
         bestVlb[col].second.minValue() < lb - mip.mipdata_->feastol) {
       bool redundant = false;
