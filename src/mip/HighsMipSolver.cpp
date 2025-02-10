@@ -974,9 +974,11 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sb_lp_iterations,
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
-  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Evaluate node max recursion level = %d\n",
-               int(evaluate_node_max_recursion_level_));
+  // Skip this for timeless logging to eliminate diffs with latest
+  if (!timeless_log)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+		 "  Evaluate node max recursion level = %d\n",
+		 int(evaluate_node_max_recursion_level_));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

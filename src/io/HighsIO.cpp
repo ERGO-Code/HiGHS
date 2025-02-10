@@ -19,6 +19,7 @@
 
 void highsLogHeader(const HighsLogOptions& log_options,
                     const bool log_githash) {
+  /*
   const std::string githash_string(HIGHS_GITHASH);
   const std::string githash_text =
       log_githash ? " (git hash: " + githash_string + ")" : "";
@@ -26,6 +27,7 @@ void highsLogHeader(const HighsLogOptions& log_options,
                "Running HiGHS %d.%d.%d%s: %s\n", (int)HIGHS_VERSION_MAJOR,
                (int)HIGHS_VERSION_MINOR, (int)HIGHS_VERSION_PATCH,
                githash_text.c_str(), kHighsCopyrightStatement.c_str());
+  */
 }
 
 std::array<char, 32> highsDoubleToString(const double val,
