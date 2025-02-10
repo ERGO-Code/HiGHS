@@ -14,7 +14,6 @@
 
 // #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
-
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsSearch.h"

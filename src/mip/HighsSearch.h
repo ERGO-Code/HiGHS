@@ -17,7 +17,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 
-// Remove for now because HighsSearch is a member of HighsMipSolver. 
+// Remove for now because HighsSearch is a member of HighsMipSolver.
 // Circular include?
 
 // #include "mip/HighsMipWorker.h"
@@ -163,7 +163,8 @@ class HighsSearch {
 
   const HighsMipSolver* getMipSolver() { return &mipsolver; }
 
-  // const HighsMipSolver* getMipSolver() { return &(mipworker.getMipSolver()); }
+  // const HighsMipSolver* getMipSolver() { return &(mipworker.getMipSolver());
+  // }
 
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);
@@ -250,7 +251,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  void dive(const HighsInt search_id=0);
+  void dive(const HighsInt search_id = 0);
   NodeResult theDive();
 
   HighsDomain& getLocalDomain() { return localdom; }

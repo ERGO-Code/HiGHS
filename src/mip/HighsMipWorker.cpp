@@ -28,7 +28,6 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__)
       pscostinit(pscostinit_),
       implicinit(implicinit_),
       clqtableinit(clqtableinit_) {
-
   // Register cutpool and conflict pool in local search domain.
   search_.getLocalDomain().addCutpool(cutpool_);
   search_.getLocalDomain().addConflictPool(conflictpool_);

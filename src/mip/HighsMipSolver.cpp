@@ -297,7 +297,6 @@ restart:
     concurrent_searches.push_back(&master_search);
 
     for (HighsInt iSearch = 0; iSearch < num_worker; iSearch++) {
-
       // worker_mipsolvers.push_back(HighsMipSolver{*this});
       mipworkers.push_back(HighsMipWorker(*this));
 
@@ -308,7 +307,8 @@ restart:
       //    *options_mip_, *model_, null_solution, false, 0});
 
       // HighsMipSolver& worker_mipsolver = worker_mipsolvers[iSearch];
-      const HighsMipSolver& worker_mipsolver = mipworkers[iSearch].getMipSolver();
+      const HighsMipSolver& worker_mipsolver =
+          mipworkers[iSearch].getMipSolver();
 
       // Do we need root basis?
       // worker_mipsolver.rootbasis = this->rootbasis;
@@ -322,7 +322,8 @@ restart:
       // worker_mipsolver.mipdata_ =
       //     decltype(mipdata_)(new HighsMipSolverData(*this));
 
-      // worker_searches.push_back( HighsSearch{worker_mipsolver, worker_mipsolver.mipdata_->pseudocost});
+      // worker_searches.push_back( HighsSearch{worker_mipsolver,
+      // worker_mipsolver.mipdata_->pseudocost});
       // worker_lps.push_back(HighsLpRelaxation{mipdata_->lp});
       // worker_searches[iSearch].setLpRelaxation(&worker_lps[iSearch]);
 
@@ -380,10 +381,10 @@ restart:
       //
       // if (search.hasNode()) search.dive();
       if (iSearch == 0) {
-	search.dive();
+        search.dive();
       } else if (allow_multiple_dive) {
-	//	if (search.hasNode())
-	  search.dive(iSearch);
+        //	if (search.hasNode())
+        search.dive(iSearch);
       }
       assert(iSearch == 0 || !search.performed_dive_);
     }
@@ -584,9 +585,9 @@ restart:
     }  // if (!submip && mipdata_->num_nodes >= nextCheck))
 
     // Now perform the node search
-    const bool multiple_node_search = false;
+    const bool allow_multiple_node_search = false;
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
-      if (iSearch > 0 && !multiple_node_search) continue;
+      if (iSearch > 0 && !allow_multiple_node_search) continue;
       HighsSearch& search = *concurrent_searches[iSearch];
 
       // remove the iteration limit when installing a new node
@@ -986,8 +987,8 @@ void HighsMipSolver::cleanupSolve() {
   // Skip this for timeless logging to eliminate diffs with latest
   if (!timeless_log)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-		 "  Evaluate node max recursion level = %d\n",
-		 int(evaluate_node_max_recursion_level_));
+                 "  Evaluate node max recursion level = %d\n",
+                 int(evaluate_node_max_recursion_level_));
 
   if (!timeless_log) analysis_.reportMipTimer();
 

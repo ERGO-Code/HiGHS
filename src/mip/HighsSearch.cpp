@@ -15,12 +15,14 @@
 #include "mip/HighsMipSolverData.h"
 #include "mip/MipTimer.h"
 
-// HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost)
+// HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost&
+// pseudocost)
 //     : mipworker(mipworker),
 //       mipsolver(mipworker.getMipSolver()),
 //      localdom(mipworker.getMipSolver().mipdata_->domain),
 
-HighsSearch::HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
+HighsSearch::HighsSearch(const HighsMipSolver& mipsolver,
+                         HighsPseudocost& pseudocost)
     : mipsolver(mipsolver),
       lp(nullptr),
       localdom(mipsolver.mipdata_->domain),
@@ -44,7 +46,8 @@ HighsSearch::HighsSearch(const HighsMipSolver& mipsolver, HighsPseudocost& pseud
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
 
-  // childselrule = mipworker.getMipSolver().submip ? ChildSelectionRule::kHybridInferenceCost
+  // childselrule = mipworker.getMipSolver().submip ?
+  // ChildSelectionRule::kHybridInferenceCost
   //                                 : ChildSelectionRule::kRootSol;
 
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -979,7 +982,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode(
   evaluate_node_global_max_recursion_level_ =
       std::max(recursion_level, evaluate_node_global_max_recursion_level_);
 
-  // IG make a copy? 
+  // IG make a copy?
   HighsMipAnalysis analysis_ = mipsolver.analysis_;
   if (recursion_level == 0) {
     assert(!analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
@@ -2015,17 +2018,18 @@ void HighsSearch::dive(const HighsInt search_id) {
 
   // set iteration limit for each lp solve during the dive to 10 times the
   // average nodes
-  printf("HighsSearch::dive(%d): Address of mipsolver.mipdata_->lp is %p\n", int(search_id), (void *)&mipsolver.mipdata_->lp);
+  printf("HighsSearch::dive(%d): Address of mipsolver.mipdata_->lp is %p\n",
+         int(search_id), (void*)&mipsolver.mipdata_->lp);
   HighsInt iterlimit = 10 * std::max(mipsolver.mipdata_->lp.getAvgSolveIters(),
                                      mipsolver.mipdata_->avgrootlpiters);
-  if (!this->hasNode()) return;
-  performed_dive_ = true;
-
   iterlimit =
       std::max({HighsInt{10000}, iterlimit,
                 HighsInt((3 * mipsolver.mipdata_->firstrootlpiters) / 2)});
 
   mipsolver.mipdata_->lp.setIterationLimit(iterlimit);
+
+  if (!this->hasNode()) return;
+  performed_dive_ = true;
 
   // perform the dive and put the open nodes to the queue
   size_t plungestart = mipsolver.mipdata_->num_nodes;
