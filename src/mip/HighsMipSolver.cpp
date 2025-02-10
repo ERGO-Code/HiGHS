@@ -383,7 +383,7 @@ restart:
 	search.dive();
       } else if (allow_multiple_dive) {
 	//	if (search.hasNode())
-	  search.dive();
+	  search.dive(iSearch);
       }
       assert(iSearch == 0 || !search.performed_dive_);
     }

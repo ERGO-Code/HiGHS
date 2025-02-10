@@ -1995,12 +1995,9 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-void HighsSearch::dive() {
+void HighsSearch::dive(const HighsInt search_id) {
   // assert(this->hasNode());
   // performed_dive_ = true;
-
-  if (!this->hasNode()) return;
-  performed_dive_ = true;
 
   // IG make a copy? After const mip solver in highs search.
   HighsMipAnalysis analysis_ = mipsolver.analysis_;
@@ -2015,11 +2012,15 @@ void HighsSearch::dive() {
   analysis_.mipTimerStart(kMipClockPerformAging1);
   mipsolver.mipdata_->conflictPool.performAging();
   analysis_.mipTimerStop(kMipClockPerformAging1);
+
   // set iteration limit for each lp solve during the dive to 10 times the
   // average nodes
-
+  printf("HighsSearch::dive(%d): Address of mipsolver.mipdata_->lp is %p\n", int(search_id), (void *)&mipsolver.mipdata_->lp);
   HighsInt iterlimit = 10 * std::max(mipsolver.mipdata_->lp.getAvgSolveIters(),
                                      mipsolver.mipdata_->avgrootlpiters);
+  if (!this->hasNode()) return;
+  performed_dive_ = true;
+
   iterlimit =
       std::max({HighsInt{10000}, iterlimit,
                 HighsInt((3 * mipsolver.mipdata_->firstrootlpiters) / 2)});

@@ -250,7 +250,7 @@ class HighsSearch {
 
   void printDisplayLine(char first, bool header = false);
 
-  void dive();
+  void dive(const HighsInt search_id=0);
   NodeResult theDive();
 
   HighsDomain& getLocalDomain() { return localdom; }
