@@ -237,10 +237,6 @@ restart:
   const HighsInt mip_search_concurrency = options_mip_->mip_search_concurrency;
   const HighsInt num_worker = mip_search_concurrency - 1;
 
-  HighsMipWorker main_worker(*this);
-
-  // HighsSearch master_search{main_worker, mipdata_->pseudocost};
-
   HighsSearch master_search{*this, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(master_search.getLocalDomain());
@@ -373,6 +369,7 @@ restart:
       return search.performed_dive_;
     };
 
+    const bool multiple_dive = false;
     // Perform concurrent dives
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
       HighsSearch& search = *concurrent_searches[iSearch];
@@ -576,9 +573,10 @@ restart:
     }  // if (!submip && mipdata_->num_nodes >= nextCheck))
 
     // Now perform the node search
+    const bool multiple_node_search = false;
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
+      if (iSearch > 0 && !multiple_node_search) continue;
       HighsSearch& search = *concurrent_searches[iSearch];
-      if (!performedDive(search, iSearch)) continue;
 
       // remove the iteration limit when installing a new node
       // mipdata_->lp.setIterationLimit();
