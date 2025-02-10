@@ -369,11 +369,21 @@ restart:
       return search.performed_dive_;
     };
 
-    const bool multiple_dive = false;
+    const bool allow_multiple_dive = true;
     // Perform concurrent dives
     for (HighsInt iSearch = 0; iSearch < mip_search_concurrency; iSearch++) {
       HighsSearch& search = *concurrent_searches[iSearch];
-      search.dive();
+      search.limit_reached_ = false;
+      search.performed_dive_ = false;
+      search.break_search_ = false;
+      // Ultimately the next few lines will be just
+      //
+      // if (search.hasNode()) search.dive();
+      if (iSearch == 0) {
+	search.dive();
+      } else if (allow_multiple_dive) {
+	if (search.hasNode()) search.dive();
+      }
       assert(iSearch == 0 || !search.performed_dive_);
     }
     // Identify whether algorithmic limits have been reached in one of
