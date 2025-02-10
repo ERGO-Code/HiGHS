@@ -1996,8 +1996,12 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
 }
 
 void HighsSearch::dive() {
-  assert(this->hasNode());
+  // assert(this->hasNode());
+  // performed_dive_ = true;
+
+  if (!this->hasNode()) return;
   performed_dive_ = true;
+
   // IG make a copy? After const mip solver in highs search.
   HighsMipAnalysis analysis_ = mipsolver.analysis_;
   const HighsOptions* options_mip_ = mipsolver.options_mip_;

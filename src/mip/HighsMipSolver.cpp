@@ -382,7 +382,8 @@ restart:
       if (iSearch == 0) {
 	search.dive();
       } else if (allow_multiple_dive) {
-	if (search.hasNode()) search.dive();
+	//	if (search.hasNode())
+	  search.dive();
       }
       assert(iSearch == 0 || !search.performed_dive_);
     }
