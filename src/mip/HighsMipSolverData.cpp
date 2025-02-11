@@ -758,8 +758,9 @@ void HighsMipSolverData::runSetup() {
     highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
                          model.a_matrix_.index_, model.a_matrix_.value_,
                          ARstart_, ARindex_, ARvalue_);
-    uplocks.resize(model.num_col_);
-    downlocks.resize(model.num_col_);
+    // (re-)initialize number of uplocks and downlocks
+    uplocks.assign(model.num_col_, 0);
+    downlocks.assign(model.num_col_, 0);
     for (HighsInt i = 0; i != model.num_col_; ++i) {
       HighsInt start = model.a_matrix_.start_[i];
       HighsInt end = model.a_matrix_.start_[i + 1];
