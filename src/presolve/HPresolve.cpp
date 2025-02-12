@@ -5176,9 +5176,11 @@ HPresolve::Result HPresolve::strengthenInequalities(
     double scale;
 
     if (model->row_lower_[row] != -kHighsInf) {
+      // ax >= lb, treat as -ax <= -lb --> -ax + lb <= 0
       maxviolation = model->row_lower_[row];
       scale = -1.0;
     } else {
+      // ax <= ub --> ax - ub <= 0
       maxviolation = -model->row_upper_[row];
       scale = 1.0;
     }
@@ -5192,6 +5194,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
     reducedcost.reserve(rowsize[row]);
     upper.reserve(rowsize[row]);
     indices.reserve(rowsize[row]);
+    positions.reserve(rowsize[row]);
     stack.reserve(rowsize[row]);
     stack.push_back(rowroot[row]);
 
@@ -5205,25 +5208,25 @@ HPresolve::Result HPresolve::strengthenInequalities(
       if (ARleft[pos] != -1) stack.push_back(ARleft[pos]);
 
       int8_t comp;
-      double weight;
-      double ub;
-      weight = Avalue[pos] * scale;
       HighsInt col = Acol[pos];
-      ub = model->col_upper_[col] - model->col_lower_[col];
+      double weight = Avalue[pos] * scale;
+      double ub = model->col_upper_[col] - model->col_lower_[col];
 
-      skiprow = ub == kHighsInf;
+      skiprow = (ub == kHighsInf) ||
+                (weight > 0 && model->col_upper_[col] == kHighsInf) ||
+                (weight < 0 && model->col_lower_[col] == -kHighsInf);
       if (skiprow) break;
 
+      // compute maximum violation
+      // scale =  1:  ax <=  ub --> violation =  ax - ub > 0
+      // scale = -1: -ax <= -lb --> violation = -ax + lb > 0
+      // this means that for scale = 1 we sum up an upper bound on constraint
+      // activity, and for scale = -1 we sum up a lower bound on constraint
+      // activity.
       if (weight > 0) {
-        skiprow = model->col_upper_[col] == kHighsInf;
-        if (skiprow) break;
-
         comp = 1;
         maxviolation += model->col_upper_[col] * weight;
       } else {
-        skiprow = model->col_lower_[col] == -kHighsInf;
-        if (skiprow) break;
-
         comp = -1;
         maxviolation += model->col_lower_[col] * weight;
         weight = -weight;
@@ -5252,6 +5255,12 @@ HPresolve::Result HPresolve::strengthenInequalities(
       stack.clear();
       continue;
     }
+
+    // maxviolation <= 0 implies that the constraint is redundant:
+    // scale =  1: upper bound on activity <= model->row_upper_[row]
+    // scale = -1: model->row_lower_[row]  <= lower bound on activity
+    // we skip redundant constraints.
+    if (maxviolation <= primal_feastol) continue;
 
     const double smallVal =
         std::max(100 * primal_feastol, primal_feastol * double(maxviolation));
@@ -5288,16 +5297,14 @@ HPresolve::Result HPresolve::strengthenInequalities(
             return reducedcost[i1] < reducedcost[i2];
           });
 
-      HighsInt coverend = cover.size();
-
       double al = reducedcost[alpos];
-      coefs.resize(coverend);
+      coefs.resize(cover.size());
       double coverrhs =
           std::max(std::ceil(double(lambda / al - primal_feastol)), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
       double step = kHighsInf;
-      for (HighsInt i = 0; i != coverend; ++i) {
+      for (size_t i = 0; i != cover.size(); ++i) {
         coefs[i] =
             std::ceil(std::min(reducedcost[cover[i]], double(lambda)) / al -
                       options->small_matrix_value);
@@ -5311,7 +5318,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
       reducedcost.push_back(step);
       upper.push_back(double(slackupper));
 
-      for (HighsInt i = 0; i != coverend; ++i)
+      for (size_t i = 0; i != cover.size(); ++i)
         reducedcost[cover[i]] -= step * coefs[i];
 
       indices.erase(std::remove_if(indices.begin(), indices.end(),
@@ -5332,7 +5339,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
                   indices.end());
     if (indices.empty()) continue;
 
-    if (scale == -1.0) {
+    if (scale < 0) {
       HighsCDouble lhs = model->row_lower_[row];
       for (HighsInt i : indices) {
         double coefdelta = double(reducedcost[i] - maxviolation);
