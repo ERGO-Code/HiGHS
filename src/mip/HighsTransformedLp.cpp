@@ -220,10 +220,18 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       if (ub - lb <= 1.5 || boundDist[col] != 0.0 || simpleLbDist[col] == 0 ||
           simpleUbDist[col] == 0) {
         // since we skip the handling of variable bound constraints for all
-        // binary and some general-integer variables, the bound type used should
-        // be a simple lower or upper bound
-        assert(oldBoundType == BoundType::kSimpleLb ||
-               oldBoundType == BoundType::kSimpleUb);
+        // binary and some general-integer variables here, the bound type used
+        // should be a simple lower or upper bound
+        if (simpleLbDist[col] < simpleUbDist[col] - mip.mipdata_->feastol) {
+          boundTypes[col] = BoundType::kSimpleLb;
+        } else if (simpleUbDist[col] <
+                   simpleLbDist[col] - mip.mipdata_->feastol) {
+          boundTypes[col] = BoundType::kSimpleUb;
+        } else if (vals[i] > 0) {
+          boundTypes[col] = BoundType::kSimpleLb;
+        } else {
+          boundTypes[col] = BoundType::kSimpleUb;
+        }
         i++;
         continue;
       }
