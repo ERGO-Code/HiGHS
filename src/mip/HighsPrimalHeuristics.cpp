@@ -1052,6 +1052,7 @@ void HighsPrimalHeuristics::randomizedRounding(
                                     kSolutionSourceRandomizedRounding);
   }
 }
+
 void HighsPrimalHeuristics::Shifting(
     const std::vector<double>& relaxationsol) {
     if (int(relaxationsol.size()) != mipsolver.numCol()) return;
@@ -1085,7 +1086,7 @@ void HighsPrimalHeuristics::Shifting(
     };
 
     while ((currentFracInt.size() > 0 || hasInfeasibleConstraints) &&
-           iterationsWithoutReductions <= maxIterationsWithoutReductions |
+           iterationsWithoutReductions <= maxIterationsWithoutReductions &&
            t <= mipsolver.mipdata_->integer_cols.size()) {
     t++;
     bool fracIntReduced = false;
@@ -1152,8 +1153,6 @@ void HighsPrimalHeuristics::Shifting(
             double xi = mipsolver.mipdata_->downlocks[it->first];
             sig = -1.0 + 1.0 / (xi + 1);
           } else {
-            it->first = j;
-            it->second = currRelSol[j];
             shifts = findShiftsByIndex(ShiftIterationsSet, j);
             sig = currentLp.col_cost_[j];
             if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
@@ -1172,7 +1171,7 @@ void HighsPrimalHeuristics::Shifting(
               sig_min = sig;
               j_min = j;
               aij_min = mipsolver.mipdata_->ARvalue_[jInd];              
-              x_j_min = it->second;
+              x_j_min = currRelSol[j];
               moveValueUp = true;
           }
         }
@@ -1183,8 +1182,6 @@ void HighsPrimalHeuristics::Shifting(
             double xi = mipsolver.mipdata_->uplocks[it->first];
             sig = -1.0 + 1.0 / (xi + 1);
           } else {
-            it->first = j;
-            it->second = currRelSol[j];
             shifts = findShiftsByIndex(ShiftIterationsSet, j);
             sig = -currentLp.col_cost_[j];
             if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
@@ -1203,7 +1200,7 @@ void HighsPrimalHeuristics::Shifting(
               sig_min = sig;
               j_min = j;
               aij_min = mipsolver.mipdata_->ARvalue_[jInd];
-              x_j_min = it->second;
+              x_j_min = currRelSol[j];
               moveValueUp = false;
           }
         }
@@ -1297,6 +1294,8 @@ void HighsPrimalHeuristics::Shifting(
     }
     // re-check for feasibility and add incumbent
     // mipsolver.mipdata_->trySolution(currRelSol, 'I');
+    if (!hasInfeasibleConstraints && currentFracInt.size() > 0)
+        ZIRound(currRelSol);
     tryRoundedPoint(currRelSol, 'I');
 }
 

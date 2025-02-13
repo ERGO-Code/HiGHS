@@ -93,23 +93,23 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   const bool other_tests = true;
   const bool test0 = other_tests;
   bool valid, integral, feasible;
-  // if (test0) {
-  //   if (dev_run)
-  //     printf("\n***************************\nSolving from saved solution\n");
-  //   highs.setOptionValue("output_flag", dev_run);
-  //   highs.readModel(model_file);
+  if (test0) {
+    if (dev_run)
+      printf("\n***************************\nSolving from saved solution\n");
+    highs.setOptionValue("output_flag", dev_run);
+    highs.readModel(model_file);
 
-  //   return_status = highs.setSolution(optimal_solution);
-  //   REQUIRE(return_status == HighsStatus::kOk);
+    return_status = highs.setSolution(optimal_solution);
+    REQUIRE(return_status == HighsStatus::kOk);
 
-  //   return_status = highs.assessPrimalSolution(valid, integral, feasible);
-  //   REQUIRE(return_status == HighsStatus::kOk);
+    return_status = highs.assessPrimalSolution(valid, integral, feasible);
+    REQUIRE(return_status == HighsStatus::kOk);
 
-  //   highs.run();
-  //   if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
-  //   REQUIRE(info.mip_node_count < scratch_num_nodes);
-  //   highs.clear();
-  // }
+    highs.run();
+    if (dev_run) printf("Num nodes = %d\n", int(info.mip_node_count));
+    REQUIRE(info.mip_node_count < scratch_num_nodes);
+    highs.clear();
+  }
 
   const bool test1 = other_tests;
   if (test1) {

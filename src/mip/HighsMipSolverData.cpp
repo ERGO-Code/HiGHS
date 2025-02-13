@@ -2101,6 +2101,10 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
+  if (mipsolver.options_mip_->mip_heuristic_run_ZIRound) {
+      heuristics.ZIRound(firstlpsol);
+      heuristics.flushStatistics();
+  }
   if (mipsolver.options_mip_->mip_heuristic_run_Shifting) {
       heuristics.Shifting(rootlpsol);
       heuristics.flushStatistics();
