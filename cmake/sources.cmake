@@ -212,6 +212,7 @@ set(highs_sources
     mip/HighsMipAnalysis.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
+    mip/HighsMipWorker.cpp
     mip/HighsModkSeparator.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsObjectiveFunction.cpp
@@ -220,6 +221,7 @@ set(highs_sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsSearch.cpp
+    mip/HighsSearchWorker.cpp
     mip/HighsSeparation.cpp
     mip/HighsSeparator.cpp
     mip/HighsTableauSeparator.cpp
@@ -333,6 +335,7 @@ set(highs_headers
     mip/HighsMipAnalysis.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
+    mip/HighsMipWorker.h
     mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
     mip/HighsObjectiveFunction.h
@@ -341,6 +344,7 @@ set(highs_headers
     mip/HighsPseudocost.h
     mip/HighsRedcostFixing.h
     mip/HighsSearch.h
+    mip/HighsSearchWorker.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
     mip/HighsTableauSeparator.h

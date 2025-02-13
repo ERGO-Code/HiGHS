@@ -23,7 +23,7 @@
 // #include "presolve/HighsSymmetry.h"
 // #include "util/HighsHash.h"
 
-class HighsSearch;
+class HighsSearchWorker;
 
 class HighsMipWorker {
   const HighsMipSolver& mipsolver_;
@@ -37,7 +37,7 @@ public: // Temporary so HighsMipWorker can be explored in other classes
   // Not sure if this should be here or in HighsSearch.
   HighsPseudocost pseudocost_;
 
-  std::unique_ptr<HighsSearch> search_ptr_;
+  std::unique_ptr<HighsSearchWorker> search_ptr_;
   // std::shared_ptr<HighsSearch> search_ptr_shared_;
   // HighsSearch* search_ptr = nullptr;
 
@@ -54,7 +54,7 @@ public: // Temporary so HighsMipWorker can be explored in other classes
 
   const HighsMipSolver& getMipSolver();
 
-  HighsSearch& getSearch();
+  HighsSearchWorker& getSearch();
 
   HighsLpRelaxation lprelaxation_;
 
