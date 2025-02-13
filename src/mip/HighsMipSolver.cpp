@@ -15,8 +15,10 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
+#include "mip/HighsSearchWorker.h"
 #include "mip/HighsSeparation.h"
 #include "mip/MipTimer.h"
 #include "presolve/HPresolve.h"
@@ -213,10 +215,17 @@ restart:
 
   std::shared_ptr<const HighsBasis> basis;
   HighsSearch search{*this, mipdata_->pseudocost};
+
+  HighsMipWorker master_worker(*this, mipdata_->lp);
+  HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
+
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
   HighsSeparation sepa(*this);
 
   search.setLpRelaxation(&mipdata_->lp);
+
+  master_search.setLpRelaxation(&mipdata_->lp);
+
   sepa.setLpRelaxation(&mipdata_->lp);
 
   double prev_lower_bound = mipdata_->lower_bound;
