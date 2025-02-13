@@ -82,11 +82,11 @@ public: // Temporary so HighsSearch can be explored in other classes
   };
 
   // Data members for parallel search
-  bool limit_reached_;
-  bool performed_dive_;
-  bool break_search_;
-  HighsInt evaluate_node_global_max_recursion_level_;
-  HighsInt evaluate_node_local_max_recursion_level_;
+  // bool limit_reached_;
+  // bool performed_dive_;
+  // bool break_search_;
+  // HighsInt evaluate_node_global_max_recursion_level_;
+  // HighsInt evaluate_node_local_max_recursion_level_;
 
  private:
   ChildSelectionRule childselrule;
@@ -235,7 +235,8 @@ public: // Temporary so HighsSearch can be explored in other classes
 
   const NodeData* getParentNodeData() const;
 
-  NodeResult evaluateNode(const HighsInt recursion_level);
+  NodeResult evaluateNode();
+  // NodeResult evaluateNode(const HighsInt recursion_level);
 
   NodeResult branch();
 
@@ -253,8 +254,10 @@ public: // Temporary so HighsSearch can be explored in other classes
 
   void printDisplayLine(char first, bool header = false);
 
-  void dive(const HighsInt search_id = 0);
-  NodeResult theDive();
+  NodeResult dive();
+
+  // void dive(const HighsInt search_id = 0);
+  // NodeResult theDive();
 
   HighsDomain& getLocalDomain() { return localdom; }
 
@@ -266,9 +269,10 @@ public: // Temporary so HighsSearch can be explored in other classes
 
   void solveDepthFirst(int64_t maxbacktracks = 1);
 
-  HighsInt getNnodes() const {
-    return nnodes;
-  }  // For parallel-tree-search study
+  // HighsInt getNnodes() const {
+  //   return nnodes;
+  // }  // For parallel-tree-search study
+
 };
 
 #endif

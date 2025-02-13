@@ -38,11 +38,11 @@ pseudocost)
   inheuristic = false;
   inbranching = false;
   countTreeWeight = true;
-  limit_reached_ = false;
-  performed_dive_ = false;
-  break_search_ = false;
-  evaluate_node_global_max_recursion_level_ = 0;
-  evaluate_node_local_max_recursion_level_ = 0;
+  // limit_reached_ = false;
+  // performed_dive_ = false;
+  // break_search_ = false;
+  // evaluate_node_global_max_recursion_level_ = 0;
+  // evaluate_node_local_max_recursion_level_ = 0;
 
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
@@ -975,26 +975,27 @@ void HighsSearchWorker::installNode(HighsNodeQueue::OpenNode&& node) {
   depthoffset = node.depth - 1;
 }
 
-HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
-    const HighsInt recursion_level) {
-  if (recursion_level == 0) evaluate_node_local_max_recursion_level_ = 0;
-  evaluate_node_local_max_recursion_level_ =
-      std::max(recursion_level, evaluate_node_local_max_recursion_level_);
-  evaluate_node_global_max_recursion_level_ =
-      std::max(recursion_level, evaluate_node_global_max_recursion_level_);
+HighsSearch::NodeResult HighsSearch::evaluateNode() {
+// HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
+//     const HighsInt recursion_level) {
+//   if (recursion_level == 0) evaluate_node_local_max_recursion_level_ = 0;
+//   evaluate_node_local_max_recursion_level_ =
+//       std::max(recursion_level, evaluate_node_local_max_recursion_level_);
+//   evaluate_node_global_max_recursion_level_ =
+//       std::max(recursion_level, evaluate_node_global_max_recursion_level_);
 
-  // IG make a copy?
-  HighsMipAnalysis analysis_ = mipsolver.analysis_;
-  if (recursion_level == 0) {
-    assert(!analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
-    analysis_.mipTimerStart(kMipClockEvaluateNodeInner);
-    if (analysis_.analyse_mip_time)
-      assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
-  } else if (analysis_.analyse_mip_time) {
-    const bool evaluate_node_inner_running =
-        analysis_.mipTimerRunning(kMipClockEvaluateNodeInner);
-    assert(evaluate_node_inner_running);
-  }
+//   // IG make a copy?
+//   HighsMipAnalysis analysis_ = mipsolver.analysis_;
+//   if (recursion_level == 0) {
+//     assert(!analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
+//     analysis_.mipTimerStart(kMipClockEvaluateNodeInner);
+//     if (analysis_.analyse_mip_time)
+//       assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
+//   } else if (analysis_.analyse_mip_time) {
+//     const bool evaluate_node_inner_running =
+//         analysis_.mipTimerRunning(kMipClockEvaluateNodeInner);
+//     assert(evaluate_node_inner_running);
+//   }
 
   assert(!nodestack.empty());
   NodeData& currnode = nodestack.back();
@@ -1004,8 +1005,8 @@ HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
 
   if (!inheuristic &&
       currnode.lower_bound > mipsolver.mipdata_->optimality_limit) {
-    if (recursion_level == 0)
-      analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+    // if (recursion_level == 0)
+    //   analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
     return NodeResult::kSubOptimal;
   }
 
@@ -1148,13 +1149,14 @@ HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
 
               localdom.conflictAnalysis(mipworker.conflictpool_);
             } else if (!localdom.getChangedCols().empty()) {
-              if (analysis_.analyse_mip_time)
-                assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
-              const HighsSearchWorker::NodeResult evaluate_node_result =
-                  evaluateNode(recursion_level + 1);
-              if (recursion_level == 0)
-                analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
-              return evaluate_node_result;
+              // if (analysis_.analyse_mip_time)
+              //   assert(analysis_.mipTimerRunning(kMipClockEvaluateNodeInner));
+              // const HighsSearchWorker::NodeResult evaluate_node_result =
+              //     evaluateNode(recursion_level + 1);
+              // if (recursion_level == 0)
+              //   analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+              // return evaluate_node_result;
+              return evaluateNode();
             }
           } else {
             if (!inheuristic) {
@@ -1172,13 +1174,14 @@ HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
                       parent->branchingdecision.column, upbranch);
                 }
 
-                localdom.conflictAnalysis(mipworker.conflictpool_);
+                 localdom.conflictAnalysis(mipworker.conflictpool_);
               } else if (!localdom.getChangedCols().empty()) {
-                const HighsSearchWorker::NodeResult evaluate_node_result =
-                    evaluateNode(recursion_level + 1);
-                if (recursion_level == 0)
-                  analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
-                return evaluate_node_result;
+              //   const HighsSearchWorker::NodeResult evaluate_node_result =
+              //       evaluateNode(recursion_level + 1);
+              //   if (recursion_level == 0)
+              //     analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+              //   return evaluate_node_result;
+                return evaluateNode();
               }
             }
           }
@@ -1224,7 +1227,7 @@ HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
     }
   }
 
-  if (recursion_level == 0) analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
+  // if (recursion_level == 0) analysis_.mipTimerStop(kMipClockEvaluateNodeInner);
   return result;
 }
 
@@ -1468,7 +1471,8 @@ HighsSearchWorker::NodeResult HighsSearchWorker::branch() {
     }
 
     assert(!localdom.getChangedCols().empty());
-    result = evaluateNode(0);
+    result = evaluateNode();
+    // result = evaluateNode(0);
     if (result == NodeResult::kSubOptimal) break;
   }
   inbranching = false;
@@ -1585,21 +1589,24 @@ HighsSearchWorker::NodeResult HighsSearchWorker::branch() {
 
     // reevaluate the node with LP presolve enabled
     lp->getLpSolver().setOptionValue("presolve", "on");
-    result = evaluateNode(0);
-
+    result = evaluateNode();
+    // result = evaluateNode(0);
+ 
     if (result == NodeResult::kOpen) {
       // LP still not solved, reevaluate with primal simplex
       lp->getLpSolver().clearSolver();
       lp->getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyPrimal);
-      result = evaluateNode(0);
+      result = evaluateNode();
+      // result = evaluateNode(0);
       lp->getLpSolver().setOptionValue("simplex_strategy",
                                        kSimplexStrategyDual);
       if (result == NodeResult::kOpen) {
         // LP still not solved, reevaluate with IPM instead of simplex
         lp->getLpSolver().clearSolver();
         lp->getLpSolver().setOptionValue("solver", "ipm");
-        result = evaluateNode(0);
+        result = evaluateNode();
+        // result = evaluateNode(0);
 
         if (result == NodeResult::kOpen) {
           highsLogUser(mipsolver.options_mip_->log_options,
@@ -1999,163 +2006,165 @@ bool HighsSearchWorker::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-void HighsSearchWorker::dive(const HighsInt search_id) {
-  // assert(this->hasNode());
-  // performed_dive_ = true;
+HighsSearch::NodeResult HighsSearch::dive() {
+// void HighsSearchWorker::dive(const HighsInt search_id) {
+//   // assert(this->hasNode());
+//   // performed_dive_ = true;
 
-  // IG make a copy? After const mip solver in highs search.
-  HighsMipAnalysis analysis_ = mipsolver.analysis_;
-  const HighsOptions* options_mip_ = mipsolver.options_mip_;
-  const bool search_logging = false;
-  if (!mipsolver.submip) {
-    if (search_logging) {
-      printf("\nHighsMipSolver::run() Number of active nodes %d\n",
-             int(mipsolver.mipdata_->nodequeue.numActiveNodes()));
-    }
-  }
-  analysis_.mipTimerStart(kMipClockPerformAging1);
-  mipworker.conflictpool_.performAging();
-  analysis_.mipTimerStop(kMipClockPerformAging1);
+//   // IG make a copy? After const mip solver in highs search.
+//   HighsMipAnalysis analysis_ = mipsolver.analysis_;
+//   const HighsOptions* options_mip_ = mipsolver.options_mip_;
+//   const bool search_logging = false;
+//   if (!mipsolver.submip) {
+//     if (search_logging) {
+//       printf("\nHighsMipSolver::run() Number of active nodes %d\n",
+//              int(mipsolver.mipdata_->nodequeue.numActiveNodes()));
+//     }
+//   }
+//   analysis_.mipTimerStart(kMipClockPerformAging1);
+//   mipworker.conflictpool_.performAging();
+//   analysis_.mipTimerStop(kMipClockPerformAging1);
 
-  // set iteration limit for each lp solve during the dive to 10 times the
-  // average nodes
-  HighsInt iterlimit = 10 * std::max(mipsolver.mipdata_->lp.getAvgSolveIters(),
-                                     mipsolver.mipdata_->avgrootlpiters);
-  iterlimit =
-      std::max({HighsInt{10000}, iterlimit,
-                HighsInt((3 * mipsolver.mipdata_->firstrootlpiters) / 2)});
+//   // set iteration limit for each lp solve during the dive to 10 times the
+//   // average nodes
+//   HighsInt iterlimit = 10 * std::max(mipsolver.mipdata_->lp.getAvgSolveIters(),
+//                                      mipsolver.mipdata_->avgrootlpiters);
+//   iterlimit =
+//       std::max({HighsInt{10000}, iterlimit,
+//                 HighsInt((3 * mipsolver.mipdata_->firstrootlpiters) / 2)});
 
-  mipsolver.mipdata_->lp.setIterationLimit(iterlimit);
+//   mipsolver.mipdata_->lp.setIterationLimit(iterlimit);
 
-  if (!this->hasNode()) return;
-  performed_dive_ = true;
+//   if (!this->hasNode()) return;
+//   performed_dive_ = true;
 
-  // perform the dive and put the open nodes to the queue
-  size_t plungestart = mipsolver.mipdata_->num_nodes;
+//   // perform the dive and put the open nodes to the queue
+//   size_t plungestart = mipsolver.mipdata_->num_nodes;
 
-  // bool considerHeuristics = true;
-  bool considerHeuristics = false;
+//   // bool considerHeuristics = true;
+//   bool considerHeuristics = false;
 
-  // bool considerHeuristics = false;
-  // if (search_id == 0)
-  //   considerHeuristics = true;
+//   // bool considerHeuristics = false;
+//   // if (search_id == 0)
+//   //   considerHeuristics = true;
 
-  analysis_.mipTimerStart(kMipClockDive);
-  while (true) {
-    // Possibly apply primal heuristics
-    if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
-      analysis_.mipTimerStart(kMipClockEvaluateNode0);
-      const HighsSearchWorker::NodeResult evaluate_node_result =
-          this->evaluateNode(0);
-      analysis_.mipTimerStop(kMipClockEvaluateNode0);
+//   analysis_.mipTimerStart(kMipClockDive);
+//   while (true) {
+//     // Possibly apply primal heuristics
+//     if (considerHeuristics && mipsolver.mipdata_->moreHeuristicsAllowed()) {
+//       analysis_.mipTimerStart(kMipClockEvaluateNode0);
+//       const HighsSearchWorker::NodeResult evaluate_node_result =
+//           this->evaluateNode(0);
+//       analysis_.mipTimerStop(kMipClockEvaluateNode0);
 
-      if (evaluate_node_result == HighsSearchWorker::NodeResult::kSubOptimal) {
-        printf(
-            "HighsMipSolver::run() evaluate_node_result == "
-            "HighsSearchWorker::NodeResult::kSubOptimal\n");
-        //        assert(345 == 678);
-        break;
-      }
+//       if (evaluate_node_result == HighsSearchWorker::NodeResult::kSubOptimal) {
+//         printf(
+//             "HighsMipSolver::run() evaluate_node_result == "
+//             "HighsSearchWorker::NodeResult::kSubOptimal\n");
+//         //        assert(345 == 678);
+//         break;
+//       }
 
-      if (this->currentNodePruned()) {
-        ++mipsolver.mipdata_->num_leaves;
-        this->flushStatistics();
-      } else {
-        analysis_.mipTimerStart(kMipClockPrimalHeuristics);
-        if (mipsolver.mipdata_->incumbent.empty()) {
-          analysis_.mipTimerStart(kMipClockRandomizedRounding0);
-          mipsolver.mipdata_->heuristics.randomizedRounding(
-              mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
-          analysis_.mipTimerStop(kMipClockRandomizedRounding0);
-        }
+//       if (this->currentNodePruned()) {
+//         ++mipsolver.mipdata_->num_leaves;
+//         this->flushStatistics();
+//       } else {
+//         analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+//         if (mipsolver.mipdata_->incumbent.empty()) {
+//           analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+//           mipsolver.mipdata_->heuristics.randomizedRounding(
+//               mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+//           analysis_.mipTimerStop(kMipClockRandomizedRounding0);
+//         }
 
-        if (mipsolver.mipdata_->incumbent.empty()) {
-          analysis_.mipTimerStart(kMipClockRens);
-          mipsolver.mipdata_->heuristics.RENS(
-              mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
-          analysis_.mipTimerStop(kMipClockRens);
-        } else {
-          analysis_.mipTimerStart(kMipClockRins);
-          mipsolver.mipdata_->heuristics.RINS(
-              mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
-          analysis_.mipTimerStop(kMipClockRins);
-        }
+//         if (mipsolver.mipdata_->incumbent.empty()) {
+//           analysis_.mipTimerStart(kMipClockRens);
+//           mipsolver.mipdata_->heuristics.RENS(
+//               mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+//           analysis_.mipTimerStop(kMipClockRens);
+//         } else {
+//           analysis_.mipTimerStart(kMipClockRins);
+//           mipsolver.mipdata_->heuristics.RINS(
+//               mipsolver.mipdata_->lp.getLpSolver().getSolution().col_value);
+//           analysis_.mipTimerStop(kMipClockRins);
+//         }
 
-        mipsolver.mipdata_->heuristics.flushStatistics();
-        analysis_.mipTimerStop(kMipClockPrimalHeuristics);
-      }
-    }
+//         mipsolver.mipdata_->heuristics.flushStatistics();
+//         analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+//       }
+//     }
 
-    considerHeuristics = false;
+//     considerHeuristics = false;
 
-    if (mipsolver.mipdata_->domain.infeasible()) break;
+//     if (mipsolver.mipdata_->domain.infeasible()) break;
 
-    if (!this->currentNodePruned()) {
-      double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
-      analysis_.mipTimerStart(kMipClockTheDive);
-      const HighsSearchWorker::NodeResult search_dive_result = this->theDive();
-      analysis_.mipTimerStop(kMipClockTheDive);
-      if (analysis_.analyse_mip_time) {
-        this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
-        analysis_.dive_time.push_back(this_dive_time);
-      }
-      if (search_dive_result == HighsSearchWorker::NodeResult::kSubOptimal) break;
+//     if (!this->currentNodePruned()) {
+//       double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
+//       analysis_.mipTimerStart(kMipClockTheDive);
+//       const HighsSearchWorker::NodeResult search_dive_result = this->theDive();
+//       analysis_.mipTimerStop(kMipClockTheDive);
+//       if (analysis_.analyse_mip_time) {
+//         this_dive_time += analysis_.mipTimerRead(kMipClockTheDive);
+//         analysis_.dive_time.push_back(this_dive_time);
+//       }
+//       if (search_dive_result == HighsSearchWorker::NodeResult::kSubOptimal) break;
 
-      ++mipsolver.mipdata_->num_leaves;
+//       ++mipsolver.mipdata_->num_leaves;
 
-      if (!mipsolver.submip) {
-        if (search_logging) {
-          //	  printf("HighsMipSolver::run() Dive nodes %5d; ",
-          // int(search.getNnodes()));
-        }
-      }
+//       if (!mipsolver.submip) {
+//         if (search_logging) {
+//           //	  printf("HighsMipSolver::run() Dive nodes %5d; ",
+//           // int(search.getNnodes()));
+//         }
+//       }
 
-      this->flushStatistics();
-    }
+//       this->flushStatistics();
+//     }
 
-    if (mipsolver.mipdata_->checkLimits()) {
-      limit_reached_ = true;
-      break;
-    }
+//     if (mipsolver.mipdata_->checkLimits()) {
+//       limit_reached_ = true;
+//       break;
+//     }
 
-    HighsInt numPlungeNodes = mipsolver.mipdata_->num_nodes - plungestart;
-    if (!mipsolver.submip) {
-      if (search_logging) {
-        const bool plunge_break = numPlungeNodes >= 100;
-        printf("plunge nodes%3d: break = %s\n", int(numPlungeNodes),
-               highsBoolToString(plunge_break).c_str());
-      }
-    }
-    if (numPlungeNodes >= 100) break;
+//     HighsInt numPlungeNodes = mipsolver.mipdata_->num_nodes - plungestart;
+//     if (!mipsolver.submip) {
+//       if (search_logging) {
+//         const bool plunge_break = numPlungeNodes >= 100;
+//         printf("plunge nodes%3d: break = %s\n", int(numPlungeNodes),
+//                highsBoolToString(plunge_break).c_str());
+//       }
+//     }
+//     if (numPlungeNodes >= 100) break;
 
-    analysis_.mipTimerStart(kMipClockBacktrackPlunge);
-    const bool backtrack_plunge =
-        this->backtrackPlunge(mipsolver.mipdata_->nodequeue);
-    analysis_.mipTimerStop(kMipClockBacktrackPlunge);
-    if (!backtrack_plunge) break;
+//     analysis_.mipTimerStart(kMipClockBacktrackPlunge);
+//     const bool backtrack_plunge =
+//         this->backtrackPlunge(mipsolver.mipdata_->nodequeue);
+//     analysis_.mipTimerStop(kMipClockBacktrackPlunge);
+//     if (!backtrack_plunge) break;
 
-    assert(this->hasNode());
+//     assert(this->hasNode());
 
-    if (mipworker.conflictpool_.getNumConflicts() >
-        options_mip_->mip_pool_soft_limit) {
-      analysis_.mipTimerStart(kMipClockPerformAging2);
-      mipworker.conflictpool_.performAging();
-      analysis_.mipTimerStop(kMipClockPerformAging2);
-    }
+//     if (mipworker.conflictpool_.getNumConflicts() >
+//         options_mip_->mip_pool_soft_limit) {
+//       analysis_.mipTimerStart(kMipClockPerformAging2);
+//       mipworker.conflictpool_.performAging();
+//       analysis_.mipTimerStop(kMipClockPerformAging2);
+//     }
 
-    this->flushStatistics();
-    mipsolver.mipdata_->printDisplayLine();
-    // printf("continue plunging due to good estimate\n");
-  }
-  analysis_.mipTimerStop(kMipClockDive);
-}
+//     this->flushStatistics();
+//     mipsolver.mipdata_->printDisplayLine();
+//     // printf("continue plunging due to good estimate\n");
+//   }
+//   analysis_.mipTimerStop(kMipClockDive);
+// }
 
-HighsSearchWorker::NodeResult HighsSearchWorker::theDive() {
+// HighsSearchWorker::NodeResult HighsSearchWorker::theDive() {
   reliableatnode.clear();
 
   do {
     ++nnodes;
-    NodeResult result = evaluateNode(0);
+    NodeResult result = evaluateNode();
+    // NodeResult result = evaluateNode(0);
 
     if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 
@@ -2170,7 +2179,8 @@ void HighsSearchWorker::solveDepthFirst(int64_t maxbacktracks) {
   do {
     if (maxbacktracks == 0) break;
 
-    NodeResult result = theDive();
+    NodeResult result = dive();
+    // NodeResult result = theDive();
     // if a limit was reached the result might be open
     if (result == NodeResult::kOpen) break;
 
