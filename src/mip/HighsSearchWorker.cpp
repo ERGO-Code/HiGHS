@@ -975,7 +975,7 @@ void HighsSearchWorker::installNode(HighsNodeQueue::OpenNode&& node) {
   depthoffset = node.depth - 1;
 }
 
-HighsSearch::NodeResult HighsSearch::evaluateNode() {
+HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode() {
 // HighsSearchWorker::NodeResult HighsSearchWorker::evaluateNode(
 //     const HighsInt recursion_level) {
 //   if (recursion_level == 0) evaluate_node_local_max_recursion_level_ = 0;
@@ -2006,7 +2006,7 @@ bool HighsSearchWorker::backtrackUntilDepth(HighsInt targetDepth) {
   return true;
 }
 
-HighsSearch::NodeResult HighsSearch::dive() {
+HighsSearchWorker::NodeResult HighsSearchWorker::dive() {
 // void HighsSearchWorker::dive(const HighsInt search_id) {
 //   // assert(this->hasNode());
 //   // performed_dive_ = true;
