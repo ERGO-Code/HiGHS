@@ -5201,20 +5201,20 @@ HPresolve::Result HPresolve::strengthenInequalities(
     bool skiprow = false;
 
     while (!stack.empty()) {
+      // pop element from stack
       HighsInt pos = stack.back();
       stack.pop_back();
 
+      // add non-zeros to stack
       if (ARright[pos] != -1) stack.push_back(ARright[pos]);
       if (ARleft[pos] != -1) stack.push_back(ARleft[pos]);
 
-      int8_t comp;
+      // get column index
       HighsInt col = Acol[pos];
-      double weight = Avalue[pos] * scale;
-      double ub = model->col_upper_[col] - model->col_lower_[col];
 
-      skiprow = (ub == kHighsInf) ||
-                (weight > 0 && model->col_upper_[col] == kHighsInf) ||
-                (weight < 0 && model->col_lower_[col] == -kHighsInf);
+      // skip row if a column bound is not finite
+      skiprow = model->col_lower_[col] == -kHighsInf ||
+                model->col_upper_[col] == kHighsInf;
       if (skiprow) break;
 
       // compute maximum violation
@@ -5223,6 +5223,9 @@ HPresolve::Result HPresolve::strengthenInequalities(
       // this means that for scale = 1 we sum up an upper bound on constraint
       // activity, and for scale = -1 we sum up a lower bound on constraint
       // activity.
+      int8_t comp;
+      double weight = Avalue[pos] * scale;
+      double ub = model->col_upper_[col] - model->col_lower_[col];
       if (weight > 0) {
         comp = 1;
         maxviolation += model->col_upper_[col] * weight;
@@ -5339,26 +5342,10 @@ HPresolve::Result HPresolve::strengthenInequalities(
                   indices.end());
     if (indices.empty()) continue;
 
-    if (scale < 0) {
-      HighsCDouble lhs = model->row_lower_[row];
+    auto updateNonZeros = [&](HighsInt row, HighsCDouble& rhs,
+                              HighsInt direction) {
       for (HighsInt i : indices) {
-        double coefdelta = double(reducedcost[i] - maxviolation);
-        HighsInt pos = positions[i];
-
-        if (complementation[i] == -1) {
-          lhs -= coefdelta * model->col_lower_[Acol[pos]];
-          addToMatrix(row, Acol[pos], -coefdelta);
-        } else {
-          lhs += coefdelta * model->col_upper_[Acol[pos]];
-          addToMatrix(row, Acol[pos], coefdelta);
-        }
-      }
-
-      model->row_lower_[row] = double(lhs);
-    } else {
-      HighsCDouble rhs = model->row_upper_[row];
-      for (HighsInt i : indices) {
-        double coefdelta = double(reducedcost[i] - maxviolation);
+        double coefdelta = direction * double(reducedcost[i] - maxviolation);
         HighsInt pos = positions[i];
 
         if (complementation[i] == -1) {
@@ -5369,7 +5356,16 @@ HPresolve::Result HPresolve::strengthenInequalities(
           addToMatrix(row, Acol[pos], -coefdelta);
         }
       }
+    };
 
+    // update / add non-zeros
+    if (scale < 0) {
+      HighsCDouble lhs = model->row_lower_[row];
+      updateNonZeros(row, lhs, HighsInt{-1});
+      model->row_lower_[row] = double(lhs);
+    } else {
+      HighsCDouble rhs = model->row_upper_[row];
+      updateNonZeros(row, rhs, HighsInt{1});
       model->row_upper_[row] = double(rhs);
     }
 
