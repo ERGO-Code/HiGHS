@@ -4203,7 +4203,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       if (mipsolver != nullptr) {
         HighsInt num_strengthened = -1;
-        HPRESOLVE_CHECKED_CALL(strengthenInequalities(num_strengthened));
+        HPRESOLVE_CHECKED_CALL(
+            strengthenInequalities(postsolve_stack, num_strengthened));
         assert(num_strengthened >= 0);
         if (num_strengthened > 0)
           highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -5143,7 +5144,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 }
 
 HPresolve::Result HPresolve::strengthenInequalities(
-    HighsInt& num_strengthened) {
+    HighsPostsolveStack& postsolve_stack, HighsInt& num_strengthened) {
   std::vector<int8_t> complementation;
   std::vector<double> reducedcost;
   std::vector<double> upper;
@@ -5262,8 +5263,10 @@ HPresolve::Result HPresolve::strengthenInequalities(
     // maxviolation <= 0 implies that the constraint is redundant:
     // scale =  1: upper bound on activity <= model->row_upper_[row]
     // scale = -1: model->row_lower_[row]  <= lower bound on activity
-    // we skip redundant constraints.
-    if (maxviolation <= primal_feastol) continue;
+    if (maxviolation <= primal_feastol) {
+      HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
+      continue;
+    }
 
     const double smallVal =
         std::max(100 * primal_feastol, primal_feastol * double(maxviolation));
