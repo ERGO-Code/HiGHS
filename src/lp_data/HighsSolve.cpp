@@ -84,10 +84,34 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
-    if (solver_object.model_status_ == HighsModelStatus::kOptimal &&
-        (solver_object.highs_info_.num_primal_infeasibilities > 0 ||
-         solver_object.highs_info_.num_dual_infeasibilities))
-      solver_object.model_status_ = HighsModelStatus::kUnknown;
+    if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
+      const HighsInfo& info = solver_object.highs_info_;
+      if (info.num_primal_infeasibilities || info.num_dual_infeasibilities) {
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "Solver %s claims optimality, but with\n",
+                     options.solver.c_str());
+        if (info.num_primal_infeasibilities)
+          highsLogUser(
+              options.log_options, HighsLogType::kWarning,
+              "       num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
+              int(info.num_primal_infeasibilities),
+              info.max_primal_infeasibility, info.sum_primal_infeasibilities);
+        if (info.num_dual_infeasibilities)
+          highsLogUser(
+              options.log_options, HighsLogType::kWarning,
+              "       num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
+              int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
+              info.sum_dual_infeasibilities);
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "   and     max/sum          %9.4g / %9.4g "
+                     "complementarity violations\n",
+                     info.max_complementarity_violation,
+                     info.sum_complementarity_violations);
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "   so set model status to \"unknown\"\n");
+        solver_object.model_status_ = HighsModelStatus::kUnknown;
+      }
+    }
     if (options.solver == kIpmString || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpIpx

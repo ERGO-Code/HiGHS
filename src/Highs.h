@@ -1471,7 +1471,7 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
-  bool written_log_header = false;
+  bool written_log_header_ = false;
 
   HighsStatus solve();
 

@@ -1717,6 +1717,7 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
                                      HighsInt& num_nz, double& offset,
                                      double* cost, double* rhs, HighsInt* start,
                                      HighsInt* index, double* value) {
+  this->logHeader();
   if (!this->standard_form_valid_) {
     HighsStatus status = formStandardFormLp();
     assert(status == HighsStatus::kOk);
@@ -3874,10 +3875,13 @@ HighsStatus Highs::callSolveQp() {
   // Define the QP solver iteration logging function
   settings.iteration_log.subscribe([this](Statistics& stats) {
     int rep = stats.iteration.size() - 1;
+    std::string time_string =
+        options_.timeless_log ? ""
+                              : highsFormatToString(" %9.2fs", stats.time[rep]);
     highsLogUser(options_.log_options, HighsLogType::kInfo,
-                 "%11d  %15.8g           %6d %9.2fs\n",
-                 int(stats.iteration[rep]), stats.objval[rep],
-                 int(stats.nullspacedimension[rep]), stats.time[rep]);
+                 "%11d  %15.8g           %6d%s\n", int(stats.iteration[rep]),
+                 stats.objval[rep], int(stats.nullspacedimension[rep]),
+                 time_string.c_str());
   });
 
   // Define the QP nullspace limit logging function
@@ -4249,9 +4253,10 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 
 // End of public methods
 void Highs::logHeader() {
-  if (written_log_header) return;
+  if (written_log_header_) return;
+  if (!*options_.log_options.output_flag) return;
   highsLogHeader(options_.log_options, options_.log_githash);
-  written_log_header = true;
+  written_log_header_ = true;
   return;
 }
 
@@ -4611,9 +4616,11 @@ void Highs::reportSolvedLpQpStats() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
   }
-  double run_time = timer_.read();
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "HiGHS run time      : %13.2f\n", run_time);
+  if (!options_.timeless_log) {
+    double run_time = timer_.read();
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "HiGHS run time      : %13.2f\n", run_time);
+  }
 }
 
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {

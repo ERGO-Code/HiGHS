@@ -108,8 +108,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
-  H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
-  cupdlp_int ifScaling = 1;
+  H_Init_Scaling(local_log_level, options.pdlp_scaling_mode, scaling, nCols,
+                 nRows, cost, rhs);
+  cupdlp_int ifScaling = intParam[IF_SCALING];
 
   CUPDLPwork* w = cupdlp_NULL;
   cupdlp_init_work(w, 1);
@@ -687,7 +688,25 @@ void getUserParamsFromOptions(const HighsOptions& options,
   intParam[N_LOG_LEVEL] = getCupdlpLogLevel(options);
   //
   ifChangeIntParam[IF_SCALING] = true;
-  intParam[IF_SCALING] = options.pdlp_scaling ? 1 : 0;
+  cupdlp_int scaling_on =
+      (options.pdlp_features_off & kPdlpScalingOff) == 0 ? 1 : 0;
+  intParam[IF_SCALING] = scaling_on;
+  if (scaling_on == 0)
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "PDLP: Scaling off\n");
+  //
+  ifChangeIntParam[E_LINE_SEARCH_METHOD] = true;
+  cupdlp_int adaptive_lineasearch =
+      (options.pdlp_features_off & kPdlpAdaptiveStepSizeOff) == 0 ? 1 : 0;
+  intParam[E_LINE_SEARCH_METHOD] = adaptive_lineasearch;
+  if (adaptive_lineasearch == 1) {
+    intParam[E_LINE_SEARCH_METHOD] = PDHG_ADAPTIVE_LINESEARCH;
+  } else {
+    intParam[E_LINE_SEARCH_METHOD] = PDHG_FIXED_LINESEARCH;
+  }
+  if (adaptive_lineasearch == 0)
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "PDLP: Adaptive line search off\n");
   //
   ifChangeFloatParam[D_PRIMAL_TOL] = true;
   floatParam[D_PRIMAL_TOL] = options.primal_feasibility_tolerance;
@@ -702,7 +721,13 @@ void getUserParamsFromOptions(const HighsOptions& options,
   floatParam[D_TIME_LIM] = options.time_limit;
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
-  intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
+  cupdlp_int restart_on =
+      (options.pdlp_features_off & kPdlpRestartOff) == 0 ? 1 : 0;
+  if (options.pdlp_e_restart_method == 0) restart_on = 0;
+  intParam[E_RESTART_METHOD] = restart_on;
+  if (restart_on == 0)
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "PDLP: Restart off\n");
   //
 
   // for the moment only native termination is allowed with GPU

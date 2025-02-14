@@ -335,14 +335,16 @@ struct HighsOptionsStruct {
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
+  bool timeless_log;
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
 
   // Options for PDLP solver
+  HighsInt pdlp_features_off;
   bool pdlp_native_termination;
-  bool pdlp_scaling;
   HighsInt pdlp_iteration_limit;
+  HighsInt pdlp_scaling_mode;
   HighsInt pdlp_e_restart_method;
   double pdlp_d_gap_tol;
 
@@ -485,10 +487,12 @@ struct HighsOptionsStruct {
         write_presolved_model_file(""),
         output_flag(false),
         log_to_console(false),
+        timeless_log(false),
         ipm_iteration_limit(0),
+        pdlp_features_off(0),
         pdlp_native_termination(false),
-        pdlp_scaling(false),
         pdlp_iteration_limit(0),
+        pdlp_scaling_mode(0),
         pdlp_e_restart_method(0),
         pdlp_d_gap_tol(0.0),
         qp_iteration_limit(0),
@@ -771,7 +775,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
-        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
         advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
         kSimplexStrategyMax);
     records.push_back(record_int);
@@ -845,6 +849,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("log_to_console",
                                        "Enables or disables console logging",
                                        advanced, &log_to_console, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "timeless_log", "Suppression of time-based data in logging", true,
+        &timeless_log, false);
     records.push_back(record_bool);
 
     record_string =
@@ -1084,15 +1093,18 @@ class HighsOptions : public HighsOptionsStruct {
         &ipm_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "pdlp_features_off",
+        "Mask for switching PDLP features off: 1 => Scaling; 2 => Restart; 4 "
+        "=> AdaptiveStepSize",
+        advanced, &pdlp_features_off, kPdlpAllFeaturesOn, kPdlpAllFeaturesOn,
+        kPdlpAllFeaturesOff);
+    records.push_back(record_int);
+
     record_bool = new OptionRecordBool(
         "pdlp_native_termination",
         "Use native termination for PDLP solver: Default = false", advanced,
         &pdlp_native_termination, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "pdlp_scaling", "Scaling option for PDLP solver: Default = true",
-        advanced, &pdlp_scaling, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
@@ -1100,10 +1112,16 @@ class HighsOptions : public HighsOptionsStruct {
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("pdlp_scaling_mode",
+                                     "Scaling mode for PDLP solver (default = "
+                                     "5): 1 => Ruiz; 2 => L2; 4 => PC",
+                                     advanced, &pdlp_scaling_mode, 0, 5, 7);
+    records.push_back(record_int);
+
     record_int = new OptionRecordInt("pdlp_e_restart_method",
                                      "Restart mode for PDLP solver: 0 => none; "
-                                     "1 => GPU (default); 2 => CPU ",
-                                     advanced, &pdlp_e_restart_method, 0, 1, 2);
+                                     "1 => GPU",
+                                     advanced, &pdlp_e_restart_method, 0, 1, 1);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(

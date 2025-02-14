@@ -1388,6 +1388,8 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
   //    the lifting functions have minimality of the cover as necessary facet
   //    condition
   bool success = false;
+  bool saveIntegalSupport = false;
+  bool saveIntegralCoefficients = false;
   do {
     if (!determineCover(lpSol)) break;
 
@@ -1409,6 +1411,11 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
 
   double minMirEfficacy = minEfficacy;
   if (success) {
+    // save data that might otherwise be overwritten when calling the cmir
+    // separator
+    saveIntegalSupport = integralSupport;
+    saveIntegralCoefficients = integralCoefficients;
+
     // compute violation and squared norm
     double violation = -double(rhs);
     double sqrnorm = 0.0;
@@ -1433,11 +1440,6 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
   // and, thus, complementation-related data does not have to be restored here.
   inds = tmpInds.data();
   vals = tmpVals.data();
-
-  // save data that might otherwise be overwritten when calling the cmir
-  // separator
-  bool saveIntegalSupport = integralSupport;
-  bool saveIntegralCoefficients = integralCoefficients;
 
   if (cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale)) {
     // take the cmir cut as it is better

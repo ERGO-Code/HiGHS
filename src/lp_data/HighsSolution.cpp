@@ -265,7 +265,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       lower = lp.row_lower_[iRow];
       upper = lp.row_upper_[iRow];
       value = solution.row_value[iRow];
-      // @FlipRowDual -solution.row_dual[iRow]; became solution.row_dual[iRow];
       if (have_dual_solution) dual = solution.row_dual[iRow];
       if (have_basis) status = basis.row_status[iRow];
       integrality = HighsVarType::kContinuous;
@@ -349,7 +348,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         } else {
           primal_negative_sum[iRow] -= term;
         }
-        // @FlipRowDual += became -=
         if (have_dual_solution) {
           double term = -solution.row_dual[iRow] * Avalue;
           if (term > 0) {
@@ -362,45 +360,10 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
   }
 
-  if (have_dual_solution) {
-    // Determine the sum of complementarity violations
-    max_complementarity_violation = 0;
-    sum_complementarity_violations = 0;
-    double primal_residual = 0;
-    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
-      const bool is_col = iVar < lp.num_col_;
-      const HighsInt iRow = iVar - lp.num_col_;
-      const double primal =
-          is_col ? solution.col_value[iVar] : solution.row_value[iRow];
-      const double dual =
-          is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
-      const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
-      const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
-      if (lower <= -kHighsInf && upper >= kHighsInf) {
-        // Free
-        primal_residual = 1;
-      } else {
-        const double mid = (lower + upper) * 0.5;
-        primal_residual = primal < mid ? std::fabs(lower - primal)
-                                       : std::fabs(upper - primal);
-      }
-      const double dual_residual = std::fabs(dual);
-      const double complementarity_violation = primal_residual * dual_residual;
-      sum_complementarity_violations += complementarity_violation;
-      max_complementarity_violation =
-          std::max(complementarity_violation, max_complementarity_violation);
-    }
-    double check_max_complementarity_violation;
-    double check_sum_complementarity_violations;
-    const bool have_values = getComplementarityViolations(
-        lp, solution, check_max_complementarity_violation,
-        check_sum_complementarity_violations);
-    assert(have_values);
-    assert(check_max_complementarity_violation ==
-           max_complementarity_violation);
-    assert(check_sum_complementarity_violations ==
-           sum_complementarity_violations);
-  }
+  // Determine the sum of complementarity violations
+  if (have_dual_solution)
+    getComplementarityViolations(lp, solution, max_complementarity_violation,
+                                 sum_complementarity_violations);
 
   if (get_residuals) {
     const double large_residual_error = 1e-12;
@@ -582,8 +545,7 @@ bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   double& max_complementarity_violation,
                                   double& sum_complementarity_violations) {
-  max_complementarity_violation = kHighsIllegalComplementarityViolation;
-  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+  assert(solution.dual_valid);
   if (!solution.dual_valid) return false;
 
   max_complementarity_violation = 0;
@@ -840,10 +802,7 @@ HighsStatus ipxSolutionToHighsSolution(
       options.log_options, HighsLogType::kInfo,
       "ipxSolutionToHighsSolution: Norm of delta     row values is %10.4g\n",
       delta_norm);
-  const bool force_dual_feasibility = false;  // true;
-  const bool minimal_truncation = true;
-  if (model_status == HighsModelStatus::kOptimal &&
-      (force_dual_feasibility || minimal_truncation)) {
+  if (model_status == HighsModelStatus::kOptimal) {
     double primal_truncation_norm = 0;
     double dual_truncation_norm = 0;
     double col_primal_truncation_norm = 0;
@@ -914,7 +873,7 @@ HighsStatus ipxSolutionToHighsSolution(
       // Continue if no dual infeasibility
       if (dual_infeasibility <= dual_feasibility_tolerance) continue;
 
-      if (residual < dual_infeasibility && !force_dual_feasibility) {
+      if (residual < dual_infeasibility) {
         /*
           // Residual is less than dual infeasibility, or not forcing
           // dual feasibility, so truncate value
@@ -1190,7 +1149,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         double slack_value = ipx_col_value[ipx_slack];
         double slack_dual = ipx_col_dual[ipx_slack];
         double value = slack_value;
-        // @FlipRowDual -slack_dual became slack_dual
         double dual = slack_dual;
         if (ipx_row_status[ipx_row] == ipx_basic) {
           // Row is basic
@@ -1238,7 +1196,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         assert(ipx_row_status[ipx_row] ==
                -1);  // const ipx::Int ipx_nonbasic_row = -1;
         double value = rhs[ipx_row] - ipx_row_value[ipx_row];
-        // @FlipRowDual -ipx_row_dual[ipx_row]; became ipx_row_dual[ipx_row];
         double dual = ipx_row_dual[ipx_row];
         if (constraint_type[ipx_row] == '>') {
           // Row is at its lower bound
