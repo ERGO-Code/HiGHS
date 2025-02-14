@@ -1337,7 +1337,9 @@ void HighsPrimalHeuristics::ZIRound(
         loopCount++;
         double relSol;
         double aij = 0.0;
-        getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.get(), XrowUpper.get());
+
+        if (currentLp.num_row_ > 0)      
+            getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.get(), XrowUpper.get());
 
         for (HighsInt j : intcols) {
 
