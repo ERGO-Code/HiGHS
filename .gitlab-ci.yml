@@ -29,6 +29,7 @@ coverage:
     paths:
       - build/${COVERAGE_REPORT_DIR}
       - build/${COVERAGE_FILE}
+      - build/Testing
     expire_in: 1 week
 
 pages:
