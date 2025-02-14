@@ -994,7 +994,14 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 		    "Duality gap (abs/rel):", fabs(resobj->dDualityGap),
 		    resobj->dRelObjGap);
     }
-    cupdlp_printf("%27s %d\n", "Number of iterations:", timers->nIter);
+    cupdlp_printf("%27s %d\n",
+		  "Number of iterations:", timers->nIter);
+    if (timers->nIter > 0) {
+      cupdlp_printf("%27s %d (%g/iter)\n",
+		    "Number of Ax   calls:", timers->nAxCalls, (1.0 * timers->nAxCalls)/ timers->nIter);
+      cupdlp_printf("%27s %d (%g/iter)\n",
+		    "Number of A^Ty calls:", timers->nAtyCalls, (1.0 * timers->nAtyCalls)/ timers->nIter);
+    }
     cupdlp_printf("\n");
   }
 
