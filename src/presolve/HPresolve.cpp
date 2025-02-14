@@ -2298,11 +2298,21 @@ void HPresolve::reinsertEquation(HighsInt row) {
 
 void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
                                 HighsInt col, double scale, double constant) {
+  // replace column x by x = scale * x' + constant
   if (mipsolver != nullptr)
     mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
+  // new variable x' has the following bounds:
+  // scale > 0 --> (lb - constant) / scale <= x' <= (ub - constant) / scale
+  // scale < 0 --> (ub - constant) / scale <= x' <= (lb - constant) / scale
+  // each matrix coefficient a will be replaced by scale * a and, therefore, the
+  // contributions to the constraint activities will change as follows:
+  // a * lb --> (a * scale) * (lb - constant) / scale = a * (lb - constant)
+  // a * ub --> (a * scale) * (ub - constant) / scale = a * (ub - constant).
+  // therefore, for now the scaling can be neglected and the bounds on
+  // constraint activities can be updated using the constant term.
   double oldLower = model->col_lower_[col];
   double oldUpper = model->col_upper_[col];
   model->col_upper_[col] -= constant;
@@ -2337,13 +2347,6 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
   model->col_upper_[col] *= boundScale;
   implColLower[col] *= boundScale;
   implColUpper[col] *= boundScale;
-  if (model->integrality_[col] != HighsVarType::kContinuous) {
-    // we rely on the integrality status being already updated to the newly
-    // scaled column by the caller, if necessary
-    model->col_upper_[col] =
-        std::floor(model->col_upper_[col] + primal_feastol);
-    model->col_lower_[col] = std::ceil(model->col_lower_[col] - primal_feastol);
-  }
 
   if (scale < 0) {
     std::swap(model->col_lower_[col], model->col_upper_[col]);
@@ -2365,6 +2368,14 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
     if (model->row_upper_[row] != kHighsInf)
       model->row_upper_[row] -= rowConstant;
   }
+
+  // use utility functions for rounding scaled bounds of integer-constrained
+  // variables if possible. this should not be done before the preceding bound
+  // updates (scaling and swaps) and matrix updates. we rely on the integrality
+  // status being already updated to the newly scaled column by the caller, if
+  // necessary.
+  changeColLower(col, model->col_lower_[col]);
+  changeColUpper(col, model->col_upper_[col]);
 
   markChangedCol(col);
 }
