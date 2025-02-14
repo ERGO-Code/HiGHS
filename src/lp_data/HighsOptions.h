@@ -773,7 +773,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
-        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
         advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
         kSimplexStrategyMax);
     records.push_back(record_int);
