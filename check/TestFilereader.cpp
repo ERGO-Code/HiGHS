@@ -416,3 +416,26 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
 
   std::remove(write_model_file.c_str());
 }
+
+TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
+  std::string write_model_file = "temp.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.addCol(1, -kHighsInf, 1, 0, nullptr, nullptr);
+  h.changeColIntegrality(0, HighsVarType::kInteger);
+  h.passColName(0, "x");
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  h.addRow(-10, kHighsInf, 1, index.data(), value.data());
+  h.passRowName(0, "r");
+  h.run();
+  double required_objective_value = h.getInfo().objective_function_value;
+  // writeModel must ensure that there is a line
+  //
+  // MI BOUND x
+  h.writeModel(write_model_file);
+  h.readModel(write_model_file);
+  h.run();
+  REQUIRE(required_objective_value == h.getInfo().objective_function_value);
+  std::remove(write_model_file.c_str());
+}
