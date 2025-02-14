@@ -1832,7 +1832,7 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
  * @param from_row      The first row for which to query data for.
  * @param to_row        The last row (inclusive) for which to query data for.
  * @param num_row       An integer to be populated with the number of rows got
- *                      from the smodel.
+ *                      from the model.
  * @param lower         An array of size [to_row - from_row + 1] for the row
  *                      lower bounds.
  * @param upper         An array of size [to_row - from_row + 1] for the row
