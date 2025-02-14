@@ -2374,8 +2374,10 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
   // updates (scaling and swaps) and matrix updates. we rely on the integrality
   // status being already updated to the newly scaled column by the caller, if
   // necessary.
-  changeColLower(col, model->col_lower_[col]);
-  changeColUpper(col, model->col_upper_[col]);
+  if (model->integrality_[col] != HighsVarType::kContinuous) {
+    changeColLower(col, model->col_lower_[col]);
+    changeColUpper(col, model->col_upper_[col]);
+  }
 
   markChangedCol(col);
 }
