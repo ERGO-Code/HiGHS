@@ -337,6 +337,9 @@ cupdlp_retcode PDHG_Init_Step_Sizes(CUPDLPwork *pdhg) {
     iterates->dLastRestartBeta = stepsize->dBeta;
   }
 
+  // Whatever eLineSearchMethod, dual step is primal step times beta
+  assert((stepsize->dDualStep - stepsize->dPrimalStep * stepsize->dBeta)/stepsize->dDualStep < 1e-12);
+
   iterates->iLastRestartIter = 0;
   stepsize->dSumPrimalStep = 0;
   stepsize->dSumDualStep = 0;

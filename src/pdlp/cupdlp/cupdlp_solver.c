@@ -11,7 +11,7 @@
 #include "cupdlp_utils.h"
 #include "glbopts.h"
 
-const cupdlp_int check_iter = 440;
+const cupdlp_int check_iter = -440;
 
 void debugPrintDouble(char* name, const cupdlp_int dim, const double* value) {
   printf("%-50s = [", name);
