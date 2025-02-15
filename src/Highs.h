@@ -1631,8 +1631,8 @@ class Highs {
       const HighsInt original_num_col, const HighsInt original_num_row,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
-      const std::vector<double> original_col_upper,
-      const std::vector<HighsVarType> original_integrality);
+      const std::vector<double>& original_col_upper,
+      const std::vector<HighsVarType>& original_integrality);
   HighsStatus elasticityFilter(const double global_lower_penalty,
                                const double global_upper_penalty,
                                const double global_rhs_penalty,

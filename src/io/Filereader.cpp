@@ -21,7 +21,7 @@ static inline void tolower(std::string& s) {
                  [](unsigned char c) { return std::tolower(c); });
 }
 
-static const std::string getFilenameExt(const std::string filename) {
+static const std::string getFilenameExt(const std::string& filename) {
   // Extract file name extension
   std::string name = filename;
   std::size_t found = name.find_last_of(".");
@@ -71,7 +71,7 @@ Filereader* Filereader::getFilereader(const HighsLogOptions& log_options,
 }
 
 void interpretFilereaderRetcode(const HighsLogOptions& log_options,
-                                const std::string filename,
+                                const std::string& filename,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::kOk:
@@ -95,7 +95,7 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
   }
 }
 
-std::string extractModelName(const std::string filename) {
+std::string extractModelName(const std::string& filename) {
   // Extract model name
   std::string name = filename;
   std::size_t found = name.find_last_of("/\\");

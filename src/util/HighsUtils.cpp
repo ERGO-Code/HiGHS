@@ -251,7 +251,7 @@ HighsInt dataSize(const HighsIndexCollection& index_collection) {
 
 bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const HighsVarType* user_data,
-                                 const std::string name) {
+                                 const std::string& name) {
   bool null_data = false;
   if (user_data == NULL) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -263,7 +263,7 @@ bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
 }
 
 bool intUserDataNotNull(const HighsLogOptions& log_options,
-                        const HighsInt* user_data, const std::string name) {
+                        const HighsInt* user_data, const std::string& name) {
   bool null_data = false;
   if (user_data == NULL) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -275,7 +275,7 @@ bool intUserDataNotNull(const HighsLogOptions& log_options,
 }
 
 bool doubleUserDataNotNull(const HighsLogOptions& log_options,
-                           const double* user_data, const std::string name) {
+                           const double* user_data, const std::string& name) {
   bool null_data = false;
   if (user_data == NULL) {
     highsLogUser(log_options, HighsLogType::kError,
@@ -286,7 +286,7 @@ bool doubleUserDataNotNull(const HighsLogOptions& log_options,
   return null_data;
 }
 
-double getNorm2(const std::vector<double> values) {
+double getNorm2(const std::vector<double>& values) {
   double sum = 0;
   HighsInt values_size = values.size();
   for (HighsInt i = 0; i < values_size; i++) sum += values[i] * values[i];
@@ -303,9 +303,9 @@ double highsRelativeDifference(const double v0, const double v1) {
 }
 
 void analyseVectorValues(const HighsLogOptions* log_options,
-                         const std::string message, HighsInt vecDim,
+                         const std::string& message, HighsInt vecDim,
                          const std::vector<double>& vec, bool analyseValueList,
-                         std::string model_name) {
+                         const std::string& model_name) {
   assert(vecDim == int(vec.size()));
   if (vecDim == 0) return;
   double log10 = log(10.0);
@@ -483,9 +483,9 @@ void analyseVectorValues(const HighsLogOptions* log_options,
 }
 
 void analyseVectorValues(const HighsLogOptions* log_options,
-                         const std::string message, HighsInt vecDim,
+                         const std::string& message, HighsInt vecDim,
                          const std::vector<HighsInt>& vec,
-                         std::string model_name) {
+                         const std::string& model_name) {
   if (vecDim == 0) return;
   const HighsInt VLsMxZ = 10;
   std::vector<std::pair<HighsInt, HighsInt>> VLs;
@@ -696,8 +696,8 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
               maxRowCount, numCol);
 }
 
-bool initialiseValueDistribution(const std::string distribution_name,
-                                 const std::string value_name,
+bool initialiseValueDistribution(const std::string& distribution_name,
+                                 const std::string& value_name,
                                  const double min_value_limit,
                                  const double max_value_limit,
                                  const double base_value_limit,
@@ -1153,7 +1153,7 @@ bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
   return true;
 }
 
-bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
+bool printScatterData(const std::string& name, const HighsScatterData& scatter_data) {
   if (!scatter_data.num_point_) return true;
   double x;
   double y;
@@ -1184,7 +1184,7 @@ bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
 }
 
 void printScatterDataRegressionComparison(
-    std::string name, const HighsScatterData& scatter_data) {
+    const std::string& name, const HighsScatterData& scatter_data) {
   if (!scatter_data.num_error_comparison_) return;
   printf("\n%s scatter data regression\n", name.c_str());
   printf("%10" HIGHSINT_FORMAT " regression error comparisons\n",
@@ -1230,7 +1230,7 @@ double nearestPowerOfTwoScale(const double value) {
   return scale;
 }
 
-void highsAssert(const bool assert_condition, const std::string message) {
+void highsAssert(const bool assert_condition, const std::string& message) {
   if (assert_condition) return;
   printf("Failing highsAssert(\"%s\")\n", message.c_str());
 #ifdef NDEBUG
@@ -1244,7 +1244,7 @@ void highsAssert(const bool assert_condition, const std::string message) {
 #endif
 }
 
-bool highsPause(const bool pause_condition, const std::string message) {
+bool highsPause(const bool pause_condition, const std::string& message) {
   if (!pause_condition) return pause_condition;
   printf("Satisfying highsPause(\"%s\")\n", message.c_str());
   char str[100];

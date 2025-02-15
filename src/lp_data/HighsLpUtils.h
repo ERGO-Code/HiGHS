@@ -30,14 +30,14 @@ using std::vector;
 void writeBasisFile(FILE*& file, const HighsBasis& basis);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename);
+                          const std::string& filename);
 HighsStatus readBasisStream(const HighsLogOptions& log_options,
                             HighsBasis& basis, std::ifstream& in_file);
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
-bool lpDimensionsOk(std::string message, const HighsLp& lp,
+bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
                     const HighsLogOptions& log_options);
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
@@ -66,7 +66,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
 void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods);
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
-                               const std::vector<double> col_value);
+                               const std::vector<double>& col_value);
 
 bool considerScaling(const HighsOptions& options, HighsLp& lp);
 void scaleLp(const HighsOptions& options, HighsLp& lp,
@@ -170,7 +170,7 @@ void reportLpColMatrix(const HighsLogOptions& log_options,
                        const HighsLp& lp  //!< LP whose data are to be reported
 );
 
-void reportMatrix(const HighsLogOptions& log_options, const std::string message,
+void reportMatrix(const HighsLogOptions& log_options, const std::string& message,
                   const HighsInt num_col, const HighsInt num_nz,
                   const HighsInt* start, const HighsInt* index,
                   const double* value);
@@ -197,7 +197,7 @@ void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 
-HighsStatus readSolutionFile(const std::string filename,
+HighsStatus readSolutionFile(const std::string& filename,
                              const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style);
@@ -224,7 +224,7 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);
 
-HighsStatus assessLpPrimalSolution(const std::string message,
+HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,

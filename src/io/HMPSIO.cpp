@@ -30,7 +30,7 @@ using std::map;
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
 FilereaderRetcode readMps(
-    const HighsLogOptions& log_options, const std::string filename,
+    const HighsLogOptions& log_options, const std::string& filename,
     HighsInt mxNumRow, HighsInt mxNumCol, HighsInt& numRow, HighsInt& numCol,
     ObjSense& objSense, double& objOffset, vector<HighsInt>& Astart,
     vector<HighsInt>& Aindex, vector<double>& Avalue, vector<double>& colCost,
@@ -537,7 +537,7 @@ bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
 }
 
 HighsStatus writeModelAsMps(const HighsOptions& options,
-                            const std::string filename, const HighsModel& model,
+                            const std::string& filename, const HighsModel& model,
                             const bool free_format) {
   bool warning_found = false;
   const HighsLp& lp = model.lp_;
@@ -603,8 +603,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
 }
 
 HighsStatus writeMps(
-    const HighsLogOptions& log_options, const std::string filename,
-    const std::string model_name, const HighsInt& num_row,
+    const HighsLogOptions& log_options, const std::string& filename,
+    const std::string& model_name, const HighsInt& num_row,
     const HighsInt& num_col, const HighsInt& q_dim, const ObjSense& sense,
     const double& offset, const vector<double>& col_cost,
     const vector<double>& col_lower, const vector<double>& col_upper,
@@ -612,7 +612,7 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality, const std::string objective_name,
+    const vector<HighsVarType>& integrality, const std::string& objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
   HighsInt num_no_cost_zero_columns = 0;

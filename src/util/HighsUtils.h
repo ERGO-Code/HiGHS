@@ -109,13 +109,13 @@ HighsInt dataSize(const HighsIndexCollection& index_collection);
 
 bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const HighsVarType* user_data,
-                                 const std::string name);
+                                 const std::string& name);
 bool intUserDataNotNull(const HighsLogOptions& log_options,
-                        const HighsInt* user_data, const std::string name);
+                        const HighsInt* user_data, const std::string& name);
 bool doubleUserDataNotNull(const HighsLogOptions& log_options,
-                           const double* user_data, const std::string name);
+                           const double* user_data, const std::string& name);
 
-double getNorm2(const std::vector<double> values);
+double getNorm2(const std::vector<double>& values);
 
 /**
  * @brief Logical check of double being +Infinity
@@ -136,22 +136,22 @@ double highsRelativeDifference(const double v0, const double v1);
  */
 void analyseVectorValues(
     const HighsLogOptions* log_options,
-    const std::string message,       //!< Message to be printed
+    const std::string& message,       //!< Message to be printed
     HighsInt vecDim,                 //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
-    std::string model_name =
+    const std::string& model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector
 );
 
 void analyseVectorValues(
     const HighsLogOptions* log_options,
-    const std::string message,         //!< Message to be printed
+    const std::string& message,         //!< Message to be printed
     HighsInt vecDim,                   //!< Dimension of vector
     const std::vector<HighsInt>& vec,  //!< Vector of values
-    std::string model_name =
+    const std::string& model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector
 );
@@ -165,8 +165,8 @@ void analyseMatrixSparsity(
     const std::vector<HighsInt>& Aindex   //!< Matrix row indices
 );
 
-bool initialiseValueDistribution(const std::string distribution_name,
-                                 const std::string value_name,
+bool initialiseValueDistribution(const std::string& distribution_name,
+                                 const std::string& value_name,
                                  const double min_value_limit,
                                  const double max_value_limit,
                                  const double base_value_limit,
@@ -189,8 +189,8 @@ bool regressScatterData(HighsScatterData& scatter_data);
 bool predictFromScatterData(const HighsScatterData& scatter_data,
                             const double value0, double& predicted_value1,
                             const bool log_regression = false);
-bool printScatterData(std::string name, const HighsScatterData& scatter_data);
-void printScatterDataRegressionComparison(std::string name,
+bool printScatterData(const std::string& name, const HighsScatterData& scatter_data);
+void printScatterDataRegressionComparison(const std::string& name,
                                           const HighsScatterData& scatter_data);
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
                                        const bool print = false);
@@ -199,11 +199,11 @@ double nearestPowerOfTwoScale(const double value);
 
 // If assert_condition is false then, if NDEBUG is defined message is
 // printed and abort() is called, otherwise assert is called
-void highsAssert(const bool assert_condition, const std::string message = "");
+void highsAssert(const bool assert_condition, const std::string& message = "");
 
 // If pause_condition is true, then keyboard input is required. Allows
 // breakpoints in VScode where optimization might prevent them.
-bool highsPause(const bool pause_condition, const std::string message = "");
+bool highsPause(const bool pause_condition, const std::string& message = "");
 
 // Utility for computing fractional part
 template <typename T>

@@ -104,7 +104,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   return return_status;
 }
 
-bool lpDimensionsOk(std::string message, const HighsLp& lp,
+bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
                     const HighsLogOptions& log_options) {
   bool ok = true;
   const HighsInt num_col = lp.num_col_;
@@ -683,7 +683,7 @@ void relaxSemiVariables(HighsLp& lp, bool& made_semi_variable_mods) {
 }
 
 bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
-                               const std::vector<double> col_value) {
+                               const std::vector<double>& col_value) {
   const std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
       lp.mods_.save_tightened_semi_variable_upper_bound_index;
   const HighsInt num_tightened_upper =
@@ -1947,7 +1947,7 @@ void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   }
 }
 
-void reportMatrix(const HighsLogOptions& log_options, const std::string message,
+void reportMatrix(const HighsLogOptions& log_options, const std::string& message,
                   const HighsInt num_col, const HighsInt num_nz,
                   const HighsInt* start, const HighsInt* index,
                   const double* value) {
@@ -2033,7 +2033,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
                      lp.row_upper_);
 }
 
-HighsStatus readSolutionFile(const std::string filename,
+HighsStatus readSolutionFile(const std::string& filename,
                              const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
@@ -2378,7 +2378,7 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
 
 // Determine validity, primal feasibility and (when relevant) integer
 // feasibility of a solution
-HighsStatus assessLpPrimalSolution(const std::string message,
+HighsStatus assessLpPrimalSolution(const std::string& message,
                                    const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
@@ -2532,7 +2532,7 @@ void writeBasisFile(FILE*& file, const HighsBasis& basis) {
 }
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
-                          const std::string filename) {
+                          const std::string& filename) {
   // Opens a basis file as an ifstream
   HighsStatus return_status = HighsStatus::kOk;
   std::ifstream in_file;
