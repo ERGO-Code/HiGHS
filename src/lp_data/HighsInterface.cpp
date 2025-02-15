@@ -2027,8 +2027,8 @@ HighsStatus Highs::elasticityFilterReturn(
     const HighsInt original_num_col, const HighsInt original_num_row,
     const std::vector<double>& original_col_cost,
     const std::vector<double>& original_col_lower,
-    const std::vector<double> original_col_upper,
-    const std::vector<HighsVarType> original_integrality) {
+    const std::vector<double>& original_col_upper,
+    const std::vector<HighsVarType>& original_integrality) {
   const HighsLp& lp = this->model_.lp_;
   double objective_function_value = info_.objective_function_value;
   // Delete any additional rows and columns, and restore the original
@@ -3466,7 +3466,7 @@ bool Highs::infeasibleBoundsOk() {
   HighsInt num_ok_infeasible_bound = 0;
   const bool has_integrality = lp.integrality_.size() > 0;
   // Lambda for assessing infeasible bounds
-  auto assessInfeasibleBound = [&](const std::string type, const HighsInt iX,
+  auto assessInfeasibleBound = [&](const std::string& type, const HighsInt iX,
                                    double& lower, double& upper) {
     double range = upper - lower;
     if (range >= 0) return true;

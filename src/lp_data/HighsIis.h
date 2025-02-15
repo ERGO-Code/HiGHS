@@ -35,7 +35,7 @@ class HighsIis {
 
   void invalidate();
   std::string iisBoundStatusToString(HighsInt bound_status) const;
-  void report(const std::string message, const HighsLp& lp) const;
+  void report(const std::string& message, const HighsLp& lp) const;
   void addCol(const HighsInt col, const HighsInt status = kIisBoundStatusNull);
   void addRow(const HighsInt row, const HighsInt status = kIisBoundStatusNull);
   void removeCol(const HighsInt col);

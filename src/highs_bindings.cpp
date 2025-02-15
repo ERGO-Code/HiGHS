@@ -172,7 +172,7 @@ HighsStatus highs_mipPostsolve(Highs* h, const HighsSolution& solution) {
   return h->postsolve(solution);
 }
 
-HighsStatus highs_writeSolution(Highs* h, const std::string filename,
+HighsStatus highs_writeSolution(Highs* h, const std::string& filename,
                                 const HighsInt style) {
   return h->writeSolution(filename, style);
 }
@@ -838,7 +838,7 @@ std::tuple<HighsStatus, std::string> highs_getColName(Highs* h,
 }
 
 std::tuple<HighsStatus, int> highs_getColByName(Highs* h,
-                                                const std::string name) {
+                                                const std::string& name) {
   HighsInt col;
   HighsStatus status = h->getColByName(name, col);
   return std::make_tuple(status, col);
@@ -852,7 +852,7 @@ std::tuple<HighsStatus, std::string> highs_getRowName(Highs* h,
 }
 
 std::tuple<HighsStatus, int> highs_getRowByName(Highs* h,
-                                                const std::string name) {
+                                                const std::string& name) {
   HighsInt row;
   HighsStatus status = h->getRowByName(name, row);
   return std::make_tuple(status, row);

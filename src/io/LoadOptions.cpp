@@ -15,7 +15,7 @@
 // specified.
 HighsLoadOptionsStatus loadOptionsFromFile(
     const HighsLogOptions& report_log_options, HighsOptions& options,
-    const std::string filename) {
+    const std::string& filename) {
   if (filename.size() == 0) return HighsLoadOptionsStatus::kEmpty;
 
   string line, option, value;

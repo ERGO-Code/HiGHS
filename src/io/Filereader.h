@@ -24,9 +24,9 @@ enum class FilereaderRetcode {
 };
 
 void interpretFilereaderRetcode(const HighsLogOptions& log_options,
-                                const std::string filename,
+                                const std::string& filename,
                                 const FilereaderRetcode code);
-std::string extractModelName(const std::string filename);
+std::string extractModelName(const std::string& filename);
 
 class Filereader {
  public:

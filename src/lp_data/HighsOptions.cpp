@@ -20,7 +20,7 @@
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
-                      const std::string log_file) {
+                      const std::string& log_file) {
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, "log_file", option_records, index);
@@ -344,7 +344,7 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
 
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordString& option,
-                              const std::string value) {
+                              const std::string& value) {
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == kPresolveString) {
@@ -445,7 +445,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
                                  std::vector<OptionRecord*>& option_records,
-                                 const std::string value_passed) {
+                                 const std::string& value_passed) {
   // Trim any leading and trailing spaces
   std::string value_trim = value_passed;
   trim(value_trim, " ");
@@ -581,7 +581,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
-                                 const std::string value) {
+                                 const std::string& value) {
   OptionStatus return_status =
       checkOptionValue(report_log_options, option, value);
   if (return_status != OptionStatus::kOk) return return_status;

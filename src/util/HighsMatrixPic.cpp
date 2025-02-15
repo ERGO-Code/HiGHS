@@ -17,14 +17,14 @@
 #include <fstream>
 
 HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
-                                   const std::string fileprefix,
+                                   const std::string& fileprefix,
                                    const HighsLp& lp) {
   return writeMatrixPicToFile(options, fileprefix, lp.num_row_, lp.num_col_,
                               lp.a_matrix_.start_, lp.a_matrix_.index_);
 }
 
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
-                                 const std::string fileprefix,
+                                 const std::string& fileprefix,
                                  const HighsInt numRow, const HighsInt numCol,
                                  const std::vector<HighsInt>& Astart,
                                  const std::vector<HighsInt>& Aindex) {
@@ -56,7 +56,7 @@ HighsStatus writeMatrixPicToFile(const HighsOptions& options,
 }
 
 HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
-                                  const std::string fileprefix,
+                                  const std::string& fileprefix,
                                   const HighsInt numRow, const HighsInt numCol,
                                   const std::vector<HighsInt>& ARstart,
                                   const std::vector<HighsInt>& ARindex) {

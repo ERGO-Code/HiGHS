@@ -229,7 +229,7 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
 }
 
 void highsReportDevInfo(const HighsLogOptions* log_options,
-                        const std::string line) {
+                        const std::string& line) {
   if (log_options) {
     highsLogDev(*log_options, HighsLogType::kInfo, "%s", line.c_str());
   } else {
@@ -237,7 +237,7 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
   }
 }
 
-void highsOpenLogFile(HighsOptions& options, const std::string log_file) {
+void highsOpenLogFile(HighsOptions& options, const std::string& log_file) {
   highsOpenLogFile(options.log_options, options.records, log_file);
 }
 
@@ -275,7 +275,7 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
   return b ? " true" : "false";
 }
 
-const std::string highsInsertMdEscapes(const std::string from_string) {
+const std::string highsInsertMdEscapes(const std::string& from_string) {
   std::string to_string = "";
   const char* underscore = "_";
   const char* backslash = "\\";

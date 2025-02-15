@@ -31,7 +31,7 @@ std::string HighsIis::iisBoundStatusToString(HighsInt bound_status) const {
   return "*****";
 }
 
-void HighsIis::report(const std::string message, const HighsLp& lp) const {
+void HighsIis::report(const std::string& message, const HighsLp& lp) const {
   HighsInt num_iis_col = this->col_index_.size();
   HighsInt num_iis_row = this->row_index_.size();
   if (num_iis_col > 10 || num_iis_row > 10) return;

@@ -42,7 +42,7 @@ const HighsInt field_6_start = 49;
 const HighsInt field_6_width = 12;
 
 FilereaderRetcode readMps(
-    const HighsLogOptions& log_options, const std::string filename,
+    const HighsLogOptions& log_options, const std::string& filename,
     HighsInt mxNumRow, HighsInt mxNumCol, HighsInt& numRow, HighsInt& numCol,
     ObjSense& objSense, double& objOffset, vector<HighsInt>& Astart,
     vector<HighsInt>& Aindex, vector<double>& Avalue, vector<double>& colCost,
@@ -55,8 +55,8 @@ FilereaderRetcode readMps(
     const HighsInt keep_n_rows = 0);
 
 HighsStatus writeMps(
-    const HighsLogOptions& log_options, const std::string filename,
-    const std::string model_name, const HighsInt& num_row,
+    const HighsLogOptions& log_options, const std::string& filename,
+    const std::string& model_name, const HighsInt& num_row,
     const HighsInt& num_col, const HighsInt& q_dim, const ObjSense& sense,
     const double& offset, const vector<double>& col_cost,
     const vector<double>& col_lower, const vector<double>& col_upper,
@@ -64,7 +64,7 @@ HighsStatus writeMps(
     const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
     const vector<double>& a_value, const vector<HighsInt>& q_start,
     const vector<HighsInt>& q_index, const vector<double>& q_value,
-    const vector<HighsVarType>& integrality, std::string objective_name,
+    const vector<HighsVarType>& integrality, const std::string& objective_name,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format = true);
 
@@ -72,7 +72,7 @@ bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
                   char* line, char* flag, double* data);
 
 HighsStatus writeModelAsMps(const HighsOptions& options,
-                            const std::string filename, const HighsModel& model,
+                            const std::string& filename, const HighsModel& model,
                             const bool free = true);
 
 #endif /* IO_HMPSIO_H_ */

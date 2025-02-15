@@ -127,7 +127,7 @@ class OptionRecordString : public OptionRecord {
 
 void highsOpenLogFile(HighsLogOptions& log_options,
                       std::vector<OptionRecord*>& option_records,
-                      const std::string log_file);
+                      const std::string& log_file);
 
 bool commandLineOffChooseOnOk(const HighsLogOptions& report_log_options,
                               const string& name, const string& value);
@@ -158,7 +158,7 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               const double value);
 OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
                               OptionRecordString& option_records,
-                              const std::string value);
+                              const std::string& value);
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
@@ -185,7 +185,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
                                  std::vector<OptionRecord*>& option_records,
-                                 const std::string value);
+                                 const std::string& value);
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const std::string& name,
                                  HighsLogOptions& log_options,
@@ -200,7 +200,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  const double value);
 OptionStatus setLocalOptionValue(const HighsLogOptions& report_log_options,
                                  OptionRecordString& option,
-                                 std::string const value);
+                                 const std::string& value);
 
 OptionStatus passLocalOptions(const HighsLogOptions& report_log_options,
                               const HighsOptions& from_options,

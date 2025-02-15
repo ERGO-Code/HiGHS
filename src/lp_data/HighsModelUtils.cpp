@@ -369,7 +369,7 @@ HighsInt maxNameLength(const HighsInt num_name,
 }
 
 HighsStatus normaliseNames(const HighsLogOptions& log_options,
-                           const std::string name_type, const HighsInt num_name,
+                           const std::string& name_type, const HighsInt num_name,
                            std::vector<std::string>& names,
                            HighsInt& max_name_length) {
   // Record the desired maximum name length
@@ -464,7 +464,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
 
 void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const bool raw, const bool is_mip,
-                        const HighsInt row_id, const std::string objective_name,
+                        const HighsInt row_id, const std::string& objective_name,
                         const double objective_function_value) {
   std::stringstream ss;
   ss.str(std::string());
