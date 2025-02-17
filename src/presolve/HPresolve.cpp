@@ -2313,28 +2313,32 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
   // a * ub --> (a * scale) * (ub - constant) / scale = a * (ub - constant).
   // therefore, for now the scaling can be neglected and the bounds on
   // constraint activities can be updated using the constant term.
-  double oldLower = model->col_lower_[col];
-  double oldUpper = model->col_upper_[col];
-  model->col_upper_[col] -= constant;
-  model->col_lower_[col] -= constant;
+  if (constant != 0.0) {
+    double oldLower = model->col_lower_[col];
+    double oldUpper = model->col_upper_[col];
+    model->col_upper_[col] -= constant;
+    model->col_lower_[col] -= constant;
 
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
-                                     oldLower);
-    impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
-                                     oldUpper);
-  }
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
+                                       oldLower);
+      impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
+                                       oldUpper);
+    }
 
-  double oldImplLower = implColLower[col];
-  double oldImplUpper = implColUpper[col];
-  implColLower[col] -= constant;
-  implColUpper[col] -= constant;
+    double oldImplLower = implColLower[col];
+    double oldImplUpper = implColUpper[col];
+    implColLower[col] -= constant;
+    implColUpper[col] -= constant;
 
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedImplVarLower(nonzero.index(), col, nonzero.value(),
-                                         oldImplLower, colLowerSource[col]);
-    impliedRowBounds.updatedImplVarUpper(nonzero.index(), col, nonzero.value(),
-                                         oldImplUpper, colUpperSource[col]);
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedImplVarLower(nonzero.index(), col,
+                                           nonzero.value(), oldImplLower,
+                                           colLowerSource[col]);
+      impliedRowBounds.updatedImplVarUpper(nonzero.index(), col,
+                                           nonzero.value(), oldImplUpper,
+                                           colUpperSource[col]);
+    }
   }
 
   // now apply the scaling, which does not change the contributions to the
