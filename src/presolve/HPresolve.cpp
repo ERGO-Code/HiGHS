@@ -2369,10 +2369,11 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
       model->row_upper_[row] -= rowConstant;
   }
 
-  // use utility functions for rounding scaled bounds of integer-constrained
-  // variables if possible. this should not be done before the preceding bound
-  // updates (scaling and swaps) and matrix updates. we rely on the integrality
-  // status being already updated to the newly scaled column by the caller, if
+  // finally, use utility methods for rounding scaled bounds of
+  // integer-constrained variables and updating bounds on constraint activities
+  // accordingly. this should not be done before the preceding bound updates
+  // (scaling and swaps) and matrix updates. we rely on the integrality status
+  // being already updated to the newly scaled column by the caller, if
   // necessary.
   if (model->integrality_[col] != HighsVarType::kContinuous) {
     changeColLower(col, model->col_lower_[col]);
