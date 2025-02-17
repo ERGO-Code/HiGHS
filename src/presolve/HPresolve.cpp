@@ -5302,12 +5302,13 @@ HPresolve::Result HPresolve::strengthenInequalities(
       cover.clear();
       cover.reserve(indices.size());
 
-      for (HighsInt i = indices.size() - 1; i >= 0; --i) {
-        double delta = upper[indices[i]] * reducedcost[indices[i]];
+      for (size_t i = indices.size(); i > 0; --i) {
+        HighsInt index = indices[i - 1];
+        double delta = upper[index] * reducedcost[index];
 
-        if (upper[indices[i]] <= 1000.0 && reducedcost[indices[i]] > smallVal &&
+        if (upper[index] <= 1000.0 && reducedcost[index] > smallVal &&
             lambda - delta <= smallVal)
-          cover.push_back(indices[i]);
+          cover.push_back(index);
         else
           lambda -= delta;
       }
@@ -5366,15 +5367,16 @@ HPresolve::Result HPresolve::strengthenInequalities(
     auto updateNonZeros = [&](HighsInt row, HighsCDouble& rhs,
                               HighsInt direction) {
       for (HighsInt i : indices) {
+        assert(Arow[positions[i]] == row);
         double coefdelta = direction * double(reducedcost[i] - maxviolation);
-        HighsInt pos = positions[i];
+        HighsInt col = Acol[positions[i]];
 
         if (complementation[i] == -1) {
-          rhs += coefdelta * model->col_lower_[Acol[pos]];
-          addToMatrix(row, Acol[pos], coefdelta);
+          rhs += coefdelta * model->col_lower_[col];
+          addToMatrix(row, col, coefdelta);
         } else {
-          rhs -= coefdelta * model->col_upper_[Acol[pos]];
-          addToMatrix(row, Acol[pos], -coefdelta);
+          rhs -= coefdelta * model->col_upper_[col];
+          addToMatrix(row, col, -coefdelta);
         }
       }
     };
