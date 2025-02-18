@@ -3458,14 +3458,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                              intScale)) {
             // check for infeasibility
             if (isInfeasible) return Result::kPrimalInfeasible;
-            // only accept row whose sides were strengthened
-            if ((rhs == kHighsInf && lhsTightened) ||
-                (lhs == -kHighsInf && rhsTightened) ||
-                (lhsTightened && rhsTightened)) {
+            // only accept row whose sides were tightened
+            bool rangedOrEquationRow = lhsTightened && rhsTightened;
+            if (rangedOrEquationRow || (lhsTightened && rhs == kHighsInf) ||
+                (rhsTightened && lhs == -kHighsInf)) {
               // check if constraint can be scaled to integral values
               if (!scaleRowIntVals(row, roundLhs, roundRhs, intScale, maxVal)) {
-                if (lhsTightened && rhsTightened) {
-                  // ranged row or equation
+                if (rangedOrEquationRow) {
+                  // ranged or equation row
                   // scale value is large, just tighten the sides
                   roundLhs /= intScale;
                   roundRhs /= intScale;
