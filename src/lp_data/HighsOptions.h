@@ -1118,7 +1118,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "mip_heuristic_run_Shifting",
-        "Run Shifting heuristic: Default = true", advanced,
+        "Run Shifting heuristic: Default = false", advanced,
         &mip_heuristic_run_Shifting, true);
     records.push_back(record_bool);
 
