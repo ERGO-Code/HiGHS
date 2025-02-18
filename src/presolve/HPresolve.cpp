@@ -3334,80 +3334,83 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         double intScale =
             HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
 
-        auto checkScaledRow = [&](HighsCDouble& lhs, HighsCDouble& rhs,
-                                  HighsCDouble& roundLhs,
-                                  HighsCDouble& roundRhs,
-                                  HighsCDouble& fractionLhs,
-                                  HighsCDouble& fractionRhs,
-                                  double& minLhsTightening,
-                                  double& minRhsTightening, double& maxVal,
-                                  bool& strengthenedLhs, bool& strengthenedRhs,
-                                  bool& isInfeasible) {
-          if (lhs != -kHighsInf) lhs = lhs * intScale;
-          if (rhs != kHighsInf) rhs = rhs * intScale;
-          roundLhs = -kHighsInf;
-          roundRhs = kHighsInf;
-          fractionLhs = 0.0;
-          fractionRhs = 0.0;
-          minRhsTightening = 0.0;
-          minLhsTightening = 0.0;
-          maxVal = 0.0;
-          strengthenedLhs = false;
-          strengthenedRhs = false;
-          isInfeasible = false;
-          for (size_t i = 0; i < rowCoefs.size(); ++i) {
-            // computed scaled coefficient
-            HighsCDouble scaleCoef = HighsCDouble(rowCoefs[i]) * intScale;
-            // compute fractional part
-            HighsCDouble intCoef;
-            HighsCDouble coefDelta = fractionality(scaleCoef, &intCoef);
-            // store coefficient and maximum absolute value
-            rowCoefs[i] = double(intCoef);
-            maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
-            if (coefDelta < -options->small_matrix_value) {
-              // for the >= side of the constraint a smaller coefficient is
-              // stronger: Therefore we relax the left hand side using the
-              // bound constraint, if the bound is infinite, abort
-              if (lhs != -kHighsInf) {
-                if (model->col_upper_[rowIndex[i]] == kHighsInf) return false;
-                lhs += model->col_upper_[rowIndex[i]] * coefDelta;
-              }
-              minRhsTightening = std::max(-double(coefDelta), minRhsTightening);
-            } else if (coefDelta > options->small_matrix_value) {
-              if (rhs != kHighsInf) {
-                if (model->col_upper_[rowIndex[i]] == kHighsInf) return false;
-                rhs += model->col_upper_[rowIndex[i]] * coefDelta;
-              }
-              // the coefficient was relaxed regarding the rows lower bound.
-              // Therefore the lower bound should be tightened by at least
-              // this amount for the scaled constraint to dominate the
-              // unscaled constraint be rounded by at least this value
-              minLhsTightening = std::max(double(coefDelta), minLhsTightening);
-            }
-          }
-          if (lhs != -kHighsInf) {
-            // round lhs
-            roundLhs = ceil(lhs - primal_feastol);
-            // compute fractional part
-            fractionLhs = roundLhs - lhs;
-            // check if strengthened
-            strengthenedLhs =
-                fractionLhs >= minLhsTightening - options->small_matrix_value;
-          }
-          if (rhs != kHighsInf) {
-            // round rhs
-            roundRhs = floor(rhs + primal_feastol);
-            // compute fractional part
-            fractionRhs = rhs - roundRhs;
-            // check if strengthened
-            strengthenedRhs =
-                fractionRhs >= minRhsTightening - options->small_matrix_value;
-          }
-          // check for infeasibility
-          isInfeasible = roundLhs != -kHighsInf && roundRhs != kHighsInf &&
-                         roundRhs < roundLhs - 0.5;
-          return true;
+        auto checkRoundRhs = [&](HighsCDouble& rhs, HighsCDouble& roundRhs,
+                                 HighsCDouble& fractionRhs,
+                                 double& minRhsTightening, bool& rhsTightened,
+                                 HighsInt direction) {
+          // return if right-hand side is not finite
+          if (rhs == direction * kHighsInf) return;
+          // round rhs
+          roundRhs = direction * floor(direction * rhs + primal_feastol);
+          // compute fractional part
+          fractionRhs = direction * (rhs - roundRhs);
+          // check if tightened
+          rhsTightened =
+              fractionRhs >= minRhsTightening - options->small_matrix_value;
         };
+
+        auto checkScaledRow =
+            [&](HighsCDouble& lhs, HighsCDouble& rhs, HighsCDouble& roundLhs,
+                HighsCDouble& roundRhs, HighsCDouble& fractionLhs,
+                HighsCDouble& fractionRhs, double& minLhsTightening,
+                double& minRhsTightening, double& maxVal, bool& lhsTightened,
+                bool& rhsTightened, bool& isInfeasible, double intScale) {
+              if (lhs != -kHighsInf) lhs = lhs * intScale;
+              if (rhs != kHighsInf) rhs = rhs * intScale;
+              roundLhs = -kHighsInf;
+              roundRhs = kHighsInf;
+              fractionLhs = 0.0;
+              fractionRhs = 0.0;
+              minRhsTightening = 0.0;
+              minLhsTightening = 0.0;
+              maxVal = 0.0;
+              lhsTightened = false;
+              rhsTightened = false;
+              isInfeasible = false;
+              for (size_t i = 0; i < rowCoefs.size(); ++i) {
+                // computed scaled coefficient
+                HighsCDouble scaleCoef = HighsCDouble(rowCoefs[i]) * intScale;
+                // compute fractional part
+                HighsCDouble intCoef;
+                HighsCDouble coefDelta = fractionality(scaleCoef, &intCoef);
+                // store coefficient and maximum absolute value
+                rowCoefs[i] = double(intCoef);
+                maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
+                if (coefDelta < -options->small_matrix_value) {
+                  // for the >= side of the constraint a smaller coefficient is
+                  // stronger: Therefore we relax the left hand side using the
+                  // bound constraint, if the bound is infinite, abort
+                  if (lhs != -kHighsInf) {
+                    if (model->col_upper_[rowIndex[i]] == kHighsInf)
+                      return false;
+                    lhs += model->col_upper_[rowIndex[i]] * coefDelta;
+                  }
+                  minRhsTightening =
+                      std::max(-double(coefDelta), minRhsTightening);
+                } else if (coefDelta > options->small_matrix_value) {
+                  if (rhs != kHighsInf) {
+                    if (model->col_upper_[rowIndex[i]] == kHighsInf)
+                      return false;
+                    rhs += model->col_upper_[rowIndex[i]] * coefDelta;
+                  }
+                  // the coefficient was relaxed regarding the rows lower bound.
+                  // Therefore the lower bound should be tightened by at least
+                  // this amount for the scaled constraint to dominate the
+                  // unscaled constraint be rounded by at least this value
+                  minLhsTightening =
+                      std::max(double(coefDelta), minLhsTightening);
+                }
+              }
+              // round left-hand and right-hand sides
+              checkRoundRhs(lhs, roundLhs, fractionLhs, minLhsTightening,
+                            lhsTightened, HighsInt{-1});
+              checkRoundRhs(rhs, roundRhs, fractionRhs, minRhsTightening,
+                            rhsTightened, HighsInt{1});
+              // check for infeasibility
+              isInfeasible = roundLhs != -kHighsInf && roundRhs != kHighsInf &&
+                             roundRhs < roundLhs - 0.5;
+              return true;
+            };
 
         auto scaleRowBack = [&](HighsInt row, HighsCDouble roundLhs,
                                 HighsCDouble roundRhs, double scalar,
@@ -3426,7 +3429,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         };
 
         auto scaleRowIntVals = [&](HighsInt row, HighsCDouble roundLhs,
-                                   HighsCDouble roundRhs, double maxVal) {
+                                   HighsCDouble roundRhs, double intScale,
+                                   double maxVal) {
           // return if maximum value in scaled row or scalar are too large
           if (maxVal > 1000.0 && intScale > 100.0) return false;
           // the scale value is reasonably small, change the row values to be
@@ -3445,22 +3449,22 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           double minLhsTightening;
           double minRhsTightening;
           double maxVal;
-          bool strengthenedLhs;
-          bool strengthenedRhs;
+          bool lhsTightened;
+          bool rhsTightened;
           bool isInfeasible;
           if (checkScaledRow(lhs, rhs, roundLhs, roundRhs, fractionLhs,
                              fractionRhs, minLhsTightening, minRhsTightening,
-                             maxVal, strengthenedLhs, strengthenedRhs,
-                             isInfeasible)) {
+                             maxVal, lhsTightened, rhsTightened, isInfeasible,
+                             intScale)) {
             // check for infeasibility
             if (isInfeasible) return Result::kPrimalInfeasible;
             // only accept row whose sides were strengthened
-            if ((rhs == kHighsInf && strengthenedLhs) ||
-                (lhs == -kHighsInf && strengthenedRhs) ||
-                (strengthenedLhs && strengthenedRhs)) {
+            if ((rhs == kHighsInf && lhsTightened) ||
+                (lhs == -kHighsInf && rhsTightened) ||
+                (lhsTightened && rhsTightened)) {
               // check if constraint can be scaled to integral values
-              if (!scaleRowIntVals(row, roundLhs, roundRhs, maxVal)) {
-                if (strengthenedLhs && strengthenedRhs) {
+              if (!scaleRowIntVals(row, roundLhs, roundRhs, intScale, maxVal)) {
+                if (lhsTightened && rhsTightened) {
                   // ranged row or equation
                   // scale value is large, just tighten the sides
                   roundLhs /= intScale;
@@ -3469,9 +3473,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                     model->row_upper_[row] = double(roundRhs);
                   if (roundLhs > model->row_lower_[row] + primal_feastol)
                     model->row_lower_[row] = double(roundLhs);
-                } else if ((strengthenedRhs &&
+                } else if ((rhsTightened &&
                             fractionRhs < minRhsTightening - primal_feastol) ||
-                           (strengthenedLhs &&
+                           (lhsTightened &&
                             fractionLhs < minLhsTightening - primal_feastol)) {
                   // <= or >= inequality
                   // scale value is large, so we scale back the altered
