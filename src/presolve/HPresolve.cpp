@@ -404,13 +404,9 @@ bool HPresolve::convertImpliedInteger(HighsInt col, HighsInt row,
       ++rowsizeImplInt[nonzero.index()];
   }
 
-  // round bounds
-  double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-  double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-  // use tighter bounds
-  if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-  if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+  // round and update bounds
+  changeColLower(col, model->col_lower_[col]);
+  changeColUpper(col, model->col_upper_[col]);
   return true;
 }
 
@@ -4033,11 +4029,9 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
     if (model->integrality_[col] != HighsVarType::kContinuous) {
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+      // round and update bounds
+      changeColLower(col, model->col_lower_[col]);
+      changeColUpper(col, model->col_upper_[col]);
     }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = false;
