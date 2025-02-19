@@ -214,16 +214,24 @@ restart:
   }
 
   std::shared_ptr<const HighsBasis> basis;
-  HighsSearch search{*this, mipdata_->pseudocost};
+  // HighsSearch search{*this, mipdata_->pseudocost};
+
+  // mipdata_->lps.push_back(mipdata_->lp);
+  // mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
+
+  // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
+
+  // HighsMipWorker master_worker(*this, mipdata_->lp);
+  // HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
 
   HighsMipWorker master_worker(*this, mipdata_->lp);
-  HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
+  HighsSearch search{master_worker, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
   HighsSeparation sepa(*this);
 
   search.setLpRelaxation(&mipdata_->lp);
-  master_search.setLpRelaxation(&mipdata_->lp);
+  // master_search.setLpRelaxation(&mipdata_->lp);
 
   sepa.setLpRelaxation(&mipdata_->lp);
 
@@ -281,16 +289,19 @@ restart:
     // HighsMipWorker master_worker(*this, mipdata_->lp);
     // HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
 
-    const int num_workers = 7;
-    for (int i = 0; i < 7; i++) {
-      mipdata_->lps.push_back(HighsLpRelaxation(*this));
-      mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
-    }
+    // const int num_workers = 7;
+    // for (int i = 0; i < 7; i++) {
+    //   mipdata_->lps.push_back(HighsLpRelaxation(*this));
+    //   mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
+    // }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
+
     bool considerHeuristics = true;
+    // bool considerHeuristics = false;
+
     analysis_.mipTimerStart(kMipClockDive);
     while (true) {
       // Possibly apply primal heuristics
@@ -316,13 +327,13 @@ restart:
 
           if (mipdata_->incumbent.empty()) {
             analysis_.mipTimerStart(kMipClockRens);
-            mipdata_->heuristics.RENS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
+            // mipdata_->heuristics.RENS(
+            //     mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRens);
           } else {
             analysis_.mipTimerStart(kMipClockRins);
-            mipdata_->heuristics.RINS(
-                mipdata_->lp.getLpSolver().getSolution().col_value);
+            // mipdata_->heuristics.RINS(
+            //     mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRins);
           }
 

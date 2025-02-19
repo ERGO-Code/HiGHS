@@ -2210,7 +2210,9 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     if (checkLimits()) return;
-    heuristics.RENS(rootlpsol);
+
+    // heuristics.RENS(rootlpsol); // here 
+
     heuristics.flushStatistics();
 
     if (checkLimits()) return;

@@ -14,10 +14,18 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolverData.h"
 
-HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
-    : mipsolver(mipsolver),
+// HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
+//     : mipsolver(mipsolver),
+//       lp(nullptr),
+//       localdom(mipsolver.mipdata_->domain),
+      
+
+HighsSearch::HighsSearch(HighsMipWorker& mipworker, HighsPseudocost&
+pseudocost)
+    : mipworker(mipworker),
+      mipsolver(mipworker.mipsolver_),
       lp(nullptr),
-      localdom(mipsolver.mipdata_->domain),
+      localdom(mipworker.mipdata_.domain),
       pseudocost(pseudocost) {
   nnodes = 0;
   treeweight = 0.0;

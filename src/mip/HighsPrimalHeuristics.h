@@ -47,9 +47,9 @@ class HighsPrimalHeuristics {
 
   void rootReducedCost();
 
-  void RENS(const std::vector<double>& relaxationsol);
+  // void RENS(const std::vector<double>& relaxationsol);
 
-  void RINS(const std::vector<double>& relaxationsol);
+  // void RINS(const std::vector<double>& relaxationsol);
 
   void feasibilityPump();
 

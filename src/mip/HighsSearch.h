@@ -17,6 +17,7 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
@@ -24,10 +25,14 @@
 #include "util/HighsHash.h"
 
 class HighsMipSolver;
+class HighsMipWorker;
 class HighsImplications;
 class HighsCliqueTable;
 
 class HighsSearch {
+public: 
+  HighsMipWorker& mipworker;
+
   const HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
   HighsDomain localdom;
@@ -139,7 +144,8 @@ class HighsSearch {
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
  public:
-  HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
+  // HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost);
+  HighsSearch(HighsMipWorker& mipworker, HighsPseudocost& pseudocost);
 
   void setRINSNeighbourhood(const std::vector<double>& basesol,
                             const std::vector<double>& relaxsol);

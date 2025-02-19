@@ -7,7 +7,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipWorker.h"
 
-#include "mip/HighsSearchWorker.h"
+// #include "mip/HighsSearchWorker.h"
 #include "mip/HighsMipSolverData.h"
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_)
@@ -39,8 +39,9 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpR
 
   // search_ptr_= std::unique_ptr<HighsSearch>(new HighsSearch(mipsolver_, pseudocost_));
 
-  search_ptr_= std::unique_ptr<HighsSearchWorker>(new HighsSearchWorker(*this, pseudocost_));
-  // search_ptr_shared_ = std::shared_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
+  search_ptr_ = std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
+
+  // search_ptr_ = std::shared_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
   // search_ptr = new HighsSearch(*this, pseudocost_);
 
   // add global cutpool 
@@ -98,6 +99,6 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpR
 
 const HighsMipSolver& HighsMipWorker::getMipSolver() { return mipsolver_; }
 
-HighsSearchWorker& HighsMipWorker::getSearch() { return *search_ptr_; }
+// HighsSearchWorker& HighsMipWorker::getSearch() { return *search_ptr_; }
 // HighsSearch& HighsMipWorker::getSearch() { return (*search_ptr); }
 // HighsSearch& HighsMipWorker::getSearch() { return (*search_ptr_shared_); }
