@@ -69,12 +69,9 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceTrivialP) {
     if (code) return "p";
     return "Trivial point";
-    //  } else if (solution_source == kSolutionSourceOpt1) {
-    //    if (code) return "1";
-    //    return "1-opt";
-    //  } else if (solution_source == kSolutionSourceOpt2) {
-    //    if (code) return "2";
-    //    return "2-opt";
+  } else if (solution_source == kSolutionSourceUserSolution) {
+    if (code) return "X";
+    return "User solution";
   } else if (solution_source == kSolutionSourceCleanup) {
     if (code) return " ";
     return "";
@@ -969,6 +966,8 @@ void HighsMipSolverData::runSetup() {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\n");
 }
+
+//double HighsMipSolverData::untransformSolution(}
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,

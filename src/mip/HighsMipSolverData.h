@@ -57,8 +57,7 @@ enum MipSolutionSource : int {
   kSolutionSourceTrivialL,
   kSolutionSourceTrivialU,
   kSolutionSourceTrivialP,
-  //  kSolutionSourceOpt1,
-  //  kSolutionSourceOpt2,
+  kSolutionSourceUserSolution,
   kSolutionSourceCleanup,
   kSolutionSourceCount
 };
