@@ -3334,13 +3334,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         double intScale =
             HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
 
-        auto roundRhs = [&](HighsCDouble& rhs, HighsCDouble& roundRhs,
-                            HighsCDouble& fractionRhs, double& minRhsTightening,
+        auto roundRhs = [&](HighsCDouble rhs, HighsCDouble& roundedRhs,
+                            HighsCDouble& fractionRhs, double minRhsTightening,
                             bool& rhsTightened, HighsInt direction) {
           // round rhs
-          roundRhs = direction * floor(direction * rhs + primal_feastol);
+          roundedRhs = direction * floor(direction * rhs + primal_feastol);
           // compute fractional part
-          fractionRhs = direction * (rhs - roundRhs);
+          fractionRhs = direction * (rhs - roundedRhs);
           // check if tightened
           rhsTightened =
               fractionRhs >= minRhsTightening - options->small_matrix_value;
