@@ -13,11 +13,6 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
                                const HighsLpRelaxation& lprelax_)
     : mipsolver_(mipsolver__),
       mipdata_(*mipsolver_.mipdata_.get()),
-      // mipsolver_worker_(mipsolver__),
-      // lprelaxation_(mipsolver__),
-      // lprelaxation_(mipsolver__) required setLpRelaxation to be called after,
-      // but here we use the local relaxation so we can initialize it in the
-      // constructor
       lprelaxation_(lprelax_),
       cutpool_(mipsolver__.numCol(),
                mipsolver__.options_mip_->mip_pool_age_limit,
@@ -25,29 +20,19 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
       conflictpool_(5 * mipsolver__.options_mip_->mip_pool_age_limit,
                     mipsolver__.options_mip_->mip_pool_soft_limit),
       cliquetable_(mipsolver__.numCol()),
-      // mipsolver(mipsolver__),
       pseudocost_(mipsolver__),
-      // search_(mipsolver_, pseudocost_),
-
       pscostinit_(pseudocost_, 1),
       clqtableinit_(mipsolver_.numCol()),
       implicinit_(mipsolver_),
-
       pscostinit(pscostinit_),
       implicinit(implicinit_),
       clqtableinit(clqtableinit_) {
-  // Register cutpool and conflict pool in local search domain.
-
-  // search_ptr_= std::unique_ptr<HighsSearch>(new HighsSearch(mipsolver_,
-  // pseudocost_));
 
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
 
-  // search_ptr_ = std::shared_ptr<HighsSearch>(new HighsSearch(*this,
-  // pseudocost_)); search_ptr = new HighsSearch(*this, pseudocost_);
-
-  // add global cutpool
+  // Register cutpool and conflict pool in local search domain.
+  // Add global cutpool.
   search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
   search_ptr_->getLocalDomain().addConflictPool(
       mipsolver_.mipdata_->conflictPool);

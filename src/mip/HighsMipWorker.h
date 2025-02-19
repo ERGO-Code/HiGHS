@@ -38,16 +38,10 @@ class HighsMipWorker {
 
   std::unique_ptr<HighsSearch> search_ptr_;
 
- public:
- 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
   HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_);
 
   // ~HighsMipWorker();
-
-  // ~HighsMipWorker() {
-  //   delete search_ptr;
-  // };
 
   const HighsMipSolver& getMipSolver();
 
@@ -67,8 +61,6 @@ class HighsMipWorker {
   HighsCliqueTable& clqtableinit;
   HighsImplications& implicinit;
 
-  // std::unique_ptr<HighsMipSolverData> mipdata_;
-
   // Solution information.
   struct Solution {
     double row_violation_;
@@ -78,7 +70,11 @@ class HighsMipWorker {
     double solution_objective_;
   };
 
-  // if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
+  const bool checkLimits(int64_t nodeOffset = 0) const;
+
+  // ... implement necessary methods for HighsSearch
+
+  
 };
 
 #endif
