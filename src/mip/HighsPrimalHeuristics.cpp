@@ -1054,7 +1054,7 @@ void HighsPrimalHeuristics::randomizedRounding(
 }
 
 void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   std::vector<double> currRelSol = relaxationsol;
   HighsInt t = 0;
@@ -1064,12 +1064,12 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
       lprelax.getFractionalIntegers();
   std::vector<std::tuple<HighsInt, HighsInt, double>> currentInfeasibleRows =
       mipsolver.mipdata_->getInfeasibleRows(currRelSol);
-  HighsInt prevInfeasibleRowsSize = currentInfeasibleRows.size();
+  size_t prevInfeasibleRowsSize = currentInfeasibleRows.size();
   bool hasInfeasibleConstraints = currentInfeasibleRows.size() != 0;
   HighsInt iterationsWithoutReductions = 0;
   HighsInt maxIterationsWithoutReductions = 5;
   std::unordered_map<HighsInt, std::vector<HighsInt>> ShiftIterationsSet;
-  std::vector<HighsInt> shifts = {};
+  std::vector<HighsInt> shifts;
 
   auto findPairByIndex = [](std::vector<std::pair<HighsInt, double>>& vec,
                             HighsInt k) {
@@ -1106,10 +1106,9 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         for (HighsInt jInd = start; jInd != end; ++jInd) {
           auto it = findPairByIndex(currentFracInt,
                                     mipsolver.mipdata_->ARindex_[jInd]);
-          if (it != currentFracInt.end()) {
-            fractIntFound = true;
-            break;
-          }
+          fractIntFound = it != currentFracInt.end();
+          if (fractIntFound) break;
+
         }
         rInd++;
       }
@@ -1137,6 +1136,7 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
 
         // skip fixed variables
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
+
         // check if the values are at the bounds
         if (currentLp.integrality_[j] == HighsVarType::kInteger) {
           AtLowerBound = std::abs(currRelSol[j] -
@@ -1318,14 +1318,14 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
 
   std::vector<double> currRelSol = relaxationsol;
 
-  auto ZI = [](double x) {
+  auto ZI = [mipsolver = this->mipsolver](double x) {
     return std::min(std::ceil(x - mipsolver.mipdata_->feastol) - x,
                     x - std::floor(x + mipsolver.mipdata_->feastol));
   };
 
   // auto localdom = mipsolver.mipdata_->domain;
 
-  double ZI_total = 0.0;  // todo: change to HighsCDouble
+  HighsCDouble ZI_total = 0.0;
   for (HighsInt i : intcols) {
     ZI_total += ZI(currRelSol[i]);
   }
@@ -1343,8 +1343,8 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
 
   HighsInt loopCount = 0;
   HighsInt max_loop_count = 5;
-  double prev_ZI_total;
-  double improvementInFeasibility = kHighsInf;
+  HighsCDouble prev_ZI_total;
+  HighsCDouble improvementInFeasibility = kHighsInf;
 
   while (ZI_total > mipsolver.mipdata_->feastol &&
          improvementInFeasibility > mipsolver.mipdata_->feastol &&
