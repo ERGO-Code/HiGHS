@@ -1113,13 +1113,13 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool(
         "mip_heuristic_run_ZIRound",
         "Run ZI Round heuristic: Default = true", advanced,
-        &mip_heuristic_run_ZIRound, false);
+        &mip_heuristic_run_ZIRound, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "mip_heuristic_run_Shifting",
-        "Run Shifting heuristic: Default = false", advanced,
-        &mip_heuristic_run_Shifting, false);
+        "Run Shifting heuristic: Default = true", advanced,
+        &mip_heuristic_run_Shifting, true);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
