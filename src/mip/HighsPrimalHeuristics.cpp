@@ -1312,126 +1312,104 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
   tryRoundedPoint(currRelSol, 'I');
 }
 
-void HighsPrimalHeuristics::ZIRound(
-    const std::vector<double>& relaxationsol) {
-    //if (mipsolver.submip) return;
-    if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
+  // if (mipsolver.submip) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
-    std::vector<double> currRelSol = relaxationsol;
+  std::vector<double> currRelSol = relaxationsol;
 
-    auto ZI = [](double x) {
-        return std::min(std::ceil(x) - x, x - std::floor(x));
-    };
+  auto ZI = [](double x) {
+    return std::min(std::ceil(x - mipsolver.mipdata_->feastol) - x,
+                    x - std::floor(x + mipsolver.mipdata_->feastol));
+  };
 
-    //auto localdom = mipsolver.mipdata_->domain;
-    double ZI_total = 0.0; // todo: change to HighsCDouble
-    for (HighsInt i : intcols) {
-        ZI_total += ZI(relaxationsol[i]);
-    }
+  // auto localdom = mipsolver.mipdata_->domain;
 
-    if (ZI_total < mipsolver.mipdata_->feastol) return;
+  double ZI_total = 0.0;  // todo: change to HighsCDouble
+  for (HighsInt i : intcols) {
+    ZI_total += ZI(currRelSol[i]);
+  }
 
-    std::vector<double> rowActivities;
-    const HighsLp& currentLp = *mipsolver.model_;
-    double UB = 0.0;
-    double LB = 0.0;
-    std::unique_ptr<double[]> XrowLower(new double[currentLp.num_row_]);
-    std::unique_ptr<double[]> XrowUpper(new double[currentLp.num_row_]);
-    HighsInt loopCount = 0;
-    HighsInt max_loop_count = 5;
-    double prev_ZI_total;
-    double improvementInFeasibility = kHighsInf;
+  if (ZI_total < mipsolver.mipdata_->feastol) return;
 
-    while (ZI_total > mipsolver.mipdata_->feastol &&
-        improvementInFeasibility > mipsolver.mipdata_->feastol &&
-        loopCount <= max_loop_count)
-    {
-        prev_ZI_total = ZI_total;
-        loopCount++;
-        double relSol;
+  const HighsLp& currentLp = *mipsolver.model_;
+
+  std::vector<double> rowActivities;
+  std::vector<double> XrowLower;
+  std::vector<double> XrowUpper;
+  rowActivities.resize(currentLp.num_row_);
+  XrowLower.resize(currentLp.num_row_);
+  XrowUpper.resize(currentLp.num_row_);
+
+  HighsInt loopCount = 0;
+  HighsInt max_loop_count = 5;
+  double prev_ZI_total;
+  double improvementInFeasibility = kHighsInf;
+
+  while (ZI_total > mipsolver.mipdata_->feastol &&
+         improvementInFeasibility > mipsolver.mipdata_->feastol &&
+         loopCount <= max_loop_count) {
+    prev_ZI_total = ZI_total;
+    loopCount++;
+    
+    if (currentLp.num_row_ > 0)
+      getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.data(),
+                    XrowUpper.data());
+
+    for (HighsInt j : intcols) {
+      double relSol = currRelSol[j];
+      if (fractionality(relSol) <= mipsolver.mipdata_->feastol) continue;
+
+      rowActivities.assign(currentLp.num_row_, 0.0);
+      calculateRowValuesQuad(currentLp, currRelSol, rowActivities);
+
+      double minRowRatioForUB = kHighsInf;
+      double minRowRatioForLB = kHighsInf;
+      for (HighsInt i = 0; i < currentLp.num_row_; ++i) {
         double aij = 0.0;
+        getLpMatrixCoefficient(currentLp, i, j, &aij);
+        double siUB = XrowUpper[i] - rowActivities[i];
+        double siLB = rowActivities[i] - XrowLower[i];
+        minRowRatioForUB =
+            std::min(minRowRatioForUB, (aij > 0 ? siUB : -siLB) / aij);
+        minRowRatioForLB =
+            std::min(minRowRatioForLB, (aij > 0 ? siLB : -siUB) / aij);
+      }
 
-        if (currentLp.num_row_ > 0)      
-            getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.get(), XrowUpper.get());
+      double UB = std::min(currentLp.col_upper_[j] - relSol, minRowRatioForUB);
+      double LB = std::min(relSol - currentLp.col_lower_[j], minRowRatioForLB);
 
-        for (HighsInt j : intcols) {
+      auto performUpdates = [&](HighsInt col, double change) {
+        double oldRelSol = currRelSol[col];
+        currRelSol[col] += change;
+        ZI_total = ZI_total - ZI(oldRelSol) + ZI(currRelSol[col]);
+      };
 
-            relSol = currRelSol[j];
-            if (std::abs(relSol - std::floor(relSol + 0.5)) <= mipsolver.mipdata_->feastol) continue;
-
-            rowActivities.clear();
-            rowActivities.resize(currentLp.num_row_, 0.0);
-            calculateRowValuesQuad(currentLp, currRelSol, rowActivities);
-            double XcolLower = currentLp.col_lower_[j];
-            double XcolUpper = currentLp.col_upper_[j];
-
-
-            double minRowRatioForUB = kHighsInf;
-            double minRowRatioForLB = kHighsInf;
-            for (HighsInt i = 0; i < currentLp.num_row_; ++i) {
-                getLpMatrixCoefficient(currentLp, i, j, &aij);
-                double siUB = XrowUpper.get()[i] - rowActivities[i];
-                double siLB = rowActivities[i] - XrowLower.get()[i];
-                if (aij > 0) {
-                    minRowRatioForUB = std::min(minRowRatioForUB, siUB / aij);
-                    minRowRatioForLB = std::min(minRowRatioForLB, siLB / aij);
-                };
-                if (aij < 0) {
-                    minRowRatioForLB = std::min(minRowRatioForLB, -siUB / aij);
-                    minRowRatioForUB = std::min(minRowRatioForUB, -siLB / aij);
-                };
-            }
-
-            UB = std::min(XcolUpper - relSol, minRowRatioForUB);
-            LB = std::min(relSol - XcolLower, minRowRatioForLB);
-
-            if (std::abs(ZI(relSol + UB) - ZI(relSol - LB)) <= mipsolver.mipdata_->feastol &&
-                ZI(relSol + UB) < ZI(relSol))
-            {
-                double XcolCost = currentLp.col_cost_[j];
-                if (currentLp.sense_ == ObjSense::kMinimize) // for minimization
-                {
-                    if (XcolCost * (relSol + UB) <= XcolCost * (relSol - LB))
-                    {
-                        currRelSol[j] = relSol + UB;
-                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
-                    }
-                    else
-                    {
-                        currRelSol[j] = relSol - LB;
-                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
-                    }
-                }
-                else // for maximization
-                {
-                    if (XcolCost * (relSol + UB) <= XcolCost * (relSol - LB))
-                    {
-                        currRelSol[j] = relSol - LB;
-                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
-                    }
-                    else
-                    {
-                        currRelSol[j] = relSol + UB;
-                        ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
-                    }
-                }
-            }
-            else if (ZI(relSol + UB) < ZI(relSol - LB) && ZI(relSol + UB) < ZI(relSol))
-            {
-                currRelSol[j] = relSol + UB;
-                ZI_total = ZI_total - ZI(relSol) + ZI(relSol + UB);
-            }
-            else if (ZI(relSol + UB) > ZI(relSol - LB) && ZI(relSol - LB) < ZI(relSol))
-            {
-                currRelSol[j] = relSol - LB;
-                ZI_total = ZI_total - ZI(relSol) + ZI(relSol - LB);
-            };
+      if (std::abs(ZI(relSol + UB) - ZI(relSol - LB)) <=
+              mipsolver.mipdata_->feastol &&
+          ZI(relSol + UB) < ZI(relSol)) {
+        double XcolCost = currentLp.col_cost_[j];
+        bool ubObjChangeSmaller =
+            XcolCost * (relSol + UB) <= XcolCost * (relSol - LB);
+        bool isMinimization = currentLp.sense_ == ObjSense::kMinimize;
+        if ((isMinimization && ubObjChangeSmaller) ||
+            (!isMinimization && !ubObjChangeSmaller)) {
+          performUpdates(j, UB);
+        } else {
+          performUpdates(j, -LB);
         }
-        improvementInFeasibility = prev_ZI_total - ZI_total;
+      } else if (ZI(relSol + UB) < ZI(relSol - LB) &&
+                 ZI(relSol + UB) < ZI(relSol)) {
+        performUpdates(j, UB);
+      } else if (ZI(relSol + UB) > ZI(relSol - LB) &&
+                 ZI(relSol - LB) < ZI(relSol)) {
+        performUpdates(j, -LB);
+      }
     }
-    // re-check for feasibility and add incumbent
-    mipsolver.mipdata_->trySolution(currRelSol, 'Z');
-
+    improvementInFeasibility = prev_ZI_total - ZI_total;
+  }
+  // re-check for feasibility and add incumbent
+  mipsolver.mipdata_->trySolution(currRelSol, 'Z');
 }
 
 void HighsPrimalHeuristics::feasibilityPump() {
