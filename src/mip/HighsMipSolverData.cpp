@@ -991,7 +991,12 @@ try_again:
   double bound_violation_ = 0;
   double row_violation_ = 0;
   double integrality_violation_ = 0;
+  double temp_mipsolver_objective_value = 0;
 
+  bool temp_feasible =
+    mipsolver.solutionFeasible(mipsolver.orig_model_, solution.col_value, &solution.row_value,
+		     bound_violation_, row_violation_, integrality_violation_,
+		     temp_mipsolver_objective_value);
   // Compute to quad precision the objective function value of the MIP
   // being solved - including the offset, and independent of objective
   // sense
