@@ -12,6 +12,7 @@
 
 HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_)
     : mipsolver_(mipsolver__),
+      mipdata_(*mipsolver_.mipdata_.get()),
       // mipsolver_worker_(mipsolver__),
       // lprelaxation_(mipsolver__),
       // lprelaxation_(mipsolver__) required setLpRelaxation to be called after, but here
@@ -43,8 +44,8 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpR
   // search_ptr = new HighsSearch(*this, pseudocost_);
 
   // add global cutpool 
-  // search_ptr_->getLocalDomain().addCutpool(mipsolver__.mipdata_->cutpool);
-  // search_ptr_->getLocalDomain().addConflictPool(mipsolver_.mipdata_->conflictPool);
+  search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
+  search_ptr_->getLocalDomain().addConflictPool(mipsolver_.mipdata_->conflictPool);
 
   // cutpool_.matrix_.AheadNeg_.assign(mipsolver__.numCol(), -1);
   // cutpool_.matrix_.AheadPos_.assign(mipsolver__.numCol(), -1);

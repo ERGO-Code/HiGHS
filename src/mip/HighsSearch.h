@@ -27,7 +27,7 @@ class HighsImplications;
 class HighsCliqueTable;
 
 class HighsSearch {
-  HighsMipSolver& mipsolver;
+  const HighsMipSolver& mipsolver;
   HighsLpRelaxation* lp;
   HighsDomain localdom;
   HighsPseudocost& pseudocost;

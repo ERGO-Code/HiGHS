@@ -16,6 +16,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
+#include "mip/HighsMipSolverData.h"
 
 // #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
@@ -27,6 +28,8 @@ class HighsSearchWorker;
 
 class HighsMipWorker {
   const HighsMipSolver& mipsolver_;
+  const HighsMipSolverData& mipdata_;
+
 public: // Temporary so HighsMipWorker can be explored in other classes
 
   HighsCliqueTable cliquetable_;
@@ -73,6 +76,17 @@ public: // Temporary so HighsMipWorker can be explored in other classes
   HighsImplications& implicinit;
 
   // std::unique_ptr<HighsMipSolverData> mipdata_;
+
+  // Solution information.
+  struct Solution {
+    double row_violation_;
+    double bound_violation_;
+    double integrality_violation_;
+    std::vector<double> solution_;
+    double solution_objective_;
+  };
+
+  // if (mipsolver.mipdata_->checkLimits(nnodes)) return result;
 };
 
 #endif

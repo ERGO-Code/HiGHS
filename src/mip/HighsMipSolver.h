@@ -51,6 +51,7 @@ class HighsMipSolver {
   const HighsCliqueTable* clqtableinit;
   const HighsImplications* implicinit;
 
+  // std::unique_ptr<const HighsMipSolverData> mipdata_;
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
   HighsMipAnalysis analysis_;

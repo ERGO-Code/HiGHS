@@ -1853,6 +1853,9 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
     if (nodeToQueue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
+      // todo: a collection of postponed nodes to add to the global node queue
+      // later 
+      // 
       std::vector<HighsInt> branchPositions;
       auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
       double tmpTreeWeight = nodequeue.emplaceNode(

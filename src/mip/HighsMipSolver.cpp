@@ -223,7 +223,6 @@ restart:
   HighsSeparation sepa(*this);
 
   search.setLpRelaxation(&mipdata_->lp);
-
   master_search.setLpRelaxation(&mipdata_->lp);
 
   sepa.setLpRelaxation(&mipdata_->lp);
@@ -239,6 +238,17 @@ restart:
                                        mipdata_->upper_bound);
 
   mipdata_->printDisplayLine();
+
+  // Make a copy of nodequeue so both searches can work together?
+
+    // HighsNodeQueue queue;
+    // double lower_bound = -kHighsInf;
+    // queue.emplaceNode(std::vector<HighsDomainChange>(),
+    //                       std::vector<HighsInt>(), lower_bound,
+    //                       master_worker.lprelaxation_.computeBestEstimate(master_worker.pseudocost_), 1);
+    // master_search.installNode(queue.popBestBoundNode());
+    // master_search.installNode(mipdata_->nodequeue.popBestBoundNode());
+
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
