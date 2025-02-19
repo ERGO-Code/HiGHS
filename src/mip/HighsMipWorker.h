@@ -24,7 +24,6 @@
 // #include "presolve/HighsSymmetry.h"
 // #include "util/HighsHash.h"
 
-// class HighsSearchWorker;
 class HighsSearch;
 
 class HighsMipWorker {
@@ -35,13 +34,8 @@ class HighsMipWorker {
 
   HighsCliqueTable cliquetable_;
 
-  // Not sure if this should be here or elsewhere.
-  // HighsMipSolver mipsolver;
-
-  // Not sure if this should be here or in HighsSearch.
   HighsPseudocost pseudocost_;
 
-  // std::unique_ptr<HighsSearchWorker> search_ptr_;
   std::unique_ptr<HighsSearch> search_ptr_;
 
  public:
@@ -56,8 +50,6 @@ class HighsMipWorker {
   // };
 
   const HighsMipSolver& getMipSolver();
-
-  // HighsSearchWorker& getSearch();
 
   HighsLpRelaxation lprelaxation_;
 

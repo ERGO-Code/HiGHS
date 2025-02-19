@@ -221,7 +221,6 @@ set(highs_sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsSearch.cpp
-    mip/HighsSearchWorker.cpp
     mip/HighsSeparation.cpp
     mip/HighsSeparator.cpp
     mip/HighsTableauSeparator.cpp
@@ -344,7 +343,6 @@ set(highs_headers
     mip/HighsPseudocost.h
     mip/HighsRedcostFixing.h
     mip/HighsSearch.h
-    mip/HighsSearchWorker.h
     mip/HighsSeparation.h
     mip/HighsSeparator.h
     mip/HighsTableauSeparator.h

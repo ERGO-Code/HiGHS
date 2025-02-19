@@ -339,7 +339,6 @@ set(highs_headers_python
     src/mip/HighsPseudocost.h
     src/mip/HighsRedcostFixing.h
     src/mip/HighsSearch.h
-    src/mip/HighsSearchWorker.h
     src/mip/HighsSeparation.h
     src/mip/HighsSeparator.h
     src/mip/HighsTableauSeparator.h

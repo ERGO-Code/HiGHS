@@ -18,7 +18,6 @@
 #include "mip/HighsMipWorker.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
-#include "mip/HighsSearchWorker.h"
 #include "mip/HighsSeparation.h"
 #include "mip/MipTimer.h"
 #include "presolve/HPresolve.h"
@@ -222,7 +221,6 @@ restart:
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
 
   // HighsMipWorker master_worker(*this, mipdata_->lp);
-  // HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
 
   HighsMipWorker master_worker(*this, mipdata_->lp);
   HighsSearch search{master_worker, mipdata_->pseudocost};
@@ -231,7 +229,6 @@ restart:
   HighsSeparation sepa(*this);
 
   search.setLpRelaxation(&mipdata_->lp);
-  // master_search.setLpRelaxation(&mipdata_->lp);
 
   sepa.setLpRelaxation(&mipdata_->lp);
 
@@ -285,9 +282,6 @@ restart:
 
     // Initialize worker relaxations and mipworkers
     // todo lps and workers are still empty right now 
-
-    // HighsMipWorker master_worker(*this, mipdata_->lp);
-    // HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
 
     // const int num_workers = 7;
     // for (int i = 0; i < 7; i++) {
