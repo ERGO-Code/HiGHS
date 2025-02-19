@@ -1135,7 +1135,9 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
          auto repair = [this, &findPairByIndex, &currentFracInt, 
-                              &findShiftsByIndex, &ShiftIterationsSet]
+                              &findShiftsByIndex, &ShiftIterationsSet, 
+                              &t, &sig_min, &j_min, &aij_min, &x_j_min, 
+                              &currRelSol, &moveValueUp]
                          (HighsInt col, HighsInt direction, HighsInt rowSense,
                           HighsInt numLocks, double coef, double cost,
                           bool isMaximization, bool isInteger, bool isAtBound) {
@@ -1144,7 +1146,7 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
             return;
 
           // search for column
-          auto& it = findPairByIndex(currentFracInt, col);
+          auto it = findPairByIndex(currentFracInt, col);
 
           // add data
           bool found = it != currentFracInt.end();
