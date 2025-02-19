@@ -1125,10 +1125,7 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
       HighsInt j_min = std::numeric_limits<HighsInt>::max();
       double x_j_min = kHighsInf;
       double aij_min = 0.0;
-      double sig = 0.0;
       bool moveValueUp = false;
-      bool AtLowerBound = false;
-      bool AtUpperBound = false;
       HighsInt start = mipsolver.mipdata_->ARstart_[row];
       HighsInt end = mipsolver.mipdata_->ARstart_[row + 1];
       for (HighsInt jInd = start; jInd != end; ++jInd) {
@@ -1137,82 +1134,66 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         // skip fixed variables
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
-        // check if the values are at the bounds
-        if (currentLp.integrality_[j] == HighsVarType::kInteger) {
-          AtLowerBound = std::abs(currRelSol[j] -
-                                  std::ceil(currentLp.col_lower_[j] -
-                                            mipsolver.mipdata_->feastol)) <=
-                         mipsolver.mipdata_->feastol;
-          AtUpperBound = std::abs(std::floor(currentLp.col_upper_[j] +
-                                             mipsolver.mipdata_->feastol) -
-                                  currRelSol[j]) <= mipsolver.mipdata_->feastol;
-        } else {
-          AtLowerBound = std::abs(currRelSol[j] - currentLp.col_lower_[j]) <=
-                         mipsolver.mipdata_->feastol;
-          AtUpperBound = std::abs(currentLp.col_upper_[j] - currRelSol[j]) <=
-                         mipsolver.mipdata_->feastol;
+         auto repair = [this](HighsInt col, HighsInt direction, HighsInt rowSense,
+                          HighsInt numLocks, double coef, double cost,
+                          bool isMaximization, bool isInteger, bool isAtBound) {
+          if ((rowSense < 0 || direction * coef > 0) &&
+              (rowSense > 0 || direction * coef < 0))
+            return;
 
-        }
+          // search for column
+          auto& it = findPairByIndex(currentFracInt, col);
 
-        auto it = findPairByIndex(currentFracInt, j);
-        if ((rowSense > 0 && mipsolver.mipdata_->ARvalue_[jInd] < 0) ||
-            (rowSense < 0 && mipsolver.mipdata_->ARvalue_[jInd] > 0)) {
-          // repair with up-rounding
-          if (it != currentFracInt.end()) {
-            double xi = mipsolver.mipdata_->downlocks[it->first];
-            sig = -1.0 + 1.0 / (xi + 1);
+          // add data
+          bool found = it != currentFracInt.end();
+
+          // skip variables at bounds
+          if (isAtBound) return;
+
+          double sig = kHighsInf;
+          if (found) {
+            sig = -1.0 + 1.0 / static_cast<double>(numLocks + 1);
           } else {
-            shifts = findShiftsByIndex(ShiftIterationsSet, j);
-            sig = currentLp.col_cost_[j];
-            if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
-            if (!shifts.empty()) {
+            const auto& shifts = findShiftsByIndex(ShiftIterationsSet, col);
+            if (shifts.empty())
+              sig = direction * (isMaximization ? -cost : cost);
+            else {
               sig = 0.0;
-              for (HighsInt s = 0; s != shifts.size(); ++s) {
-                if (shifts[s] > 0) {
-                  sig += pow(1.1, shifts[s] - t);
-                }
+              for (size_t s = 0; s != shifts.size(); ++s) {
+                if (direction * shifts[s] > 0)
+                  sig += pow(1.1, direction * shifts[s] - t);
               }
             }
-            if (currentLp.integrality_[j] == HighsVarType::kInteger) sig += 1;
+            if (isInteger) sig += 1;
           }
-          if (!AtUpperBound && sig < sig_min) {
+
+          if (sig < sig_min) {
             sig_min = sig;
-            j_min = j;
-            aij_min = mipsolver.mipdata_->ARvalue_[jInd];              
-            x_j_min = currRelSol[j];
-            moveValueUp = true;
+            j_min = col;
+            aij_min = coef;
+            x_j_min = currRelSol[col];
+            moveValueUp = direction > 0;
           }
-        }
-        if ((rowSense > 0 && mipsolver.mipdata_->ARvalue_[jInd] > 0) ||
-            (rowSense < 0 && mipsolver.mipdata_->ARvalue_[jInd] < 0)) {
-          // repair with down-rounding
-          if (it != currentFracInt.end()) {
-            double xi = mipsolver.mipdata_->uplocks[it->first];
-            sig = -1.0 + 1.0 / (xi + 1);
-          } else {
-            shifts = findShiftsByIndex(ShiftIterationsSet, j);
-            sig = -currentLp.col_cost_[j];
-            if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize) sig = -sig;
-            if (!shifts.empty()) {
-              sig = 0.0;
-              for (HighsInt s = 0; s != shifts.size(); ++s) {
-                if (shifts[s] < 0) {
-                  sig += pow(1.1, std::abs(shifts[s]) - t);
-                }
-              }
-            }
-            if (currentLp.integrality_[j] == HighsVarType::kInteger)
-                sig += 1;
-          }
-          if (!AtLowerBound && sig < sig_min) {
-              sig_min = sig;
-              j_min = j;
-              aij_min = mipsolver.mipdata_->ARvalue_[jInd];
-              x_j_min = currRelSol[j];
-              moveValueUp = false;
-          }
-        }
+        };
+
+        // repair with up-rounding
+        repair(j, HighsInt{1}, rowSense, mipsolver.mipdata_->downlocks[j],
+               mipsolver.mipdata_->ARvalue_[jInd], currentLp.col_cost_[j],
+               mipsolver.orig_model_->sense_ == ObjSense::kMaximize,
+               currentLp.integrality_[j] == HighsVarType::kInteger,
+               std::abs(currentLp.col_upper_[j] - currRelSol[j]) <=
+                   mipsolver.mipdata_->feastol);
+
+        // repair with down-rounding
+        repair(j, HighsInt{-1}, rowSense, mipsolver.mipdata_->uplocks[j],
+               mipsolver.mipdata_->ARvalue_[jInd], currentLp.col_cost_[j],
+               mipsolver.orig_model_->sense_ == ObjSense::kMaximize,
+               currentLp.integrality_[j] == HighsVarType::kInteger,
+               std::abs(currRelSol[j] - currentLp.col_lower_[j]) <=
+                   mipsolver.mipdata_->feastol);
       }
+
+
       if (j_min != std::numeric_limits<HighsInt>::max()) {
         // Update CurrentFracInt
         auto it = findPairByIndex(currentFracInt, j_min);
