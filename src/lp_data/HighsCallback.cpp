@@ -28,6 +28,7 @@ void HighsCallback::clearHighsCallbackDataOut() {
 
 void HighsCallback::clearHighsCallbackDataIn() {
   this->data_in.user_interrupt = false;
+  this->data_in.user_solution = nullptr;
 }
 
 void HighsCallback::clear() {

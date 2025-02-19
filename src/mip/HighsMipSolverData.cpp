@@ -2482,7 +2482,7 @@ void HighsMipSolverData::limitsToBounds(double& dual_bound,
 // incumbent value (mipsolver.solution_objective_) is not right for
 // callback_type = kCallbackMipSolution
 
-void HighsMipSolverData::setCallbackDataOut(const double mipsolver_objective_value) {
+void HighsMipSolverData::setCallbackDataOut(const double mipsolver_objective_value) const {
   double dual_bound;
   double primal_bound;
   double mip_rel_gap;
@@ -2503,27 +2503,19 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
     const std::string message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
-
-  double dual_bound;
-  double primal_bound;
-  double mip_rel_gap;
-  limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
-  mipsolver.callback_->data_out.running_time = mipsolver.timer_.read();
-  mipsolver.callback_->data_out.objective_function_value =
-      mipsolver_objective_value;
-  mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
-  mipsolver.callback_->data_out.mip_total_lp_iterations =
-      mipsolver.mipdata_->total_lp_iterations;
-  mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
-  mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
-  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
+  setCallbackDataOut(mipsolver_objective_value);
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
 void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_value) {
   setCallbackDataOut(mipsolver_objective_value);
-  printf("HighsMipSolverData::callbackUserSolution() mipsolver_objective_value = %g\n",  mipsolver.callback_->data_out.objective_function_value);
-  
+  mipsolver.callback_->clearHighsCallbackDataIn();
+  const bool interrupt = mipsolver.callback_->callbackAction(kCallbackMipUserSolution, "MIP User solution");
+  assert(!interrupt);
+  if (mipsolver.callback_->data_in.user_solution) {
+    printf("HighsMipSolverData::callbackUserSolution() User solution has first value %g\n",
+	   mipsolver.callback_->data_in.user_solution[0]);
+  }
 }
 
 static double possInfRelDiff(const double v0, const double v1,

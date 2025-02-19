@@ -31,6 +31,11 @@ struct MipData {
   HighsVarType* integrality;
 };
 
+struct UserMipSolution {
+  double optimal_objective_value;
+  double* optimal_solution; 
+};
+
 // Callback that saves message for comparison
 HighsCallbackFunctionType myLogCallback =
     [](int callback_type, const std::string& message,
@@ -183,9 +188,15 @@ HighsCallbackFunctionType userkMipUserSolution =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
+      UserMipSolution callback_data = *(static_cast<UserMipSolution*>(user_callback_data));
       if (dev_run) {
-        printf("userkMipUserSolution: mip_primal_bound = %g)\n",
-               data_out->mip_primal_bound);
+	if (data_out->mip_primal_bound > callback_data.optimal_objective_value) {
+	  // If current objective value is not optimal, pass the
+	  // optimal solution as a user solution
+	  printf("userkMipUserSolution: %g = mip_primal_bound > optimal_objective_value = %g\n",
+		 data_out->mip_primal_bound, callback_data.optimal_objective_value);
+	  data_in->user_solution = callback_data.optimal_solution;
+	}
       }
     };
 
@@ -385,8 +396,7 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
-  //  MipData user_callback_data;
-  highs.setCallback(userMipCutPoolCallback);  //, p_user_callback_data);
+  highs.setCallback(userMipCutPoolCallback);
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
 }
@@ -395,10 +405,17 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("presolve", kHighsOffString);
   highs.readModel(filename);
-  //  MipData user_callback_data;
-  highs.setCallback(userkMipUserSolution);  //, p_user_callback_data);
+  highs.run();
+  std::vector<double> optimal_solution = highs.getSolution().col_value;
+  UserMipSolution user_callback_data;
+  user_callback_data.optimal_objective_value = highs.getInfo().objective_function_value;
+  user_callback_data.optimal_solution = optimal_solution.data();
+  void* p_user_callback_data = (void*)(&user_callback_data);
+
+  highs.clearSolver();
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setCallback(userkMipUserSolution, p_user_callback_data); 
   highs.startCallback(kCallbackMipUserSolution);
   highs.run();
 }
