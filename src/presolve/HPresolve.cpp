@@ -3370,28 +3370,29 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               for (size_t i = 0; i < rowCoefs.size(); ++i) {
                 // computed scaled coefficient
                 HighsCDouble scaleCoef = HighsCDouble(rowCoefs[i]) * intScale;
-                // compute fractional part
-                HighsCDouble intCoef;
-                HighsCDouble coefDelta = fractionality(scaleCoef, &intCoef);
-                // store coefficient and maximum absolute value
+                // round to the nearest integer
+                HighsCDouble intCoef = floor(scaleCoef + 0.5);
+                // compute difference
+                HighsCDouble coefDelta = intCoef - scaleCoef;
+                // store integral coefficient and maximum absolute value
                 rowCoefs[i] = double(intCoef);
                 maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
+                // get column upper bound
+                double ub = model->col_upper_[rowIndex[i]];
                 if (coefDelta < -options->small_matrix_value) {
                   // for the >= side of the constraint a smaller coefficient is
                   // stronger: Therefore we relax the left hand side using the
                   // bound constraint, if the bound is infinite, abort
                   if (lhs != -kHighsInf) {
-                    if (model->col_upper_[rowIndex[i]] == kHighsInf)
-                      return false;
-                    lhs += model->col_upper_[rowIndex[i]] * coefDelta;
+                    if (ub == kHighsInf) return false;
+                    lhs += ub * coefDelta;
                   }
                   minRhsTightening =
                       std::max(-double(coefDelta), minRhsTightening);
                 } else if (coefDelta > options->small_matrix_value) {
                   if (rhs != kHighsInf) {
-                    if (model->col_upper_[rowIndex[i]] == kHighsInf)
-                      return false;
-                    rhs += model->col_upper_[rowIndex[i]] * coefDelta;
+                    if (ub == kHighsInf) return false;
+                    rhs += ub * coefDelta;
                   }
                   // the coefficient was relaxed regarding the rows lower bound.
                   // Therefore the lower bound should be tightened by at least
