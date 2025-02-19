@@ -2515,6 +2515,13 @@ void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_v
   if (mipsolver.callback_->data_in.user_solution) {
     printf("HighsMipSolverData::callbackUserSolution() User solution has first value %g\n",
 	   mipsolver.callback_->data_in.user_solution[0]);
+    printf("HighsMipSolverData::callbackUserSolution() original model has %d columns; model has %d columns\n",
+	   int(mipsolver.orig_model_->num_col_),
+	   int(mipsolver.model_->num_col_)); 
+    std::vector<double> user_solution(mipsolver.orig_model_->num_col_);
+    for (HighsInt iCol = 0; iCol < mipsolver.orig_model_->num_col_; iCol++)
+      user_solution[iCol] = mipsolver.callback_->data_in.user_solution[iCol];
+    transformNewIntegerFeasibleSolution(user_solution, false);
   }
 }
 

@@ -402,7 +402,8 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  const std::string model = "bell5";
+  const std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(filename);
@@ -414,7 +415,7 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
   void* p_user_callback_data = (void*)(&user_callback_data);
 
   highs.clearSolver();
-  highs.setOptionValue("presolve", kHighsOffString);
+  //  highs.setOptionValue("presolve", kHighsOffString);
   highs.setCallback(userkMipUserSolution, p_user_callback_data); 
   highs.startCallback(kCallbackMipUserSolution);
   highs.run();
