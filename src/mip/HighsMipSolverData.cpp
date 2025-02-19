@@ -967,7 +967,10 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-// double HighsMipSolverData::untransformSolution(}
+void HighsMipSolverData::presolveSolution(const std::vector<double>& sol, std::vector<double>& presolved_sol) {
+
+
+}
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,
@@ -2390,18 +2393,19 @@ void HighsMipSolverData::callbackUserSolution(
       kCallbackMipUserSolution, "MIP User solution");
   assert(!interrupt);
   if (mipsolver.callback_->data_in.user_solution) {
-    printf(
-        "HighsMipSolverData::callbackUserSolution() User solution has first "
-        "value %g\n",
-        mipsolver.callback_->data_in.user_solution[0]);
-    printf(
-        "HighsMipSolverData::callbackUserSolution() original model has %d "
-        "columns; model has %d columns\n",
-        int(mipsolver.orig_model_->num_col_), int(mipsolver.model_->num_col_));
     std::vector<double> user_solution(mipsolver.orig_model_->num_col_);
     for (HighsInt iCol = 0; iCol < mipsolver.orig_model_->num_col_; iCol++)
       user_solution[iCol] = mipsolver.callback_->data_in.user_solution[iCol];
-    transformNewIntegerFeasibleSolution(user_solution, false);
+    double bound_violation_ = 0;
+    double row_violation_ = 0;
+    double integrality_violation_ = 0;
+    HighsCDouble mipsolver_quad_objective_value = 0;
+    const bool feasible = mipsolver.solutionFeasible(
+         mipsolver.orig_model_, user_solution, nullptr,
+         bound_violation_, row_violation_, integrality_violation_,
+         mipsolver_quad_objective_value);
+    printf("HighsMipSolverData::callbackUserSolution() User solution is %s\n",
+	   feasible ? "Feasible" : "Not feasible");
   }
 }
 
