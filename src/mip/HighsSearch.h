@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "mip/HighsConflictPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
@@ -236,6 +237,39 @@ class HighsSearch {
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(int64_t maxbacktracks = 1);
+
+  double getFeasTol() const;
+  double getUpperLimit() const;
+  double getEpsilon() const;
+  double getOptimalityLimit() const;
+
+  const std::vector<double>& getRootLpSol() const;
+  const std::vector<HighsInt>& getIntegralCols() const;
+
+  HighsDomain& getDomain() const;
+  HighsConflictPool& getConflictPool() const;
+  HighsCutPool& getCutPool() const;
+
+  const HighsDebugSol& getDebugSolution() const;
+
+  const HighsNodeQueue& getNodeQueue() const;
+
+  const bool checkLimits(int64_t nodeOffset = 0) const;
+
+  HighsSymmetries& getSymmetries() const;
+
+  // one error computeStabilizerOrbits
+
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source,
+                    const bool print_display_line = true);
+
+  int64_t& getNumNodes();
+  HighsCDouble& getPrunedTreeweight();
+  int64_t& getTotalLpIterations();
+  int64_t& getHeuristicLpIterations();
+  int64_t& getSbLpIterations();
+  int64_t& getSbLpIterations() const;
 };
 
 #endif
