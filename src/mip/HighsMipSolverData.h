@@ -24,11 +24,15 @@
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
+#include "mip/HighsSearchWorker.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsSeparation.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
+
+class HighsMipWorker;
 
 struct HighsPrimaDualIntegral {
   double value;
@@ -69,6 +73,10 @@ struct HighsMipSolverData {
   HighsConflictPool conflictPool;
   HighsDomain domain;
   HighsLpRelaxation lp;
+
+  std::deque<HighsLpRelaxation> lps;
+  std::deque<HighsMipWorker> workers;
+
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;

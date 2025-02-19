@@ -274,6 +274,19 @@ restart:
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
+
+    // Initialize worker relaxations and mipworkers
+    // todo lps and workers are still empty right now 
+
+    // HighsMipWorker master_worker(*this, mipdata_->lp);
+    // HighsSearchWorker master_search{master_worker, mipdata_->pseudocost};
+
+    const int num_workers = 7;
+    for (int i = 0; i < 7; i++) {
+      mipdata_->lps.push_back(HighsLpRelaxation(*this));
+      mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
+    }
+
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
