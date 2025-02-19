@@ -2211,7 +2211,7 @@ restart:
 
     if (checkLimits()) return;
 
-    // heuristics.RENS(rootlpsol); // here 
+    heuristics.RENS(rootlpsol); // here 
 
     heuristics.flushStatistics();
 

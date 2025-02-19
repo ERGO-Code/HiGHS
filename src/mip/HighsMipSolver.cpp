@@ -321,13 +321,13 @@ restart:
 
           if (mipdata_->incumbent.empty()) {
             analysis_.mipTimerStart(kMipClockRens);
-            // mipdata_->heuristics.RENS(
-            //     mipdata_->lp.getLpSolver().getSolution().col_value);
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRens);
           } else {
             analysis_.mipTimerStart(kMipClockRins);
-            // mipdata_->heuristics.RINS(
-            //     mipdata_->lp.getLpSolver().getSolution().col_value);
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRins);
           }
 

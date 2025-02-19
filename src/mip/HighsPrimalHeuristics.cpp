@@ -314,543 +314,553 @@ void HighsPrimalHeuristics::rootReducedCost() {
   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRootReducedCost);
 }
 
-// void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
-//   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
-//   HighsSearch heur(mipsolver, pscost);
-//   HighsDomain& localdom = heur.getLocalDomain();
-//   heur.setHeuristic(true);
-
-//   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
-//                                [&](HighsInt i) {
-//                                  return mipsolver.mipdata_->domain.isFixed(i);
-//                                }),
-//                 intcols.end());
-
-//   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
-//   // only use the global upper limit as LP limit so that dual proofs are valid
-//   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-//   heurlp.setAdjustSymmetricBranchingCol(false);
-//   heur.setLpRelaxation(&heurlp);
-
-//   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-//                                         localdom.col_lower_.data(),
-//                                         localdom.col_upper_.data());
-//   localdom.clearChangedCols();
-//   heur.createNewNode();
-
-//   // determine the initial number of unfixed variables fixing rate to decide if
-//   // the problem is restricted enough to be considered for solving a submip
-//   double maxfixingrate = determineTargetFixingRate();
-//   double fixingrate = 0.0;
-//   bool stop = false;
-//   // heurlp.setIterationLimit(2 * mipsolver.mipdata_->maxrootlpiters);
-//   // printf("iterlimit: %" HIGHSINT_FORMAT "\n",
-//   //       heurlp.getLpSolver().getOptions().simplex_iteration_limit);
-//   HighsInt targetdepth = 1;
-//   HighsInt nbacktracks = -1;
-//   HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
-// retry:
-//   ++nbacktracks;
-//   neighbourhood.backtracked();
-//   // printf("current depth : %" HIGHSINT_FORMAT
-//   //        "   target depth : %" HIGHSINT_FORMAT "\n",
-//   //        heur.getCurrentDepth(), targetdepth);
-//   if (heur.getCurrentDepth() > targetdepth) {
-//     if (!heur.backtrackUntilDepth(targetdepth)) {
-//       lp_iterations += heur.getLocalLpIterations();
-//       return;
-//     }
-//   }
-
-//   // printf("fixingrate before loop is %g\n", fixingrate);
-//   assert(heur.hasNode());
-//   while (true) {
-//     // printf("evaluating node\n");
-//     heur.evaluateNode();
-//     // printf("done evaluating node\n");
-//     if (heur.currentNodePruned()) {
-//       ++nbacktracks;
-//       if (mipsolver.mipdata_->domain.infeasible()) {
-//         lp_iterations += heur.getLocalLpIterations();
-//         return;
-//       }
-
-//       if (!heur.backtrack()) break;
-//       neighbourhood.backtracked();
-//       continue;
-//     }
-
-//     fixingrate = neighbourhood.getFixingRate();
-//     // printf("after evaluating node current fixingrate is %g\n", fixingrate);
-//     if (fixingrate >= maxfixingrate) break;
-//     if (stop) break;
-//     if (nbacktracks >= 10) break;
-
-//     HighsInt numBranched = 0;
-//     double stopFixingRate = std::min(
-//         1.0 - (1.0 - neighbourhood.getFixingRate()) * 0.9, maxfixingrate);
-//     const auto& relaxationsol = heurlp.getSolution().col_value;
-//     for (HighsInt i : intcols) {
-//       if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
-
-//       double downval =
-//           std::floor(relaxationsol[i] + mipsolver.mipdata_->feastol);
-//       double upval = std::ceil(relaxationsol[i] - mipsolver.mipdata_->feastol);
-
-//       downval = std::min(downval, localdom.col_upper_[i]);
-//       upval = std::max(upval, localdom.col_lower_[i]);
-//       if (localdom.col_lower_[i] < downval) {
-//         ++numBranched;
-//         heur.branchUpwards(i, downval, downval - 0.5);
-//         localdom.propagate();
-//         if (localdom.infeasible()) {
-//           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//           break;
-//         }
-//       }
-//       if (localdom.col_upper_[i] > upval) {
-//         ++numBranched;
-//         heur.branchDownwards(i, upval, upval + 0.5);
-//         localdom.propagate();
-//         if (localdom.infeasible()) {
-//           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//           break;
-//         }
-//       }
-
-//       if (neighbourhood.getFixingRate() >= stopFixingRate) break;
-//     }
-
-//     if (numBranched == 0) {
-//       auto getFixVal = [&](HighsInt col, double fracval) {
-//         double fixval;
-
-//         // reinforce direction of this solution away from root
-//         // solution if the change is at least 0.4
-//         // otherwise take the direction where the objective gets worse
-//         // if objective is zero round to nearest integer
-//         double rootchange = mipsolver.mipdata_->rootlpsol.empty()
-//                                 ? 0.0
-//                                 : fracval - mipsolver.mipdata_->rootlpsol[col];
-//         if (rootchange >= 0.4)
-//           fixval = std::ceil(fracval);
-//         else if (rootchange <= -0.4)
-//           fixval = std::floor(fracval);
-//         if (mipsolver.model_->col_cost_[col] > 0.0)
-//           fixval = std::ceil(fracval);
-//         else if (mipsolver.model_->col_cost_[col] < 0.0)
-//           fixval = std::floor(fracval);
-//         else
-//           fixval = std::floor(fracval + 0.5);
-//         // make sure we do not set an infeasible domain
-//         fixval = std::min(localdom.col_upper_[col], fixval);
-//         fixval = std::max(localdom.col_lower_[col], fixval);
-//         return fixval;
-//       };
-
-//       pdqsort(heurlp.getFractionalIntegers().begin(),
-//               heurlp.getFractionalIntegers().end(),
-//               [&](const std::pair<HighsInt, double>& a,
-//                   const std::pair<HighsInt, double>& b) {
-//                 return std::make_pair(
-//                            std::abs(getFixVal(a.first, a.second) - a.second),
-//                            HighsHashHelpers::hash(
-//                                (uint64_t(a.first) << 32) +
-//                                heurlp.getFractionalIntegers().size())) <
-//                        std::make_pair(
-//                            std::abs(getFixVal(b.first, b.second) - b.second),
-//                            HighsHashHelpers::hash(
-//                                (uint64_t(b.first) << 32) +
-//                                heurlp.getFractionalIntegers().size()));
-//               });
-
-//       double change = 0.0;
-//       // select a set of fractional variables to fix
-//       for (auto fracint : heurlp.getFractionalIntegers()) {
-//         double fixval = getFixVal(fracint.first, fracint.second);
-
-//         if (localdom.col_lower_[fracint.first] < fixval) {
-//           ++numBranched;
-//           heur.branchUpwards(fracint.first, fixval, fracint.second);
-//           localdom.propagate();
-//           if (localdom.infeasible()) {
-//             localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//             break;
-//           }
-
-//           fixingrate = neighbourhood.getFixingRate();
-//         }
-
-//         if (localdom.col_upper_[fracint.first] > fixval) {
-//           ++numBranched;
-//           heur.branchDownwards(fracint.first, fixval, fracint.second);
-//           localdom.propagate();
-//           if (localdom.infeasible()) {
-//             localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//             break;
-//           }
-
-//           fixingrate = neighbourhood.getFixingRate();
-//         }
-
-//         if (fixingrate >= maxfixingrate) break;
-
-//         change += std::abs(fixval - fracint.second);
-//         if (change >= 0.5) break;
-//       }
-//     }
-
-//     if (numBranched == 0) break;
-//     heurlp.flushDomain(localdom);
-//   }
-
-//   // printf("stopped heur dive with fixing rate %g\n", fixingrate);
-//   // if there is no node left it means we backtracked to the global domain and
-//   // the subproblem was solved with the dive
-//   if (!heur.hasNode()) {
-//     lp_iterations += heur.getLocalLpIterations();
-//     return;
-//   }
-//   // determine the fixing rate to decide if the problem is restricted enough to
-//   // be considered for solving a submip
-
-//   fixingrate = neighbourhood.getFixingRate();
-//   // printf("fixing rate is %g\n", fixingrate);
-//   if (fixingrate < 0.1 ||
-//       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
-//     // heur.childselrule = ChildSelectionRule::kBestCost;
-//     heur.setMinReliable(0);
-//     heur.solveDepthFirst(10);
-//     lp_iterations += heur.getLocalLpIterations();
-//     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
-//     // lpiterations += heur.lpiterations;
-//     // pseudocost = heur.pseudocost;
-//     return;
-//   }
-
-//   heurlp.removeObsoleteRows(false);
-//   mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
-//   const bool solve_sub_mip_return =
-//       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-//                   localdom.col_lower_, localdom.col_upper_,
-//                   500,  // std::max(50, int(0.05 *
-//                   // (mipsolver.mipdata_->num_leaves))),
-//                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-//   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
-//   if (!solve_sub_mip_return) {
-//     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
-//     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
-//         100000 + ((mipsolver.mipdata_->total_lp_iterations -
-//                    mipsolver.mipdata_->heuristic_lp_iterations -
-//                    mipsolver.mipdata_->sb_lp_iterations) >>
-//                   1)) {
-//       lp_iterations = new_lp_iterations;
-//       return;
-//     }
-
-//     targetdepth = heur.getCurrentDepth() / 2;
-//     if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
-//       lp_iterations = new_lp_iterations;
-//       return;
-//     }
-//     maxfixingrate = fixingrate * 0.5;
-//     // printf("infeasible in root node, trying with lower fixing rate %g\n",
-//     //        maxfixingrate);
-//     goto retry;
-//   }
-
-//   lp_iterations += heur.getLocalLpIterations();
-// }
-
-// void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
-//   if (int(relaxationsol.size()) != mipsolver.numCol()) return;
-
-//   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
-//                                [&](HighsInt i) {
-//                                  return mipsolver.mipdata_->domain.isFixed(i);
-//                                }),
-//                 intcols.end());
-
-//   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
-//   HighsSearch heur(mipsolver, pscost);
-//   HighsDomain& localdom = heur.getLocalDomain();
-//   heur.setHeuristic(true);
-
-//   HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
-//   // only use the global upper limit as LP limit so that dual proofs are valid
-//   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-//   heurlp.setAdjustSymmetricBranchingCol(false);
-//   heur.setLpRelaxation(&heurlp);
-
-//   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-//                                         localdom.col_lower_.data(),
-//                                         localdom.col_upper_.data());
-//   localdom.clearChangedCols();
-//   heur.createNewNode();
-
-//   // determine the initial number of unfixed variables fixing rate to decide if
-//   // the problem is restricted enough to be considered for solving a submip
-//   double maxfixingrate = determineTargetFixingRate();
-//   double minfixingrate = 0.25;
-//   double fixingrate = 0.0;
-//   bool stop = false;
-//   HighsInt nbacktracks = -1;
-//   HighsInt targetdepth = 1;
-//   HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
-// retry:
-//   ++nbacktracks;
-//   neighbourhood.backtracked();
-//   // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
-//   // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
-//   //       targetdepth);
-//   if (heur.getCurrentDepth() > targetdepth) {
-//     if (!heur.backtrackUntilDepth(targetdepth)) {
-//       lp_iterations += heur.getLocalLpIterations();
-//       return;
-//     }
-//   }
-
-//   assert(heur.hasNode());
-
-//   while (true) {
-//     heur.evaluateNode();
-//     if (heur.currentNodePruned()) {
-//       ++nbacktracks;
-//       // printf("backtrack1\n");
-//       if (mipsolver.mipdata_->domain.infeasible()) {
-//         lp_iterations += heur.getLocalLpIterations();
-//         return;
-//       }
-
-//       if (!heur.backtrack()) break;
-//       neighbourhood.backtracked();
-//       continue;
-//     }
-
-//     fixingrate = neighbourhood.getFixingRate();
-
-//     if (stop) break;
-//     if (fixingrate >= maxfixingrate) break;
-//     if (nbacktracks >= 10) break;
-
-//     std::vector<std::pair<HighsInt, double>>::iterator fixcandend;
-
-//     // partition the fractional variables to consider which ones should we fix
-//     // in this dive first if there is an incumbent, we dive towards the RINS
-//     // neighbourhood
-//     fixcandend = std::partition(
-//         heurlp.getFractionalIntegers().begin(),
-//         heurlp.getFractionalIntegers().end(),
-//         [&](const std::pair<HighsInt, double>& fracvar) {
-//           return std::abs(relaxationsol[fracvar.first] -
-//                           mipsolver.mipdata_->incumbent[fracvar.first]) <=
-//                  mipsolver.mipdata_->feastol;
-//         });
-
-//     bool fixtolpsol = true;
-
-//     auto getFixVal = [&](HighsInt col, double fracval) {
-//       double fixval;
-//       if (fixtolpsol) {
-//         // RINS neighbourhood (with extension)
-//         fixval = std::floor(relaxationsol[col] + 0.5);
-//       } else {
-//         // reinforce direction of this solution away from root
-//         // solution if the change is at least 0.4
-//         // otherwise take the direction where the objective gets worse
-//         // if objective is zero round to nearest integer
-//         double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
-//         if (rootchange >= 0.4)
-//           fixval = std::ceil(fracval);
-//         else if (rootchange <= -0.4)
-//           fixval = std::floor(fracval);
-//         if (mipsolver.model_->col_cost_[col] > 0.0)
-//           fixval = std::ceil(fracval);
-//         else if (mipsolver.model_->col_cost_[col] < 0.0)
-//           fixval = std::floor(fracval);
-//         else
-//           fixval = std::floor(fracval + 0.5);
-//       }
-//       // make sure we do not set an infeasible domain
-//       fixval = std::min(localdom.col_upper_[col], fixval);
-//       fixval = std::max(localdom.col_lower_[col], fixval);
-//       return fixval;
-//     };
-
-//     // no candidates left to fix for getting to the neighbourhood, therefore we
-//     // switch to a different diving strategy until the minimal fixing rate is
-//     // reached
-//     HighsInt numBranched = 0;
-//     if (heurlp.getFractionalIntegers().begin() == fixcandend) {
-//       fixingrate = neighbourhood.getFixingRate();
-//       double stopFixingRate =
-//           std::min(maxfixingrate, 1.0 - (1.0 - fixingrate) * 0.9);
-//       const auto& currlpsol = heurlp.getSolution().col_value;
-//       for (HighsInt i : intcols) {
-//         if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
-
-//         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
-//             mipsolver.mipdata_->feastol) {
-//           double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
-//           if (localdom.col_lower_[i] < fixval) {
-//             ++numBranched;
-//             heur.branchUpwards(i, fixval, fixval - 0.5);
-//             localdom.propagate();
-//             if (localdom.infeasible()) {
-//               localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//               break;
-//             }
-
-//             fixingrate = neighbourhood.getFixingRate();
-//           }
-//           if (localdom.col_upper_[i] > fixval) {
-//             ++numBranched;
-//             heur.branchDownwards(i, fixval, fixval + 0.5);
-//             localdom.propagate();
-//             if (localdom.infeasible()) {
-//               localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//               break;
-//             }
-
-//             fixingrate = neighbourhood.getFixingRate();
-//           }
-
-//           if (fixingrate >= stopFixingRate) break;
-//         }
-//       }
-
-//       if (numBranched != 0) {
-//         // printf(
-//         //    "fixed %" HIGHSINT_FORMAT " additional cols, old fixing rate:
-//         //    %.2f%%, new fixing " "rate: %.2f%%\n", numBranched, fixingrate,
-//         //    getFixingRate());
-//         heurlp.flushDomain(localdom);
-//         continue;
-//       }
-
-//       if (fixingrate >= minfixingrate)
-//         break;  // if the RINS neighbourhood achieved a high enough fixing rate
-//                 // by itself we stop here
-//       fixcandend = heurlp.getFractionalIntegers().end();
-//       // now sort the variables by their distance towards the value they will
-//       // be fixed to
-//       fixtolpsol = false;
-//     }
-
-//     // now sort the variables by their distance towards the value they will be
-//     // fixed to
-//     pdqsort(heurlp.getFractionalIntegers().begin(), fixcandend,
-//             [&](const std::pair<HighsInt, double>& a,
-//                 const std::pair<HighsInt, double>& b) {
-//               return std::make_pair(
-//                          std::abs(getFixVal(a.first, a.second) - a.second),
-//                          HighsHashHelpers::hash(
-//                              (uint64_t(a.first) << 32) +
-//                              heurlp.getFractionalIntegers().size())) <
-//                      std::make_pair(
-//                          std::abs(getFixVal(b.first, b.second) - b.second),
-//                          HighsHashHelpers::hash(
-//                              (uint64_t(b.first) << 32) +
-//                              heurlp.getFractionalIntegers().size()));
-//             });
-
-//     double change = 0.0;
-//     // select a set of fractional variables to fix
-//     for (auto fracint = heurlp.getFractionalIntegers().begin();
-//          fracint != fixcandend; ++fracint) {
-//       double fixval = getFixVal(fracint->first, fracint->second);
-
-//       if (localdom.col_lower_[fracint->first] < fixval) {
-//         ++numBranched;
-//         heur.branchUpwards(fracint->first, fixval, fracint->second);
-//         if (localdom.infeasible()) {
-//           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//           break;
-//         }
-
-//         fixingrate = neighbourhood.getFixingRate();
-//       }
-
-//       if (localdom.col_upper_[fracint->first] > fixval) {
-//         ++numBranched;
-//         heur.branchDownwards(fracint->first, fixval, fracint->second);
-//         if (localdom.infeasible()) {
-//           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
-//           break;
-//         }
-
-//         fixingrate = neighbourhood.getFixingRate();
-//       }
-
-//       if (fixingrate >= maxfixingrate) break;
-
-//       change += std::abs(fixval - fracint->second);
-//       if (change >= 0.5) break;
-//     }
-
-//     if (numBranched == 0) break;
-
-//     heurlp.flushDomain(localdom);
-
-//     // printf("%" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT " fixed, fixingrate is
-//     // %g\n", nfixed, ntotal, fixingrate);
-//   }
-
-//   // if there is no node left it means we backtracked to the global domain and
-//   // the subproblem was solved with the dive
-//   if (!heur.hasNode()) {
-//     lp_iterations += heur.getLocalLpIterations();
-//     return;
-//   }
-//   // determine the fixing rate to decide if the problem is restricted enough
-//   // to be considered for solving a submip
-
-//   // printf("fixing rate is %g\n", fixingrate);
-//   fixingrate = neighbourhood.getFixingRate();
-//   if (fixingrate < 0.1 ||
-//       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
-//     // heur.childselrule = ChildSelectionRule::kBestCost;
-//     heur.setMinReliable(0);
-//     heur.solveDepthFirst(10);
-//     lp_iterations += heur.getLocalLpIterations();
-//     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
-//     // lpiterations += heur.lpiterations;
-//     // pseudocost = heur.pseudocost;
-//     return;
-//   }
-
-//   heurlp.removeObsoleteRows(false);
-//   mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
-//   const bool solve_sub_mip_return =
-//       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-//                   localdom.col_lower_, localdom.col_upper_,
-//                   500,  // std::max(50, int(0.05 *
-//                   // (mipsolver.mipdata_->num_leaves))),
-//                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-//   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
-//   if (!solve_sub_mip_return) {
-//     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
-//     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
-//         100000 + ((mipsolver.mipdata_->total_lp_iterations -
-//                    mipsolver.mipdata_->heuristic_lp_iterations -
-//                    mipsolver.mipdata_->sb_lp_iterations) >>
-//                   1)) {
-//       lp_iterations = new_lp_iterations;
-//       return;
-//     }
-
-//     targetdepth = heur.getCurrentDepth() / 2;
-//     if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
-//       lp_iterations = new_lp_iterations;
-//       return;
-//     }
-//     // printf("infeasible in root node, trying with lower fixing rate\n");
-//     maxfixingrate = fixingrate * 0.5;
-//     goto retry;
-//   }
-
-//   lp_iterations += heur.getLocalLpIterations();
-// }
+void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
+  HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
+
+  // HighsSearch heur(mipsolver, pscost);
+
+  HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
+  HighsSearch heur(worker, pscost);
+
+  HighsDomain& localdom = heur.getLocalDomain();
+  heur.setHeuristic(true);
+
+  intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
+                               [&](HighsInt i) {
+                                 return mipsolver.mipdata_->domain.isFixed(i);
+                               }),
+                intcols.end());
+
+  HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
+  // only use the global upper limit as LP limit so that dual proofs are valid
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
+  heur.setLpRelaxation(&heurlp);
+
+  heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+                                        localdom.col_lower_.data(),
+                                        localdom.col_upper_.data());
+  localdom.clearChangedCols();
+  heur.createNewNode();
+
+  // determine the initial number of unfixed variables fixing rate to decide if
+  // the problem is restricted enough to be considered for solving a submip
+  double maxfixingrate = determineTargetFixingRate();
+  double fixingrate = 0.0;
+  bool stop = false;
+  // heurlp.setIterationLimit(2 * mipsolver.mipdata_->maxrootlpiters);
+  // printf("iterlimit: %" HIGHSINT_FORMAT "\n",
+  //       heurlp.getLpSolver().getOptions().simplex_iteration_limit);
+  HighsInt targetdepth = 1;
+  HighsInt nbacktracks = -1;
+  HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
+retry:
+  ++nbacktracks;
+  neighbourhood.backtracked();
+  // printf("current depth : %" HIGHSINT_FORMAT
+  //        "   target depth : %" HIGHSINT_FORMAT "\n",
+  //        heur.getCurrentDepth(), targetdepth);
+  if (heur.getCurrentDepth() > targetdepth) {
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
+  }
+
+  // printf("fixingrate before loop is %g\n", fixingrate);
+  assert(heur.hasNode());
+  while (true) {
+    // printf("evaluating node\n");
+    heur.evaluateNode();
+    // printf("done evaluating node\n");
+    if (heur.currentNodePruned()) {
+      ++nbacktracks;
+      if (mipsolver.mipdata_->domain.infeasible()) {
+        lp_iterations += heur.getLocalLpIterations();
+        return;
+      }
+
+      if (!heur.backtrack()) break;
+      neighbourhood.backtracked();
+      continue;
+    }
+
+    fixingrate = neighbourhood.getFixingRate();
+    // printf("after evaluating node current fixingrate is %g\n", fixingrate);
+    if (fixingrate >= maxfixingrate) break;
+    if (stop) break;
+    if (nbacktracks >= 10) break;
+
+    HighsInt numBranched = 0;
+    double stopFixingRate = std::min(
+        1.0 - (1.0 - neighbourhood.getFixingRate()) * 0.9, maxfixingrate);
+    const auto& relaxationsol = heurlp.getSolution().col_value;
+    for (HighsInt i : intcols) {
+      if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
+
+      double downval =
+          std::floor(relaxationsol[i] + mipsolver.mipdata_->feastol);
+      double upval = std::ceil(relaxationsol[i] - mipsolver.mipdata_->feastol);
+
+      downval = std::min(downval, localdom.col_upper_[i]);
+      upval = std::max(upval, localdom.col_lower_[i]);
+      if (localdom.col_lower_[i] < downval) {
+        ++numBranched;
+        heur.branchUpwards(i, downval, downval - 0.5);
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
+      }
+      if (localdom.col_upper_[i] > upval) {
+        ++numBranched;
+        heur.branchDownwards(i, upval, upval + 0.5);
+        localdom.propagate();
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
+      }
+
+      if (neighbourhood.getFixingRate() >= stopFixingRate) break;
+    }
+
+    if (numBranched == 0) {
+      auto getFixVal = [&](HighsInt col, double fracval) {
+        double fixval;
+
+        // reinforce direction of this solution away from root
+        // solution if the change is at least 0.4
+        // otherwise take the direction where the objective gets worse
+        // if objective is zero round to nearest integer
+        double rootchange = mipsolver.mipdata_->rootlpsol.empty()
+                                ? 0.0
+                                : fracval - mipsolver.mipdata_->rootlpsol[col];
+        if (rootchange >= 0.4)
+          fixval = std::ceil(fracval);
+        else if (rootchange <= -0.4)
+          fixval = std::floor(fracval);
+        if (mipsolver.model_->col_cost_[col] > 0.0)
+          fixval = std::ceil(fracval);
+        else if (mipsolver.model_->col_cost_[col] < 0.0)
+          fixval = std::floor(fracval);
+        else
+          fixval = std::floor(fracval + 0.5);
+        // make sure we do not set an infeasible domain
+        fixval = std::min(localdom.col_upper_[col], fixval);
+        fixval = std::max(localdom.col_lower_[col], fixval);
+        return fixval;
+      };
+
+      pdqsort(heurlp.getFractionalIntegers().begin(),
+              heurlp.getFractionalIntegers().end(),
+              [&](const std::pair<HighsInt, double>& a,
+                  const std::pair<HighsInt, double>& b) {
+                return std::make_pair(
+                           std::abs(getFixVal(a.first, a.second) - a.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(a.first) << 32) +
+                               heurlp.getFractionalIntegers().size())) <
+                       std::make_pair(
+                           std::abs(getFixVal(b.first, b.second) - b.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(b.first) << 32) +
+                               heurlp.getFractionalIntegers().size()));
+              });
+
+      double change = 0.0;
+      // select a set of fractional variables to fix
+      for (auto fracint : heurlp.getFractionalIntegers()) {
+        double fixval = getFixVal(fracint.first, fracint.second);
+
+        if (localdom.col_lower_[fracint.first] < fixval) {
+          ++numBranched;
+          heur.branchUpwards(fracint.first, fixval, fracint.second);
+          localdom.propagate();
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            break;
+          }
+
+          fixingrate = neighbourhood.getFixingRate();
+        }
+
+        if (localdom.col_upper_[fracint.first] > fixval) {
+          ++numBranched;
+          heur.branchDownwards(fracint.first, fixval, fracint.second);
+          localdom.propagate();
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            break;
+          }
+
+          fixingrate = neighbourhood.getFixingRate();
+        }
+
+        if (fixingrate >= maxfixingrate) break;
+
+        change += std::abs(fixval - fracint.second);
+        if (change >= 0.5) break;
+      }
+    }
+
+    if (numBranched == 0) break;
+    heurlp.flushDomain(localdom);
+  }
+
+  // printf("stopped heur dive with fixing rate %g\n", fixingrate);
+  // if there is no node left it means we backtracked to the global domain and
+  // the subproblem was solved with the dive
+  if (!heur.hasNode()) {
+    lp_iterations += heur.getLocalLpIterations();
+    return;
+  }
+  // determine the fixing rate to decide if the problem is restricted enough to
+  // be considered for solving a submip
+
+  fixingrate = neighbourhood.getFixingRate();
+  // printf("fixing rate is %g\n", fixingrate);
+  if (fixingrate < 0.1 ||
+      (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
+    // heur.childselrule = ChildSelectionRule::kBestCost;
+    heur.setMinReliable(0);
+    heur.solveDepthFirst(10);
+    lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
+    // lpiterations += heur.lpiterations;
+    // pseudocost = heur.pseudocost;
+    return;
+  }
+
+  heurlp.removeObsoleteRows(false);
+  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
+  const bool solve_sub_mip_return =
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
+  if (!solve_sub_mip_return) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
+    targetdepth = heur.getCurrentDepth() / 2;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+    maxfixingrate = fixingrate * 0.5;
+    // printf("infeasible in root node, trying with lower fixing rate %g\n",
+    //        maxfixingrate);
+    goto retry;
+  }
+
+  lp_iterations += heur.getLocalLpIterations();
+}
+
+void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
+  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+
+  intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
+                               [&](HighsInt i) {
+                                 return mipsolver.mipdata_->domain.isFixed(i);
+                               }),
+                intcols.end());
+
+  HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
+
+  // HighsSearch heur(mipsolver, pscost);
+
+  HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
+  HighsSearch heur(worker, pscost);
+
+  HighsDomain& localdom = heur.getLocalDomain();
+  heur.setHeuristic(true);
+
+  HighsLpRelaxation heurlp(mipsolver.mipdata_->lp);
+  // only use the global upper limit as LP limit so that dual proofs are valid
+  heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+  heurlp.setAdjustSymmetricBranchingCol(false);
+  heur.setLpRelaxation(&heurlp);
+
+  heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+                                        localdom.col_lower_.data(),
+                                        localdom.col_upper_.data());
+  localdom.clearChangedCols();
+  heur.createNewNode();
+
+  // determine the initial number of unfixed variables fixing rate to decide if
+  // the problem is restricted enough to be considered for solving a submip
+  double maxfixingrate = determineTargetFixingRate();
+  double minfixingrate = 0.25;
+  double fixingrate = 0.0;
+  bool stop = false;
+  HighsInt nbacktracks = -1;
+  HighsInt targetdepth = 1;
+  HeuristicNeighbourhood neighbourhood(mipsolver, localdom);
+retry:
+  ++nbacktracks;
+  neighbourhood.backtracked();
+  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
+  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
+  //       targetdepth);
+  if (heur.getCurrentDepth() > targetdepth) {
+    if (!heur.backtrackUntilDepth(targetdepth)) {
+      lp_iterations += heur.getLocalLpIterations();
+      return;
+    }
+  }
+
+  assert(heur.hasNode());
+
+  while (true) {
+    heur.evaluateNode();
+    if (heur.currentNodePruned()) {
+      ++nbacktracks;
+      // printf("backtrack1\n");
+      if (mipsolver.mipdata_->domain.infeasible()) {
+        lp_iterations += heur.getLocalLpIterations();
+        return;
+      }
+
+      if (!heur.backtrack()) break;
+      neighbourhood.backtracked();
+      continue;
+    }
+
+    fixingrate = neighbourhood.getFixingRate();
+
+    if (stop) break;
+    if (fixingrate >= maxfixingrate) break;
+    if (nbacktracks >= 10) break;
+
+    std::vector<std::pair<HighsInt, double>>::iterator fixcandend;
+
+    // partition the fractional variables to consider which ones should we fix
+    // in this dive first if there is an incumbent, we dive towards the RINS
+    // neighbourhood
+    fixcandend = std::partition(
+        heurlp.getFractionalIntegers().begin(),
+        heurlp.getFractionalIntegers().end(),
+        [&](const std::pair<HighsInt, double>& fracvar) {
+          return std::abs(relaxationsol[fracvar.first] -
+                          mipsolver.mipdata_->incumbent[fracvar.first]) <=
+                 mipsolver.mipdata_->feastol;
+        });
+
+    bool fixtolpsol = true;
+
+    auto getFixVal = [&](HighsInt col, double fracval) {
+      double fixval;
+      if (fixtolpsol) {
+        // RINS neighbourhood (with extension)
+        fixval = std::floor(relaxationsol[col] + 0.5);
+      } else {
+        // reinforce direction of this solution away from root
+        // solution if the change is at least 0.4
+        // otherwise take the direction where the objective gets worse
+        // if objective is zero round to nearest integer
+        double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
+        if (rootchange >= 0.4)
+          fixval = std::ceil(fracval);
+        else if (rootchange <= -0.4)
+          fixval = std::floor(fracval);
+        if (mipsolver.model_->col_cost_[col] > 0.0)
+          fixval = std::ceil(fracval);
+        else if (mipsolver.model_->col_cost_[col] < 0.0)
+          fixval = std::floor(fracval);
+        else
+          fixval = std::floor(fracval + 0.5);
+      }
+      // make sure we do not set an infeasible domain
+      fixval = std::min(localdom.col_upper_[col], fixval);
+      fixval = std::max(localdom.col_lower_[col], fixval);
+      return fixval;
+    };
+
+    // no candidates left to fix for getting to the neighbourhood, therefore we
+    // switch to a different diving strategy until the minimal fixing rate is
+    // reached
+    HighsInt numBranched = 0;
+    if (heurlp.getFractionalIntegers().begin() == fixcandend) {
+      fixingrate = neighbourhood.getFixingRate();
+      double stopFixingRate =
+          std::min(maxfixingrate, 1.0 - (1.0 - fixingrate) * 0.9);
+      const auto& currlpsol = heurlp.getSolution().col_value;
+      for (HighsInt i : intcols) {
+        if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
+
+        if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
+            mipsolver.mipdata_->feastol) {
+          double fixval = HighsIntegers::nearestInteger(currlpsol[i]);
+          if (localdom.col_lower_[i] < fixval) {
+            ++numBranched;
+            heur.branchUpwards(i, fixval, fixval - 0.5);
+            localdom.propagate();
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              break;
+            }
+
+            fixingrate = neighbourhood.getFixingRate();
+          }
+          if (localdom.col_upper_[i] > fixval) {
+            ++numBranched;
+            heur.branchDownwards(i, fixval, fixval + 0.5);
+            localdom.propagate();
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              break;
+            }
+
+            fixingrate = neighbourhood.getFixingRate();
+          }
+
+          if (fixingrate >= stopFixingRate) break;
+        }
+      }
+
+      if (numBranched != 0) {
+        // printf(
+        //    "fixed %" HIGHSINT_FORMAT " additional cols, old fixing rate:
+        //    %.2f%%, new fixing " "rate: %.2f%%\n", numBranched, fixingrate,
+        //    getFixingRate());
+        heurlp.flushDomain(localdom);
+        continue;
+      }
+
+      if (fixingrate >= minfixingrate)
+        break;  // if the RINS neighbourhood achieved a high enough fixing rate
+                // by itself we stop here
+      fixcandend = heurlp.getFractionalIntegers().end();
+      // now sort the variables by their distance towards the value they will
+      // be fixed to
+      fixtolpsol = false;
+    }
+
+    // now sort the variables by their distance towards the value they will be
+    // fixed to
+    pdqsort(heurlp.getFractionalIntegers().begin(), fixcandend,
+            [&](const std::pair<HighsInt, double>& a,
+                const std::pair<HighsInt, double>& b) {
+              return std::make_pair(
+                         std::abs(getFixVal(a.first, a.second) - a.second),
+                         HighsHashHelpers::hash(
+                             (uint64_t(a.first) << 32) +
+                             heurlp.getFractionalIntegers().size())) <
+                     std::make_pair(
+                         std::abs(getFixVal(b.first, b.second) - b.second),
+                         HighsHashHelpers::hash(
+                             (uint64_t(b.first) << 32) +
+                             heurlp.getFractionalIntegers().size()));
+            });
+
+    double change = 0.0;
+    // select a set of fractional variables to fix
+    for (auto fracint = heurlp.getFractionalIntegers().begin();
+         fracint != fixcandend; ++fracint) {
+      double fixval = getFixVal(fracint->first, fracint->second);
+
+      if (localdom.col_lower_[fracint->first] < fixval) {
+        ++numBranched;
+        heur.branchUpwards(fracint->first, fixval, fracint->second);
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
+
+        fixingrate = neighbourhood.getFixingRate();
+      }
+
+      if (localdom.col_upper_[fracint->first] > fixval) {
+        ++numBranched;
+        heur.branchDownwards(fracint->first, fixval, fracint->second);
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
+
+        fixingrate = neighbourhood.getFixingRate();
+      }
+
+      if (fixingrate >= maxfixingrate) break;
+
+      change += std::abs(fixval - fracint->second);
+      if (change >= 0.5) break;
+    }
+
+    if (numBranched == 0) break;
+
+    heurlp.flushDomain(localdom);
+
+    // printf("%" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT " fixed, fixingrate is
+    // %g\n", nfixed, ntotal, fixingrate);
+  }
+
+  // if there is no node left it means we backtracked to the global domain and
+  // the subproblem was solved with the dive
+  if (!heur.hasNode()) {
+    lp_iterations += heur.getLocalLpIterations();
+    return;
+  }
+  // determine the fixing rate to decide if the problem is restricted enough
+  // to be considered for solving a submip
+
+  // printf("fixing rate is %g\n", fixingrate);
+  fixingrate = neighbourhood.getFixingRate();
+  if (fixingrate < 0.1 ||
+      (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
+    // heur.childselrule = ChildSelectionRule::kBestCost;
+    heur.setMinReliable(0);
+    heur.solveDepthFirst(10);
+    lp_iterations += heur.getLocalLpIterations();
+    if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
+    // lpiterations += heur.lpiterations;
+    // pseudocost = heur.pseudocost;
+    return;
+  }
+
+  heurlp.removeObsoleteRows(false);
+  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
+  const bool solve_sub_mip_return =
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
+  if (!solve_sub_mip_return) {
+    int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
+    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+        100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                   mipsolver.mipdata_->heuristic_lp_iterations -
+                   mipsolver.mipdata_->sb_lp_iterations) >>
+                  1)) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+
+    targetdepth = heur.getCurrentDepth() / 2;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) {
+      lp_iterations = new_lp_iterations;
+      return;
+    }
+    // printf("infeasible in root node, trying with lower fixing rate\n");
+    maxfixingrate = fixingrate * 0.5;
+    goto retry;
+  }
+
+  lp_iterations += heur.getLocalLpIterations();
+}
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                             const int solution_source) {
