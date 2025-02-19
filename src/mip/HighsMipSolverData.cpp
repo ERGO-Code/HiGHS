@@ -1280,7 +1280,7 @@ void HighsMipSolverData::performRestart() {
   }
 
   // Transform the reference of the objective limit and lower/upper
-  // bounds to the original model, since offset will generally changte
+  // bounds to the original model, since offset will generally change
   // in presolve. Bound changes are transitory, so no real gap change,
   // and no update to P-D integral is necessary
   upper_limit += mipsolver.model_->offset_;
