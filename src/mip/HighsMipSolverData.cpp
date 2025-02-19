@@ -967,10 +967,8 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-void HighsMipSolverData::presolveSolution(const std::vector<double>& sol, std::vector<double>& presolved_sol) {
-
-
-}
+void HighsMipSolverData::presolveSolution(const std::vector<double>& sol,
+                                          std::vector<double>& presolved_sol) {}
 
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,
@@ -2401,11 +2399,10 @@ void HighsMipSolverData::callbackUserSolution(
     double integrality_violation_ = 0;
     HighsCDouble mipsolver_quad_objective_value = 0;
     const bool feasible = mipsolver.solutionFeasible(
-         mipsolver.orig_model_, user_solution, nullptr,
-         bound_violation_, row_violation_, integrality_violation_,
-         mipsolver_quad_objective_value);
+        mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
+        row_violation_, integrality_violation_, mipsolver_quad_objective_value);
     printf("HighsMipSolverData::callbackUserSolution() User solution is %s\n",
-	   feasible ? "Feasible" : "Not feasible");
+           feasible ? "Feasible" : "Not feasible");
   }
 }
 

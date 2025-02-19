@@ -251,7 +251,8 @@ struct HighsMipSolverData {
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit = -kHighsInf);
   void runSetup();
-  void presolveSolution(const std::vector<double>& sol, std::vector<double>& presolved_sol);
+  void presolveSolution(const std::vector<double>& sol,
+                        std::vector<double>& presolved_sol);
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,
       const bool possibly_store_as_new_incumbent = true);
