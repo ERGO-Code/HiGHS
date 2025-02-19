@@ -41,8 +41,6 @@ class HighsMipWorker {
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
   HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_);
 
-  // ~HighsMipWorker();
-
   const HighsMipSolver& getMipSolver();
 
   HighsLpRelaxation lprelaxation_;
@@ -73,8 +71,11 @@ class HighsMipWorker {
   const bool checkLimits(int64_t nodeOffset = 0) const;
 
   // ... implement necessary methods for HighsSearch
+ 
+  ~HighsMipWorker() {
+      search_ptr_.release();
+  }
 
-  
 };
 
 #endif

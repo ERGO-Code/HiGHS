@@ -86,6 +86,8 @@ class HighsConflictPool {
 
   void removePropagationDomain(HighsDomain::ConflictPoolPropagation* domain) {
     for (HighsInt k = propagationDomains.size() - 1; k >= 0; --k) {
+      // assert(propagationDomains.size() > k);
+      // assert(propagationDomains)
       if (propagationDomains[k] == domain) {
         propagationDomains.erase(propagationDomains.begin() + k);
         return;

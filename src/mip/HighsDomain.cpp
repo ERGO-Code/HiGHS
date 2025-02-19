@@ -541,6 +541,9 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
         assert(val < 0);
         HighsCDouble deltamin = computeDelta(val, oldbound, newbound, kHighsInf,
                                              activitycutsinf_[row]);
+
+          std::cout << activitycuts_.size() << std::endl;
+
         activitycuts_[row] += deltamin;
 
         if (deltamin <= 0) {

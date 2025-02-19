@@ -633,6 +633,8 @@ class HighsDomain {
   HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 
   bool inSubmip() const { return mipsolver->submip; }
+
+  // ~HighsDomain() {}
 };
 
 #endif
