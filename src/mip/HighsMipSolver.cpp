@@ -242,6 +242,12 @@ restart:
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   while (search.hasNode()) {
+
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+	callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_);
+    
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
     analysis_.mipTimerStop(kMipClockPerformAging1);

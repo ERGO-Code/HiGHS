@@ -1303,6 +1303,10 @@ class Highs(_Highs):
     def cbMipDefineLazyConstraints(self):
         return self.callbacks[int(cb.HighsCallbackType.kCallbackMipDefineLazyConstraints)]
 
+    @property
+    def cbkMipUserSolution(self):
+        return self.callbacks[int(cb.HighsCallbackType.kCallbackMipUserSolution)]
+
     # callback setters are required for +=/-= syntax
     # e.g., h.cbLogging += my_callback
     @cbLogging.setter

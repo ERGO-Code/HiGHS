@@ -2482,6 +2482,22 @@ void HighsMipSolverData::limitsToBounds(double& dual_bound,
 // incumbent value (mipsolver.solution_objective_) is not right for
 // callback_type = kCallbackMipSolution
 
+void HighsMipSolverData::setCallbackDataOut(const double mipsolver_objective_value) {
+  double dual_bound;
+  double primal_bound;
+  double mip_rel_gap;
+  limitsToBounds(dual_bound, primal_bound, mip_rel_gap);
+  mipsolver.callback_->data_out.running_time = mipsolver.timer_.read();
+  mipsolver.callback_->data_out.objective_function_value =
+    mipsolver_objective_value;
+  mipsolver.callback_->data_out.mip_node_count = mipsolver.mipdata_->num_nodes;
+  mipsolver.callback_->data_out.mip_total_lp_iterations =
+    mipsolver.mipdata_->total_lp_iterations;
+  mipsolver.callback_->data_out.mip_primal_bound = primal_bound;
+  mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
+  mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
+}
+
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
     const std::string message) const {
@@ -2502,6 +2518,12 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   mipsolver.callback_->data_out.mip_dual_bound = dual_bound;
   mipsolver.callback_->data_out.mip_gap = mip_rel_gap;
   return mipsolver.callback_->callbackAction(callback_type, message);
+}
+
+void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_value) {
+  setCallbackDataOut(mipsolver_objective_value);
+  printf("HighsMipSolverData::callbackUserSolution() mipsolver_objective_value = %g\n",  mipsolver.callback_->data_out.objective_function_value);
+  
 }
 
 static double possInfRelDiff(const double v0, const double v1,

@@ -46,6 +46,7 @@ typedef struct {
 
 typedef struct {
   int user_interrupt;
+  double* user_solution;
 } HighsCallbackDataIn;
 
 // Additional callback handling

@@ -6,7 +6,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -176,6 +176,16 @@ HighsCallbackFunctionType userMipCutPoolCallback =
                    data_out->cutpool_value[iEl]);
           }
         }
+      }
+    };
+
+HighsCallbackFunctionType userkMipUserSolution =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
+       void* user_callback_data) {
+      if (dev_run) {
+        printf("userkMipUserSolution: mip_primal_bound = %g)\n",
+               data_out->mip_primal_bound);
       }
     };
 
@@ -378,5 +388,17 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
   //  MipData user_callback_data;
   highs.setCallback(userMipCutPoolCallback);  //, p_user_callback_data);
   highs.startCallback(kCallbackMipGetCutPool);
+  highs.run();
+}
+
+TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.readModel(filename);
+  //  MipData user_callback_data;
+  highs.setCallback(userkMipUserSolution);  //, p_user_callback_data);
+  highs.startCallback(kCallbackMipUserSolution);
   highs.run();
 }
