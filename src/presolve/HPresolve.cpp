@@ -404,13 +404,9 @@ bool HPresolve::convertImpliedInteger(HighsInt col, HighsInt row,
       ++rowsizeImplInt[nonzero.index()];
   }
 
-  // round bounds
-  double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-  double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-  // use tighter bounds
-  if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-  if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+  // round and update bounds
+  changeColLower(col, model->col_lower_[col]);
+  changeColUpper(col, model->col_upper_[col]);
   return true;
 }
 
@@ -2298,33 +2294,47 @@ void HPresolve::reinsertEquation(HighsInt row) {
 
 void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
                                 HighsInt col, double scale, double constant) {
+  // replace column x by x = scale * x' + constant
   if (mipsolver != nullptr)
     mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
-  double oldLower = model->col_lower_[col];
-  double oldUpper = model->col_upper_[col];
-  model->col_upper_[col] -= constant;
-  model->col_lower_[col] -= constant;
+  // new variable x' has the following bounds:
+  // scale > 0 --> (lb - constant) / scale <= x' <= (ub - constant) / scale
+  // scale < 0 --> (ub - constant) / scale <= x' <= (lb - constant) / scale
+  // each matrix coefficient a will be replaced by scale * a and, therefore, the
+  // contributions to the constraint activities will change as follows:
+  // a * lb --> (a * scale) * (lb - constant) / scale = a * (lb - constant)
+  // a * ub --> (a * scale) * (ub - constant) / scale = a * (ub - constant).
+  // therefore, for now the scaling can be neglected and the bounds on
+  // constraint activities can be updated using the constant term.
+  if (constant != 0.0) {
+    double oldLower = model->col_lower_[col];
+    double oldUpper = model->col_upper_[col];
+    model->col_upper_[col] -= constant;
+    model->col_lower_[col] -= constant;
 
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
-                                     oldLower);
-    impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
-                                     oldUpper);
-  }
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
+                                       oldLower);
+      impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
+                                       oldUpper);
+    }
 
-  double oldImplLower = implColLower[col];
-  double oldImplUpper = implColUpper[col];
-  implColLower[col] -= constant;
-  implColUpper[col] -= constant;
+    double oldImplLower = implColLower[col];
+    double oldImplUpper = implColUpper[col];
+    implColLower[col] -= constant;
+    implColUpper[col] -= constant;
 
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedImplVarLower(nonzero.index(), col, nonzero.value(),
-                                         oldImplLower, colLowerSource[col]);
-    impliedRowBounds.updatedImplVarUpper(nonzero.index(), col, nonzero.value(),
-                                         oldImplUpper, colUpperSource[col]);
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedImplVarLower(nonzero.index(), col,
+                                           nonzero.value(), oldImplLower,
+                                           colLowerSource[col]);
+      impliedRowBounds.updatedImplVarUpper(nonzero.index(), col,
+                                           nonzero.value(), oldImplUpper,
+                                           colUpperSource[col]);
+    }
   }
 
   // now apply the scaling, which does not change the contributions to the
@@ -2337,13 +2347,6 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
   model->col_upper_[col] *= boundScale;
   implColLower[col] *= boundScale;
   implColUpper[col] *= boundScale;
-  if (model->integrality_[col] != HighsVarType::kContinuous) {
-    // we rely on the integrality status being already updated to the newly
-    // scaled column by the caller, if necessary
-    model->col_upper_[col] =
-        std::floor(model->col_upper_[col] + primal_feastol);
-    model->col_lower_[col] = std::ceil(model->col_lower_[col] - primal_feastol);
-  }
 
   if (scale < 0) {
     std::swap(model->col_lower_[col], model->col_upper_[col]);
@@ -2364,6 +2367,17 @@ void HPresolve::transformColumn(HighsPostsolveStack& postsolve_stack,
       model->row_lower_[row] -= rowConstant;
     if (model->row_upper_[row] != kHighsInf)
       model->row_upper_[row] -= rowConstant;
+  }
+
+  // finally, use utility methods for rounding scaled bounds of
+  // integer-constrained variables and updating bounds on constraint activities
+  // accordingly. this should not be done before the preceding bound updates
+  // (scaling and swaps) and matrix updates. we rely on the integrality status
+  // being already updated to the newly scaled column by the caller, if
+  // necessary.
+  if (model->integrality_[col] != HighsVarType::kContinuous) {
+    changeColLower(col, model->col_lower_[col]);
+    changeColUpper(col, model->col_upper_[col]);
   }
 
   markChangedCol(col);
@@ -3958,11 +3972,9 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   for (HighsInt col = 0; col != model->num_col_; ++col) {
     if (colDeleted[col]) continue;
     if (model->integrality_[col] != HighsVarType::kContinuous) {
-      double ceilLower = std::ceil(model->col_lower_[col] - primal_feastol);
-      double floorUpper = std::floor(model->col_upper_[col] + primal_feastol);
-
-      if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
-      if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
+      // round and update bounds
+      changeColLower(col, model->col_lower_[col]);
+      changeColUpper(col, model->col_upper_[col]);
     }
     HPRESOLVE_CHECKED_CALL(colPresolve(postsolve_stack, col));
     changedColFlag[col] = false;
@@ -4146,7 +4158,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       if (mipsolver != nullptr) {
         HighsInt num_strengthened = -1;
-        HPRESOLVE_CHECKED_CALL(strengthenInequalities(num_strengthened));
+        HPRESOLVE_CHECKED_CALL(
+            strengthenInequalities(postsolve_stack, num_strengthened));
         assert(num_strengthened >= 0);
         if (num_strengthened > 0)
           highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -5086,7 +5099,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 }
 
 HPresolve::Result HPresolve::strengthenInequalities(
-    HighsInt& num_strengthened) {
+    HighsPostsolveStack& postsolve_stack, HighsInt& num_strengthened) {
   std::vector<int8_t> complementation;
   std::vector<double> reducedcost;
   std::vector<double> upper;
@@ -5119,9 +5132,11 @@ HPresolve::Result HPresolve::strengthenInequalities(
     double scale;
 
     if (model->row_lower_[row] != -kHighsInf) {
+      // ax >= lb, treat as -ax <= -lb --> -ax + lb <= 0
       maxviolation = model->row_lower_[row];
       scale = -1.0;
     } else {
+      // ax <= ub --> ax - ub <= 0
       maxviolation = -model->row_upper_[row];
       scale = 1.0;
     }
@@ -5135,38 +5150,42 @@ HPresolve::Result HPresolve::strengthenInequalities(
     reducedcost.reserve(rowsize[row]);
     upper.reserve(rowsize[row]);
     indices.reserve(rowsize[row]);
+    positions.reserve(rowsize[row]);
     stack.reserve(rowsize[row]);
     stack.push_back(rowroot[row]);
 
     bool skiprow = false;
 
     while (!stack.empty()) {
+      // pop element from stack
       HighsInt pos = stack.back();
       stack.pop_back();
 
+      // add non-zeros to stack
       if (ARright[pos] != -1) stack.push_back(ARright[pos]);
       if (ARleft[pos] != -1) stack.push_back(ARleft[pos]);
 
-      int8_t comp;
-      double weight;
-      double ub;
-      weight = Avalue[pos] * scale;
+      // get column index
       HighsInt col = Acol[pos];
-      ub = model->col_upper_[col] - model->col_lower_[col];
 
-      skiprow = ub == kHighsInf;
+      // skip row if a column bound is not finite
+      skiprow = model->col_lower_[col] == -kHighsInf ||
+                model->col_upper_[col] == kHighsInf;
       if (skiprow) break;
 
+      // compute maximum violation
+      // scale =  1:  ax <=  ub --> violation =  ax - ub > 0
+      // scale = -1: -ax <= -lb --> violation = -ax + lb > 0
+      // this means that for scale = 1 we sum up an upper bound on constraint
+      // activity, and for scale = -1 we sum up a lower bound on constraint
+      // activity.
+      int8_t comp;
+      double weight = Avalue[pos] * scale;
+      double ub = model->col_upper_[col] - model->col_lower_[col];
       if (weight > 0) {
-        skiprow = model->col_upper_[col] == kHighsInf;
-        if (skiprow) break;
-
         comp = 1;
         maxviolation += model->col_upper_[col] * weight;
       } else {
-        skiprow = model->col_lower_[col] == -kHighsInf;
-        if (skiprow) break;
-
         comp = -1;
         maxviolation += model->col_lower_[col] * weight;
         weight = -weight;
@@ -5196,6 +5215,14 @@ HPresolve::Result HPresolve::strengthenInequalities(
       continue;
     }
 
+    // maxviolation <= 0 implies that the constraint is redundant:
+    // scale =  1: upper bound on activity <= model->row_upper_[row]
+    // scale = -1: model->row_lower_[row]  <= lower bound on activity
+    if (maxviolation <= primal_feastol) {
+      HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, row));
+      continue;
+    }
+
     const double smallVal =
         std::max(100 * primal_feastol, primal_feastol * double(maxviolation));
     while (true) {
@@ -5212,12 +5239,13 @@ HPresolve::Result HPresolve::strengthenInequalities(
       cover.clear();
       cover.reserve(indices.size());
 
-      for (HighsInt i = indices.size() - 1; i >= 0; --i) {
-        double delta = upper[indices[i]] * reducedcost[indices[i]];
+      for (size_t i = indices.size(); i > 0; --i) {
+        HighsInt index = indices[i - 1];
+        double delta = upper[index] * reducedcost[index];
 
-        if (upper[indices[i]] <= 1000.0 && reducedcost[indices[i]] > smallVal &&
+        if (upper[index] <= 1000.0 && reducedcost[index] > smallVal &&
             lambda - delta <= smallVal)
-          cover.push_back(indices[i]);
+          cover.push_back(index);
         else
           lambda -= delta;
       }
@@ -5231,16 +5259,14 @@ HPresolve::Result HPresolve::strengthenInequalities(
             return reducedcost[i1] < reducedcost[i2];
           });
 
-      HighsInt coverend = cover.size();
-
       double al = reducedcost[alpos];
-      coefs.resize(coverend);
+      coefs.resize(cover.size());
       double coverrhs =
           std::max(std::ceil(double(lambda / al - primal_feastol)), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
       double step = kHighsInf;
-      for (HighsInt i = 0; i != coverend; ++i) {
+      for (size_t i = 0; i != cover.size(); ++i) {
         coefs[i] =
             std::ceil(std::min(reducedcost[cover[i]], double(lambda)) / al -
                       options->small_matrix_value);
@@ -5254,7 +5280,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
       reducedcost.push_back(step);
       upper.push_back(double(slackupper));
 
-      for (HighsInt i = 0; i != coverend; ++i)
+      for (size_t i = 0; i != cover.size(); ++i)
         reducedcost[cover[i]] -= step * coefs[i];
 
       indices.erase(std::remove_if(indices.begin(), indices.end(),
@@ -5275,37 +5301,31 @@ HPresolve::Result HPresolve::strengthenInequalities(
                   indices.end());
     if (indices.empty()) continue;
 
-    if (scale == -1.0) {
-      HighsCDouble lhs = model->row_lower_[row];
+    auto updateNonZeros = [&](HighsInt row, HighsCDouble& rhs,
+                              HighsInt direction) {
       for (HighsInt i : indices) {
-        double coefdelta = double(reducedcost[i] - maxviolation);
-        HighsInt pos = positions[i];
+        assert(Arow[positions[i]] == row);
+        double coefdelta = direction * double(reducedcost[i] - maxviolation);
+        HighsInt col = Acol[positions[i]];
 
         if (complementation[i] == -1) {
-          lhs -= coefdelta * model->col_lower_[Acol[pos]];
-          addToMatrix(row, Acol[pos], -coefdelta);
+          rhs += coefdelta * model->col_lower_[col];
+          addToMatrix(row, col, coefdelta);
         } else {
-          lhs += coefdelta * model->col_upper_[Acol[pos]];
-          addToMatrix(row, Acol[pos], coefdelta);
+          rhs -= coefdelta * model->col_upper_[col];
+          addToMatrix(row, col, -coefdelta);
         }
       }
+    };
 
+    // update / add non-zeros
+    if (scale < 0) {
+      HighsCDouble lhs = model->row_lower_[row];
+      updateNonZeros(row, lhs, HighsInt{-1});
       model->row_lower_[row] = double(lhs);
     } else {
       HighsCDouble rhs = model->row_upper_[row];
-      for (HighsInt i : indices) {
-        double coefdelta = double(reducedcost[i] - maxviolation);
-        HighsInt pos = positions[i];
-
-        if (complementation[i] == -1) {
-          rhs += coefdelta * model->col_lower_[Acol[pos]];
-          addToMatrix(row, Acol[pos], coefdelta);
-        } else {
-          rhs -= coefdelta * model->col_upper_[Acol[pos]];
-          addToMatrix(row, Acol[pos], -coefdelta);
-        }
-      }
-
+      updateNonZeros(row, rhs, HighsInt{1});
       model->row_upper_[row] = double(rhs);
     }
 
