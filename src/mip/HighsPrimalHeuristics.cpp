@@ -1318,7 +1318,7 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
 
   std::vector<double> currRelSol = relaxationsol;
 
-  auto ZI = [mipsolver = this->mipsolver](double x) {
+  auto ZI = [this](double x) {
     return std::min(std::ceil(x - mipsolver.mipdata_->feastol) - x,
                     x - std::floor(x + mipsolver.mipdata_->feastol));
   };
