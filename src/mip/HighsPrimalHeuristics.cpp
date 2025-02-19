@@ -1134,7 +1134,9 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         // skip fixed variables
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
-         auto repair = [this](HighsInt col, HighsInt direction, HighsInt rowSense,
+         auto repair = [this, &findPairByIndex, &currentFracInt, 
+                              &findShiftsByIndex, &ShiftIterationsSet]
+                         (HighsInt col, HighsInt direction, HighsInt rowSense,
                           HighsInt numLocks, double coef, double cost,
                           bool isMaximization, bool isInteger, bool isAtBound) {
           if ((rowSense < 0 || direction * coef > 0) &&
