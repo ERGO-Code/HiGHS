@@ -542,7 +542,7 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
         HighsCDouble deltamin = computeDelta(val, oldbound, newbound, kHighsInf,
                                              activitycutsinf_[row]);
 
-          std::cout << activitycuts_.size() << std::endl;
+       //  std::cout << activitycuts_.size() << std::endl;
 
         activitycuts_[row] += deltamin;
 

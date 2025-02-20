@@ -220,6 +220,7 @@ restart:
 
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
 
+  // they should live in the same space so the pointers don't get confused.
   // HighsMipWorker master_worker(*this, mipdata_->lp);
   // HighsSearch& search = *master_worker.search_ptr_.get();
 
@@ -230,7 +231,7 @@ restart:
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
   HighsSeparation sepa(*this);
 
-  // search.setLpRelaxation(&mipdata_->lp);
+  search.setLpRelaxation(&mipdata_->lp);
 
   sepa.setLpRelaxation(&mipdata_->lp);
 
@@ -323,13 +324,13 @@ restart:
 
           if (mipdata_->incumbent.empty()) {
             analysis_.mipTimerStart(kMipClockRens);
-            // mipdata_->heuristics.RENS(
-            //     mipdata_->lp.getLpSolver().getSolution().col_value);
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRens);
           } else {
             analysis_.mipTimerStart(kMipClockRins);
-            // mipdata_->heuristics.RINS(
-            //     mipdata_->lp.getLpSolver().getSolution().col_value);
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRins);
           }
 
