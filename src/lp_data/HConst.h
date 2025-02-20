@@ -225,7 +225,8 @@ enum HighsCallbackType : int {
   kCallbackMipInterrupt,              // 6
   kCallbackMipGetCutPool,             // 7
   kCallbackMipDefineLazyConstraints,  // 8
-  kCallbackMax = kCallbackMipDefineLazyConstraints,
+  kCallbackMipUserSolution,           // 9
+  kCallbackMax = kCallbackMipUserSolution,
   kNumCallbackType
 };
 

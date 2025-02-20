@@ -53,51 +53,13 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                            integral, feasible);
     assert(valid);
 #endif
-    bound_violation_ = 0;
-    row_violation_ = 0;
-    integrality_violation_ = 0;
-
-    HighsCDouble obj = orig_model_->offset_;
-    assert((HighsInt)solution.col_value.size() == orig_model_->num_col_);
-    for (HighsInt i = 0; i != orig_model_->num_col_; ++i) {
-      const double value = solution.col_value[i];
-      obj += orig_model_->col_cost_[i] * value;
-
-      if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
-        integrality_violation_ =
-            std::max(fractionality(value), integrality_violation_);
-      }
-
-      const double lower = orig_model_->col_lower_[i];
-      const double upper = orig_model_->col_upper_[i];
-      double primal_infeasibility;
-      if (value < lower - options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = lower - value;
-      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = value - upper;
-      } else
-        continue;
-
-      bound_violation_ = std::max(bound_violation_, primal_infeasibility);
-    }
-
-    for (HighsInt i = 0; i != orig_model_->num_row_; ++i) {
-      const double value = solution.row_value[i];
-      const double lower = orig_model_->row_lower_[i];
-      const double upper = orig_model_->row_upper_[i];
-
-      double primal_infeasibility;
-      if (value < lower - options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = lower - value;
-      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = value - upper;
-      } else
-        continue;
-
-      row_violation_ = std::max(row_violation_, primal_infeasibility);
-    }
-
-    solution_objective_ = double(obj);
+    // Initial solution can be infeasible, but need to set values for violation
+    // and objective
+    HighsCDouble quad_solution_objective_;
+    solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
+                     bound_violation_, row_violation_, integrality_violation_,
+                     quad_solution_objective_);
+    solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
   }
 }
@@ -169,6 +131,12 @@ restart:
       cleanupSolve();
       return;
     }
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+        callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_,
+                                     kUserMipSolutionCallbackOriginAfterSetup);
+
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus model_status = mipdata_->trivialHeuristics();
@@ -242,6 +210,12 @@ restart:
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   while (search.hasNode()) {
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+        callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_,
+                                     kUserMipSolutionCallbackOriginBeforeDive);
+
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
     analysis_.mipTimerStop(kMipClockPerformAging1);
@@ -872,4 +846,78 @@ void HighsMipSolver::callbackGetCutPool() const {
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);
+}
+
+bool HighsMipSolver::solutionFeasible(
+    const HighsLp* lp, const std::vector<double>& col_value,
+    const std::vector<double>* pass_row_value, double& bound_violation,
+    double& row_violation, double& integrality_violation, HighsCDouble& obj) {
+  bound_violation = 0;
+  row_violation = 0;
+  integrality_violation = 0;
+  const double mip_feasibility_tolerance =
+      options_mip_->mip_feasibility_tolerance;
+
+  obj = lp->offset_;
+
+  if (kAllowDeveloperAssert) assert(HighsInt(col_value.size()) == lp->num_col_);
+  for (HighsInt i = 0; i != lp->num_col_; ++i) {
+    const double value = col_value[i];
+    obj += lp->col_cost_[i] * value;
+
+    if (lp->integrality_[i] == HighsVarType::kInteger) {
+      integrality_violation =
+          std::max(fractionality(value), integrality_violation);
+    }
+
+    const double lower = lp->col_lower_[i];
+    const double upper = lp->col_upper_[i];
+    double primal_infeasibility;
+    if (value < lower - mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    bound_violation = std::max(bound_violation, primal_infeasibility);
+  }
+
+  // Check row feasibility if there are a positive number of rows.
+  //
+  // If there are no rows and pass_row_value is nullptr, then
+  // row_value_p is also nullptr since row_value is not resized
+  if (lp->num_row_ > 0) {
+    std::vector<double> row_value;
+    if (pass_row_value) {
+      if (kAllowDeveloperAssert)
+        assert(HighsInt((*pass_row_value).size()) == lp->num_col_);
+    } else {
+      calculateRowValuesQuad(*lp, col_value, row_value);
+    }
+    const double* row_value_p =
+        pass_row_value ? (*pass_row_value).data() : row_value.data();
+    assert(row_value_p);
+
+    for (HighsInt i = 0; i != lp->num_row_; ++i) {
+      const double value = row_value_p[i];
+      const double lower = lp->row_lower_[i];
+      const double upper = lp->row_upper_[i];
+
+      double primal_infeasibility;
+      if (value < lower - mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      row_violation = std::max(row_violation, primal_infeasibility);
+    }
+  }
+
+  const bool feasible = bound_violation <= mip_feasibility_tolerance &&
+                        integrality_violation <= mip_feasibility_tolerance &&
+                        row_violation <= mip_feasibility_tolerance;
+  return feasible;
 }
