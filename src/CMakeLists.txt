@@ -201,7 +201,13 @@ else()
     set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/")
 
     add_subdirectory(pdlp/cupdlp/cuda)
-    target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
+
+    if (WIN32)
+      target_link_libraries(highs cudalin ${CUDA_LIBRARY})
+    else()
+      target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
+    endif()
+    
     set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
   endif()

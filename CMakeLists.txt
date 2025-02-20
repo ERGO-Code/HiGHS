@@ -401,13 +401,16 @@ endif()
 add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
 
-if (CUPDLP_GPU)
-add_compile_options("-Wno-deprecated-declarations")
+if (CUPDLP_GPU AND UNIX)
+  add_compile_options("-Wno-deprecated-declarations")
 endif()
 # add_compile_options("-Wno-implicit-function-declaration")
 
 # set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
-set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+if (UNIX)
+  set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+endif()
+
 
 
 # If Visual Studio targets are being built.
@@ -424,7 +427,10 @@ if(MSVC)
   # add_link_options("/DEBUG:FASTLINK")
 
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
-  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+
+  if (NOT CUPDLP_GPU)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+  endif()
 
   if(STDCALL)
     # /Gz - stdcall calling convention
