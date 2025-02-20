@@ -1134,6 +1134,7 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         // skip fixed variables
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
+        // lambda for finding best shift
          auto repair = [this, &findPairByIndex, &currentFracInt, 
                               &findShiftsByIndex, &ShiftIterationsSet, 
                               &t, &sig_min, &j_min, &aij_min, &x_j_min, 
@@ -1253,28 +1254,26 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         HighsInt col = it.first;
         assert(col >= 0);
         assert(col < mipsolver.numCol());
-        double xi = mipsolver.mipdata_->uplocks[col];
-        double downval = std::floor(it.second + mipsolver.mipdata_->feastol);
-        double c_min = currentLp.col_cost_[col] * (downval - it.second);
-        if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
-          xi_max = xi;
-          delta_c_min = c_min;
-          pind_j_min = i;
-          j_min = col;
-          x_j_min = downval;
-          sigma = -1;
-        }
-        xi = mipsolver.mipdata_->downlocks[col];
-        double upval = std::ceil(it.second - mipsolver.mipdata_->feastol);
-        c_min = currentLp.col_cost_[col] * (upval - it.second);
-        if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
-          xi_max = xi;
-          delta_c_min = c_min;
-          pind_j_min = i;
-          j_min = col;
-          x_j_min = upval;
-          sigma = 1;
-        }
+        
+        auto isBetter = [this](double col, double xi, double roundedval,
+                            HighsInt direction) {
+          double c_min = currentLp.col_cost_[col] * (roundedval - it.second);
+          if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
+            xi_max = xi;
+            delta_c_min = c_min;
+            pind_j_min = i;
+            j_min = col;
+            x_j_min = roundedval;
+            sigma = direction;
+          }
+        };
+
+        isBetter(col, mipsolver.mipdata_->uplocks[col],
+                 std::floor(it.second + mipsolver.mipdata_->feastol),
+                 HighsInt{-1});
+        isBetter(col, mipsolver.mipdata_->downlocks[col],
+                 std::ceil(it.second - mipsolver.mipdata_->feastol),
+                 HighsInt{1});
       }
       if (sigma != 0) {
         currRelSol[j_min] = x_j_min;
