@@ -143,8 +143,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   // Solve the sub-MIP
   submipsolver.run();
-  mipsolver.max_submip_level =
-      std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
+
+  // ig:here
+  // mipsolver.max_submip_level =
+  //     std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
+
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -215,7 +218,7 @@ class HeuristicNeighbourhood {
   HighsInt numTotal;
 
  public:
-  HeuristicNeighbourhood(HighsMipSolver& mipsolver, HighsDomain& localdom)
+  HeuristicNeighbourhood(const HighsMipSolver& mipsolver, HighsDomain& localdom)
       : localdom(localdom),
         numFixed(0),
         startCheckedChanges(localdom.getDomainChangeStack().size()),
@@ -314,12 +317,12 @@ void HighsPrimalHeuristics::rootReducedCost() {
   mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRootReducedCost);
 }
 
-void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
+void HighsPrimalHeuristics::RENS(HighsMipWorker& worker, const std::vector<double>& tmp) {
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
 
   // HighsSearch heur(mipsolver, pscost);
 
-  HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
+  // HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
   HighsSearch heur(worker, pscost);
 
   HighsDomain& localdom = heur.getLocalDomain();
@@ -567,7 +570,7 @@ retry:
   lp_iterations += heur.getLocalLpIterations();
 }
 
-void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::RINS(HighsMipWorker& worker, const std::vector<double>& relaxationsol) {
   if (int(relaxationsol.size()) != mipsolver.numCol()) return;
 
   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
@@ -580,7 +583,7 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
 
   // HighsSearch heur(mipsolver, pscost);
 
-  HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
+  // HighsMipWorker worker{mipsolver, mipsolver.mipdata_->lp};
   HighsSearch heur(worker, pscost);
 
   HighsDomain& localdom = heur.getLocalDomain();

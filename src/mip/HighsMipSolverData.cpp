@@ -19,6 +19,78 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
+HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
+    : mipsolver(mipsolver),
+      cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
+              mipsolver.options_mip_->mip_pool_soft_limit),
+      conflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                   mipsolver.options_mip_->mip_pool_soft_limit),
+      domain(mipsolver),
+      lps(1, HighsLpRelaxation(mipsolver)),
+      lp(lps.at(0)),
+      // workers({HighsMipWorker(mipsolver, lp)}),
+      pseudocost(),
+      cliquetable(mipsolver.numCol()),
+      implications(mipsolver),
+      heuristics_ptr(new HighsPrimalHeuristics(mipsolver)),
+      heuristics(*heuristics_ptr.get()),
+      // heuristics(mipsolver),
+      objectiveFunction(mipsolver),
+      presolve_status(HighsPresolveStatus::kNotSet),
+      cliquesExtracted(false),
+      rowMatrixSet(false),
+      analyticCenterComputed(false),
+      analyticCenterStatus(HighsModelStatus::kNotset),
+      detectSymmetries(false),
+      numRestarts(0),
+      numRestartsRoot(0),
+      numCliqueEntriesAfterPresolve(0),
+      numCliqueEntriesAfterFirstPresolve(0),
+      feastol(0.0),
+      epsilon(0.0),
+      heuristic_effort(0.0),
+      dispfreq(0),
+      firstlpsolobj(-kHighsInf),
+      rootlpsolobj(-kHighsInf),
+      numintegercols(0),
+      maxTreeSizeLog2(0),
+      pruned_treeweight(0),
+      avgrootlpiters(0.0),
+      disptime(0.0),
+      last_disptime(0.0),
+      firstrootlpiters(0),
+      num_nodes(0),
+      num_leaves(0),
+      num_leaves_before_run(0),
+      num_nodes_before_run(0),
+      total_repair_lp(0),
+      total_repair_lp_feasible(0),
+      total_repair_lp_iterations(0),
+      total_lp_iterations(0),
+      heuristic_lp_iterations(0),
+      sepa_lp_iterations(0),
+      sb_lp_iterations(0),
+      total_lp_iterations_before_run(0),
+      heuristic_lp_iterations_before_run(0),
+      sepa_lp_iterations_before_run(0),
+      sb_lp_iterations_before_run(0),
+      num_disp_lines(0),
+      numImprovingSols(0),
+      lower_bound(-kHighsInf),
+      upper_bound(kHighsInf),
+      upper_limit(kHighsInf),
+      optimality_limit(kHighsInf),
+      debugSolution(mipsolver) {
+  domain.addCutpool(cutpool);
+  domain.addConflictPool(conflictPool);
+
+  // workers.emplace(workers.end(), HighsMipWorker(mipsolver, lps.back()));
+
+  // ig:here
+  // workers.emplace_back(std::move(HighsMipWorker(mipsolver, lp)));
+
+}
+
 std::string HighsMipSolverData::solutionSourceToString(
     const int solution_source, const bool code) {
   if (solution_source == kSolutionSourceNone) {
@@ -1852,7 +1924,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   } while (true);
 }
 
-void HighsMipSolverData::evaluateRootNode() {
+void HighsMipSolverData::evaluateRootNode(HighsMipWorker& worker) {
   const bool compute_analytic_centre = true;
   if (!compute_analytic_centre) printf("NOT COMPUTING ANALYTIC CENTRE!\n");
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
@@ -2014,7 +2086,10 @@ restart:
   HighsInt stall = 0;
   double smoothprogress = 0.0;
   HighsInt nseparounds = 0;
-  HighsSeparation sepa(mipsolver);
+
+  // HighsSeparation sepa(mipsolver);
+  HighsSeparation sepa(worker);
+
   sepa.setLpRelaxation(&lp);
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
@@ -2210,7 +2285,7 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     if (checkLimits()) return;
-    heuristics.RENS(rootlpsol);
+    heuristics.RENS(worker, rootlpsol);
     heuristics.flushStatistics();
 
     if (checkLimits()) return;

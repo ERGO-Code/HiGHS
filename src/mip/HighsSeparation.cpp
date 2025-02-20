@@ -22,12 +22,13 @@
 #include "mip/HighsTableauSeparator.h"
 #include "mip/HighsTransformedLp.h"
 
-HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
-  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa");
-  cliqueClock = mipsolver.timer_.clock_def("Clique sepa");
-  separators.emplace_back(new HighsTableauSeparator(mipsolver));
-  separators.emplace_back(new HighsPathSeparator(mipsolver));
-  separators.emplace_back(new HighsModkSeparator(mipsolver));
+// HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
+HighsSeparation::HighsSeparation(const HighsMipWorker& mipworker) {
+  implBoundClock = mipworker.mipsolver_.timer_.clock_def("Implbound sepa");
+  cliqueClock = mipworker.mipsolver_.timer_.clock_def("Clique sepa");
+  separators.emplace_back(new HighsTableauSeparator(mipworker.mipsolver_));
+  separators.emplace_back(new HighsPathSeparator(mipworker.mipsolver_));
+  separators.emplace_back(new HighsModkSeparator(mipworker.mipsolver_));
 }
 
 HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,

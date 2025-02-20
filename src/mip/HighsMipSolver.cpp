@@ -124,7 +124,9 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
+
   mipdata_->init();
+
   analysis_.mipTimerStop(kMipClockInit);
   analysis_.mipTimerStart(kMipClockRunPresolve);
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
@@ -158,11 +160,24 @@ void HighsMipSolver::run() {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
+
   mipdata_->runSetup();
+
   analysis_.mipTimerStop(kMipClockRunSetup);
   if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
+
+  // Initialize master worker.
+  HighsMipWorker master_worker(*this, mipdata_->lp);
+
+  // mipdata_->lps.push_back(mipdata_->lp);
+  // mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
+
+  //  mipdata_->workers.emplace(mipdata_->workers.end(), HighsMipWorker(*this, mipdata_->lps.back()));
+
+  //  HighsMipWorker& master_worker = mipdata_->workers.at(0);
+
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -186,7 +201,9 @@ restart:
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
                    timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
-    mipdata_->evaluateRootNode();
+
+    mipdata_->evaluateRootNode(master_worker);
+
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
     // Sometimes the analytic centre calculation is not completed when
     // evaluateRootNode returns, so stop its clock if it's running
@@ -224,12 +241,11 @@ restart:
   // HighsMipWorker master_worker(*this, mipdata_->lp);
   // HighsSearch& search = *master_worker.search_ptr_.get();
 
-
-  HighsMipWorker master_worker(*this, mipdata_->lp);
   HighsSearch search{master_worker, mipdata_->pseudocost};
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
-  HighsSeparation sepa(*this);
+  // HighsSeparation sepa(*this);
+  HighsSeparation sepa(master_worker);
 
   search.setLpRelaxation(&mipdata_->lp);
 
@@ -324,12 +340,12 @@ restart:
 
           if (mipdata_->incumbent.empty()) {
             analysis_.mipTimerStart(kMipClockRens);
-            mipdata_->heuristics.RENS(
+            mipdata_->heuristics.RENS(master_worker,
                 mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRens);
           } else {
             analysis_.mipTimerStart(kMipClockRins);
-            mipdata_->heuristics.RINS(
+            mipdata_->heuristics.RINS(master_worker,
                 mipdata_->lp.getLpSolver().getSolution().col_value);
             analysis_.mipTimerStop(kMipClockRins);
           }

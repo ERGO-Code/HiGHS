@@ -19,14 +19,15 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
                mipsolver__.options_mip_->mip_pool_soft_limit),
       conflictpool_(5 * mipsolver__.options_mip_->mip_pool_age_limit,
                     mipsolver__.options_mip_->mip_pool_soft_limit),
-      cliquetable_(mipsolver__.numCol()),
+    //   cliquetable_(mipsolver__.numCol()),
       pseudocost_(mipsolver__),
       pscostinit_(pseudocost_, 1),
-      clqtableinit_(mipsolver_.numCol()),
+    //   clqtableinit_(mipsolver_.numCol()),
       implicinit_(mipsolver_),
       pscostinit(pscostinit_),
-      implicinit(implicinit_),
-      clqtableinit(clqtableinit_) {
+      implicinit(implicinit_)
+    //   clqtableinit(clqtableinit_) 
+      {
 
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));

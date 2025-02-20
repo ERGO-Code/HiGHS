@@ -8,7 +8,7 @@
 #ifndef HIGHS_MIP_WORKER_H_
 #define HIGHS_MIP_WORKER_H_
 
-#include "mip/HighsCliqueTable.h"
+// #include "mip/HighsCliqueTable.h"
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 
@@ -32,7 +32,7 @@ class HighsMipWorker {
   const HighsMipSolver& mipsolver_;
   const HighsMipSolverData& mipdata_;
 
-  HighsCliqueTable cliquetable_;
+  // HighsCliqueTable cliquetable_;
 
   HighsPseudocost pseudocost_;
 
@@ -50,13 +50,13 @@ class HighsMipWorker {
 
   // members for worker threads.
   HighsPseudocostInitialization pscostinit_;
-  HighsCliqueTable clqtableinit_;
+  // HighsCliqueTable clqtableinit_;
   HighsImplications implicinit_;
 
   // References to members, initialized to local objects for worker threads,
   // modify to mip solver for main worker.
   HighsPseudocostInitialization& pscostinit;
-  HighsCliqueTable& clqtableinit;
+  // HighsCliqueTable& clqtableinit;
   HighsImplications& implicinit;
 
   // Solution information.

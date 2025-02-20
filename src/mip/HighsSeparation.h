@@ -16,6 +16,7 @@
 #include "mip/HighsSeparator.h"
 
 class HighsMipSolver;
+class HighsMipWorker;
 class HighsImplications;
 class HighsCliqueTable;
 
@@ -28,7 +29,8 @@ class HighsSeparation {
 
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 
-  HighsSeparation(const HighsMipSolver& mipsolver);
+  // HighsSeparation(const HighsMipSolver& mipsolver);
+  HighsSeparation(const HighsMipWorker& mipworker);
 
  private:
   HighsInt implBoundClock;

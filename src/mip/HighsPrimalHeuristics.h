@@ -15,10 +15,15 @@
 #include "util/HighsRandom.h"
 
 class HighsMipSolver;
+class HighsMipWorker;
 
 class HighsPrimalHeuristics {
  private:
-  HighsMipSolver& mipsolver;
+  const HighsMipSolver& mipsolver;
+
+  // HighsMipWorker& mipworker;
+  // const HighsMipSolver& mipsolver;
+
   size_t total_repair_lp;
   size_t total_repair_lp_feasible;
   size_t total_repair_lp_iterations;
@@ -47,9 +52,11 @@ class HighsPrimalHeuristics {
 
   void rootReducedCost();
 
-  void RENS(const std::vector<double>& relaxationsol);
+  // void RENS(const std::vector<double>& relaxationsol);
+  void RENS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 
-  void RINS(const std::vector<double>& relaxationsol);
+  // void RINS(const std::vector<double>& relaxationsol);
+  void RINS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 
   void feasibilityPump();
 
