@@ -1274,13 +1274,12 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, const int solution_source,
                                       const bool print_display_line,
-				      const bool is_user_solution) {
+                                      const bool is_user_solution) {
   const bool execute_mip_solution_callback =
-    !is_user_solution &&
-    !mipsolver.submip &&
-    (mipsolver.callback_->user_callback
-     ? mipsolver.callback_->active[kCallbackMipSolution]
-     : false);
+      !is_user_solution && !mipsolver.submip &&
+      (mipsolver.callback_->user_callback
+           ? mipsolver.callback_->active[kCallbackMipSolution]
+           : false);
   // Determine whether the potential new incumbent should be
   // transformed
   //
@@ -1311,7 +1310,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
-    if (!is_user_solution && !mipsolver.submip) saveReportMipSolution(new_upper_limit);
+    if (!is_user_solution && !mipsolver.submip)
+      saveReportMipSolution(new_upper_limit);
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
@@ -1511,7 +1511,8 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
     ub = mipsolver.options_mip_->objective_bound;
 
   auto print_lp_iters = convertToPrintString(total_lp_iterations);
-  HighsInt dynamic_constraints_in_lp = lp.numRows() > 0 ? lp.numRows() - lp.getNumModelRows() : 0;
+  HighsInt dynamic_constraints_in_lp =
+      lp.numRows() > 0 ? lp.numRows() - lp.getNumModelRows() : 0;
   if (upper_bound != kHighsInf) {
     std::array<char, 22> gap_string = {};
     if (gap >= 9999.)
@@ -1557,9 +1558,9 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         // clang-format on
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
-        ub_string.data(), gap, cutpool.getNumCuts(),
-        dynamic_constraints_in_lp, conflictPool.getNumConflicts(),
-        print_lp_iters.data(), time_string.c_str());
+        ub_string.data(), gap, cutpool.getNumCuts(), dynamic_constraints_in_lp,
+        conflictPool.getNumConflicts(), print_lp_iters.data(),
+        time_string.c_str());
   }
   // Check that limitsToBounds yields the same values for the
   // dual_bound, primal_bound (modulo optimization sense) and
@@ -1770,8 +1771,9 @@ restart:
   // Possibly look for primal solution from the user
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
-					     kUserMipSolutionCallbackOriginEvaluateRootNode0);
+    mipsolver.mipdata_->callbackUserSolution(
+        mipsolver.solution_objective_,
+        kUserMipSolutionCallbackOriginEvaluateRootNode0);
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
@@ -2008,10 +2010,10 @@ restart:
 
     // Possibly look for primal solution from the user
     if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-	mipsolver.callback_->active[kCallbackMipUserSolution])
-      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
-					       kUserMipSolutionCallbackOriginEvaluateRootNode1);
-
+        mipsolver.callback_->active[kCallbackMipUserSolution])
+      mipsolver.mipdata_->callbackUserSolution(
+          mipsolver.solution_objective_,
+          kUserMipSolutionCallbackOriginEvaluateRootNode1);
   }
   mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
   if (mipsolver.analysis_.analyse_mip_time) {
@@ -2066,8 +2068,9 @@ restart:
   // Possibly look for primal solution from the user
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
-					     kUserMipSolutionCallbackOriginEvaluateRootNode2);
+    mipsolver.mipdata_->callbackUserSolution(
+        mipsolver.solution_objective_,
+        kUserMipSolutionCallbackOriginEvaluateRootNode2);
 
   // Possible cut extraction callback
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
@@ -2118,10 +2121,10 @@ restart:
       printDisplayLine();
       // Possibly look for primal solution from the user
       if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-	  mipsolver.callback_->active[kCallbackMipUserSolution])
-	mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
-						 kUserMipSolutionCallbackOriginEvaluateRootNode3);
-
+          mipsolver.callback_->active[kCallbackMipUserSolution])
+        mipsolver.mipdata_->callbackUserSolution(
+            mipsolver.solution_objective_,
+            kUserMipSolutionCallbackOriginEvaluateRootNode3);
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
@@ -2154,13 +2157,14 @@ restart:
 
     ++nseparounds;
     printDisplayLine();
-    // Possibly look for primal solution from the user
-    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
-	mipsolver.callback_->active[kCallbackMipUserSolution])
-      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
-					       kUserMipSolutionCallbackOriginEvaluateRootNode4);
-
   }
+
+  // Possibly look for primal solution from the user
+  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->active[kCallbackMipUserSolution])
+    mipsolver.mipdata_->callbackUserSolution(
+        mipsolver.solution_objective_,
+        kUserMipSolutionCallbackOriginEvaluateRootNode4);
 
   removeFixedIndices();
   if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
@@ -2411,10 +2415,12 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_value,
-					      const HighsInt user_solution_callback_origin) {
+void HighsMipSolverData::callbackUserSolution(
+    const double mipsolver_objective_value,
+    const HighsInt user_solution_callback_origin) {
   setCallbackDataOut(mipsolver_objective_value);
-  mipsolver.callback_->data_out.user_solution_callback_origin = user_solution_callback_origin;
+  mipsolver.callback_->data_out.user_solution_callback_origin =
+      user_solution_callback_origin;
 
   mipsolver.callback_->clearHighsCallbackDataIn();
   const bool interrupt = mipsolver.callback_->callbackAction(
@@ -2430,21 +2436,27 @@ void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_v
     HighsCDouble user_solution_quad_objective_value = 0;
     const bool feasible = mipsolver.solutionFeasible(
         mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-        row_violation_, integrality_violation_, user_solution_quad_objective_value);
-    double user_solution_objective_value = double(user_solution_quad_objective_value);
+        row_violation_, integrality_violation_,
+        user_solution_quad_objective_value);
+    double user_solution_objective_value =
+        double(user_solution_quad_objective_value);
     if (!feasible) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   "User-supplied solution has with objective %g has violations: "
-                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
-                   user_solution_objective_value, bound_violation_,
-                   integrality_violation_, row_violation_);
+      highsLogUser(
+          mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+          "User-supplied solution has with objective %g has violations: "
+          "bound = %.4g; integrality = %.4g; row = %.4g\n",
+          user_solution_objective_value, bound_violation_,
+          integrality_violation_, row_violation_);
       return;
     }
     std::vector<double> reduced_user_solution;
-    reduced_user_solution = postSolveStack.getReducedPrimalSolution(user_solution);
+    reduced_user_solution =
+        postSolveStack.getReducedPrimalSolution(user_solution);
     const bool print_display_line = true;
     const bool is_user_solution = true;
-    addIncumbent(reduced_user_solution, user_solution_objective_value, kSolutionSourceUserSolution, print_display_line, is_user_solution);
+    addIncumbent(reduced_user_solution, user_solution_objective_value,
+                 kSolutionSourceUserSolution, print_display_line,
+                 is_user_solution);
   }
 }
 

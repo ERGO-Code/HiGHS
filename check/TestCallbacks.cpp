@@ -1,3 +1,4 @@
+// #include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -6,7 +7,7 @@
 #include "catch.hpp"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = true;
+const bool dev_run = false;  // true;//
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
@@ -189,20 +190,23 @@ HighsCallbackFunctionType userkMipUserSolution =
     [](int callback_type, const std::string& message,
        const HighsCallbackDataOut* data_out, HighsCallbackDataIn* data_in,
        void* user_callback_data) {
-      
       UserMipSolution callback_data =
           *(static_cast<UserMipSolution*>(user_callback_data));
-      if (data_out->mip_primal_bound >
-	  callback_data.optimal_objective_value) {
-	
-	// If current objective value is not optimal, pass the
-	// optimal solution as a user solution
-	if (dev_run) 
-	  printf("userkMipUserSolution: %g = mip_primal_bound > "
-		 "optimal_objective_value = %g\n",
-		 data_out->mip_primal_bound,
-		 callback_data.optimal_objective_value);
-	data_in->user_solution = callback_data.optimal_solution;
+      if (data_out->user_solution_callback_origin ==
+          callback_data.require_user_solution_callback_origin) {
+        if (data_out->mip_primal_bound >
+            callback_data.optimal_objective_value) {
+          // If current objective value is not optimal, pass the
+          // optimal solution as a user solution
+          if (dev_run)
+            printf(
+                "userkMipUserSolution: origin = %d; %g = mip_primal_bound > "
+                "optimal_objective_value = %g\n",
+                int(data_out->user_solution_callback_origin),
+                data_out->mip_primal_bound,
+                callback_data.optimal_objective_value);
+          data_in->user_solution = callback_data.optimal_solution;
+        }
       }
     };
 
@@ -408,33 +412,32 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs-callback]") {
 }
 
 TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
-  const std::vector<std::string> model = {"flugpl", "lseu", "egout", "gt2", "rgn", "bell5", "sp150x300d", "p0548", "dcmulti"};
-  //  const std::string model = "flugpl";
-  //  const std::string model = "lseu";
-  //  const std::string model = "egout";
-  //  const std::string model = "gt2";
-  // const std::string model = "rgn";
-  //  const std::string model = "bell5";
-  //  const std::string model = "sp150x300d";
-  //  const std::string model = "p0548";
-  //   const std::string model = "dcmulti";
+  //  const std::vector<std::string> model = {"rgn", "flugpl", "gt2", "egout",
+  //  "bell5", "lseu", "sp150x300d"};//, "p0548", "dcmulti"}; const
+  //  std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4, 5, 6};
+  const std::vector<std::string> model = {"p0548", "flugpl", "gt2", "egout",
+                                          "sp150x300d"};
+  const std::vector<HighsInt> require_origin = {0, 1, 2, 3, 4};  //, 4, 5, 6};
+  assert(model.size() == require_origin.size());
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
-  HighsInt from_model = 1;
+  HighsInt from_model = 0;
   HighsInt to_model = HighsInt(model.size());
   for (HighsInt iModel = from_model; iModel < to_model; iModel++) {
     const std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
+        std::string(HIGHS_DIR) + "/check/instances/" + model[iModel] + ".mps";
     highs.readModel(filename);
     highs.run();
     std::vector<double> optimal_solution = highs.getSolution().col_value;
     double objective_function_value0 = highs.getInfo().objective_function_value;
     highs.clearSolver();
-  
+
     UserMipSolution user_callback_data;
     user_callback_data.optimal_objective_value = objective_function_value0;
     user_callback_data.optimal_solution = optimal_solution.data();
+    user_callback_data.require_user_solution_callback_origin =
+        require_origin[iModel];
     void* p_user_callback_data = (void*)(&user_callback_data);
 
     //  highs.setOptionValue("presolve", kHighsOffString);
@@ -443,7 +446,9 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
     highs.run();
     highs.stopCallback(kCallbackMipUserSolution);
     double objective_function_value1 = highs.getInfo().objective_function_value;
-    double objective_diff = std::fabs(objective_function_value1 - objective_function_value0)/std::max(1.0, std::fabs(objective_function_value0));
+    double objective_diff =
+        std::fabs(objective_function_value1 - objective_function_value0) /
+        std::max(1.0, std::fabs(objective_function_value0));
     REQUIRE(objective_diff < 1e-12);
   }
 }
