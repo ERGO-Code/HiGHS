@@ -131,6 +131,12 @@ restart:
       cleanupSolve();
       return;
     }
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+	callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_,
+				     kUserMipSolutionCallbackOriginAfterSetup);
+
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus model_status = mipdata_->trivialHeuristics();
@@ -207,7 +213,8 @@ restart:
     // Possibly look for primal solution from the user
     if (!submip && callback_->user_callback &&
         callback_->active[kCallbackMipUserSolution])
-      mipdata_->callbackUserSolution(solution_objective_);
+      mipdata_->callbackUserSolution(solution_objective_,
+				     kUserMipSolutionCallbackOriginBeforeDive);
 
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();

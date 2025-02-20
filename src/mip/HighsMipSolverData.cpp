@@ -1511,6 +1511,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
     ub = mipsolver.options_mip_->objective_bound;
 
   auto print_lp_iters = convertToPrintString(total_lp_iterations);
+  HighsInt dynamic_constraints_in_lp = lp.numRows() > 0 ? lp.numRows() - lp.getNumModelRows() : 0;
   if (upper_bound != kHighsInf) {
     std::array<char, 22> gap_string = {};
     if (gap >= 9999.)
@@ -1536,7 +1537,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
         ub_string.data(), gap_string.data(), cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        dynamic_constraints_in_lp, conflictPool.getNumConflicts(),
         print_lp_iters.data(), time_string.c_str());
   } else {
     std::array<char, 22> ub_string;
@@ -1557,7 +1558,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
         solutionSourceToString(solution_source).c_str(), print_nodes.data(),
         queue_nodes.data(), print_leaves.data(), explored, lb_string.data(),
         ub_string.data(), gap, cutpool.getNumCuts(),
-        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        dynamic_constraints_in_lp, conflictPool.getNumConflicts(),
         print_lp_iters.data(), time_string.c_str());
   }
   // Check that limitsToBounds yields the same values for the
@@ -1769,7 +1770,8 @@ restart:
   // Possibly look for primal solution from the user
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
+					     kUserMipSolutionCallbackOriginEvaluateRootNode0);
 
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
@@ -2007,7 +2009,8 @@ restart:
     // Possibly look for primal solution from the user
     if (!mipsolver.submip && mipsolver.callback_->user_callback &&
 	mipsolver.callback_->active[kCallbackMipUserSolution])
-      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
+					       kUserMipSolutionCallbackOriginEvaluateRootNode1);
 
   }
   mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
@@ -2063,7 +2066,8 @@ restart:
   // Possibly look for primal solution from the user
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipUserSolution])
-    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
+					     kUserMipSolutionCallbackOriginEvaluateRootNode2);
 
   // Possible cut extraction callback
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
@@ -2115,7 +2119,8 @@ restart:
       // Possibly look for primal solution from the user
       if (!mipsolver.submip && mipsolver.callback_->user_callback &&
 	  mipsolver.callback_->active[kCallbackMipUserSolution])
-	mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+	mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
+						 kUserMipSolutionCallbackOriginEvaluateRootNode3);
 
     }
 
@@ -2152,7 +2157,8 @@ restart:
     // Possibly look for primal solution from the user
     if (!mipsolver.submip && mipsolver.callback_->user_callback &&
 	mipsolver.callback_->active[kCallbackMipUserSolution])
-      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_,
+					       kUserMipSolutionCallbackOriginEvaluateRootNode4);
 
   }
 
@@ -2405,9 +2411,11 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
   return mipsolver.callback_->callbackAction(callback_type, message);
 }
 
-void HighsMipSolverData::callbackUserSolution(
-    const double mipsolver_objective_value) {
+void HighsMipSolverData::callbackUserSolution(const double mipsolver_objective_value,
+					      const HighsInt user_solution_callback_origin) {
   setCallbackDataOut(mipsolver_objective_value);
+  mipsolver.callback_->data_out.user_solution_callback_origin = user_solution_callback_origin;
+
   mipsolver.callback_->clearHighsCallbackDataIn();
   const bool interrupt = mipsolver.callback_->callbackAction(
       kCallbackMipUserSolution, "MIP User solution");

@@ -24,6 +24,15 @@ void HighsCallback::clearHighsCallbackDataOut() {
   this->data_out.mip_dual_bound = -kHighsInf;
   this->data_out.mip_gap = -1;
   this->data_out.mip_solution = nullptr;
+  this->data_out.cutpool_num_col = 0;
+  this->data_out.cutpool_num_cut = 0;
+  this->data_out.cutpool_num_nz = 0;
+  this->data_out.cutpool_start = nullptr;
+  this->data_out.cutpool_index = nullptr;
+  this->data_out.cutpool_value = nullptr;
+  this->data_out.cutpool_lower = nullptr;
+  this->data_out.cutpool_upper = nullptr;
+  this->data_out.user_solution_callback_origin = 0;
 }
 
 void HighsCallback::clearHighsCallbackDataIn() {
