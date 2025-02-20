@@ -1254,9 +1254,11 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         HighsInt col = it.first;
         assert(col >= 0);
         assert(col < mipsolver.numCol());
-        
-        auto isBetter = [this](double col, double xi, double roundedval,
-                            HighsInt direction) {
+
+        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min, 
+                               &pind_j_min, &j_min, &x_j_min, &sigma, &i]
+                          (double col, double xi, double roundedval,
+                           HighsInt direction) {
           double c_min = currentLp.col_cost_[col] * (roundedval - it.second);
           if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
             xi_max = xi;
