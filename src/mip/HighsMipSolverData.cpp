@@ -967,9 +967,6 @@ void HighsMipSolverData::runSetup() {
                  "\n");
 }
 
-void HighsMipSolverData::presolveSolution(const std::vector<double>& sol,
-                                          std::vector<double>& presolved_sol) {}
-
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,
     const bool possibly_store_as_new_incumbent) {
@@ -1276,12 +1273,14 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, const int solution_source,
-                                      const bool print_display_line) {
+                                      const bool print_display_line,
+				      const bool is_user_solution) {
   const bool execute_mip_solution_callback =
-      !mipsolver.submip &&
-      (mipsolver.callback_->user_callback
-           ? mipsolver.callback_->active[kCallbackMipSolution]
-           : false);
+    !is_user_solution &&
+    !mipsolver.submip &&
+    (mipsolver.callback_->user_callback
+     ? mipsolver.callback_->active[kCallbackMipSolution]
+     : false);
   // Determine whether the potential new incumbent should be
   // transformed
   //
@@ -1297,10 +1296,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                : 0;
 
   if (possibly_store_as_new_incumbent) {
-    // #1463 use pre-computed transformed_solobj
     solobj = transformed_solobj;
-    //    solobj = transformNewIntegerFeasibleSolution(sol);
-
     if (solobj >= upper_bound) return false;
 
     double prev_upper_bound = upper_bound;
@@ -1315,7 +1311,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit = computeNewUpperLimit(solobj, 0.0, 0.0);
 
-    if (!mipsolver.submip) saveReportMipSolution(new_upper_limit);
+    if (!is_user_solution && !mipsolver.submip) saveReportMipSolution(new_upper_limit);
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
       upper_limit = new_upper_limit;
@@ -1770,6 +1766,11 @@ restart:
 
   printDisplayLine();
 
+  // Possibly look for primal solution from the user
+  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->active[kCallbackMipUserSolution])
+    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
                               "HighsMipSolverData::evaluateRootNode");
@@ -2002,6 +2003,12 @@ restart:
     rootlpsolobj = lp.getObjective();
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
+
+    // Possibly look for primal solution from the user
+    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+	mipsolver.callback_->active[kCallbackMipUserSolution])
+      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+
   }
   mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
   if (mipsolver.analysis_.analyse_mip_time) {
@@ -2053,6 +2060,11 @@ restart:
   }
 
   printDisplayLine();
+  // Possibly look for primal solution from the user
+  if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+      mipsolver.callback_->active[kCallbackMipUserSolution])
+    mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+
   // Possible cut extraction callback
   if (!mipsolver.submip && mipsolver.callback_->user_callback &&
       mipsolver.callback_->callbackActive(kCallbackMipGetCutPool))
@@ -2100,6 +2112,11 @@ restart:
       ++nseparounds;
 
       printDisplayLine();
+      // Possibly look for primal solution from the user
+      if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+	  mipsolver.callback_->active[kCallbackMipUserSolution])
+	mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
@@ -2132,6 +2149,11 @@ restart:
 
     ++nseparounds;
     printDisplayLine();
+    // Possibly look for primal solution from the user
+    if (!mipsolver.submip && mipsolver.callback_->user_callback &&
+	mipsolver.callback_->active[kCallbackMipUserSolution])
+      mipsolver.mipdata_->callbackUserSolution(mipsolver.solution_objective_);
+
   }
 
   removeFixedIndices();
@@ -2397,12 +2419,24 @@ void HighsMipSolverData::callbackUserSolution(
     double bound_violation_ = 0;
     double row_violation_ = 0;
     double integrality_violation_ = 0;
-    HighsCDouble mipsolver_quad_objective_value = 0;
+    HighsCDouble user_solution_quad_objective_value = 0;
     const bool feasible = mipsolver.solutionFeasible(
         mipsolver.orig_model_, user_solution, nullptr, bound_violation_,
-        row_violation_, integrality_violation_, mipsolver_quad_objective_value);
-    printf("HighsMipSolverData::callbackUserSolution() User solution is %s\n",
-           feasible ? "Feasible" : "Not feasible");
+        row_violation_, integrality_violation_, user_solution_quad_objective_value);
+    double user_solution_objective_value = double(user_solution_quad_objective_value);
+    if (!feasible) {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+                   "User-supplied solution has with objective %g has violations: "
+                   "bound = %.4g; integrality = %.4g; row = %.4g\n",
+                   user_solution_objective_value, bound_violation_,
+                   integrality_violation_, row_violation_);
+      return;
+    }
+    std::vector<double> reduced_user_solution;
+    reduced_user_solution = postSolveStack.getReducedPrimalSolution(user_solution);
+    const bool print_display_line = true;
+    const bool is_user_solution = true;
+    addIncumbent(reduced_user_solution, user_solution_objective_value, kSolutionSourceUserSolution, print_display_line, is_user_solution);
   }
 }
 
