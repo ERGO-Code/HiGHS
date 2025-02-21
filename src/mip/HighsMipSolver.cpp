@@ -351,7 +351,7 @@ restart:
           }
 
           // sync goes with flush maybe 
-          mipdata_->heuristics.flushStatistics();
+          mipdata_->heuristics.flushStatistics(master_worker);
           analysis_.mipTimerStop(kMipClockPrimalHeuristics);
         }
       }

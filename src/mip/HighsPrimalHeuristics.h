@@ -22,24 +22,42 @@ class HighsPrimalHeuristics {
   const HighsMipSolver& mipsolver;
 
   // HighsMipWorker& mipworker;
-  // const HighsMipSolver& mipsolver;
+  // const HighsMipSolver& mipsolver;o
 
-  size_t total_repair_lp;
-  size_t total_repair_lp_feasible;
-  size_t total_repair_lp_iterations;
-  size_t lp_iterations;
+  
 
-  double successObservations;
-  HighsInt numSuccessObservations;
-  double infeasObservations;
-  HighsInt numInfeasObservations;
-
-  HighsRandom randgen;
-
+  
   std::vector<HighsInt> intcols;
 
  public:
+ struct Statistics {
+  Statistics()    :
+  total_repair_lp(0),
+  total_repair_lp_feasible(0),
+  total_repair_lp_iterations(0),
+  lp_iterations(0) {
+ successObservations = 0;
+ numSuccessObservations = 0;
+ infeasObservations = 0;
+ numInfeasObservations = 0;
+ }
+   size_t total_repair_lp;
+   size_t total_repair_lp_feasible;
+   size_t total_repair_lp_iterations;
+   size_t lp_iterations;
+ 
+   double successObservations;
+   HighsInt numSuccessObservations;
+   double infeasObservations;
+   HighsInt numInfeasObservations;
+ 
+   // still need to create in the mipworker 
+   // probably keep them separate 
+
+  // HighsRandom randgen;
+   };
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
+  // HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
   void setupIntCols();
 
@@ -62,7 +80,7 @@ class HighsPrimalHeuristics {
 
   void centralRounding();
 
-  void flushStatistics();
+  void flushStatistics(HighsMipWorker& worker);
 
   bool tryRoundedPoint(const std::vector<double>& point,
                        const int solution_source);

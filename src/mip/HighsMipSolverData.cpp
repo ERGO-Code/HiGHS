@@ -32,9 +32,9 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       pseudocost(),
       cliquetable(mipsolver.numCol()),
       implications(mipsolver),
-      heuristics_ptr(new HighsPrimalHeuristics(mipsolver)),
-      heuristics(*heuristics_ptr.get()),
-      // heuristics(mipsolver),
+      // heuristics_ptr(new HighsPrimalHeuristics(mipsolver)),
+      // heuristics(*heuristics_ptr.get()),
+      heuristics(mipsolver),
       objectiveFunction(mipsolver),
       presolve_status(HighsPresolveStatus::kNotSet),
       cliquesExtracted(false),
@@ -88,6 +88,7 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
 
   // ig:here
   // workers.emplace_back(std::move(HighsMipWorker(mipsolver, lp)));
+  workers.emplace_back(mipsolver, lp);
 
 }
 
@@ -1781,7 +1782,7 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   assert(!interrupt);
 }
 
-bool HighsMipSolverData::rootSeparationRound(
+bool HighsMipSolverData::rootSeparationRound(HighsMipWorker& worker,
     HighsSeparation& sepa, HighsInt& ncuts, HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
@@ -1797,7 +1798,7 @@ bool HighsMipSolverData::rootSeparationRound(
 
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(worker);
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
   }
@@ -2042,7 +2043,7 @@ restart:
   mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
   heuristics.randomizedRounding(firstlpsol);
   mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding1);
-  heuristics.flushStatistics();
+  heuristics.flushStatistics(worker);
 
   mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
@@ -2120,7 +2121,7 @@ restart:
 
     mipsolver.analysis_.mipTimerStart(kMipClockSeparationRootSeparationRound);
     const bool root_separation_round_result =
-        rootSeparationRound(sepa, ncuts, status);
+        rootSeparationRound(worker, sepa, ncuts, status);
     mipsolver.analysis_.mipTimerStop(kMipClockSeparationRootSeparationRound);
     if (root_separation_round_result) {
       mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
@@ -2142,7 +2143,7 @@ restart:
       heuristics.centralRounding();
       mipsolver.analysis_.mipTimerStop(kMipClockSeparationCentralRounding);
 
-      heuristics.flushStatistics();
+      heuristics.flushStatistics(worker);
 
       if (checkLimits()) {
         mipsolver.analysis_.mipTimerStop(kMipClockSeparation);
@@ -2233,7 +2234,7 @@ restart:
     heuristics.centralRounding();
     mipsolver.analysis_.mipTimerStop(kMipClockCentralRounding);
 
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(worker);
 
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
@@ -2245,7 +2246,7 @@ restart:
       HighsInt ncuts;
       mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound);
       const bool root_separation_round_result =
-          rootSeparationRound(sepa, ncuts, status);
+          rootSeparationRound(worker, sepa, ncuts, status);
       mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound);
       if (root_separation_round_result) return;
       ++nseparounds;
@@ -2265,7 +2266,7 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     heuristics.rootReducedCost();
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(worker);
 
     if (checkLimits()) return;
 
@@ -2276,7 +2277,7 @@ restart:
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      if (rootSeparationRound(sepa, ncuts, status)) return;
+      if (rootSeparationRound(worker, sepa, ncuts, status)) return;
 
       ++nseparounds;
       printDisplayLine();
@@ -2286,7 +2287,7 @@ restart:
 
     if (checkLimits()) return;
     heuristics.RENS(worker, rootlpsol);
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(worker);
 
     if (checkLimits()) return;
     // if there are new global bound changes we reevaluate the LP and do one
@@ -2296,7 +2297,7 @@ restart:
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      if (rootSeparationRound(sepa, ncuts, status)) return;
+      if (rootSeparationRound(worker, sepa, ncuts, status)) return;
 
       ++nseparounds;
 
@@ -2307,7 +2308,7 @@ restart:
 
     if (checkLimits()) return;
     heuristics.feasibilityPump();
-    heuristics.flushStatistics();
+    heuristics.flushStatistics(worker);
 
     if (checkLimits()) return;
     status = evaluateRootLp();
@@ -2329,7 +2330,7 @@ restart:
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
   if (separate && lp.scaledOptimal(status)) {
     HighsInt ncuts;
-    if (rootSeparationRound(sepa, ncuts, status)) return;
+    if (rootSeparationRound(worker, sepa, ncuts, status)) return;
 
     ++nseparounds;
     printDisplayLine();

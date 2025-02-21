@@ -846,7 +846,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                              inds.size(), rhs);
-  if (extractCliques)
+  if (extractCliques && mipsolver.mipdata_->workers.size() <= 1)
     mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
         mipsolver, inds.data(), vals.data(), inds.size(), rhs);
 

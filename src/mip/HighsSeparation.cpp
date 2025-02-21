@@ -155,6 +155,9 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       size_t nlpiters = -lp->getNumLpIterations();
       HighsInt ncuts = separationRound(propdomain, status);
       nlpiters += lp->getNumLpIterations();
+
+      // todo: replace with mipworker iterations field
+
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
       mipsolver.mipdata_->total_lp_iterations += nlpiters;
       // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);

@@ -40,6 +40,8 @@ class HighsMipWorker {
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
   HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_);
+ 
+  // HighsMipWorker(const HighsMipWorker& mipworker);
 
   const HighsMipSolver& getMipSolver();
 
@@ -49,17 +51,10 @@ class HighsMipWorker {
   HighsConflictPool conflictpool_;
 
   // members for worker threads.
-  HighsPseudocostInitialization pscostinit_;
+  HighsPseudocost pscost_;
   // HighsCliqueTable clqtableinit_;
-  HighsImplications implicinit_;
+  /// HighsImplications implicinit_;
 
-  // References to members, initialized to local objects for worker threads,
-  // modify to mip solver for main worker.
-  HighsPseudocostInitialization& pscostinit;
-  // HighsCliqueTable& clqtableinit;
-  HighsImplications& implicinit;
-
-  // Solution information.
   struct Solution {
     double row_violation_;
     double bound_violation_;
@@ -73,8 +68,16 @@ class HighsMipWorker {
   // ... implement necessary methods for HighsSearch
  
   ~HighsMipWorker() {
-      search_ptr_.release();
+      // search_ptr_.release();
+      search_ptr_.reset();
   }
+
+  HighsPrimalHeuristics::Statistics heur_stats;
+
+  // todo: 
+  // timer_
+  // sync too
+  // or name times differently for workers in the same timer instance in mipsolver.
 
 };
 

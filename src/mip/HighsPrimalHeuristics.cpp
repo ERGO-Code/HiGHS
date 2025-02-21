@@ -33,16 +33,12 @@
 #endif
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
-    : mipsolver(mipsolver),
-      total_repair_lp(0),
-      total_repair_lp_feasible(0),
-      total_repair_lp_iterations(0),
-      lp_iterations(0),
-      randgen(mipsolver.options_mip_->random_seed) {
-  successObservations = 0;
-  numSuccessObservations = 0;
-  infeasObservations = 0;
-  numInfeasObservations = 0;
+// HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipWorker& mipworker)
+    // : mipworker(mipworker),
+    //  mipsolver(mipworker.mipsolver_),
+    : mipsolver(mipsolver)
+       {
+
 }
 
 void HighsPrimalHeuristics::setupIntCols() {
@@ -155,10 +151,10 @@ bool HighsPrimalHeuristics::solveSubMip(
     // (double)mipsolver.orig_model_->a_matrix_.value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
-    lp_iterations += adjusted_lp_iterations;
-    total_repair_lp += submipsolver.mipdata_->total_repair_lp;
-    total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
-    total_repair_lp_iterations +=
+    worker.heur_stats.lp_iterations += adjusted_lp_iterations;
+    worker.heur_stats.total_repair_lp += submipsolver.mipdata_->total_repair_lp;
+    worker.heur_stats.total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
+    worker.heur_stats.total_repair_lp_iterations +=
         submipsolver.mipdata_->total_repair_lp_iterations;
     if (mipsolver.submip)
       mipsolver.mipdata_->num_nodes += std::max(
@@ -166,8 +162,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   }
 
   if (submipsolver.modelstatus_ == HighsModelStatus::kInfeasible) {
-    infeasObservations += fixingRate;
-    ++numInfeasObservations;
+    worker.heur_stats.infeasObservations += fixingRate;
+    ++worker.heur_stats.numInfeasObservations;
   }
   if (submipsolver.node_count_ <= 1 &&
       submipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
@@ -181,8 +177,8 @@ bool HighsPrimalHeuristics::solveSubMip(
 
   if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
     // remember fixing rate as good
-    successObservations += fixingRate;
-    ++numSuccessObservations;
+    worker.heur_stats.successObservations += fixingRate;
+    ++worker.heur_stats.numSuccessObservations;
   }
 
   return true;
@@ -1243,7 +1239,7 @@ void HighsPrimalHeuristics::clique() {
 }
 #endif
 
-void HighsPrimalHeuristics::flushStatistics() {
+void HighsPrimalHeuristics::flushStatistics(HighsMipWorker& mipworker) {
   mipsolver.mipdata_->total_repair_lp += total_repair_lp;
   mipsolver.mipdata_->total_repair_lp_feasible += total_repair_lp_feasible;
   mipsolver.mipdata_->total_repair_lp_iterations += total_repair_lp_iterations;

@@ -68,6 +68,7 @@ enum MipSolutionSource : int {
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
+
   HighsCutPool cutpool;
   HighsConflictPool conflictPool;
   HighsDomain domain;
@@ -78,7 +79,8 @@ struct HighsMipSolverData {
 
   HighsLpRelaxation& lp;
 
-  std::unique_ptr<HighsPrimalHeuristics> heuristics_ptr;
+  // std::unique_ptr<HighsPrimalHeuristics> heuristics_ptr;
+  // HighsPrimalHeuristics heuristics;
   HighsPrimalHeuristics heuristics;
 
   HighsPseudocost pseudocost;
@@ -211,7 +213,7 @@ struct HighsMipSolverData {
   bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
                    const int solution_source = kSolutionSourceNone);
-  bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
+  bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
 
