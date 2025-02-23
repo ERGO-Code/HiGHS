@@ -1157,11 +1157,12 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_int = new OptionRecordInt(
-        "log_dev_level",
-        "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
-        kHighsLogDevLevelMax);
+    record_int =
+        new OptionRecordInt("log_dev_level",
+                            "Output development messages: 0 => none; 1 => "
+                            "info; 2 => detailed; 3 => verbose",
+                            advanced, &log_dev_level, kHighsLogDevLevelMin,
+                            kHighsLogDevLevelNone, kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("log_githash", "Log the githash",
