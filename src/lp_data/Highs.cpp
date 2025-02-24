@@ -4035,7 +4035,7 @@ HighsStatus Highs::callSolveMip() {
                                       : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal) {
-    HighsStatus check_status = checkOptimality("QP", return_status);
+    HighsStatus check_status = checkOptimality("MIP", return_status);
     if (check_status == HighsStatus::kError) {
       return_status = check_status;
       model_status_ = HighsModelStatus::kSolveError;
