@@ -88,7 +88,7 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
 
   // ig:here
   // workers.emplace_back(std::move(HighsMipWorker(mipsolver, lp)));
-  workers.emplace_back(mipsolver, lp);
+  // workers.emplace_back(mipsolver, lp);
 
 }
 

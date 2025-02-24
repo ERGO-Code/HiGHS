@@ -22,6 +22,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
       pseudocost_(mipsolver__)
       {
 
+  // std::cout << mipdata_.domain.changedcolsflags_.size() << std::endl;
   search_ptr_ =
       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
 

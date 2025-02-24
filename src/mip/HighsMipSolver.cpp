@@ -122,6 +122,9 @@ void HighsMipSolver::run() {
         fopen(options_mip_->mip_improving_solution_file.c_str(), "w");
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+
+  // todo:ig mipdata_. initialize worker
+
   analysis_.mipTimerStart(kMipClockPresolve);
   analysis_.mipTimerStart(kMipClockInit);
 
