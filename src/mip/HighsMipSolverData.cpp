@@ -84,10 +84,7 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
   domain.addCutpool(cutpool);
   domain.addConflictPool(conflictPool);
 
-  // workers.emplace(workers.end(), HighsMipWorker(mipsolver, lps.back()));
-
   // ig:here
-  // workers.emplace_back(std::move(HighsMipWorker(mipsolver, lp)));
   // workers.emplace_back(mipsolver, lp);
 
 }

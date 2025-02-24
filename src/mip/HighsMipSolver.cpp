@@ -172,14 +172,18 @@ void HighsMipSolver::run() {
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 
   // Initialize master worker.
-  HighsMipWorker master_worker(*this, mipdata_->lp);
+  // HighsMipWorker master_worker(*this, mipdata_->lp);
 
-  // mipdata_->lps.push_back(mipdata_->lp);
-  // mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
+  mipdata_->workers.emplace_back(*this, mipdata_->lp);
+  // workers.emplace_back(mipsolver, lp);
 
-  //  mipdata_->workers.emplace(mipdata_->workers.end(), HighsMipWorker(*this, mipdata_->lps.back()));
+  // mipdata_->workers.emplace_back(*this, mipdata_->lps.at(0));
+  HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
-  //  HighsMipWorker& master_worker = mipdata_->workers.at(0);
+  // Now the worker lives in mipdata.
+  // The master worker is used in evaluateRootNode.
+
+  // HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
@@ -232,11 +236,23 @@ restart:
     return;
   }
 
+ printf(
+      "MIPSOLVER mipdata lp deque member  with address %p, %d "
+      "columns, and %d rows\n",
+      (void*)&mipdata_->lps.at(0), int(mipdata_->lps.at(0).getLpSolver().getNumCol()),
+      int(mipdata_->lps.at(0).getLpSolver().getNumRow()));
+
+ printf( "Passed to search atm:  \n");
+
+ printf( "MIPSOLVER mipdata lp ref with address %p, %d "
+      "columns, and %d rows\n",
+      (void*)&mipdata_->lp, int(mipdata_->lp.getLpSolver().getNumCol()),
+      int(mipdata_->lp.getLpSolver().getNumRow()));
+
+
+
   std::shared_ptr<const HighsBasis> basis;
   // HighsSearch search{*this, mipdata_->pseudocost};
-
-  // mipdata_->lps.push_back(mipdata_->lp);
-  // mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
 
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
 
@@ -244,7 +260,20 @@ restart:
   // HighsMipWorker master_worker(*this, mipdata_->lp);
   // HighsSearch& search = *master_worker.search_ptr_.get();
 
+  // This version works during refactor with the master pseudocost.
+  // valgrind OK.
   HighsSearch search{master_worker, mipdata_->pseudocost};
+
+
+  // This search is from the worker and will use the worker pseudocost.
+  // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
+
+  // fails in a submip .
+//  printf(
+//       "MIPSOLVER Search has lp member in constructor of mipworker with address %p, %d "
+//       "columns, and %d rows\n",
+//       (void*)&search.lp, int(search.lp->getLpSolver().getNumCol()),
+//       int(search.lp->getLpSolver().getNumRow()));
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
   // HighsSeparation sepa(*this);
