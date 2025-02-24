@@ -1967,6 +1967,25 @@ void test_multiObjective() {
   free(col_value);
 }
 
+void test_qp_indefinite_failure() {
+    void* highs = Highs_create();
+    HighsInt ret;
+    const double inf = Highs_getInfinity(highs);
+    ret = Highs_addCol(highs, 0.0, 1.0, inf, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 1.0, 1.0, 0, NULL, NULL);
+    HighsInt start[2] = {0, 1};
+    HighsInt index[1] = {1};
+    double value[1] = {1.0};
+    ret = Highs_passHessian(highs, 2, 1, kHighsHessianFormatTriangular, start, index, value);
+    assert(ret == 0);
+    HighsInt run_status = Highs_run(highs);
+    HighsInt model_status = Highs_getModelStatus(highs);
+    assert(run_status == kHighsStatusError);
+    assert(model_status == kHighsModelStatusSolveError);
+    Highs_destroy(highs);
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -2032,6 +2051,7 @@ int main() {
   test_feasibilityRelaxation();
   test_getModel();
   test_multiObjective();
+  test_qp_indefinite_failure();
   return 0;
 }
 //  test_setSolution();
