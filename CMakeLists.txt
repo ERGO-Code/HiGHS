@@ -477,6 +477,8 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
       -fno-omit-frame-pointer ")
 endif()
 
+add_compile_options(-O0) 
+
 # HiGHS coverage update in progress
 if(FAST_BUILD AND HIGHS_COVERAGE)
   if(WIN32)

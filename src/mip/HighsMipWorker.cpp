@@ -19,14 +19,7 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
                mipsolver_.options_mip_->mip_pool_soft_limit),
       conflictpool_(5 * mipsolver_.options_mip_->mip_pool_age_limit,
                     mipsolver_.options_mip_->mip_pool_soft_limit),
-    //   cliquetable_(mipsolver__.numCol()),
-      pseudocost_(mipsolver__),
-      pscostinit_(pseudocost_, 1),
-    //   clqtableinit_(mipsolver_.numCol()),
-      implicinit_(mipsolver_),
-      pscostinit(pscostinit_),
-      implicinit(implicinit_)
-    //   clqtableinit(clqtableinit_) 
+      pseudocost_(mipsolver__)
       {
 
   search_ptr_ =
@@ -62,62 +55,4 @@ HighsMipWorker::HighsMipWorker(const HighsMipSolver& mipsolver__,
       int(search_ptr_->lp->getLpSolver().getNumRow()));
 }
 
-// HighsMipWorker::HighsMipWorker(const HighsMipWorker& worker)
-//    : mipsolver_(worker.mipsolver_),
-//       mipdata_(worker.mipdata_),
-//       lprelaxation_(worker.lprelaxation_),
-//       cutpool_(mipsolver_.numCol(),
-//                mipsolver_.options_mip_->mip_pool_age_limit,
-//                mipsolver_.options_mip_->mip_pool_soft_limit),
-//       conflictpool_(5 * mipsolver_.options_mip_->mip_pool_age_limit,
-//                     mipsolver_.options_mip_->mip_pool_soft_limit),
-//     //   cliquetable_(mipsolver__.numCol()),
-//       pseudocost_(mipsolver_),
-//       pscostinit_(pseudocost_, 1),
-//     //   clqtableinit_(mipsolver_.numCol()),
-//       implicinit_(mipsolver_),
-//       pscostinit(pscostinit_),
-//       implicinit(implicinit_)
-//     //   clqtableinit(clqtableinit_) 
-//       {
-
-//   search_ptr_ =
-//       std::unique_ptr<HighsSearch>(new HighsSearch(*this, pseudocost_));
-
-//   // Register cutpool and conflict pool in local search domain.
-//   // Add global cutpool.
-//   search_ptr_->getLocalDomain().addCutpool(mipsolver_.mipdata_->cutpool);
-//   search_ptr_->getLocalDomain().addConflictPool(
-//       mipsolver_.mipdata_->conflictPool);
-
-//   // cutpool_.matrix_.AheadNeg_.assign(mipsolver__.numCol(), -1);
-//   // cutpool_.matrix_.AheadPos_.assign(mipsolver__.numCol(), -1);
-
-//   // std::vector<HighsInt> AheadPos_;
-//   // std::vector<HighsInt> AheadNeg_;
-
-//   // add local cutpool
-//   search_ptr_->getLocalDomain().addCutpool(cutpool_);
-//   search_ptr_->getLocalDomain().addConflictPool(conflictpool_);
-//   search_ptr_->setLpRelaxation(&lprelaxation_);
-
-//   printf(
-//       "lprelaxation_ address in constructor of mipworker %p, %d columns, and "
-//       "%d rows\n",
-//       (void*)&lprelaxation_, int(lprelaxation_.getLpSolver().getNumCol()),
-//       int(lprelaxation_.getLpSolver().getNumRow()));
-
-//   printf(
-//       "Search has lp member in constructor of mipworker with address %p, %d "
-//       "columns, and %d rows\n",
-//       (void*)&search_ptr_->lp, int(search_ptr_->lp->getLpSolver().getNumCol()),
-//       int(search_ptr_->lp->getLpSolver().getNumRow()));
-// }
-
-//  HighsMipWorker::~HighsMipWorker() {
-//     delete search_ptr;
-//   };
-
 const HighsMipSolver& HighsMipWorker::getMipSolver() { return mipsolver_; }
-
-// HighsSearch& HighsMipWorker::getSearch() { return (*search_ptr); }

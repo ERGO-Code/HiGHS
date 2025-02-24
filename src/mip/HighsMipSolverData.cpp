@@ -1797,7 +1797,7 @@ bool HighsMipSolverData::rootSeparationRound(HighsMipWorker& worker,
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
 
   if (mipsolver.submip || incumbent.empty()) {
-    heuristics.randomizedRounding(solvals);
+    heuristics.randomizedRounding(worker ,solvals);
     heuristics.flushStatistics(worker);
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
@@ -2041,7 +2041,7 @@ restart:
   disptime = 0;
 
   mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
-  heuristics.randomizedRounding(firstlpsol);
+  heuristics.randomizedRounding(worker, firstlpsol);
   mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding1);
   heuristics.flushStatistics(worker);
 
@@ -2265,7 +2265,7 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    heuristics.rootReducedCost();
+    heuristics.rootReducedCost(worker);
     heuristics.flushStatistics(worker);
 
     if (checkLimits()) return;
@@ -2307,7 +2307,7 @@ restart:
     if (upper_limit != kHighsInf || mipsolver.submip) break;
 
     if (checkLimits()) return;
-    heuristics.feasibilityPump();
+    heuristics.feasibilityPump(worker);
     heuristics.flushStatistics(worker);
 
     if (checkLimits()) return;

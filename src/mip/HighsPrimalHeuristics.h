@@ -22,53 +22,52 @@ class HighsPrimalHeuristics {
   const HighsMipSolver& mipsolver;
 
   // HighsMipWorker& mipworker;
-  // const HighsMipSolver& mipsolver;o
+  // const HighsMipSolver& mipsolver;
 
-  
-
-  
   std::vector<HighsInt> intcols;
 
  public:
- struct Statistics {
-  Statistics()    :
-  total_repair_lp(0),
-  total_repair_lp_feasible(0),
-  total_repair_lp_iterations(0),
-  lp_iterations(0) {
- successObservations = 0;
- numSuccessObservations = 0;
- infeasObservations = 0;
- numInfeasObservations = 0;
- }
-   size_t total_repair_lp;
-   size_t total_repair_lp_feasible;
-   size_t total_repair_lp_iterations;
-   size_t lp_iterations;
- 
-   double successObservations;
-   HighsInt numSuccessObservations;
-   double infeasObservations;
-   HighsInt numInfeasObservations;
- 
-   // still need to create in the mipworker 
-   // probably keep them separate 
+  struct Statistics {
+    Statistics()
+        : total_repair_lp(0),
+          total_repair_lp_feasible(0),
+          total_repair_lp_iterations(0),
+          lp_iterations(0) {
+      successObservations = 0;
+      numSuccessObservations = 0;
+      infeasObservations = 0;
+      numInfeasObservations = 0;
+    }
 
-  // HighsRandom randgen;
-   };
+    size_t total_repair_lp;
+    size_t total_repair_lp_feasible;
+    size_t total_repair_lp_iterations;
+    size_t lp_iterations;
+
+    double successObservations;
+    HighsInt numSuccessObservations;
+    double infeasObservations;
+    HighsInt numInfeasObservations;
+
+    // still need to create in the mipworker
+    // probably keep them separate
+
+    // HighsRandom randgen;
+  };
+
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
   // HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
   void setupIntCols();
 
-  bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
+  bool solveSubMip(HighsMipWorker& worker, const HighsLp& lp, const HighsBasis& basis,
                    double fixingRate, std::vector<double> colLower,
                    std::vector<double> colUpper, HighsInt maxleaves,
                    HighsInt maxnodes, HighsInt stallnodes);
 
-  double determineTargetFixingRate();
+  double determineTargetFixingRate(HighsMipWorker& worker);
 
-  void rootReducedCost();
+  void rootReducedCost(HighsMipWorker& worker);
 
   // void RENS(const std::vector<double>& relaxationsol);
   void RENS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
@@ -76,7 +75,7 @@ class HighsPrimalHeuristics {
   // void RINS(const std::vector<double>& relaxationsol);
   void RINS(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 
-  void feasibilityPump();
+  void feasibilityPump(HighsMipWorker& worker);
 
   void centralRounding();
 
@@ -89,7 +88,7 @@ class HighsPrimalHeuristics {
                           const std::vector<double>& point2,
                           const int solution_source);
 
-  void randomizedRounding(const std::vector<double>& relaxationsol);
+  void randomizedRounding(HighsMipWorker& worker, const std::vector<double>& relaxationsol);
 };
 
 #endif

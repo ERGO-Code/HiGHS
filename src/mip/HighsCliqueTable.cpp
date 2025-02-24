@@ -1086,8 +1086,12 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
                                              double rhs) {
   if (isFull()) return;
 
-  const HighsImplications& implics = mipsolver.mipdata_->implications;
-  const HighsDomain& globaldom = mipsolver.mipdata_->domain;
+  HighsImplications& implics = mipsolver.mipdata_->implications;
+  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+
+  // todo:(ig)
+  // const HighsImplications& implics = mipsolver.mipdata_->implications;
+  // const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
   const double feastol = mipsolver.mipdata_->feastol;
 
