@@ -1351,15 +1351,19 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
 
       double minRowRatioForUB = kHighsInf;
       double minRowRatioForLB = kHighsInf;
-      for (HighsInt i = 0; i < currentLp.num_row_; ++i) {
-        double aij = 0.0;
-        getLpMatrixCoefficient(currentLp, i, j, &aij);
-        double siUB = XrowUpper[i] - rowActivities[i];
-        double siLB = rowActivities[i] - XrowLower[i];
-        minRowRatioForUB =
-            std::min(minRowRatioForUB, (aij > 0 ? siUB : -siLB) / aij);
-        minRowRatioForLB =
-            std::min(minRowRatioForLB, (aij > 0 ? siLB : -siUB) / aij);
+      
+      for (HighsInt el = currentLp.a_matrix_.start_[j]; 
+          el < currentLp.a_matrix_.start_[j + 1]; el++) {
+
+          HighsInt i = currentLp.a_matrix_.index_[el];
+          double aij = currentLp.a_matrix_.value_[el];
+
+          double siUB = XrowUpper[i] - rowActivities[i];
+          double siLB = rowActivities[i] - XrowLower[i];
+          minRowRatioForUB =
+              std::min(minRowRatioForUB, (aij > 0 ? siUB : -siLB) / aij);
+          minRowRatioForLB =
+              std::min(minRowRatioForLB, (aij > 0 ? siLB : -siUB) / aij);
       }
 
       double UB = std::min(currentLp.col_upper_[j] - relSol, minRowRatioForUB);
