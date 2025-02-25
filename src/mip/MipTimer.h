@@ -29,14 +29,14 @@ enum iClockMip {
   kMipClockProbingPresolve,
   kMipClockPerformAging1,
   kMipClockDive,
-  kMipClockOpenNodesToQueue,
+  kMipClockOpenNodesToQueue0,
   kMipClockDomainPropgate,
   kMipClockPruneInfeasibleNodes,
   kMipClockUpdateLocalDomain,
   kMipClockNodeSearch,
   //  kMipClock@,
   // Dive
-  kMipClockEvaluateNode,
+  kMipClockEvaluateNode0,
   kMipClockPrimalHeuristics,
   kMipClockTheDive,
   kMipClockBacktrackPlunge,
@@ -57,6 +57,16 @@ enum iClockMip {
   kMipClockCentralRounding,
   kMipClockRootSeparationRound,
   kMipClockSolveSubMipRootReducedCost,
+
+  // NodeSearch
+  kMipClockCurrentNodeToQueue,
+  kMipClockSearchBacktrack,
+  kMipClockNodePrunedLoop,
+  kMipClockOpenNodesToQueue1,
+  kMipClockEvaluateNode1,
+  kMipClockNodeSearchSeparation,
+  kMipClockStoreBasis,
+  //  kMipClock@,
 
   // Separation
   kMipClockSeparationRootSeparationRound,
@@ -108,8 +118,8 @@ class MipTimer {
     // Search - Should correspond to kMipClockSearch
     clock[kMipClockPerformAging1] = timer_pointer->clock_def("Perform aging 1");
     clock[kMipClockDive] = timer_pointer->clock_def("Dive");
-    clock[kMipClockOpenNodesToQueue] =
-        timer_pointer->clock_def("Open nodes to queue");
+    clock[kMipClockOpenNodesToQueue0] =
+        timer_pointer->clock_def("Open nodes to queue 0");
     clock[kMipClockDomainPropgate] =
         timer_pointer->clock_def("Domain propagate");
     clock[kMipClockPruneInfeasibleNodes] =
@@ -120,7 +130,7 @@ class MipTimer {
     //    clock[kMipClock@] = timer_pointer->clock_def("@");
 
     // Dive - Should correspond to kMipClockDive
-    clock[kMipClockEvaluateNode] = timer_pointer->clock_def("Evaluate node");
+    clock[kMipClockEvaluateNode0] = timer_pointer->clock_def("Evaluate node");
     clock[kMipClockPrimalHeuristics] =
         timer_pointer->clock_def("Primal heuristics");
     clock[kMipClockTheDive] = timer_pointer->clock_def("The dive");
@@ -166,6 +176,21 @@ class MipTimer {
         timer_pointer->clock_def("Central rounding - s.");
     clock[kMipClockSeparationEvaluateRootLp] =
         timer_pointer->clock_def("Evaluate root LP - s.");
+
+    // Node search
+    clock[kMipClockCurrentNodeToQueue] =
+        timer_pointer->clock_def("Current node to queue");
+    clock[kMipClockSearchBacktrack] =
+        timer_pointer->clock_def("Search backtrack");
+    clock[kMipClockNodePrunedLoop] =
+        timer_pointer->clock_def("Pruned loop search");
+    clock[kMipClockOpenNodesToQueue1] =
+        timer_pointer->clock_def("Open nodes to queue 1");
+    clock[kMipClockEvaluateNode1] = timer_pointer->clock_def("Evaluate node 1");
+    clock[kMipClockNodeSearchSeparation] =
+        timer_pointer->clock_def("Node search separation");
+    clock[kMipClockStoreBasis] = timer_pointer->clock_def("Store basis");
+    //    clock[] = timer_pointer->clock_def("");
 
     // Evaluate LPs
     clock[kMipClockSimplexBasisSolveLp] =
@@ -278,7 +303,7 @@ class MipTimer {
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockPerformAging1,        kMipClockDive,
-        kMipClockOpenNodesToQueue,     kMipClockDomainPropgate,
+        kMipClockOpenNodesToQueue0,    kMipClockDomainPropgate,
         kMipClockPruneInfeasibleNodes, kMipClockUpdateLocalDomain,
         kMipClockNodeSearch,
         //	kMipClock@
@@ -289,7 +314,7 @@ class MipTimer {
 
   void reportMipDiveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockEvaluateNode, kMipClockPrimalHeuristics, kMipClockTheDive,
+        kMipClockEvaluateNode0, kMipClockPrimalHeuristics, kMipClockTheDive,
         kMipClockBacktrackPlunge, kMipClockPerformAging2};
     reportMipClockList("MipDive_", mip_clock_list, mip_timer_clock,
                        kMipClockDive, tolerance_percent_report);
@@ -327,6 +352,16 @@ class MipTimer {
         kMipClockSeparationCentralRounding, kMipClockSeparationEvaluateRootLp};
     reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
                        kMipClockSeparation);  //, tolerance_percent_report);
+  };
+
+  void reportMipNodeSearchClock(const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{
+        kMipClockCurrentNodeToQueue, kMipClockNodePrunedLoop,
+        //      kMipClockSearchBacktrack,
+        kMipClockOpenNodesToQueue1, kMipClockEvaluateNode1,
+        kMipClockNodeSearchSeparation, kMipClockStoreBasis};
+    reportMipClockList("MipNodeSearch", mip_clock_list, mip_timer_clock,
+                       kMipClockNodeSearch);  //, tolerance_percent_report);
   };
 
   void csvMipClock(const std::string model_name,

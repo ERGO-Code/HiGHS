@@ -140,6 +140,7 @@ restart:
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus model_status = mipdata_->trivialHeuristics();
+    analysis_.mipTimerStop(kMipClockTrivialHeuristics);
     if (modelstatus_ == HighsModelStatus::kNotset &&
         model_status == HighsModelStatus::kInfeasible) {
       // trivialHeuristics can spot trivial infeasibility, so act on it
@@ -237,10 +238,10 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        analysis_.mipTimerStart(kMipClockEvaluateNode);
+        analysis_.mipTimerStart(kMipClockEvaluateNode0);
         const HighsSearch::NodeResult evaluate_node_result =
             search.evaluateNode();
-        analysis_.mipTimerStop(kMipClockEvaluateNode);
+        analysis_.mipTimerStop(kMipClockEvaluateNode0);
 
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
@@ -321,9 +322,9 @@ restart:
     }  // while (true)
     analysis_.mipTimerStop(kMipClockDive);
 
-    analysis_.mipTimerStart(kMipClockOpenNodesToQueue);
+    analysis_.mipTimerStart(kMipClockOpenNodesToQueue0);
     search.openNodesToQueue(mipdata_->nodequeue);
-    analysis_.mipTimerStop(kMipClockOpenNodesToQueue);
+    analysis_.mipTimerStop(kMipClockOpenNodesToQueue0);
 
     search.flushStatistics();
 
@@ -525,13 +526,23 @@ restart:
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to
       // new global information before we perform separation rounds for the node
-      if (search.evaluateNode() == HighsSearch::NodeResult::kSubOptimal)
-        search.currentNodeToQueue(mipdata_->nodequeue);
+      analysis_.mipTimerStart(kMipClockEvaluateNode1);
+      const HighsSearch::NodeResult evaluate_node_result =
+	search.evaluateNode();
+      analysis_.mipTimerStop(kMipClockEvaluateNode1);
+      if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) {
+	analysis_.mipTimerStart(kMipClockCurrentNodeToQueue);
+	search.currentNodeToQueue(mipdata_->nodequeue);
+	analysis_.mipTimerStop(kMipClockCurrentNodeToQueue);
+      }
 
       // if the node was pruned we remove it from the search and install the
       // next node from the queue
+        analysis_.mipTimerStart(kMipClockNodePrunedLoop);
       if (search.currentNodePruned()) {
+	analysis_.mipTimerStart(kMipClockSearchBacktrack);
         search.backtrack();
+	analysis_.mipTimerStop(kMipClockSearchBacktrack);
         ++mipdata_->num_leaves;
         ++mipdata_->num_nodes;
         search.flushStatistics();
@@ -553,6 +564,7 @@ restart:
             mipdata_->updatePrimalDualIntegral(
                 prev_lower_bound, mipdata_->lower_bound, mipdata_->upper_bound,
                 mipdata_->upper_bound);
+	  analysis_.mipTimerStop(kMipClockNodePrunedLoop);
           break;
         }
 
@@ -588,19 +600,27 @@ restart:
           mipdata_->domain.clearChangedCols();
           mipdata_->removeFixedIndices();
         }
+	analysis_.mipTimerStop(kMipClockStoreBasis);
 
+	analysis_.mipTimerStop(kMipClockNodePrunedLoop);
         continue;
       }
+      analysis_.mipTimerStop(kMipClockNodePrunedLoop);
 
       // the node is still not fathomed, so perform separation
+      analysis_.mipTimerStart(kMipClockNodeSearchSeparation);
       sepa.separate(search.getLocalDomain());
+      analysis_.mipTimerStop(kMipClockNodeSearchSeparation);
 
       if (mipdata_->domain.infeasible()) {
         search.cutoffNode();
+	analysis_.mipTimerStart(kMipClockOpenNodesToQueue1);
         search.openNodesToQueue(mipdata_->nodequeue);
+	analysis_.mipTimerStop(kMipClockOpenNodesToQueue1);
         mipdata_->nodequeue.clear();
         mipdata_->pruned_treeweight = 1.0;
 
+	analysis_.mipTimerStart(kMipClockStoreBasis);
         double prev_lower_bound = mipdata_->lower_bound;
 
         mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
