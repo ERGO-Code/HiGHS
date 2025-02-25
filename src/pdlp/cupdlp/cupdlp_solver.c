@@ -790,6 +790,23 @@ void PDHG_Compute_SolvingTime(CUPDLPwork *pdhg) {
   timers->dSolvingTime = getTimeStamp() - timers->dSolvingBeg;
 }
 
+void iterReport(char* message, CUPDLPwork *pdhg) {
+  CUPDLPproblem *problem = pdhg->problem;
+  if (pdhg->settings->nLogLevel<=1 || problem->data->nCols + problem->data->nRows >10) return;
+  CUPDLPresobj *resobj = pdhg->resobj;
+  CUPDLPiterates *iterates = pdhg->iterates;
+  CUPDLPtimers *timers = pdhg->timers;
+  printf("grep-%s,%4d,x,", message, timers->nIter);
+  for (int iCol = 0; iCol < problem->data->nCols; iCol++)
+    printf("%11.5g,", iterates->x->data[iCol]);
+  printf("y,");
+  for (int iRow = 0; iRow < problem->data->nRows; iRow++)
+    printf("%11.5g,", iterates->y->data[iRow]);
+  printf("%11.5g,", resobj->dPrimalFeas);
+  printf("%11.5g,", resobj->dDualFeas);
+  printf("%11.5g\n", resobj->dRelObjGap);
+}
+
 cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   cupdlp_retcode retcode = RETCODE_OK;
 
@@ -820,6 +837,8 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
   const int iter_log_between_header = 50;
   int iter_log_since_header = iter_log_between_header;
   for (timers->nIter = 0; timers->nIter < settings->nIterLim; ++timers->nIter) {
+    // Possibly report each iterate
+    iterReport("Full", pdhg);
     PDHG_Compute_SolvingTime(pdhg);
 #if CUPDLP_DUMP_ITERATES_STATS & CUPDLP_DEBUG
     PDHG_Dump_Stats(pdhg);
@@ -850,6 +869,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
       PDHG_Compute_Average_Iterate(pdhg);
       PDHG_Compute_Residuals(pdhg);
       PDHG_Compute_Infeas_Residuals(pdhg);
+      iterReport("Chek", pdhg);
 
       if (bool_print) {
 	// With reduced printing, the header is only needed for the
