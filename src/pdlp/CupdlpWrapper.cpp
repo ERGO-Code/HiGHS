@@ -118,20 +118,19 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #ifdef CUPDLP_GPU
   cupdlp_float cuda_prepare_time = getTimeStamp();
   // CHECK_CUSPARSE(cusparseCreate(&w->cusparsehandle));
-    cusparseStatus_t status_cusparse = cusparseCreate(&w->cusparsehandle);                                      
-    if (status_cusparse != CUSPARSE_STATUS_SUCCESS) {                               
-      printf("CUSPARSE API failed at line %d of %s with error: %s (%d)\n", 
-             __LINE__, __FILE__, 
-             cusparseGetErrorString(status_cusparse), status_cusparse);  
-    }
+  cusparseStatus_t status_cusparse = cusparseCreate(&w->cusparsehandle);
+  if (status_cusparse != CUSPARSE_STATUS_SUCCESS) {
+    printf("CUSPARSE API failed at line %d of %s with error: %s (%d)\n",
+           __LINE__, __FILE__, cusparseGetErrorString(status_cusparse),
+           status_cusparse);
+  }
 
   // CHECK_CUBLAS(cublasCreate(&w->cublashandle));
-    cublasStatus_t status_cublas = cublasCreate(&w->cublashandle);
-    if (status_cublas != CUBLAS_STATUS_SUCCESS) {                               
-      printf("CUBLAS API failed at line %d of %s with error: %s (%d)\n", 
-             __LINE__, __FILE__,
-             cublasGetStatusString(status_cublas), status_cublas);  
-    }
+  cublasStatus_t status_cublas = cublasCreate(&w->cublashandle);
+  if (status_cublas != CUBLAS_STATUS_SUCCESS) {
+    printf("CUBLAS API failed at line %d of %s with error: %s (%d)\n", __LINE__,
+           __FILE__, cublasGetStatusString(status_cublas), status_cublas);
+  }
   cuda_prepare_time = getTimeStamp() - cuda_prepare_time;
 #endif
 
@@ -170,7 +169,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 #ifdef CUPDLP_CPU
   cupdlp_copy_vec(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   cupdlp_copy_vec(w->colScale, scaling->colScale, cupdlp_float, nCols);
-#else 
+#else
   CUPDLP_COPY_VEC(w->rowScale, scaling->rowScale, cupdlp_float, nRows);
   CUPDLP_COPY_VEC(w->colScale, scaling->colScale, cupdlp_float, nCols);
 #endif
@@ -571,14 +570,14 @@ cupdlp_retcode problem_alloc(
   cupdlp_init_vec_double(prob->upper, nCols);
   cupdlp_init_zero_vec_double(prob->hasLower, nCols);
   cupdlp_init_zero_vec_double(prob->hasUpper, nCols);
-// #elif defined(CUPDLP_GPU)
-//   CUPDLP_INIT_VEC(prob->cost, nCols);
-//   CUPDLP_INIT_VEC(prob->rhs, nRows);
-//   CUPDLP_INIT_VEC(prob->lower, nCols);
-//   CUPDLP_INIT_VEC(prob->upper, nCols);
-//   CUPDLP_INIT_ZERO_VEC(prob->hasLower, nCols);
-//   CUPDLP_INIT_ZERO_VEC(prob->hasUpper, nCols);
-// #endif
+  // #elif defined(CUPDLP_GPU)
+  //   CUPDLP_INIT_VEC(prob->cost, nCols);
+  //   CUPDLP_INIT_VEC(prob->rhs, nRows);
+  //   CUPDLP_INIT_VEC(prob->lower, nCols);
+  //   CUPDLP_INIT_VEC(prob->upper, nCols);
+  //   CUPDLP_INIT_ZERO_VEC(prob->hasLower, nCols);
+  //   CUPDLP_INIT_ZERO_VEC(prob->hasUpper, nCols);
+  // #endif
 
   data_alloc(prob->data, nRows, nCols, matrix, src_matrix_format,
              dst_matrix_format);
@@ -635,21 +634,21 @@ double infNorm(double* x, cupdlp_int n) {
 //   }
 // }
 
-void cupdlp_hasLower(cupdlp_float *haslb, const cupdlp_float *lb,
+void cupdlp_hasLower(cupdlp_float* haslb, const cupdlp_float* lb,
                      const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     haslb[i] = lb[i] > bound ? 1.0 : 0.0;
   }
 }
 
-void cupdlp_hasUpper(cupdlp_float *hasub, const cupdlp_float *ub,
+void cupdlp_hasUpper(cupdlp_float* hasub, const cupdlp_float* ub,
                      const cupdlp_float bound, const cupdlp_int len) {
   for (int i = 0; i < len; i++) {
     hasub[i] = ub[i] < bound ? 1.0 : 0.0;
   }
 }
 
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+void cupdlp_haslb(cupdlp_float* haslb, const cupdlp_float* lb,
                   const cupdlp_float bound, const cupdlp_int len) {
 #ifndef CUPDLP_CPU
   cupdlp_haslb_cuda(haslb, lb, bound, len);
@@ -658,7 +657,7 @@ void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
 #endif
 }
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+void cupdlp_hasub(cupdlp_float* hasub, const cupdlp_float* ub,
                   const cupdlp_float bound, const cupdlp_int len) {
 #ifndef CUPDLP_CPU
   cupdlp_hasub_cuda(hasub, ub, bound, len);
@@ -728,14 +727,16 @@ void getUserParamsFromOptions(const HighsOptions& options,
   if (restart_on == 0)
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "PDLP: Restart off\n");
-  //
+    //
 
-  // for the moment only native termination is allowed with GPU
-#ifdef CUPDLP_CPU 
+    // for the moment only native termination is allowed with GPU
+#ifdef CUPDLP_CPU
 #ifdef CUPDLP_FORCE_NATIVE
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
   if (!options.pdlp_native_termination) {
-    printf("Warning: CUPDLP_FORCE_NATIVE is on. Forcing pdlp_native_termination=on.\n");
+    printf(
+        "Warning: CUPDLP_FORCE_NATIVE is on. Forcing "
+        "pdlp_native_termination=on.\n");
   }
 #else
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
@@ -744,7 +745,9 @@ void getUserParamsFromOptions(const HighsOptions& options,
 #else
   ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
   if (!options.pdlp_native_termination) {
-    printf("Warning: GPU only supports pdlp_native_termination=on. Forcing pdlp_native_termination=on.\n");
+    printf(
+        "Warning: GPU only supports pdlp_native_termination=on. Forcing "
+        "pdlp_native_termination=on.\n");
   }
 #endif
 }
