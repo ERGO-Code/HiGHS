@@ -34,7 +34,7 @@ class HighsMipWorker {
  
   const HighsMipSolver& getMipSolver();
 
-  HighsLpRelaxation lprelaxation_;
+  HighsLpRelaxation& lprelaxation_;
 
   HighsCutPool cutpool_;
   HighsConflictPool conflictpool_;
@@ -52,7 +52,7 @@ class HighsMipWorker {
   HighsRandom randgen;
 
   // HighsMipWorker(const HighsMipSolver& mipsolver__);
-  HighsMipWorker(const HighsMipSolver& mipsolver__, const HighsLpRelaxation& lprelax_);
+  HighsMipWorker(const HighsMipSolver& mipsolver__, HighsLpRelaxation& lprelax_);
 
   ~HighsMipWorker() {
       // search_ptr_.release();

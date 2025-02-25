@@ -250,6 +250,12 @@ restart:
       int(mipdata_->lp.getLpSolver().getNumRow()));
 
 
+ printf(
+      "master_worker lprelaxation_ member  with address %p, %d "
+      "columns, and %d rows\n",
+      (void*)&master_worker.lprelaxation_, int(master_worker.lprelaxation_.getLpSolver().getNumCol()),
+      int(mipdata_->lps.at(0).getLpSolver().getNumRow()));
+
 
   std::shared_ptr<const HighsBasis> basis;
   // HighsSearch search{*this, mipdata_->pseudocost};
@@ -263,24 +269,18 @@ restart:
   // This version works during refactor with the master pseudocost.
   // valgrind OK.
   HighsSearch search{master_worker, mipdata_->pseudocost};
-
-
-  // This search is from the worker and will use the worker pseudocost.
-  // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
-
-  // fails in a submip .
-//  printf(
-//       "MIPSOLVER Search has lp member in constructor of mipworker with address %p, %d "
-//       "columns, and %d rows\n",
-//       (void*)&search.lp, int(search.lp->getLpSolver().getNumCol()),
-//       int(search.lp->getLpSolver().getNumRow()));
-
-  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
-  // HighsSeparation sepa(*this);
-  HighsSeparation sepa(master_worker);
-
   search.setLpRelaxation(&mipdata_->lp);
 
+  // This search is from the worker and will use the worker pseudocost.
+  // does not work yet, fails at domain propagation somewhere.
+  // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
+
+
+
+  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
+
+  // HighsSeparation sepa(*this);
+  HighsSeparation sepa(master_worker);
   sepa.setLpRelaxation(&mipdata_->lp);
 
   double prev_lower_bound = mipdata_->lower_bound;
@@ -294,16 +294,6 @@ restart:
                                        mipdata_->upper_bound);
 
   mipdata_->printDisplayLine();
-
-  // Make a copy of nodequeue so both searches can work together?
-
-    // HighsNodeQueue queue;
-    // double lower_bound = -kHighsInf;
-    // queue.emplaceNode(std::vector<HighsDomainChange>(),
-    //                       std::vector<HighsInt>(), lower_bound,
-    //                       master_worker.lprelaxation_.computeBestEstimate(master_worker.pseudocost_), 1);
-    // master_search.installNode(queue.popBestBoundNode());
-    // master_search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;
