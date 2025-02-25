@@ -74,9 +74,13 @@ enum iClockMip {
   kMipClockSeparationCentralRounding,
   kMipClockSeparationEvaluateRootLp,
 
+  // LP solves
   kMipClockSimplexBasisSolveLp,
   kMipClockSimplexNoBasisSolveLp,
   kMipClockIpmSolveLp,
+
+  // Sub-MIP solves
+  kMipClockSubMipSolve,
 
   kMipClockSolveSubMipRENS,
   kMipClockSolveSubMipRINS,
@@ -192,6 +196,9 @@ class MipTimer {
     clock[kMipClockStoreBasis] = timer_pointer->clock_def("Store basis");
     //    clock[] = timer_pointer->clock_def("");
 
+    // Sub-MIP clock
+    clock[kMipClockSubMipSolve] = timer_pointer->clock_def("Sub-MIP solves");
+
     // Evaluate LPs
     clock[kMipClockSimplexBasisSolveLp] =
         timer_pointer->clock_def("Solve LP - simplex basis");
@@ -207,7 +214,6 @@ class MipTimer {
 
     clock[kMipClockProbingImplications] =
         timer_pointer->clock_def("Probing - implications");
-    //    clock[] = timer_pointer->clock_def("");
     //    clock[] = timer_pointer->clock_def("");
   }
 
@@ -294,6 +300,12 @@ class MipTimer {
                        kMipClockTotal);  //, tolerance_percent_report);
   };
 
+  void reportMipSubMipSolveClock(const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{kMipClockSubMipSolve};
+    reportMipClockList("MipSlvLp", mip_clock_list, mip_timer_clock,
+                       kMipClockTotal);  //, tolerance_percent_report);
+  };
+
   void reportMipPresolveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{kMipClockProbingPresolve};
     reportMipClockList("MipPrslv", mip_clock_list, mip_timer_clock,
@@ -359,7 +371,7 @@ class MipTimer {
         kMipClockCurrentNodeToQueue, kMipClockNodePrunedLoop,
         //      kMipClockSearchBacktrack,
         kMipClockOpenNodesToQueue1, kMipClockEvaluateNode1,
-        kMipClockNodeSearchSeparation, kMipClockStoreBasis};
+        kMipClockNodeSearchSeparation};  //, kMipClockStoreBasis};
     reportMipClockList("MipNodeSearch", mip_clock_list, mip_timer_clock,
                        kMipClockNodeSearch);  //, tolerance_percent_report);
   };
