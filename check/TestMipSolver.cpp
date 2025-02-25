@@ -800,6 +800,7 @@ void rowlessMIP(Highs& highs) {
 TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
   highs.readModel(filename);

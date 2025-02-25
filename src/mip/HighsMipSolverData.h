@@ -57,8 +57,7 @@ enum MipSolutionSource : int {
   kSolutionSourceTrivialL,
   kSolutionSourceTrivialU,
   kSolutionSourceTrivialP,
-  //  kSolutionSourceOpt1,
-  //  kSolutionSourceOpt2,
+  kSolutionSourceUserSolution,
   kSolutionSourceCleanup,
   kSolutionSourceCount
 };
@@ -266,7 +265,8 @@ struct HighsMipSolverData {
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj,
                     const int solution_source,
-                    const bool print_display_line = true);
+                    const bool print_display_line = true,
+                    const bool is_user_solution = false);
 
   const std::vector<double>& getSolution() const;
 
@@ -286,9 +286,12 @@ struct HighsMipSolverData {
   bool checkLimits(int64_t nodeOffset = 0) const;
   void limitsToBounds(double& dual_bound, double& primal_bound,
                       double& mip_rel_gap) const;
+  void setCallbackDataOut(const double mipsolver_objective_value) const;
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
+  void callbackUserSolution(const double mipsolver_objective_value,
+                            const HighsInt user_solution_callback_origin);
 };
 
 #endif

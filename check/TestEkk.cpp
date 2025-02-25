@@ -30,6 +30,7 @@ void ekk_solve(Highs& highs, std::string presolve,
   }
 
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+  highs.setOptionValue("output_flag", dev_run);
 }
 
 void ekk_distillation(Highs& highs) {
