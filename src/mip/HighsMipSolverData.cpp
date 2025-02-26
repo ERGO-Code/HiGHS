@@ -1024,6 +1024,8 @@ try_again:
     tmpSolver.setOptionValue("time_limit", time_available);
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mipsolver.options_mip_->mip_feasibility_tolerance);
+    if (tmpSolver.getOptions().mip_root_presolve_only)
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.passModel(std::move(fixedModel));
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
     tmpSolver.run();

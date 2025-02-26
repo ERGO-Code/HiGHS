@@ -437,6 +437,7 @@ struct HighsOptionsStruct {
   bool mip_improving_solution_save;
   bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
+  bool mip_root_presolve_only;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -572,7 +573,8 @@ struct HighsOptionsStruct {
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
         // clang-format off
-	mip_improving_solution_file("") {};
+        mip_improving_solution_file(""),
+        mip_root_presolve_only(false) {};
   // clang-format on
 };
 
@@ -1002,6 +1004,12 @@ class HighsOptions : public HighsOptionsStruct {
         "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
+
+    record_bool = new OptionRecordBool(
+        "mip_root_presolve_only",
+        "Whether MIP presolve is only applied at the root node", advanced,
+        &mip_root_presolve_only, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,

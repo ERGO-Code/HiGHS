@@ -125,7 +125,10 @@ bool HighsPrimalHeuristics::solveSubMip(
         mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
   }
 
-  submipoptions.presolve = "on";
+  if (submipoptions.mip_root_presolve_only)
+    submipoptions.presolve = kHighsOffString;
+  else
+    submipoptions.presolve = kHighsOnString;
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it

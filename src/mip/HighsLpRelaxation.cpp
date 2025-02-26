@@ -545,6 +545,8 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    if (lpsolver.getOptions().mip_root_presolve_only)
+      lpsolver.setOptionValue("presolve", kHighsOffString);
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexBasisSolveLp);
     lpsolver.run();
     mipsolver.analysis_.mipTimerStop(kMipClockSimplexBasisSolveLp);
@@ -1070,6 +1072,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.setOptionValue("highs_analysis_level",
                             kHighsAnalysisLevelSolverRuntimeData);
   }
+  if (lpsolver.getOptions().mip_root_presolve_only)
+    lpsolver.setOptionValue("presolve", kHighsOffString);
 
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
@@ -1207,6 +1211,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("output_flag", false);
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("ipm_iteration_limit", 200);
+        if (ipm.getOptions().mip_root_presolve_only)
+          ipm.setOptionValue("presolve", kHighsOffString);
         ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
