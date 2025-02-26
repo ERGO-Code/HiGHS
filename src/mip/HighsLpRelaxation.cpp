@@ -545,11 +545,15 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
+    // check if only root presolve is allowed
+    const std::string presolve = lpsolver.getOptions().presolve;
     if (lpsolver.getOptions().mip_root_presolve_only)
       lpsolver.setOptionValue("presolve", kHighsOffString);
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexBasisSolveLp);
     lpsolver.run();
     mipsolver.analysis_.mipTimerStop(kMipClockSimplexBasisSolveLp);
+    // restore value of presolve option
+    lpsolver.setOptionValue("presolve", presolve);
   }
 }
 
@@ -1072,9 +1076,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.setOptionValue("highs_analysis_level",
                             kHighsAnalysisLevelSolverRuntimeData);
   }
-  if (lpsolver.getOptions().mip_root_presolve_only)
-    lpsolver.setOptionValue("presolve", kHighsOffString);
-
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
   mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
@@ -1211,6 +1212,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("output_flag", false);
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("ipm_iteration_limit", 200);
+        // check if only root presolve is allowed
+        const std::string presolve = lpsolver.getOptions().presolve;
         if (ipm.getOptions().mip_root_presolve_only)
           ipm.setOptionValue("presolve", kHighsOffString);
         ipm.passModel(lpsolver.getLp());
@@ -1221,6 +1224,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
         ipm.run();
         mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
+        // restore value of presolve option
+        lpsolver.setOptionValue("presolve", presolve);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");
         return run(false);
       }

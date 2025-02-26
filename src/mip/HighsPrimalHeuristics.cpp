@@ -886,8 +886,9 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-
-    if (numintcols / (double)mipsolver.numCol() >= 0.2)
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    else if ((5 * numintcols) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
@@ -1002,7 +1003,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
   }
 
-  if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
+  if (mipsolver.mipdata_->integer_cols.size() !=
+      static_cast<size_t>(mipsolver.numCol())) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.setIterationLimit(
@@ -1010,7 +1012,9 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    else if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
