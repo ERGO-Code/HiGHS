@@ -867,9 +867,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   for (HighsInt i = 0; i != numintcols; ++i) {
     HighsInt col = intcols[i];
     double intval = point[col];
-    if (source == 'I') {
-      if (std::abs(intval - std::floor(intval + 0.5)) > mipsolver.mipdata_->feastol) continue;
-    }
+    
+    if (std::abs(intval - std::floor(intval + 0.5)) > mipsolver.mipdata_->feastol) continue;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
 
