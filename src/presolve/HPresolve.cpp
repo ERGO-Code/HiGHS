@@ -140,7 +140,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
       reductionLimit < kHighsSize_tInf) {
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "HPresolve::okSetInput reductionLimit = %d\n",
-                int(reductionLimit));
+                static_cast<int>(reductionLimit));
   }
   return true;
 }
@@ -547,8 +547,8 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
                                double dualRowBnd, double residualAct,
                                HighsInt direction) {
     if (direction * residualAct <= -kHighsInf) return;
-    double impliedBound =
-        double((HighsCDouble(dualRowBnd) - residualAct) / val);
+    double impliedBound = static_cast<double>(
+        (static_cast<HighsCDouble>(dualRowBnd) - residualAct) / val);
 
     if (std::abs(impliedBound) * kHighsTiny >
         options->dual_feasibility_tolerance)
@@ -593,7 +593,8 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
                                double rowBnd, double residualAct,
                                HighsInt direction) {
     if (direction * residualAct <= -kHighsInf) return;
-    double impliedBound = double((HighsCDouble(rowBnd) - residualAct) / val);
+    double impliedBound = static_cast<double>(
+        (static_cast<HighsCDouble>(rowBnd) - residualAct) / val);
 
     if (std::abs(impliedBound) * kHighsTiny > primal_feastol) return;
 
@@ -735,7 +736,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   model->num_col_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
   const bool have_col_names = model->col_names_.size() > 0;
-  assert(!have_col_names || HighsInt(model->col_names_.size()) == oldNumCol);
+  assert(!have_col_names ||
+         model->col_names_.size() == static_cast<size_t>(oldNumCol));
   for (HighsInt i = 0; i != oldNumCol; ++i) {
     if (colDeleted[i])
       newColIndex[i] = -1;
@@ -778,7 +780,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   numDeletedCols = 0;
   HighsInt oldNumRow = model->num_row_;
   const bool have_row_names = model->row_names_.size() > 0;
-  assert(!have_row_names || HighsInt(model->row_names_.size()) == oldNumRow);
+  assert(!have_row_names ||
+         model->row_names_.size() == static_cast<size_t>(oldNumRow));
   model->num_row_ = 0;
   std::vector<HighsInt> newRowIndex(oldNumRow);
   for (HighsInt i = 0; i != oldNumRow; ++i) {
@@ -2224,7 +2227,7 @@ HighsInt HPresolve::countFillin(HighsInt row) {
 bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
                             HighsInt row, HighsInt col) {
   // check numerics against markowitz tolerance
-  assert(int(rowpositions.size()) == rowsize[row]);
+  assert(rowpositions.size() == static_cast<size_t>(rowsize[row]));
 
   // check fillin against max fillin
   HighsInt fillin = -(rowsize[row] + colsize[col] - 1);
@@ -2482,21 +2485,21 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
   // substitute column in the objective function
   if (model->col_cost_[col] != 0.0) {
     HighsCDouble objscale = model->col_cost_[col] * substrowscale;
-    model->offset_ = double(model->offset_ - objscale * rhs);
+    model->offset_ = static_cast<double>(model->offset_ - objscale * rhs);
     assert(std::isfinite(model->offset_));
     for (HighsInt rowiter : rowpositions) {
       // printf("changing col cost to %g = %g + %g * %g\n",
       // double(model->col_cost_[Acol[rowiter]] + objscale * Avalue[rowiter]),
       // model->col_cost_[Acol[rowiter]], double(objscale), Avalue[rowiter]);
-      model->col_cost_[Acol[rowiter]] =
-          double(model->col_cost_[Acol[rowiter]] + objscale * Avalue[rowiter]);
+      model->col_cost_[Acol[rowiter]] = static_cast<double>(
+          model->col_cost_[Acol[rowiter]] + objscale * Avalue[rowiter]);
       if (std::abs(model->col_cost_[Acol[rowiter]]) <=
           options->small_matrix_value)
         model->col_cost_[Acol[rowiter]] = 0.0;
     }
     assert(std::abs(model->col_cost_[col]) <=
            std::max(options->dual_feasibility_tolerance,
-                    kHighsTiny * std::abs(double(objscale))));
+                    kHighsTiny * std::abs(static_cast<double>(objscale))));
     model->col_cost_[col] = 0.0;
   }
 
@@ -2679,23 +2682,27 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postsolve_stack,
     // lower(-substcoef/staycoef * substcol) is (-substcoef/staycoef) *
     // substLower if (-substcoef/staycoef) is positive, i.e. if the coefficients
     // have opposite sign
-    stayImplLower =
-        substLower == -kHighsInf
-            ? -kHighsInf
-            : double((HighsCDouble(rhs) - substcoef * substLower) / staycoef);
-    stayImplUpper =
-        substUpper == kHighsInf
-            ? kHighsInf
-            : double((HighsCDouble(rhs) - substcoef * substUpper) / staycoef);
+    stayImplLower = substLower == -kHighsInf
+                        ? -kHighsInf
+                        : static_cast<double>((static_cast<HighsCDouble>(rhs) -
+                                               substcoef * substLower) /
+                                              staycoef);
+    stayImplUpper = substUpper == kHighsInf
+                        ? kHighsInf
+                        : static_cast<double>((static_cast<HighsCDouble>(rhs) -
+                                               substcoef * substUpper) /
+                                              staycoef);
   } else {
-    stayImplLower =
-        substUpper == kHighsInf
-            ? -kHighsInf
-            : double((HighsCDouble(rhs) - substcoef * substUpper) / staycoef);
-    stayImplUpper =
-        substLower == -kHighsInf
-            ? kHighsInf
-            : double((HighsCDouble(rhs) - substcoef * substLower) / staycoef);
+    stayImplLower = substUpper == kHighsInf
+                        ? -kHighsInf
+                        : static_cast<double>((static_cast<HighsCDouble>(rhs) -
+                                               substcoef * substUpper) /
+                                              staycoef);
+    stayImplUpper = substLower == -kHighsInf
+                        ? kHighsInf
+                        : static_cast<double>((static_cast<HighsCDouble>(rhs) -
+                                               substcoef * substLower) /
+                                              staycoef);
   }
 
   // possibly tighten bounds of the column that stays
@@ -3360,87 +3367,89 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
               fractionRhs >= minRhsTightening - options->small_matrix_value;
         };
 
-        auto checkScaleRow = [&](HighsInt row, HighsCDouble& roundedLhs,
-                                 HighsCDouble& roundedRhs,
-                                 HighsCDouble& fractionLhs,
-                                 HighsCDouble& fractionRhs,
-                                 double& minLhsTightening,
-                                 double& minRhsTightening, double& maxVal,
-                                 bool& lhsTightened, bool& rhsTightened,
-                                 bool& isInfeasible, double intScale) {
-          HighsCDouble lhs = model->row_lower_[row];
-          HighsCDouble rhs = model->row_upper_[row];
-          bool lhsFinite = lhs != -kHighsInf;
-          bool rhsFinite = rhs != kHighsInf;
-          if (lhsFinite) lhs = lhs * intScale;
-          if (rhsFinite) rhs = rhs * intScale;
-          roundedLhs = -kHighsInf;
-          roundedRhs = kHighsInf;
-          fractionLhs = 0.0;
-          fractionRhs = 0.0;
-          minRhsTightening = 0.0;
-          minLhsTightening = 0.0;
-          maxVal = 0.0;
-          lhsTightened = false;
-          rhsTightened = false;
-          isInfeasible = false;
-          for (size_t i = 0; i < rowCoefs.size(); ++i) {
-            // computed scaled coefficient
-            HighsCDouble scaleCoef = HighsCDouble(rowCoefs[i]) * intScale;
-            // round to the nearest integer
-            HighsCDouble intCoef = floor(scaleCoef + 0.5);
-            // compute difference
-            HighsCDouble coefDelta = intCoef - scaleCoef;
-            // store integral coefficient and maximum absolute value
-            rowCoefs[i] = double(intCoef);
-            maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
-            // get column upper bound
-            double ub = model->col_upper_[rowIndex[i]];
-            if (coefDelta < -options->small_matrix_value) {
-              // for the >= side of the constraint a smaller coefficient is
-              // stronger: Therefore we relax the left hand side using the
-              // bound constraint, if the bound is infinite, abort
-              if (lhsFinite) {
-                if (ub == kHighsInf) return false;
-                lhs += ub * coefDelta;
+        auto checkScaleRow =
+            [&](HighsInt row, HighsCDouble& roundedLhs,
+                HighsCDouble& roundedRhs, HighsCDouble& fractionLhs,
+                HighsCDouble& fractionRhs, double& minLhsTightening,
+                double& minRhsTightening, double& maxVal, bool& lhsTightened,
+                bool& rhsTightened, bool& isInfeasible, double intScale) {
+              HighsCDouble lhs = model->row_lower_[row];
+              HighsCDouble rhs = model->row_upper_[row];
+              bool lhsFinite = lhs != -kHighsInf;
+              bool rhsFinite = rhs != kHighsInf;
+              if (lhsFinite) lhs = lhs * intScale;
+              if (rhsFinite) rhs = rhs * intScale;
+              roundedLhs = -kHighsInf;
+              roundedRhs = kHighsInf;
+              fractionLhs = 0.0;
+              fractionRhs = 0.0;
+              minRhsTightening = 0.0;
+              minLhsTightening = 0.0;
+              maxVal = 0.0;
+              lhsTightened = false;
+              rhsTightened = false;
+              isInfeasible = false;
+              for (size_t i = 0; i < rowCoefs.size(); ++i) {
+                // computed scaled coefficient
+                HighsCDouble scaleCoef =
+                    static_cast<HighsCDouble>(rowCoefs[i]) * intScale;
+                // round to the nearest integer
+                HighsCDouble intCoef = floor(scaleCoef + 0.5);
+                // compute difference
+                HighsCDouble coefDelta = intCoef - scaleCoef;
+                // store integral coefficient and maximum absolute value
+                rowCoefs[i] = static_cast<double>(intCoef);
+                maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
+                // get column upper bound
+                double ub = model->col_upper_[rowIndex[i]];
+                if (coefDelta < -options->small_matrix_value) {
+                  // for the >= side of the constraint a smaller coefficient is
+                  // stronger: Therefore we relax the left hand side using the
+                  // bound constraint, if the bound is infinite, abort
+                  if (lhsFinite) {
+                    if (ub == kHighsInf) return false;
+                    lhs += ub * coefDelta;
+                  }
+                  minRhsTightening = std::max(-static_cast<double>(coefDelta),
+                                              minRhsTightening);
+                } else if (coefDelta > options->small_matrix_value) {
+                  if (rhsFinite) {
+                    if (ub == kHighsInf) return false;
+                    rhs += ub * coefDelta;
+                  }
+                  // the coefficient was relaxed regarding the rows lower bound.
+                  // Therefore the lower bound should be tightened by at least
+                  // this amount for the scaled constraint to dominate the
+                  // unscaled constraint be rounded by at least this value
+                  minLhsTightening = std::max(static_cast<double>(coefDelta),
+                                              minLhsTightening);
+                }
               }
-              minRhsTightening = std::max(-double(coefDelta), minRhsTightening);
-            } else if (coefDelta > options->small_matrix_value) {
-              if (rhsFinite) {
-                if (ub == kHighsInf) return false;
-                rhs += ub * coefDelta;
-              }
-              // the coefficient was relaxed regarding the rows lower bound.
-              // Therefore the lower bound should be tightened by at least
-              // this amount for the scaled constraint to dominate the
-              // unscaled constraint be rounded by at least this value
-              minLhsTightening = std::max(double(coefDelta), minLhsTightening);
-            }
-          }
-          // round left-hand and right-hand sides
-          if (lhsFinite)
-            roundRhs(lhs, roundedLhs, fractionLhs, minLhsTightening,
-                     lhsTightened, HighsInt{-1});
-          if (rhsFinite)
-            roundRhs(rhs, roundedRhs, fractionRhs, minRhsTightening,
-                     rhsTightened, HighsInt{1});
-          // check for infeasibility
-          isInfeasible =
-              lhsFinite && rhsFinite && roundedRhs < roundedLhs - 0.5;
-          return true;
-        };
+              // round left-hand and right-hand sides
+              if (lhsFinite)
+                roundRhs(lhs, roundedLhs, fractionLhs, minLhsTightening,
+                         lhsTightened, HighsInt{-1});
+              if (rhsFinite)
+                roundRhs(rhs, roundedRhs, fractionRhs, minRhsTightening,
+                         rhsTightened, HighsInt{1});
+              // check for infeasibility
+              isInfeasible =
+                  lhsFinite && rhsFinite && roundedRhs < roundedLhs - 0.5;
+              return true;
+            };
 
         auto scaleRow = [&](HighsInt row, HighsCDouble roundedLhs,
                             HighsCDouble roundedRhs, double scalar,
                             bool checkDelta) {
           // scale the row
           if (roundedLhs != -kHighsInf)
-            model->row_lower_[row] = double(roundedLhs / scalar);
+            model->row_lower_[row] = static_cast<double>(roundedLhs / scalar);
           if (roundedRhs != kHighsInf)
-            model->row_upper_[row] = double(roundedRhs / scalar);
+            model->row_upper_[row] = static_cast<double>(roundedRhs / scalar);
           for (size_t i = 0; i < rowCoefs.size(); ++i) {
-            double delta = double(HighsCDouble(rowCoefs[i]) / scalar -
-                                  Avalue[rowpositions[i]]);
+            double delta = static_cast<double>(
+                static_cast<HighsCDouble>(rowCoefs[i]) / scalar -
+                Avalue[rowpositions[i]]);
             if (!checkDelta || std::fabs(delta) > options->small_matrix_value)
               addToMatrix(row, rowIndex[i], delta);
           }
@@ -3488,9 +3497,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                   roundedLhs /= intScale;
                   roundedRhs /= intScale;
                   if (roundedRhs < model->row_upper_[row] - primal_feastol)
-                    model->row_upper_[row] = double(roundedRhs);
+                    model->row_upper_[row] = static_cast<double>(roundedRhs);
                   if (roundedLhs > model->row_lower_[row] + primal_feastol)
-                    model->row_lower_[row] = double(roundedLhs);
+                    model->row_lower_[row] = static_cast<double>(roundedLhs);
                 } else if ((rhsTightened &&
                             fractionRhs < minRhsTightening - primal_feastol) ||
                            (lhsTightened &&
@@ -3543,7 +3552,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HighsCDouble rhs = model->row_upper_[row];
         strengthenCoefs(rhs, HighsInt{1},
                         impliedRowUpper - model->row_upper_[row]);
-        model->row_upper_[row] = double(rhs);
+        model->row_upper_[row] = static_cast<double>(rhs);
       }
 
       if (model->row_upper_[row] == kHighsInf &&
@@ -3552,7 +3561,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         HighsCDouble rhs = model->row_lower_[row];
         strengthenCoefs(rhs, HighsInt{-1},
                         model->row_lower_[row] - impliedRowLower);
-        model->row_lower_[row] = double(rhs);
+        model->row_lower_[row] = static_cast<double>(rhs);
       }
     }
   }  // if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
@@ -4356,12 +4365,14 @@ void HPresolve::storeCurrentProblemSize() {
 }
 
 double HPresolve::problemSizeReduction() {
-  double colReduction = 100.0 *
-                        double(oldNumCol - (model->num_col_ - numDeletedCols)) /
-                        oldNumCol;
-  double rowReduction = 100.0 *
-                        double(oldNumRow - (model->num_row_ - numDeletedRows)) /
-                        oldNumRow;
+  double colReduction =
+      100.0 *
+      static_cast<double>(oldNumCol - (model->num_col_ - numDeletedCols)) /
+      oldNumCol;
+  double rowReduction =
+      100.0 *
+      static_cast<double>(oldNumRow - (model->num_row_ - numDeletedRows)) /
+      oldNumRow;
 
   return std::max(rowReduction, colReduction);
 }
@@ -4976,8 +4987,8 @@ void HPresolve::fixColToZero(HighsPostsolveStack& postsolve_stack,
 }
 
 void HPresolve::removeRow(HighsInt row) {
-  assert(row < int(rowroot.size()));
   assert(row >= 0);
+  assert(static_cast<size_t>(row) < rowroot.size());
   // first mark the row as logically deleted, so that it is not register as
   // singleton row upon removing its nonzeros
   markRowDeleted(row);
@@ -5225,7 +5236,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
     }
 
     const double smallVal =
-        std::max(100 * primal_feastol, primal_feastol * double(maxviolation));
+        std::max(100 * primal_feastol,
+                 primal_feastol * static_cast<double>(maxviolation));
     while (true) {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
@@ -5262,24 +5274,24 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
       double al = reducedcost[alpos];
       coefs.resize(cover.size());
-      double coverrhs =
-          std::max(std::ceil(double(lambda / al - primal_feastol)), 1.0);
+      double coverrhs = std::max(
+          std::ceil(static_cast<double>(lambda / al - primal_feastol)), 1.0);
       HighsCDouble slackupper = -coverrhs;
 
       double step = kHighsInf;
       for (size_t i = 0; i != cover.size(); ++i) {
-        coefs[i] =
-            std::ceil(std::min(reducedcost[cover[i]], double(lambda)) / al -
-                      options->small_matrix_value);
+        coefs[i] = std::ceil(
+            std::min(reducedcost[cover[i]], static_cast<double>(lambda)) / al -
+            options->small_matrix_value);
         slackupper += upper[cover[i]] * coefs[i];
         step = std::min(step, reducedcost[cover[i]] / coefs[i]);
       }
-      step = std::min(step, double(maxviolation / coverrhs));
+      step = std::min(step, static_cast<double>(maxviolation / coverrhs));
       maxviolation -= step * coverrhs;
 
       HighsInt slackind = reducedcost.size();
       reducedcost.push_back(step);
-      upper.push_back(double(slackupper));
+      upper.push_back(static_cast<double>(slackupper));
 
       for (size_t i = 0; i != cover.size(); ++i)
         reducedcost[cover[i]] -= step * coefs[i];
@@ -5292,7 +5304,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
       indices.push_back(slackind);
     }
 
-    double threshold = double(maxviolation + primal_feastol);
+    double threshold = static_cast<double>(maxviolation + primal_feastol);
 
     indices.erase(std::remove_if(indices.begin(), indices.end(),
                                  [&](HighsInt i) {
@@ -5306,7 +5318,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
                               HighsInt direction) {
       for (HighsInt i : indices) {
         assert(Arow[positions[i]] == row);
-        double coefdelta = direction * double(reducedcost[i] - maxviolation);
+        double coefdelta =
+            direction * static_cast<double>(reducedcost[i] - maxviolation);
         HighsInt col = Acol[positions[i]];
 
         if (complementation[i] == -1) {
@@ -5323,11 +5336,11 @@ HPresolve::Result HPresolve::strengthenInequalities(
     if (scale < 0) {
       HighsCDouble lhs = model->row_lower_[row];
       updateNonZeros(row, lhs, HighsInt{-1});
-      model->row_lower_[row] = double(lhs);
+      model->row_lower_[row] = static_cast<double>(lhs);
     } else {
       HighsCDouble rhs = model->row_upper_[row];
       updateNonZeros(row, rhs, HighsInt{1});
-      model->row_upper_[row] = double(rhs);
+      model->row_upper_[row] = static_cast<double>(rhs);
     }
 
     num_strengthened += indices.size();
@@ -5574,8 +5587,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             model->integrality_[parallelColCandidate] != HighsVarType::kInteger;
       }
 
-      double objDiff = double(model->col_cost_[col] * HighsCDouble(colScale) -
-                              model->col_cost_[duplicateCol]);
+      double objDiff = static_cast<double>(
+          model->col_cost_[col] * static_cast<HighsCDouble>(colScale) -
+          model->col_cost_[duplicateCol]);
       // if (std::abs(objDiff) > options->small_matrix_value) continue;
       constexpr HighsInt kMergeParallelCols = 0;
       constexpr HighsInt kDominanceColToUpper = 1;
@@ -5677,8 +5691,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = duplicateColRowPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(double(Avalue[duplicateColRowPos] -
-                                   colScale * colNz.value())) <=
+        parallel = std::abs(static_cast<double>(
+                       Avalue[duplicateColRowPos] -
+                       static_cast<HighsCDouble>(colScale) * colNz.value())) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
@@ -5954,8 +5969,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         parallel = nzPos != -1;
         if (!parallel) break;
 
-        parallel = std::abs(double(Avalue[nzPos] -
-                                   HighsCDouble(rowScale) * rowNz.value())) <=
+        parallel = std::abs(static_cast<double>(
+                       Avalue[nzPos] -
+                       static_cast<HighsCDouble>(rowScale) * rowNz.value())) <=
                    options->small_matrix_value;
         if (!parallel) break;
       }
@@ -6131,13 +6147,13 @@ HPresolve::Result HPresolve::equalityRowAddition(
   }
 
   if (model->row_upper_[removerow] != kHighsInf)
-    model->row_upper_[removerow] =
-        double(model->row_upper_[removerow] +
-               HighsCDouble(scale) * model->row_upper_[stayrow]);
+    model->row_upper_[removerow] = static_cast<double>(
+        model->row_upper_[removerow] +
+        static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
   if (model->row_lower_[removerow] != -kHighsInf)
-    model->row_lower_[removerow] =
-        double(model->row_lower_[removerow] +
-               HighsCDouble(scale) * model->row_upper_[stayrow]);
+    model->row_lower_[removerow] = static_cast<double>(
+        model->row_lower_[removerow] +
+        static_cast<HighsCDouble>(scale) * model->row_upper_[stayrow]);
 
   // row is now a singleton row, doubleton equation, or a row
   // that contains only singletons and we let the normal row presolve
@@ -6588,7 +6604,8 @@ HighsInt HPresolve::debugGetCheckCol() const {
   HighsInt check_col = -1;
   if (check_col_name == "") return check_col;
   if (model->col_names_.size()) {
-    if (HighsInt(model->col_hash_.name2index.size()) != model->num_col_)
+    if (model->col_hash_.name2index.size() !=
+        static_cast<size_t>(model->num_col_))
       model->col_hash_.form(model->col_names_);
     auto search = model->col_hash_.name2index.find(check_col_name);
     if (search != model->col_hash_.name2index.end()) {
@@ -6604,7 +6621,8 @@ HighsInt HPresolve::debugGetCheckRow() const {
   HighsInt check_row = -1;
   if (check_row_name == "") return check_row;
   if (model->row_names_.size()) {
-    if (HighsInt(model->row_hash_.name2index.size()) != model->num_row_)
+    if (model->row_hash_.name2index.size() !=
+        static_cast<size_t>(model->num_row_))
       model->row_hash_.form(model->row_names_);
     auto search = model->row_hash_.name2index.find(check_row_name);
     if (search != model->row_hash_.name2index.end()) {
