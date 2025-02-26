@@ -888,7 +888,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                            localdom.col_upper_.data());
 
     if (numintcols / (double)mipsolver.numCol() >= 0.2)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
@@ -1011,7 +1011,7 @@ void HighsPrimalHeuristics::randomizedRounding(
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
     if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,

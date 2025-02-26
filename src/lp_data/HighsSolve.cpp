@@ -107,7 +107,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             utilModelStatusToString(solver_object.model_status_).c_str(),
             solver_object.basis_.valid ? "" : "not ",
             solver_object.solution_.value_valid ? "" : "not ",
-            options.run_centring ? "off" : options.run_crossover.c_str());
+            options.run_centring ? kHighsOffString
+                                 : options.run_crossover.c_str());
         const bool allow_simplex_cleanup =
             options.run_crossover != kHighsOffString && !options.run_centring;
         if (allow_simplex_cleanup) {
