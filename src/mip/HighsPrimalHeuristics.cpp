@@ -867,6 +867,9 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   for (HighsInt i = 0; i != numintcols; ++i) {
     HighsInt col = intcols[i];
     double intval = point[col];
+    if (source == 'I') {
+      if (std::abs(intval - std::floor(intval + 0.5)) > mipsolver.mipdata_->feastol) continue;
+    }
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
 
@@ -1292,10 +1295,14 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
     prevInfeasibleRowsSize = currentInfeasibleRows.size();
   }
   // re-check for feasibility and add incumbent
-  // mipsolver.mipdata_->trySolution(currRelSol, 'I');
-  if (!hasInfeasibleConstraints && currentFracInt.size() > 0)
-    ZIRound(currRelSol);
-  tryRoundedPoint(currRelSol, 'I');
+  if (hasInfeasibleConstraints) {
+      tryRoundedPoint(currRelSol, 'I');
+  }
+  else {
+      if (currentFracInt.size() > 0) ZIRound(currRelSol);
+      if (currentFracInt.size() == 0)
+          mipsolver.mipdata_->trySolution(currRelSol, 'I');
+  }
 }
 
 void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
@@ -1351,7 +1358,7 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
 
       double minRowRatioForUB = kHighsInf;
       double minRowRatioForLB = kHighsInf;
-      
+
       for (HighsInt el = currentLp.a_matrix_.start_[j]; 
           el < currentLp.a_matrix_.start_[j + 1]; el++) {
 
