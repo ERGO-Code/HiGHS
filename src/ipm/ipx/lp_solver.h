@@ -95,7 +95,7 @@ public:
     Int GetBasicSolution(double* x, double* slack, double* y, double* z,
                          Int* cbasis, Int* vbasis) const;
 
-    // Returns/sets all paramters. Without calling SetParameters(), the solver
+    // Returns/sets all parameters. Without calling SetParameters(), the solver
     // uses the default values of a Parameters object.
     Parameters GetParameters() const;
     void SetParameters(Parameters new_parameters);

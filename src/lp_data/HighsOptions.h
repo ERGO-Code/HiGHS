@@ -766,14 +766,15 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
-        &highs_analysis_level, kHighsAnalysisLevelMin, kHighsAnalysisLevelMin,
+        &highs_analysis_level, kHighsAnalysisLevelMin,
+        kHighsAnalysisLevelMipTime,  // kHighsAnalysisLevelMin,
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
-        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
         advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
         kSimplexStrategyMax);
     records.push_back(record_int);
@@ -1157,11 +1158,12 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_int = new OptionRecordInt(
-        "log_dev_level",
-        "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
-        kHighsLogDevLevelMax);
+    record_int =
+        new OptionRecordInt("log_dev_level",
+                            "Output development messages: 0 => none; 1 => "
+                            "info; 2 => detailed; 3 => verbose",
+                            advanced, &log_dev_level, kHighsLogDevLevelMin,
+                            kHighsLogDevLevelNone, kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("log_githash", "Log the githash",

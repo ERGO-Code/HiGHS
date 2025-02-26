@@ -1,5 +1,7 @@
 ## Build changes
 
+Added code coverage report
+
 ## Code changes
 
 Any LP offset is communicated to the IPM solver, and used in logging and primal/dual objective calculations. 
@@ -19,3 +21,13 @@ Primal and dual residual tolerances - applied following IPM or PDLP solution - n
 Highs::getCols (Highs::getRows) now runs in linear time if the internal constraint matrix is stored column-wise (row-wise). Added ensureColwise/Rowwise to the Highs class, the C API and highspy so that users can set the internal constraint matrix storage orientation
 
 When columns and rows are deleted from the incumbent LP after a basic solution has been found, HiGHS no longer invalidates the basis. Now it maintains the basic and nonbasic status of the remaining variables and constraints. When the model is re-solved, this information is used to construct a starting basis.
+
+Fixed bugs in presolve
+
+When running from the command lin, changes to default option values are reported
+
+Added callback to allow users to supply integer feasible solutions to the MIP solver during execution
+
+
+
+

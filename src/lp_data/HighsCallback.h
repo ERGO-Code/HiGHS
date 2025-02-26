@@ -16,6 +16,16 @@
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
 
+enum userMipSolutionCallbackOrigin {
+  kUserMipSolutionCallbackOriginAfterSetup = 0,
+  kUserMipSolutionCallbackOriginBeforeDive,
+  kUserMipSolutionCallbackOriginEvaluateRootNode0,
+  kUserMipSolutionCallbackOriginEvaluateRootNode1,
+  kUserMipSolutionCallbackOriginEvaluateRootNode2,
+  kUserMipSolutionCallbackOriginEvaluateRootNode3,
+  kUserMipSolutionCallbackOriginEvaluateRootNode4
+};
+
 using HighsCallbackFunctionType =
     std::function<void(int, const std::string&, const HighsCallbackDataOut*,
                        HighsCallbackDataIn*, void*)>;

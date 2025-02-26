@@ -130,6 +130,8 @@ bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
   solution.value_valid = false;
   solution.dual_valid = false;
   // Create HighsMipSolver instance for sub-MIP
+  if (!mipsolver.submip)
+    mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   submipsolver.rootbasis = &basis;
@@ -139,11 +141,10 @@ bool HighsPrimalHeuristics::solveSubMip(HighsMipWorker& worker,
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   // Solve the sub-MIP
   submipsolver.run();
-
   // ig:here
   // mipsolver.max_submip_level =
   //     std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
-
+  if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();

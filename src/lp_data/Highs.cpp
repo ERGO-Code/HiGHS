@@ -1264,7 +1264,7 @@ HighsStatus Highs::solve() {
   const bool unconstrained_lp = incumbent_lp.a_matrix_.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
   // Even if options_.solver == kHighsChooseString in isolation will,
-  // untimately lead to a choice between simplex and IPM, if a basis
+  // ultimately lead to a choice between simplex and IPM, if a basis
   // is available, simplex should surely be chosen.
   const bool solver_will_use_basis = options_.solver == kSimplexString ||
                                      options_.solver == kHighsChooseString;

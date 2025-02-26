@@ -122,7 +122,7 @@
 - Default: 0
 
 ## [simplex\_strategy](@id option-simplex_strategy)
-- Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (PAMI); 3 => Dual (SIP); 4 => Primal
+- Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (SIP); 3 => Dual (PAMI); 4 => Primal
 - Type: integer
 - Range: {0, 4}
 - Default: 1

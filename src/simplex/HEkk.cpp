@@ -1105,13 +1105,13 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - SIP with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - PAMI with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");

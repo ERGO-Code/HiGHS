@@ -301,7 +301,11 @@ class HighsTimer {
       double time_per_call = 0;
       if (clock_num_call[iClock] > 0) {
         time_per_call = time / clock_num_call[iClock];
-        if (percent_sum_clock_times[i] >= tolerance_percent_report) {
+        const bool report_time =
+            tolerance_percent_report > 0
+                ? percent_sum_clock_times[i] >= tolerance_percent_report
+                : clock_num_call[iClock] > 0;
+        if (report_time) {
           printf("%s-time  %-32s: %11.4e (%5.1f%%", grep_stamp,
                  clock_names[iClock].c_str(), time, percent_run_highs);
           if (ideal_sum_time > 0) {
