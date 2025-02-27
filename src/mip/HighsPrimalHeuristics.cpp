@@ -1200,7 +1200,6 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
                    mipsolver.mipdata_->feastol);
       }
 
-
       if (j_min != std::numeric_limits<HighsInt>::max()) {
         // Update CurrentFracInt
         auto it = findPairByIndex(currentFracInt, j_min);
