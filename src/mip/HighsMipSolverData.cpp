@@ -1024,7 +1024,8 @@ try_again:
     tmpSolver.setOptionValue("time_limit", time_available);
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mipsolver.options_mip_->mip_feasibility_tolerance);
-    if (tmpSolver.getOptions().mip_root_presolve_only)
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
       tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.passModel(std::move(fixedModel));
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
@@ -1778,6 +1779,7 @@ restart:
         mipsolver.solution_objective_,
         kUserMipSolutionCallbackOriginEvaluateRootNode0);
 
+  // check if only root presolve is allowed
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
                               "HighsMipSolverData::evaluateRootNode");
