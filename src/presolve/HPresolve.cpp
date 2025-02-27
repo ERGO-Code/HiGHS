@@ -3268,7 +3268,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
                 int64_t a1Inverse = HighsIntegers::modularInverse(a1, d);
 
                 // now compute b = a1^-1 rhs (mod d)
-                double b = HighsIntegers::mod(a1Inverse * rhs, (double)d);
+                double b =
+                    HighsIntegers::mod(a1Inverse * rhs, static_cast<double>(d));
 
                 // printf(
                 //     "substitute integral column x with integral column z with
@@ -4070,7 +4071,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 #ifndef NDEBUG
         std::string time_str = " " + std::to_string(run_time) + "s";
 #else
-        std::string time_str = " " + std::to_string(int(run_time)) + "s";
+        std::string time_str =
+            " " + std::to_string(static_cast<int>(run_time)) + "s";
 #endif
         if (options->timeless_log) time_str = "";
         highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -4131,7 +4133,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (trySparsify) {
         HighsInt numNz = numNonzeros();
         HPRESOLVE_CHECKED_CALL(sparsify(postsolve_stack));
-        double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
+        double nzReduction =
+            100.0 * (1.0 - (numNonzeros() / static_cast<double>(numNz)));
 
         if (nzReduction > 0) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
@@ -4341,14 +4344,14 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   }
   if (check_col >= 0 && col_bound_change && debug_report) {
     printf("After reduction %4d: col = %4d[%s] has bounds [%11.4g, %11.4g]\n",
-           int(numreductions - 1), int(check_col),
+           statiuc_cast<int>(numreductions - 1), static_cast<int>(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
     postsolve_stack.debug_prev_numreductions = numreductions;
   }
   if (check_row >= 0 && row_bound_change && debug_report) {
     printf("After reduction %4d: row = %4d[%s] has bounds [%11.4g, %11.4g]\n",
-           int(numreductions - 1), int(check_row),
+           static_cast<int>(numreductions - 1), static_cast<int>(check_row),
            model->row_names_[check_row].c_str(), model->row_lower_[check_row],
            model->row_upper_[check_row]);
     postsolve_stack.debug_prev_numreductions = numreductions;
@@ -4529,7 +4532,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   highsLogDev(options->log_options, HighsLogType::kInfo,
               "HPresolve::removeDependentEquations Got %d equations, checking "
               "for dependent equations\n",
-              (int)matrix.num_col_);
+              static_cast<int>(matrix.num_col_));
   matrix.num_row_ = model->num_col_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -4605,11 +4608,11 @@ HPresolve::Result HPresolve::removeDependentEquations(
   highsLogDev(
       options->log_options, HighsLogType::kInfo,
       "HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
-      (int)num_removed_row, (int)num_removed_nz);
+      static_cast<int>(num_removed_row), static_cast<int>(num_removed_nz));
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious rows",
-                (int)num_fictitious_rows_skipped);
+                static_cast<int>(num_fictitious_rows_skipped));
   highsLogDev(options->log_options, HighsLogType::kInfo, "\n");
 
   analysis_.logging_on_ = logging_on;
@@ -5308,7 +5311,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
     indices.erase(std::remove_if(indices.begin(), indices.end(),
                                  [&](HighsInt i) {
-                                   return i >= (HighsInt)positions.size() ||
+                                   return static_cast<size_t>(i) >=
+                                              positions.size() ||
                                           std::abs(reducedcost[i]) <= threshold;
                                  }),
                   indices.end());
