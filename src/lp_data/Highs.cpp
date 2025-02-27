@@ -2384,47 +2384,6 @@ HighsStatus Highs::setBasis() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setHotStart(const HotStart& hot_start) {
-  // Check that the user-supplied hot start is valid
-  if (!hot_start.valid) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "setHotStart: invalid hot start\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus return_status = setHotStartInterface(hot_start);
-  return returnFromHighs(return_status);
-}
-
-HighsStatus Highs::freezeBasis(HighsInt& frozen_basis_id) {
-  frozen_basis_id = kNoLink;
-  // Check that there is a simplex basis to freeze
-  if (!ekk_instance_.status_.has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "freezeBasis: no simplex factorization to freeze\n");
-    return HighsStatus::kError;
-  }
-  ekk_instance_.freezeBasis(frozen_basis_id);
-  return returnFromHighs(HighsStatus::kOk);
-}
-
-HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
-  // Check that there is a simplex basis to unfreeze
-  if (!ekk_instance_.status_.initialised_for_new_lp) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "unfreezeBasis: no simplex information to unfreeze\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = ekk_instance_.unfreezeBasis(frozen_basis_id);
-  if (call_status != HighsStatus::kOk) return call_status;
-  // Reset simplex NLA pointers
-  ekk_instance_.setNlaPointersForTrans(model_.lp_);
-  // Get the corresponding HiGHS basis
-  basis_ = ekk_instance_.getHighsBasis(model_.lp_);
-  // Clear everything else
-  invalidateModelStatusSolutionAndInfo();
-  return returnFromHighs(HighsStatus::kOk);
-}
-
 HighsStatus Highs::putIterate() {
   // Check that there is a simplex iterate to put
   if (!ekk_instance_.status_.has_invert) {

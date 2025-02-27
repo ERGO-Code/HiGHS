@@ -102,10 +102,6 @@ class HEkk {
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
 
-  void freezeBasis(HighsInt& frozen_basis_id);
-  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
-  HighsStatus frozenBasisAllDataClear();
-
   void putIterate();
   HighsStatus getIterate();
 

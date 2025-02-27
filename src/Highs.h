@@ -1233,40 +1233,6 @@ class Highs {
   }
 
   /**
-   * @brief Get the hot start basis data from the most recent simplex
-   * solve. Advanced method: for HiGHS MIP solver
-   */
-  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
-
-  /**
-   * @brief Set up for simplex using the supplied hot start
-   * data. Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus setHotStart(const HotStart& hot_start);
-
-  /**
-   * @brief Freeze the current internal HighsBasis instance and
-   * standard NLA, returning a value to be used to recover this basis
-   * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
-   * solver
-   */
-  HighsStatus freezeBasis(HighsInt& frozen_basis_id);
-
-  /**
-   * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
-   * possible). Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
-
-  /**
-   * @brief Check that all frozen basis data has been
-   * cleared. Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus frozenBasisAllDataClear() {
-    return ekk_instance_.frozenBasisAllDataClear();
-  }
-
-  /**
    * @Brief Put a copy of the current iterate - basis; invertible
    * representation and dual edge weights - into storage within
    * HSimplexNla. Advanced method: for HiGHS MIP solver
@@ -1429,6 +1395,40 @@ class Highs {
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
+
+  /**
+   * @brief Get the hot start basis data from the most recent simplex
+   * solve. Advanced method: for HiGHS MIP solver
+   */
+  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+
+  /**
+   * @brief Set up for simplex using the supplied hot start
+   * data. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus setHotStart(const HotStart& hot_start) { this->deprecationMessage("setHotStart", "None"); return HighsStatus::kError; }
+
+  /**
+   * @brief Freeze the current internal HighsBasis instance and
+   * standard NLA, returning a value to be used to recover this basis
+   * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
+   * solver
+   */
+  HighsStatus freezeBasis(HighsInt& frozen_basis_id) { this->deprecationMessage("freezeBasis", "None"); return HighsStatus::kError; }
+
+  /**
+   * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
+   * possible). Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id) { this->deprecationMessage("unfreezeBasis", "None"); return HighsStatus::kError; }
+
+  /**
+   * @brief Check that all frozen basis data has been
+   * cleared. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus frozenBasisAllDataClear() {
+    this->deprecationMessage("frozenBasisAllDataClear", "None"); return HighsStatus::kError; 
+  }
 
   // End of deprecated methods
  private:
@@ -1613,8 +1613,6 @@ class Highs {
                                   double* solution_vector,
                                   HighsInt* solution_num_nz,
                                   HighsInt* solution_indices, bool transpose);
-
-  HighsStatus setHotStartInterface(const HotStart& hot_start);
 
   void zeroIterationCounts();
 
