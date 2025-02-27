@@ -293,17 +293,24 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           break;
         case HMpsFF::Parsekey::kQmatrix:
         case HMpsFF::Parsekey::kQuadobj:
+	  printf("MIP MPS read failed, MIP has Hessian\n"); return FreeFormatParserReturnCode::kParserError;
           keyword = parseHessian(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kQsection:
         case HMpsFF::Parsekey::kQcmatrix:
+	  printf("MIP MPS read failed, Quadratic entries\n");
+	  return FreeFormatParserReturnCode::kParserError;
           keyword = parseQuadRows(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kCsection:
+	  printf("MIP MPS read failed, Cone entries\n");
+	  return FreeFormatParserReturnCode::kParserError;
           keyword = parseCones(log_options, f);
           break;
         case HMpsFF::Parsekey::kSets:
         case HMpsFF::Parsekey::kSos:
+	  printf("MIP MPS read failed, SOS entries\n");
+	  return FreeFormatParserReturnCode::kParserError;
           keyword = parseSos(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kFail:
@@ -354,30 +361,37 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
     case HMpsFF::Parsekey::kDelayedrows:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse DELAYEDROWS section\n");
+      printf("MIP MPS read failed, DELAYEDROWS section\n");
       break;
     case HMpsFF::Parsekey::kModelcuts:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse MODELCUTS section\n");
+      printf("MIP MPS read failed, MODELCUTS section\n");
       break;
     case HMpsFF::Parsekey::kIndicators:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse INDICATORS section\n");
+      printf("MIP MPS read failed, INDICATORS section\n");
       break;
     case HMpsFF::Parsekey::kGencons:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse GENCONS section\n");
+      printf("MIP MPS read failed, GENCONS section\n");
       break;
     case HMpsFF::Parsekey::kPwlobj:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse PWLOBJ section\n");
+      printf("MIP MPS read failed, PWL section\n");
       break;
     case HMpsFF::Parsekey::kPwlnam:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse PWLNAM section\n");
+      printf("MIP MPS read failed, PWLNAM section\n");
       break;
     case HMpsFF::Parsekey::kPwlcon:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse PWLCON section\n");
+      printf("MIP MPS read failed, PWLCON section\n");
       break;
     default:
       return false;
