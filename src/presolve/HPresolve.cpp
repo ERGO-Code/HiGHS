@@ -4344,7 +4344,7 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolve_stack) {
   }
   if (check_col >= 0 && col_bound_change && debug_report) {
     printf("After reduction %4d: col = %4d[%s] has bounds [%11.4g, %11.4g]\n",
-           statiuc_cast<int>(numreductions - 1), static_cast<int>(check_col),
+           static_cast<int>(numreductions - 1), static_cast<int>(check_col),
            model->col_names_[check_col].c_str(), model->col_lower_[check_col],
            model->col_upper_[check_col]);
     postsolve_stack.debug_prev_numreductions = numreductions;
