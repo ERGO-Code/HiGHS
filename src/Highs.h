@@ -399,26 +399,26 @@ class Highs {
   /**
    * @brief Get the value of infinity used by HiGHS
    */
-  double getInfinity() { return kHighsInf; }
+  double getInfinity() const { return kHighsInf; }
 
   /**
    * @brief Get the size of HighsInt
    */
-  HighsInt getSizeofHighsInt() {
+  HighsInt getSizeofHighsInt()  const {
     return sizeof(options_.num_user_settable_options_);
   }
 
   /**
    * @brief Get the run time of HiGHS
    */
-  double getRunTime() { return timer_.read(); }
+  double getRunTime() const { return timer_.read(); }
 
   /**
    * Methods for model output
    */
 
   /**
-   * @brief Identify and the standard form of the HighsLp instance in
+   * @brief Identify the standard form of the HighsLp instance in
    * HiGHS
    */
   HighsStatus getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
@@ -576,7 +576,7 @@ class Highs {
   /**
    * @brief Try to get the current dual objective function value
    */
-  HighsStatus getDualObjectiveValue(double& dual_objective_value);
+  HighsStatus getDualObjectiveValue(double& dual_objective_value) const;
 
   /**
    * Methods for operations with the invertible representation of the

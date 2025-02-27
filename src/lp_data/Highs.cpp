@@ -1855,7 +1855,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 }
 
 HighsStatus Highs::getDualObjectiveValue(
-    double& dual_objective_function_value) {
+    double& dual_objective_function_value) const {
   bool have_dual_objective_value = false;
   if (!this->model_.isQp())
     have_dual_objective_value = computeDualObjectiveValue(
