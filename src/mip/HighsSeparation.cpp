@@ -51,7 +51,10 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
       return -1;
     }
 
-    mipdata.cliquetable.cleanupFixed(mipdata.domain);
+    // only modify cliquetable for master worker.
+    if (&propdomain == &mipdata.domain) 
+      mipdata.cliquetable.cleanupFixed(mipdata.domain);
+
     if (mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();

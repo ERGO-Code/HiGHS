@@ -1246,7 +1246,7 @@ void HighsDomain::ObjectivePropagation::propagate() {
 void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
-                                     HighsCDouble& activitymin) {
+                                     HighsCDouble& activitymin) const {
   if (infeasible_) {
     activitymin = 0.0;
     ninfmin = 0;
@@ -1291,7 +1291,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
 void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
-                                     HighsCDouble& activitymax) {
+                                     HighsCDouble& activitymax) const {
   if (infeasible_) {
     activitymax = 0.0;
     ninfmax = 0;
@@ -2000,8 +2000,10 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgreason_.push_back(reason);
 
   if (binary && !infeasible_ && isFixed(boundchg.column))
-    mipsolver->mipdata_->cliquetable.addImplications(
-        *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+    // only modify cliquetable before the dive.
+    if (mipsolver->mipdata_->workers.size() <= 1)
+      mipsolver->mipdata_->cliquetable.addImplications(
+          *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
 }
 
 void HighsDomain::setDomainChangeStack(
@@ -2472,8 +2474,8 @@ void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
   if (&mipsolver->mipdata_->domain == this) return;
   if (mipsolver->mipdata_->domain.infeasible() || !infeasible_) return;
 
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  // mipsolver->mipdata_->domain.propagate();
+  // if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
 
@@ -2488,8 +2490,8 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
 
   if (mipsolver->mipdata_->domain.infeasible()) return;
 
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  // mipsolver->mipdata_->domain.propagate();
+  // if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
   conflictSet.conflictAnalysis(proofinds, proofvals, prooflen, proofrhs,
@@ -2504,8 +2506,8 @@ void HighsDomain::conflictAnalyzeReconvergence(
 
   if (mipsolver->mipdata_->domain.infeasible()) return;
 
-  mipsolver->mipdata_->domain.propagate();
-  if (mipsolver->mipdata_->domain.infeasible()) return;
+  // mipsolver->mipdata_->domain.propagate();
+  // if (mipsolver->mipdata_->domain.infeasible()) return;
 
   ConflictSet conflictSet(*this);
 
