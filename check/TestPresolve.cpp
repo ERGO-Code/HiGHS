@@ -651,7 +651,7 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
-  std::string model_file = model_file =
+  std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
 
   Highs highs;
