@@ -659,5 +659,5 @@ TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
   // Allow only presolve at root node
   highs.setOptionValue("mip_root_presolve_only", true);
   highs.readModel(model_file);
-  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 }
