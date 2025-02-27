@@ -658,7 +658,7 @@ class Highs {
    * approximate condition number
    */
   HighsStatus getKappa(double& kappa, const bool exact = false,
-                       const bool report = false);
+                       const bool report = false) const;
 
   /**
    * @brief Get the number of columns in the incumbent model
@@ -710,7 +710,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get multiple columns from the model given by a set
@@ -729,7 +729,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get multiple columns from the model given by a mask
@@ -746,7 +746,7 @@ class Highs {
       HighsInt*
           index,     //!<  Array of size num_nz with row indices for the columns
       double* value  //!<  Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get a column name from the incumbent model
@@ -782,7 +782,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get multiple rows from the model given by a set
@@ -800,7 +800,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get multiple rows from the model given by a mask
@@ -816,7 +816,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get a row name from the incumbent model
@@ -831,7 +831,7 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value);
+  HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value) const;
 
   /**
    * @brief Write out the incumbent model to a file
@@ -1575,15 +1575,15 @@ class Highs {
   void getColsInterface(const HighsIndexCollection& index_collection,
                         HighsInt& num_col, double* cost, double* lower,
                         double* upper, HighsInt& num_nz, HighsInt* start,
-                        HighsInt* index, double* value);
+                        HighsInt* index, double* value) const;
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
                         HighsInt& num_row, double* lower, double* upper,
                         HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                        double* value);
+                        double* value) const;
 
   void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
-                               double& value);
+                               double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
@@ -1654,8 +1654,8 @@ class Highs {
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type,
                               HighsStatus return_status);
-  HighsStatus invertRequirementError(std::string method_name);
-  HighsStatus lpInvertRequirementError(std::string method_name);
+  HighsStatus invertRequirementError(std::string method_name) const;
+  HighsStatus lpInvertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);

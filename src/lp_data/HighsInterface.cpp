@@ -754,7 +754,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
                              HighsInt& num_col, double* cost, double* lower,
                              double* upper, HighsInt& num_nz, HighsInt* start,
-                             HighsInt* index, double* value) {
+                             HighsInt* index, double* value) const {
   const HighsLp& lp = model_.lp_;
   if (lp.a_matrix_.isColwise()) {
     getSubVectors(index_collection, lp.num_col_, lp.col_cost_.data(),
@@ -771,7 +771,7 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
 void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
                              HighsInt& num_row, double* lower, double* upper,
                              HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                             double* value) {
+                             double* value) const {
   const HighsLp& lp = model_.lp_;
   if (lp.a_matrix_.isColwise()) {
     getSubVectorsTranspose(index_collection, lp.num_row_, nullptr,
@@ -786,18 +786,27 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
 }
 
 void Highs::getCoefficientInterface(const HighsInt ext_row,
-                                    const HighsInt ext_col, double& value) {
-  HighsLp& lp = model_.lp_;
+                                    const HighsInt ext_col, double& value) const {
+  const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
   value = 0;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
-  for (HighsInt el = lp.a_matrix_.start_[ext_col];
-       el < lp.a_matrix_.start_[ext_col + 1]; el++) {
-    if (lp.a_matrix_.index_[el] == ext_row) {
-      value = lp.a_matrix_.value_[el];
-      break;
+
+  if (lp.a_matrix_.isColwise()) {
+    for (HighsInt el = lp.a_matrix_.start_[ext_col];
+	 el < lp.a_matrix_.start_[ext_col + 1]; el++) {
+      if (lp.a_matrix_.index_[el] == ext_row) {
+	value = lp.a_matrix_.value_[el];
+	break;
+      }
+    }
+  } else {
+    for (HighsInt el = lp.a_matrix_.start_[ext_row];
+	 el < lp.a_matrix_.start_[ext_row + 1]; el++) {
+      if (lp.a_matrix_.index_[el] == ext_col) {
+	value = lp.a_matrix_.value_[el];
+	break;
+      }
     }
   }
 }
@@ -2620,14 +2629,14 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   return return_status;
 }
 
-HighsStatus Highs::invertRequirementError(std::string method_name) {
+HighsStatus Highs::invertRequirementError(std::string method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
 }
 
-HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
+HighsStatus Highs::lpInvertRequirementError(std::string method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   if (model_.isMip() || model_.isQp()) return HighsStatus::kOk;
   highsLogUser(options_.log_options, HighsLogType::kError,

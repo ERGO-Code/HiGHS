@@ -3659,7 +3659,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
-                                   const bool report) {
+                                   const bool report) const {
   HighsInt solver_num_row = lp.num_row_;
   HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;

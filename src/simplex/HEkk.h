@@ -132,8 +132,8 @@ class HEkk {
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
   double computeBasisCondition(const HighsLp& lp, const bool exact = false,
-                               const bool report = false);
-  double computeBasisCondition() {
+                               const bool report = false) const;
+  double computeBasisCondition() const {
     return computeBasisCondition(this->lp_, false, false);
   }
 
