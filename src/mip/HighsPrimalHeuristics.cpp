@@ -887,10 +887,12 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
+
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
-    else if ((5 * numintcols) / mipsolver.numCol() >= 1)
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * numintcols) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
@@ -1014,15 +1016,18 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
+
     // check if only root presolve is allowed
     if (mipsolver.options_mip_->mip_root_presolve_only)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
-    else if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * intcols.size()) / mipsolver.numCol() >= 1)
       lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
+
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
