@@ -1779,8 +1779,9 @@ void HighsMipSolverData::printDisplayLine(const int solution_source) {
   assert(!interrupt);
 }
 
-bool HighsMipSolverData::rootSeparationRound(HighsMipWorker& worker,
-    HighsSeparation& sepa, HighsInt& ncuts, HighsLpRelaxation::Status& status) {
+bool HighsMipSolverData::rootSeparationRound(
+    HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
+    HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
@@ -1794,7 +1795,7 @@ bool HighsMipSolverData::rootSeparationRound(HighsMipWorker& worker,
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
 
   if (mipsolver.submip || incumbent.empty()) {
-    heuristics.randomizedRounding(worker ,solvals);
+    heuristics.randomizedRounding(worker, solvals);
     heuristics.flushStatistics(worker);
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;

@@ -18,13 +18,13 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
+#include "mip/HighsMipWorker.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsObjectiveFunction.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
-#include "mip/HighsMipWorker.h"
 #include "mip/HighsSeparation.h"
 #include "parallel/HighsParallel.h"
 #include "presolve/HighsPostsolveStack.h"
@@ -213,14 +213,14 @@ struct HighsMipSolverData {
   bool checkSolution(const std::vector<double>& solution) const;
   bool trySolution(const std::vector<double>& solution,
                    const int solution_source = kSolutionSourceNone);
-  bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa, HighsInt& ncuts,
-                           HighsLpRelaxation::Status& status);
+  bool rootSeparationRound(HighsMipWorker& worker, HighsSeparation& sepa,
+                           HighsInt& ncuts, HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
 
   void evaluateRootNode(HighsMipWorker& worker);
 
-  bool addIncumbent(const std::vector<double>& sol, double solobj,
-                    const int solution_source,
+  bool addIncumbent(const std::vector<double>& sol,
+                    double solobj, const int solution_source,
                     const bool print_display_line = true);
 
   const std::vector<double>& getSolution() const;

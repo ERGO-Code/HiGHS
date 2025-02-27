@@ -47,6 +47,8 @@ class HighsMipWorker {
     double solution_objective_;
   };
 
+  Solution solution;
+
   HighsPrimalHeuristics::Statistics heur_stats;
 
   HighsRandom randgen;
