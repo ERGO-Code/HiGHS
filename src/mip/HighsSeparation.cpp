@@ -23,8 +23,8 @@
 #include "mip/HighsTransformedLp.h"
 
 HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
-  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa", "Ibd");
-  cliqueClock = mipsolver.timer_.clock_def("Clique sepa", "Clq");
+  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa");
+  cliqueClock = mipsolver.timer_.clock_def("Clique sepa");
   separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));

@@ -1105,13 +1105,13 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - SIP with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - PAMI with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");
@@ -1465,6 +1465,7 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   }
   highs_basis.valid = true;
   highs_basis.alien = false;
+  highs_basis.useful = true;
   highs_basis.was_alien = false;
   highs_basis.debug_id =
       (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
@@ -3468,7 +3469,7 @@ bool HEkk::bailout() {
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
   } else if (options_->time_limit < kHighsInf &&
-             timer_->readRunHighsClock() > options_->time_limit) {
+             timer_->read() > options_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_->simplex_iteration_limit) {
@@ -4421,12 +4422,14 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
 void HighsSimplexStats::report(FILE* file, std::string message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
-  fprintf(file, "   iteration_count            = %d\n", this->iteration_count);
-  fprintf(file, "   num_invert                 = %d\n", this->num_invert);
+  fprintf(file, "   iteration_count            = %d\n",
+          static_cast<int>(this->iteration_count));
+  fprintf(file, "   num_invert                 = %d\n",
+          static_cast<int>(this->num_invert));
   fprintf(file, "   last_invert_num_el         = %d\n",
-          this->last_invert_num_el);
+          static_cast<int>(this->last_invert_num_el));
   fprintf(file, "   last_factored_basis_num_el = %d\n",
-          this->last_factored_basis_num_el);
+          static_cast<int>(this->last_factored_basis_num_el));
   fprintf(file, "   col_aq_density             = %g\n", this->col_aq_density);
   fprintf(file, "   row_ep_density             = %g\n", this->row_ep_density);
   fprintf(file, "   row_ap_density             = %g\n", this->row_ap_density);

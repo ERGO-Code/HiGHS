@@ -53,51 +53,13 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                            integral, feasible);
     assert(valid);
 #endif
-    bound_violation_ = 0;
-    row_violation_ = 0;
-    integrality_violation_ = 0;
-
-    HighsCDouble obj = orig_model_->offset_;
-    assert((HighsInt)solution.col_value.size() == orig_model_->num_col_);
-    for (HighsInt i = 0; i != orig_model_->num_col_; ++i) {
-      const double value = solution.col_value[i];
-      obj += orig_model_->col_cost_[i] * value;
-
-      if (orig_model_->integrality_[i] == HighsVarType::kInteger) {
-        integrality_violation_ =
-            std::max(fractionality(value), integrality_violation_);
-      }
-
-      const double lower = orig_model_->col_lower_[i];
-      const double upper = orig_model_->col_upper_[i];
-      double primal_infeasibility;
-      if (value < lower - options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = lower - value;
-      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = value - upper;
-      } else
-        continue;
-
-      bound_violation_ = std::max(bound_violation_, primal_infeasibility);
-    }
-
-    for (HighsInt i = 0; i != orig_model_->num_row_; ++i) {
-      const double value = solution.row_value[i];
-      const double lower = orig_model_->row_lower_[i];
-      const double upper = orig_model_->row_upper_[i];
-
-      double primal_infeasibility;
-      if (value < lower - options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = lower - value;
-      } else if (value > upper + options_mip_->mip_feasibility_tolerance) {
-        primal_infeasibility = value - upper;
-      } else
-        continue;
-
-      row_violation_ = std::max(row_violation_, primal_infeasibility);
-    }
-
-    solution_objective_ = double(obj);
+    // Initial solution can be infeasible, but need to set values for violation
+    // and objective
+    HighsCDouble quad_solution_objective_;
+    solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
+                     bound_violation_, row_violation_, integrality_violation_,
+                     quad_solution_objective_);
+    solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
   }
 }
@@ -113,9 +75,7 @@ void HighsMipSolver::run() {
     analysis_.timer_ = &this->timer_;
     analysis_.setup(*orig_model_, *options_mip_);
   }
-  // Start the total_clock for the timer that is local to the HighsMipSolver
-  // instance
-  timer_.start(timer_.total_clock);
+  timer_.start();
 
   improving_solution_file_ = nullptr;
   if (!submip && options_mip_->mip_improving_solution_file != "")
@@ -131,12 +91,12 @@ void HighsMipSolver::run() {
   mipdata_->runPresolve(options_mip_->presolve_reduction_limit);
   analysis_.mipTimerStop(kMipClockRunPresolve);
   analysis_.mipTimerStop(kMipClockPresolve);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
   // Identify whether time limit has been reached (in presolve)
   if (modelstatus_ == HighsModelStatus::kNotset &&
-      timer_.read(timer_.total_clock) >= options_mip_->time_limit)
+      timer_.read() >= options_mip_->time_limit)
     modelstatus_ = HighsModelStatus::kTimeLimit;
 
   if (modelstatus_ != HighsModelStatus::kNotset) {
@@ -155,16 +115,15 @@ void HighsMipSolver::run() {
 
   analysis_.mipTimerStart(kMipClockSolve);
 
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - starting  setup\n", timer_.read());
   analysis_.mipTimerStart(kMipClockRunSetup);
   mipdata_->runSetup();
   analysis_.mipTimerStop(kMipClockRunSetup);
-  if (analysis_.analyse_mip_time & !submip)
+  if (analysis_.analyse_mip_time && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP-Timing: %11.2g - completed setup\n",
-                 timer_.read(timer_.total_clock));
+                 "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     // Check limits have not been reached before evaluating root node
@@ -172,6 +131,12 @@ restart:
       cleanupSolve();
       return;
     }
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+        callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_,
+                                     kUserMipSolutionCallbackOriginAfterSetup);
+
     // Apply the trivial heuristics
     analysis_.mipTimerStart(kMipClockTrivialHeuristics);
     HighsModelStatus model_status = mipdata_->trivialHeuristics();
@@ -183,10 +148,10 @@ restart:
       return;
     }
     analysis_.mipTimerStop(kMipClockTrivialHeuristics);
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - starting evaluate root node\n",
-                   timer_.read(timer_.total_clock));
+                   timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
@@ -195,10 +160,10 @@ restart:
     if (analysis_.analyse_mip_time &&
         analysis_.mipTimerRunning(kMipClockIpmSolveLp))
       analysis_.mipTimerStop(kMipClockIpmSolveLp);
-    if (analysis_.analyse_mip_time & !submip)
+    if (analysis_.analyse_mip_time && !submip)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                    "MIP-Timing: %11.2g - completed evaluate root node\n",
-                   timer_.read(timer_.total_clock));
+                   timer_.read());
     // age 5 times to remove stored but never violated cuts after root
     // separation
     analysis_.mipTimerStart(kMipClockPerformAging0);
@@ -245,6 +210,12 @@ restart:
   double lowerBoundLastCheck = mipdata_->lower_bound;
   analysis_.mipTimerStart(kMipClockSearch);
   while (search.hasNode()) {
+    // Possibly look for primal solution from the user
+    if (!submip && callback_->user_callback &&
+        callback_->active[kCallbackMipUserSolution])
+      mipdata_->callbackUserSolution(solution_objective_,
+                                     kUserMipSolutionCallbackOriginBeforeDive);
+
     analysis_.mipTimerStart(kMipClockPerformAging1);
     mipdata_->conflictPool.performAging();
     analysis_.mipTimerStop(kMipClockPerformAging1);
@@ -307,10 +278,14 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
+        double this_dive_time = -analysis_.mipTimerRead(kMipClockTheDive);
         analysis_.mipTimerStart(kMipClockTheDive);
         const HighsSearch::NodeResult search_dive_result = search.dive();
         analysis_.mipTimerStop(kMipClockTheDive);
-
+        if (analysis_.analyse_mip_time) {
+          this_dive_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+          analysis_.dive_time.push_back(this_dive_time);
+        }
         if (search_dive_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         ++mipdata_->num_leaves;
@@ -510,6 +485,7 @@ restart:
     // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
+    double this_node_search_time = -analysis_.mipTimerRead(kMipClockNodeSearch);
     analysis_.mipTimerStart(kMipClockNodeSearch);
 
     while (!mipdata_->nodequeue.empty()) {
@@ -654,7 +630,10 @@ restart:
       break;
     }  // while(!mipdata_->nodequeue.empty())
     analysis_.mipTimerStop(kMipClockNodeSearch);
-
+    if (analysis_.analyse_mip_time) {
+      this_node_search_time += analysis_.mipTimerRead(kMipClockNodeSearch);
+      analysis_.node_search_time.push_back(this_node_search_time);
+    }
     if (limit_reached) break;
   }  // while(search.hasNode())
   analysis_.mipTimerStop(kMipClockSearch);
@@ -718,7 +697,7 @@ void HighsMipSolver::cleanupSolve() {
   }
 
   analysis_.mipTimerStop(kMipClockPostsolve);
-  timer_.stop(timer_.total_clock);
+  timer_.stop();
 
   std::string solutionstatus = "-";
 
@@ -768,6 +747,7 @@ void HighsMipSolver::cleanupSolve() {
                     gapValString.data());
   }
 
+  bool timeless_log = options_mip_->timeless_log;
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n");
   if (this->orig_model_->model_name_.length())
@@ -778,12 +758,15 @@ void HighsMipSolver::cleanupSolve() {
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
-               "  Gap               %s\n"
-               "  P-D integral      %.12g\n"
-               "  Solution status   %s\n",
+               "  Gap               %s\n",
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
-               dual_bound_, gapString.data(),
-               mipdata_->primal_dual_integral.value, solutionstatus.c_str());
+               dual_bound_, gapString.data());
+  if (!timeless_log)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  P-D integral      %.12g\n",
+                 mipdata_->primal_dual_integral.value);
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+               "  Solution status   %s\n", solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
@@ -792,11 +775,16 @@ void HighsMipSolver::cleanupSolve() {
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
+  if (!timeless_log)
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                 "  Timing            %.2f (total)\n"
+                 "                    %.2f (presolve)\n"
+                 "                    %.2f (solve)\n"
+                 "                    %.2f (postsolve)\n",
+                 timer_.read(), analysis_.mipTimerRead(kMipClockPresolve),
+                 analysis_.mipTimerRead(kMipClockSolve),
+                 analysis_.mipTimerRead(kMipClockPostsolve));
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "  Timing            %.2f (total)\n"
-               "                    %.2f (presolve)\n"
-               "                    %.2f (solve)\n"
-               "                    %.2f (postsolve)\n"
                "  Max sub-MIP depth %d\n"
                "  Nodes             %llu\n"
                "  Repair LPs        %llu (%llu feasible; %llu iterations)\n"
@@ -804,10 +792,6 @@ void HighsMipSolver::cleanupSolve() {
                "                    %llu (strong br.)\n"
                "                    %llu (separation)\n"
                "                    %llu (heuristics)\n",
-               timer_.read(timer_.total_clock),
-               analysis_.mipTimerRead(kMipClockPresolve),
-               analysis_.mipTimerRead(kMipClockSolve),
-               analysis_.mipTimerRead(kMipClockPostsolve),
                int(max_submip_level), (long long unsigned)mipdata_->num_nodes,
                (long long unsigned)mipdata_->total_repair_lp,
                (long long unsigned)mipdata_->total_repair_lp_feasible,
@@ -817,7 +801,7 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
-  analysis_.reportMipTimer();
+  if (!timeless_log) analysis_.reportMipTimer();
 
   assert(modelstatus_ != HighsModelStatus::kNotset);
 }
@@ -862,4 +846,78 @@ void HighsMipSolver::callbackGetCutPool() const {
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);
+}
+
+bool HighsMipSolver::solutionFeasible(
+    const HighsLp* lp, const std::vector<double>& col_value,
+    const std::vector<double>* pass_row_value, double& bound_violation,
+    double& row_violation, double& integrality_violation, HighsCDouble& obj) {
+  bound_violation = 0;
+  row_violation = 0;
+  integrality_violation = 0;
+  const double mip_feasibility_tolerance =
+      options_mip_->mip_feasibility_tolerance;
+
+  obj = lp->offset_;
+
+  if (kAllowDeveloperAssert) assert(HighsInt(col_value.size()) == lp->num_col_);
+  for (HighsInt i = 0; i != lp->num_col_; ++i) {
+    const double value = col_value[i];
+    obj += lp->col_cost_[i] * value;
+
+    if (lp->integrality_[i] == HighsVarType::kInteger) {
+      integrality_violation =
+          std::max(fractionality(value), integrality_violation);
+    }
+
+    const double lower = lp->col_lower_[i];
+    const double upper = lp->col_upper_[i];
+    double primal_infeasibility;
+    if (value < lower - mip_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + mip_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    } else
+      continue;
+
+    bound_violation = std::max(bound_violation, primal_infeasibility);
+  }
+
+  // Check row feasibility if there are a positive number of rows.
+  //
+  // If there are no rows and pass_row_value is nullptr, then
+  // row_value_p is also nullptr since row_value is not resized
+  if (lp->num_row_ > 0) {
+    std::vector<double> row_value;
+    if (pass_row_value) {
+      if (kAllowDeveloperAssert)
+        assert(HighsInt((*pass_row_value).size()) == lp->num_col_);
+    } else {
+      calculateRowValuesQuad(*lp, col_value, row_value);
+    }
+    const double* row_value_p =
+        pass_row_value ? (*pass_row_value).data() : row_value.data();
+    assert(row_value_p);
+
+    for (HighsInt i = 0; i != lp->num_row_; ++i) {
+      const double value = row_value_p[i];
+      const double lower = lp->row_lower_[i];
+      const double upper = lp->row_upper_[i];
+
+      double primal_infeasibility;
+      if (value < lower - mip_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + mip_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      } else
+        continue;
+
+      row_violation = std::max(row_violation, primal_infeasibility);
+    }
+  }
+
+  const bool feasible = bound_violation <= mip_feasibility_tolerance &&
+                        integrality_violation <= mip_feasibility_tolerance &&
+                        row_violation <= mip_feasibility_tolerance;
+  return feasible;
 }

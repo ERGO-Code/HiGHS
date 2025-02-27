@@ -435,7 +435,7 @@ void analyseVectorValues(const HighsLogOptions* log_options,
           highsFormatToString("%12" HIGHSINT_FORMAT
                               " values satisfy 10^(%3" HIGHSINT_FORMAT
                               ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                              vK, k, k + 1));
+                              vK, k - 1, k));
   }
   for (HighsInt k = 1; k <= nVK; k++) {
     HighsInt vK = negVK[k];
@@ -445,7 +445,7 @@ void analyseVectorValues(const HighsLogOptions* log_options,
           highsFormatToString("%12" HIGHSINT_FORMAT
                               " values satisfy 10^(%3" HIGHSINT_FORMAT
                               ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
-                              vK, -k, 1 - k));
+                              vK, -k - 1, -k));
   }
   vK = vecDim - nNz;
   if (vK > 0)

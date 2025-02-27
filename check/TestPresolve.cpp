@@ -639,3 +639,25 @@ TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
   REQUIRE(h.getPresolvedLp().num_col_ == 2);
   REQUIRE(h.getPresolvedLp().num_row_ == 2);
 }
+
+TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+}
+
+TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Allow only presolve at root node
+  highs.setOptionValue("mip_root_presolve_only", true);
+  highs.readModel(model_file);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+}

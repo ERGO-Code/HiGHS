@@ -57,18 +57,20 @@ install(TARGETS highs
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
   
 # Add library targets to the build-tree export set
-export(TARGETS highs
-  NAMESPACE ${PROJECT_NAMESPACE}::highs
-  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+if (NOT HIGHS_COVERAGE)
+  export(TARGETS highs
+    NAMESPACE ${PROJECT_NAMESPACE}::highs
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
-install(EXPORT ${lower}-targets
-  NAMESPACE ${PROJECT_NAMESPACE}::
-  FILE highs-targets.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
-# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
-# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  install(EXPORT ${lower}-targets
+    NAMESPACE ${PROJECT_NAMESPACE}::
+    FILE highs-targets.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
+  # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+  # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 
 include(CMakePackageConfigHelpers)

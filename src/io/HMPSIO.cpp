@@ -913,6 +913,9 @@ HighsStatus writeMps(
                 if (lb || highs_isInfinity(ub))
                   fprintf(file, " LI BOUND     %-8s  %.10g\n",
                           col_names[c_n].c_str(), lb);
+              } else {
+                // Infinite lower bound
+                fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
               }
               if (!highs_isInfinity(ub)) {
                 // Finite upper bound

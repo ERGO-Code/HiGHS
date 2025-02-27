@@ -154,11 +154,15 @@ class HPresolve {
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  void recomputeColImpliedBounds(HighsInt row);
-
-  void recomputeRowDualImpliedBounds(HighsInt col);
-
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
+
+  void resetRowDualImpliedBounds(HighsInt row, HighsInt col = -1);
+
+  void resetColImpliedBoundsDerivedFromRow(HighsInt row);
+
+  void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
@@ -211,6 +215,9 @@ class HPresolve {
 
   void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
              std::vector<HighsInt>& ARstart);
+
+  void getRowPositions(HighsInt row,
+                       std::vector<HighsInt>& myrowpositions) const;
 
   void storeRow(HighsInt row);
 
@@ -353,7 +360,8 @@ class HPresolve {
 
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
-  Result strengthenInequalities(HighsInt& num_strenghtened);
+  Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
+                                HighsInt& num_strenghtened);
 
   HighsInt detectImpliedIntegers();
 

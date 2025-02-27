@@ -233,22 +233,28 @@ OptionStatus getLocalOptionType(
 void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(
-    FILE* file, const std::vector<OptionRecord*>& option_records,
+    FILE* file, const HighsLogOptions& report_log_options,
+    const std::vector<OptionRecord*>& option_records,
     const bool report_only_deviations = false,
     const HighsFileType file_type = HighsFileType::kFull);
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
+void reportOptions(FILE* file, const HighsLogOptions& report_log_options,
+                   const std::vector<OptionRecord*>& option_records,
                    const bool report_only_deviations = false,
                    const HighsFileType file_type = HighsFileType::kFull);
-void reportOption(FILE* file, const OptionRecordBool& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordBool& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordInt& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordInt& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordDouble& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordDouble& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
-void reportOption(FILE* file, const OptionRecordString& option,
+void reportOption(FILE* file, const HighsLogOptions& report_log_options,
+                  const OptionRecordString& option,
                   const bool report_only_deviations,
                   const HighsFileType file_type);
 
@@ -299,6 +305,8 @@ struct HighsOptionsStruct {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
+  double primal_residual_tolerance;
+  double dual_residual_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -327,6 +335,7 @@ struct HighsOptionsStruct {
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
+  bool timeless_log;
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
@@ -390,8 +399,6 @@ struct HighsOptionsStruct {
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
   bool run_centring;
-  double primal_residual_tolerance;
-  double dual_residual_tolerance;
   HighsInt max_centring_steps;
   double centring_ratio_tolerance;
 
@@ -430,6 +437,7 @@ struct HighsOptionsStruct {
   bool mip_improving_solution_save;
   bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
+  bool mip_root_presolve_only;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -452,6 +460,8 @@ struct HighsOptionsStruct {
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
         ipm_optimality_tolerance(0.0),
+        primal_residual_tolerance(0.0),
+        dual_residual_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -477,6 +487,7 @@ struct HighsOptionsStruct {
         write_presolved_model_file(""),
         output_flag(false),
         log_to_console(false),
+        timeless_log(false),
         ipm_iteration_limit(0),
         pdlp_native_termination(false),
         pdlp_scaling(false),
@@ -528,8 +539,6 @@ struct HighsOptionsStruct {
         less_infeasible_DSE_choose_row(false),
         use_original_HFactor_logic(false),
         run_centring(false),
-        primal_residual_tolerance(0.0),
-        dual_residual_tolerance(0.0),
         max_centring_steps(0),
         centring_ratio_tolerance(0.0),
         icrash(false),
@@ -564,7 +573,8 @@ struct HighsOptionsStruct {
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
         // clang-format off
-	mip_improving_solution_file("") {};
+        mip_improving_solution_file(""),
+        mip_root_presolve_only(false) {};
   // clang-format on
 };
 
@@ -708,6 +718,16 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
+        "primal_residual_tolerance", "Primal residual tolerance", advanced,
+        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "dual_residual_tolerance", "Dual residual tolerance", advanced,
+        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
         "objective_bound",
         "Objective bound for termination of the dual simplex solver", advanced,
         &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
@@ -755,7 +775,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
-        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
         advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
         kSimplexStrategyMax);
     records.push_back(record_int);
@@ -829,6 +849,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("log_to_console",
                                        "Enables or disables console logging",
                                        advanced, &log_to_console, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "timeless_log", "Suppression of time-based data in logging", true,
+        &timeless_log, false);
     records.push_back(record_bool);
 
     record_string =
@@ -979,6 +1004,12 @@ class HighsOptions : public HighsOptionsStruct {
         "string \\\"\\\"",
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
+
+    record_bool = new OptionRecordBool(
+        "mip_root_presolve_only",
+        "Whether MIP presolve is only applied at the root node", advanced,
+        &mip_root_presolve_only, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,
@@ -1134,11 +1165,12 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_int = new OptionRecordInt(
-        "log_dev_level",
-        "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
-        kHighsLogDevLevelMax);
+    record_int =
+        new OptionRecordInt("log_dev_level",
+                            "Output development messages: 0 => none; 1 => "
+                            "info; 2 => detailed; 3 => verbose",
+                            advanced, &log_dev_level, kHighsLogDevLevelMin,
+                            kHighsLogDevLevelNone, kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("log_githash", "Log the githash",
@@ -1397,16 +1429,6 @@ class HighsOptions : public HighsOptionsStruct {
         "Centring stops when the ratio max(x_j*s_j) / min(x_j*s_j) is below "
         "this tolerance (default = 100)",
         advanced, &centring_ratio_tolerance, 0, 100, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
-    records.push_back(record_double);
-
-    record_double = new OptionRecordDouble(
-        "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     // Set up the log_options aliases

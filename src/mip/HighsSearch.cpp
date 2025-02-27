@@ -1530,7 +1530,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     std::swap(tmpLp, lp);
 
     // reevaluate the node with LP presolve enabled
-    lp->getLpSolver().setOptionValue("presolve", "on");
+    lp->getLpSolver().setOptionValue("presolve", kHighsOnString);
     result = evaluateNode();
 
     if (result == NodeResult::kOpen) {

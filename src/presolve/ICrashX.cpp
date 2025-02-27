@@ -20,12 +20,13 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
                           HighsCallback& highs_callback) {
   ipx::Int num_col, num_row;
+  double offset;
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
 
-  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
-                rhs, constraint_type);
+  fillInIpxData(lp, num_col, num_row, offset, objective, col_lb, col_ub, Ap, Ai,
+                Av, rhs, constraint_type);
   // if (res != IpxStatus::OK) return HighsStatus::kError;
 
   const HighsLogOptions& log_options = options.log_options;
@@ -55,7 +56,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   lps.SetCallback(&highs_callback);
 
   ipx::Int load_status = lps.LoadModel(
-      num_col, objective.data(), col_lb.data(), col_ub.data(), num_row,
+      num_col, offset, objective.data(), col_lb.data(), col_ub.data(), num_row,
       Ap.data(), Ai.data(), Av.data(), rhs.data(), constraint_type.data());
   if (load_status != 0) {
     highsLogUser(log_options, HighsLogType::kError,

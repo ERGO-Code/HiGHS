@@ -802,6 +802,14 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
 }
 
+HighsInt Highs_ensureColwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureColwise();
+}
+
+HighsInt Highs_ensureRowwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureRowwise();
+}
+
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
   ObjSense pass_sense = ObjSense::kMinimize;
   if (sense == (HighsInt)ObjSense::kMaximize) pass_sense = ObjSense::kMaximize;

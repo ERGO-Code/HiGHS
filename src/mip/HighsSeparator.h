@@ -30,8 +30,7 @@ class HighsSeparator {
   int clockIndex;
 
  public:
-  HighsSeparator(const HighsMipSolver& mipsolver, const char* name,
-                 const char* ch3_name);
+  HighsSeparator(const HighsMipSolver& mipsolver, const char* name);
 
   virtual void separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                   HighsLpAggregator& lpAggregator,
