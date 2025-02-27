@@ -908,6 +908,7 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  if (!options_.use_warm_start) this->clearSolver();
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
   if (num_linear_objective == 0) return this->solve();
   return this->multiobjectiveSolve();

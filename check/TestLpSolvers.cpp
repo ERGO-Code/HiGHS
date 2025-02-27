@@ -679,3 +679,18 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   REQUIRE(simplex_stats.row_DSE_density > 0);
   if (dev_run) h.reportSimplexStats(stdout);
 }
+
+TEST_CASE("use_warm_start", "[highs_lp_solver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  h.run();
+  HighsInt required_iteration_count = h.getInfo().simplex_iteration_count;
+  h.setOptionValue("use_warm_start", false);
+  h.run();
+  HighsInt iteration_count = h.getInfo().simplex_iteration_count;
+  REQUIRE(iteration_count == required_iteration_count);
+}

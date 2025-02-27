@@ -365,6 +365,7 @@ struct HighsOptionsStruct {
   bool use_implied_bounds_from_presolve;
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
+  bool use_warm_start;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -505,6 +506,7 @@ struct HighsOptionsStruct {
         use_implied_bounds_from_presolve(false),
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
+        use_warm_start(true),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -1204,6 +1206,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("mps_parser_type_free",
                                        "Use the free format MPS file reader",
                                        advanced, &mps_parser_type_free, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("use_warm_start",
+                                       "Use any warm start that is available",
+                                       advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
     record_int =
