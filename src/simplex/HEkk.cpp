@@ -273,17 +273,6 @@ void HEkk::clearEkkNlaInfo() {
   info.update_limit = 0;
 }
 
-void HotStart::clear() {
-  this->valid = false;
-  this->refactor_info.clear();
-  this->nonbasicMove.clear();
-}
-
-void HEkk::clearHotStart() {
-  this->hot_start_.clear();
-  this->simplex_nla_.factor_.refactor_info_.clear();
-}
-
 void HEkk::invalidate() {
   this->status_.initialised_for_new_lp = false;
   assert(!this->status_.is_dualized);
@@ -334,7 +323,6 @@ void HEkk::updateStatus(LpAction action) {
   switch (action) {
     case LpAction::kScale:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
       break;
     case LpAction::kNewCosts:
       this->status_.has_fresh_rebuild = false;
@@ -348,11 +336,9 @@ void HEkk::updateStatus(LpAction action) {
       break;
     case LpAction::kNewBasis:
       this->invalidateBasis();
-      this->clearHotStart();
       break;
     case LpAction::kNewCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
@@ -363,40 +349,29 @@ void HEkk::updateStatus(LpAction action) {
         // Clear everything
         this->clear();
       }
-      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasis();
       break;
     case LpAction::kDelNonbasicCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasis();
       break;
     case LpAction::kDelRows:
       this->clear();
-      this->clearHotStart();
       //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
       assert(1 == 0);
-      this->clearHotStart();
       //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
       break;
     case LpAction::kScaledRow:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
-      break;
-    case LpAction::kHotStart:
-      this->clearEkkData();  //
-      this->clearNlaInvertStatus();
       break;
     case LpAction::kBacktracking:
       this->status_.has_ar_matrix = false;

@@ -83,7 +83,6 @@ class HEkk {
   void setNlaPointersForLpAndScale(const HighsLp& lp);
   void setNlaPointersForTrans(const HighsLp& lp);
   void setNlaRefactorInfo();
-  void clearHotStart();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
 
@@ -191,6 +190,9 @@ class HEkk {
   HighsSparseMatrix ar_matrix_;
   HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
+
+  // Unused, but retained since there is a const reference to this in
+  // a deprecated method
   HotStart hot_start_;
 
   double cost_scale_;

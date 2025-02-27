@@ -132,10 +132,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Consider scaling the LP - either with any existing scaling, or by
   // considering computing scaling factors if there are none - and
   // then move to EKK
-  const bool new_scaling = considerScaling(options, incumbent_lp);
-  // If new scaling is performed, the hot start information is
-  // no longer valid
-  if (new_scaling) ekk_instance.clearHotStart();
+  considerScaling(options, incumbent_lp);
   //
   if (!status.has_basis && !basis.valid && basis.useful) {
     // There is no simplex basis, but there is a useful HiGHS basis

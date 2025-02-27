@@ -1354,9 +1354,6 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   lp.ensureColwise();
   // Consider scaling the LP
   const bool new_scaling = considerScaling(options, lp);
-  // If new scaling is performed, the hot start information is
-  // no longer valid
-  if (new_scaling) ekk_instance.clearHotStart();
   const bool check_basis = basis.alien || (!basis.valid && basis.useful);
   if (check_basis) {
     // The basis needs to be checked for rank deficiency, and possibly
