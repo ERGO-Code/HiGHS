@@ -3053,7 +3053,8 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
-                           HighsInt* start, HighsInt* index, double* value) const {
+                           HighsInt* start, HighsInt* index,
+                           double* value) const {
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
   assert(!create_error);

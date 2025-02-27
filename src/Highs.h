@@ -404,7 +404,7 @@ class Highs {
   /**
    * @brief Get the size of HighsInt
    */
-  HighsInt getSizeofHighsInt()  const {
+  HighsInt getSizeofHighsInt() const {
     return sizeof(options_.num_user_settable_options_);
   }
 
@@ -831,7 +831,8 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value) const;
+  HighsStatus getCoeff(const HighsInt row, const HighsInt col,
+                       double& value) const;
 
   /**
    * @brief Write out the incumbent model to a file
@@ -1406,7 +1407,10 @@ class Highs {
    * @brief Set up for simplex using the supplied hot start
    * data. Advanced method: for HiGHS MIP solver
    */
-  HighsStatus setHotStart(const HotStart& hot_start) { this->deprecationMessage("setHotStart", "None"); return HighsStatus::kError; }
+  HighsStatus setHotStart(const HotStart& hot_start) {
+    this->deprecationMessage("setHotStart", "None");
+    return HighsStatus::kError;
+  }
 
   /**
    * @brief Freeze the current internal HighsBasis instance and
@@ -1414,20 +1418,27 @@ class Highs {
    * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
    * solver
    */
-  HighsStatus freezeBasis(HighsInt& frozen_basis_id) { this->deprecationMessage("freezeBasis", "None"); return HighsStatus::kError; }
+  HighsStatus freezeBasis(HighsInt& frozen_basis_id) {
+    this->deprecationMessage("freezeBasis", "None");
+    return HighsStatus::kError;
+  }
 
   /**
    * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
    * possible). Advanced method: for HiGHS MIP solver
    */
-  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id) { this->deprecationMessage("unfreezeBasis", "None"); return HighsStatus::kError; }
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id) {
+    this->deprecationMessage("unfreezeBasis", "None");
+    return HighsStatus::kError;
+  }
 
   /**
    * @brief Check that all frozen basis data has been
    * cleared. Advanced method: for HiGHS MIP solver
    */
   HighsStatus frozenBasisAllDataClear() {
-    this->deprecationMessage("frozenBasisAllDataClear", "None"); return HighsStatus::kError; 
+    this->deprecationMessage("frozenBasisAllDataClear", "None");
+    return HighsStatus::kError;
   }
 
   // End of deprecated methods

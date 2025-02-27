@@ -786,7 +786,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
 }
 
 void Highs::getCoefficientInterface(const HighsInt ext_row,
-                                    const HighsInt ext_col, double& value) const {
+                                    const HighsInt ext_col,
+                                    double& value) const {
   const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
@@ -794,18 +795,18 @@ void Highs::getCoefficientInterface(const HighsInt ext_row,
 
   if (lp.a_matrix_.isColwise()) {
     for (HighsInt el = lp.a_matrix_.start_[ext_col];
-	 el < lp.a_matrix_.start_[ext_col + 1]; el++) {
+         el < lp.a_matrix_.start_[ext_col + 1]; el++) {
       if (lp.a_matrix_.index_[el] == ext_row) {
-	value = lp.a_matrix_.value_[el];
-	break;
+        value = lp.a_matrix_.value_[el];
+        break;
       }
     }
   } else {
     for (HighsInt el = lp.a_matrix_.start_[ext_row];
-	 el < lp.a_matrix_.start_[ext_row + 1]; el++) {
+         el < lp.a_matrix_.start_[ext_row + 1]; el++) {
       if (lp.a_matrix_.index_[el] == ext_col) {
-	value = lp.a_matrix_.value_[el];
-	break;
+        value = lp.a_matrix_.value_[el];
+        break;
       }
     }
   }
