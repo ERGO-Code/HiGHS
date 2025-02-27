@@ -141,7 +141,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   return ncuts;
 }
 
-void HighsSeparation::separate(HighsDomain& propdomain) {
+void HighsSeparation::separate(HighsMipWorker& worker, HighsDomain& propdomain) {
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
@@ -156,10 +156,13 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       HighsInt ncuts = separationRound(propdomain, status);
       nlpiters += lp->getNumLpIterations();
 
-      // todo: replace with mipworker iterations field
+      // replace with mipworker iterations field
+      // mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
+      // mipsolver.mipdata_->total_lp_iterations += nlpiters;
+      
+      // todo:ig  more stats for separation iterations?
+      worker.heur_stats.lp_iterations += nlpiters;
 
-      mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
-      mipsolver.mipdata_->total_lp_iterations += nlpiters;
       // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);
 
       // printf(
@@ -182,6 +185,9 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // printf("no separation, just aging. status: %" HIGHSINT_FORMAT "\n",
     //        (HighsInt)status);
     lp->performAging(true);
-    mipsolver.mipdata_->cutpool.performAging();
+
+    // mipsolver.mipdata_->cutpool.performAging();
+    // ig: using worker cutpool
+    worker.cutpool_.performAging();
   }
 }

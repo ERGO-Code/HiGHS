@@ -698,7 +698,7 @@ restart:
       }
 
       // the node is still not fathomed, so perform separation
-      sepa.separate(search.getLocalDomain());
+      sepa.separate(master_worker, search.getLocalDomain());
 
       if (mipdata_->domain.infeasible()) {
         search.cutoffNode();
