@@ -852,7 +852,7 @@ class Highs {
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename = "");
+  HighsStatus writeBasis(const std::string& filename = "") const;
 
   /**
    * Methods for incumbent model modification

@@ -797,7 +797,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string& filename) {
+HighsStatus Highs::writeBasis(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -812,7 +812,7 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
                  "Writing the basis to %s\n", filename.c_str());
   writeBasisFile(file, basis_);
   if (file != stdout) fclose(file);
-  return returnFromHighs(return_status);
+  return return_status;
 }
 
 HighsStatus Highs::presolve() {
