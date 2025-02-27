@@ -649,3 +649,15 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 }
+
+TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
+  std::string model_file = model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Allow only presolve at root node
+  highs.setOptionValue("mip_root_presolve_only", true);
+  highs.readModel(model_file);
+  REQUIRE(h.run() == HighsStatus::kOk);
+}
