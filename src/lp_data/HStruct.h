@@ -30,7 +30,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
-  bool hasUndefined();
+  bool hasUndefined() const;
   void invalidate();
   void clear();
 };
