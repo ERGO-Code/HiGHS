@@ -61,7 +61,7 @@ class HighsDomain {
   class ConflictSet {
     friend class HighsDomain;
     HighsDomain& localdom;
-    HighsDomain& globaldom;
+    const HighsDomain& globaldom;
 
    public:
     struct LocalDomChg {
