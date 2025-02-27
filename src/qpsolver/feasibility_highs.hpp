@@ -58,7 +58,7 @@ static void computeStartingPointHighs(
 
     // set HiGHS to be silent
     highs.setOptionValue("output_flag", false);
-    highs.setOptionValue("presolve", "on");
+    highs.setOptionValue("presolve", kHighsOnString);
     // Set the residual time limit
     const double use_time_limit =
         std::max(settings.time_limit - timer.read(), 0.001);
