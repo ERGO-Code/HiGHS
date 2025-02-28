@@ -36,7 +36,8 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::kSuccess:
         lp.ensureColwise();
         assert(model.lp_.objective_name_ != "");
-        return parser.warning_issued_ ? FilereaderRetcode::kWarning : FilereaderRetcode::kOk;
+        return parser.warning_issued_ ? FilereaderRetcode::kWarning
+                                      : FilereaderRetcode::kOk;
       case FreeFormatParserReturnCode::kParserError:
         return FilereaderRetcode::kParserError;
       case FreeFormatParserReturnCode::kFileNotFound:
@@ -66,14 +67,14 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.row_lower_, lp.row_upper_, lp.integrality_, lp.objective_name_,
               lp.col_names_, lp.row_names_, hessian.dim_, hessian.start_,
               hessian.index_, hessian.value_, lp.cost_row_location_,
-	      warning_issued,
-              options.keep_n_rows);
+              warning_issued, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) lp.ensureColwise();
   // Comment on existence of names with spaces
   hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);
   hasNamesWithSpaces(options.log_options, lp.num_row_, lp.row_names_);
   assert(model.lp_.objective_name_ != "");
-  if (return_code == FilereaderRetcode::kOk && warning_issued) return_code = FilereaderRetcode::kWarning;
+  if (return_code == FilereaderRetcode::kOk && warning_issued)
+    return_code = FilereaderRetcode::kWarning;
   return return_code;
 }
 

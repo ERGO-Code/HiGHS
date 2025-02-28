@@ -10,7 +10,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double inf = kHighsInf;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
@@ -153,7 +153,8 @@ void freeFixedModelTest(const std::string model_name) {
 
   HighsModel model_free = highs.getModel();
 
-  REQUIRE(highs.setOptionValue("mps_parser_type_free", false) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("mps_parser_type_free", false) ==
+          HighsStatus::kOk);
 
   REQUIRE(highs.readModel(filename) == HighsStatus::kWarning);
 
@@ -437,9 +438,10 @@ TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
 }
 
 TEST_CASE("mps-warnings", "[highs_filereader]") {
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/warnings.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/warnings.mps";
   Highs h;
-  //highs.setOptionValue("output_flag", dev_run);
+  // highs.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kWarning);
 }
