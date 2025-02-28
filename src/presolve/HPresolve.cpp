@@ -1671,11 +1671,12 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // lifting for probing (only performed when probing did not modify the
     // problem so far and at least 2 percent of the variables in the problem are
     // continuous)
-    if (mipsolver->options_mip_->mip_lifting_for_probing &&
-        numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
-        modelHasPercentageContVars(size_t{2})) {
-      // apply lifting
-      liftingForProbing();
+    if (mipsolver->options_mip_->mip_lifting_for_probing) {
+      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
+          modelHasPercentageContVars(size_t{2})) {
+        // apply lifting
+        liftingForProbing();
+      }
       // clear lifting opportunities
       liftingOpportunities.clear();
       implications.storeLiftingOpportunity = nullptr;
