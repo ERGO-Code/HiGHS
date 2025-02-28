@@ -349,6 +349,7 @@ restart:
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
         if (search.currentNodePruned()) {
+          // ig: do we update num_leaves here? 
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {

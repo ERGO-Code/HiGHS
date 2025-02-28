@@ -150,27 +150,29 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                             false)) {
       bool addedConstraints = false;
 
-      HighsInt oldNumConflicts =
-          mipsolver.mipdata_->conflictPool.getNumConflicts();
-      for (const HighsDomainChange& domchg : boundChanges) {
-        if (localdomain.isActive(domchg)) continue;
-        localdomain.conflictAnalyzeReconvergence(
-            domchg, inds.data(), vals.data(), inds.size(), rhs,
-            mipsolver.mipdata_->conflictPool);
-      }
-      addedConstraints =
-          mipsolver.mipdata_->conflictPool.getNumConflicts() != oldNumConflicts;
+      if (mipsolver.mipdata_->workers.size() <= 1) {
+        HighsInt oldNumConflicts =
+            mipsolver.mipdata_->conflictPool.getNumConflicts();
+        for (const HighsDomainChange& domchg : boundChanges) {
+          if (localdomain.isActive(domchg)) continue;
+          localdomain.conflictAnalyzeReconvergence(
+              domchg, inds.data(), vals.data(), inds.size(), rhs,
+              mipsolver.mipdata_->conflictPool);
+        }
+        addedConstraints =
+            mipsolver.mipdata_->conflictPool.getNumConflicts() != oldNumConflicts;
 
-      if (addedConstraints) {
-        localdomain.propagate();
-        if (localdomain.infeasible()) return;
+        if (addedConstraints) {
+          localdomain.propagate();
+          if (localdomain.infeasible()) return;
 
-        boundChanges.erase(
-            std::remove_if(boundChanges.begin(), boundChanges.end(),
-                           [&](const HighsDomainChange& domchg) {
-                             return localdomain.isActive(domchg);
-                           }),
-            boundChanges.end());
+          boundChanges.erase(
+              std::remove_if(boundChanges.begin(), boundChanges.end(),
+                            [&](const HighsDomainChange& domchg) {
+                              return localdomain.isActive(domchg);
+                            }),
+              boundChanges.end());
+        }
       }
 
       if (!boundChanges.empty()) {

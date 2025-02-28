@@ -344,7 +344,7 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           substitutions.push_back(substitution);
           colsubstituted[implcol] = true;
           ++numReductions;
-        } else {
+        } else if (mipsolver.mipdata_->workers.size() <= 1) {
           double lb = std::min(lbDown, lbUp);
           double ub = std::max(ubDown, ubUp);
 
@@ -558,7 +558,9 @@ void HighsImplications::separateImpliedBounds(
     if (nextCleanupCall < 0) {
       // HighsInt oldNumEntries =
       // mipsolver.mipdata_->cliquetable.getNumEntries();
-      mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
+      if (mipsolver.mipdata_->workers.size() <= 1)
+        mipsolver.mipdata_->cliquetable.runCliqueMerging(globaldomain);
+
       // printf("numEntries: %d, beforeMerging: %d\n",
       //        mipsolver.mipdata_->cliquetable.getNumEntries(), oldNumEntries);
       nextCleanupCall =
@@ -567,7 +569,8 @@ void HighsImplications::separateImpliedBounds(
       // printf("nextCleanupCall: %d\n", nextCleanupCall);
     }
 
-    mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
+    if (mipsolver.mipdata_->workers.size() <= 1)
+      mipsolver.mipdata_->cliquetable.numNeighbourhoodQueries = oldNumQueries;
   }
 
   for (std::pair<HighsInt, double> fracint :

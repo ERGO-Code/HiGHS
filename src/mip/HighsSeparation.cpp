@@ -79,10 +79,12 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     return numBoundChgs;
   };
 
-  lp->getMipSolver().timer_.start(implBoundClock);
-  mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
-                                             mipdata.cutpool, mipdata.feastol);
-  lp->getMipSolver().timer_.stop(implBoundClock);
+  if (&propdomain == &mipdata.domain) {
+    lp->getMipSolver().timer_.start(implBoundClock);
+    mipdata.implications.separateImpliedBounds(*lp, lp->getSolution().col_value,
+                                              mipdata.cutpool, mipdata.feastol);
+    lp->getMipSolver().timer_.stop(implBoundClock);
+  }
 
   HighsInt ncuts = 0;
   HighsInt numboundchgs = propagateAndResolve();
@@ -91,10 +93,12 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  lp->getMipSolver().timer_.start(cliqueClock);
-  mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
-                                      mipdata.cutpool, mipdata.feastol);
-  lp->getMipSolver().timer_.stop(cliqueClock);
+  if (&propdomain == &mipdata.domain) {
+    lp->getMipSolver().timer_.start(cliqueClock);
+    mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
+                                        mipdata.cutpool, mipdata.feastol);
+    lp->getMipSolver().timer_.stop(cliqueClock);
+  }
 
   numboundchgs = propagateAndResolve();
   if (numboundchgs == -1)
@@ -112,11 +116,13 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   }
   HighsLpAggregator lpAggregator(*lp);
 
-  for (const std::unique_ptr<HighsSeparator>& separator : separators) {
-    separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
-    if (mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::kInfeasible;
-      return 0;
+  if (&propdomain == &mipdata.domain) {
+    for (const std::unique_ptr<HighsSeparator>& separator : separators) {
+      separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
+      if (mipdata.domain.infeasible()) {
+        status = HighsLpRelaxation::Status::kInfeasible;
+        return 0;
+      }
     }
   }
 
@@ -126,13 +132,17 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   else
     ncuts += numboundchgs;
 
-  mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol);
+  if (&propdomain == &mipdata.domain) {
+    mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol);
+  }
 
   if (cutset.numCuts() > 0) {
     ncuts += cutset.numCuts();
     lp->addCuts(cutset);
     status = lp->resolveLp(&propdomain);
     lp->performAging(true);
+
+    // only for the master domain.
     if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
       mipdata.redcostfixing.addRootRedcost(
           mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
