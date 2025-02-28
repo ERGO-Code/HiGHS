@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -291,6 +288,58 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
       ->passHessian(dim, num_nz, format, start, index, value);
 }
 
+HighsInt Highs_passLinearObjectives(const void* highs,
+                                    const HighsInt num_linear_objective,
+                                    const double* weight, const double* offset,
+                                    const double* coefficients,
+                                    const double* abs_tolerance,
+                                    const double* rel_tolerance,
+                                    const HighsInt* priority) {
+  HighsInt status = Highs_clearLinearObjectives(highs);
+  if (status != kHighsStatusOk) return status;
+  HighsLinearObjective linear_objective;
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    HighsInt num_col = Highs_getNumCol(highs);
+    linear_objective.weight = weight[iObj];
+    linear_objective.offset = offset[iObj];
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+      linear_objective.coefficients.push_back(
+          coefficients[iObj * num_col + iCol]);
+    linear_objective.abs_tolerance = abs_tolerance[iObj];
+    linear_objective.rel_tolerance = rel_tolerance[iObj];
+    linear_objective.priority = priority[iObj];
+    linear_objective.weight = weight[iObj];
+    status =
+        HighsInt(((Highs*)highs)->addLinearObjective(linear_objective, iObj));
+    if (status != kHighsStatusOk) return status;
+    linear_objective.coefficients.clear();
+  }
+  return kHighsStatusOk;
+}
+
+HighsInt Highs_addLinearObjective(const void* highs, const double weight,
+                                  const double offset,
+                                  const double* coefficients,
+                                  const double abs_tolerance,
+                                  const double rel_tolerance,
+                                  const HighsInt priority) {
+  HighsLinearObjective linear_objective;
+  HighsInt num_col = Highs_getNumCol(highs);
+  linear_objective.weight = weight;
+  linear_objective.offset = offset;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    linear_objective.coefficients.push_back(coefficients[iCol]);
+  linear_objective.abs_tolerance = abs_tolerance;
+  linear_objective.rel_tolerance = rel_tolerance;
+  linear_objective.priority = priority;
+  linear_objective.weight = weight;
+  return HighsInt(((Highs*)highs)->addLinearObjective(linear_objective));
+}
+
+HighsInt Highs_clearLinearObjectives(const void* highs) {
+  return HighsInt(((Highs*)highs)->clearLinearObjectives());
+}
+
 HighsInt Highs_passRowName(const void* highs, const HighsInt row,
                            const char* name) {
   return (HighsInt)((Highs*)highs)->passRowName(row, std::string(name));
@@ -299,6 +348,10 @@ HighsInt Highs_passRowName(const void* highs, const HighsInt row,
 HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name) {
   return (HighsInt)((Highs*)highs)->passColName(col, std::string(name));
+}
+
+HighsInt Highs_passModelName(const void* highs, const char* name) {
+  return (HighsInt)((Highs*)highs)->passModelName(std::string(name));
 }
 
 HighsInt Highs_readOptions(const void* highs, const char* filename) {
@@ -525,6 +578,17 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
   return retcode;
 }
 
+HighsInt Highs_getDualUnboundednessDirection(
+    const void* highs, HighsInt* has_dual_unboundedness_direction,
+    double* dual_unboundedness_direction_value) {
+  bool v;
+  HighsInt retcode = (HighsInt)((Highs*)highs)
+                         ->getDualUnboundednessDirection(
+                             v, dual_unboundedness_direction_value);
+  *has_dual_unboundedness_direction = (HighsInt)v;
+  return retcode;
+}
+
 HighsInt Highs_getPrimalRay(const void* highs, HighsInt* has_primal_ray,
                             double* primal_ray_value) {
   bool v;
@@ -736,6 +800,14 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const HighsInt* index, const double* value) {
   return (HighsInt)((Highs*)highs)
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
+}
+
+HighsInt Highs_ensureColwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureColwise();
+}
+
+HighsInt Highs_ensureRowwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureRowwise();
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {

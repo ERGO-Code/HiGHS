@@ -7,9 +7,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 12 is Intel
-  build_macos_12:
-    runs-on: macos-12
+  # macos 13 is Intel
+  build_macos_13:
+    runs-on: macos-13
     # strategy:
       # matrix:
       #   python: [3.11]
@@ -35,7 +35,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -56,7 +56,7 @@ jobs:
 
 
             
-  # macos 14 is M1 (beta)
+  # macos 14 is M1
   build_macos_14:
     runs-on: macos-14 
     steps:
@@ -81,7 +81,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -124,7 +124,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -167,7 +167,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -212,7 +212,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - name: Add local feed 
         run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
@@ -228,5 +228,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.7.2 -s ${{runner.workspace}}\nugets 
+          dotnet add package Highs.Native -v 1.9.0 -s ${{runner.workspace}}\nugets 
           dotnet run

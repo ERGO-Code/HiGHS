@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -44,7 +41,6 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   double primal_feastol;
-  HighsInt run_clock = -1;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -162,11 +158,15 @@ class HPresolve {
 
   void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  void recomputeColImpliedBounds(HighsInt row);
-
-  void recomputeRowDualImpliedBounds(HighsInt col);
-
   void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
+
+  void resetColImpliedBounds(HighsInt col, HighsInt row = -1);
+
+  void resetRowDualImpliedBounds(HighsInt row, HighsInt col = -1);
+
+  void resetColImpliedBoundsDerivedFromRow(HighsInt row);
+
+  void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
@@ -178,9 +178,16 @@ class HPresolve {
                                        HighsPostsolveStack::RowType& rowType,
                                        bool relaxRowDualBounds = false);
 
+  bool isImpliedEquationAtLower(HighsInt row) const;
+
+  bool isImpliedEquationAtUpper(HighsInt row) const;
+
   bool isImpliedIntegral(HighsInt col);
 
   bool isImpliedInteger(HighsInt col);
+
+  bool convertImpliedInteger(HighsInt col, HighsInt row = -1,
+                             bool skipInputChecks = false);
 
   bool isLowerImplied(HighsInt col) const;
 
@@ -212,6 +219,9 @@ class HPresolve {
 
   void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
              std::vector<HighsInt>& ARstart);
+
+  void getRowPositions(HighsInt row,
+                       std::vector<HighsInt>& myrowpositions) const;
 
   void storeRow(HighsInt row);
 
@@ -270,6 +280,10 @@ class HPresolve {
 
   Result presolve(HighsPostsolveStack& postsolve_stack);
 
+  Result removeSlacks(HighsPostsolveStack& postsolve_stack);
+
+  Result checkTimeLimit();
+
   Result checkLimits(HighsPostsolveStack& postsolve_stack);
 
   void storeCurrentProblemSize();
@@ -311,9 +325,15 @@ class HPresolve {
 
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
+  void substituteFreeCol(HighsPostsolveStack& postsolve_stack, HighsInt row,
+                         HighsInt col, bool relaxRowDualBounds = false);
+
   Result rowPresolve(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result colPresolve(HighsPostsolveStack& postsolve_stack, HighsInt col);
+
+  Result detectDominatedCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
+                            bool handleSingletonRows = true);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
@@ -346,11 +366,17 @@ class HPresolve {
 
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
-  HighsInt strengthenInequalities();
+  Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
+                                HighsInt& num_strenghtened);
 
   HighsInt detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
+
+  template <typename RowStorageFormat>
+  Result equalityRowAddition(HighsPostsolveStack& postsolve_stack,
+                             HighsInt stayrow, HighsInt removerow, double scale,
+                             const HighsMatrixSlice<RowStorageFormat>& vector);
 
   Result sparsify(HighsPostsolveStack& postsolve_stack);
 

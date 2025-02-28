@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -151,6 +148,24 @@ class Highs {
                           const HighsInt format, const HighsInt* start,
                           const HighsInt* index, const double* value);
   /**
+   * @brief Pass multiple linear objectives for the incumbent model
+   */
+  HighsStatus passLinearObjectives(
+      const HighsInt num_linear_objective,
+      const HighsLinearObjective* linear_objective);
+
+  /**
+   * @brief Add a linear objective for the incumbent model
+   */
+  HighsStatus addLinearObjective(const HighsLinearObjective& linear_objective,
+                                 const HighsInt iObj = -1);
+
+  /**
+   * @brief Clear the multiple linear objective data
+   */
+  HighsStatus clearLinearObjectives();
+
+  /**
    * @brief Pass a column name to the incumbent model
    */
   HighsStatus passColName(const HighsInt col, const std::string& name);
@@ -159,6 +174,11 @@ class Highs {
    * @brief Pass a row name to the incumbent model
    */
   HighsStatus passRowName(const HighsInt row, const std::string& name);
+
+  /**
+   * @brief Pass a model name to the incumbent model
+   */
+  HighsStatus passModelName(const std::string& name);
 
   /**
    * @brief Read in a model
@@ -171,12 +191,14 @@ class Highs {
   HighsStatus readBasis(const std::string& filename);
 
   /**
-   * @brief Presolve the incumbent model
+   * @brief Presolve the incumbent model, allowing the presolved model
+   * to be extracted. Subsequent solution of the incumbent model will
+   * only use presolve if there is no valid basis
    */
   HighsStatus presolve();
 
   /**
-   * @brief Solve the incumbent model according to the specified options
+   * @brief Run the solver, accounting for any multiple objective
    */
   HighsStatus run();
 
@@ -290,11 +312,11 @@ class Highs {
 
   /**
    * @brief Write (deviations from default values of) the options to a
-   * file, with the extension ".html" producing HTML, otherwise using
-   * the standard format used to read options from a file.
+   * file, using the standard format used to read options from a file.
+   * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false) const;
+                           const bool report_only_deviations = false);
 
   /**
    * @brief Returns the number of user-settable options
@@ -377,23 +399,34 @@ class Highs {
   /**
    * @brief Get the value of infinity used by HiGHS
    */
-  double getInfinity() { return kHighsInf; }
+  double getInfinity() const { return kHighsInf; }
 
   /**
    * @brief Get the size of HighsInt
    */
-  HighsInt getSizeofHighsInt() {
+  HighsInt getSizeofHighsInt() const {
     return sizeof(options_.num_user_settable_options_);
   }
 
   /**
    * @brief Get the run time of HiGHS
    */
-  double getRunTime() { return timer_.readRunHighsClock(); }
+  double getRunTime() const { return timer_.read(); }
 
   /**
    * Methods for model output
    */
+
+  /**
+   * @brief Identify the standard form of the HighsLp instance in
+   * HiGHS
+   */
+  HighsStatus getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
+                                HighsInt& num_nz, double& offset,
+                                double* cost = nullptr, double* rhs = nullptr,
+                                HighsInt* start = nullptr,
+                                HighsInt* index = nullptr,
+                                double* value = nullptr);
 
   /**
    * @brief Return a const reference to the presolved HighsLp instance in HiGHS
@@ -477,20 +510,31 @@ class Highs {
   }
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does and dual_ray is not nullptr
+   * @brief Indicate whether a dual unbounded ray exists, and (at the
+   * expense of solving an LP) gets it if it does not and
+   * dual_ray_value is not nullptr
    */
   HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = nullptr);
 
   /**
-   * @brief Indicate whether a dual unbounded ray exists, and gets
-   * it if it does
+   * @brief Indicate whether a dual unbounded ray exists, and gets it
+   * if it does
    */
   HighsStatus getDualRaySparse(bool& has_dual_ray, HVector& row_ep_buffer);
 
   /**
-   * @brief Indicate whether a primal unbounded ray exists, and gets
-   * it if it does and primal_ray is not nullptr
+   * @brief Indicate whether a dual unboundedness direction exists,
+   * and (at the expense of solving an LP) gets it if
+   * dual_unboundedness_direction is not nullptr
+   */
+  HighsStatus getDualUnboundednessDirection(
+      bool& has_dual_unboundedness_direction,
+      double* dual_unboundedness_direction_value = nullptr);
+
+  /**
+   * @brief Indicate whether a primal unbounded ray exists, and (at
+   * the expense of solving an LP) gets it if primal_ray is not
+   * nullptr
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = nullptr);
@@ -525,9 +569,14 @@ class Highs {
   HighsStatus getIis(HighsIis& iis);
 
   /**
-   * @brief Get the current model objective value
+   * @brief Get the current model objective function value
    */
   double getObjectiveValue() const { return info_.objective_function_value; }
+
+  /**
+   * @brief Try to get the current dual objective function value
+   */
+  HighsStatus getDualObjectiveValue(double& dual_objective_value) const;
 
   /**
    * Methods for operations with the invertible representation of the
@@ -604,6 +653,14 @@ class Highs {
                                HighsInt* col_indices = nullptr);
 
   /**
+   * @brief Get the condition number of the current basis matrix,
+   * possibly computing it exactly and reporting the error in the
+   * approximate condition number
+   */
+  HighsStatus getKappa(double& kappa, const bool exact = false,
+                       const bool report = false) const;
+
+  /**
    * @brief Get the number of columns in the incumbent model
    */
   HighsInt getNumCol() const { return model_.lp_.num_col_; }
@@ -653,7 +710,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get multiple columns from the model given by a set
@@ -672,7 +729,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with row indices for the columns
       double* value  //!< Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get multiple columns from the model given by a mask
@@ -689,7 +746,7 @@ class Highs {
       HighsInt*
           index,     //!<  Array of size num_nz with row indices for the columns
       double* value  //!<  Array of size num_nz with row values for the columns
-  );
+  ) const;
 
   /**
    * @brief Get a column name from the incumbent model
@@ -725,7 +782,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get multiple rows from the model given by a set
@@ -743,7 +800,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get multiple rows from the model given by a mask
@@ -759,7 +816,7 @@ class Highs {
       HighsInt*
           index,     //!< Array of size num_nz with column indices for the rows
       double* value  //!< Array of size num_nz with column values for the rows
-  );
+  ) const;
 
   /**
    * @brief Get a row name from the incumbent model
@@ -774,7 +831,8 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  HighsStatus getCoeff(const HighsInt row, const HighsInt col, double& value);
+  HighsStatus getCoeff(const HighsInt row, const HighsInt col,
+                       double& value) const;
 
   /**
    * @brief Write out the incumbent model to a file
@@ -795,7 +853,7 @@ class Highs {
   /**
    * @brief Write out the internal HighsBasis instance to a file
    */
-  HighsStatus writeBasis(const std::string& filename = "");
+  HighsStatus writeBasis(const std::string& filename = "") const;
 
   /**
    * Methods for incumbent model modification
@@ -991,6 +1049,16 @@ class Highs {
                       const HighsInt* starts, const HighsInt* indices,
                       const double* values);
 
+  HighsStatus ensureColwise() {
+    this->model_.lp_.ensureColwise();
+    return HighsStatus::kOk;
+  }
+
+  HighsStatus ensureRowwise() {
+    this->model_.lp_.ensureRowwise();
+    return HighsStatus::kOk;
+  }
+
   /**
    * @brief Delete multiple columns from the incumbent model given by an
    * interval [from_col, to_col]
@@ -1157,38 +1225,12 @@ class Highs {
   static void resetGlobalScheduler(bool blocking = false);
 
   // Start of advanced methods for HiGHS MIP solver
-  /**
-   * @brief Get the hot start basis data from the most recent simplex
-   * solve. Advanced method: for HiGHS MIP solver
-   */
-  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
 
-  /**
-   * @brief Set up for simplex using the supplied hot start
-   * data. Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus setHotStart(const HotStart& hot_start);
-
-  /**
-   * @brief Freeze the current internal HighsBasis instance and
-   * standard NLA, returning a value to be used to recover this basis
-   * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
-   * solver
-   */
-  HighsStatus freezeBasis(HighsInt& frozen_basis_id);
-
-  /**
-   * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
-   * possible). Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
-
-  /**
-   * @brief Check that all frozen basis data has been
-   * cleared. Advanced method: for HiGHS MIP solver
-   */
-  HighsStatus frozenBasisAllDataClear() {
-    return ekk_instance_.frozenBasisAllDataClear();
+  const HighsSimplexStats& getSimplexStats() const {
+    return ekk_instance_.getSimplexStats();
+  }
+  void reportSimplexStats(FILE* file) const {
+    ekk_instance_.reportSimplexStats(file);
   }
 
   /**
@@ -1239,6 +1281,19 @@ class Highs {
    */
   const std::vector<double>& getPrimalPhase1Dual() const {
     return ekk_instance_.primal_phase1_dual_;
+  }
+
+  /**
+   * @brief Development methods
+   */
+  HighsInt defineClock(const char* name) {
+    return this->timer_.clock_def(name);
+  }
+  void writeAllClocks() { this->timer_.writeAllClocks(); }
+  HighsStatus clearModelNames() {
+    this->model_.lp_.col_names_.clear();
+    this->model_.lp_.row_names_.clear();
+    return HighsStatus::kOk;
   }
 
   // Start of deprecated methods
@@ -1309,9 +1364,8 @@ class Highs {
 
   HighsStatus resetHighsOptions();
 
-  HighsStatus writeHighsOptions(
-      const std::string& filename,  //!< The filename
-      const bool report_only_non_default_values = true);
+  HighsStatus writeHighsOptions(const std::string& filename,  //!< The filename
+                                const bool report_only_deviations = true);
 
   HighsInt getSimplexIterationCount() {
     deprecationMessage("getSimplexIterationCount", "None");
@@ -1343,6 +1397,50 @@ class Highs {
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
 
+  /**
+   * @brief Get the hot start basis data from the most recent simplex
+   * solve. Advanced method: for HiGHS MIP solver
+   */
+  const HotStart& getHotStart() const { return ekk_instance_.hot_start_; }
+
+  /**
+   * @brief Set up for simplex using the supplied hot start
+   * data. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus setHotStart(const HotStart& hot_start) {
+    this->deprecationMessage("setHotStart", "None");
+    return HighsStatus::kError;
+  }
+
+  /**
+   * @brief Freeze the current internal HighsBasis instance and
+   * standard NLA, returning a value to be used to recover this basis
+   * and standard NLA at minimal cost. Advanced method: for HiGHS MIP
+   * solver
+   */
+  HighsStatus freezeBasis(HighsInt& frozen_basis_id) {
+    this->deprecationMessage("freezeBasis", "None");
+    return HighsStatus::kError;
+  }
+
+  /**
+   * @brief Unfreeze a frozen HighsBasis instance and standard NLA (if
+   * possible). Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id) {
+    this->deprecationMessage("unfreezeBasis", "None");
+    return HighsStatus::kError;
+  }
+
+  /**
+   * @brief Check that all frozen basis data has been
+   * cleared. Advanced method: for HiGHS MIP solver
+   */
+  HighsStatus frozenBasisAllDataClear() {
+    this->deprecationMessage("frozenBasisAllDataClear", "None");
+    return HighsStatus::kError;
+  }
+
   // End of deprecated methods
  private:
   HighsSolution solution_;
@@ -1350,6 +1448,8 @@ class Highs {
   ICrashInfo icrash_info_;
 
   HighsModel model_;
+  std::vector<HighsLinearObjective> multi_linear_objective_;
+
   HighsModel presolved_model_;
   HighsTimer timer_;
 
@@ -1358,12 +1458,17 @@ class Highs {
   HighsInfo info_;
   HighsRanging ranging_;
   HighsIis iis_;
-
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+
+  bool standard_form_valid_;
+  double standard_form_offset_;
+  std::vector<double> standard_form_cost_;
+  std::vector<double> standard_form_rhs_;
+  HighsSparseMatrix standard_form_matrix_;
 
   HEkk ekk_instance_;
 
@@ -1377,7 +1482,9 @@ class Highs {
   bool called_return_from_run = true;
   HighsInt debug_run_call_num_ = 0;
 
-  bool written_log_header = false;
+  bool written_log_header_ = false;
+
+  HighsStatus solve();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();
@@ -1409,13 +1516,11 @@ class Highs {
   // and basis data
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
-  //
-  // Sets model status, basis, solution and info from the
-  // highs_model_object
-  void setBasisValidity();
-  //
   // Clears the presolved model and its status
   void clearPresolve();
+  //
+  // Clears the standard form LP
+  void clearStandardFormLp();
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
@@ -1457,9 +1562,8 @@ class Highs {
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
-  void underDevelopmentLogMessage(const std::string& method_name);
-
   // Interface methods
+  HighsStatus formStandardFormLp();
   HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,
@@ -1480,18 +1584,17 @@ class Highs {
   void deleteRowsInterface(HighsIndexCollection& index_collection);
 
   void getColsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_col, double* col_cost, double* col_lower,
-                        double* col_upper, HighsInt& num_nz,
-                        HighsInt* col_matrix_start, HighsInt* col_matrix_index,
-                        double* col_matrix_value);
+                        HighsInt& num_col, double* cost, double* lower,
+                        double* upper, HighsInt& num_nz, HighsInt* start,
+                        HighsInt* index, double* value) const;
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
-                        HighsInt& num_row, double* row_lower, double* row_upper,
-                        HighsInt& num_nz, HighsInt* row_matrix_start,
-                        HighsInt* row_matrix_index, double* row_matrix_value);
+                        HighsInt& num_row, double* lower, double* upper,
+                        HighsInt& num_nz, HighsInt* start, HighsInt* index,
+                        double* value) const;
 
   void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
-                               double& value);
+                               double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
@@ -1522,8 +1625,6 @@ class Highs {
                                   HighsInt* solution_num_nz,
                                   HighsInt* solution_indices, bool transpose);
 
-  HighsStatus setHotStartInterface(const HotStart& hot_start);
-
   void zeroIterationCounts();
 
   HighsStatus getDualRayInterface(bool& has_dual_ray, double* dual_ray_value);
@@ -1553,13 +1654,16 @@ class Highs {
                          HighsInt* iis_col_index, HighsInt* iis_row_index,
                          HighsInt* iis_col_bound, HighsInt* iis_row_bound);
 
+  HighsStatus returnFromLexicographicOptimization(
+      const HighsStatus return_status, HighsInt original_lp_num_row);
+  HighsStatus multiobjectiveSolve();
+
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string& solver_type,
                               HighsStatus return_status);
-  HighsStatus invertRequirementError(std::string method_name);
-  HighsStatus lpInvertRequirementError(std::string method_name);
+  HighsStatus invertRequirementError(std::string method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
@@ -1576,6 +1680,10 @@ class Highs {
                               const bool constraint,
                               const double ill_conditioning_bound);
   bool infeasibleBoundsOk();
+  bool validLinearObjective(const HighsLinearObjective& linear_objective,
+                            const HighsInt iObj) const;
+  bool hasRepeatedLinearObjectivePriorities(
+      const HighsLinearObjective* linear_objective = nullptr) const;
 };
 
 // Start of deprecated methods not in the Highs class

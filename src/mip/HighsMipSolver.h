@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -14,6 +11,7 @@
 #include "Highs.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsOptions.h"
+#include "mip/HighsMipAnalysis.h"
 
 struct HighsMipSolverData;
 class HighsCutPool;
@@ -40,17 +38,22 @@ class HighsMipSolver {
   double gap_;
   int64_t node_count_;
   int64_t total_lp_iterations_;
+  double primal_dual_integral_;
 
   FILE* improving_solution_file_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
 
   bool submip;
+  HighsInt submip_level;
+  HighsInt max_submip_level;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
   const HighsCliqueTable* clqtableinit;
   const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
+
+  HighsMipAnalysis analysis_;
 
   void run();
 
@@ -82,7 +85,7 @@ class HighsMipSolver {
 
   HighsMipSolver(HighsCallback& callback, const HighsOptions& options,
                  const HighsLp& lp, const HighsSolution& solution,
-                 bool submip = false);
+                 bool submip = false, HighsInt submip_level = 0);
 
   ~HighsMipSolver();
 
@@ -100,6 +103,10 @@ class HighsMipSolver {
   presolve::HighsPostsolveStack getPostsolveStack() const;
 
   void callbackGetCutPool() const;
+  bool solutionFeasible(const HighsLp* lp, const std::vector<double>& col_value,
+                        const std::vector<double>* pass_row_value,
+                        double& bound_violation, double& row_violation,
+                        double& integrality_violation, HighsCDouble& obj);
 };
 
 #endif

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -146,17 +143,17 @@ const HighsInt kDualMultiMinConcurrency = 1;  // 2;
 // Simplex nonbasicFlag status for columns and rows. Don't use enum
 // class since they are used as HighsInt to replace conditional
 // statements by multiplication
-const HighsInt kNonbasicFlagTrue = 1;   // Nonbasic
-const HighsInt kNonbasicFlagFalse = 0;  // Basic
-const HighsInt kIllegalFlagValue =
+const int8_t kNonbasicFlagTrue = 1;   // Nonbasic
+const int8_t kNonbasicFlagFalse = 0;  // Basic
+const int8_t kIllegalFlagValue =
     -99;  // Used to see whether valid flag value has been set
 
 // Simplex nonbasicMove status for columns and rows. Don't use enum
 // class since they are used in conditional statements
-const HighsInt kNonbasicMoveUp = 1;   // Free to move (only) up
-const HighsInt kNonbasicMoveDn = -1;  // Free to move (only) down
-const HighsInt kNonbasicMoveZe = 0;   // Fixed or free to move up and down
-const HighsInt kIllegalMoveValue =
+const int8_t kNonbasicMoveUp = 1;   // Free to move (only) up
+const int8_t kNonbasicMoveDn = -1;  // Free to move (only) down
+const int8_t kNonbasicMoveZe = 0;   // Fixed or free to move up and down
+const int8_t kIllegalMoveValue =
     -99;  // Used to see whether valid move value has been set
 
 // Threshold for accepting updated DSE weight
@@ -185,7 +182,6 @@ enum class LpAction {
   kDelRowsBasisOk,
   kScaledCol,
   kScaledRow,
-  kHotStart,
   kBacktracking
 };
 

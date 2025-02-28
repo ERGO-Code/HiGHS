@@ -85,9 +85,8 @@ class Basis {
   HVector col_aq;
 
   bool reinversion_hint = false;
+
  public:
-
-
   Basis(Runtime& rt, std::vector<HighsInt> active,
         std::vector<BasisStatus> atlower, std::vector<HighsInt> inactive);
 
@@ -99,7 +98,9 @@ class Basis {
 
   HighsInt getnumactive() const { return active_constraint_index.size(); };
 
-  HighsInt getnuminactive() const { return non_active_constraint_index.size(); };
+  HighsInt getnuminactive() const {
+    return non_active_constraint_index.size();
+  };
 
   const std::vector<HighsInt>& getactive() const {
     return active_constraint_index;
@@ -121,28 +122,29 @@ class Basis {
   // Nullspace from now on)
   void deactivate(HighsInt conid);
 
-  QpSolverStatus activate(const Settings& settings, HighsInt conid, BasisStatus atlower,
-                          HighsInt nonactivetoremove, Pricing* pricing);
+  QpSolverStatus activate(const Settings& settings, HighsInt conid,
+                          BasisStatus atlower, HighsInt nonactivetoremove,
+                          Pricing* pricing);
 
-  void updatebasis(const Settings& settings, HighsInt newactivecon, HighsInt droppedcon,
-                   Pricing* pricing);
+  void updatebasis(const Settings& settings, HighsInt newactivecon,
+                   HighsInt droppedcon, Pricing* pricing);
 
   QpVector btran(const QpVector& rhs, bool buffer = false, HighsInt p = -1);
 
   QpVector ftran(const QpVector& rhs, bool buffer = false, HighsInt q = -1);
 
   QpVector& btran(const QpVector& rhs, QpVector& target, bool buffer = false,
-                HighsInt p = -1);
+                  HighsInt p = -1);
 
   QpVector& ftran(const QpVector& rhs, QpVector& target, bool buffer = false,
-                HighsInt q = -1);
+                  HighsInt q = -1);
 
   QpVector recomputex(const Instance& inst);
 
   void write(std::string filename);
 
   QpVector& Ztprod(const QpVector& rhs, QpVector& target, bool buffer = false,
-                 HighsInt q = -1);
+                   HighsInt q = -1);
 
   QpVector& Zprod(const QpVector& rhs, QpVector& target);
 };

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -45,10 +42,12 @@ typedef struct {
   double* cutpool_value;
   double* cutpool_lower;
   double* cutpool_upper;
+  HighsInt user_solution_callback_origin;
 } HighsCallbackDataOut;
 
 typedef struct {
   int user_interrupt;
+  double* user_solution;
 } HighsCallbackDataIn;
 
 // Additional callback handling

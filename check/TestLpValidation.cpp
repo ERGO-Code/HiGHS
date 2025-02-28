@@ -171,10 +171,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<HighsInt> ARstart;
   vector<HighsInt> ARindex;
   vector<double> ARvalue;
-
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
-              ARvalue);
+    avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+                 ARvalue);
   }
 
   HighsInt num_col = 0;
@@ -186,8 +185,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<HighsInt> Aindex;
   vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++) {
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
-              Aindex, Avalue);
+    avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+                 Aindex, Avalue);
   }
 
   return_status = assessLp(lp, options);
@@ -387,6 +386,10 @@ TEST_CASE("LP-validation", "[highs_data]") {
   const double to_value = 99;
   REQUIRE(highs.changeCoeff(check_row, check_col, to_value) ==
           HighsStatus::kOk);
+  REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
+          HighsStatus::kOk);
+  REQUIRE(check_value == to_value);
+  REQUIRE(highs.ensureRowwise() == HighsStatus::kOk);
   REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);

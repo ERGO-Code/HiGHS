@@ -346,6 +346,16 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
       vec_clear(w->buffer);
     }
 
+    if (w->buffer2 != NULL) {
+      // CUPDLP_FREE_VEC(w->buffer);
+      free(w->buffer2);
+    }
+
+    if (w->buffer3) {
+      // CUPDLP_FREE_VEC(w->buffer);
+      free(w->buffer3);
+    }
+
     if (problem) {
       // problem_clear(problem);
       problem = cupdlp_NULL;
@@ -421,7 +431,7 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("\n");
 }
 
-void PDHG_PrintHugeCUPDHG() {
+void PDHG_PrintHugeCUPDHG(void) {
   cupdlp_printf("\n");
   cupdlp_printf("  ____ _   _ ____  ____  _     ____\n");
   cupdlp_printf(" / ___| | | |  _ \\|  _ \\| |   |  _ \\\n");
@@ -431,7 +441,7 @@ void PDHG_PrintHugeCUPDHG() {
   cupdlp_printf("\n");
 }
 
-void PDHG_PrintUserParamHelper() {
+void PDHG_PrintUserParamHelper(void) {
   PDHG_PrintHugeCUPDHG();
 
   cupdlp_printf("CUPDHG User Parameters:\n");

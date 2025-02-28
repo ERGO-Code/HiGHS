@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -21,6 +18,7 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "mip/MipTimer.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
@@ -36,6 +34,9 @@
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
+      total_repair_lp(0),
+      total_repair_lp_feasible(0),
+      total_repair_lp_iterations(0),
       lp_iterations(0),
       randgen(mipsolver.options_mip_->random_seed) {
   successObservations = 0;
@@ -107,8 +108,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.mip_max_stall_nodes = stallnodes;
   submipoptions.mip_pscost_minreliable = 0;
-  submipoptions.time_limit -=
-      mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  submipoptions.time_limit -= mipsolver.timer_.read();
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
 
   if (!mipsolver.submip) {
@@ -125,7 +125,11 @@ bool HighsPrimalHeuristics::solveSubMip(
         mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
   }
 
-  submipoptions.presolve = "on";
+  // check if only root presolve is allowed
+  if (submipoptions.mip_root_presolve_only)
+    submipoptions.presolve = kHighsOffString;
+  else
+    submipoptions.presolve = kHighsOnString;
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it
@@ -135,13 +139,16 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.dual_valid = false;
   // Create HighsMipSolver instance for sub-MIP
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
-                              solution, true);
+                              solution, true, mipsolver.submip_level + 1);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
   submipsolver.clqtableinit = &mipsolver.mipdata_->cliquetable;
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
+  // Solve the sub-MIP
   submipsolver.run();
+  mipsolver.max_submip_level =
+      std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -150,7 +157,10 @@ bool HighsPrimalHeuristics::solveSubMip(
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
-
+    total_repair_lp += submipsolver.mipdata_->total_repair_lp;
+    total_repair_lp_feasible += submipsolver.mipdata_->total_repair_lp_feasible;
+    total_repair_lp_iterations +=
+        submipsolver.mipdata_->total_repair_lp_iterations;
     if (mipsolver.submip)
       mipsolver.mipdata_->num_nodes += std::max(
           int64_t{1}, int64_t(adjustmentfactor * submipsolver.node_count_));
@@ -166,7 +176,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
   if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
-    mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
+    mipsolver.mipdata_->trySolution(submipsolver.solution_,
+                                    kSolutionSourceSubMip);
   }
 
   if (mipsolver.mipdata_->numImprovingSols != oldNumImprovingSols) {
@@ -269,8 +280,18 @@ void HighsPrimalHeuristics::rootReducedCost() {
       localdom.propagate();
       if (localdom.infeasible()) {
         localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+
+        double prev_lower_bound = mipsolver.mipdata_->lower_bound;
+
         mipsolver.mipdata_->lower_bound =
             std::max(mipsolver.mipdata_->lower_bound, currCutoff);
+
+        const bool bound_change =
+            mipsolver.mipdata_->lower_bound != prev_lower_bound;
+        if (!mipsolver.submip && bound_change)
+          mipsolver.mipdata_->updatePrimalDualIntegral(
+              prev_lower_bound, mipsolver.mipdata_->lower_bound,
+              mipsolver.mipdata_->upper_bound, mipsolver.mipdata_->upper_bound);
         localdom.backtrack();
         if (localdom.getBranchDepth() == 0) break;
         neighbourhood.backtracked();
@@ -288,11 +309,13 @@ void HighsPrimalHeuristics::rootReducedCost() {
   double fixingRate = neighbourhood.getFixingRate();
   if (fixingRate < 0.3) return;
 
+  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRootReducedCost);
   solveSubMip(*mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
               200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRootReducedCost);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
@@ -510,11 +533,15 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                   localdom.col_lower_, localdom.col_upper_,
-                   500,  // std::max(50, int(0.05 *
-                         // (mipsolver.mipdata_->num_leaves))),
-                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
+  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
+  const bool solve_sub_mip_return =
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
+  if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -797,11 +824,15 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                   localdom.col_lower_, localdom.col_upper_,
-                   500,  // std::max(50, int(0.05 *
-                         // (mipsolver.mipdata_->num_leaves))),
-                   200 + mipsolver.mipdata_->num_nodes / 20, 12)) {
+  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
+  const bool solve_sub_mip_return =
+      solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
+                  localdom.col_lower_, localdom.col_upper_,
+                  500,  // std::max(50, int(0.05 *
+                  // (mipsolver.mipdata_->num_leaves))),
+                  200 + mipsolver.mipdata_->num_nodes / 20, 12);
+  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
+  if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
         100000 + ((mipsolver.mipdata_->total_lp_iterations -
@@ -826,7 +857,7 @@ retry:
 }
 
 bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
-                                            char source) {
+                                            const int solution_source) {
   auto localdom = mipsolver.mipdata_->domain;
 
   HighsInt numintcols = intcols.size();
@@ -857,8 +888,12 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
 
-    if (numintcols / (double)mipsolver.numCol() >= 0.2)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * numintcols) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
@@ -878,17 +913,17 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     } else if (lprelax.unscaledPrimalFeasible(st)) {
       mipsolver.mipdata_->addIncumbent(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-          source);
+          solution_source);
       return true;
     }
   }
 
-  return mipsolver.mipdata_->trySolution(localdom.col_lower_, source);
+  return mipsolver.mipdata_->trySolution(localdom.col_lower_, solution_source);
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
     const std::vector<double>& point1, const std::vector<double>& point2,
-    char source) {
+    const int solution_source) {
   std::vector<double> roundedpoint;
 
   HighsInt numintcols = intcols.size();
@@ -932,7 +967,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
       if (tmpalpha < nextalpha && tmpalpha > alpha + 1e-2) nextalpha = tmpalpha;
     }
 
-    if (tryRoundedPoint(roundedpoint, source)) return true;
+    if (tryRoundedPoint(roundedpoint, solution_source)) return true;
 
     if (reachedpoint2) return false;
 
@@ -972,7 +1007,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
   }
 
-  if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
+  if (mipsolver.mipdata_->integer_cols.size() !=
+      static_cast<size_t>(mipsolver.numCol())) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.setIterationLimit(
@@ -980,12 +1016,18 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * intcols.size()) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
+
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
@@ -1001,9 +1043,10 @@ void HighsPrimalHeuristics::randomizedRounding(
     } else if (lprelax.unscaledPrimalFeasible(st))
       mipsolver.mipdata_->addIncumbent(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-          'R');
+          kSolutionSourceRandomizedRounding);
   } else {
-    mipsolver.mipdata_->trySolution(localdom.col_lower_, 'R');
+    mipsolver.mipdata_->trySolution(localdom.col_lower_,
+                                    kSolutionSourceRandomizedRounding);
   }
 }
 
@@ -1080,7 +1123,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     if (havecycle) return;
 
-    if (linesearchRounding(lpsol, roundedsol, 'F')) return;
+    if (linesearchRounding(lpsol, roundedsol, kSolutionSourceFeasibilityPump))
+      return;
 
     if (lprelax.getNumLpIterations() >=
         1000 + mipsolver.mipdata_->avgrootlpiters * 5)
@@ -1110,7 +1154,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       lprelax.unscaledPrimalFeasible(status))
     mipsolver.mipdata_->addIncumbent(
         lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
-        'F');
+        kSolutionSourceFeasibilityPump);
 }
 
 void HighsPrimalHeuristics::centralRounding() {
@@ -1119,13 +1163,16 @@ void HighsPrimalHeuristics::centralRounding() {
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->firstlpsol,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
   else if (!mipsolver.mipdata_->rootlpsol.empty())
     linesearchRounding(mipsolver.mipdata_->rootlpsol,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
   else
     linesearchRounding(mipsolver.mipdata_->analyticCenter,
-                       mipsolver.mipdata_->analyticCenter, 'C');
+                       mipsolver.mipdata_->analyticCenter,
+                       kSolutionSourceCentralRounding);
 }
 
 #if 0
@@ -1199,6 +1246,12 @@ void HighsPrimalHeuristics::clique() {
 #endif
 
 void HighsPrimalHeuristics::flushStatistics() {
+  mipsolver.mipdata_->total_repair_lp += total_repair_lp;
+  mipsolver.mipdata_->total_repair_lp_feasible += total_repair_lp_feasible;
+  mipsolver.mipdata_->total_repair_lp_iterations += total_repair_lp_iterations;
+  total_repair_lp = 0;
+  total_repair_lp_feasible = 0;
+  total_repair_lp_iterations = 0;
   mipsolver.mipdata_->heuristic_lp_iterations += lp_iterations;
   mipsolver.mipdata_->total_lp_iterations += lp_iterations;
   lp_iterations = 0;

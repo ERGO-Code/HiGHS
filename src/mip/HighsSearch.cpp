@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -599,7 +596,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, solobj,
-              inheuristic ? 'H' : 'B');
+              inheuristic ? kSolutionSourceHeuristic
+                          : kSolutionSourceBranching);
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -732,7 +730,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, solobj,
-              inheuristic ? 'H' : 'B');
+              inheuristic ? kSolutionSourceHeuristic
+                          : kSolutionSourceBranching);
 
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -1062,7 +1061,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           double cutoffbnd = getCutoffBound();
           mipsolver.mipdata_->addIncumbent(
               lp->getLpSolver().getSolution().col_value, lp->getObjective(),
-              inheuristic ? 'H' : 'T');
+              inheuristic ? kSolutionSourceHeuristic
+                          : kSolutionSourceEvaluateNode);
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
@@ -1530,7 +1530,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     std::swap(tmpLp, lp);
 
     // reevaluate the node with LP presolve enabled
-    lp->getLpSolver().setOptionValue("presolve", "on");
+    lp->getLpSolver().setOptionValue("presolve", kHighsOnString);
     result = evaluateNode();
 
     if (result == NodeResult::kOpen) {

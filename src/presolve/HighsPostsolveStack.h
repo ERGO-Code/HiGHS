@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -219,6 +216,16 @@ class HighsPostsolveStack {
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
+  struct SlackColSubstitution {
+    double rhs;
+    HighsInt row;
+    HighsInt col;
+
+    void undo(const HighsOptions& options,
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
+  };
+
   /// tags for reduction
   enum class ReductionType : uint8_t {
     kLinearTransform,
@@ -234,6 +241,7 @@ class HighsPostsolveStack {
     kForcingColumnRemovedRow,
     kDuplicateRow,
     kDuplicateColumn,
+    kSlackColSubstitution,
   };
 
   HighsDataStack reductionValues;
@@ -321,6 +329,19 @@ class HighsPostsolveStack {
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
     reductionAdded(ReductionType::kFreeColSubstitution);
+  }
+
+  template <typename RowStorageFormat>
+  void slackColSubstitution(HighsInt row, HighsInt col, double rhs,
+                            const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(
+        SlackColSubstitution{rhs, origRowIndex[row], origColIndex[col]});
+    reductionValues.push(rowValues);
+    reductionAdded(ReductionType::kSlackColSubstitution);
   }
 
   template <typename ColStorageFormat>
@@ -710,6 +731,13 @@ class HighsPostsolveStack {
           reduction.undo(options, solution, basis);
           break;
         }
+        case ReductionType::kSlackColSubstitution: {
+          SlackColSubstitution reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         default:
           printf("Reduction case %d not handled\n",
                  int(reductions[i - 1].first));
@@ -756,9 +784,7 @@ class HighsPostsolveStack {
   */
 
   // Only used for debugging
-  void undoUntil(const HighsOptions& options,
-                 const std::vector<HighsInt>& flagRow,
-                 const std::vector<HighsInt>& flagCol, HighsSolution& solution,
+  void undoUntil(const HighsOptions& options, HighsSolution& solution,
                  HighsBasis& basis, size_t numReductions) {
     reductionValues.resetPosition();
 
@@ -886,6 +912,13 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+        }
+        case ReductionType::kSlackColSubstitution: {
+          SlackColSubstitution reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
         }
       }
     }

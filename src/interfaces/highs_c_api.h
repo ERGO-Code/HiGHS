@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -558,6 +555,72 @@ HighsInt Highs_passHessian(void* highs, const HighsInt dim,
                            const double* value);
 
 /**
+ * Passes multiple linear objective data to HiGHS, clearing any such
+ * data already in HiGHS
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param weight        A pointer to the weights of the linear objective, with
+ *                      its positive/negative sign determining whether it is
+ *                      minimized or maximized during lexicographic optimization
+ * @param offset        A pointer to the objective offsets
+ * @param coefficients  A pointer to the objective coefficients
+ * @param abs_tolerance A pointer to the absolute tolerances used when
+ *                      constructing objective constraints during lexicographic
+ *                      optimization
+ * @param rel_tolerance A pointer to the relative tolerances used when
+ *                      constructing objective constraints during lexicographic
+ *                      optimization
+ * @param priority      A pointer to the priorities of the objectives during
+ *                      lexicographic optimization
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_passLinearObjectives(const void* highs,
+                                    const HighsInt num_linear_objective,
+                                    const double* weight, const double* offset,
+                                    const double* coefficients,
+                                    const double* abs_tolerance,
+                                    const double* rel_tolerance,
+                                    const HighsInt* priority);
+
+/**
+ * Adds linear objective data to HiGHS
+ *
+ * @param highs         A pointer to the Highs instance.
+ * @param weight        The weight of the linear objective, with its
+ *                      positive/negative sign determining whether it is
+ *                      minimized or maximized during lexicographic
+ *                      optimization
+ * @param offset        The objective offset
+ * @param coefficients  A pointer to the objective coefficients
+ * @param abs_tolerance The absolute tolerance used when constructing an
+ *                      objective constraint during lexicographic optimization
+ * @param rel_tolerance The relative tolerance used when constructing an
+ *                      objective constraint during lexicographic optimization
+ * @param priority      The priority of this objective during lexicographic
+ *                      optimization
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_addLinearObjective(const void* highs, const double weight,
+                                  const double offset,
+                                  const double* coefficients,
+                                  const double abs_tolerance,
+                                  const double rel_tolerance,
+                                  const HighsInt priority);
+
+/**
+ * Clears any multiple linear objective data in HiGHS
+ *
+ * @param highs A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+
+HighsInt Highs_clearLinearObjectives(const void* highs);
+/**
  * Pass the name of a row.
  *
  * @param highs A pointer to the Highs instance.
@@ -580,6 +643,16 @@ HighsInt Highs_passRowName(const void* highs, const HighsInt row,
  */
 HighsInt Highs_passColName(const void* highs, const HighsInt col,
                            const char* name);
+
+/**
+ * Pass the name of the model.
+ *
+ * @param highs A pointer to the Highs instance.
+ * @param name  The name of the model.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_passModelName(const void* highs, const char* name);
 
 /**
  * Read the option values from file.
@@ -905,11 +978,13 @@ HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
 HighsInt Highs_getModelStatus(const void* highs);
 
 /**
- * Get an unbounded dual ray that is a certificate of primal infeasibility.
+ * Indicates whether a dual ray that is a certificate of primal
+ * infeasibility currently exists, and (at the expense of solving an
+ * LP) gets it if it does not and dual_ray_value is not nullptr.
  *
  * @param highs             A pointer to the Highs instance.
- * @param has_dual_ray      A pointer to an int to store 1 if the dual ray
- *                          exists.
+ * @param has_dual_ray      A pointer to an int to store 1 if a dual ray
+ *                          currently exists.
  * @param dual_ray_value    An array of length [num_row] filled with the
  *                          unbounded ray.
  *
@@ -919,7 +994,28 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
                           double* dual_ray_value);
 
 /**
- * Get an unbounded primal ray that is a certificate of dual infeasibility.
+ * Indicates whether a dual unboundedness direction (corresponding to a
+ * certificate of primal infeasibility) exists, and (at the expense of
+ * solving an LP) gets it if it does not and
+ * dual_unboundedness_direction is not nullptr
+ *
+ * @param highs                                   A pointer to the Highs
+ *                                                instance.
+ * @param has_dual_unboundedness_direction        A pointer to an int to store 1
+ *                                                if the dual unboundedness
+ *                                                direction exists.
+ * @param dual_unboundedness_direction_value      An array of length [num_col]
+ *                                                filled with the unboundedness
+ *                                                direction.
+ */
+HighsInt Highs_getDualUnboundednessDirection(
+    const void* highs, HighsInt* has_dual_unboundedness_direction,
+    double* dual_unboundedness_direction_value);
+
+/**
+ * Indicates whether a primal ray that is a certificate of primal
+ * unboundedness currently exists, and (at the expense of solving an
+ * LP) gets it if it does not and primal_ray_value is not nullptr.
  *
  * @param highs             A pointer to the Highs instance.
  * @param has_primal_ray    A pointer to an int to store 1 if the primal ray
@@ -1331,6 +1427,25 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const HighsInt* index, const double* value);
 
 /**
+ * Ensure that the constraint matrix of the incumbent model is stored
+ * column-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureColwise(void* highs);
+
+/**
+ * Ensure that the constraint matrix of the incumbent model is stored row-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureRowwise(void* highs);
+
+/**
  * Change the objective sense of the model.
  *
  * @param highs     A pointer to the Highs instance.
@@ -1717,7 +1832,7 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
  * @param from_row      The first row for which to query data for.
  * @param to_row        The last row (inclusive) for which to query data for.
  * @param num_row       An integer to be populated with the number of rows got
- *                      from the smodel.
+ *                      from the model.
  * @param lower         An array of size [to_row - from_row + 1] for the row
  *                      lower bounds.
  * @param upper         An array of size [to_row - from_row + 1] for the row

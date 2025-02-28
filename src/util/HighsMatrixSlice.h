@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -13,14 +10,14 @@
  * underlying matrix storage formats
  */
 
+#ifndef UTIL_HIGHS_MATRIX_SLICE_H_
+#define UTIL_HIGHS_MATRIX_SLICE_H_
+
 #include <cstddef>
 #include <iterator>
 #include <vector>
 
 #include "util/HighsInt.h"
-
-#ifndef UTIL_HIGHS_MATRIX_SLICE_H_
-#define UTIL_HIGHS_MATRIX_SLICE_H_
 
 template <typename StorageFormat>
 class HighsMatrixSlice;

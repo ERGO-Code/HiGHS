@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -17,7 +14,7 @@
 #include "pdlp/CupdlpWrapper.h"
 #include "simplex/HApp.h"
 
-// The method below runs simplex or ipx solver on the lp.
+// The method below runs simplex, ipx or pdlp solver on the lp.
 HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -72,6 +69,14 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                           return_status, "solveLpCupdlp");
     }
     if (return_status == HighsStatus::kError) return return_status;
+    // IPM (and PDLP?) can claim optimality with large primal and/or
+    // dual residual errors, so must correct any residual errors that
+    // exceed the tolerance in this scenario.
+    //
+    // OK to correct residual errors whatever the model status, as
+    // it's only changed in the case of optimality
+    correctResiduals(solver_object);
+
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
     // Get the objective and any KKT failures
@@ -79,6 +84,10 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
         solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
                      solver_object.basis_, solver_object.highs_info_);
+    if (solver_object.model_status_ == HighsModelStatus::kOptimal &&
+        (solver_object.highs_info_.num_primal_infeasibilities > 0 ||
+         solver_object.highs_info_.num_dual_infeasibilities))
+      solver_object.model_status_ = HighsModelStatus::kUnknown;
     if (options.solver == kIpmString || options.run_centring) {
       // Setting the IPM-specific values of (highs_)info_ has been done in
       // solveLpIpx
@@ -98,7 +107,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             utilModelStatusToString(solver_object.model_status_).c_str(),
             solver_object.basis_.valid ? "" : "not ",
             solver_object.solution_.value_valid ? "" : "not ",
-            options.run_centring ? "off" : options.run_crossover.c_str());
+            options.run_centring ? kHighsOffString.c_str()
+                                 : options.run_crossover.c_str());
         const bool allow_simplex_cleanup =
             options.run_crossover != kHighsOffString && !options.run_centring;
         if (allow_simplex_cleanup) {
@@ -127,7 +137,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
             return HighsStatus::kError;
           }
         }  // options.run_crossover == kHighsOnString
+           // clang-format off
       }  // unwelcome_ipx_status
+      // clang-format on
     } else {
       // PDLP has been used, so check whether claim of optimality
       // satisfies the HiGHS criteria
@@ -379,6 +391,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
+  basis.useful = true;
   highs_info.basis_validity = kBasisValidityValid;
   setSolutionStatus(highs_info);
   if (highs_info.num_primal_infeasibilities) {

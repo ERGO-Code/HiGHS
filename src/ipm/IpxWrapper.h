@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -31,10 +28,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsCallback& callback);
 
 void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
-                   std::vector<double>& obj, std::vector<double>& col_lb,
-                   std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
-                   std::vector<ipx::Int>& Ai, std::vector<double>& Ax,
-                   std::vector<double>& rhs,
+                   double& offset, std::vector<double>& obj,
+                   std::vector<double>& col_lb, std::vector<double>& col_ub,
+                   std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
+                   std::vector<double>& Ax, std::vector<double>& rhs,
                    std::vector<char>& constraint_type);
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,

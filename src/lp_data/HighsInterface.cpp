@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -20,6 +17,228 @@
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+
+HighsStatus Highs::formStandardFormLp() {
+  this->clearStandardFormLp();
+  HighsLp& lp = this->model_.lp_;
+  HighsSparseMatrix& matrix = lp.a_matrix_;
+  // Ensure that the incumbent LP and standard form LP matrices are rowwise
+  matrix.ensureRowwise();
+  // Original rows are processed before columns, so that any original
+  // boxed rows can be transformed to pairs of one-sided rows,
+  // requiring the standard form matrix to be row-wise. The original
+  // columns are assumed to come before any new columns, so their
+  // costs (as a minimization) must be defined befor costs of new
+  // columns.
+  // Determine the objective scaling, and apply it to any offset
+  HighsInt sense = HighsInt(lp.sense_);
+  this->standard_form_offset_ = sense * lp.offset_;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    this->standard_form_cost_.push_back(sense * lp.col_cost_[iCol]);
+  this->standard_form_matrix_.format_ = MatrixFormat::kRowwise;
+  this->standard_form_matrix_.num_col_ = lp.num_col_;
+  // Create a HighsSparseMatrix instance to store rows extracted from
+  // the original constraint matrix
+  HighsInt local_row_min_nnz = std::max(lp.num_col_, HighsInt(2));
+  HighsSparseMatrix local_row;
+  local_row.ensureRowwise();
+  local_row.num_row_ = 1;
+  local_row.num_col_ = lp.num_col_;
+  local_row.index_.resize(local_row_min_nnz);
+  local_row.value_.resize(local_row_min_nnz);
+  local_row.start_.resize(2);
+  HighsInt& num_nz = local_row.start_[1];
+  local_row.start_[0] = 0;
+  HighsInt num_fixed_row = 0;
+  HighsInt num_boxed_row = 0;
+  HighsInt num_lower_row = 0;
+  HighsInt num_upper_row = 0;
+  HighsInt num_free_row = 0;
+  HighsInt num_fixed_col = 0;
+  HighsInt num_boxed_col = 0;
+  HighsInt num_lower_col = 0;
+  HighsInt num_upper_col = 0;
+  HighsInt num_free_col = 0;
+  std::vector<HighsInt> slack_ix;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      assert(0 == 1);
+      // Free row
+      num_free_row++;
+      continue;
+    }
+    if (lower == upper) {
+      // Equality row
+      num_fixed_row++;
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+      continue;
+    } else if (lower <= -kHighsInf) {
+      // Upper bounded row, so record the slack
+      num_upper_row++;
+      assert(upper < kHighsInf);
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(standard_form_row + 1);
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    } else if (upper >= kHighsInf) {
+      // Lower bounded row, so record the slack
+      num_lower_row++;
+      assert(lower > -kHighsInf);
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(-(standard_form_row + 1));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lower);
+    } else {
+      // Boxed row, so record the lower slack
+      assert(lower > -kHighsInf);
+      assert(upper < kHighsInf);
+      num_boxed_row++;
+      HighsInt standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(-(standard_form_row + 1));
+      matrix.getRow(iRow, num_nz, local_row.index_.data(),
+                    local_row.value_.data());
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(lower);
+      // .. and upper slack, adding a copy of the row
+      standard_form_row = this->standard_form_rhs_.size();
+      slack_ix.push_back(standard_form_row + 1);
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    }
+  }
+  // Add rows corresponding to boxed columns
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf && upper < kHighsInf) {
+      // Boxed column
+      //
+      // x will be replaced by x = l + X (below) with X >= 0
+      //
+      // Introduce variable s >= 0 so that (with x >= l still)
+      //
+      // x = u - s => x + s = u
+      this->standard_form_cost_.push_back(0);
+      this->standard_form_matrix_.num_col_++;
+      local_row.num_col_++;
+      local_row.index_[0] = iCol;
+      local_row.index_[1] = this->standard_form_matrix_.num_col_ - 1;
+      local_row.value_[0] = 1;
+      local_row.value_[1] = 1;
+      local_row.start_[1] = 2;
+      this->standard_form_matrix_.addRows(local_row);
+      this->standard_form_rhs_.push_back(upper);
+    }
+  }
+  // Finished with both matrices, row-wise, so ensure that the
+  // incumbent matrix leaves col-wise, and that the standard form
+  // matrix is col-wise so RHS shifts can be applied and more columns
+  // can be added
+  matrix.ensureColwise();
+  this->standard_form_matrix_.ensureColwise();
+  // Work through the columns, ensuring that all have non-negativity bounds
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double cost = sense * lp.col_cost_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
+    if (lower > -kHighsInf) {
+      // Finite lower bound
+      if (upper < kHighsInf) {
+        if (lower == upper) {
+          // Fixed column
+          num_fixed_col++;
+        } else {
+          // Boxed column
+          num_boxed_col++;
+        }
+      } else {
+        // Lower column
+        num_lower_col++;
+      }
+      if (lower != 0) {
+        // x >= l, so shift x-l = X >= 0, giving x = X + l
+        //
+        // Cost contribution c(X+l) = cX + cl
+        this->standard_form_offset_ += cost * lower;
+        // Constraint contribution a(X+l) = aX + al
+        for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+             iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++)
+          this->standard_form_rhs_[this->standard_form_matrix_.index_[iEl]] -=
+              this->standard_form_matrix_.value_[iEl] * lower;
+      }
+    } else if (upper < kHighsInf) {
+      // Upper column
+      num_upper_col++;
+      // Have to operate even if u=0, since cost and column values are negated
+      //
+      // x <= u, so shift u-x = X >= 0, giving x = u - X
+      //
+      // Cost contribution c(u-X) = cu - cX
+      this->standard_form_offset_ += cost * upper;
+      this->standard_form_cost_[iCol] = -cost;
+      // Constraint contribution a(u-X) = -aX + au
+      for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+           iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++) {
+        this->standard_form_rhs_[this->standard_form_matrix_.index_[iEl]] -=
+            this->standard_form_matrix_.value_[iEl] * upper;
+        this->standard_form_matrix_.value_[iEl] =
+            -this->standard_form_matrix_.value_[iEl];
+      }
+    } else {
+      // Free column
+      num_free_col++;
+      // Represent as x = x+ - x-
+      //
+      // where original column is now x+ >= 0
+      //
+      // and x- >= 0 has negation of its cost and matrix column
+      this->standard_form_cost_.push_back(-cost);
+      for (HighsInt iEl = this->standard_form_matrix_.start_[iCol];
+           iEl < this->standard_form_matrix_.start_[iCol + 1]; iEl++) {
+        this->standard_form_matrix_.index_.push_back(
+            this->standard_form_matrix_.index_[iEl]);
+        this->standard_form_matrix_.value_.push_back(
+            -this->standard_form_matrix_.value_[iEl]);
+      }
+      this->standard_form_matrix_.start_.push_back(
+          HighsInt(this->standard_form_matrix_.index_.size()));
+    }
+  }
+  // Now add the slack variables
+  for (HighsInt iX = 0; iX < HighsInt(slack_ix.size()); iX++) {
+    HighsInt iRow = slack_ix[iX];
+    this->standard_form_cost_.push_back(0);
+    if (iRow > 0) {
+      this->standard_form_matrix_.index_.push_back(iRow - 1);
+      this->standard_form_matrix_.value_.push_back(1);
+    } else {
+      this->standard_form_matrix_.index_.push_back(-iRow - 1);
+      this->standard_form_matrix_.value_.push_back(-1);
+    }
+    this->standard_form_matrix_.start_.push_back(
+        HighsInt(this->standard_form_matrix_.index_.size()));
+  }
+  this->standard_form_valid_ = true;
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Standard form LP obtained for LP with (free / lower / upper / "
+               "boxed / fixed) variables"
+               " (%d / %d / %d / %d / %d) and constraints"
+               " (%d / %d / %d / %d / %d) \n",
+               int(num_free_col), int(num_lower_col), int(num_upper_col),
+               int(num_boxed_col), int(num_fixed_col), int(num_free_row),
+               int(num_lower_row), int(num_upper_row), int(num_boxed_row),
+               int(num_fixed_row));
+  return HighsStatus::kOk;
+}
 
 HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
@@ -86,7 +305,7 @@ HighsStatus Highs::addColsInterface(
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsScale& scale = lp.scale_;
-  bool& valid_basis = basis.valid;
+  bool& useful_basis = basis.useful;
   bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -196,7 +415,7 @@ HighsStatus Highs::addColsInterface(
                                       &scale.col[lp.num_col_]);
   }
   // Update the basis corresponding to new nonbasic columns
-  if (valid_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
+  if (useful_basis) appendNonbasicColsToBasisInterface(ext_num_new_col);
 
   // Possibly add column names
   lp.addColNames("", ext_num_new_col);
@@ -252,7 +471,8 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsScale& scale = lp.scale_;
-  bool& valid_basis = basis.valid;
+  bool& useful_basis = basis.useful;
+
   bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -340,7 +560,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
                                        &scale.row[lp.num_row_]);
   }
   // Update the basis corresponding to new basic rows
-  if (valid_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
+  if (useful_basis) appendBasicRowsToBasisInterface(ext_num_new_row);
 
   // Possibly add row names
   lp.addRowNames("", ext_num_new_row);
@@ -357,6 +577,69 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   return return_status;
 }
 
+void deleteBasisEntries(std::vector<HighsBasisStatus>& status,
+                        bool& deleted_basic, bool& deleted_nonbasic,
+                        const HighsIndexCollection& index_collection,
+                        const HighsInt entry_dim) {
+  assert(ok(index_collection));
+  assert(static_cast<size_t>(entry_dim) == status.size());
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  if (from_k > to_k) return;
+
+  HighsInt delete_from_entry;
+  HighsInt delete_to_entry;
+  HighsInt keep_from_entry;
+  HighsInt keep_to_entry = -1;
+  HighsInt current_set_entry = 0;
+  HighsInt new_num_entry = 0;
+  deleted_basic = false;
+  deleted_nonbasic = false;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, delete_from_entry, delete_to_entry,
+                     keep_from_entry, keep_to_entry, current_set_entry);
+    // Account for the initial entries being kept
+    if (k == from_k) new_num_entry = delete_from_entry;
+    // Identify whether a basic or a nonbasic entry has been deleted
+    for (HighsInt entry = delete_from_entry; entry <= delete_to_entry;
+         entry++) {
+      if (status[entry] == HighsBasisStatus::kBasic) {
+        deleted_basic = true;
+      } else {
+        deleted_nonbasic = true;
+      }
+    }
+    if (delete_to_entry >= entry_dim - 1) break;
+    for (HighsInt entry = keep_from_entry; entry <= keep_to_entry; entry++) {
+      status[new_num_entry] = status[entry];
+      new_num_entry++;
+    }
+    if (keep_to_entry >= entry_dim - 1) break;
+  }
+  status.resize(new_num_entry);
+}
+
+void deleteBasisCols(HighsBasis& basis,
+                     const HighsIndexCollection& index_collection,
+                     const HighsInt original_num_col) {
+  bool deleted_basic;
+  bool deleted_nonbasic;
+  deleteBasisEntries(basis.col_status, deleted_basic, deleted_nonbasic,
+                     index_collection, original_num_col);
+  if (deleted_basic) basis.valid = false;
+}
+
+void deleteBasisRows(HighsBasis& basis,
+                     const HighsIndexCollection& index_collection,
+                     const HighsInt original_num_row) {
+  bool deleted_basic;
+  bool deleted_nonbasic;
+  deleteBasisEntries(basis.row_status, deleted_basic, deleted_nonbasic,
+                     index_collection, original_num_row);
+  if (deleted_nonbasic) basis.valid = false;
+}
+
 void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
@@ -368,13 +651,24 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
 
   lp.deleteCols(index_collection);
   model_.hessian_.deleteCols(index_collection);
-  assert(lp.num_col_ <= original_num_col);
-  if (lp.num_col_ < original_num_col) {
-    // Nontrivial deletion so reset the model_status and invalidate
-    // the Highs basis
-    model_status_ = HighsModelStatus::kNotset;
-    basis.valid = false;
+  // Bail out if no columns were actually deleted
+  if (lp.num_col_ == original_num_col) return;
+
+  assert(lp.num_col_ < original_num_col);
+
+  // Nontrivial deletion so reset the model_status and update any
+  // Highs basis
+  model_status_ = HighsModelStatus::kNotset;
+  if (basis_.useful) {
+    assert(basis_.col_status.size() == static_cast<size_t>(original_num_col));
+    // Have a full set of column basis status values, so maintain
+    // them, and only invalidate the basis if a basic column has been
+    // deleted
+    deleteBasisCols(basis_, index_collection, original_num_col);
+  } else {
+    assert(!basis.valid);
   }
+
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
@@ -413,13 +707,24 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   HighsInt original_num_row = lp.num_row_;
 
   lp.deleteRows(index_collection);
-  assert(lp.num_row_ <= original_num_row);
-  if (lp.num_row_ < original_num_row) {
-    // Nontrivial deletion so reset the model_status and invalidate
-    // the Highs basis
-    model_status_ = HighsModelStatus::kNotset;
-    basis.valid = false;
+  // Bail out if no rows were actually deleted
+  if (lp.num_row_ == original_num_row) return;
+
+  assert(lp.num_row_ < original_num_row);
+
+  // Nontrivial deletion so reset the model_status and update any
+  // Highs basis
+  model_status_ = HighsModelStatus::kNotset;
+  if (basis_.useful) {
+    assert(basis_.row_status.size() == static_cast<size_t>(original_num_row));
+    // Have a full set of row basis status values, so maintain them,
+    // and only invalidate the basis if a nonbasic row has been
+    // deleted
+    deleteBasisRows(basis_, index_collection, original_num_row);
+  } else {
+    assert(!basis.valid);
   }
+
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
     lp.scale_.row.resize(lp.num_row_);
@@ -447,197 +752,62 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 }
 
 void Highs::getColsInterface(const HighsIndexCollection& index_collection,
-                             HighsInt& get_num_col, double* col_cost,
-                             double* col_lower, double* col_upper,
-                             HighsInt& get_num_nz, HighsInt* col_matrix_start,
-                             HighsInt* col_matrix_index,
-                             double* col_matrix_value) {
-  HighsLp& lp = model_.lp_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  // Surely this is checked elsewhere
-  assert(0 <= from_k && to_k < lp.num_col_);
-  assert(from_k <= to_k);
-  HighsInt out_from_col;
-  HighsInt out_to_col;
-  HighsInt in_from_col;
-  HighsInt in_to_col = -1;
-  HighsInt current_set_entry = 0;
-  HighsInt col_dim = lp.num_col_;
-  get_num_col = 0;
-  get_num_nz = 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, out_from_col, out_to_col, in_from_col,
-                     in_to_col, current_set_entry);
-    assert(out_to_col < col_dim);
-    assert(in_to_col < col_dim);
-    for (HighsInt iCol = out_from_col; iCol <= out_to_col; iCol++) {
-      if (col_cost != NULL) col_cost[get_num_col] = lp.col_cost_[iCol];
-      if (col_lower != NULL) col_lower[get_num_col] = lp.col_lower_[iCol];
-      if (col_upper != NULL) col_upper[get_num_col] = lp.col_upper_[iCol];
-      if (col_matrix_start != NULL)
-        col_matrix_start[get_num_col] = get_num_nz + lp.a_matrix_.start_[iCol] -
-                                        lp.a_matrix_.start_[out_from_col];
-      get_num_col++;
-    }
-    for (HighsInt iEl = lp.a_matrix_.start_[out_from_col];
-         iEl < lp.a_matrix_.start_[out_to_col + 1]; iEl++) {
-      if (col_matrix_index != NULL)
-        col_matrix_index[get_num_nz] = lp.a_matrix_.index_[iEl];
-      if (col_matrix_value != NULL)
-        col_matrix_value[get_num_nz] = lp.a_matrix_.value_[iEl];
-      get_num_nz++;
-    }
-    if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
+                             HighsInt& num_col, double* cost, double* lower,
+                             double* upper, HighsInt& num_nz, HighsInt* start,
+                             HighsInt* index, double* value) const {
+  const HighsLp& lp = model_.lp_;
+  if (lp.a_matrix_.isColwise()) {
+    getSubVectors(index_collection, lp.num_col_, lp.col_cost_.data(),
+                  lp.col_lower_.data(), lp.col_upper_.data(), lp.a_matrix_,
+                  num_col, cost, lower, upper, num_nz, start, index, value);
+  } else {
+    getSubVectorsTranspose(index_collection, lp.num_col_, lp.col_cost_.data(),
+                           lp.col_lower_.data(), lp.col_upper_.data(),
+                           lp.a_matrix_, num_col, cost, lower, upper, num_nz,
+                           start, index, value);
   }
 }
 
 void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
-                             HighsInt& get_num_row, double* row_lower,
-                             double* row_upper, HighsInt& get_num_nz,
-                             HighsInt* row_matrix_start,
-                             HighsInt* row_matrix_index,
-                             double* row_matrix_value) {
-  HighsLp& lp = model_.lp_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
-  assert(ok(index_collection));
-  HighsInt from_k;
-  HighsInt to_k;
-  limits(index_collection, from_k, to_k);
-  // Surely this is checked elsewhere
-  assert(0 <= from_k && to_k < lp.num_row_);
-  assert(from_k <= to_k);
-  // "Out" means not in the set to be extracted
-  // "In" means in the set to be extracted
-  HighsInt out_from_row;
-  HighsInt out_to_row;
-  HighsInt in_from_row;
-  HighsInt in_to_row = -1;
-  HighsInt current_set_entry = 0;
-  HighsInt row_dim = lp.num_row_;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
-  // Set up a row mask so that entries to be got from the column-wise
-  // matrix can be identified and have their correct row index.
-  vector<HighsInt> new_index;
-  new_index.resize(lp.num_row_);
-
-  get_num_row = 0;
-  get_num_nz = 0;
-  if (!index_collection.is_mask_) {
-    out_to_row = -1;
-    current_set_entry = 0;
-    for (HighsInt k = from_k; k <= to_k; k++) {
-      updateOutInIndex(index_collection, in_from_row, in_to_row, out_from_row,
-                       out_to_row, current_set_entry);
-      if (k == from_k) {
-        // Account for any initial rows not being extracted
-        for (HighsInt iRow = 0; iRow < in_from_row; iRow++) {
-          new_index[iRow] = -1;
-        }
-      }
-      for (HighsInt iRow = in_from_row; iRow <= in_to_row; iRow++) {
-        new_index[iRow] = get_num_row;
-        get_num_row++;
-      }
-      for (HighsInt iRow = out_from_row; iRow <= out_to_row; iRow++) {
-        new_index[iRow] = -1;
-      }
-      if (out_to_row >= row_dim - 1) break;
-    }
+                             HighsInt& num_row, double* lower, double* upper,
+                             HighsInt& num_nz, HighsInt* start, HighsInt* index,
+                             double* value) const {
+  const HighsLp& lp = model_.lp_;
+  if (lp.a_matrix_.isColwise()) {
+    getSubVectorsTranspose(index_collection, lp.num_row_, nullptr,
+                           lp.row_lower_.data(), lp.row_upper_.data(),
+                           lp.a_matrix_, num_row, nullptr, lower, upper, num_nz,
+                           start, index, value);
   } else {
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (index_collection.mask_[iRow]) {
-        new_index[iRow] = get_num_row;
-        get_num_row++;
-      } else {
-        new_index[iRow] = -1;
-      }
-    }
-  }
-
-  // Bail out if no rows are to be extracted
-  if (get_num_row == 0) return;
-
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    HighsInt new_iRow = new_index[iRow];
-    if (new_iRow >= 0) {
-      assert(new_iRow < get_num_row);
-      if (row_lower != NULL) row_lower[new_iRow] = lp.row_lower_[iRow];
-      if (row_upper != NULL) row_upper[new_iRow] = lp.row_upper_[iRow];
-    }
-  }
-  const bool extract_start = row_matrix_start != NULL;
-  const bool extract_index = row_matrix_index != NULL;
-  const bool extract_value = row_matrix_value != NULL;
-  const bool extract_matrix = extract_index || extract_value;
-  // Allocate an array of lengths for the row-wise matrix to be
-  // extracted: necessary even if just the number of nonzeros is
-  // required
-  vector<HighsInt> row_matrix_length;
-  row_matrix_length.assign(get_num_row, 0);
-  // Identify the lengths of the rows in the row-wise matrix to be extracted
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[col];
-         iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt new_iRow = new_index[iRow];
-      if (new_iRow >= 0) row_matrix_length[new_iRow]++;
-    }
-  }
-  if (!extract_start) {
-    // bail out if no matrix starts are to be extracted, but only after
-    // computing the number of nonzeros
-    for (HighsInt iRow = 0; iRow < get_num_row; iRow++)
-      get_num_nz += row_matrix_length[iRow];
-    return;
-  }
-  // Allocate an array of lengths for the row-wise matrix to be extracted
-  row_matrix_start[0] = 0;
-  for (HighsInt iRow = 0; iRow < get_num_row - 1; iRow++) {
-    row_matrix_start[iRow + 1] =
-        row_matrix_start[iRow] + row_matrix_length[iRow];
-    row_matrix_length[iRow] = row_matrix_start[iRow];
-  }
-  HighsInt iRow = get_num_row - 1;
-  get_num_nz = row_matrix_start[iRow] + row_matrix_length[iRow];
-  // Bail out if matrix indices and values are not required
-  if (!extract_matrix) return;
-  row_matrix_length[iRow] = row_matrix_start[iRow];
-  // Fill the row-wise matrix with indices and values
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[col];
-         iEl < lp.a_matrix_.start_[col + 1]; iEl++) {
-      HighsInt iRow = lp.a_matrix_.index_[iEl];
-      HighsInt new_iRow = new_index[iRow];
-      if (new_iRow >= 0) {
-        HighsInt row_iEl = row_matrix_length[new_iRow];
-        if (extract_index) row_matrix_index[row_iEl] = col;
-        if (extract_value) row_matrix_value[row_iEl] = lp.a_matrix_.value_[iEl];
-        row_matrix_length[new_iRow]++;
-      }
-    }
+    getSubVectors(index_collection, lp.num_row_, nullptr, lp.row_lower_.data(),
+                  lp.row_upper_.data(), lp.a_matrix_, num_row, nullptr, lower,
+                  upper, num_nz, start, index, value);
   }
 }
 
 void Highs::getCoefficientInterface(const HighsInt ext_row,
-                                    const HighsInt ext_col, double& value) {
-  HighsLp& lp = model_.lp_;
+                                    const HighsInt ext_col,
+                                    double& value) const {
+  const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
   value = 0;
-  // Ensure that the LP is column-wise
-  lp.ensureColwise();
-  for (HighsInt el = lp.a_matrix_.start_[ext_col];
-       el < lp.a_matrix_.start_[ext_col + 1]; el++) {
-    if (lp.a_matrix_.index_[el] == ext_row) {
-      value = lp.a_matrix_.value_[el];
-      break;
+
+  if (lp.a_matrix_.isColwise()) {
+    for (HighsInt el = lp.a_matrix_.start_[ext_col];
+         el < lp.a_matrix_.start_[ext_col + 1]; el++) {
+      if (lp.a_matrix_.index_[el] == ext_row) {
+        value = lp.a_matrix_.value_[el];
+        break;
+      }
+    }
+  } else {
+    for (HighsInt el = lp.a_matrix_.start_[ext_row];
+         el < lp.a_matrix_.start_[ext_row + 1]; el++) {
+      if (lp.a_matrix_.index_[el] == ext_col) {
+        value = lp.a_matrix_.value_[el];
+        break;
+      }
     }
   }
 }
@@ -994,7 +1164,7 @@ void Highs::setNonbasicStatusInterface(
         double lower = lp.col_lower_[iCol];
         double upper = lp.col_upper_[iCol];
         HighsBasisStatus status = highs_basis.col_status[iCol];
-        HighsInt move = kIllegalMoveValue;
+        int8_t move = kIllegalMoveValue;
         if (lower == upper) {
           if (status == HighsBasisStatus::kNonbasic)
             status = HighsBasisStatus::kLower;
@@ -1045,7 +1215,7 @@ void Highs::setNonbasicStatusInterface(
         double lower = lp.row_lower_[iRow];
         double upper = lp.row_upper_[iRow];
         HighsBasisStatus status = highs_basis.row_status[iRow];
-        HighsInt move = kIllegalMoveValue;
+        int8_t move = kIllegalMoveValue;
         if (lower == upper) {
           if (status == HighsBasisStatus::kNonbasic)
             status = HighsBasisStatus::kLower;
@@ -1095,14 +1265,17 @@ void Highs::setNonbasicStatusInterface(
 }
 
 void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
+  if (ext_num_new_col == 0) return;
   HighsBasis& highs_basis = basis_;
-  if (!highs_basis.valid) return;
+  if (!highs_basis.useful) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
 
+  assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+
   // Add nonbasic structurals
-  if (ext_num_new_col == 0) return;
   HighsInt newNumCol = lp.num_col_ + ext_num_new_col;
   HighsInt newNumTot = newNumCol + lp.num_row_;
   highs_basis.col_status.resize(newNumCol);
@@ -1128,7 +1301,7 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
     double lower = lp.col_lower_[iCol];
     double upper = lp.col_upper_[iCol];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       status = HighsBasisStatus::kLower;
@@ -1169,13 +1342,17 @@ void Highs::appendNonbasicColsToBasisInterface(const HighsInt ext_num_new_col) {
 }
 
 void Highs::appendBasicRowsToBasisInterface(const HighsInt ext_num_new_row) {
+  if (ext_num_new_row == 0) return;
   HighsBasis& highs_basis = basis_;
-  if (!highs_basis.valid) return;
+  if (!highs_basis.useful) return;
   const bool has_simplex_basis = ekk_instance_.status_.has_basis;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
   HighsLp& lp = model_.lp_;
+
+  assert(highs_basis.col_status.size() == static_cast<size_t>(lp.num_col_));
+  assert(highs_basis.row_status.size() == static_cast<size_t>(lp.num_row_));
+
   // Add basic logicals
-  if (ext_num_new_row == 0) return;
   // Add the new rows to the Highs basis
   HighsInt newNumRow = lp.num_row_ + ext_num_new_row;
   highs_basis.row_status.resize(newNumRow);
@@ -1320,156 +1497,6 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::setHotStartInterface(const HotStart& hot_start) {
-  assert(hot_start.valid);
-  HighsLp& lp = model_.lp_;
-  HighsInt num_col = lp.num_col_;
-  HighsInt num_row = lp.num_row_;
-  HighsInt num_tot = num_col + num_row;
-  bool hot_start_ok = true;
-  HighsInt hot_start_num_row;
-  HighsInt hot_start_num_tot;
-  hot_start_num_row = (int)hot_start.refactor_info.pivot_row.size();
-  if (hot_start_num_row != num_row) {
-    hot_start_ok = false;
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "setHotStart: refactor_info.pivot_row.size of %d and LP with "
-                "%d rows are incompatible\n",
-                (int)hot_start_num_row, (int)num_row);
-  }
-  hot_start_num_row = (int)hot_start.refactor_info.pivot_var.size();
-  if (hot_start_num_row != num_row) {
-    hot_start_ok = false;
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "setHotStart: refactor_info.pivot_var.size of %d and LP with "
-                "%d rows are incompatible\n",
-                (int)hot_start_num_row, (int)num_row);
-  }
-  hot_start_num_row = (int)hot_start.refactor_info.pivot_type.size();
-  if (hot_start_num_row != num_row) {
-    hot_start_ok = false;
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "setHotStart: refactor_info.pivot_type.size of %d and LP with "
-                "%d rows are incompatible\n",
-                (int)hot_start_num_row, (int)num_row);
-  }
-  hot_start_num_tot = (int)hot_start.nonbasicMove.size();
-  if (hot_start_num_tot != num_tot) {
-    hot_start_ok = false;
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "setHotStart: nonbasicMove.size of %d and LP with %d "
-                "columns+rows are incompatible\n",
-                (int)hot_start_num_tot, (int)num_tot);
-  }
-  if (!hot_start_ok) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "setHotStart called with incompatible data\n");
-    return HighsStatus::kError;
-  }
-  // Set up the HiGHS and Ekk basis
-  vector<int8_t>& nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_;
-  vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
-  vector<HighsInt>& basicIndex = ekk_instance_.basis_.basicIndex_;
-  basis_.col_status.assign(num_col, HighsBasisStatus::kBasic);
-  basis_.row_status.resize(num_row, HighsBasisStatus::kBasic);
-  basicIndex = hot_start.refactor_info.pivot_var;
-  nonbasicFlag.assign(num_tot, kNonbasicFlagTrue);
-  ekk_instance_.basis_.nonbasicMove_ = hot_start.nonbasicMove;
-  ekk_instance_.hot_start_.refactor_info = hot_start.refactor_info;
-  // Complete nonbasicFlag by setting the entries for basic variables
-  for (HighsInt iRow = 0; iRow < num_row; iRow++)
-    nonbasicFlag[basicIndex[iRow]] = kNonbasicFlagFalse;
-  // Complete the HiGHS basis column status and adjust nonbasicMove
-  // for nonbasic variables
-  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (nonbasicFlag[iCol] == kNonbasicFlagFalse) continue;
-    const double lower = lp.col_lower_[iCol];
-    const double upper = lp.col_upper_[iCol];
-    HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
-    if (lower == upper) {
-      // Fixed
-      status = HighsBasisStatus::kLower;
-      move = kNonbasicMoveZe;
-    } else if (!highs_isInfinity(-lower)) {
-      // Finite lower bound so boxed or lower
-      if (!highs_isInfinity(upper)) {
-        // Finite upper bound so boxed: use nonbasicMove to choose
-        if (nonbasicMove[iCol] == kNonbasicMoveUp) {
-          status = HighsBasisStatus::kLower;
-          move = kNonbasicMoveUp;
-        } else {
-          status = HighsBasisStatus::kUpper;
-          move = kNonbasicMoveDn;
-        }
-      } else {
-        // Lower (since upper bound is infinite)
-        status = HighsBasisStatus::kLower;
-        move = kNonbasicMoveUp;
-      }
-    } else if (!highs_isInfinity(upper)) {
-      // Upper
-      status = HighsBasisStatus::kUpper;
-      move = kNonbasicMoveDn;
-    } else {
-      // FREE
-      status = HighsBasisStatus::kZero;
-      move = kNonbasicMoveZe;
-    }
-    assert(status != HighsBasisStatus::kNonbasic);
-    basis_.col_status[iCol] = status;
-    assert(move != kIllegalMoveValue);
-    nonbasicMove[iCol] = move;
-  }
-  // Complete the HiGHS basis row status and adjust nonbasicMove
-  // for nonbasic variables
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (nonbasicFlag[num_col + iRow] == kNonbasicFlagFalse) continue;
-    const double lower = lp.row_lower_[iRow];
-    const double upper = lp.row_upper_[iRow];
-    HighsBasisStatus status = HighsBasisStatus::kNonbasic;
-    HighsInt move = kIllegalMoveValue;
-    if (lower == upper) {
-      // Fixed
-      status = HighsBasisStatus::kLower;
-      move = kNonbasicMoveZe;
-    } else if (!highs_isInfinity(-lower)) {
-      // Finite lower bound so boxed or lower
-      if (!highs_isInfinity(upper)) {
-        // Finite upper bound so boxed: use nonbasicMove to choose
-        if (nonbasicMove[num_col + iRow] == kNonbasicMoveDn) {
-          status = HighsBasisStatus::kLower;
-          move = kNonbasicMoveDn;
-        } else {
-          status = HighsBasisStatus::kUpper;
-          move = kNonbasicMoveUp;
-        }
-      } else {
-        // Lower (since upper bound is infinite)
-        status = HighsBasisStatus::kLower;
-        move = kNonbasicMoveDn;
-      }
-    } else if (!highs_isInfinity(upper)) {
-      // Upper
-      status = HighsBasisStatus::kUpper;
-      move = kNonbasicMoveUp;
-    } else {
-      // FREE
-      status = HighsBasisStatus::kZero;
-      move = kNonbasicMoveZe;
-    }
-    assert(status != HighsBasisStatus::kNonbasic);
-    basis_.row_status[iRow] = status;
-    assert(move != kIllegalMoveValue);
-    nonbasicMove[num_col + iRow] = move;
-  }
-  basis_.valid = true;
-  ekk_instance_.status_.has_basis = true;
-  ekk_instance_.setNlaRefactorInfo();
-  ekk_instance_.updateStatus(LpAction::kHotStart);
-  return HighsStatus::kOk;
-}
-
 void Highs::zeroIterationCounts() {
   info_.simplex_iteration_count = 0;
   info_.ipm_iteration_count = 0;
@@ -1485,16 +1512,120 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsInt num_row = lp.num_row_;
   // For an LP with no rows the dual ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
-  if (has_dual_ray && dual_ray_value != NULL) {
-    vector<double> rhs;
-    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
-    rhs.assign(num_row, 0);
-    rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
-    HighsInt* dual_ray_num_nz = 0;
-    basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+
+  // Declare identifiers to save column costs, integrality, any Hessian and the
+  // presolve setting, and a flag to know when they should be
+  // recovered
+  std::vector<double> col_cost;
+  HighsHessian hessian;
+  bool solve_relaxation;
+  std::string presolve;
+  bool solve_feasibility_problem = false;
+  const bool is_qp = model_.isQp();
+
+  if (dual_ray_value != NULL) {
+    // User wants a dual ray whatever
+    if (!has_dual_ray || !has_invert) {
+      // No dual ray is known, or no INVERT to compute it
+      //
+      // No point in trying to get a dual ray if the model status is
+      // optimal
+      if (this->model_status_ == HighsModelStatus::kOptimal) {
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Model status is optimal, so no dual ray is available\n");
+        return return_status;
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP to try to compute dual ray\n");
+      // Save the column costs, integrality, any Hessian and the
+      // presolve setting
+      col_cost = lp.col_cost_;
+      if (is_qp) hessian = model_.hessian_;
+      this->getOptionValue("presolve", presolve);
+      this->getOptionValue("solve_relaxation", solve_relaxation);
+      solve_feasibility_problem = true;
+      // Zero the costs, integrality and Hessian
+      std::vector<double> zero_costs;
+      zero_costs.assign(lp.num_col_, 0);
+      HighsStatus status =
+          this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
+      assert(status == HighsStatus::kOk);
+      if (is_qp) {
+        HighsHessian zero_hessian;
+        this->passHessian(zero_hessian);
+      }
+      this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
+      HighsStatus call_status = this->run();
+      if (call_status != HighsStatus::kOk) return_status = call_status;
+      has_dual_ray = ekk_instance_.status_.has_dual_ray;
+      has_invert = ekk_instance_.status_.has_invert;
+      assert(has_invert);
+    }
+    if (has_dual_ray) {
+      if (ekk_instance_.dual_ray_.size()) {
+        // Dual ray is already computed
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Copying known dual ray\n");
+        for (HighsInt iRow = 0; iRow < num_row; iRow++)
+          dual_ray_value[iRow] = ekk_instance_.dual_ray_[iRow];
+      } else if (has_invert) {
+        // Dual ray is known and can be calculated
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Solving linear system to compute dual ray\n");
+        vector<double> rhs;
+        HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+        rhs.assign(num_row, 0);
+        rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
+        HighsInt* dual_ray_num_nz = 0;
+        basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+        // Now save the dual ray itself
+        ekk_instance_.dual_ray_.resize(num_row);
+        for (HighsInt iRow = 0; iRow < num_row; iRow++)
+          ekk_instance_.dual_ray_[iRow] = dual_ray_value[iRow];
+      } else {
+        assert(!has_invert);
+        // Dual ray is known but cannot be calculated
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "No LP invertible representation to compute dual ray\n");
+        return_status = HighsStatus::kError;
+      }
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No dual ray found\n");
+      return_status = HighsStatus::kOk;
+    }
+  }
+  if (solve_feasibility_problem) {
+    // Feasibility problem has been solved, so any objective-related
+    // information has been lost. Reverting the objective function via
+    // Highs calls clears info_, so better to just copy the data
+    // directly and set the info_ entries that are no longer valid
+    lp.col_cost_ = col_cost;
+    if (is_qp) model_.hessian_ = hessian;
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
+    // Modify the objective-related information
+    this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
+    this->info_.objective_function_value = 0;
+    this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    this->info_.max_complementarity_violation =
+        kHighsIllegalComplementarityViolation;
+    this->info_.sum_complementarity_violations =
+        kHighsIllegalComplementarityViolation;
+    if (has_dual_ray) {
+      assert(this->info_.num_primal_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kInfeasible);
+    } else {
+      // If someone has tried to get a dual ray for a feasible
+      // problem, then any status of the original model has been lost
+      this->model_status_ = HighsModelStatus::kNotset;
+    }
   }
   return return_status;
 }
@@ -1507,37 +1638,111 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the primal ray is vacuous
   if (num_row == 0) return return_status;
-  assert(ekk_instance_.status_.has_invert);
+  if (model_.isQp()) {
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Cannot find primal ray for unbounded QP\n");
+    return HighsStatus::kError;
+  }
+  bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
-  if (has_primal_ray && primal_ray_value != NULL) {
-    HighsInt col = ekk_instance_.info_.primal_ray_col_;
-    assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
-    // Get this pivotal column
-    vector<double> rhs;
-    vector<double> column;
-    column.assign(num_row, 0);
-    rhs.assign(num_row, 0);
-    lp.ensureColwise();
-    HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
-    if (col < num_col) {
-      for (HighsInt iEl = lp.a_matrix_.start_[col];
-           iEl < lp.a_matrix_.start_[col + 1]; iEl++)
-        rhs[lp.a_matrix_.index_[iEl]] =
-            primal_ray_sign * lp.a_matrix_.value_[iEl];
+
+  std::string presolve;
+  bool solve_relaxation;
+  bool allow_unbounded_or_infeasible;
+  bool solve_unboundedness_problem = false;
+
+  if (primal_ray_value != NULL) {
+    // User wants a primal ray whatever
+    if (!has_primal_ray || !has_invert) {
+      // No primal ray is known, or no INVERT to compute it
+      //
+      // No point in trying to get a primal ray if the model status is
+      // optimal
+      if (this->model_status_ == HighsModelStatus::kOptimal) {
+        highsLogUser(
+            options_.log_options, HighsLogType::kInfo,
+            "Model status is optimal, so no primal ray is available\n");
+        return return_status;
+      }
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Solving LP to try to compute primal ray\n");
+      this->getOptionValue("presolve", presolve);
+      this->getOptionValue("solve_relaxation", solve_relaxation);
+      this->getOptionValue("allow_unbounded_or_infeasible",
+                           allow_unbounded_or_infeasible);
+      solve_unboundedness_problem = true;
+      lp.integrality_.clear();
+      this->setOptionValue("presolve", kHighsOffString);
+      this->setOptionValue("solve_relaxation", true);
+      this->setOptionValue("allow_unbounded_or_infeasible", false);
+      HighsStatus call_status = this->run();
+      if (call_status != HighsStatus::kOk) return_status = call_status;
+      has_primal_ray = ekk_instance_.status_.has_primal_ray;
+      has_invert = ekk_instance_.status_.has_invert;
+      assert(has_invert);
+    }
+    if (has_primal_ray) {
+      if (ekk_instance_.primal_ray_.size()) {
+        // Primal ray is already computed
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Copying known primal ray\n");
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          primal_ray_value[iCol] = ekk_instance_.primal_ray_[iCol];
+        return return_status;
+      } else if (has_invert) {
+        // Primal ray is known and can be calculated
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Solving linear system to compute primal ray\n");
+        HighsInt col = ekk_instance_.info_.primal_ray_col_;
+        assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
+        // Get this pivotal column
+        vector<double> rhs;
+        vector<double> column;
+        column.assign(num_row, 0);
+        rhs.assign(num_row, 0);
+        lp.ensureColwise();
+        HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
+        if (col < num_col) {
+          for (HighsInt iEl = lp.a_matrix_.start_[col];
+               iEl < lp.a_matrix_.start_[col + 1]; iEl++)
+            rhs[lp.a_matrix_.index_[iEl]] =
+                primal_ray_sign * lp.a_matrix_.value_[iEl];
+        } else {
+          rhs[col - num_col] = primal_ray_sign;
+        }
+        HighsInt* column_num_nz = 0;
+        basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
+        // Now zero primal_ray_value and scatter the column according to
+        // the basic variables.
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          primal_ray_value[iCol] = 0;
+        for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+          HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
+          if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+        }
+        if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
+        // Now save the primal ray itself
+        ekk_instance_.primal_ray_.resize(num_col);
+        for (HighsInt iCol = 0; iCol < num_col; iCol++)
+          ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
+      }
     } else {
-      rhs[col - num_col] = primal_ray_sign;
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "No primal ray found\n");
+      return_status = HighsStatus::kOk;
     }
-    HighsInt* column_num_nz = 0;
-    basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
-    // Now zero primal_ray_value and scatter the column according to
-    // the basic variables.
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) primal_ray_value[iCol] = 0;
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-      if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
+  }
+  if (solve_unboundedness_problem) {
+    // Restore the option values
+    this->setOptionValue("presolve", presolve);
+    this->setOptionValue("solve_relaxation", solve_relaxation);
+    this->setOptionValue("allow_unbounded_or_infeasible",
+                         allow_unbounded_or_infeasible);
+    if (has_primal_ray) {
+      assert(this->info_.num_dual_infeasibilities > 0);
+      assert(this->model_status_ == HighsModelStatus::kUnbounded);
     }
-    if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
   }
   return return_status;
 }
@@ -1662,6 +1867,7 @@ HighsStatus Highs::getIisInterface() {
       max_iterations = std::max(iterations, max_iterations);
     }
     highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 " %d cols, %d rows, %d LPs solved"
                  " (min / average / max) iteration count (%6d / %6.2g / % 6d)"
                  " and time (%6.2f / %6.2f / % 6.2f) \n",
                  int(this->iis_.col_index_.size()),
@@ -1691,6 +1897,12 @@ HighsStatus Highs::elasticityFilterReturn(
 
   run_status = this->deleteCols(original_num_col, lp.num_col_ - 1);
   assert(run_status == HighsStatus::kOk);
+  //
+  // Now that deleteRows and deleteCols may yield a valid basis, the
+  // lack of dual values triggers an assert in
+  // getKktFailures. Ultimately (#2081) the dual values will be
+  // available but, for now, make the basis invalid.
+  basis_.valid = false;
 
   run_status =
       this->changeColsCost(0, original_num_col - 1, original_col_cost.data());
@@ -2063,7 +2275,7 @@ HighsStatus Highs::elasticityFilter(
       printf("\nElasticity filter pass %d\n==============\n", int(loop_k));
     HighsInt num_fixed = 0;
     if (has_elastic_columns) {
-      for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+      for (size_t eCol = 0; eCol < col_of_ecol.size(); eCol++) {
         HighsInt iCol = col_of_ecol[eCol];
         if (solution.col_value[col_ecol_offset + eCol] >
             this->options_.primal_feasibility_tolerance) {
@@ -2081,7 +2293,7 @@ HighsStatus Highs::elasticityFilter(
       }
     }
     if (has_elastic_rows) {
-      for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+      for (size_t eCol = 0; eCol < row_of_ecol.size(); eCol++) {
         HighsInt iRow = row_of_ecol[eCol];
         if (solution.col_value[row_ecol_offset + eCol] >
             this->options_.primal_feasibility_tolerance) {
@@ -2119,7 +2331,7 @@ HighsStatus Highs::elasticityFilter(
   HighsInt num_enforced_col_ecol = 0;
   HighsInt num_enforced_row_ecol = 0;
   if (has_elastic_columns) {
-    for (HighsInt eCol = 0; eCol < col_of_ecol.size(); eCol++) {
+    for (size_t eCol = 0; eCol < col_of_ecol.size(); eCol++) {
       HighsInt iCol = col_of_ecol[eCol];
       if (lp.col_upper_[col_ecol_offset + eCol] == 0) {
         num_enforced_col_ecol++;
@@ -2133,7 +2345,7 @@ HighsStatus Highs::elasticityFilter(
     }
   }
   if (has_elastic_rows) {
-    for (HighsInt eCol = 0; eCol < row_of_ecol.size(); eCol++) {
+    for (size_t eCol = 0; eCol < row_of_ecol.size(); eCol++) {
       HighsInt iRow = row_of_ecol[eCol];
       if (lp.col_upper_[row_ecol_offset + eCol] == 0) {
         num_enforced_row_ecol++;
@@ -2267,18 +2479,10 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   return return_status;
 }
 
-HighsStatus Highs::invertRequirementError(std::string method_name) {
+HighsStatus Highs::invertRequirementError(std::string method_name) const {
   assert(!ekk_instance_.status_.has_invert);
   highsLogUser(options_.log_options, HighsLogType::kError,
                "No invertible representation for %s\n", method_name.c_str());
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::lpInvertRequirementError(std::string method_name) {
-  assert(!ekk_instance_.status_.has_invert);
-  if (model_.isMip() || model_.isQp()) return HighsStatus::kOk;
-  highsLogUser(options_.log_options, HighsLogType::kError,
-               "No LP invertible representation for %s\n", method_name.c_str());
   return HighsStatus::kError;
 }
 
@@ -3181,4 +3385,357 @@ bool Highs::infeasibleBoundsOk() {
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
   return num_true_infeasible_bound == 0;
+}
+
+bool Highs::validLinearObjective(const HighsLinearObjective& linear_objective,
+                                 const HighsInt iObj) const {
+  HighsInt linear_objective_coefficients_size =
+      linear_objective.coefficients.size();
+  if (linear_objective_coefficients_size != this->model_.lp_.num_col_) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Coefficient vector for linear objective %s has size %d != %d = "
+        "lp.num_col_\n",
+        iObj >= 0 ? std::to_string(iObj).c_str() : "",
+        int(linear_objective_coefficients_size),
+        int(this->model_.lp_.num_col_));
+    return false;
+  }
+  if (!options_.blend_multi_objectives &&
+      hasRepeatedLinearObjectivePriorities(&linear_objective)) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Repeated priorities for lexicographic optimization is illegal\n");
+    return false;
+  }
+  return true;
+}
+
+bool Highs::hasRepeatedLinearObjectivePriorities(
+    const HighsLinearObjective* linear_objective) const {
+  // Look for repeated values in the linear objective priorities, also
+  // comparing linear_objective if it's not a null pointer. Cost is
+  // O(n^2), but who will have more than O(1) linear objectives!
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective <= 0 ||
+      (num_linear_objective <= 1 && !linear_objective))
+    return false;
+  for (HighsInt iObj0 = 0; iObj0 < num_linear_objective; iObj0++) {
+    HighsInt priority0 = this->multi_linear_objective_[iObj0].priority;
+    for (HighsInt iObj1 = iObj0 + 1; iObj1 < num_linear_objective; iObj1++) {
+      HighsInt priority1 = this->multi_linear_objective_[iObj1].priority;
+      if (priority1 == priority0) return true;
+    }
+    if (linear_objective) {
+      if (linear_objective->priority == priority0) return true;
+    }
+  }
+  return false;
+}
+
+static bool comparison(std::pair<HighsInt, HighsInt> x1,
+                       std::pair<HighsInt, HighsInt> x2) {
+  return x1.first >= x2.first;
+}
+
+HighsStatus Highs::returnFromLexicographicOptimization(
+    HighsStatus return_status, HighsInt original_lp_num_row) {
+  // Save model_status_ and info_ since they are cleared by calling
+  // deleteRows
+  HighsModelStatus model_status = this->model_status_;
+  HighsInfo info = this->info_;
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+  if (num_linear_objective > 1) {
+    this->deleteRows(original_lp_num_row, this->model_.lp_.num_row_ - 1);
+    // Recover model_status_ and info_, and then account for lack of basis or
+    // dual solution
+    this->model_status_ = model_status;
+    this->info_ = info;
+    info_.objective_function_value = 0;
+    info_.basis_validity = kBasisValidityInvalid;
+    info_.dual_solution_status = kSolutionStatusNone;
+    info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
+    info_.sum_complementarity_violations =
+        kHighsIllegalComplementarityViolation;
+    this->solution_.value_valid = true;
+    this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
+  }
+  return return_status;
+}
+
+HighsStatus Highs::multiobjectiveSolve() {
+  const HighsInt coeff_logging_size_limit = 10;
+  HighsInt num_linear_objective = this->multi_linear_objective_.size();
+
+  assert(num_linear_objective > 0);
+  HighsLp& lp = this->model_.lp_;
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    HighsLinearObjective& multi_linear_objective =
+        this->multi_linear_objective_[iObj];
+    if (multi_linear_objective.coefficients.size() !=
+        static_cast<size_t>(lp.num_col_)) {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Multiple linear objective coefficient vector %d has size "
+                   "incompatible with model\n",
+                   int(iObj));
+      return HighsStatus::kError;
+    }
+  }
+
+  std::unique_ptr<std::stringstream> multi_objective_log;
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Solving with %d multiple linear objectives, %s\n",
+               int(num_linear_objective),
+               this->options_.blend_multi_objectives
+                   ? "blending objectives by weight"
+                   : "using lexicographic optimization by priority");
+  highsLogUser(
+      options_.log_options, HighsLogType::kInfo,
+      "Ix      weight      offset     abs_tol     rel_tol    priority%s\n",
+      lp.num_col_ < coeff_logging_size_limit ? "   coefficients" : "");
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+    HighsLinearObjective& linear_objective =
+        this->multi_linear_objective_[iObj];
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "%2d %11.6g %11.6g %11.6g %11.6g %11d  ", int(iObj),
+        linear_objective.weight, linear_objective.offset,
+        linear_objective.abs_tolerance, linear_objective.rel_tolerance,
+        linear_objective.priority);
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            "%s c_{%1d} = %g", iCol == 0 ? "" : ",", int(iCol),
+            linear_objective.coefficients[iCol]);
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
+  }
+  this->clearSolver();
+  if (this->options_.blend_multi_objectives) {
+    // Objectives are blended by weight and minimized
+    lp.offset_ = 0;
+    lp.col_cost_.assign(lp.num_col_, 0);
+    for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++) {
+      HighsLinearObjective& multi_linear_objective =
+          this->multi_linear_objective_[iObj];
+      lp.offset_ +=
+          multi_linear_objective.weight * multi_linear_objective.offset;
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        lp.col_cost_[iCol] += multi_linear_objective.weight *
+                              multi_linear_objective.coefficients[iCol];
+    }
+    lp.sense_ = ObjSense::kMinimize;
+
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "Solving with blended objective");
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString(
+          ": %s %g", lp.sense_ == ObjSense::kMinimize ? "min" : "max",
+          lp.offset_);
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            " + (%g) x[%d]", lp.col_cost_[iCol], int(iCol));
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
+    return this->solve();
+  }
+
+  // Objectives are applied lexicographically
+  if (model_.isQp() && num_linear_objective > 1) {
+    // Lexicographic optimization with a single linear objective is
+    // trivially standard optimization, so is OK
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Cannot perform non-trivial lexicographic optimization for QP\n");
+    return HighsStatus::kError;
+  }
+  // Check whether there are repeated linear objective priorities
+  if (hasRepeatedLinearObjectivePriorities()) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Repeated priorities for lexicographic optimization is illegal\n");
+    return HighsStatus::kError;
+  }
+  std::vector<std::pair<HighsInt, HighsInt>> priority_objective;
+
+  for (HighsInt iObj = 0; iObj < num_linear_objective; iObj++)
+    priority_objective.push_back(
+        std::make_pair(this->multi_linear_objective_[iObj].priority, iObj));
+  std::sort(priority_objective.begin(), priority_objective.end(), comparison);
+  // Clear LP objective
+  lp.offset_ = 0;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  const HighsInt original_lp_num_row = lp.num_row_;
+  std::vector<HighsInt> index(lp.num_col_);
+  std::vector<double> value(lp.num_col_);
+  // Use the solution of one MIP to provide an integer feasible
+  // solution of the next
+  HighsSolution solution;
+  for (HighsInt iIx = 0; iIx < num_linear_objective; iIx++) {
+    HighsInt priority = priority_objective[iIx].first;
+    HighsInt iObj = priority_objective[iIx].second;
+    // Use this objective
+    HighsLinearObjective& linear_objective =
+        this->multi_linear_objective_[iObj];
+    lp.offset_ = linear_objective.offset;
+    lp.col_cost_ = linear_objective.coefficients;
+    lp.sense_ =
+        linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
+    if (lp.isMip() && solution.value_valid) {
+      HighsStatus set_solution_status = this->setSolution(solution);
+      if (set_solution_status == HighsStatus::kError) {
+        highsLogUser(options_.log_options, HighsLogType::kError,
+                     "Failure to use one MIP to provide an integer feasible "
+                     "solution of the next\n");
+        return returnFromLexicographicOptimization(HighsStatus::kError,
+                                                   original_lp_num_row);
+      }
+      bool valid, integral, feasible;
+      HighsStatus assess_primal_solution =
+          assessPrimalSolution(valid, integral, feasible);
+      if (!valid || !integral || !feasible) {
+        highsLogUser(options_.log_options, HighsLogType::kWarning,
+                     "Failure to use one MIP to provide an integer feasible "
+                     "solution of the next: "
+                     "status is valid = %s, integral = %s, feasible = %s\n",
+                     highsBoolToString(valid).c_str(),
+                     highsBoolToString(integral).c_str(),
+                     highsBoolToString(feasible).c_str());
+      }
+    }
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString("Solving with objective %d",
+                                                int(iObj));
+    if (lp.num_col_ < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString(
+          ": %s %g", lp.sense_ == ObjSense::kMinimize ? "min" : "max",
+          lp.offset_);
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        *multi_objective_log << highsFormatToString(
+            " + (%g) x[%d]", lp.col_cost_[iCol], int(iCol));
+    }
+    *multi_objective_log << "\n";
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
+    HighsStatus solve_status = this->solve();
+    if (solve_status == HighsStatus::kError)
+      return returnFromLexicographicOptimization(HighsStatus::kError,
+                                                 original_lp_num_row);
+    if (model_status_ != HighsModelStatus::kOptimal) {
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "After priority %d solve, model status is %s\n",
+                   int(priority), modelStatusToString(model_status_).c_str());
+      return returnFromLexicographicOptimization(HighsStatus::kWarning,
+                                                 original_lp_num_row);
+    }
+    if (iIx == num_linear_objective - 1) break;
+    if (lp.isMip()) {
+      // Save the solution to provide an integer feasible solution of
+      // the next MIP
+      solution.col_value = this->solution_.col_value;
+      solution.value_valid = true;
+    }
+    // Add the constraint
+    HighsInt nnz = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (lp.col_cost_[iCol]) {
+        index[nnz] = iCol;
+        value[nnz] = lp.col_cost_[iCol];
+        nnz++;
+      }
+    }
+    double objective = info_.objective_function_value;
+    HighsStatus add_row_status;
+    double lower_bound = -kHighsInf;
+    double upper_bound = kHighsInf;
+    if (lp.sense_ == ObjSense::kMinimize) {
+      // Minimizing, so set a greater upper bound than the objective
+      if (linear_objective.abs_tolerance >= 0)
+        upper_bound = objective + linear_objective.abs_tolerance;
+      if (linear_objective.rel_tolerance >= 0) {
+        if (objective >= 0) {
+          // Guarantees objective of at least (1+t).f^*
+          //
+          // so ((1+t).f^*-f^*)/f^* = t
+          upper_bound = std::min(
+              objective * (1.0 + linear_objective.rel_tolerance), upper_bound);
+        } else if (objective < 0) {
+          // Guarantees objective of at least (1-t).f^*
+          //
+          // so ((1-t).f^*-f^*)/f^* = -t
+          upper_bound = std::min(
+              objective * (1.0 - linear_objective.rel_tolerance), upper_bound);
+        }
+      }
+      upper_bound -= lp.offset_;
+    } else {
+      // Maximizing, so set a lesser lower bound than the objective
+      if (linear_objective.abs_tolerance >= 0)
+        lower_bound = objective - linear_objective.abs_tolerance;
+      if (linear_objective.rel_tolerance >= 0) {
+        if (objective >= 0) {
+          // Guarantees objective of at most (1-t).f^*
+          //
+          // so ((1-t).f^*-f^*)/f^* = -t
+          lower_bound = std::max(
+              objective * (1.0 - linear_objective.rel_tolerance), lower_bound);
+        } else if (objective < 0) {
+          // Guarantees objective of at least (1+t).f^*
+          //
+          // so ((1+t).f^*-f^*)/f^* = t
+          lower_bound = std::max(
+              objective * (1.0 + linear_objective.rel_tolerance), lower_bound);
+        }
+      }
+      lower_bound -= lp.offset_;
+    }
+    if (lower_bound == -kHighsInf && upper_bound == kHighsInf)
+      highsLogUser(options_.log_options, HighsLogType::kWarning,
+                   "After priority %d solve, no objective constraint due to "
+                   "absolute tolerance being %g < 0,"
+                   " and relative tolerance being %g < 0\n",
+                   int(priority), linear_objective.abs_tolerance,
+                   linear_objective.rel_tolerance);
+    multi_objective_log =
+        std::unique_ptr<std::stringstream>(new std::stringstream());
+    *multi_objective_log << highsFormatToString(
+        "Add constraint for objective %d: ", int(iObj));
+    if (nnz < coeff_logging_size_limit) {
+      *multi_objective_log << highsFormatToString("%g <= ", lower_bound);
+      for (HighsInt iEl = 0; iEl < nnz; iEl++)
+        *multi_objective_log << highsFormatToString(
+            "%s(%g) x[%d]", iEl > 0 ? " + " : "", value[iEl], int(index[iEl]));
+      *multi_objective_log << highsFormatToString(" <= %g\n", upper_bound);
+    } else {
+      *multi_objective_log << highsFormatToString("Bounds [%g, %g]\n",
+                                                  lower_bound, upper_bound);
+    }
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
+                 multi_objective_log->str().c_str());
+    add_row_status =
+        this->addRow(lower_bound, upper_bound, nnz, index.data(), value.data());
+    assert(add_row_status == HighsStatus::kOk);
+  }
+  return returnFromLexicographicOptimization(HighsStatus::kOk,
+                                             original_lp_num_row);
+}
+
+void HighsLinearObjective::clear() {
+  this->weight = 0.0;
+  this->offset = 0.0;
+  this->coefficients.clear();
+  this->abs_tolerance = 0.0;
+  this->rel_tolerance = 0.0;
+  this->priority = 0;
 }

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -486,7 +483,7 @@ class HEkkDual {
    * @brief Multiple minor iteration data
    */
   struct MFinish {
-    HighsInt move_in;
+    int8_t move_in;
     double shiftOut;
     std::vector<HighsInt> flipList;
 

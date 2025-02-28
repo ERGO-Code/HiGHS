@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -18,6 +15,16 @@
 
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsCallbackStruct.h"
+
+enum userMipSolutionCallbackOrigin {
+  kUserMipSolutionCallbackOriginAfterSetup = 0,
+  kUserMipSolutionCallbackOriginBeforeDive,
+  kUserMipSolutionCallbackOriginEvaluateRootNode0,
+  kUserMipSolutionCallbackOriginEvaluateRootNode1,
+  kUserMipSolutionCallbackOriginEvaluateRootNode2,
+  kUserMipSolutionCallbackOriginEvaluateRootNode3,
+  kUserMipSolutionCallbackOriginEvaluateRootNode4
+};
 
 using HighsCallbackFunctionType =
     std::function<void(int, const std::string&, const HighsCallbackDataOut*,

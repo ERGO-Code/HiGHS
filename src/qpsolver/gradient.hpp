@@ -1,8 +1,8 @@
 #ifndef __SRC_LIB_GRADIENT_HPP__
 #define __SRC_LIB_GRADIENT_HPP__
 
-#include "runtime.hpp"
 #include "qpvector.hpp"
+#include "runtime.hpp"
 
 class Gradient {
   Runtime& runtime;

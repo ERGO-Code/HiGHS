@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -722,6 +719,65 @@ void HighsSparseMatrix::deleteRows(
   this->num_row_ = new_num_row;
 }
 
+HighsStatus HighsSparseMatrix::assessStart(const HighsLogOptions& log_options) {
+  // Identify main dimensions
+  HighsInt vec_dim;
+  HighsInt num_vec;
+  if (this->isColwise()) {
+    vec_dim = this->num_row_;
+    num_vec = this->num_col_;
+  } else {
+    vec_dim = this->num_col_;
+    num_vec = this->num_row_;
+  }
+  if (this->start_[0]) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Matrix start[0] = %d, not 0\n", int(this->start_[0]));
+    return HighsStatus::kError;
+  }
+  HighsInt num_nz = this->numNz();
+  for (HighsInt iVec = 1; iVec < num_vec; iVec++) {
+    if (this->start_[iVec] < this->start_[iVec - 1]) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix start[%d] = %d > %d = start[%d]\n", int(iVec),
+                   int(this->start_[iVec]), int(this->start_[iVec - 1]),
+                   int(iVec - 1));
+      return HighsStatus::kError;
+    }
+    if (this->start_[iVec] > num_nz) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix start[%d] = %d > %d = number of nonzeros\n",
+                   int(iVec), int(this->start_[iVec]), int(num_nz));
+      return HighsStatus::kError;
+    }
+  }
+  return HighsStatus::kOk;
+}
+
+HighsStatus HighsSparseMatrix::assessIndexBounds(
+    const HighsLogOptions& log_options) {
+  // Identify main dimensions
+  HighsInt vec_dim;
+  HighsInt num_vec;
+  if (this->isColwise()) {
+    vec_dim = this->num_row_;
+    //    num_vec = this->num_col_;
+  } else {
+    vec_dim = this->num_col_;
+    //    num_vec = this->num_row_;
+  }
+  HighsInt num_nz = this->numNz();
+  for (HighsInt iEl = 1; iEl < num_nz; iEl++) {
+    if (this->index_[iEl] < 0 || this->index_[iEl] >= vec_dim) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Matrix index[%d] = %d is not in legal range of [0, %d)\n",
+                   int(iEl), int(this->index_[iEl]), vec_dim);
+      return HighsStatus::kError;
+    }
+  }
+  return HighsStatus::kOk;
+}
+
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const std::string matrix_name,
                                       const double small_matrix_value,
@@ -1171,6 +1227,32 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
         value += row[this->index_[iEl]] * this->value_[iEl];
       result[iRow] = double(value);
     }
+  }
+}
+
+void HighsSparseMatrix::productTransposeQuad(
+    vector<double>& result, const vector<double>& row,
+    const HighsInt debug_report) const {
+  assert(this->formatOk());
+  assert((int)row.size() >= this->num_row_);
+  result.assign(this->num_col_, 0.0);
+  if (this->isColwise()) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      HighsCDouble value = 0.0;
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        value += row[this->index_[iEl]] * this->value_[iEl];
+      result[iCol] = double(value);
+    }
+  } else {
+    std::vector<HighsCDouble> value(this->num_col_, 0);
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
+        value[this->index_[iEl]] += row[iRow] * this->value_[iEl];
+    }
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+      result[iCol] = double(value[iCol]);
   }
 }
 

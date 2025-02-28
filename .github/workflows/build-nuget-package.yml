@@ -7,9 +7,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # macos 12 is Intel
-  build_macos_12:
-    runs-on: macos-12
+  # macos 13 is Intel
+  build_macos_13:
+    runs-on: macos-13
     # strategy:
       # matrix:
       #   python: [3.11]
@@ -32,7 +32,7 @@ jobs:
           name: macos-x64
           path: ${{runner.workspace}}/build/dotnet/Highs.Native/runtimes
             
-  # macos 14 is M1 (beta)
+  # macos 14 is M1
   build_macos_14:
     runs-on: macos-14 
     steps:
@@ -124,7 +124,7 @@ jobs:
 
   build_windows:
     runs-on: windows-latest
-    needs: [build_macos_12, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
+    needs: [build_macos_13, build_macos_14, build_windows_32, build_linux, build_linux_arm64]
     steps:
       - uses: actions/checkout@v4
       - name: Build HiGHS Windows native
@@ -185,7 +185,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.7.2
+        run: dotnet pack -c Release /p:Version=1.9.0
 
       - uses: actions/upload-artifact@v4
         with:

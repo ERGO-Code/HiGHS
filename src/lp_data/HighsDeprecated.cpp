@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -177,7 +174,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
 }
 #endif
 
-const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
+const HighsModelStatus& Highs::getModelStatus(const bool) const {
   deprecationMessage("getModelStatus(const bool scaled_model)",
                      "getModelStatus()");
   return model_status_;

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -132,7 +129,9 @@ class HFactor {
         build_timer_(nullptr),
         nwork(0),
         u_merit_x(0),
+        // clang-format off
         u_total_x(0) {};
+  // clang-format on
 
   /**
    * @brief Copy problem size and pointers of constraint matrix, and set

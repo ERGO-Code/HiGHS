@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -26,7 +23,6 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
-#include "util/HighsTimer.h"
 
 using std::fabs;
 using std::max;
@@ -130,7 +126,7 @@ bool lpDimensionsOk(std::string message, const HighsLp& lp,
   HighsInt col_upper_size = lp.col_upper_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
-  bool legal_col_upper_size = col_lower_size >= num_col;
+  bool legal_col_upper_size = col_upper_size >= num_col;
   if (!legal_col_cost_size)
     highsLogUser(log_options, HighsLogType::kError,
                  "LP dimension validation (%s) fails on col_cost.size() = %d < "
@@ -481,11 +477,14 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_illegal_lower = 0;
   HighsInt num_illegal_upper = 0;
-  HighsInt num_modified_upper = 0;
+  HighsInt num_tightened_upper = 0;
   HighsInt num_inconsistent_semi = 0;
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
   const double kLowerBoundMu = 10.0;
+
+  std::vector<HighsInt>& save_non_semi_variable_index =
+      lp.mods_.save_non_semi_variable_index;
   std::vector<HighsInt>& inconsistent_semi_variable_index =
       lp.mods_.save_inconsistent_semi_variable_index;
   std::vector<double>& inconsistent_semi_variable_lower_bound_value =
@@ -519,7 +518,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       // Semi-variables with zero lower bound are not semi
       if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
-        lp.mods_.save_non_semi_variable_index.push_back(iCol);
+        save_non_semi_variable_index.push_back(iCol);
         // Semi-integer become integer so still have a non-continuous variable
         if (lp.integrality_[iCol] == HighsVarType::kSemiInteger)
           num_non_continuous_variables++;
@@ -539,7 +538,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
           tightened_semi_variable_upper_bound_index.push_back(iCol);
           tightened_semi_variable_upper_bound_value.push_back(
               kMaxSemiVariableUpper);
-          num_modified_upper++;
+          num_tightened_upper++;
         }
       }
       num_non_continuous_variables++;
@@ -571,12 +570,12 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     return_status = HighsStatus::kWarning;
   }
   const bool has_illegal_bounds = num_illegal_lower || num_illegal_upper;
-  if (num_modified_upper) {
+  if (num_tightened_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %g that can be modified to %g > %g*lower)\n",
-                 num_modified_upper, kMaxSemiVariableUpper,
+                 "exceeding %g that can be tightened to %g > %g*lower)\n",
+                 num_tightened_upper, kMaxSemiVariableUpper,
                  kMaxSemiVariableUpper, kLowerBoundMu);
     return_status = HighsStatus::kWarning;
     if (has_illegal_bounds) {
@@ -584,10 +583,11 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       assert(num_illegal_lower || num_illegal_upper);
       tightened_semi_variable_upper_bound_index.clear();
       tightened_semi_variable_upper_bound_value.clear();
+      num_tightened_upper = 0;
     } else {
       // Apply the upper bound tightenings, saving the over-written
       // values
-      for (HighsInt k = 0; k < num_modified_upper; k++) {
+      for (HighsInt k = 0; k < num_tightened_upper; k++) {
         const double use_upper_bound =
             tightened_semi_variable_upper_bound_value[k];
         const HighsInt iCol = tightened_semi_variable_upper_bound_index[k];
@@ -603,6 +603,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       inconsistent_semi_variable_lower_bound_value.clear();
       inconsistent_semi_variable_upper_bound_value.clear();
       inconsistent_semi_variable_type.clear();
+      num_inconsistent_semi = 0;
     } else {
       for (HighsInt k = 0; k < num_inconsistent_semi; k++) {
         const HighsInt iCol = inconsistent_semi_variable_index[k];
@@ -615,10 +616,10 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   if (num_non_semi) {
     if (has_illegal_bounds) {
       // Don't apply type changes if there are illegal bounds
-      lp.mods_.save_non_semi_variable_index.clear();
+      save_non_semi_variable_index.clear();
     } else {
       for (HighsInt k = 0; k < num_non_semi; k++) {
-        const HighsInt iCol = lp.mods_.save_non_semi_variable_index[k];
+        const HighsInt iCol = save_non_semi_variable_index[k];
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
@@ -647,9 +648,14 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     return_status = HighsStatus::kError;
   }
   made_semi_variable_mods =
-      lp.mods_.save_non_semi_variable_index.size() > 0 ||
-      inconsistent_semi_variable_index.size() > 0 ||
-      tightened_semi_variable_upper_bound_index.size() > 0;
+      num_non_semi > 0 || num_inconsistent_semi > 0 || num_tightened_upper > 0;
+  assert(num_non_semi <= save_non_semi_variable_index.size());
+  assert(num_inconsistent_semi <= inconsistent_semi_variable_index.size());
+  assert(num_tightened_upper <=
+         tightened_semi_variable_upper_bound_index.size());
+  //      save_non_semi_variable_index.size() > 0 ||
+  //      inconsistent_semi_variable_index.size() > 0 ||
+  //      tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
@@ -680,11 +686,11 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value) {
   const std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
       lp.mods_.save_tightened_semi_variable_upper_bound_index;
-  const HighsInt num_modified_upper =
+  const HighsInt num_tightened_upper =
       tightened_semi_variable_upper_bound_index.size();
   HighsInt num_active_modified_upper = 0;
   double min_semi_variable_margin = kHighsInf;
-  for (HighsInt k = 0; k < num_modified_upper; k++) {
+  for (HighsInt k = 0; k < num_tightened_upper; k++) {
     const double value =
         col_value[tightened_semi_variable_upper_bound_index[k]];
     const double upper =
@@ -703,7 +709,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  "%" HIGHSINT_FORMAT
                  " semi-variables are active at modified upper bounds\n",
                  num_active_modified_upper);
-  } else if (num_modified_upper) {
+  } else if (num_tightened_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "No semi-variables are active at modified upper bounds:"
                  " a large minimum margin (%g) suggests optimality,"
@@ -2028,7 +2034,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
 }
 
 HighsStatus readSolutionFile(const std::string filename,
-                             const HighsOptions& options, const HighsLp& lp,
+                             const HighsOptions& options, HighsLp& lp,
                              HighsBasis& basis, HighsSolution& solution,
                              const HighsInt style) {
   const HighsLogOptions& log_options = options.log_options;
@@ -2047,6 +2053,7 @@ HighsStatus readSolutionFile(const std::string filename,
   }
   std::string keyword;
   std::string name;
+  double value;
   HighsInt num_col;
   HighsInt num_row;
   const HighsInt lp_num_col = lp.num_col_;
@@ -2063,49 +2070,89 @@ HighsStatus readSolutionFile(const std::string filename,
   read_basis.col_status.resize(lp_num_col);
   read_basis.row_status.resize(lp_num_row);
   std::string section_name;
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Model status
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Optimal
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  //
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // # Primal solution values
-  if (!readSolutionFileKeywordLineOk(keyword, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  // Read in the primal solution values: return warning if there is none
-  if (keyword == "None")
-    return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
-                                  read_solution, read_basis, in_file);
-  // If there are primal solution values then keyword is the status
-  // and the next line is objective
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // EOL
-  if (!readSolutionFileIgnoreLineOk(in_file))
-    return readSolutionFileErrorReturn(in_file);  // Objective
-  // Next line should be "Columns" and correct number
-  if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
-    return readSolutionFileErrorReturn(in_file);
-  assert(keyword == "Columns");
-  // The default style parameter is kSolutionStyleRaw, and this still
-  // allows sparse files to be read. Recognise the latter from num_col
-  // <= 0. Doesn't matter if num_col = 0, since there's nothing to
-  // read either way
-  const bool sparse = num_col <= 0;
-  if (style == kSolutionStyleSparse) assert(sparse);
-  if (sparse) {
-    num_col = -num_col;
-  } else {
-    if (num_col != lp_num_col) {
+  if (!readSolutionFileIdIgnoreLineOk(section_name, in_file))
+    return readSolutionFileErrorReturn(
+        in_file);  // Model (status) or =obj= (value)
+  const bool miplib_sol = section_name == "=obj=";
+  if (miplib_sol) {
+    // A MIPLIB solution file has nonzero solution values for a subset
+    // of the variables identified by name, so there must be column
+    // names
+    if (!lp.col_names_.size()) {
       highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
-                   " columns, not %" HIGHSINT_FORMAT "\n",
-                   num_col, lp_num_col);
+                   "readSolutionFile: Cannot read a MIPLIB solution file "
+                   "without column names in the model\n");
+      return HighsStatus::kError;
+    }
+    // Ensure that the col name hash table has been formed
+    if (!lp.col_hash_.name2index.size()) lp.col_hash_.form(lp.col_names_);
+  }
+  bool sparse = false;
+  if (!miplib_sol) {
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Optimal
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  //
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // # Primal solution values
+    if (!readSolutionFileKeywordLineOk(keyword, in_file))
       return readSolutionFileErrorReturn(in_file);
+    // Read in the primal solution values: return warning if there is none
+    if (keyword == "None")
+      return readSolutionFileReturn(HighsStatus::kWarning, solution, basis,
+                                    read_solution, read_basis, in_file);
+    // If there are primal solution values then keyword is the status
+    // and the next line is objective
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // EOL
+    if (!readSolutionFileIgnoreLineOk(in_file))
+      return readSolutionFileErrorReturn(in_file);  // Objective
+    // Next line should be "Columns" and correct number
+    if (!readSolutionFileHashKeywordIntLineOk(keyword, num_col, in_file))
+      return readSolutionFileErrorReturn(in_file);
+    assert(keyword == "Columns");
+    // The default style parameter is kSolutionStyleRaw, and this still
+    // allows sparse files to be read. Recognise the latter from num_col
+    // <= 0. Doesn't matter if num_col = 0, since there's nothing to
+    // read either way
+    sparse = num_col <= 0;
+    if (style == kSolutionStyleSparse) assert(sparse);
+    if (sparse) {
+      num_col = -num_col;
+      assert(num_col <= lp_num_col);
+    } else {
+      if (num_col != lp_num_col) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Solution file is for %" HIGHSINT_FORMAT
+                     " columns, not %" HIGHSINT_FORMAT "\n",
+                     num_col, lp_num_col);
+        return readSolutionFileErrorReturn(in_file);
+      }
     }
   }
-  double value;
-  if (sparse) {
+  if (miplib_sol) {
+    HighsInt num_value = 0;
+    read_solution.col_value.assign(lp_num_col, 0);
+    for (;;) {
+      // Only false return is for encountering EOF
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file)) break;
+      auto search = lp.col_hash_.name2index.find(name);
+      if (search == lp.col_hash_.name2index.end()) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is not found\n", name.c_str());
+        return HighsStatus::kError;
+      } else if (search->second == kHashIsDuplicate) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: name %s is duplicated\n", name.c_str());
+        return HighsStatus::kError;
+      }
+      HighsInt iCol = search->second;
+      assert(lp.col_names_[iCol] == name);
+      read_solution.col_value[iCol] = value;
+      num_value++;
+      if (in_file.eof()) break;
+    }
+  } else if (sparse) {
     read_solution.col_value.assign(lp_num_col, 0);
     HighsInt iCol;
     for (HighsInt iX = 0; iX < num_col; iX++) {
@@ -2115,7 +2162,7 @@ HighsStatus readSolutionFile(const std::string filename,
     }
   } else {
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(value, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_value[iCol] = value;
     }
@@ -2147,7 +2194,7 @@ HighsStatus readSolutionFile(const std::string filename,
   // next.
   const bool num_row_ok = num_row == lp_num_row;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (!readSolutionFileIdDoubleLineOk(value, in_file))
+    if (!readSolutionFileIdDoubleLineOk(name, value, in_file))
       return readSolutionFileErrorReturn(in_file);
     if (num_row_ok) read_solution.row_value[iRow] = value;
   }
@@ -2190,7 +2237,7 @@ HighsStatus readSolutionFile(const std::string filename,
     assert(keyword == "Columns");
     double dual;
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.col_dual[iCol] = dual;
     }
@@ -2201,7 +2248,7 @@ HighsStatus readSolutionFile(const std::string filename,
                                     read_solution, read_basis, in_file);
     assert(keyword == "Rows");
     for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      if (!readSolutionFileIdDoubleLineOk(dual, in_file))
+      if (!readSolutionFileIdDoubleLineOk(name, dual, in_file))
         return readSolutionFileErrorReturn(in_file);
       read_solution.row_dual[iRow] = dual;
     }
@@ -2271,8 +2318,15 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& keyword, HighsInt& value,
   return true;
 }
 
-bool readSolutionFileIdDoubleLineOk(double& value, std::ifstream& in_file) {
-  std::string id;
+bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file) {
+  if (in_file.eof()) return false;
+  in_file >> id;  // Id
+  in_file.ignore(kMaxLineLength, '\n');
+  return true;
+}
+
+bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
+                                    std::ifstream& in_file) {
   if (in_file.eof()) return false;
   in_file >> id;  // Id
   if (in_file.eof()) return false;
@@ -2324,7 +2378,8 @@ void assessColPrimalSolution(const HighsOptions& options, const double primal,
 
 // Determine validity, primal feasibility and (when relevant) integer
 // feasibility of a solution
-HighsStatus assessLpPrimalSolution(const HighsOptions& options,
+HighsStatus assessLpPrimalSolution(const std::string message,
+                                   const HighsOptions& options,
                                    const HighsLp& lp,
                                    const HighsSolution& solution, bool& valid,
                                    bool& integral, bool& feasible) {
@@ -2349,7 +2404,8 @@ HighsStatus assessLpPrimalSolution(const HighsOptions& options,
       lp.isMip() ? options.mip_feasibility_tolerance
                  : options.primal_feasibility_tolerance;
   highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Assessing feasibility of %s tolerance of %11.4g\n",
+               "%sAssessing feasibility of %s tolerance of %11.4g\n",
+               message.c_str(),
                lp.isMip() ? "MIP using primal feasibility and integrality"
                           : "LP using primal feasibility",
                kPrimalFeasibilityTolerance);
@@ -3029,4 +3085,197 @@ void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp) {
   assert(original_num_nz - num_nz == num_row_count_1);
   highsLogUser(log_options, HighsLogType::kWarning,
                "Removed %d rows of count 1\n", (int)num_row_count_1);
+}
+
+void getSubVectors(const HighsIndexCollection& index_collection,
+                   const HighsInt data_dim, const double* data0,
+                   const double* data1, const double* data2,
+                   const HighsSparseMatrix& matrix, HighsInt& num_sub_vector,
+                   double* sub_vector_data0, double* sub_vector_data1,
+                   double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
+                   HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
+                   double* sub_matrix_value) {
+  // Ensure that if there's no data0 then it's not required in the
+  // sub-vector
+  if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  // Surely this is checked elsewhere
+  assert(0 <= from_k && to_k < data_dim);
+  assert(from_k <= to_k);
+  HighsInt out_from_vector;
+  HighsInt out_to_vector;
+  HighsInt in_from_vector;
+  HighsInt in_to_vector = -1;
+  HighsInt current_set_entry = 0;
+  num_sub_vector = 0;
+  sub_matrix_num_nz = 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateOutInIndex(index_collection, out_from_vector, out_to_vector,
+                     in_from_vector, in_to_vector, current_set_entry);
+    assert(out_to_vector < data_dim);
+    assert(in_to_vector < data_dim);
+    for (HighsInt iVector = out_from_vector; iVector <= out_to_vector;
+         iVector++) {
+      if (sub_vector_data0 != nullptr)
+        sub_vector_data0[num_sub_vector] = data0[iVector];
+      if (sub_vector_data1 != nullptr)
+        sub_vector_data1[num_sub_vector] = data1[iVector];
+      if (sub_vector_data2 != nullptr)
+        sub_vector_data2[num_sub_vector] = data2[iVector];
+      if (sub_matrix_start != nullptr)
+        sub_matrix_start[num_sub_vector] = sub_matrix_num_nz +
+                                           matrix.start_[iVector] -
+                                           matrix.start_[out_from_vector];
+      num_sub_vector++;
+    }
+    for (HighsInt iEl = matrix.start_[out_from_vector];
+         iEl < matrix.start_[out_to_vector + 1]; iEl++) {
+      if (sub_matrix_index != nullptr)
+        sub_matrix_index[sub_matrix_num_nz] = matrix.index_[iEl];
+      if (sub_matrix_value != nullptr)
+        sub_matrix_value[sub_matrix_num_nz] = matrix.value_[iEl];
+      sub_matrix_num_nz++;
+    }
+    if (out_to_vector == data_dim - 1 || in_to_vector == data_dim - 1) break;
+  }
+}
+
+void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
+                            const HighsInt data_dim, const double* data0,
+                            const double* data1, const double* data2,
+                            const HighsSparseMatrix& matrix,
+                            HighsInt& num_sub_vector, double* sub_vector_data0,
+                            double* sub_vector_data1, double* sub_vector_data2,
+                            HighsInt& sub_matrix_num_nz,
+                            HighsInt* sub_matrix_start,
+                            HighsInt* sub_matrix_index,
+                            double* sub_matrix_value) {
+  // Ensure that if there's no data0 then it's not required in the
+  // sub-vector
+  if (data0 == nullptr) assert(sub_vector_data0 == nullptr);
+  assert(ok(index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  limits(index_collection, from_k, to_k);
+  // Surely this is checked elsewhere
+  assert(0 <= from_k && to_k < data_dim);
+  assert(from_k <= to_k);
+  // "Out" means not in the set to be extracted
+  // "In" means in the set to be extracted
+  HighsInt out_from_vector;
+  HighsInt out_to_vector;
+  HighsInt in_from_vector;
+  HighsInt in_to_vector = -1;
+  HighsInt current_set_entry = 0;
+  // Set up a mask so that entries to be got from the matrix can be
+  // identified and have their correct index.
+  vector<HighsInt> new_index;
+  new_index.resize(data_dim);
+
+  num_sub_vector = 0;
+  sub_matrix_num_nz = 0;
+  if (!index_collection.is_mask_) {
+    out_to_vector = -1;
+    current_set_entry = 0;
+    for (HighsInt k = from_k; k <= to_k; k++) {
+      updateOutInIndex(index_collection, in_from_vector, in_to_vector,
+                       out_from_vector, out_to_vector, current_set_entry);
+      if (k == from_k) {
+        // Account for any initial vectors not being extracted
+        for (HighsInt iVector = 0; iVector < in_from_vector; iVector++) {
+          new_index[iVector] = -1;
+        }
+      }
+      for (HighsInt iVector = in_from_vector; iVector <= in_to_vector;
+           iVector++) {
+        new_index[iVector] = num_sub_vector;
+        num_sub_vector++;
+      }
+      for (HighsInt iVector = out_from_vector; iVector <= out_to_vector;
+           iVector++) {
+        new_index[iVector] = -1;
+      }
+      if (out_to_vector >= data_dim - 1) break;
+    }
+  } else {
+    for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
+      if (index_collection.mask_[iVector]) {
+        new_index[iVector] = num_sub_vector;
+        num_sub_vector++;
+      } else {
+        new_index[iVector] = -1;
+      }
+    }
+  }
+
+  // Bail out if no vectors are to be extracted
+  if (num_sub_vector == 0) return;
+
+  for (HighsInt iVector = 0; iVector < data_dim; iVector++) {
+    HighsInt new_iVector = new_index[iVector];
+    if (new_iVector >= 0) {
+      assert(new_iVector < num_sub_vector);
+      if (sub_vector_data0 != NULL)
+        sub_vector_data0[new_iVector] = data0[iVector];
+      if (sub_vector_data1 != NULL)
+        sub_vector_data1[new_iVector] = data1[iVector];
+      if (sub_vector_data2 != NULL)
+        sub_vector_data2[new_iVector] = data2[iVector];
+    }
+  }
+  const bool extract_start = sub_matrix_start != NULL;
+  const bool extract_index = sub_matrix_index != NULL;
+  const bool extract_value = sub_matrix_value != NULL;
+  const bool extract_matrix = extract_index || extract_value;
+  // Allocate an array of lengths for the sub-matrix to be
+  // extracted: necessary even if just the number of nonzeros is
+  // required
+  vector<HighsInt> sub_matrix_length;
+  sub_matrix_length.assign(num_sub_vector, 0);
+  // Identify the lengths of the vectors in the sub-matrix to be extracted
+  HighsInt num_vector = matrix.start_.size() - 1;
+  for (HighsInt vector = 0; vector < num_vector; vector++) {
+    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1];
+         iEl++) {
+      HighsInt iVector = matrix.index_[iEl];
+      HighsInt new_iVector = new_index[iVector];
+      if (new_iVector >= 0) sub_matrix_length[new_iVector]++;
+    }
+  }
+  if (!extract_start) {
+    // bail out if no matrix starts are to be extracted, but only after
+    // computing the number of nonzeros
+    for (HighsInt iVector = 0; iVector < num_sub_vector; iVector++)
+      sub_matrix_num_nz += sub_matrix_length[iVector];
+    return;
+  }
+  // Allocate an array of lengths for the sub-matrix to be extracted
+  sub_matrix_start[0] = 0;
+  for (HighsInt iVector = 0; iVector < num_sub_vector - 1; iVector++) {
+    sub_matrix_start[iVector + 1] =
+        sub_matrix_start[iVector] + sub_matrix_length[iVector];
+    sub_matrix_length[iVector] = sub_matrix_start[iVector];
+  }
+  HighsInt iVector = num_sub_vector - 1;
+  sub_matrix_num_nz = sub_matrix_start[iVector] + sub_matrix_length[iVector];
+  // Bail out if matrix indices and values are not required
+  if (!extract_matrix) return;
+  sub_matrix_length[iVector] = sub_matrix_start[iVector];
+  // Fill the row-wise matrix with indices and values
+  for (HighsInt vector = 0; vector < num_vector; vector++) {
+    for (HighsInt iEl = matrix.start_[vector]; iEl < matrix.start_[vector + 1];
+         iEl++) {
+      HighsInt iVector = matrix.index_[iEl];
+      HighsInt new_iVector = new_index[iVector];
+      if (new_iVector >= 0) {
+        HighsInt row_iEl = sub_matrix_length[new_iVector];
+        if (extract_index) sub_matrix_index[row_iEl] = vector;
+        if (extract_value) sub_matrix_value[row_iEl] = matrix.value_[iEl];
+        sub_matrix_length[new_iVector]++;
+      }
+    }
+  }
 }

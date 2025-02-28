@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -119,13 +116,13 @@ struct HighsHashHelpers {
     else
       _BitScanReverse(&result, (n & 0xffffffffu));
 #endif
-    return result;
+    return static_cast<int>(result);
   }
 
   static int log2i(uint32_t n) {
     unsigned long result;
-    _BitScanReverse(&result, (unsigned long)n);
-    return result;
+    _BitScanReverse(&result, static_cast<unsigned long>(n));
+    return static_cast<int>(result);
   }
 
   static int popcnt(uint64_t x) {
@@ -304,7 +301,7 @@ struct HighsHashHelpers {
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
     u64 a = c[index & 63] & M61();
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
 
     hash += multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
@@ -325,7 +322,7 @@ struct HighsHashHelpers {
     value = ((value << 1) & M61()) | 1;
 
     u64 a = c[index & 63] & M61();
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
@@ -338,7 +335,7 @@ struct HighsHashHelpers {
   /// useful for sparse hashing of bit vectors
   static void sparse_combine(u64& hash, HighsInt index) {
     u64 a = c[index & 63] & M61();
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
 
     hash += modexp_M61(a, degree);
     hash = (hash >> 61) + (hash & M61());
@@ -358,7 +355,7 @@ struct HighsHashHelpers {
     // procedure.
 
     u64 a = c[index & 63] & M61();
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M61() - modexp_M61(a, degree);
@@ -390,7 +387,7 @@ struct HighsHashHelpers {
     // algorithm for multiplication mod M31 might not work properly due to
     // overflow
     u32 a = static_cast<u32>(c[index & 63] & M31());
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
 
     u64 result = hash;
     result += multiply_modM31(static_cast<u32>(value), modexp_M31(a, degree));
@@ -413,7 +410,7 @@ struct HighsHashHelpers {
     value = (pair_hash<0>(static_cast<u32>(value), value >> 32) >> 33) | 1;
 
     u32 a = static_cast<u32>(c[index & 63] & M31());
-    HighsInt degree = (index >> 6) + 1;
+    u64 degree = (static_cast<u64>(index) >> 6) + 1;
     // add the additive inverse (M31() - hashvalue) instead of the hash value
     // itself
     u64 result = hash;

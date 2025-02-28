@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -94,7 +91,7 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
     basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp.col_lower_[iCol];
     double upper = lp.col_upper_[iCol];
-    HighsInt move = kIllegalMoveValue;
+    int8_t move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
       move = kNonbasicMoveZe;

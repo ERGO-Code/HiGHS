@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -13,7 +10,7 @@
  */
 #include "Highs.h"
 // #include "io/HighsIO.h"
-#include "lp_data/HighsRuntimeOptions.h"
+#include "HighsRuntimeOptions.h"
 
 // uncomment if we will be shutting down task executor from exe
 // #include "parallel/HighsParallel.h"
@@ -50,6 +47,7 @@ int main(int argc, char** argv) {
   // settings defined in any options file.
   highs.passOptions(loaded_options);
   //  highs.writeOptions("Options.md");
+  highs.writeOptions("", true);
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);

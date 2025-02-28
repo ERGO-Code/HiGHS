@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -57,7 +54,7 @@ class HighsModkSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsModkSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "Mod-k sepa", "Mod") {}
+      : HighsSeparator(mipsolver, "Mod-k sepa") {}
 };
 
 #endif

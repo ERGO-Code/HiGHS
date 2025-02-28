@@ -1,30 +1,32 @@
 ## Build changes
 
+Added code coverage report
+
 ## Code changes
 
-Added `int64_t mip_total_lp_iterations` to `HighsCallbackDataOut` and modified accessor function
+Any LP offset is communicated to the IPM solver, and used in logging and primal/dual objective calculations. 
 
-`Highs::writeSolution` and `Highs::writeBasis` now being done via `HighsIO` logging, so can be redirected to logging callback.
+If there is a valid basis when Highs::run() is called, presolve isn't skipped unless the solver option is "simplex" or "choose" (when simplex will always be chosen if there is an advanced basis).
 
-Introduced `const double kHighsUndefined` as value of undefined values in a user solution. It's equal to `kHighsInf`
+Added basis solve methods to highspy
 
-Added `Highs::setSolution(const HighsInt num_entries, const HighsInt* index, const double* value);` to allow a sparse primal solution to be defined. When a MIP is solved to do this, the value of (new) option `mip_max_start_nodes` is used for `mip_max_nodes` to avoid excessive cost
+Added methods to get primal/dual ray and dual unboundedness direction to highspy
 
-Added options `write_presolved_model_to_file` and `write_presolved_model_file` so that presolved model can be written via a command line option
+When a presolved LP has model status kUnknown, rather than returning this to the user, it performs postsolve and then uses the basis to solve the original LP
 
-Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possibly weighted) sum of (allowable) infeasibilities in an LP/MIP.
+Fixed bug in presolve when pointers stored in HighsMatrixSlice get invalidated when the coefficient matrix is reallocated (e.g. when non-zeros are added in HPresolve::addToMatrix)
 
-Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise progress of the MIP solver.
+Primal and dual residual tolerances - applied following IPM or PDLP solution - now documented as options
 
-Added minimal documentation of solvers and how simplex variants can be run
+Highs::getCols (Highs::getRows) now runs in linear time if the internal constraint matrix is stored column-wise (row-wise). Added ensureColwise/Rowwise to the Highs class, the C API and highspy so that users can set the internal constraint matrix storage orientation
 
-Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return HighsStatus::kOk (since internal matrix is exact)
+When columns and rows are deleted from the incumbent LP after a basic solution has been found, HiGHS no longer invalidates the basis. Now it maintains the basic and nonbasic status of the remaining variables and constraints. When the model is re-solved, this information is used to construct a starting basis.
 
-Now multiplying by pre-computed reciprocals rather than performing divisions in loops in simplex solver: LP performance improvement ~2.5%
+Fixed bugs in presolve
 
+When running from the command lin, changes to default option values are reported
 
-
-
+Added callback to allow users to supply integer feasible solutions to the MIP solver during execution
 
 
 

@@ -145,7 +145,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         case HighsLoadOptionsStatus::kError:
           return false;
         case HighsLoadOptionsStatus::kEmpty:
-          writeOptionsToFile(stdout, options.records);
+          writeOptionsToFile(stdout, options.log_options, options.records);
           return false;
         default:
           break;
@@ -245,7 +245,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         return false;
     }
 
-  } catch (const cxxopts::OptionException& e) {
+  } catch (const cxxopts::exceptions::exception& e) {
     highsLogUser(report_log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
     return false;

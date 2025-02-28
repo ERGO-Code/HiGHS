@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -18,6 +15,8 @@
 #endif
 
 namespace free_format_parser {
+
+const bool kNoClockCalls = false;
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
@@ -225,11 +224,11 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
       // Remove any trailing comment
       const size_t p = strline.find_first_of(mps_comment_chars);
       if (p <= strline.length()) {
-	// A comment character has been found, so erase from it to the end
-	// of the line and check whether the line is now empty
-	strline.erase(p);
-	skip = is_empty(strline);
-	if (skip) return true;
+        // A comment character has been found, so erase from it to the end
+        // of the line and check whether the line is now empty
+        strline.erase(p);
+        skip = is_empty(strline);
+        if (skip) return true;
       }
     }
     strline = trim(strline);
@@ -400,57 +399,63 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
 
   word = strline.substr(start, end - start);
 
+  // Create an upper-case version of WORD, so that keywords are
+  // read as if they were in lower or mixed case
+  std::string upper_word = word;
+  toupper(upper_word);
+
   // store rest of strline for keywords that have arguments
-  if (word == "QCMATRIX" || word == "QSECTION" || word == "CSECTION")
+  if (upper_word == "QCMATRIX" || upper_word == "QSECTION" ||
+      upper_word == "CSECTION")
     section_args = strline.substr(end, strline.length());
 
-  if (word == "NAME")
+  if (upper_word == "NAME")
     return HMpsFF::Parsekey::kName;
-  else if (word == "OBJSENSE")
+  else if (upper_word == "OBJSENSE")
     return HMpsFF::Parsekey::kObjsense;
-  else if (word == "MAX")
+  else if (upper_word == "MAX")
     return HMpsFF::Parsekey::kMax;
-  else if (word == "MIN")
+  else if (upper_word == "MIN")
     return HMpsFF::Parsekey::kMin;
-  else if (word == "ROWS")
+  else if (upper_word == "ROWS")
     return HMpsFF::Parsekey::kRows;
-  else if (word == "COLUMNS")
+  else if (upper_word == "COLUMNS")
     return HMpsFF::Parsekey::kCols;
-  else if (word == "RHS")
+  else if (upper_word == "RHS")
     return HMpsFF::Parsekey::kRhs;
-  else if (word == "BOUNDS")
+  else if (upper_word == "BOUNDS")
     return HMpsFF::Parsekey::kBounds;
-  else if (word == "RANGES")
+  else if (upper_word == "RANGES")
     return HMpsFF::Parsekey::kRanges;
-  else if (word == "QSECTION")
+  else if (upper_word == "QSECTION")
     return HMpsFF::Parsekey::kQsection;
-  else if (word == "QMATRIX")
+  else if (upper_word == "QMATRIX")
     return HMpsFF::Parsekey::kQmatrix;
-  else if (word == "QUADOBJ")
+  else if (upper_word == "QUADOBJ")
     return HMpsFF::Parsekey::kQuadobj;
-  else if (word == "QCMATRIX")
+  else if (upper_word == "QCMATRIX")
     return HMpsFF::Parsekey::kQcmatrix;
-  else if (word == "CSECTION")
+  else if (upper_word == "CSECTION")
     return HMpsFF::Parsekey::kCsection;
-  else if (word == "DELAYEDROWS")
+  else if (upper_word == "DELAYEDROWS")
     return HMpsFF::Parsekey::kDelayedrows;
-  else if (word == "MODELCUTS")
+  else if (upper_word == "MODELCUTS")
     return HMpsFF::Parsekey::kModelcuts;
-  else if (word == "INDICATORS")
+  else if (upper_word == "INDICATORS")
     return HMpsFF::Parsekey::kIndicators;
-  else if (word == "SETS")
+  else if (upper_word == "SETS")
     return HMpsFF::Parsekey::kSets;
-  else if (word == "SOS")
+  else if (upper_word == "SOS")
     return HMpsFF::Parsekey::kSos;
-  else if (word == "GENCONS")
+  else if (upper_word == "GENCONS")
     return HMpsFF::Parsekey::kGencons;
-  else if (word == "PWLOBJ")
+  else if (upper_word == "PWLOBJ")
     return HMpsFF::Parsekey::kPwlobj;
-  else if (word == "PWLNAM")
+  else if (upper_word == "PWLNAM")
     return HMpsFF::Parsekey::kPwlnam;
-  else if (word == "PWLCON")
+  else if (upper_word == "PWLCON")
     return HMpsFF::Parsekey::kPwlcon;
-  else if (word == "ENDATA")
+  else if (upper_word == "ENDATA")
     return HMpsFF::Parsekey::kEnd;
   else
     return HMpsFF::Parsekey::kNone;
@@ -497,6 +502,8 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
       // Look for Gurobi-style definition of MAX/MIN on OBJSENSE line
       if (e < strline.length()) {
         std::string sense = first_word(strline, e);
+        // Convert to upper case
+        toupper(sense);
         if (sense.compare("MAX") == 0) {
           // Found MAX sense on OBJSENSE line
           obj_sense = ObjSense::kMaximize;
@@ -517,8 +524,12 @@ HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
 
 double getWallTime() {
   using namespace std::chrono;
-  return duration_cast<duration<double> >(wall_clock::now().time_since_epoch())
-      .count();
+  const double wall_time = kNoClockCalls
+                               ? 0
+                               : duration_cast<duration<double> >(
+                                     wall_clock::now().time_since_epoch())
+                                     .count();
+  return wall_time;
 }
 
 HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,

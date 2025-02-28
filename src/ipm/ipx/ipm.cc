@@ -825,8 +825,9 @@ void IPM::PrintHeader() {
     << " "  << Format("Iter", 4)
     << "  " << Format("P.res", 8) << " " << Format("D.res", 8)
     << "  " << Format("P.obj", 15) << " " << Format("D.obj", 15)
-    << "  " << Format("mu", 8)
-    << "  " << Format("Time", 7);
+    << "  " << Format("mu", 8);
+  if (!control_.timelessLog())
+    h_logging_stream << "  " << Format("Time", 7);
   control_.hLog(h_logging_stream);
   control_.Debug()
     << "  " << Format("stepsizes", 9)
@@ -850,8 +851,9 @@ void IPM::PrintOutput() {
       << " "  << Scientific(iterate_->dresidual(), 8, 2)
       << "  " << Scientific(iterate_->pobjective_after_postproc(), 15, 8)
       << " "  << Scientific(iterate_->dobjective_after_postproc(), 15, 8)
-      << "  " << Scientific(iterate_->mu(), 8, 2)
-      << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
+      << "  " << Scientific(iterate_->mu(), 8, 2);
+    if (!control_.timelessLog())
+      h_logging_stream << "  " << Fixed(control_.Elapsed(), 6, 0) << "s";
     control_.hLog(h_logging_stream);
     control_.Debug()
       << "  " << Fixed(step_primal_, 4, 2) << " " << Fixed(step_dual_, 4, 2)

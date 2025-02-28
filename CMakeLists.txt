@@ -9,11 +9,11 @@ cmake_minimum_required(VERSION 3.15...3.27)
 # set preference for clang compiler and intel compiler over gcc and other compilers
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-C OPTIONAL)
-set(CMAKE_C_COMPILER_NAMES clang icc cc ${CMAKE_C_COMPILER_NAMES})
+set(CMAKE_C_COMPILER_NAMES clang gcc icx cc ${CMAKE_C_COMPILER_NAMES})
 
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-CXX OPTIONAL)
 include(Platform/${CMAKE_SYSTEM_NAME}-CXX OPTIONAL)
-set(CMAKE_CXX_COMPILER_NAMES clang++ icpc c++ ${CMAKE_CXX_COMPILER_NAMES})
+set(CMAKE_CXX_COMPILER_NAMES clang++ g++ icpx c++ ${CMAKE_CXX_COMPILER_NAMES})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -82,11 +82,28 @@ include(CMakeDependentOption)
 CMAKE_DEPENDENT_OPTION(ALL_TESTS "Build all tests" OFF "BUILD_TESTING;BUILD_CXX" OFF)
 message(STATUS "Build all tests: ${ALL_TESTS}")
 
+option(BUILD_EXTRA_UNIT_TESTS "Build extra unit tests" OFF)
+if (BUILD_EXTRA_UNIT_TESTS)
+  message(STATUS "Build extra unit tests: ON")
+endif()
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_UNIT_ONLY "Build extra unit tests ONLY" OFF "BUILD_EXTRA_UNIT_TESTS" OFF)
+if (BUILD_EXTRA_UNIT_ONLY)
+  message(STATUS "Build only extra unit tests: ON")
+endif()
+
+CMAKE_DEPENDENT_OPTION(BUILD_EXTRA_PROBLEM_SET "Build extra instance tests" OFF "BUILD_TESTING" OFF)
+if (BUILD_EXTRA_PROBLEM_SET)
+  message(STATUS "Build extra instance tests: ON")
+endif()
+
 option(ZLIB "ZLIB" ON)
 message(STATUS "ZLIB: ${ZLIB}")
 if (PYTHON_BUILD_SETUP)
   set(ZLIB OFF)
 endif()
+
+option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 
 # Address | Thread | Leak 
 # Linux atm
@@ -171,6 +188,14 @@ if (BUILD_CXX)
     # to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
     option(STDCALL "Build highs with the __stdcall convention" OFF)
   endif()
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR 
+    CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
+    CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
+  endif()  
 
   # Basic type
   include(CMakePushCheckState)
@@ -304,16 +329,19 @@ if(NOT FAST_BUILD)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 endif()
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86\_64|i686)")
-  if (WIN32)
-    message("FLAG_MPOPCNT_SUPPORTED is not available on this architecture")
+include(CheckCXXCompilerFlag)
+if (NOT HIGHS_COVERAGE AND NOT APPLE)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+      check_cxx_compiler_flag("-mpopcntd" COMPILER_SUPPORTS_POPCNTD)
+      if(COMPILER_SUPPORTS_POPCNTD)
+          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
+      endif()
   else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
+      check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_POPCNT)
+      if(COMPILER_SUPPORTS_POPCNT)
+          add_compile_options(-mpopcnt)
+      endif()
   endif()
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)" AND NOT APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
-else()
-  message("FLAG_MPOPCNT_SUPPORTED is not available on this architecture")
 endif()
 
 option(DEBUGSOL "check the debug solution" OFF)
@@ -449,6 +477,58 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
       -fno-omit-frame-pointer ")
 endif()
 
+# HiGHS coverage update in progress
+if(FAST_BUILD AND HIGHS_COVERAGE)
+  if(WIN32)
+    message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
+  endif()
+
+  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(FATAL_ERROR "Warning: to enable coverage, you must compile in Debug mode")
+  endif()
+
+  # Disable IPO
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+  message(STATUS "Building in coverage mode")
+
+  # Enable coverage flags
+  add_compile_options(-O0) 
+  add_compile_options(--coverage) 
+  add_compile_options(-fprofile-update=atomic) 
+
+  add_link_options(-O0) 
+  add_link_options(--coverage)    # Ensure coverage data is linked correctly
+
+  find_program(GCOV_PATH gcov)
+  find_program(LCOV_PATH lcov)
+  find_program(GENHTML_PATH genhtml)
+
+  if(NOT GCOV_PATH)
+    message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  if(NOT LCOV_PATH)
+    message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  if(NOT GENHTML_PATH)
+    message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
+  endif()
+
+  # add_custom_target(coverage
+  #   COMMAND ${LCOV_PATH} -d bin -c -o cov.info --ignore-errors empty
+  #   COMMAND ${LCOV_PATH} --remove "*/usr/include/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "*/usr/lib/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "extern/pdqsort/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "extern/zstr/*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${LCOV_PATH} --remove "app/cxxopts*" -o ${CMAKE_BINARY_DIR}/cov.info.cleaned
+  # COMMAND ${GENHTML_PATH} ${CMAKE_BINARY_DIR}/cov.info.cleaned -o ${CMAKE_BINARY_DIR}/cov_report
+  #   VERBATIM
+  #   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  # COMMENT "Generating code coverage report v2025.")
+
+endif()
+
 if(NOT FAST_BUILD)
   # For the moment keep above coverage part in case we are testing at CI.
   option(CI "CI extended tests" ON)
@@ -471,7 +551,7 @@ if(NOT FAST_BUILD)
   endif()
 
   if(HIGHS_COVERAGE)
-    if(NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
       message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
     endif()
   endif()
@@ -582,12 +662,12 @@ else(FAST_BUILD)
 
   if(BUILD_CXX)
     add_subdirectory(app)
-    if(BUILD_TESTING)
-      enable_testing()
-      add_subdirectory(check)
-    endif()
-    # Add tests in examples/tests
     add_subdirectory(examples)
+  endif()
+
+  if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(check)
   endif()
 
   include(python-highs)

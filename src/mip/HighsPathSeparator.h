@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -34,7 +31,7 @@ class HighsPathSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsPathSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "PathAggr sepa", "Agg") {
+      : HighsSeparator(mipsolver, "PathAggr sepa") {
     randgen.initialise(mipsolver.options_mip_->random_seed);
   }
 };

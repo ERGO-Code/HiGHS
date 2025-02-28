@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -24,7 +21,7 @@ class HighsOptions;
 
 const HighsInt kIoBufferSize = 1024;  // 65536;
 
-enum class HighsFileType { kNone = 0, kOther, kMps, kLp, kMd, kHtml };
+enum class HighsFileType { kMinimal = 0, kFull, kMps, kLp, kMd };
 
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
