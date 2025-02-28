@@ -642,7 +642,7 @@ class HighsDomain {
 
   const HighsHashTable<HighsInt>& getRedundantRows();
 
-  double getRedundantRowValue(HighsInt row);
+  double getRedundantRowValue(HighsInt row) const;
 };
 
 #endif

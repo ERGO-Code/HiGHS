@@ -1860,7 +1860,7 @@ const HighsHashTable<HighsInt>& HighsDomain::getRedundantRows() {
   return redundant_rows_;
 }
 
-double HighsDomain::getRedundantRowValue(HighsInt row) {
+double HighsDomain::getRedundantRowValue(HighsInt row) const {
   if (mipsolver->model_->row_lower_[row] != -kHighsInf) {
     assert(mipsolver->model_->row_upper_[row] == kHighsInf);
     return static_cast<double>(activitymin_[row] -

@@ -1501,24 +1501,26 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsInt numFail = 0;
 
     // Collect up to 10 lifting opportunities per row
-    size_t maxNumLiftOpps = std::max(
+    const size_t maxNumLiftOpps = std::max(
         size_t{100000}, size_t{10} * static_cast<size_t>(model->num_row_));
 
     // store lifting opportunities
     size_t numLiftOpps = 0;
-    implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
-                                               double val) {
-      // find lifting opportunities for row
-      auto& htree = liftingOpportunities[row];
-      // add element
-      auto insertresult = htree.insert_or_get(col, val);
-      if (insertresult.second) {
-        numLiftOpps++;
-      } else {
-        double& currentval = *insertresult.first;
-        currentval = val;
-      }
-    };
+    if (mipsolver->options_mip_->mip_lifting_for_probing) {
+      implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
+                                                 double val) {
+        // find lifting opportunities for row
+        auto& htree = liftingOpportunities[row];
+        // add element
+        auto insertresult = htree.insert_or_get(col, val);
+        if (insertresult.second) {
+          numLiftOpps++;
+        } else {
+          double& currentval = *insertresult.first;
+          currentval = val;
+        }
+      };
+    }
 
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
@@ -1669,12 +1671,15 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // lifting for probing (only performed when probing did not modify the
     // problem so far and at least 2 percent of the variables in the problem are
     // continuous)
-    if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
-        modelHasPercentageContVars(size_t{2}))
+    if (mipsolver->options_mip_->mip_lifting_for_probing &&
+        numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
+        modelHasPercentageContVars(size_t{2})) {
+      // apply lifting
       liftingForProbing();
-    // clear lifting opportunities
-    liftingOpportunities.clear();
-    implications.storeLiftingOpportunity = nullptr;
+      // clear lifting opportunities
+      liftingOpportunities.clear();
+      implications.storeLiftingOpportunity = nullptr;
+    }
 
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
@@ -1815,10 +1820,8 @@ void HPresolve::liftingForProbing() {
 
   // perform actual lifting
   size_t nfill = 0;
-  // const size_t maxfillin = std::max(10 * liftingtable.size(),
-  //                                   static_cast<size_t>(numNonzeros()) /
-  //                                   100);
-  const size_t maxnfill = std::numeric_limits<size_t>::max();
+  const size_t maxnfill = std::max(10 * liftingtable.size(),
+                                   static_cast<size_t>(numNonzeros()) / 100);
   for (const auto& lifting : liftingtable) {
     // get clique
     HighsInt row = std::get<0>(lifting);

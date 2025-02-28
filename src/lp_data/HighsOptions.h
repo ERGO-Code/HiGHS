@@ -439,6 +439,7 @@ struct HighsOptionsStruct {
   bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
+  bool mip_lifting_for_probing;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -576,7 +577,8 @@ struct HighsOptionsStruct {
         mip_improving_solution_report_sparse(false),
         // clang-format off
         mip_improving_solution_file(""),
-        mip_root_presolve_only(false) {};
+        mip_root_presolve_only(false),
+        mip_lifting_for_probing(false) {};
   // clang-format on
 };
 
@@ -1011,6 +1013,11 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_root_presolve_only",
         "Whether MIP presolve is only applied at the root node", advanced,
         &mip_root_presolve_only, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_lifting_for_probing", "Whether lifting for probing is used",
+        advanced, &mip_lifting_for_probing, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
