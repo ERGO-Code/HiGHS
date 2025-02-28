@@ -870,9 +870,9 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
+      warning_issued_ = true;
       num_ignored_row_name++;
       if (num_ignored_row_name % report_ignored_row_name_frequency == 0) {
-    warning_issued_ = true;
 	highsLogUser(log_options, HighsLogType::kWarning,
 		     "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
 		     marker.c_str());
@@ -892,12 +892,12 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           if (col_value[rowidx]) {
             // Ignore duplicate entry
             num_nz--;
+	    warning_issued_ = true;
 	    num_ignored_duplicate_matrix_nz++;
 	    if (num_ignored_duplicate_matrix_nz % report_ignored_duplicate_matrix_nz_frequency == 0) {
-    warning_issued_ = true;
 	      highsLogUser(log_options, HighsLogType::kWarning,
-			   "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
-			   colname.c_str(), marker.c_str());
+			   "Column \"%s\" has duplicate nonzero %g in row \"%s\": ignored\n",
+			   colname.c_str(), value, marker.c_str());
 	      report_ignored_duplicate_matrix_nz_frequency *= 2;
 	    }
           } else {
@@ -907,12 +907,12 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
         } else if (rowidx == -1) {
           // Ignore duplicate entry
           if (col_cost) {
+	    warning_issued_ = true;
 	    num_ignored_duplicate_cost_nz++;
 	    if (num_ignored_duplicate_cost_nz % report_ignored_duplicate_cost_nz_frequency == 0) {
-    warning_issued_ = true;
 	      highsLogUser(log_options, HighsLogType::kWarning,
-			   "Column \"%s\" has duplicate nonzero in objective row \"%s\"\n",
-			   colname.c_str(), marker.c_str());
+			   "Column \"%s\" has duplicate nonzero %g in objective row \"%s\": ignored\n",
+			   colname.c_str(), value, marker.c_str());
 	      report_ignored_duplicate_cost_nz_frequency *= 2;
 	    }
           } else {
@@ -944,11 +944,14 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
-        highsLogUser(
-            log_options, HighsLogType::kWarning,
-            "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
-            marker.c_str());
+	warning_issued_ = true;
+	num_ignored_row_name++;
+	if (num_ignored_row_name % report_ignored_row_name_frequency == 0) {
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Row name \"%s\" in COLUMNS section is not defined: ignored\n",
+		       marker.c_str());
+	  report_ignored_row_name_frequency *= 2;
+	}
         continue;
       };
       bool is_nan = false;
@@ -964,10 +967,14 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
           if (col_value[rowidx]) {
             // Ignore duplicate entry
             num_nz--;
-    warning_issued_ = true;
-            highsLogUser(log_options, HighsLogType::kWarning,
-                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
-                         colname.c_str(), marker.c_str());
+	    warning_issued_ = true;
+	    num_ignored_duplicate_matrix_nz++;
+	    if (num_ignored_duplicate_matrix_nz % report_ignored_duplicate_matrix_nz_frequency == 0) {
+	      highsLogUser(log_options, HighsLogType::kWarning,
+			   "Column \"%s\" has duplicate nonzero %g in row \"%s\": ignored\n",
+			   colname.c_str(), value, marker.c_str());
+	      report_ignored_duplicate_matrix_nz_frequency *= 2;
+	    }
           } else {
             col_value[rowidx] = value;
             col_index[col_count++] = rowidx;
@@ -975,10 +982,14 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
         } else if (rowidx == -1) {
           // Ignore duplicate entry
           if (col_cost) {
-    warning_issued_ = true;
-            highsLogUser(log_options, HighsLogType::kWarning,
-                         "Column \"%s\" has duplicate nonzero in row \"%s\"\n",
-                         colname.c_str(), objective_name.c_str());
+	    warning_issued_ = true;
+	    num_ignored_duplicate_cost_nz++;
+	    if (num_ignored_duplicate_cost_nz % report_ignored_duplicate_cost_nz_frequency == 0) {
+	      highsLogUser(log_options, HighsLogType::kWarning,
+			   "Column \"%s\" has duplicate nonzero %g in objective row \"%s\": ignored\n",
+			   colname.c_str(), value, objective_name.c_str());
+	      report_ignored_duplicate_cost_nz_frequency *= 2;
+	    }
           } else {
             col_cost = value;
           }
@@ -1102,21 +1113,21 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     }
 
     if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
+      warning_issued_ = true;
       highsLogUser(log_options, HighsLogType::kWarning,
                    "Row name \"%s\" in RHS section is not defined: ignored\n",
                    marker.c_str());
     } else {
+      bool is_nan = false;
+      double value = getValue(word, is_nan);  // atof(word.c_str());
       parseName(marker, rowidx, has_entry);
       if (has_entry) {
-    warning_issued_ = true;
+	warning_issued_ = true;
         highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RHS section has duplicate definition: "
+                     "Row name \"%s\" in RHS section has duplicate value %g: "
                      "ignored\n",
-                     marker.c_str());
+                     marker.c_str(), value);
       } else {
-        bool is_nan = false;
-        double value = getValue(word, is_nan);  // atof(word.c_str());
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
                        "RHS for row \"%s\" is NaN\n", marker.c_str());
@@ -1148,7 +1159,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
+	warning_issued_ = true;
         highsLogUser(log_options, HighsLogType::kWarning,
                      "Row name \"%s\" in RHS section is not defined: ignored\n",
                      marker.c_str());
@@ -1156,15 +1167,15 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       };
 
       parseName(marker, rowidx, has_entry);
+      bool is_nan = false;
+      double value = getValue(word, is_nan);  // atof(word.c_str());
       if (has_entry) {
-    warning_issued_ = true;
+	warning_issued_ = true;
         highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RHS section has duplicate definition: "
+                     "Row name \"%s\" in RHS section has duplicate value %g: "
                      "ignored\n",
-                     marker.c_str());
+                     marker.c_str(), value);
       } else {
-        bool is_nan = false;
-        double value = getValue(word, is_nan);  // atof(word.c_str());
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
                        "RHS for row \"%s\" is NaN\n", marker.c_str());
@@ -1341,11 +1352,11 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     // Determine whether this entry yields a duplicate bound
     // definition
     if ((is_lb && has_lower[colidx]) || (is_ub && has_upper[colidx])) {
-    warning_issued_ = true;
+      warning_issued_ = true;
       highsLogUser(log_options, HighsLogType::kWarning,
-                   "Column name \"%s\" in BOUNDS section has duplicate "
+                   "Column name \"%s\" in BOUNDS section has duplicate %s bound "
                    "definition: ignored\n",
-                   marker.c_str());
+                   marker.c_str(), is_lb ? "lower" : "upper");
       continue;
     }
 
@@ -1499,7 +1510,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
+      warning_issued_ = true;
       highsLogUser(
           log_options, HighsLogType::kWarning,
           "Row name \"%s\" in RANGES section is not defined: ignored\n",
@@ -1507,26 +1518,28 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     } else {
       parseName(marker, rowidx);
       if (rowidx < 0) {
-    warning_issued_ = true;
+	warning_issued_ = true;
         highsLogUser(
             log_options, HighsLogType::kWarning,
             "Row name \"%s\" in RANGES section is not valid: ignored\n",
             marker.c_str());
-      } else if (has_row_entry_[rowidx]) {
-    warning_issued_ = true;
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RANGES section has duplicate "
-                     "definition: ignored\n",
-                     marker.c_str());
       } else {
         bool is_nan = false;
         double value = getValue(word, is_nan);  // atof(word.c_str());
-        if (is_nan) {
-          highsLogUser(log_options, HighsLogType::kError,
-                       "Range for row \"%s\" is NaN\n", marker.c_str());
-          return HMpsFF::Parsekey::kFail;
-        }
-        addRhs(value, rowidx);
+	if (has_row_entry_[rowidx]) {
+	  warning_issued_ = true;
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Row name \"%s\" in RANGES section has duplicate "
+		       "value %g: ignored\n",
+		       marker.c_str(), value);
+	} else {
+	  if (is_nan) {
+	    highsLogUser(log_options, HighsLogType::kError,
+			 "Range for row \"%s\" is NaN\n", marker.c_str());
+	    return HMpsFF::Parsekey::kFail;
+	  }
+	  addRhs(value, rowidx);
+	}
       }
     }
 
@@ -1548,7 +1561,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
+	warning_issued_ = true;
         highsLogUser(
             log_options, HighsLogType::kWarning,
             "Row name \"%s\" in RANGES section is not defined: ignored\n",
@@ -1556,27 +1569,29 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       } else {
         parseName(marker, rowidx);
         if (rowidx < 0) {
-    warning_issued_ = true;
+	  warning_issued_ = true;
           highsLogUser(
               log_options, HighsLogType::kWarning,
               "Row name \"%s\" in RANGES section is not valid: ignored\n",
               marker.c_str());
-        } else if (has_row_entry_[rowidx]) {
-    warning_issued_ = true;
-          highsLogUser(log_options, HighsLogType::kWarning,
-                       "Row name \"%s\" in RANGES section has duplicate "
-                       "definition: ignored\n",
-                       marker.c_str());
         } else {
-          bool is_nan = false;
-          double value = getValue(word, is_nan);  // atof(word.c_str());
-          if (is_nan) {
-            highsLogUser(log_options, HighsLogType::kError,
-                         "Range for row \"%s\" is NaN\n", marker.c_str());
-            return HMpsFF::Parsekey::kFail;
-          }
-          addRhs(value, rowidx);
-        }
+	  bool is_nan = false;
+	  double value = getValue(word, is_nan);  // atof(word.c_str());
+	  if (has_row_entry_[rowidx]) {
+	    warning_issued_ = true;
+	    highsLogUser(log_options, HighsLogType::kWarning,
+			 "Row name \"%s\" in RANGES section has duplicate "
+			 "value %g: ignored\n",
+			 marker.c_str(), value);
+	  } else {
+	    if (is_nan) {
+	      highsLogUser(log_options, HighsLogType::kError,
+			   "Range for row \"%s\" is NaN\n", marker.c_str());
+	      return HMpsFF::Parsekey::kFail;
+	    }
+	    addRhs(value, rowidx);
+	  }
+	}
       }
 
       if (!is_end(strline, end)) {
@@ -1724,7 +1739,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   // if row of section does not exist or is free (index -2), then skip
   if (mit == rowname2idx.end() || mit->second == -2) {
     if (mit == rowname2idx.end()) {
-    warning_issued_ = true;
+      warning_issued_ = true;
       highsLogUser(log_options, HighsLogType::kWarning,
                    "Row name \"%s\" in %s section is not defined: ignored\n",
                    rowname.c_str(), section_name.c_str());
