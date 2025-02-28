@@ -1049,6 +1049,10 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
   bool has_entry = false;
 
   bool skip;
+  size_t num_ignored_row_name = 0;
+  size_t report_ignored_row_name_frequency = 1;
+  size_t num_ignored_duplicate_rhs = 0;
+  size_t report_ignored_duplicate_rhs_frequency = 1;
   while (getMpsLine(file, strline, skip)) {
     if (skip) continue;
     if (timeout()) return HMpsFF::Parsekey::kTimeout;
@@ -1114,19 +1118,27 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
     if (mit == rowname2idx.end()) {
       warning_issued_ = true;
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "Row name \"%s\" in RHS section is not defined: ignored\n",
-                   marker.c_str());
+      num_ignored_row_name++;
+      if (num_ignored_row_name % report_ignored_row_name_frequency == 0) {
+	highsLogUser(log_options, HighsLogType::kWarning,
+		     "Row name \"%s\" in RHS section is not defined: ignored\n",
+		     marker.c_str());
+	report_ignored_row_name_frequency *= 2;
+      }
     } else {
       bool is_nan = false;
       double value = getValue(word, is_nan);  // atof(word.c_str());
       parseName(marker, rowidx, has_entry);
       if (has_entry) {
 	warning_issued_ = true;
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RHS section has duplicate value %g: "
-                     "ignored\n",
-                     marker.c_str(), value);
+	num_ignored_duplicate_rhs++;
+	if (num_ignored_duplicate_rhs % report_ignored_duplicate_rhs_frequency == 0) {
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Row name \"%s\" in RHS section has duplicate value %g: "
+		       "ignored\n",
+		       marker.c_str(), value);
+	  report_ignored_duplicate_rhs_frequency *= 2;
+	}
       } else {
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
@@ -1160,9 +1172,13 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
 	warning_issued_ = true;
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RHS section is not defined: ignored\n",
-                     marker.c_str());
+	num_ignored_row_name++;
+	if (num_ignored_row_name % report_ignored_row_name_frequency == 0) {
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Row name \"%s\" in RHS section is not defined: ignored\n",
+		       marker.c_str());
+	  report_ignored_row_name_frequency *= 2;
+	}
         continue;
       };
 
@@ -1171,10 +1187,14 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       double value = getValue(word, is_nan);  // atof(word.c_str());
       if (has_entry) {
 	warning_issued_ = true;
-        highsLogUser(log_options, HighsLogType::kWarning,
-                     "Row name \"%s\" in RHS section has duplicate value %g: "
-                     "ignored\n",
-                     marker.c_str(), value);
+	num_ignored_duplicate_rhs++;
+	if (num_ignored_duplicate_rhs % report_ignored_duplicate_rhs_frequency == 0) {
+	  highsLogUser(log_options, HighsLogType::kWarning,
+		       "Row name \"%s\" in RHS section has duplicate value %g: "
+		       "ignored\n",
+		       marker.c_str(), value);
+	  report_ignored_duplicate_rhs_frequency *= 2;
+	}
       } else {
         if (is_nan) {
           highsLogUser(log_options, HighsLogType::kError,
