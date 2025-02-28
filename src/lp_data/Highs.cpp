@@ -677,8 +677,9 @@ HighsStatus Highs::readModel(const std::string& filename) {
   if (call_code != FilereaderRetcode::kOk) {
     interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
+    const HighsStatus call_status = call_code == FilereaderRetcode::kWarning ? HighsStatus::kWarning : HighsStatus::kError;
     return_status =
-        interpretCallStatus(options_.log_options, HighsStatus::kError,
+        interpretCallStatus(options_.log_options, call_status,
                             return_status, "readModelFromFile");
     if (return_status == HighsStatus::kError) return return_status;
   }

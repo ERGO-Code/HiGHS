@@ -17,9 +17,10 @@
 
 enum class FilereaderRetcode {
   kOk = 0,
-  kFileNotFound = 1,
-  kParserError = 2,
-  kNotImplemented = 3,
+  kWarning = 1,
+  kFileNotFound = 2,
+  kParserError = 3,
+  kNotImplemented = 4,
   kTimeout
 };
 

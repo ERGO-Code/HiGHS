@@ -10,7 +10,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double inf = kHighsInf;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
@@ -146,20 +146,16 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 void freeFixedModelTest(const std::string model_name) {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
-  HighsStatus status;
 
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
   HighsModel model_free = highs.getModel();
 
-  status = highs.setOptionValue("mps_parser_type_free", false);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("mps_parser_type_free", false) == HighsStatus::kOk);
 
-  status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kWarning);
 
   HighsModel model_fixed = highs.getModel();
 
@@ -438,4 +434,12 @@ TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
   h.run();
   REQUIRE(required_objective_value == h.getInfo().objective_function_value);
   std::remove(write_model_file.c_str());
+}
+
+TEST_CASE("mps-warnings", "[highs_filereader]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/warnings.mps";
+  Highs h;
+  //highs.setOptionValue("output_flag", dev_run);
+  HighsStatus return_status = h.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kWarning);
 }
