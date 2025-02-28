@@ -441,7 +441,16 @@ TEST_CASE("mps-warnings", "[highs_filereader]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/warnings.mps";
   Highs h;
-  // highs.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kWarning);
+}
+
+TEST_CASE("mps-silly-names", "[highs_filereader]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/silly-names.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsStatus return_status = h.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kOk);
 }

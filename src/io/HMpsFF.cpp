@@ -414,56 +414,70 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
       upper_word == "CSECTION")
     section_args = strline.substr(end, strline.length());
 
+  HMpsFF::Parsekey key;
+
   if (upper_word == "NAME")
-    return HMpsFF::Parsekey::kName;
+    key = HMpsFF::Parsekey::kName;
   else if (upper_word == "OBJSENSE")
-    return HMpsFF::Parsekey::kObjsense;
+    key = HMpsFF::Parsekey::kObjsense;
   else if (upper_word == "MAX")
-    return HMpsFF::Parsekey::kMax;
+    key = HMpsFF::Parsekey::kMax;
   else if (upper_word == "MIN")
-    return HMpsFF::Parsekey::kMin;
+    key = HMpsFF::Parsekey::kMin;
   else if (upper_word == "ROWS")
-    return HMpsFF::Parsekey::kRows;
+    key = HMpsFF::Parsekey::kRows;
   else if (upper_word == "COLUMNS")
-    return HMpsFF::Parsekey::kCols;
+    key = HMpsFF::Parsekey::kCols;
   else if (upper_word == "RHS")
-    return HMpsFF::Parsekey::kRhs;
+    key = HMpsFF::Parsekey::kRhs;
   else if (upper_word == "BOUNDS")
-    return HMpsFF::Parsekey::kBounds;
+    key = HMpsFF::Parsekey::kBounds;
   else if (upper_word == "RANGES")
-    return HMpsFF::Parsekey::kRanges;
+    key = HMpsFF::Parsekey::kRanges;
   else if (upper_word == "QSECTION")
-    return HMpsFF::Parsekey::kQsection;
+    key = HMpsFF::Parsekey::kQsection;
   else if (upper_word == "QMATRIX")
-    return HMpsFF::Parsekey::kQmatrix;
+    key = HMpsFF::Parsekey::kQmatrix;
   else if (upper_word == "QUADOBJ")
-    return HMpsFF::Parsekey::kQuadobj;
+    key = HMpsFF::Parsekey::kQuadobj;
   else if (upper_word == "QCMATRIX")
-    return HMpsFF::Parsekey::kQcmatrix;
+    key = HMpsFF::Parsekey::kQcmatrix;
   else if (upper_word == "CSECTION")
-    return HMpsFF::Parsekey::kCsection;
+    key = HMpsFF::Parsekey::kCsection;
   else if (upper_word == "DELAYEDROWS")
-    return HMpsFF::Parsekey::kDelayedrows;
+    key = HMpsFF::Parsekey::kDelayedrows;
   else if (upper_word == "MODELCUTS")
-    return HMpsFF::Parsekey::kModelcuts;
+    key = HMpsFF::Parsekey::kModelcuts;
   else if (upper_word == "INDICATORS")
-    return HMpsFF::Parsekey::kIndicators;
+    key = HMpsFF::Parsekey::kIndicators;
   else if (upper_word == "SETS")
-    return HMpsFF::Parsekey::kSets;
+    key = HMpsFF::Parsekey::kSets;
   else if (upper_word == "SOS")
-    return HMpsFF::Parsekey::kSos;
+    key = HMpsFF::Parsekey::kSos;
   else if (upper_word == "GENCONS")
-    return HMpsFF::Parsekey::kGencons;
+    key = HMpsFF::Parsekey::kGencons;
   else if (upper_word == "PWLOBJ")
-    return HMpsFF::Parsekey::kPwlobj;
+    key = HMpsFF::Parsekey::kPwlobj;
   else if (upper_word == "PWLNAM")
-    return HMpsFF::Parsekey::kPwlnam;
+    key = HMpsFF::Parsekey::kPwlnam;
   else if (upper_word == "PWLCON")
-    return HMpsFF::Parsekey::kPwlcon;
+    key = HMpsFF::Parsekey::kPwlcon;
   else if (upper_word == "ENDATA")
-    return HMpsFF::Parsekey::kEnd;
+    key = HMpsFF::Parsekey::kEnd;
   else
     return HMpsFF::Parsekey::kNone;
+  // Can have keywords used as column names or names of RHS, BOUND,
+  // RANGES etc, so assume this if there are non-blanks after the
+  // apparent keyword. Only cases that don't work are NAME, OBJSENSE,
+  // QCMATRIX and QSECTION, since they can be followed by text
+  if (key == HMpsFF::Parsekey::kName || key == HMpsFF::Parsekey::kObjsense ||
+      key == HMpsFF::Parsekey::kQcmatrix || key == HMpsFF::Parsekey::kQsection)
+    return key;
+  assert(key != HMpsFF::Parsekey::kNone);
+
+  if (is_end(strline, end)) return key;
+
+  return HMpsFF::Parsekey::kNone;
 }
 
 HighsInt HMpsFF::getColIdx(const std::string& colname, const bool add_if_new) {
