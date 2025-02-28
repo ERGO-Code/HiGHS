@@ -74,7 +74,6 @@ void HSimplexNla::clear() {
   analysis_ = NULL;
   report_ = false;
   build_synthetic_tick_ = 0;
-  this->frozenBasisClearAllData();
 }
 
 HighsInt HSimplexNla::invert() {
@@ -91,8 +90,6 @@ HighsInt HSimplexNla::invert() {
   // Must not have timed out
   assert(rank_deficiency >= 0);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
-  // Clear any frozen basis updates
-  frozenBasisClearAllUpdate();
   return rank_deficiency;
 }
 
@@ -113,7 +110,6 @@ void HSimplexNla::ftran(HVector& rhs, const double expected_density,
 void HSimplexNla::btranInScaledSpace(
     HVector& rhs, const double expected_density,
     HighsTimerClock* factor_timer_clock_pointer) const {
-  frozenBtran(rhs);
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
@@ -121,39 +117,6 @@ void HSimplexNla::ftranInScaledSpace(
     HVector& rhs, const double expected_density,
     HighsTimerClock* factor_timer_clock_pointer) const {
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
-  frozenFtran(rhs);
-}
-
-void HSimplexNla::frozenBtran(HVector& rhs) const {
-  HighsInt frozen_basis_id = last_frozen_basis_id_;
-  if (frozen_basis_id == kNoLink) return;
-  // Apply any updates since the last frozen basis
-  update_.btran(rhs);
-  // Work through any updates associated with previously frozen basis
-  frozen_basis_id = frozen_basis_[frozen_basis_id].prev_;
-  if (frozen_basis_id == kNoLink) return;
-  for (;;) {
-    assert(frozen_basis_id != kNoLink);
-    const FrozenBasis& frozen_basis = frozen_basis_[frozen_basis_id];
-    frozen_basis.update_.btran(rhs);
-    frozen_basis_id = frozen_basis.prev_;
-    if (frozen_basis_id == kNoLink) break;
-  }
-}
-
-void HSimplexNla::frozenFtran(HVector& rhs) const {
-  // Work through any updates associated with previously frozen basis
-  HighsInt frozen_basis_id = first_frozen_basis_id_;
-  if (frozen_basis_id == kNoLink) return;
-  for (;;) {
-    assert(frozen_basis_id != kNoLink);
-    if (frozen_basis_id == last_frozen_basis_id_) break;
-    const FrozenBasis& frozen_basis = frozen_basis_[frozen_basis_id];
-    frozen_basis.update_.ftran(rhs);
-    frozen_basis_id = frozen_basis.next_;
-  }
-  // Now apply any updates since the last frozen basis
-  update_.ftran(rhs);
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
@@ -161,8 +124,7 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
   reportPackValue("  pack: aq Bf ", aq);
   reportPackValue("  pack: ep Bf ", ep);
   factor_.refactor_info_.clear();
-  if (update_.valid_) assert(last_frozen_basis_id_ != kNoLink);
-  if (!update_.valid_) {  // last_frozen_basis_id_ == kNoLink) {
+  if (!update_.valid_) {
     factor_.update(aq, ep, iRow, hint);
   } else {
     *hint = update_.update(aq, iRow);

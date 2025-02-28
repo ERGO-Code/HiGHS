@@ -1354,9 +1354,6 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   lp.ensureColwise();
   // Consider scaling the LP
   const bool new_scaling = considerScaling(options, lp);
-  // If new scaling is performed, the hot start information is
-  // no longer valid
-  if (new_scaling) ekk_instance.clearHotStart();
   const bool check_basis = basis.alien || (!basis.valid && basis.useful);
   if (check_basis) {
     // The basis needs to be checked for rank deficiency, and possibly
@@ -1590,7 +1587,7 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
-bool HighsSolution::hasUndefined() {
+bool HighsSolution::hasUndefined() const {
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++)
     if (this->col_value[iCol] == kHighsUndefined) return true;
   return false;
