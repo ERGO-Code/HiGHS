@@ -1821,6 +1821,8 @@ void HPresolve::liftingForProbing() {
 
   // perform actual lifting
   size_t nfill = 0;
+  size_t nmod = 0;
+  size_t numrowsmodified = 0;
   const size_t maxnfill = std::max(10 * liftingtable.size(),
                                    static_cast<size_t>(numNonzeros()) / 100);
   for (const auto& lifting : liftingtable) {
@@ -1829,8 +1831,10 @@ void HPresolve::liftingForProbing() {
     const auto& bestclique = std::get<1>(lifting);
 
     // check against max. fill-in
-    nfill += static_cast<size_t>(std::get<3>(lifting));
-    if (nfill > maxnfill) break;
+    size_t newfill = static_cast<size_t>(std::get<3>(lifting));
+    if (nfill + newfill > maxnfill) break;
+    nfill += newfill;
+    nmod += bestclique.size() - newfill;
 
     // update matrix
     HighsCDouble update = 0.0;
@@ -1845,11 +1849,18 @@ void HPresolve::liftingForProbing() {
     }
 
     // update left-hand / right-hand sides
+    numrowsmodified++;
     if (model->row_lower_[row] != -kHighsInf)
       model->row_lower_[row] += static_cast<double>(update);
     if (model->row_upper_[row] != kHighsInf)
       model->row_upper_[row] += static_cast<double>(update);
   }
+
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "Lifting for probing modified %d rows, modified %d existing "
+              "non-zeros and introduced %d new non-zeros\n",
+              static_cast<int>(numrowsmodified), static_cast<int>(nmod),
+              static_cast<int>(nfill));
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
