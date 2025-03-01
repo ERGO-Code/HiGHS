@@ -3746,13 +3746,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   return_status = solveLp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
-  if (model_status_ == HighsModelStatus::kOptimal) {
-    HighsStatus check_status = checkOptimality("LP", return_status);
-    if (check_status == HighsStatus::kError) {
-      return_status = check_status;
-      solver_object.model_status_ = HighsModelStatus::kSolveError;
-    }
-  }
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("LP");
   return return_status;
 }
 
@@ -3897,13 +3891,7 @@ HighsStatus Highs::callSolveQp() {
   info_.simplex_iteration_count += stats.phase1_iterations;
   info_.qp_iteration_count += stats.num_iterations;
   info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal) {
-    HighsStatus check_status = checkOptimality("QP", return_status);
-    if (check_status == HighsStatus::kError) {
-      return_status = check_status;
-      model_status_ = HighsModelStatus::kSolveError;
-    }
-  }
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("QP");
   return return_status;
 }
 
@@ -3997,13 +3985,8 @@ HighsStatus Highs::callSolveMip() {
                                       ? -1
                                       : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal) {
-    HighsStatus check_status = checkOptimality("MIP", return_status);
-    if (check_status == HighsStatus::kError) {
-      return_status = check_status;
-      model_status_ = HighsModelStatus::kSolveError;
-    }
-  }
+  if (model_status_ == HighsModelStatus::kOptimal)
+    return_status = checkOptimality("MIP");
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {

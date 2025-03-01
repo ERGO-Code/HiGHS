@@ -2442,24 +2442,25 @@ void Highs::clearZeroHessian() {
   }
 }
 
-HighsStatus Highs::checkOptimality(const std::string& solver_type,
-                                   HighsStatus return_status) {
+HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   // Check for infeasibility measures incompatible with optimality
-  assert(return_status != HighsStatus::kError);
+  assert(model_status_ == HighsModelStatus::kOptimal);
   // Cannot expect to have no dual_infeasibilities since the QP solver
   // (and, of course, the MIP solver) give no dual information
   if (info_.num_primal_infeasibilities == 0 &&
       info_.num_dual_infeasibilities <= 0)
     return HighsStatus::kOk;
   HighsLogType log_type = HighsLogType::kWarning;
-  return_status = HighsStatus::kWarning;
+  model_status_ = HighsModelStatus::kUnknown;
+  HighsStatus return_status = HighsStatus::kWarning;
+  // Check for gross errors
   if (info_.max_primal_infeasibility >
           sqrt(options_.primal_feasibility_tolerance) ||
       (info_.dual_solution_status != kSolutionStatusNone &&
        info_.max_dual_infeasibility >
            sqrt(options_.dual_feasibility_tolerance))) {
-    // Check for gross errors
     log_type = HighsLogType::kError;
+    model_status_ = HighsModelStatus::kSolveError;
     return_status = HighsStatus::kError;
   }
   std::stringstream ss;
@@ -2476,6 +2477,8 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type,
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
   highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
+  highsLogUser(options_.log_options, log_type, "Setting model status to %s\n",
+               modelStatusToString(model_status_).c_str());
   return return_status;
 }
 

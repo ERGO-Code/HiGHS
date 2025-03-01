@@ -1967,7 +1967,7 @@ void test_multiObjective() {
   free(col_value);
 }
 
-void test_qp_indefinite_failure() {
+void testQpIndefiniteFailure() {
     void* highs = Highs_create();
     HighsInt ret;
     const double inf = Highs_getInfinity(highs);
@@ -2051,7 +2051,7 @@ int main() {
   test_feasibilityRelaxation();
   test_getModel();
   test_multiObjective();
-  test_qp_indefinite_failure();
+  test_testQpIndefiniteFailure();
   return 0;
 }
 //  test_setSolution();
