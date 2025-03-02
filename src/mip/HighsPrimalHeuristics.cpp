@@ -308,13 +308,11 @@ void HighsPrimalHeuristics::rootReducedCost() {
   double fixingRate = neighbourhood.getFixingRate();
   if (fixingRate < 0.3) return;
 
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRootReducedCost);
   solveSubMip(*mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
               200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRootReducedCost);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
@@ -532,14 +530,12 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
   const bool solve_sub_mip_return =
       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                   localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
@@ -823,14 +819,12 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
   const bool solve_sub_mip_return =
       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                   localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >

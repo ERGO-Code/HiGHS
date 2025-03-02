@@ -1847,9 +1847,9 @@ restart:
   last_disptime = -kHighsInf;
   disptime = 0;
 
-  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
+  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
-  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding1);
+  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding);
   heuristics.flushStatistics();
 
   mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
@@ -2047,18 +2047,20 @@ restart:
 
     heuristics.flushStatistics();
 
-    // if there are new global bound changes we reevaluate the LP and do one
+    // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     if (checkLimits()) return;
     bool separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
+  status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound);
+      mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound0);
       const bool root_separation_round_result =
           rootSeparationRound(sepa, ncuts, status);
-      mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound);
+      mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound0);
       if (root_separation_round_result) return;
       ++nseparounds;
       printDisplayLine();
@@ -2083,20 +2085,27 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
+    mipsolver.analysis_.mipTimerStart(kMipClockRootHeuristicsReducedCost);
     heuristics.rootReducedCost();
+    mipsolver.analysis_.mipTimerStop(kMipClockRootHeuristicsReducedCost);
     heuristics.flushStatistics();
 
     if (checkLimits()) return;
 
-    // if there are new global bound changes we reevaluate the LP and do one
+    // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     bool separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
+  status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      if (rootSeparationRound(sepa, ncuts, status)) return;
-
+      mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound1);
+      const bool root_separation_round_result =
+	rootSeparationRound(sepa, ncuts, status);
+      mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound1);
+      if (root_separation_round_result) return;
       ++nseparounds;
       printDisplayLine();
     }
@@ -2104,19 +2113,26 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     if (checkLimits()) return;
+    mipsolver.analysis_.mipTimerStart(kMipClockRootHeuristicsRens);
     heuristics.RENS(rootlpsol);
+    mipsolver.analysis_.mipTimerStop(kMipClockRootHeuristicsRens);
     heuristics.flushStatistics();
 
     if (checkLimits()) return;
-    // if there are new global bound changes we reevaluate the LP and do one
+    // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
+  status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
-      if (rootSeparationRound(sepa, ncuts, status)) return;
-
+      mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound2);
+      const bool root_separation_round_result =
+          rootSeparationRound(sepa, ncuts, status);
+      mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound2);
+      if (root_separation_round_result) return;
       ++nseparounds;
 
       printDisplayLine();
@@ -2135,7 +2151,9 @@ restart:
     heuristics.flushStatistics();
 
     if (checkLimits()) return;
-    status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
+  status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   } while (false);
 
@@ -2147,15 +2165,20 @@ restart:
     return;
   }
 
-  // if there are new global bound changes we reevaluate the LP and do one
+  // if there are new global bound changes we re-evaluate the LP and do one
   // more separation round
   bool separate = !domain.getChangedCols().empty();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
   if (separate && lp.scaledOptimal(status)) {
     HighsInt ncuts;
-    if (rootSeparationRound(sepa, ncuts, status)) return;
-
+    mipsolver.analysis_.mipTimerStart(kMipClockRootSeparationRound3);
+    const bool root_separation_round_result =
+      rootSeparationRound(sepa, ncuts, status);
+    mipsolver.analysis_.mipTimerStop(kMipClockRootSeparationRound3);
+    if (root_separation_round_result) return;
     ++nseparounds;
     printDisplayLine();
   }
@@ -2192,7 +2215,9 @@ restart:
                      fixingRate);
         if (stall != -1) maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         tg.taskWait();
+      mipsolver.analysis_.mipTimerStart(kMipClockPerformRestart);
         performRestart();
+      mipsolver.analysis_.mipTimerStop(kMipClockPerformRestart);
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
@@ -2202,7 +2227,9 @@ restart:
 
     if (detectSymmetries) {
       finishSymmetryDetection(tg, symData);
-      status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStart(kMipClockEvaluateRootLp);
+  status = evaluateRootLp();
+  mipsolver.analysis_.mipTimerStop(kMipClockEvaluateRootLp);
       if (status == HighsLpRelaxation::Status::kInfeasible) return;
     }
 

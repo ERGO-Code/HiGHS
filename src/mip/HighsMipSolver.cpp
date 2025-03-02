@@ -237,10 +237,10 @@ restart:
     while (true) {
       // Possibly apply primal heuristics
       if (considerHeuristics && mipdata_->moreHeuristicsAllowed()) {
-        analysis_.mipTimerStart(kMipClockEvaluateNode0);
+        analysis_.mipTimerStart(kMipClockDiveEvaluateNode);
         const HighsSearch::NodeResult evaluate_node_result =
             search.evaluateNode();
-        analysis_.mipTimerStop(kMipClockEvaluateNode0);
+        analysis_.mipTimerStop(kMipClockDiveEvaluateNode);
 
         if (evaluate_node_result == HighsSearch::NodeResult::kSubOptimal) break;
 
@@ -248,28 +248,28 @@ restart:
           ++mipdata_->num_leaves;
           search.flushStatistics();
         } else {
-          analysis_.mipTimerStart(kMipClockPrimalHeuristics);
+          analysis_.mipTimerStart(kMipClockDivePrimalHeuristics);
           if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockRandomizedRounding0);
+            analysis_.mipTimerStart(kMipClockDiveRandomizedRounding);
             mipdata_->heuristics.randomizedRounding(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRandomizedRounding0);
+            analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
           }
 
           if (mipdata_->incumbent.empty()) {
-            analysis_.mipTimerStart(kMipClockRens);
+            analysis_.mipTimerStart(kMipClockDiveRens);
             mipdata_->heuristics.RENS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRens);
+            analysis_.mipTimerStop(kMipClockDiveRens);
           } else {
-            analysis_.mipTimerStart(kMipClockRins);
+            analysis_.mipTimerStart(kMipClockDiveRins);
             mipdata_->heuristics.RINS(
                 mipdata_->lp.getLpSolver().getSolution().col_value);
-            analysis_.mipTimerStop(kMipClockRins);
+            analysis_.mipTimerStop(kMipClockDiveRins);
           }
 
           mipdata_->heuristics.flushStatistics();
-          analysis_.mipTimerStop(kMipClockPrimalHeuristics);
+          analysis_.mipTimerStop(kMipClockDivePrimalHeuristics);
         }
       }
 
