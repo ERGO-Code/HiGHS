@@ -619,6 +619,11 @@ bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
                                double& dual_objective_value) {
   dual_objective_value = 0;
   if (!solution.dual_valid) return false;
+  // #2184 Make sure that the solution corresponds to this LP
+  assert(solution.col_value.size() == static_cast<size_t>(lp.num_col_));
+  assert(solution.col_dual.size() == static_cast<size_t>(lp.num_col_));
+  assert(solution.row_value.size() == static_cast<size_t>(lp.num_row_));
+  assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
   dual_objective_value = lp.offset_;
   double bound = 0;
