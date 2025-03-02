@@ -4523,10 +4523,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
+    const bool lp_factor_row_compatible =
+        ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_);
+    if (!lp_factor_row_compatible) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");
+      assert(lp_factor_row_compatible);
       // Clear Ekk entirely
       ekk_instance_.clear();
     }
