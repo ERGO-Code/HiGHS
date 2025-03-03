@@ -32,7 +32,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   // the infeasibility flag is overwritten and lost when setDomainChangeStack is
-  // called. therefore, assume that localdom is not infeasible here.
+  // called. therefore, assert that localdom is not infeasible here.
   assert(!this->localdom.infeasible());
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
