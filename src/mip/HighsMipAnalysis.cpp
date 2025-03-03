@@ -143,20 +143,22 @@ void HighsMipAnalysis::reportMipTimer() {
   MipTimer mip_timer;
   mip_timer.reportMipCoreClock(mip_clocks);
   mip_timer.reportMipLevel1Clock(mip_clocks);
-  mip_timer.reportMipSolveLpClock(mip_clocks);
-  mip_timer.reportMipPresolveClock(mip_clocks);
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
-  mip_timer.reportAltEvaluateRootNodeClock(mip_clocks);
-  mip_timer.reportMipSeparationClock(mip_clocks);
+  //  mip_timer.reportAltEvaluateRootNodeClock(mip_clocks);
+  //  mip_timer.reportMipPresolveClock(mip_clocks);
+  //  mip_timer.reportMipSeparationClock(mip_clocks);
   //  mip_timer.reportMipSearchClock(mip_clocks);
   //  mip_timer.reportMipDiveClock(mip_clocks);
   //  mip_timer.reportMipNodeSearchClock(mip_clocks);
   //  mip_timer.reportMipDivePrimalHeuristicsClock(mip_clocks);
   //  mip_timer.reportMipSubMipSolveClock(mip_clocks);
+  //  mip_timer.reportMipSolveLpClock(mip_clocks);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
   //  reportMipSolveLpClock(true);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
   //  reportMipSolveLpClock(false);
+  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true, true);
+  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false, true);
   //  analyseVectorValues(nullptr, "Node search time",
   //                      HighsInt(node_search_time.size()), node_search_time);
   //  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),

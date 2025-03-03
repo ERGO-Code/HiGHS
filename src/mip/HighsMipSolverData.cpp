@@ -1726,12 +1726,17 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 }
 
 void clockOff(HighsMipAnalysis& analysis) {
-  const int clock0_running = analysis.mipTimerRunning(kMipClockEvaluateRootNode0) ? 1 : 0;
-  const int clock1_running = analysis.mipTimerRunning(kMipClockEvaluateRootNode1) ? 1 : 0;
-  const int clock2_running = analysis.mipTimerRunning(kMipClockEvaluateRootNode2) ? 1 : 0;
+  if (!analysis.analyse_mip_time) return;
+  const int clock0_running =
+      analysis.mipTimerRunning(kMipClockEvaluateRootNode0) ? 1 : 0;
+  const int clock1_running =
+      analysis.mipTimerRunning(kMipClockEvaluateRootNode1) ? 1 : 0;
+  const int clock2_running =
+      analysis.mipTimerRunning(kMipClockEvaluateRootNode2) ? 1 : 0;
   const bool one_running = clock0_running + clock1_running + clock2_running;
-  if (!one_running) printf("HighsMipSolverData::clockOff Clocks running are (%d; %d; %d)\n",
-		      clock0_running, clock1_running, clock2_running);
+  if (!one_running)
+    printf("HighsMipSolverData::clockOff Clocks running are (%d; %d; %d)\n",
+           clock0_running, clock1_running, clock2_running);
   assert(one_running);
   if (clock0_running) analysis.mipTimerStop(kMipClockEvaluateRootNode0);
   if (clock1_running) analysis.mipTimerStop(kMipClockEvaluateRootNode1);
@@ -1854,7 +1859,8 @@ restart:
     status = evaluateRootLp();
     analysis.mipTimerStop(kMipClockEvaluateRootLp);
     lp.removeObsoleteRows();
-    if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+    if (status == HighsLpRelaxation::Status::kInfeasible)
+      return clockOff(analysis);
   }
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
@@ -1871,7 +1877,8 @@ restart:
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
-  if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+  if (status == HighsLpRelaxation::Status::kInfeasible)
+    return clockOff(analysis);
 
   rootlpsolobj = firstlpsolobj;
   removeFixedIndices();
@@ -1889,8 +1896,8 @@ restart:
       analysis.mipTimerStop(kMipClockPerformRestart);
       ++numRestartsRoot;
       if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-	clockOff(analysis);
-	goto restart;
+        clockOff(analysis);
+        goto restart;
       }
 
       return clockOff(analysis);
@@ -2047,7 +2054,8 @@ restart:
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
-  if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+  if (status == HighsLpRelaxation::Status::kInfeasible)
+    return clockOff(analysis);
 
   rootlpsol = lp.getLpSolver().getSolution().col_value;
   rootlpsolobj = lp.getObjective();
@@ -2070,10 +2078,11 @@ restart:
     // more separation round
     if (checkLimits()) return clockOff(analysis);
     bool separate = !domain.getChangedCols().empty();
-  analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
-  analysis.mipTimerStop(kMipClockEvaluateRootLp);
-    if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+    analysis.mipTimerStart(kMipClockEvaluateRootLp);
+    status = evaluateRootLp();
+    analysis.mipTimerStop(kMipClockEvaluateRootLp);
+    if (status == HighsLpRelaxation::Status::kInfeasible)
+      return clockOff(analysis);
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound0);
@@ -2116,15 +2125,16 @@ restart:
     // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     bool separate = !domain.getChangedCols().empty();
-  analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
-  analysis.mipTimerStop(kMipClockEvaluateRootLp);
-    if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+    analysis.mipTimerStart(kMipClockEvaluateRootLp);
+    status = evaluateRootLp();
+    analysis.mipTimerStop(kMipClockEvaluateRootLp);
+    if (status == HighsLpRelaxation::Status::kInfeasible)
+      return clockOff(analysis);
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound1);
       const bool root_separation_round_result =
-	rootSeparationRound(sepa, ncuts, status);
+          rootSeparationRound(sepa, ncuts, status);
       analysis.mipTimerStop(kMipClockRootSeparationRound1);
       if (root_separation_round_result) return clockOff(analysis);
       ++nseparounds;
@@ -2143,10 +2153,11 @@ restart:
     // if there are new global bound changes we re-evaluate the LP and do one
     // more separation round
     separate = !domain.getChangedCols().empty();
-  analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
-  analysis.mipTimerStop(kMipClockEvaluateRootLp);
-    if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+    analysis.mipTimerStart(kMipClockEvaluateRootLp);
+    status = evaluateRootLp();
+    analysis.mipTimerStop(kMipClockEvaluateRootLp);
+    if (status == HighsLpRelaxation::Status::kInfeasible)
+      return clockOff(analysis);
     if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       analysis.mipTimerStart(kMipClockRootSeparationRound2);
@@ -2174,10 +2185,11 @@ restart:
     heuristics.flushStatistics();
 
     if (checkLimits()) return clockOff(analysis);
-  analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
-  analysis.mipTimerStop(kMipClockEvaluateRootLp);
-    if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+    analysis.mipTimerStart(kMipClockEvaluateRootLp);
+    status = evaluateRootLp();
+    analysis.mipTimerStop(kMipClockEvaluateRootLp);
+    if (status == HighsLpRelaxation::Status::kInfeasible)
+      return clockOff(analysis);
   } while (false);
 
   analysis.mipTimerStop(kMipClockEvaluateRootNode1);
@@ -2196,12 +2208,13 @@ restart:
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
   status = evaluateRootLp();
   analysis.mipTimerStop(kMipClockEvaluateRootLp);
-  if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+  if (status == HighsLpRelaxation::Status::kInfeasible)
+    return clockOff(analysis);
   if (separate && lp.scaledOptimal(status)) {
     HighsInt ncuts;
     analysis.mipTimerStart(kMipClockRootSeparationRound3);
     const bool root_separation_round_result =
-      rootSeparationRound(sepa, ncuts, status);
+        rootSeparationRound(sepa, ncuts, status);
     analysis.mipTimerStop(kMipClockRootSeparationRound3);
     if (root_separation_round_result) return clockOff(analysis);
     ++nseparounds;
@@ -2225,11 +2238,9 @@ restart:
     if (!mipsolver.submip && mipsolver.options_mip_->mip_allow_restart &&
         mipsolver.options_mip_->presolve != kHighsOffString) {
       if (!analyticCenterComputed && compute_analytic_centre) {
-        analysis.mipTimerStart(
-            kMipClockFinishAnalyticCentreComputation);
+        analysis.mipTimerStart(kMipClockFinishAnalyticCentreComputation);
         finishAnalyticCenterComputation(tg);
-        analysis.mipTimerStop(
-            kMipClockFinishAnalyticCentreComputation);
+        analysis.mipTimerStop(kMipClockFinishAnalyticCentreComputation);
       }
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
@@ -2240,24 +2251,25 @@ restart:
                      fixingRate);
         if (stall != -1) maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         tg.taskWait();
-      analysis.mipTimerStart(kMipClockPerformRestart);
+        analysis.mipTimerStart(kMipClockPerformRestart);
         performRestart();
-      analysis.mipTimerStop(kMipClockPerformRestart);
+        analysis.mipTimerStop(kMipClockPerformRestart);
         ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-	  clockOff(analysis);
-	  goto restart;
-	}
+          clockOff(analysis);
+          goto restart;
+        }
         return clockOff(analysis);
       }
     }
 
     if (detectSymmetries) {
       finishSymmetryDetection(tg, symData);
-  analysis.mipTimerStart(kMipClockEvaluateRootLp);
-  status = evaluateRootLp();
-  analysis.mipTimerStop(kMipClockEvaluateRootLp);
-      if (status == HighsLpRelaxation::Status::kInfeasible) return clockOff(analysis);
+      analysis.mipTimerStart(kMipClockEvaluateRootLp);
+      status = evaluateRootLp();
+      analysis.mipTimerStop(kMipClockEvaluateRootLp);
+      if (status == HighsLpRelaxation::Status::kInfeasible)
+        return clockOff(analysis);
     }
 
     // add the root node to the nodequeue to initialize the search

@@ -56,7 +56,7 @@ enum iClockMip {
   //  kMipClock@,
   //  kMipClock@,
   //  kMipClock@,
-  
+
   kMipClockEvaluateRootNode0,
   kMipClockEvaluateRootNode1,
   kMipClockEvaluateRootNode2,
@@ -140,27 +140,34 @@ class MipTimer {
         timer_pointer->clock_def("Randomized rounding");
     clock[kMipClockPerformRestart] =
         timer_pointer->clock_def("Perform restart");
-    clock[kMipClockRootSeparation] = timer_pointer->clock_def("Root separation");
+    clock[kMipClockRootSeparation] =
+        timer_pointer->clock_def("Root separation");
     clock[kMipClockFinishAnalyticCentreComputation] =
         timer_pointer->clock_def("A-centre - finish");
     clock[kMipClockRootCentralRounding] =
         timer_pointer->clock_def("Root central rounding");
     clock[kMipClockRootSeparationRound0] =
         timer_pointer->clock_def("Root separation round 0");
-    clock[kMipClockRootHeuristicsReducedCost] = timer_pointer->clock_def("Root heuristics reduced cost");
+    clock[kMipClockRootHeuristicsReducedCost] =
+        timer_pointer->clock_def("Root heuristics reduced cost");
     clock[kMipClockRootSeparationRound1] =
         timer_pointer->clock_def("Root separation round 1");
-    clock[kMipClockRootHeuristicsRens] = timer_pointer->clock_def("Root heuristics RENS");
+    clock[kMipClockRootHeuristicsRens] =
+        timer_pointer->clock_def("Root heuristics RENS");
     clock[kMipClockRootSeparationRound2] =
         timer_pointer->clock_def("Root separation round 2");
-    clock[kMipClockRootFeasibilityPump] = timer_pointer->clock_def("Root feasibility pump");
+    clock[kMipClockRootFeasibilityPump] =
+        timer_pointer->clock_def("Root feasibility pump");
     clock[kMipClockRootSeparationRound3] =
         timer_pointer->clock_def("Root separation round 3");
     //    clock[kMipClock@] = timer_pointer->clock_def("@");
 
-    clock[kMipClockEvaluateRootNode0] = timer_pointer->clock_def("kMipClockEvaluateRootNode0");
-    clock[kMipClockEvaluateRootNode1] = timer_pointer->clock_def("kMipClockEvaluateRootNode1");
-    clock[kMipClockEvaluateRootNode2] = timer_pointer->clock_def("kMipClockEvaluateRootNode2");
+    clock[kMipClockEvaluateRootNode0] =
+        timer_pointer->clock_def("kMipClockEvaluateRootNode0");
+    clock[kMipClockEvaluateRootNode1] =
+        timer_pointer->clock_def("kMipClockEvaluateRootNode1");
+    clock[kMipClockEvaluateRootNode2] =
+        timer_pointer->clock_def("kMipClockEvaluateRootNode2");
 
     // Separation
     clock[kMipClockRootSeparationRound] =
@@ -191,7 +198,8 @@ class MipTimer {
     //    clock[kMipClock@] = timer_pointer->clock_def("@");
 
     // Dive - Should correspond to kMipClockDive
-    clock[kMipClockDiveEvaluateNode] = timer_pointer->clock_def("Evaluate node");
+    clock[kMipClockDiveEvaluateNode] =
+        timer_pointer->clock_def("Evaluate node");
     clock[kMipClockDivePrimalHeuristics] =
         timer_pointer->clock_def("Dive primal heuristics");
     clock[kMipClockTheDive] = timer_pointer->clock_def("The dive");
@@ -256,7 +264,8 @@ class MipTimer {
         grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
   };
 
-  void csvMipClockList(const std::string model_name,
+  void csvMipClockList(const std::string grep_query,
+                       const std::string model_name,
                        const std::vector<HighsInt> mip_clock_list,
                        const HighsTimerClock& mip_timer_clock,
                        const HighsInt kMipClockIdeal, const bool header,
@@ -268,7 +277,7 @@ class MipTimer {
     if (ideal_sum_time < 1e-2) return;
     const HighsInt num_clock = mip_clock_list.size();
     if (header) {
-      printf("grep_csvMIP,model,ideal");
+      printf("grep_%s,model,ideal", grep_query.c_str());
       for (HighsInt iX = 0; iX < num_clock; iX++) {
         HighsInt iclock = clock[mip_clock_list[iX]];
         printf(",%s", timer_pointer->clock_names[iclock].c_str());
@@ -278,7 +287,8 @@ class MipTimer {
       return;
     }
     double sum_time = 0;
-    printf("grep_csvMIP,%s,%11.4g", model_name.c_str(), ideal_sum_time);
+    printf("grep_%s,%s,%11.4g", grep_query.c_str(), model_name.c_str(),
+           ideal_sum_time);
     for (HighsInt iX = 0; iX < num_clock; iX++) {
       HighsInt iclock = clock[mip_clock_list[iX]];
       double time = timer_pointer->read(iclock);
@@ -331,14 +341,12 @@ class MipTimer {
   };
 
   void reportAltEvaluateRootNodeClock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{
-      kMipClockEvaluateRootNode0,
-      kMipClockEvaluateRootNode1,
-      kMipClockEvaluateRootNode2};
+    const std::vector<HighsInt> mip_clock_list{kMipClockEvaluateRootNode0,
+                                               kMipClockEvaluateRootNode1,
+                                               kMipClockEvaluateRootNode2};
     reportMipClockList(
         "AltEvaluateRootNode", mip_clock_list, mip_timer_clock,
         kMipClockEvaluateRootNode);  //, tolerance_percent_report);
-    
   };
 
   void reportMipEvaluateRootNodeClock(const HighsTimerClock& mip_timer_clock) {
@@ -353,14 +361,14 @@ class MipTimer {
         kMipClockFinishAnalyticCentreComputation,
         kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
-	kMipClockRootHeuristicsReducedCost,
+        kMipClockRootHeuristicsReducedCost,
         kMipClockRootSeparationRound1,
-	kMipClockRootHeuristicsRens,
+        kMipClockRootHeuristicsRens,
         kMipClockRootSeparationRound2,
         kMipClockRootFeasibilityPump,
         kMipClockRootSeparationRound3
-	//	kMipClock@,
-	//	kMipClock@
+        //	kMipClock@,
+        //	kMipClock@
     };
     reportMipClockList(
         "MipEvaluateRootNode", mip_clock_list, mip_timer_clock,
@@ -371,7 +379,8 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockRootSeparationRound,
         kMipClockRootSeparationFinishAnalyticCentreComputation,
-        kMipClockRootSeparationCentralRounding, kMipClockRootSeparationEvaluateRootLp};
+        kMipClockRootSeparationCentralRounding,
+        kMipClockRootSeparationEvaluateRootLp};
     reportMipClockList("MipRootSeparation", mip_clock_list, mip_timer_clock,
                        kMipClockRootSeparation);  //, tolerance_percent_report);
   };
@@ -390,17 +399,19 @@ class MipTimer {
 
   void reportMipDiveClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockDiveEvaluateNode, kMipClockDivePrimalHeuristics, kMipClockTheDive,
-        kMipClockBacktrackPlunge, kMipClockPerformAging2};
+        kMipClockDiveEvaluateNode, kMipClockDivePrimalHeuristics,
+        kMipClockTheDive, kMipClockBacktrackPlunge, kMipClockPerformAging2};
     reportMipClockList("MipDive_", mip_clock_list, mip_timer_clock,
                        kMipClockDive, tolerance_percent_report);
   };
 
-  void reportMipDivePrimalHeuristicsClock(const HighsTimerClock& mip_timer_clock) {
-    const std::vector<HighsInt> mip_clock_list{kMipClockDiveRandomizedRounding,
-                                               kMipClockDiveRens, kMipClockDiveRins};
-    reportMipClockList("MipDivePrimalHeuristics", mip_clock_list, mip_timer_clock,
-                       kMipClockDivePrimalHeuristics, tolerance_percent_report);
+  void reportMipDivePrimalHeuristicsClock(
+      const HighsTimerClock& mip_timer_clock) {
+    const std::vector<HighsInt> mip_clock_list{
+        kMipClockDiveRandomizedRounding, kMipClockDiveRens, kMipClockDiveRins};
+    reportMipClockList("MipDivePrimalHeuristics", mip_clock_list,
+                       mip_timer_clock, kMipClockDivePrimalHeuristics,
+                       tolerance_percent_report);
   };
 
   void reportMipNodeSearchClock(const HighsTimerClock& mip_timer_clock) {
@@ -419,8 +430,32 @@ class MipTimer {
     const std::vector<HighsInt> mip_clock_list{
         kMipClockRunPresolve, kMipClockEvaluateRootNode,
         kMipClockDivePrimalHeuristics, kMipClockTheDive, kMipClockNodeSearch};
-    csvMipClockList(model_name, mip_clock_list, mip_timer_clock, kMipClockTotal,
-                    header, end_line);
+    csvMipClockList("csvMIP", model_name, mip_clock_list, mip_timer_clock,
+                    kMipClockTotal, header, end_line);
+  };
+
+  void csvEvaluateRootNodeClock(const std::string model_name,
+                                const HighsTimerClock& mip_timer_clock,
+                                const bool header, const bool end_line) {
+    const std::vector<HighsInt> mip_clock_list{
+        kMipClockStartSymmetryDetection,
+        kMipClockStartAnalyticCentreComputation,
+        kMipClockEvaluateRootLp,
+        kMipClockSeparateLpCuts,
+        kMipClockRandomizedRounding,
+        kMipClockPerformRestart,
+        kMipClockRootSeparation,
+        kMipClockFinishAnalyticCentreComputation,
+        kMipClockRootCentralRounding,
+        kMipClockRootSeparationRound0,
+        kMipClockRootHeuristicsReducedCost,
+        kMipClockRootSeparationRound1,
+        kMipClockRootHeuristicsRens,
+        kMipClockRootSeparationRound2,
+        kMipClockRootFeasibilityPump,
+        kMipClockRootSeparationRound3};
+    csvMipClockList("csvRootNode", model_name, mip_clock_list, mip_timer_clock,
+                    kMipClockEvaluateRootNode, header, end_line);
   };
 };
 
