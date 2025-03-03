@@ -42,15 +42,18 @@ enum iClockMip {
   kMipClockSeparateLpCuts,
   kMipClockRandomizedRounding,
   kMipClockPerformRestart,
-  kMipClockSeparation,
+  kMipClockRootSeparation,
   kMipClockFinishAnalyticCentreComputation,
-  kMipClockCentralRounding,
+  kMipClockRootCentralRounding,
   kMipClockRootSeparationRound0,
-  kMipClockRootSeparationRound1,
-  kMipClockRootSeparationRound2,
-  kMipClockRootSeparationRound3,
   kMipClockRootHeuristicsReducedCost,
+  kMipClockRootSeparationRound1,
   kMipClockRootHeuristicsRens,
+  kMipClockRootSeparationRound2,
+  kMipClockRootFeasibilityPump,
+  kMipClockRootSeparationRound3,
+  //  kMipClock@,
+  //  kMipClock@,
   //  kMipClock@,
   //  kMipClock@,
   
@@ -81,10 +84,10 @@ enum iClockMip {
   //  kMipClock@,
 
   // Separation
-  kMipClockSeparationRootSeparationRound,
-  kMipClockSeparationFinishAnalyticCentreComputation,
-  kMipClockSeparationCentralRounding,
-  kMipClockSeparationEvaluateRootLp,
+  kMipClockRootSeparationRound,
+  kMipClockRootSeparationFinishAnalyticCentreComputation,
+  kMipClockRootSeparationCentralRounding,
+  kMipClockRootSeparationEvaluateRootLp,
 
   // LP solves
   kMipClockSimplexBasisSolveLp,
@@ -137,21 +140,22 @@ class MipTimer {
         timer_pointer->clock_def("Randomized rounding");
     clock[kMipClockPerformRestart] =
         timer_pointer->clock_def("Perform restart");
-    clock[kMipClockSeparation] = timer_pointer->clock_def("Separation");
+    clock[kMipClockRootSeparation] = timer_pointer->clock_def("Root separation");
     clock[kMipClockFinishAnalyticCentreComputation] =
         timer_pointer->clock_def("A-centre - finish");
-    clock[kMipClockCentralRounding] =
-        timer_pointer->clock_def("Central rounding");
+    clock[kMipClockRootCentralRounding] =
+        timer_pointer->clock_def("Root central rounding");
     clock[kMipClockRootSeparationRound0] =
         timer_pointer->clock_def("Root separation round 0");
+    clock[kMipClockRootHeuristicsReducedCost] = timer_pointer->clock_def("Root heuristics reduced cost");
     clock[kMipClockRootSeparationRound1] =
         timer_pointer->clock_def("Root separation round 1");
+    clock[kMipClockRootHeuristicsRens] = timer_pointer->clock_def("Root heuristics RENS");
     clock[kMipClockRootSeparationRound2] =
         timer_pointer->clock_def("Root separation round 2");
+    clock[kMipClockRootFeasibilityPump] = timer_pointer->clock_def("Root feasibility pump");
     clock[kMipClockRootSeparationRound3] =
         timer_pointer->clock_def("Root separation round 3");
-    clock[kMipClockRootHeuristicsReducedCost] = timer_pointer->clock_def("Root heuristics reduced cost");
-    clock[kMipClockRootHeuristicsRens] = timer_pointer->clock_def("Root heuristics RENS");
     //    clock[kMipClock@] = timer_pointer->clock_def("@");
 
     clock[kMipClockEvaluateRootNode0] = timer_pointer->clock_def("kMipClockEvaluateRootNode0");
@@ -159,14 +163,14 @@ class MipTimer {
     clock[kMipClockEvaluateRootNode2] = timer_pointer->clock_def("kMipClockEvaluateRootNode2");
 
     // Separation
-    clock[kMipClockSeparationRootSeparationRound] =
-        timer_pointer->clock_def("Root separation round - s.");
-    clock[kMipClockSeparationFinishAnalyticCentreComputation] =
-        timer_pointer->clock_def("A-centre - finish - s.");
-    clock[kMipClockSeparationCentralRounding] =
-        timer_pointer->clock_def("Central rounding - s.");
-    clock[kMipClockSeparationEvaluateRootLp] =
-        timer_pointer->clock_def("Evaluate root LP - s.");
+    clock[kMipClockRootSeparationRound] =
+        timer_pointer->clock_def("Separation");
+    clock[kMipClockRootSeparationFinishAnalyticCentreComputation] =
+        timer_pointer->clock_def("A-centre - finish");
+    clock[kMipClockRootSeparationCentralRounding] =
+        timer_pointer->clock_def("Central rounding");
+    clock[kMipClockRootSeparationEvaluateRootLp] =
+        timer_pointer->clock_def("Evaluate root LP");
 
     // Presolve - Should correspond to kMipClockRunPresolve
     clock[kMipClockProbingPresolve] =
@@ -345,15 +349,16 @@ class MipTimer {
         kMipClockSeparateLpCuts,
         kMipClockRandomizedRounding,
         kMipClockPerformRestart,
-        kMipClockSeparation,
+        kMipClockRootSeparation,
         kMipClockFinishAnalyticCentreComputation,
-        kMipClockCentralRounding,
+        kMipClockRootCentralRounding,
         kMipClockRootSeparationRound0,
-        kMipClockRootSeparationRound1,
-        kMipClockRootSeparationRound2,
-        kMipClockRootSeparationRound3,
 	kMipClockRootHeuristicsReducedCost,
-	kMipClockRootHeuristicsRens
+        kMipClockRootSeparationRound1,
+	kMipClockRootHeuristicsRens,
+        kMipClockRootSeparationRound2,
+        kMipClockRootFeasibilityPump,
+        kMipClockRootSeparationRound3
 	//	kMipClock@,
 	//	kMipClock@
     };
@@ -364,11 +369,11 @@ class MipTimer {
 
   void reportMipSeparationClock(const HighsTimerClock& mip_timer_clock) {
     const std::vector<HighsInt> mip_clock_list{
-        kMipClockSeparationRootSeparationRound,
-        kMipClockSeparationFinishAnalyticCentreComputation,
-        kMipClockSeparationCentralRounding, kMipClockSeparationEvaluateRootLp};
-    reportMipClockList("MipSeparation", mip_clock_list, mip_timer_clock,
-                       kMipClockSeparation);  //, tolerance_percent_report);
+        kMipClockRootSeparationRound,
+        kMipClockRootSeparationFinishAnalyticCentreComputation,
+        kMipClockRootSeparationCentralRounding, kMipClockRootSeparationEvaluateRootLp};
+    reportMipClockList("MipRootSeparation", mip_clock_list, mip_timer_clock,
+                       kMipClockRootSeparation);  //, tolerance_percent_report);
   };
 
   void reportMipSearchClock(const HighsTimerClock& mip_timer_clock) {
