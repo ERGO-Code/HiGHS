@@ -324,11 +324,11 @@ restart:
     // Initialize worker relaxations and mipworkers
     // todo lps and workers are still empty right now 
 
-    // const int num_workers = 7;
-    // for (int i = 0; i < 7; i++) {
-    //   mipdata_->lps.push_back(HighsLpRelaxation(*this));
-    //   mipdata_->workers.push_back(HighsMipWorker(*this, mipdata_->lps.back()));
-    // }
+     const int num_workers = 7;
+     for (int i = 0; i < 7; i++) {
+       mipdata_->lps.push_back(HighsLpRelaxation(*this));
+       mipdata_->workers.emplace_back(*this, mipdata_->lps.back());
+     }
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
