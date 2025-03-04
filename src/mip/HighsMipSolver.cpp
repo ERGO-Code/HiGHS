@@ -172,18 +172,11 @@ void HighsMipSolver::run() {
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
 
   // Initialize master worker.
-  // HighsMipWorker master_worker(*this, mipdata_->lp);
-
-  mipdata_->workers.emplace_back(*this, mipdata_->lp);
-  // workers.emplace_back(mipsolver, lp);
-
-  // mipdata_->workers.emplace_back(*this, mipdata_->lps.at(0));
-  HighsMipWorker& master_worker = mipdata_->workers.at(0);
-
   // Now the worker lives in mipdata.
   // The master worker is used in evaluateRootNode.
+  mipdata_->workers.emplace_back(*this, mipdata_->lp);
 
-  // HighsMipWorker& master_worker = mipdata_->workers.at(0);
+  HighsMipWorker& master_worker = mipdata_->workers.at(0);
 
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
@@ -274,7 +267,7 @@ restart:
   // This search is from the worker and will use the worker pseudocost.
   // does not work yet, fails at domain propagation somewhere.
   // HighsSearch& search = *mipdata_->workers[0].search_ptr_.get();
-
+  // search.setLpRelaxation(&mipdata_->lp);
 
 
   mipdata_->debugSolution.registerDomain(search.getLocalDomain());
