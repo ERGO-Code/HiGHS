@@ -677,9 +677,11 @@ HighsStatus Highs::readModel(const std::string& filename) {
   if (call_code != FilereaderRetcode::kOk) {
     interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
-    return_status =
-        interpretCallStatus(options_.log_options, HighsStatus::kError,
-                            return_status, "readModelFromFile");
+    const HighsStatus call_status = call_code == FilereaderRetcode::kWarning
+                                        ? HighsStatus::kWarning
+                                        : HighsStatus::kError;
+    return_status = interpretCallStatus(options_.log_options, call_status,
+                                        return_status, "readModelFromFile");
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
@@ -3744,8 +3746,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   return_status = solveLp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("LP", return_status);
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("LP");
   return return_status;
 }
 
@@ -3890,8 +3891,7 @@ HighsStatus Highs::callSolveQp() {
   info_.simplex_iteration_count += stats.phase1_iterations;
   info_.qp_iteration_count += stats.num_iterations;
   info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("QP", return_status);
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("QP");
   return return_status;
 }
 
@@ -3986,7 +3986,7 @@ HighsStatus Highs::callSolveMip() {
                                       : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("MIP", return_status);
+    return_status = checkOptimality("MIP");
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {
@@ -4523,10 +4523,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
+    const bool lp_factor_row_compatible =
+        ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_);
+    if (!lp_factor_row_compatible) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");
+      assert(lp_factor_row_compatible);
       // Clear Ekk entirely
       ekk_instance_.clear();
     }

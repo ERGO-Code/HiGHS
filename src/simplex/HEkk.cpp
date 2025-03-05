@@ -2287,21 +2287,11 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   status_.has_ar_matrix = true;
 }
 
-bool HEkk::lpFactorRowCompatible() {
-  // Check for LP-HFactor row compatibility
-  const bool consistent_num_row =
-      this->simplex_nla_.factor_.num_row == this->lp_.num_row_;
-  if (!consistent_num_row) {
-    highsLogDev(options_->log_options, HighsLogType::kError,
-                "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
-                "factor_num_row = %d\n",
-                (int)this->lp_.num_col_, (int)this->lp_.num_row_,
-                (int)this->simplex_nla_.factor_.num_row);
-  }
-  return consistent_num_row;
+bool HEkk::lpFactorRowCompatible() const {
+  return lpFactorRowCompatible(this->lp_.num_row_);
 }
 
-bool HEkk::lpFactorRowCompatible(HighsInt expectedNumRow) {
+bool HEkk::lpFactorRowCompatible(const HighsInt expectedNumRow) const {
   // Check for LP-HFactor row compatibility
   const bool consistent_num_row =
       this->simplex_nla_.factor_.num_row == expectedNumRow;

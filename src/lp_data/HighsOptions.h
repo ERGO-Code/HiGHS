@@ -51,7 +51,6 @@ class OptionRecordBool : public OptionRecord {
   OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
                    bool* Xvalue_pointer, bool Xdefault_value)
       : OptionRecord(HighsOptionType::kBool, Xname, Xdescription, Xadvanced) {
-    advanced = Xadvanced;
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
