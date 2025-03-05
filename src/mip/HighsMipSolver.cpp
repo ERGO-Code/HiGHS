@@ -256,19 +256,16 @@ restart:
             analysis_.mipTimerStop(kMipClockRandomizedRounding0);
           }
 
-          // previous heuristic may have detected infeasibility
-          if (!mipdata_->domain.infeasible()) {
-            if (mipdata_->incumbent.empty()) {
-              analysis_.mipTimerStart(kMipClockRens);
-              mipdata_->heuristics.RENS(
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockRens);
-            } else {
-              analysis_.mipTimerStart(kMipClockRins);
-              mipdata_->heuristics.RINS(
-                  mipdata_->lp.getLpSolver().getSolution().col_value);
-              analysis_.mipTimerStop(kMipClockRins);
-            }
+          if (mipdata_->incumbent.empty()) {
+            analysis_.mipTimerStart(kMipClockRens);
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+            analysis_.mipTimerStop(kMipClockRens);
+          } else {
+            analysis_.mipTimerStart(kMipClockRins);
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+            analysis_.mipTimerStop(kMipClockRins);
           }
 
           mipdata_->heuristics.flushStatistics();
