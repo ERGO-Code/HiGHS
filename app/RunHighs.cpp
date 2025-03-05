@@ -20,23 +20,46 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsModel& model);
 
 int main(int argc, char** argv) {
-  // Create the Highs instance
+  // Create the Highs instance.
   Highs highs;
   const HighsOptions& options = highs.getOptions();
   const HighsLogOptions& log_options = options.log_options;
 
-  // Load user options
-  std::string model_file;
-  std::string read_solution_file;
+  // Load user options.
+  HighsCommandLineOptions cmd_options;
   HighsOptions loaded_options;
+
   // Set "HiGHS.log" as the default log_file for the app so that
   // log_file has this value if it isn't set in the file
   loaded_options.log_file = "HiGHS.log";
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
-  if (!loadOptions(log_options, argc, argv, loaded_options, model_file,
-                   read_solution_file))
+
+  // Replace command line options parsing library
+  // cxxopts now Cpp17 with
+  // CLI11 for Cpp11
+
+  CLI::App app{"HiGHS options"};
+  argv = app.ensure_utf8(argv);
+
+  setupCommandLineOptions(app, cmd_options);
+
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::RequiredError& e) {
+    std::cout << "Please specify filename in .mps|.lp|.ems format."
+              << std::endl;
     return (int)HighsStatus::kError;
+  } catch (const CLI::ParseError& e) {
+    // Should be called from main.
+    return app.exit(e);
+  }
+
+  if (!loadOptions(log_options, cmd_options, loaded_options))
+    return (int)HighsStatus::kError;
+
+  return 0;
+
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
   if (loaded_options.output_flag) highs.openLogFile(loaded_options.log_file);
@@ -50,13 +73,14 @@ int main(int argc, char** argv) {
   highs.writeOptions("", true);
 
   // Load the model from model_file
-  HighsStatus read_status = highs.readModel(model_file);
+  HighsStatus read_status = highs.readModel(cmd_options.model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
 
   // Possible read a solution file
-  if (read_solution_file != "") {
-    HighsStatus read_solution_status = highs.readSolution(read_solution_file);
+  if (cmd_options.read_solution_file != "") {
+    HighsStatus read_solution_status =
+        highs.readSolution(cmd_options.read_solution_file);
     if (read_solution_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Error loading solution file\n");
