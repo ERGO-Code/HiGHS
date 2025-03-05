@@ -1500,13 +1500,29 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                  10 * numNonzeros());
     HighsInt numFail = 0;
 
-    // Collect up to 10 lifting opportunities per row
+    // lambda to check if model has enough continuous variables to perform
+    // lifting for probing
+    auto modelHasPercentageContVars = [&](size_t percentage) {
+      size_t num_cols = 0, num_cont_cols = 0;
+      for (size_t col = 0; col < colsize.size(); col++) {
+        if (colDeleted[col]) continue;
+        num_cols++;
+        if (model->integrality_[col] == HighsVarType::kContinuous)
+          num_cont_cols++;
+      }
+      return size_t{100} * num_cont_cols >= percentage * num_cols;
+    };
+
+    // collect up to 10 lifting opportunities per row
     const size_t maxNumLiftOpps = std::max(
         size_t{100000}, size_t{10} * static_cast<size_t>(model->num_row_));
 
-    // store lifting opportunities
+    // only search for lifting opportunities if at least 2 percent of the
+    // variables in the problem are continuous
     size_t numLiftOpps = 0;
-    if (mipsolver->options_mip_->mip_lifting_for_probing) {
+    if (mipsolver->options_mip_->mip_lifting_for_probing &&
+        modelHasPercentageContVars(size_t{2})) {
+      // store lifting opportunities
       implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
                                                  double val) {
         // find lifting opportunities for row
@@ -1655,25 +1671,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
-    // lambda to check if model has enough continuous variables to perform
-    // lifting for probing
-    auto modelHasPercentageContVars = [&](size_t percentage) {
-      size_t num_cols = 0, num_cont_cols = 0;
-      for (size_t col = 0; col < colsize.size(); col++) {
-        if (colDeleted[col]) continue;
-        num_cols++;
-        if (model->integrality_[col] == HighsVarType::kContinuous)
-          num_cont_cols++;
-      }
-      return size_t{100} * num_cont_cols >= percentage * num_cols;
-    };
-
     // lifting for probing (only performed when probing did not modify the
-    // problem so far and at least 2 percent of the variables in the problem are
-    // continuous)
+    // problem so far)
     if (mipsolver->options_mip_->mip_lifting_for_probing) {
-      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0 &&
-          modelHasPercentageContVars(size_t{2})) {
+      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0) {
         // apply lifting
         liftingForProbing();
       }
