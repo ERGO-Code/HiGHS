@@ -43,21 +43,35 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
       ->required()
-      ->check(CLI::ExistingFile)
       ->check([](const std::string& input) -> std::string {
-        std::cout << "IG INPUT IS" << input << std::endl;
+        std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
         return {};
-      });
+      })
+      ->check(CLI::ExistingFile);
 
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
                  "File containing HiGHS options.")
+      ->check([](const std::string& input) -> std::string {
+        std::cout << "Input is: " << input << std::endl;
+        if (input.find(' ') != std::string::npos) {
+          return "Multiple files not implemented.";
+        }
+        return {};
+      })
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString, cmd_options.read_solution_file,
                  "File of solution to read.")
+      ->check([](const std::string& input) -> std::string {
+        std::cout << "Input is: " << input << std::endl;
+        if (input.find(' ') != std::string::npos) {
+          return "Multiple files not implemented.";
+        }
+        return {};
+      })
       ->check(CLI::ExistingFile);
 
   // Command line option specifications.
@@ -78,7 +92,14 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kSolutionFileString, cmd_options.cmd_solution_file,
                  "File for writing out model solution.");
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
-                 "File for writing out model.");
+                 "File for writing out model.")
+      ->check([](const std::string& input) -> std::string {
+        std::cout << "Input is: " << input << std::endl;
+        if (input.find(' ') != std::string::npos) {
+          return "Multiple files not implemented.";
+        }
+        return {};
+      });
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
                  "Seed to initialize random number generation.");
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,

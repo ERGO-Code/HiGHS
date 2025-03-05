@@ -49,8 +49,22 @@ int main(int argc, char** argv) {
   } catch (const CLI::RequiredError& e) {
     std::cout << "Please specify filename in .mps|.lp|.ems format."
               << std::endl;
+
+    return (int)HighsStatus::kError;
+  } catch (const CLI::ExtrasError& e) {
+    // Catching too many positional args error.
+    std::cout << "Multiple files not supported." << std::endl;
+
+    return (int)HighsStatus::kError;
+  } catch (const CLI::ArgumentMismatch& e) {
+    // Catching multiple values error.
+    // std::cout << e.get_name() << std::endl;
+    std::cout << "Too many arguments provided. Please provide only one."
+              << std::endl;
+
     return (int)HighsStatus::kError;
   } catch (const CLI::ParseError& e) {
+
     // Should be called from main.
     return app.exit(e);
   }
@@ -58,7 +72,7 @@ int main(int argc, char** argv) {
   if (!loadOptions(log_options, cmd_options, loaded_options))
     return (int)HighsStatus::kError;
 
-  return 0;
+  // return 0;
 
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
