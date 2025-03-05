@@ -867,8 +867,11 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   for (HighsInt i = 0; i != numintcols; ++i) {
     HighsInt col = intcols[i];
     double intval = point[col];
-    
-    if (std::abs(intval - std::floor(intval + 0.5)) > mipsolver.mipdata_->feastol) continue;
+    double rounded;
+    // make sure that solution value is integral
+    if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol)
+      return false;
+    intval = rounded;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
 
@@ -1056,7 +1059,7 @@ void HighsPrimalHeuristics::randomizedRounding(
 }
 
 void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
-   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   std::vector<double> currRelSol = relaxationsol;
   HighsInt t = 0;
@@ -1091,8 +1094,8 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
   };
 
   while ((currentFracInt.size() > 0 || hasInfeasibleConstraints) &&
-        iterationsWithoutReductions <= maxIterationsWithoutReductions &&
-          t <= mipsolver.mipdata_->integer_cols.size()) {
+         iterationsWithoutReductions <= maxIterationsWithoutReductions &&
+         t <= mipsolver.mipdata_->integer_cols.size()) {
     t++;
     bool fracIntReduced = false;
     iterationsWithoutReductions++;
@@ -1110,7 +1113,6 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
                                     mipsolver.mipdata_->ARindex_[jInd]);
           fractIntFound = it != currentFracInt.end();
           if (fractIntFound) break;
-
         }
         rInd++;
       }
@@ -1137,25 +1139,24 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         if (currentLp.col_lower_[j] == currentLp.col_upper_[j]) continue;
 
         // lambda for finding best shift
-         auto repair = [this, &findPairByIndex, &currentFracInt, 
-                              &findShiftsByIndex, &ShiftIterationsSet, 
-                              &t, &sig_min, &j_min, &aij_min, &x_j_min, 
-                              &currRelSol, &moveValueUp]
-                         (HighsInt col, HighsInt direction, HighsInt rowSense,
+        auto repair = [this, &findPairByIndex, &currentFracInt,
+                       &findShiftsByIndex, &ShiftIterationsSet, &t, &sig_min,
+                       &j_min, &aij_min, &x_j_min, &currRelSol, &moveValueUp](
+                          HighsInt col, HighsInt direction, HighsInt rowSense,
                           HighsInt numLocks, double coef, double cost,
                           bool isMaximization, bool isInteger, bool isAtBound) {
           if ((rowSense < 0 || direction * coef > 0) &&
               (rowSense > 0 || direction * coef < 0))
             return;
 
+          // skip variables at bounds
+          if (isAtBound) return;
+
           // search for column
           auto it = findPairByIndex(currentFracInt, col);
 
           // add data
           bool found = it != currentFracInt.end();
-
-          // skip variables at bounds
-          if (isAtBound) return;
 
           double sig = kHighsInf;
           if (found) {
@@ -1207,7 +1208,8 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
           currentFracInt.erase(it);
           fracIntReduced = true;
         }
-        // Update currRelSol and ShiftIterationsSet (for not fractional integers)
+        // Update currRelSol and ShiftIterationsSet (for not fractional
+        // integers)
         if (moveValueUp) {
           if (fracIntReduced) {
             currRelSol[j_min] =
@@ -1239,8 +1241,8 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
                   currentLp.col_lower_[j_min] - mipsolver.mipdata_->feastol);
             }
 
-              ShiftIterationsSet[j_min].push_back(-t);
-          }          
+            ShiftIterationsSet[j_min].push_back(-t);
+          }
         }
       }
     } else {
@@ -1256,10 +1258,10 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
         assert(col >= 0);
         assert(col < mipsolver.numCol());
 
-        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min, 
-                               &pind_j_min, &j_min, &x_j_min, &sigma, &i]
-                          (double col, double xi, double roundedval,
-                           HighsInt direction) {
+        auto isBetter = [this, &currentLp, &it, &xi_max, &delta_c_min,
+                         &pind_j_min, &j_min, &x_j_min, &sigma,
+                         &i](double col, double xi, double roundedval,
+                             HighsInt direction) {
           double c_min = currentLp.col_cost_[col] * (roundedval - it.second);
           if (xi > xi_max || (xi == xi_max && c_min < delta_c_min)) {
             xi_max = xi;
@@ -1294,12 +1296,11 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
   }
   // re-check for feasibility and add incumbent
   if (hasInfeasibleConstraints) {
-      tryRoundedPoint(currRelSol, 'I');
-  }
-  else {
-      if (currentFracInt.size() > 0) ZIRound(currRelSol);
-      if (currentFracInt.size() == 0)
-          mipsolver.mipdata_->trySolution(currRelSol, 'I');
+    tryRoundedPoint(currRelSol, 'I');
+  } else {
+    if (currentFracInt.size() > 0) ZIRound(currRelSol);
+    if (currentFracInt.size() == 0)
+      mipsolver.mipdata_->trySolution(currRelSol, 'I');
   }
 }
 
@@ -1342,10 +1343,10 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
          loopCount <= max_loop_count) {
     prev_ZI_total = ZI_total;
     loopCount++;
-    
+
     if (currentLp.num_row_ > 0)
       getLpRowBounds(currentLp, 0, currentLp.num_row_ - 1, XrowLower.data(),
-                    XrowUpper.data());
+                     XrowUpper.data());
 
     for (HighsInt j : intcols) {
       double relSol = currRelSol[j];
@@ -1357,18 +1358,17 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
       double minRowRatioForUB = kHighsInf;
       double minRowRatioForLB = kHighsInf;
 
-      for (HighsInt el = currentLp.a_matrix_.start_[j]; 
-          el < currentLp.a_matrix_.start_[j + 1]; el++) {
+      for (HighsInt el = currentLp.a_matrix_.start_[j];
+           el < currentLp.a_matrix_.start_[j + 1]; el++) {
+        HighsInt i = currentLp.a_matrix_.index_[el];
+        double aij = currentLp.a_matrix_.value_[el];
 
-          HighsInt i = currentLp.a_matrix_.index_[el];
-          double aij = currentLp.a_matrix_.value_[el];
-
-          double siUB = XrowUpper[i] - rowActivities[i];
-          double siLB = rowActivities[i] - XrowLower[i];
-          minRowRatioForUB =
-              std::min(minRowRatioForUB, (aij > 0 ? siUB : -siLB) / aij);
-          minRowRatioForLB =
-              std::min(minRowRatioForLB, (aij > 0 ? siLB : -siUB) / aij);
+        double siUB = XrowUpper[i] - rowActivities[i];
+        double siLB = rowActivities[i] - XrowLower[i];
+        minRowRatioForUB =
+            std::min(minRowRatioForUB, (aij > 0 ? siUB : -siLB) / aij);
+        minRowRatioForLB =
+            std::min(minRowRatioForLB, (aij > 0 ? siLB : -siUB) / aij);
       }
 
       double UB = std::min(currentLp.col_upper_[j] - relSol, minRowRatioForUB);
