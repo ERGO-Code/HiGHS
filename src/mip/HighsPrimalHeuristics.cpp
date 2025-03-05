@@ -319,6 +319,9 @@ void HighsPrimalHeuristics::rootReducedCost() {
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
   HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();
@@ -567,7 +570,10 @@ retry:
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
                                [&](HighsInt i) {
@@ -979,7 +985,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
 
 void HighsPrimalHeuristics::randomizedRounding(
     const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   auto localdom = mipsolver.mipdata_->domain;
 
@@ -1158,7 +1164,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 }
 
 void HighsPrimalHeuristics::centralRounding() {
-  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol())
+  if (mipsolver.mipdata_->analyticCenter.size() !=
+      static_cast<size_t>(mipsolver.numCol()))
     return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())
