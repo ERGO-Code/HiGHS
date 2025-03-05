@@ -308,7 +308,7 @@ class HighsDomain {
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
 
-  bool infeasible_ = 0;
+  bool infeasible_ = false;
   Reason infeasible_reason;
   HighsInt infeasible_pos;
 
@@ -333,6 +333,7 @@ class HighsDomain {
   std::vector<HighsInt> colUpperPos_;
   std::vector<HighsInt> branchPos_;
   HighsHashTable<HighsInt> redundant_rows_;
+  bool recordRedundantRows_ = false;
 
  public:
   std::vector<double> col_lower_;
@@ -364,7 +365,8 @@ class HighsDomain {
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
         col_lower_(other.col_lower_),
-        col_upper_(other.col_upper_) {
+        col_upper_(other.col_upper_),
+        recordRedundantRows_(other.recordRedundantRows_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -396,6 +398,7 @@ class HighsDomain {
     branchPos_ = other.branchPos_;
     col_lower_ = other.col_lower_;
     col_upper_ = other.col_upper_;
+    recordRedundantRows_ = other.recordRedundantRows_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -643,6 +646,8 @@ class HighsDomain {
   const HighsHashTable<HighsInt>& getRedundantRows();
 
   double getRedundantRowValue(HighsInt row) const;
+
+  void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
 };
 
 #endif

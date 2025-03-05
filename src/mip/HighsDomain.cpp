@@ -1545,7 +1545,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+      if (recordRedundantRows_ &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
                             activitymininf_[mip->a_matrix_.index_[i]],
@@ -1596,7 +1597,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
+      if (recordRedundantRows_ &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
                             activitymaxinf_[mip->a_matrix_.index_[i]],
@@ -1698,7 +1700,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
+      if (recordRedundantRows_ &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] == -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{-1},
                             activitymaxinf_[mip->a_matrix_.index_[i]],
@@ -1752,7 +1755,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
+      if (recordRedundantRows_ &&
+          mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           mip->row_upper_[mip->a_matrix_.index_[i]] == kHighsInf)
         updateRedundantRows(mip->a_matrix_.index_[i], HighsInt{1},
                             activitymininf_[mip->a_matrix_.index_[i]],

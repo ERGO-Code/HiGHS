@@ -15,12 +15,13 @@
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
-  globaldomain.clearRedundantRows();
   globaldomain.propagate();
-  if (globaldomain.infeasible() || globaldomain.isFixed(col)) {
-    globaldomain.clearRedundantRows();
-    return true;
-  }
+  if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
+
+  // record redundant rows for lifting
+  assert(globaldomain.getRedundantRows().size() == 0);
+  if (storeLiftingOpportunity != nullptr)
+    globaldomain.setRecordRedundantRows(true);
 
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
@@ -33,28 +34,36 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
-  auto isInfeasible = [&]() {
+  auto storeLiftingOpportunities = [&](HighsInt col, double val) {
+    // use callback to store new lifting opportunities; negate column index if
+    // variable is set to its lower bound
+    if (storeLiftingOpportunity != nullptr) {
+      for (const auto& elm : globaldomain.getRedundantRows())
+        storeLiftingOpportunity(
+            elm.key(), (val ? 1 : -1) * col,
+            (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
+      globaldomain.clearRedundantRows();
+      globaldomain.setRecordRedundantRows(false);
+    }
+  };
+
+  auto isInfeasible = [&](HighsInt col, double val) {
     if (!globaldomain.infeasible()) return false;
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
-    globaldomain.clearRedundantRows();
+    storeLiftingOpportunities(col, val);
     return true;
   };
 
-  if (isInfeasible()) return true;
+  if (isInfeasible(col, val)) return true;
 
   globaldomain.propagate();
 
-  if (isInfeasible()) return true;
+  if (isInfeasible(col, val)) return true;
 
-  // use callback to store new lifting opportunities; negate column index if
-  // variable is set to its lower bound
-  if (storeLiftingOpportunity != nullptr)
-    for (const auto& elm : globaldomain.getRedundantRows())
-      storeLiftingOpportunity(
-          elm.key(), (val ? 1 : -1) * col,
-          (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
+  // inform caller about lifting opportunities
+  storeLiftingOpportunities(col, val);
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
