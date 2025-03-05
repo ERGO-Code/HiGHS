@@ -641,9 +641,11 @@ class HighsDomain {
 
   bool inSubmip() const { return mipsolver->submip; }
 
-  void clearRedundantRows();
+  void clearRedundantRows() { redundant_rows_.clear(); };
 
-  const HighsHashTable<HighsInt>& getRedundantRows();
+  const HighsHashTable<HighsInt>& getRedundantRows() const {
+    return redundant_rows_;
+  };
 
   double getRedundantRowValue(HighsInt row) const;
 

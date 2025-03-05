@@ -1858,12 +1858,6 @@ void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
   }
 }
 
-void HighsDomain::clearRedundantRows() { redundant_rows_.clear(); }
-
-const HighsHashTable<HighsInt>& HighsDomain::getRedundantRows() {
-  return redundant_rows_;
-}
-
 double HighsDomain::getRedundantRowValue(HighsInt row) const {
   if (mipsolver->model_->row_lower_[row] != -kHighsInf) {
     assert(mipsolver->model_->row_upper_[row] == kHighsInf);
