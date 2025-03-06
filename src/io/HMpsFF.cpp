@@ -298,24 +298,25 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           break;
         case HMpsFF::Parsekey::kQmatrix:
         case HMpsFF::Parsekey::kQuadobj:
-	  printf("MIP MPS read failed, MIP has Hessian\n"); return FreeFormatParserReturnCode::kParserError;
+          printf("MIP MPS read failed, MIP has Hessian\n");
+          return FreeFormatParserReturnCode::kParserError;
           keyword = parseHessian(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kQsection:
         case HMpsFF::Parsekey::kQcmatrix:
-	  printf("MIP MPS read failed, Quadratic entries\n");
-	  return FreeFormatParserReturnCode::kParserError;
+          printf("MIP MPS read failed, Quadratic entries\n");
+          return FreeFormatParserReturnCode::kParserError;
           keyword = parseQuadRows(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kCsection:
-	  printf("MIP MPS read failed, Cone entries\n");
-	  return FreeFormatParserReturnCode::kParserError;
+          printf("MIP MPS read failed, Cone entries\n");
+          return FreeFormatParserReturnCode::kParserError;
           keyword = parseCones(log_options, f);
           break;
         case HMpsFF::Parsekey::kSets:
         case HMpsFF::Parsekey::kSos:
-	  printf("MIP MPS read failed, SOS entries\n");
-	  return FreeFormatParserReturnCode::kParserError;
+          printf("MIP MPS read failed, SOS entries\n");
+          return FreeFormatParserReturnCode::kParserError;
           keyword = parseSos(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kFail:
