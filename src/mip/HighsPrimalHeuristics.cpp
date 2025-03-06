@@ -870,7 +870,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     double rounded;
     // make sure that solution value is integral
     if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol)
-      continue;
+      return false;
     intval = rounded;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
@@ -927,6 +927,70 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   }
 
   return mipsolver.mipdata_->trySolution(localdom.col_lower_, solution_source);
+}
+
+bool HighsPrimalHeuristics::tryShiftedPoint(const std::vector<double>& point,
+                                            char source) {
+  auto localdom = mipsolver.mipdata_->domain;
+
+  HighsInt numintcols = intcols.size();
+  for (HighsInt i = 0; i != numintcols; ++i) {
+    HighsInt col = intcols[i];
+    double intval = point[col];
+    double rounded;
+    // make sure that solution value is integral
+    if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol)
+      continue;
+    intval = rounded;
+    intval = std::min(localdom.col_upper_[col], intval);
+    intval = std::max(localdom.col_lower_[col], intval);
+
+    localdom.fixCol(col, intval, HighsDomain::Reason::branching());
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return false;
+    }
+    localdom.propagate();
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return false;
+    }
+  }
+
+  if (numintcols != mipsolver.numCol()) {
+    HighsLpRelaxation lprelax(mipsolver);
+    lprelax.loadModel();
+    lprelax.setIterationLimit(
+        std::max(int64_t{10000}, 2 * mipsolver.mipdata_->firstrootlpiters));
+    lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+                                           localdom.col_lower_.data(),
+                                           localdom.col_upper_.data());
+
+    if (numintcols / (double)mipsolver.numCol() >= 0.2)
+      lprelax.getLpSolver().setOptionValue("presolve", "on");
+    else
+      lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
+                                     "HighsPrimalHeuristics::tryShiftedPoint");
+
+    HighsLpRelaxation::Status st = lprelax.resolveLp();
+
+    if (st == HighsLpRelaxation::Status::kInfeasible) {
+      std::vector<HighsInt> inds;
+      std::vector<double> vals;
+      double rhs;
+      if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
+                                      rhs)) {
+        HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
+        cutGen.generateConflict(localdom, inds, vals, rhs);
+      }
+      return false;
+    } else if (lprelax.unscaledPrimalFeasible(st)) {
+        ZIRound(lprelax.getLpSolver().getSolution().col_value);
+        mipsolver.mipdata_->trySolution(lprelax.getLpSolver().getSolution().col_value, source);
+    }
+  }
+
+  return mipsolver.mipdata_->trySolution(localdom.col_lower_, source);
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
@@ -1296,7 +1360,7 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
   }
   // re-check for feasibility and add incumbent
   if (hasInfeasibleConstraints) {
-    tryRoundedPoint(currRelSol, 'I');
+    tryShiftedPoint(currRelSol, 'I');
   } else {
     if (currentFracInt.size() > 0) ZIRound(currRelSol);
     if (currentFracInt.size() == 0)
