@@ -216,6 +216,7 @@ HighsStatus assessMatrix(
                  " |values| in [%g, %g] greater than %g\n",
                  matrix_name.c_str(), num_large_values, min_large_value,
                  max_large_value, large_matrix_value);
+    printf("MIP MPS read failed, Excessive matrix entries\n");
     error_found = true;
   }
   if (num_small_values) {
