@@ -1285,7 +1285,9 @@ CLI11_INLINE std::ostream &streamOutAsParagraph(std::ostream &out,
                 out << '\n' << linePrefix;
                 charsWritten = 0;
             }
-
+            
+            if(word[0] == '\"')
+                out << "  ";
             out << word << " ";
             charsWritten += word.length() + 1;
         }
@@ -11224,7 +11226,8 @@ CLI11_INLINE std::string Formatter::make_description(const App *app) const {
 CLI11_INLINE std::string Formatter::make_usage(const App *app, std::string name) const {
     std::string usage = app->get_usage();
     if(!usage.empty()) {
-        return usage + "\n\n";
+        // return usage + "\n\n";
+        return usage + "\n";
     }
 
     std::stringstream out;

@@ -39,8 +39,6 @@ struct HighsCommandLineOptions {
 
 void setupCommandLineOptions(CLI::App& app,
                              HighsCommandLineOptions& cmd_options) {
-
-
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
@@ -58,7 +56,6 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
                  "File containing HiGHS options.")
       ->check([](const std::string& input) -> std::string {
-        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -69,7 +66,6 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kReadSolutionFileString, cmd_options.read_solution_file,
                  "File of solution to read.")
       ->check([](const std::string& input) -> std::string {
-        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -78,34 +74,29 @@ void setupCommandLineOptions(CLI::App& app,
       ->check(CLI::ExistingFile);
 
   // Command line option specifications.
-  app.add_option(
-      "--" + kPresolveString, cmd_options.cmd_presolve,
-      "Set presolve to:\n"
-       "  \"choose\" * default\n"
-       "  \"on\"\n"
-       "  \"off\"");
-      // "Presolve: \"choose\" by default - \"on\"/\"off\" \nare alternatives.");
+  app.add_option("--" + kPresolveString, cmd_options.cmd_presolve,
+                 "Set presolve option to:\n"
+                 "\"choose\" * default\n"
+                 "\"on\"\n"
+                 "\"off\"");
 
   app.add_option("--" + kSolverString, cmd_options.cmd_solver,
-                //  "Solver: \"choose\" by default - \n\"simplex\"/\"ipm\" are "
-                 "Set solver to:\n"
-       "  \"choose\" * default\n"
-       "  \"simplex\"\n"
-       "  \"ipm\"");
+                 "Set solver option to:\n"
+                 "\"choose\" * default\n"
+                 "\"simplex\"\n"
+                 "\"ipm\"");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
-                //  "Parallel solve: \"choose\" by default - \n\"on\"/\"off\" are "
-                 "Set parallel to:\n"
-       "  \"choose\" * default\n"
-       "  \"on\"\n"
-       "  \"off\"");
+                 "Set parallel option to:\n"
+                 "\"choose\" * default\n"
+                 "\"on\"\n"
+                 "\"off\"");
 
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
-                //  "Run crossover: \"on\" by default - \n\"choose\"/\"off\" are "
-                 "Set run crossover to:\n"
-       "  \"choose\"\n"
-       "  \"on\" * default\n"
-       "  \"off\"");
+                 "Set run_crossover option to:\n"
+                 "\"choose\"\n"
+                 "\"on\" * default\n"
+                 "\"off\"");
 
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
                  "Run time limit (seconds - double).");
@@ -113,7 +104,6 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kSolutionFileString, cmd_options.cmd_solution_file,
                  "File for writing out model solution.")
       ->check([](const std::string& input) -> std::string {
-        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -123,7 +113,6 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
                  "File for writing out model.")
       ->check([](const std::string& input) -> std::string {
-        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -135,14 +124,11 @@ void setupCommandLineOptions(CLI::App& app,
 
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,
                  "Compute cost, bound, RHS and basic \nsolution ranging:\n"
-                 "  \"on\"\n"
-                 "  \"off\" * default");
-                //  "Compute cost, bound, RHS and basic solution \nranging.");
-
-  // app.set_version_flag("--version", getVersionString());
+                 "\"on\"\n"
+                 "\"off\" * default");
 
   // Version.
-  app.add_flag("--version,-v", cmd_options.cmd_version, "    Print version.");
+  app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
   app.set_help_flag("-h,--help", "Print help.");
 
   app.get_formatter()->column_width(33);
@@ -152,7 +138,6 @@ void setupCommandLineOptions(CLI::App& app,
   app.get_formatter()->label("FLOAT", "float");
   app.get_formatter()->label("INT", "int");
   app.get_formatter()->label("OPTIONS", "options");
-
 }
 
 bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
@@ -165,7 +150,7 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     exit(0);
   }
 
-  // options file
+  // Options file.
   if (c.options_file != "") {
     switch (loadOptionsFromFile(report_log_options, options, c.options_file)) {
       case HighsLoadOptionsStatus::kError:
@@ -177,9 +162,7 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
         break;
     }
   }
-
   // Handle command line option specifications.
-
   // Presolve option.
   if (c.cmd_presolve != "") {
     if (setLocalOptionValue(report_log_options, kPresolveString,

@@ -39,62 +39,44 @@ int main(int argc, char** argv) {
   // cxxopts now Cpp17 with
   // CLI11 for Cpp11
 
-  CLI::App app{"HiGHS"};
+  CLI::App app{""};
   argv = app.ensure_utf8(argv);
 
   setupCommandLineOptions(app, cmd_options);
 
   try {
-    // Check if help is requested before parsing.
-    // if (argc == 1 || std::any_of(argv, argv + argc, [](const char* arg) {
-    //       return std::string(arg) == "--help" || std::string(arg) == "-h";
-    //     })) {
-    //   app.help();
-    //   return 0;
-    // }
-    std::string usage_msg = "usage: \n      " + std::string(argv[0]) + " [option...] [file]";
+    std::string usage_msg =
+        "usage:\n      " + std::string(argv[0]) + " [options] [file]";
     app.usage(usage_msg);
 
     app.parse(argc, argv);
-  }
-  // Catch call for help.
-  catch (const CLI::CallForHelp& e) {
+  } catch (const CLI::CallForHelp& e) {
     std::cout << app.help() << std::endl;
     return 0;
-  }
-  catch (const CLI::CallForAllHelp& e) {
+  } catch (const CLI::CallForAllHelp& e) {
     std::cout << app.help();
     return 0;
-  }
-  // Catch too many positional arguments.
-  catch (const CLI::RequiredError& e) {
+  } catch (const CLI::RequiredError& e) {
     std::cout << "Please specify filename in .mps|.lp|.ems format."
               << std::endl;
     return (int)HighsStatus::kError;
-  }
-  // Catch too many positional arguments.
-  catch (const CLI::ExtrasError& e) {
+  } catch (const CLI::ExtrasError& e) {
     std::cout << e.what() << std::endl;
     std::cout << "Multiple files not supported." << std::endl;
     return (int)HighsStatus::kError;
-  }
-  // Catching multiple values error.
-  catch (const CLI::ArgumentMismatch& e) {
+  } catch (const CLI::ArgumentMismatch& e) {
     std::cout << e.what() << std::endl;
     std::cout << "Too many arguments provided. Please provide only one."
               << std::endl;
     return (int)HighsStatus::kError;
-  }
-  // app.exit(e) should be called from main.
-  catch (const CLI::ParseError& e) {
+  } catch (const CLI::ParseError& e) {
     std::cout << e.what() << std::endl;
+    // app.exit() should be called from main.
     return app.exit(e);
   }
 
   if (!loadOptions(app, log_options, cmd_options, loaded_options))
     return (int)HighsStatus::kError;
-
-  // return 0;
 
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
