@@ -986,7 +986,8 @@ bool HighsPrimalHeuristics::tryShiftedPoint(const std::vector<double>& point,
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
         ZIRound(lprelax.getLpSolver().getSolution().col_value);
-        mipsolver.mipdata_->trySolution(lprelax.getLpSolver().getSolution().col_value, source);
+        return mipsolver.mipdata_->trySolution(
+          lprelax.getLpSolver().getSolution().col_value, source);
     }
   }
 
