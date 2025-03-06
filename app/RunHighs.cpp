@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Error writing basis to file\n");
 
-      return (int)read_status;
+      return (int)basis_status;
     }
   }
 
