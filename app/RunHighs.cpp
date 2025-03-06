@@ -55,10 +55,7 @@ int main(int argc, char** argv) {
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
 
-  std::cout << "output_basis_file " << output_basis_file << std::endl;
-  std::cout << "input_basis_file " << input_basis_file << std::endl;
-
-  if (!input_basis_file.empty()) {
+  if (input_basis_file != "") {
     HighsStatus basis_status = highs.readBasis(input_basis_file);
     if (basis_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -100,7 +97,7 @@ int main(int argc, char** argv) {
 
   // highs.writeInfo("Info.md");
 
-  if (!output_basis_file.empty()) {
+  if (output_basis_file != "") {
     HighsStatus basis_status = highs.writeBasis(output_basis_file);
     if (basis_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
