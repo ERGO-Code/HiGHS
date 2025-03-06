@@ -146,6 +146,7 @@ class HMpsFF {
     kCsection,
     kDelayedrows,
     kModelcuts,
+    kUsercuts,
     kIndicators,
     kSets,
     kSos,
