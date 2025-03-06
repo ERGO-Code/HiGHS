@@ -870,7 +870,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     double rounded;
     // make sure that solution value is integral
     if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol)
-      return false;
+      continue;
     intval = rounded;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
