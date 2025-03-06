@@ -34,8 +34,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestCheckSolution.cpp
       TestEkk.cpp
       TestFactor.cpp
-      TestFreezeBasis.cpp
-      TestHotStart.cpp
       TestMain.cpp
       TestNames.cpp
       TestOptions.cpp

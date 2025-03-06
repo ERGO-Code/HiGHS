@@ -39,8 +39,11 @@ FilereaderRetcode readMps(
     vector<HighsVarType>& integerColumn, std::string& objective_name,
     vector<std::string>& col_names, vector<std::string>& row_names,
     HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
-    vector<double>& Qvalue, HighsInt& cost_row_location,
+    vector<double>& Qvalue, HighsInt& cost_row_location, bool& warning_issued,
     const HighsInt keep_n_rows) {
+  // Keep track of any warnings that are issued so that
+  // Highs::readModel can return HighsStatus::kWarning
+  warning_issued = false;
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -205,12 +208,14 @@ FilereaderRetcode readMps(
   }
   Astart.push_back(Aindex.size());
 
-  if (num_alien_entries)
+  if (num_alien_entries) {
+    warning_issued = true;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "COLUMNS section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored\n",
                  num_alien_entries);
+  }
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read COLUMNS OK\n");
 
   // Load RHS
@@ -254,12 +259,14 @@ FilereaderRetcode readMps(
     }
     save_flag1 = flag[1];
   }
-  if (num_alien_entries)
+  if (num_alien_entries) {
+    warning_issued = true;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "RHS     section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored\n",
                  num_alien_entries);
+  }
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read RHS     OK\n");
 
   // Load RANGES
@@ -326,12 +333,14 @@ FilereaderRetcode readMps(
         break;
     }
   }
-  if (num_alien_entries)
+  if (num_alien_entries) {
+    warning_issued = true;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "RANGES  section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored\n",
                  num_alien_entries);
+  }
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read RANGES  OK\n");
 
   // Load BOUNDS
@@ -383,6 +392,7 @@ FilereaderRetcode readMps(
   }
   // Load Hessian
   if (flag[0] == 'Q') {
+    warning_issued = true;
     highsLogUser(
         log_options, HighsLogType::kWarning,
         "Quadratic section: under development. Assumes QUADOBJ section\n");
@@ -443,12 +453,14 @@ FilereaderRetcode readMps(
       if (colUpper[iCol] >= kHighsInf) colUpper[iCol] = 1;
     }
   }
-  if (num_alien_entries)
+  if (num_alien_entries) {
+    warning_issued = true;
     highsLogUser(log_options, HighsLogType::kWarning,
                  "BOUNDS  section entries contain %8" HIGHSINT_FORMAT
                  " with col not in "
                  "COLUMNS section: ignored\n",
                  num_alien_entries);
+  }
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read BOUNDS  OK\n");
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read ENDATA  OK\n");
   highsLogDev(log_options, HighsLogType::kInfo,

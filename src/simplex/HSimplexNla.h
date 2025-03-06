@@ -37,16 +37,6 @@ struct ProductFormUpdate {
   void ftran(HVector& rhs) const;
 };
 
-struct FrozenBasis {
-  bool valid_ = false;
-  HighsInt prev_;
-  HighsInt next_;
-  ProductFormUpdate update_;
-  SimplexBasis basis_;
-  std::vector<double> dual_edge_weight_;
-  void clear();
-};
-
 struct SimplexIterate {
   bool valid_ = false;
   SimplexBasis basis_;
@@ -82,17 +72,8 @@ class HSimplexNla {
   void ftranInScaledSpace(
       HVector& rhs, const double expected_density,
       HighsTimerClock* factor_timer_clock_pointer = NULL) const;
-  void frozenBtran(HVector& rhs) const;
-  void frozenFtran(HVector& rhs) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
-  void frozenBasisClearAllData();
-  void frozenBasisClearAllUpdate();
-  bool frozenBasisAllDataClear();
-  bool frozenBasisIdValid(const HighsInt frozen_basis_id) const;
-  bool frozenBasisHasInvert(const HighsInt frozen_basis_id) const;
-  HighsInt freeze(const SimplexBasis& basis, const double col_aq_density);
-  void unfreeze(const HighsInt unfreeze_basis_id, SimplexBasis& basis);
   void putInvert();
   void getInvert();
 
@@ -164,10 +145,6 @@ class HSimplexNla {
   bool report_;
   double build_synthetic_tick_;
 
-  // Frozen basis data
-  HighsInt first_frozen_basis_id_ = kNoLink;
-  HighsInt last_frozen_basis_id_ = kNoLink;
-  vector<FrozenBasis> frozen_basis_;
   ProductFormUpdate update_;
 
   // Simplex iterate data

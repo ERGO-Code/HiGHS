@@ -125,7 +125,11 @@ bool HighsPrimalHeuristics::solveSubMip(
         mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
   }
 
-  submipoptions.presolve = "on";
+  // check if only root presolve is allowed
+  if (submipoptions.mip_root_presolve_only)
+    submipoptions.presolve = kHighsOffString;
+  else
+    submipoptions.presolve = kHighsOnString;
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it
@@ -315,6 +319,9 @@ void HighsPrimalHeuristics::rootReducedCost() {
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
   HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();
@@ -563,7 +570,10 @@ retry:
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
                                [&](HighsInt i) {
@@ -884,8 +894,12 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
 
-    if (numintcols / (double)mipsolver.numCol() >= 0.2)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * numintcols) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
@@ -971,7 +985,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
 
 void HighsPrimalHeuristics::randomizedRounding(
     const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   auto localdom = mipsolver.mipdata_->domain;
 
@@ -999,7 +1013,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
   }
 
-  if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
+  if (mipsolver.mipdata_->integer_cols.size() !=
+      static_cast<size_t>(mipsolver.numCol())) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.setIterationLimit(
@@ -1007,12 +1022,18 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * intcols.size()) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
+
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
@@ -1143,7 +1164,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 }
 
 void HighsPrimalHeuristics::centralRounding() {
-  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol())
+  if (mipsolver.mipdata_->analyticCenter.size() !=
+      static_cast<size_t>(mipsolver.numCol()))
     return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())

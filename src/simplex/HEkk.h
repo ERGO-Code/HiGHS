@@ -83,7 +83,6 @@ class HEkk {
   void setNlaPointersForLpAndScale(const HighsLp& lp);
   void setNlaPointersForTrans(const HighsLp& lp);
   void setNlaRefactorInfo();
-  void clearHotStart();
   void btran(HVector& rhs, const double expected_density);
   void ftran(HVector& rhs, const double expected_density);
 
@@ -101,10 +100,6 @@ class HEkk {
   HighsStatus solve(const bool force_phase2 = false);
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
-
-  void freezeBasis(HighsInt& frozen_basis_id);
-  HighsStatus unfreezeBasis(const HighsInt frozen_basis_id);
-  HighsStatus frozenBasisAllDataClear();
 
   void putIterate();
   HighsStatus getIterate();
@@ -132,8 +127,8 @@ class HEkk {
 
   const SimplexBasis& getSimplexBasis() { return basis_; }
   double computeBasisCondition(const HighsLp& lp, const bool exact = false,
-                               const bool report = false);
-  double computeBasisCondition() {
+                               const bool report = false) const;
+  double computeBasisCondition() const {
     return computeBasisCondition(this->lp_, false, false);
   }
 
@@ -141,8 +136,8 @@ class HEkk {
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
   void initialisePartitionedRowwiseMatrix();
-  bool lpFactorRowCompatible();
-  bool lpFactorRowCompatible(HighsInt expectedNumRow);
+  bool lpFactorRowCompatible() const;
+  bool lpFactorRowCompatible(const HighsInt expectedNumRow) const;
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -195,6 +190,9 @@ class HEkk {
   HighsSparseMatrix ar_matrix_;
   HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
+
+  // Unused, but retained since there is a const reference to this in
+  // a deprecated method
   HotStart hot_start_;
 
   double cost_scale_;
