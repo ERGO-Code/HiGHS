@@ -21,6 +21,10 @@
 #include "util/stringutil.h"
 
 struct HighsCommandLineOptions {
+  bool cmd_version = false;
+  double cmd_time_limit = 0;
+  int cmd_random_seed = 0;
+
   std::string model_file = "";
   std::string options_file = "";
   std::string read_solution_file = "";
@@ -28,13 +32,9 @@ struct HighsCommandLineOptions {
   std::string cmd_solver = "";
   std::string cmd_parallel = "";
   std::string cmd_crossover = "";
-  std::string cmd_time_limit = "";
   std::string cmd_solution_file = "";
   std::string cmd_write_model_file = "";
-  std::string cmd_random_seed = "";
   std::string cmd_ranging = "";
-
-  bool cmd_version = false;
 };
 
 void setupCommandLineOptions(CLI::App& app,
@@ -42,9 +42,10 @@ void setupCommandLineOptions(CLI::App& app,
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
-      ->required()
+      // Can't use required here because it breaks version printing with -v.
+      // ->required()
       ->check([](const std::string& input) -> std::string {
-        std::cout << "Input is: " << input << std::endl;
+        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -55,7 +56,7 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
                  "File containing HiGHS options.")
       ->check([](const std::string& input) -> std::string {
-        std::cout << "Input is: " << input << std::endl;
+        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -66,7 +67,7 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kReadSolutionFileString, cmd_options.read_solution_file,
                  "File of solution to read.")
       ->check([](const std::string& input) -> std::string {
-        std::cout << "Input is: " << input << std::endl;
+        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
@@ -78,37 +79,53 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option(
       "--" + kPresolveString, cmd_options.cmd_presolve,
       "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.");
+
   app.add_option("--" + kSolverString, cmd_options.cmd_solver,
                  "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are "
                  "alternatives.");
+
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
                  "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
                  "alternatives.");
+
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
                  "Run crossover: \"on\" by default - \"choose\"/\"off\" are "
                  "alternatives.");
+
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
                  "Run time limit (seconds - double).");
+
   app.add_option("--" + kSolutionFileString, cmd_options.cmd_solution_file,
-                 "File for writing out model solution.");
-  app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
-                 "File for writing out model.")
+                 "File for writing out model solution.")
       ->check([](const std::string& input) -> std::string {
-        std::cout << "Input is: " << input << std::endl;
+        // std::cout << "Input is: " << input << std::endl;
         if (input.find(' ') != std::string::npos) {
           return "Multiple files not implemented.";
         }
         return {};
       });
+
+  app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
+                 "File for writing out model.")
+      ->check([](const std::string& input) -> std::string {
+        // std::cout << "Input is: " << input << std::endl;
+        if (input.find(' ') != std::string::npos) {
+          return "Multiple files not implemented.";
+        }
+        return {};
+      });
+
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
                  "Seed to initialize random number generation.");
+
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,
                  "Compute cost, bound, RHS and basic solution ranging.");
-  app.add_option("-v,--" + kVersionString, cmd_options.cmd_version,
-                 "Print version.");
+
+  // app.set_version_flag("--version", getVersionString());
+  app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
 }
 
-bool loadOptions(const HighsLogOptions& report_log_options,
+bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
                  const HighsCommandLineOptions& c, HighsOptions& options) {
   if (c.cmd_version) {
     std::cout << "HiGHS version " << HIGHS_VERSION_MAJOR << "."
@@ -117,8 +134,6 @@ bool loadOptions(const HighsLogOptions& report_log_options,
     std::cout << kHighsCopyrightStatement << std::endl;
     exit(0);
   }
-
-  assert(c.model_file != "");
 
   // options file
   if (c.options_file != "") {
@@ -168,10 +183,10 @@ bool loadOptions(const HighsLogOptions& report_log_options,
   }
 
   // Time limit option.
-  if (c.cmd_time_limit != "") {
-    double value = atof(c.cmd_time_limit.c_str());
+  if (app.count("--" + kTimeLimitString) > 0) {
     if (setLocalOptionValue(report_log_options, kTimeLimitString,
-                            options.records, value) != OptionStatus::kOk)
+                            options.records,
+                            c.cmd_time_limit) != OptionStatus::kOk)
       return false;
   }
 
@@ -197,8 +212,8 @@ bool loadOptions(const HighsLogOptions& report_log_options,
   }
 
   // Random seed option.
-  if (c.cmd_random_seed != "") {
-    HighsInt value = atof(c.cmd_time_limit.c_str());
+  if (app.count("--" + kRandomSeedString) > 0) {
+    HighsInt value = c.cmd_random_seed;
     if (setLocalOptionValue(report_log_options, kRandomSeedString,
                             options.records, value) != OptionStatus::kOk)
       return false;
@@ -229,10 +244,10 @@ bool loadOptions(const HighsLogOptions& report_log_options,
   //   model_file = "ml.mps";
   // }
 
-  // if (model_file.size() == 0) {
-  //   std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
-  //   return false;
-  // }
+  if (c.model_file.size() == 0) {
+    std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
+    return false;
+  }
 
   return true;
 }

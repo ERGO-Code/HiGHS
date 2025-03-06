@@ -46,30 +46,33 @@ int main(int argc, char** argv) {
 
   try {
     app.parse(argc, argv);
-  } catch (const CLI::RequiredError& e) {
+  }
+  // Catch too many positional arguments.
+  catch (const CLI::RequiredError& e) {
     std::cout << "Please specify filename in .mps|.lp|.ems format."
               << std::endl;
-
     return (int)HighsStatus::kError;
-  } catch (const CLI::ExtrasError& e) {
-    // Catching too many positional args error.
+  }
+  // Catch too many positional arguments.
+  catch (const CLI::ExtrasError& e) {
+    std::cout << e.what() << std::endl;
     std::cout << "Multiple files not supported." << std::endl;
-
     return (int)HighsStatus::kError;
-  } catch (const CLI::ArgumentMismatch& e) {
-    // Catching multiple values error.
-    // std::cout << e.get_name() << std::endl;
+  }
+  // Catching multiple values error.
+  catch (const CLI::ArgumentMismatch& e) {
+    std::cout << e.what() << std::endl;
     std::cout << "Too many arguments provided. Please provide only one."
               << std::endl;
-
     return (int)HighsStatus::kError;
-  } catch (const CLI::ParseError& e) {
-
-    // Should be called from main.
+  }
+  // app.exit(e) should be called from main.
+  catch (const CLI::ParseError& e) {
+    std::cout << e.what() << std::endl;
     return app.exit(e);
   }
 
-  if (!loadOptions(log_options, cmd_options, loaded_options))
+  if (!loadOptions(app, log_options, cmd_options, loaded_options))
     return (int)HighsStatus::kError;
 
   // return 0;

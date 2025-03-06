@@ -288,3 +288,5 @@ result
 # Extra unit tests
 highs-unit-tests
 highs-problem-set
+
+build-latest
