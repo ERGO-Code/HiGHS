@@ -45,7 +45,24 @@ int main(int argc, char** argv) {
   setupCommandLineOptions(app, cmd_options);
 
   try {
+    // Check if help is requested before parsing.
+    // if (argc == 1 || std::any_of(argv, argv + argc, [](const char* arg) {
+    //       return std::string(arg) == "--help" || std::string(arg) == "-h";
+    //     })) {
+    //   app.help();
+    //   return 0;
+    // }
+
     app.parse(argc, argv);
+  }
+  // Catch call for help.
+  catch (const CLI::CallForHelp& e) {
+    std::cout << app.help();
+    return 0;
+  }
+  catch (const CLI::CallForAllHelp& e) {
+    std::cout << app.help();
+    return 0;
   }
   // Catch too many positional arguments.
   catch (const CLI::RequiredError& e) {

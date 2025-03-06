@@ -78,18 +78,18 @@ void setupCommandLineOptions(CLI::App& app,
   // Command line option specifications.
   app.add_option(
       "--" + kPresolveString, cmd_options.cmd_presolve,
-      "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.");
+      "Presolve: \"choose\" by default - \"on\"/\"off\" \nare alternatives.");
 
   app.add_option("--" + kSolverString, cmd_options.cmd_solver,
-                 "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are "
+                 "Solver: \"choose\" by default - \n\"simplex\"/\"ipm\" are "
                  "alternatives.");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
-                 "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
+                 "Parallel solve: \"choose\" by default - \n\"on\"/\"off\" are "
                  "alternatives.");
 
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
-                 "Run crossover: \"on\" by default - \"choose\"/\"off\" are "
+                 "Run crossover: \"on\" by default - \n\"choose\"/\"off\" are "
                  "alternatives.");
 
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
@@ -116,10 +116,10 @@ void setupCommandLineOptions(CLI::App& app,
       });
 
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
-                 "Seed to initialize random number generation.");
+                 "Seed to initialize random number \ngeneration.");
 
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,
-                 "Compute cost, bound, RHS and basic solution ranging.");
+                 "Compute cost, bound, RHS and basic solution \nranging.");
 
   // app.set_version_flag("--version", getVersionString());
   app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
