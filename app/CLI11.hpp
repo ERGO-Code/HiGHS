@@ -5014,10 +5014,10 @@ class FormatterBase {
     ///@{
 
     /// The width of the left column (options/flags/subcommands)
-    std::size_t column_width_{30};
+    std::size_t column_width_{18};
 
     /// The width of the right column (description of options/flags/subcommands)
-    std::size_t right_column_width_{65};
+    std::size_t right_column_width_{60};
 
     /// The width of the description paragraph at the top of help
     std::size_t description_paragraph_width_{80};
@@ -5207,7 +5207,7 @@ template <typename CRTP> class OptionBase {
 
   protected:
     /// The group membership
-    std::string group_ = std::string("OPTIONS");
+    std::string group_ = std::string("options");
 
     /// True if this is a required option
     bool required_{false};
@@ -6962,7 +6962,7 @@ class App {
     /// Create a new program. Pass in the same arguments as main(), along with a help string.
     explicit App(std::string app_description = "", std::string app_name = "")
         : App(app_description, app_name, nullptr) {
-        set_help_flag("-h,--help", "Print help.");
+        // set_help_flag("-h,--help", "Print help.");
     }
 
     App(const App &) = delete;
@@ -10997,23 +10997,23 @@ ConfigBase::to_config(const App *app, bool default_also, bool write_description,
 
     std::vector<std::string> groups = app->get_groups();
     bool defaultUsed = false;
-    groups.insert(groups.begin(), std::string("OPTIONS"));
+    groups.insert(groups.begin(), std::string("options"));
 
     for(auto &group : groups) {
-        if(group == "OPTIONS" || group.empty()) {
+        if(group == "options" || group.empty()) {
             if(defaultUsed) {
                 continue;
             }
             defaultUsed = true;
         }
-        if(write_description && group != "OPTIONS" && !group.empty()) {
+        if(write_description && group != "options" && !group.empty()) {
             out << '\n' << commentChar << commentLead << group << " Options\n";
         }
         for(const Option *opt : app->get_options({})) {
             // Only process options that are configurable
             if(opt->get_configurable()) {
                 if(opt->get_group() != group) {
-                    if(!(group == "OPTIONS" && opt->get_group().empty())) {
+                    if(!(group == "options" && opt->get_group().empty())) {
                         continue;
                     }
                 }
@@ -11168,7 +11168,7 @@ CLI11_INLINE std::string Formatter::make_positionals(const App *app) const {
     if(opts.empty())
         return {};
 
-    return make_group(get_label("POSITIONALS"), true, opts);
+    return make_group(get_label("positionals"), true, opts);
 }
 
 CLI11_INLINE std::string Formatter::make_groups(const App *app, AppFormatMode mode) const {
@@ -11241,7 +11241,7 @@ CLI11_INLINE std::string Formatter::make_usage(const App *app, std::string name)
     std::vector<const Option *> non_pos_options =
         app->get_options([](const Option *opt) { return opt->nonpositional(); });
     if(!non_pos_options.empty())
-        out << " [" << get_label("OPTIONS") << "]";
+        out << " [" << get_label("options") << "]";
 
     // Positionals need to be listed here
     std::vector<const Option *> positionals = app->get_options([](const Option *opt) { return opt->get_positional(); });
@@ -11267,7 +11267,8 @@ CLI11_INLINE std::string Formatter::make_usage(const App *app, std::string name)
             << (app->get_require_subcommand_min() == 0 ? "]" : "");
     }
 
-    out << "\n\n";
+    // out << "\n\n";
+    out << "\n";
 
     return out.str();
 }
@@ -11296,7 +11297,7 @@ CLI11_INLINE std::string Formatter::make_help(const App *app, std::string name, 
     detail::streamOutAsParagraph(
         out, make_description(app), description_paragraph_width_, "");  // Format description as paragraph
     out << make_usage(app, name);
-    out << make_positionals(app);
+    // out << make_positionals(app);
     out << make_groups(app, mode);
     out << make_subcommands(app, mode);
     detail::streamOutAsParagraph(out, make_footer(app), footer_paragraph_width_);  // Format footer as paragraph
@@ -11414,9 +11415,9 @@ CLI11_INLINE std::string Formatter::make_option(const Option *opt, bool is_posit
         std::string longNames = detail::join(vlongNames, ", ");
 
         // Calculate setw sizes
-        const auto shortNamesColumnWidth = static_cast<int>(column_width_ / 3);  // 33% left for short names
+        const auto shortNamesColumnWidth = static_cast<int>(column_width_ / 5);  // 20% left for short names
         const auto longNamesColumnWidth = static_cast<int>(std::ceil(
-            static_cast<float>(column_width_) / 3.0f * 2.0f));  // 66% right for long names and options, ceil result
+            static_cast<float>(column_width_) / 5.0f * 4.0f));  // 80% right for long names and options, ceil result
         int shortNamesOverSize = 0;
 
         // Print short names

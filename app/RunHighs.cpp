@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   // cxxopts now Cpp17 with
   // CLI11 for Cpp11
 
-  CLI::App app{"HiGHS command line options"};
+  CLI::App app{"HiGHS"};
   argv = app.ensure_utf8(argv);
 
   setupCommandLineOptions(app, cmd_options);
@@ -52,12 +52,14 @@ int main(int argc, char** argv) {
     //   app.help();
     //   return 0;
     // }
+    std::string usage_msg = "usage: \n      " + std::string(argv[0]) + " [option...] [file]";
+    app.usage(usage_msg);
 
     app.parse(argc, argv);
   }
   // Catch call for help.
   catch (const CLI::CallForHelp& e) {
-    std::cout << app.help();
+    std::cout << app.help() << std::endl;
     return 0;
   }
   catch (const CLI::CallForAllHelp& e) {
