@@ -39,6 +39,10 @@ struct HighsCommandLineOptions {
 
 void setupCommandLineOptions(CLI::App& app,
                              HighsCommandLineOptions& cmd_options) {
+
+  // Version.
+  app.add_flag("--version,-v", cmd_options.cmd_version, "    Print version.");
+
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
@@ -78,18 +82,22 @@ void setupCommandLineOptions(CLI::App& app,
   // Command line option specifications.
   app.add_option(
       "--" + kPresolveString, cmd_options.cmd_presolve,
-      "Presolve: \"choose\" by default - \"on\"/\"off\" \nare alternatives.");
+      "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.");
+      // "Presolve: \"choose\" by default - \"on\"/\"off\" \nare alternatives.");
 
   app.add_option("--" + kSolverString, cmd_options.cmd_solver,
-                 "Solver: \"choose\" by default - \n\"simplex\"/\"ipm\" are "
+                //  "Solver: \"choose\" by default - \n\"simplex\"/\"ipm\" are "
+                 "    Solver: \"choose\" by default - \"simplex\"/\"ipm\" are "
                  "alternatives.");
 
   app.add_option("--" + kParallelString, cmd_options.cmd_parallel,
-                 "Parallel solve: \"choose\" by default - \n\"on\"/\"off\" are "
+                //  "Parallel solve: \"choose\" by default - \n\"on\"/\"off\" are "
+                 "    Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
                  "alternatives.");
 
   app.add_option("--" + kRunCrossoverString, cmd_options.cmd_crossover,
-                 "Run crossover: \"on\" by default - \n\"choose\"/\"off\" are "
+                //  "Run crossover: \"on\" by default - \n\"choose\"/\"off\" are "
+                 "    Run crossover: \"on\" by default - \"choose\"/\"off\" are "
                  "alternatives.");
 
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
@@ -119,10 +127,18 @@ void setupCommandLineOptions(CLI::App& app,
                  "Seed to initialize random number \ngeneration.");
 
   app.add_option("--" + kRangingString, cmd_options.cmd_ranging,
-                 "Compute cost, bound, RHS and basic solution \nranging.");
+                 "Compute cost, bound, RHS and basic solution ranging.");
+                //  "Compute cost, bound, RHS and basic solution \nranging.");
 
   // app.set_version_flag("--version", getVersionString());
-  app.add_flag("--version,-v", cmd_options.cmd_version, "Print version.");
+
+  app.get_formatter()->column_width(33);
+  app.get_formatter()->label("TEXT:FILE", "arg");
+  app.get_formatter()->label("TEXT", "arg");
+  app.get_formatter()->label("FLOAT", "double");
+  app.get_formatter()->label("INT", "int");
+  app.get_formatter()->label("OPTIONS", "options");
+  app.get_formatter()->label("POSITIONALS", "positionals");
 }
 
 bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,

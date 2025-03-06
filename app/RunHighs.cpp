@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   // cxxopts now Cpp17 with
   // CLI11 for Cpp11
 
-  CLI::App app{"HiGHS options"};
+  CLI::App app{"HiGHS command line options"};
   argv = app.ensure_utf8(argv);
 
   setupCommandLineOptions(app, cmd_options);

@@ -6962,7 +6962,7 @@ class App {
     /// Create a new program. Pass in the same arguments as main(), along with a help string.
     explicit App(std::string app_description = "", std::string app_name = "")
         : App(app_description, app_name, nullptr) {
-        set_help_flag("-h,--help", "Print this help message and exit");
+        set_help_flag("-h,--help", "Print help.");
     }
 
     App(const App &) = delete;
