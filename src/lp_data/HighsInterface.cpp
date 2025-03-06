@@ -2464,8 +2464,10 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
         info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
-  highsLogUser(options_.log_options, HighsLogType::kError, "%s", report_string.c_str());
-  highsLogUser(options_.log_options, HighsLogType::kError, "Setting model status to %s\n",
+  highsLogUser(options_.log_options, HighsLogType::kError, "%s",
+               report_string.c_str());
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "Setting model status to %s\n",
                modelStatusToString(model_status_).c_str());
   return HighsStatus::kError;
 }
