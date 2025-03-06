@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
 
   // Load user options
   std::string model_file;
+  std::string input_basis_file;
+  std::string output_basis_file;
   std::string read_solution_file;
   HighsOptions loaded_options;
   // Set "HiGHS.log" as the default log_file for the app so that
@@ -35,7 +37,7 @@ int main(int argc, char** argv) {
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
   if (!loadOptions(log_options, argc, argv, loaded_options, model_file,
-                   read_solution_file))
+                   input_basis_file, output_basis_file, read_solution_file))
     return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
@@ -52,6 +54,18 @@ int main(int argc, char** argv) {
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
+
+  std::cout << "output_basis_file " << output_basis_file << std::endl;
+  std::cout << "input_basis_file " << input_basis_file << std::endl;
+
+  if (!input_basis_file.empty()) {
+    HighsStatus basis_status = highs.readBasis(input_basis_file);
+    if (basis_status == HighsStatus::kError) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Error reading basis from file\n");
+      return (int)basis_status;
+    }
+  }
 
   // Possible read a solution file
   if (read_solution_file != "") {
@@ -85,6 +99,16 @@ int main(int argc, char** argv) {
   if (run_status == HighsStatus::kError) return int(run_status);
 
   // highs.writeInfo("Info.md");
+
+  if (!output_basis_file.empty()) {
+    HighsStatus basis_status = highs.writeBasis(output_basis_file);
+    if (basis_status == HighsStatus::kError) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Error writing basis to file\n");
+
+      return (int)read_status;
+    }
+  }
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file || options.solution_file != "")

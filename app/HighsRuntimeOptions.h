@@ -19,6 +19,8 @@
 
 bool loadOptions(const HighsLogOptions& report_log_options, int argc,
                  char** argv, HighsOptions& options, std::string& model_file,
+                 std::string& input_basis_file, std::string& output_basis_file,
+
                  std::string& read_solution_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
@@ -31,6 +33,11 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         // model file
         (kModelFileString, "File of model to solve.",
          cxxopts::value<std::vector<std::string>>())
+        // model file
+        (kReadBasisFile, "File of initial basis to read.",
+         cxxopts::value<std::vector<std::string>>())(
+            kWriteBasisFile, "File of final basis to write.",
+            cxxopts::value<std::vector<std::string>>())
         // read_solution file
         (kReadSolutionFileString, "File of solution to read.",
          cxxopts::value<std::vector<std::string>>())
@@ -114,6 +121,49 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
         model_file = v[0];
       }
     }
+
+    input_basis_file = "";
+    if (result.count(kReadBasisFile)) {
+      auto& v = result[kReadBasisFile].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        HighsInt nonEmpty = 0;
+        for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
+          std::string arg = v[i];
+          if (trim(arg).size() > 0) {
+            nonEmpty++;
+            input_basis_file = arg;
+          }
+        }
+        if (nonEmpty > 1) {
+          std::cout << "Multiple files not implemented.\n";
+          return false;
+        }
+      } else {
+        input_basis_file = v[0];
+      }
+    }
+
+    output_basis_file = "";
+    if (result.count(kWriteBasisFile)) {
+      auto& v = result[kWriteBasisFile].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        HighsInt nonEmpty = 0;
+        for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
+          std::string arg = v[i];
+          if (trim(arg).size() > 0) {
+            nonEmpty++;
+            output_basis_file = arg;
+          }
+        }
+        if (nonEmpty > 1) {
+          std::cout << "Multiple files not implemented.\n";
+          return false;
+        }
+      } else {
+        output_basis_file = v[0];
+      }
+    }
+
     read_solution_file = "";
     if (result.count(kReadSolutionFileString)) {
       auto& v = result[kReadSolutionFileString].as<std::vector<std::string>>();
@@ -244,7 +294,6 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
                               value) != OptionStatus::kOk)
         return false;
     }
-
   } catch (const cxxopts::exceptions::exception& e) {
     highsLogUser(report_log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());

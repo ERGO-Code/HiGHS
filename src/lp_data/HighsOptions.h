@@ -262,6 +262,8 @@ const HighsInt kKeepNRowsKeepRows = 1;
 
 // Strings for command line options
 const string kModelFileString = "model_file";
+const string kReadBasisFile = "read_basis";
+const string kWriteBasisFile = "write_basis";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
