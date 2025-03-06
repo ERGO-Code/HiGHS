@@ -377,6 +377,7 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
     case HMpsFF::Parsekey::kUsercuts:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse USERCUTS section\n");
+      printf("MIP MPS read failed, USERCUTS section\n");
       break;
     case HMpsFF::Parsekey::kIndicators:
       highsLogUser(log_options, HighsLogType::kError,
@@ -677,10 +678,12 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     if (!is_end(strline, rowname_end)) {
       std::string name = strline.substr(start + 1);
       name = trim(name);
-      if (name.size() > 8)
+      if (name.size() > 8) {
+        printf("MIP MPS read failed, Illegal ROWS section entry\n");
         return HMpsFF::Parsekey::kFail;
-      else
+      } else {
         return HMpsFF::Parsekey::kFixedFormat;
+      }
     }
 
     // Do not add to matrix if row is free.
