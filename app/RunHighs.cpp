@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
   // Load user options
   std::string model_file;
-  std::string input_basis_file;
+  std::string read_basis_file;
   std::string output_basis_file;
   std::string read_solution_file;
   HighsOptions loaded_options;
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
   if (!loadOptions(log_options, argc, argv, loaded_options, model_file,
-                   input_basis_file, output_basis_file, read_solution_file))
+                   read_basis_file, output_basis_file, read_solution_file))
     return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
@@ -55,8 +55,8 @@ int main(int argc, char** argv) {
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
 
-  if (input_basis_file != "") {
-    HighsStatus basis_status = highs.readBasis(input_basis_file);
+  if (read_basis_file != "") {
+    HighsStatus basis_status = highs.readBasis(read_basis_file);
     if (basis_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Error reading basis from file\n");

@@ -19,7 +19,7 @@
 
 bool loadOptions(const HighsLogOptions& report_log_options, int argc,
                  char** argv, HighsOptions& options, std::string& model_file,
-                 std::string& input_basis_file, std::string& output_basis_file,
+                 std::string& read_basis_file, std::string& output_basis_file,
 
                  std::string& read_solution_file) {
   try {
@@ -122,7 +122,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
       }
     }
 
-    input_basis_file = "";
+    read_basis_file = "";
     if (result.count(kReadBasisFile)) {
       auto& v = result[kReadBasisFile].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -131,7 +131,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;
-            input_basis_file = arg;
+            read_basis_file = arg;
           }
         }
         if (nonEmpty > 1) {
@@ -139,7 +139,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
           return false;
         }
       } else {
-        input_basis_file = v[0];
+        read_basis_file = v[0];
       }
     }
 
