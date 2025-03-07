@@ -2450,19 +2450,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   if (info_.num_primal_infeasibilities == 0 &&
       info_.num_dual_infeasibilities <= 0)
     return HighsStatus::kOk;
-  HighsLogType log_type = HighsLogType::kWarning;
-  model_status_ = HighsModelStatus::kUnknown;
-  HighsStatus return_status = HighsStatus::kWarning;
-  // Check for gross errors
-  if (info_.max_primal_infeasibility >
-          sqrt(options_.primal_feasibility_tolerance) ||
-      (info_.dual_solution_status != kSolutionStatusNone &&
-       info_.max_dual_infeasibility >
-           sqrt(options_.dual_feasibility_tolerance))) {
-    log_type = HighsLogType::kError;
-    model_status_ = HighsModelStatus::kSolveError;
-    return_status = HighsStatus::kError;
-  }
+  model_status_ = HighsModelStatus::kSolveError;
   std::stringstream ss;
   ss.str(std::string());
   ss << highsFormatToString(
@@ -2476,10 +2464,12 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
         info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
-  highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
-  highsLogUser(options_.log_options, log_type, "Setting model status to %s\n",
+  highsLogUser(options_.log_options, HighsLogType::kError, "%s",
+               report_string.c_str());
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "Setting model status to %s\n",
                modelStatusToString(model_status_).c_str());
-  return return_status;
+  return HighsStatus::kError;
 }
 
 HighsStatus Highs::invertRequirementError(std::string method_name) const {
