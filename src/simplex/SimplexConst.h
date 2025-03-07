@@ -182,7 +182,6 @@ enum class LpAction {
   kDelRowsBasisOk,
   kScaledCol,
   kScaledRow,
-  kHotStart,
   kBacktracking
 };
 

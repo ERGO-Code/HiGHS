@@ -190,7 +190,7 @@ class HighsTimer {
    * @brief Read the time of a clock
    */
   double read(const HighsInt i_clock = 0  //!< Index of the clock to be read
-  ) {
+  ) const {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
@@ -336,7 +336,7 @@ class HighsTimer {
   /**
    * @brief Return the current wall-clock time
    */
-  double getWallTime() {
+  double getWallTime() const {
     using namespace std::chrono;
     const double wall_time = kNoClockCalls
                                  ? 0

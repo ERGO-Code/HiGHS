@@ -1207,6 +1207,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("output_flag", false);
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("ipm_iteration_limit", 200);
+        // check if only root presolve is allowed
+        if (mipsolver.options_mip_->mip_root_presolve_only)
+          ipm.setOptionValue("presolve", kHighsOffString);
         ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff

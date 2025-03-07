@@ -677,9 +677,11 @@ HighsStatus Highs::readModel(const std::string& filename) {
   if (call_code != FilereaderRetcode::kOk) {
     interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
-    return_status =
-        interpretCallStatus(options_.log_options, HighsStatus::kError,
-                            return_status, "readModelFromFile");
+    const HighsStatus call_status = call_code == FilereaderRetcode::kWarning
+                                        ? HighsStatus::kWarning
+                                        : HighsStatus::kError;
+    return_status = interpretCallStatus(options_.log_options, call_status,
+                                        return_status, "readModelFromFile");
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
@@ -797,7 +799,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::writeBasis(const std::string& filename) {
+HighsStatus Highs::writeBasis(const std::string& filename) const {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
@@ -812,7 +814,7 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
                  "Writing the basis to %s\n", filename.c_str());
   writeBasisFile(file, basis_);
   if (file != stdout) fclose(file);
-  return returnFromHighs(return_status);
+  return return_status;
 }
 
 HighsStatus Highs::presolve() {
@@ -908,6 +910,7 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  if (!options_.use_warm_start) this->clearSolver();
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
   if (num_linear_objective == 0) return this->solve();
   return this->multiobjectiveSolve();
@@ -1855,7 +1858,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 }
 
 HighsStatus Highs::getDualObjectiveValue(
-    double& dual_objective_function_value) {
+    double& dual_objective_function_value) const {
   bool have_dual_objective_value = false;
   if (!this->model_.isQp())
     have_dual_objective_value = computeDualObjectiveValue(
@@ -2092,7 +2095,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 }
 
 HighsStatus Highs::getKappa(double& kappa, const bool exact,
-                            const bool report) {
+                            const bool report) const {
   if (!ekk_instance_.status_.has_invert)
     return invertRequirementError("getBasisInverseRow");
   kappa = ekk_instance_.computeBasisCondition(this->model_.lp_, exact, report);
@@ -2382,47 +2385,6 @@ HighsStatus Highs::setBasis() {
   newHighsBasis();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
-}
-
-HighsStatus Highs::setHotStart(const HotStart& hot_start) {
-  // Check that the user-supplied hot start is valid
-  if (!hot_start.valid) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "setHotStart: invalid hot start\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus return_status = setHotStartInterface(hot_start);
-  return returnFromHighs(return_status);
-}
-
-HighsStatus Highs::freezeBasis(HighsInt& frozen_basis_id) {
-  frozen_basis_id = kNoLink;
-  // Check that there is a simplex basis to freeze
-  if (!ekk_instance_.status_.has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "freezeBasis: no simplex factorization to freeze\n");
-    return HighsStatus::kError;
-  }
-  ekk_instance_.freezeBasis(frozen_basis_id);
-  return returnFromHighs(HighsStatus::kOk);
-}
-
-HighsStatus Highs::unfreezeBasis(const HighsInt frozen_basis_id) {
-  // Check that there is a simplex basis to unfreeze
-  if (!ekk_instance_.status_.initialised_for_new_lp) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "unfreezeBasis: no simplex information to unfreeze\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = ekk_instance_.unfreezeBasis(frozen_basis_id);
-  if (call_status != HighsStatus::kOk) return call_status;
-  // Reset simplex NLA pointers
-  ekk_instance_.setNlaPointersForTrans(model_.lp_);
-  // Get the corresponding HiGHS basis
-  basis_ = ekk_instance_.getHighsBasis(model_.lp_);
-  // Clear everything else
-  invalidateModelStatusSolutionAndInfo();
-  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::putIterate() {
@@ -2928,7 +2890,7 @@ HighsStatus Highs::getObjectiveOffset(double& offset) const {
 HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
-                           HighsInt* index, double* value) {
+                           HighsInt* index, double* value) const {
   if (from_col > to_col) {
     // Empty interval
     num_col = 0;
@@ -2947,13 +2909,13 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
   }
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
-                           HighsInt* index, double* value) {
+                           HighsInt* index, double* value) const {
   if (num_set_entries == 0) {
     // Empty interval
     num_col = 0;
@@ -2969,20 +2931,20 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                                  model_.lp_.num_col_);
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
                            double* costs, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_col_);
   assert(!create_error);
   (void)create_error;
   getColsInterface(index_collection, num_col, costs, lower, upper, num_nz,
                    start, index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
@@ -3049,7 +3011,7 @@ HighsStatus Highs::getColIntegrality(const HighsInt col,
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   if (from_row > to_row) {
     // Empty interval
     num_row = 0;
@@ -3068,13 +3030,13 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
   }
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
-                           double* value) {
+                           double* value) const {
   if (num_set_entries == 0) {
     num_row = 0;
     num_nz = 0;
@@ -3089,19 +3051,20 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                                  model_.lp_.num_row_);
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
-                           HighsInt* start, HighsInt* index, double* value) {
+                           HighsInt* start, HighsInt* index,
+                           double* value) const {
   HighsIndexCollection index_collection;
   const bool create_error = create(index_collection, mask, model_.lp_.num_row_);
   assert(!create_error);
   (void)create_error;
   getRowsInterface(index_collection, num_row, lower, upper, num_nz, start,
                    index, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
@@ -3146,7 +3109,7 @@ HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
-                            double& value) {
+                            double& value) const {
   if (row < 0 || row >= model_.lp_.num_row_) {
     highsLogUser(
         options_.log_options, HighsLogType::kError,
@@ -3166,7 +3129,7 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
     return HighsStatus::kError;
   }
   getCoefficientInterface(row, col, value);
-  return returnFromHighs(HighsStatus::kOk);
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
@@ -3783,8 +3746,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   return_status = solveLp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("LP", return_status);
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("LP");
   return return_status;
 }
 
@@ -3929,8 +3891,7 @@ HighsStatus Highs::callSolveQp() {
   info_.simplex_iteration_count += stats.phase1_iterations;
   info_.qp_iteration_count += stats.num_iterations;
   info_.valid = true;
-  if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("QP", return_status);
+  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("QP");
   return return_status;
 }
 
@@ -4025,7 +3986,7 @@ HighsStatus Highs::callSolveMip() {
                                       : HighsInt(mip_total_lp_iterations);
   info_.valid = true;
   if (model_status_ == HighsModelStatus::kOptimal)
-    checkOptimality("MIP", return_status);
+    return_status = checkOptimality("MIP");
   if (use_mip_feasibility_tolerance) {
     // Overwrite max infeasibility to include integrality if there is a solution
     if (solver.solution_objective_ != kHighsInf) {
@@ -4562,10 +4523,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   assert(dimensions_ok);
   if (ekk_instance_.status_.has_nla) {
-    if (!ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_)) {
+    const bool lp_factor_row_compatible =
+        ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_);
+    if (!lp_factor_row_compatible) {
       highsLogDev(options_.log_options, HighsLogType::kWarning,
                   "Highs::returnFromHighs(): LP and HFactor have inconsistent "
                   "numbers of rows\n");
+      assert(lp_factor_row_compatible);
       // Clear Ekk entirely
       ekk_instance_.clear();
     }

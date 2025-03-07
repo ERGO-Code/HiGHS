@@ -238,7 +238,7 @@ void assertLogical(const char* name, const HighsInt is) {
   }
 }
 
-void version_api() {
+void versionApi() {
   if (dev_run) {
     printf("HiGHS version %s\n", Highs_version());
     printf("HiGHS version major %" HIGHSINT_FORMAT "\n", Highs_versionMajor());
@@ -250,7 +250,7 @@ void version_api() {
   }
 }
 
-void minimal_api_lp() {
+void minimalApiLp() {
   // This illustrates the use of Highs_call, the simple C interface to
   // HiGHS. It's designed to solve the general LP problem
   //
@@ -375,7 +375,7 @@ void minimal_api_lp() {
   free(row_basis_status);
 }
 
-void minimal_api_mip() {
+void minimalApiMip() {
   // The use of Highs_mipCall is illustrated for the MIP
   //
   // Min    f  = -3x_0 - 2x_1 - x_2
@@ -455,7 +455,7 @@ void minimal_api_mip() {
   free(row_value);
 }
 
-void minimal_api_qp() {
+void minimalApiQp() {
   // Test solving the problem qjh
   //
   // minimize -x_2 - 3x_3 + (1/2)(2x_1^2 - 2x_1x_3 + 0.2x_2^2 + 2x_3^2)
@@ -503,7 +503,7 @@ void minimal_api_qp() {
   free(col_value);
 }
 
-void minimal_api_illegal_lp() {
+void minimalApiIllegalLp() {
   const double inf = 1e30;
   HighsInt num_col = 2;
   HighsInt num_row = 1;
@@ -530,7 +530,7 @@ void minimal_api_illegal_lp() {
   assert(model_status == kHighsModelStatusNotset);
 }
 
-void full_api() {
+void fullApi() {
   void* highs = Highs_create();
 
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
@@ -698,7 +698,7 @@ void full_api() {
   Highs_destroy(highs);
 }
 
-void full_api_options() {
+void fullApiOptions() {
   void* highs;
 
   highs = Highs_create();
@@ -841,7 +841,7 @@ void full_api_options() {
   Highs_destroy(highs);
 }
 
-void full_api_lp() {
+void fullApiLp() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
   // s.t.                x_1 <= 6
@@ -1059,7 +1059,7 @@ void full_api_lp() {
   Highs_destroy(highs);
 }
 
-void full_api_mip() {
+void fullApiMip() {
   // The use of the full HiGHS API is illustrated for the MIP
   //
   // Min    f  = -3x_0 - 2x_1 - x_2
@@ -1138,7 +1138,7 @@ void full_api_mip() {
   free(row_value);
 }
 
-void full_api_qp() {
+void fullApiQp() {
   double required_objective_function_value;
   double required_x0;
   double required_x1;
@@ -1324,7 +1324,7 @@ void full_api_qp() {
   free(col_solution);
 }
 
-void pass_presolve_get_lp() {
+void passPresolveGetLp() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
   // s.t.                x_1 <= 6
@@ -1474,7 +1474,7 @@ void options() {
   Highs_destroy(highs);
 }
 
-void test_getColsByRange() {
+void testGetColsByRange() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   HighsInt return_status;
@@ -1510,7 +1510,7 @@ void test_getColsByRange() {
   Highs_destroy(highs);
 }
 
-void test_passHessian() {
+void testPassHessian() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   Highs_addCol(highs, 2.0, 0.0, 2.0, 0, NULL, NULL);
@@ -1540,7 +1540,7 @@ void test_passHessian() {
   Highs_destroy(highs);
 }
 
-void test_ranging() {
+void testRanging() {
   void* highs = Highs_create();
   if (!dev_run) Highs_setBoolOptionValue(highs, "output_flag", 0);
   //
@@ -1678,7 +1678,7 @@ void test_ranging() {
   Highs_destroy(highs);
 }
 
-void test_feasibilityRelaxation() {
+void testFeasibilityRelaxation() {
   void* highs;
   highs = Highs_create();
   const double kHighsInf = Highs_getInfinity(highs);
@@ -1728,7 +1728,7 @@ void test_feasibilityRelaxation() {
   Highs_destroy(highs);
 }
 
-void test_callback() {
+void testCallback() {
   HighsInt num_col = 7;
   HighsInt num_row = 1;
   HighsInt num_nz = num_col;
@@ -1783,7 +1783,7 @@ void test_callback() {
   Highs_destroy(highs);
 }
 
-void test_getModel() {
+void testGetModel() {
   void* highs;
   highs = Highs_create();
   Highs_setBoolOptionValue(highs, "output_flag", dev_run);
@@ -1855,7 +1855,7 @@ void test_getModel() {
   Highs_destroy(highs);
 }
 
-void test_multiObjective() {
+void testMultiObjective() {
   void* highs;
   highs = Highs_create();
   const double inf = Highs_getInfinity(highs);
@@ -1967,11 +1967,31 @@ void test_multiObjective() {
   free(col_value);
 }
 
+void testQpIndefiniteFailure() {
+    void* highs = Highs_create();
+    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+    HighsInt ret;
+    const double inf = Highs_getInfinity(highs);
+    ret = Highs_addCol(highs, 0.0, 1.0, inf, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 1.0, 1.0, 0, NULL, NULL);
+    HighsInt start[2] = {0, 1};
+    HighsInt index[1] = {1};
+    double value[1] = {1.0};
+    ret = Highs_passHessian(highs, 2, 1, kHighsHessianFormatTriangular, start, index, value);
+    assert(ret == 0);
+    HighsInt run_status = Highs_run(highs);
+    HighsInt model_status = Highs_getModelStatus(highs);
+    assert(run_status == kHighsStatusError);
+    assert(model_status == kHighsModelStatusSolveError);
+    Highs_destroy(highs);
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
 
-void test_setSolution() {
+void testSetSolution() {
   void* highs = Highs_create();
   // Perform in C the equivalent of std::string model_file =
   // std::string(HIGHS_DIR) + "/check/instances/shell.mps";
@@ -2013,25 +2033,26 @@ iteration_count1); assertLogical("Dual", logic);
 }
 */
 int main() {
-  minimal_api_illegal_lp();
-  test_callback();
-  version_api();
-  full_api();
-  minimal_api_lp();
-  minimal_api_mip();
-  minimal_api_qp();
-  full_api_options();
-  full_api_lp();
-  full_api_mip();
-  full_api_qp();
-  pass_presolve_get_lp();
+  minimalApiIllegalLp();
+  testCallback();
+  versionApi();
+  fullApi();
+  minimalApiLp();
+  minimalApiMip();
+  minimalApiQp();
+  fullApiOptions();
+  fullApiLp();
+  fullApiMip();
+  fullApiQp();
+  passPresolveGetLp();
   options();
-  test_getColsByRange();
-  test_passHessian();
-  test_ranging();
-  test_feasibilityRelaxation();
-  test_getModel();
-  test_multiObjective();
+  testGetColsByRange();
+  testPassHessian();
+  testRanging();
+  testFeasibilityRelaxation();
+  testGetModel();
+  testMultiObjective();
+  testQpIndefiniteFailure();
   return 0;
 }
-//  test_setSolution();
+//  testSetSolution();

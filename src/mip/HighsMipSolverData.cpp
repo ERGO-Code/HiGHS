@@ -299,7 +299,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     Highs ipm;
     ipm.setOptionValue("solver", "ipm");
     ipm.setOptionValue("run_crossover", kHighsOffString);
-    ipm.setOptionValue("presolve", "off");
+    ipm.setOptionValue("presolve", kHighsOffString);
     ipm.setOptionValue("output_flag", false);
     // ipm.setOptionValue("output_flag", !mipsolver.submip);
     ipm.setOptionValue("ipm_iteration_limit", 200);
@@ -846,9 +846,9 @@ void HighsMipSolverData::runSetup() {
     implications.cleanupVarbounds(col);
   domain.clearChangedCols();
 
-  lp.getLpSolver().setOptionValue("presolve", "off");
+  lp.getLpSolver().setOptionValue("presolve", kHighsOffString);
   // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
-  // 0.0); lp.getLpSolver().setOptionValue("parallel", "on");
+  // 0.0); lp.getLpSolver().setOptionValue("parallel", kHighsOnString);
   lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);
 
   checkObjIntegrality();
@@ -1020,10 +1020,13 @@ try_again:
       tmpSolver.setOptionValue("output_flag", false);
     }
     // tmpSolver.setOptionValue("simplex_scale_strategy", 0);
-    // tmpSolver.setOptionValue("presolve", "off");
+    // tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.setOptionValue("time_limit", time_available);
     tmpSolver.setOptionValue("primal_feasibility_tolerance",
                              mipsolver.options_mip_->mip_feasibility_tolerance);
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.passModel(std::move(fixedModel));
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
     tmpSolver.run();
@@ -1797,11 +1800,14 @@ restart:
         mipsolver.solution_objective_,
         kUserMipSolutionCallbackOriginEvaluateRootNode0);
 
+  // check if only root presolve is allowed
   if (firstrootbasis.valid)
     lp.getLpSolver().setBasis(firstrootbasis,
                               "HighsMipSolverData::evaluateRootNode");
+  else if (mipsolver.options_mip_->mip_root_presolve_only)
+    lp.getLpSolver().setOptionValue("presolve", kHighsOffString);
   else
-    lp.getLpSolver().setOptionValue("presolve", "on");
+    lp.getLpSolver().setOptionValue("presolve", kHighsOnString);
   if (mipsolver.options_mip_->highs_debug_level)
     lp.getLpSolver().setOptionValue("output_flag",
                                     mipsolver.options_mip_->output_flag);
@@ -1815,8 +1821,8 @@ restart:
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
-  lp.getLpSolver().setOptionValue("presolve", "off");
-  lp.getLpSolver().setOptionValue("parallel", "off");
+  lp.getLpSolver().setOptionValue("presolve", kHighsOffString);
+  lp.getLpSolver().setOptionValue("parallel", kHighsOffString);
 
   if (status == HighsLpRelaxation::Status::kInfeasible ||
       status == HighsLpRelaxation::Status::kUnbounded)
