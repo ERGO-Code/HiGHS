@@ -438,7 +438,7 @@ struct HighsOptionsStruct {
   bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
   bool mip_root_presolve_only;
-  bool mip_lifting_for_probing;
+  HighsInt mip_lifting_for_probing;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -577,7 +577,7 @@ struct HighsOptionsStruct {
         // clang-format off
         mip_improving_solution_file(""),
         mip_root_presolve_only(false),
-        mip_lifting_for_probing(false) {};
+        mip_lifting_for_probing(-1) {};
   // clang-format on
 };
 
@@ -1014,10 +1014,10 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_root_presolve_only, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_lifting_for_probing", "Whether lifting for probing is used",
-        advanced, &mip_lifting_for_probing, false);
-    records.push_back(record_bool);
+    record_int = new OptionRecordInt(
+        "mip_lifting_for_probing", "Level of lifting for probing that is used",
+        advanced, &mip_lifting_for_probing, -1, -1, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,

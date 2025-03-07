@@ -1520,7 +1520,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // only search for lifting opportunities if at least 2 percent of the
     // variables in the problem are continuous
     size_t numLiftOpps = 0;
-    if (mipsolver->options_mip_->mip_lifting_for_probing &&
+    if (mipsolver->options_mip_->mip_lifting_for_probing != -1 &&
         modelHasPercentageContVars(size_t{2})) {
       // store lifting opportunities
       implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
@@ -1673,7 +1673,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
     // lifting for probing (only performed when probing did not modify the
     // problem so far)
-    if (mipsolver->options_mip_->mip_lifting_for_probing) {
+    if (mipsolver->options_mip_->mip_lifting_for_probing != -1) {
       if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0) {
         // apply lifting
         liftingForProbing();
@@ -1709,6 +1709,9 @@ void HPresolve::liftingForProbing() {
   // remember overall best score
   double bestscoretotal = -kHighsInf;
 
+  // is lifting allowed to add non-zeros?
+  bool fillAllowed = mipsolver->options_mip_->mip_lifting_for_probing > 0;
+
   // consider lifting opportunities
   for (const auto& elm : liftingOpportunities) {
     // get row index and skip deleted rows
@@ -1738,9 +1741,11 @@ void HPresolve::liftingForProbing() {
     const auto& htree = elm.second;
     htree.for_each([&](HighsInt bincol, double value) {
       HighsInt col = std::abs(bincol);
-      if (!colDeleted[col] && !domain.isFixed(col))
+      HighsInt pos = findNonzero(row, col);
+      if ((fillAllowed || pos != -1) && !colDeleted[col] &&
+          !domain.isFixed(col))
         coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
-            value, findNonzero(row, col)};
+            value, pos};
     });
 
     // skip row if map is empty
