@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
   // Load user options
   std::string model_file;
   std::string read_basis_file;
-  std::string output_basis_file;
+  std::string write_basis_file;
   std::string read_solution_file;
   HighsOptions loaded_options;
   // Set "HiGHS.log" as the default log_file for the app so that
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   // When loading the options file, any messages are reported using
   // the default HighsLogOptions
   if (!loadOptions(log_options, argc, argv, loaded_options, model_file,
-                   read_basis_file, output_basis_file, read_solution_file))
+                   read_basis_file, write_basis_file, read_solution_file))
     return (int)HighsStatus::kError;
   // Open the app log file - unless output_flag is false, to avoid
   // creating an empty file. It does nothing if its name is "".
@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
 
   // highs.writeInfo("Info.md");
 
-  if (output_basis_file != "") {
-    HighsStatus basis_status = highs.writeBasis(output_basis_file);
+  if (write_basis_file != "") {
+    HighsStatus basis_status = highs.writeBasis(write_basis_file);
     if (basis_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Error writing basis to file\n");

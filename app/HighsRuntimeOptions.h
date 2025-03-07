@@ -19,7 +19,7 @@
 
 bool loadOptions(const HighsLogOptions& report_log_options, int argc,
                  char** argv, HighsOptions& options, std::string& model_file,
-                 std::string& read_basis_file, std::string& output_basis_file,
+                 std::string& read_basis_file, std::string& write_basis_file,
 
                  std::string& read_solution_file) {
   try {
@@ -143,7 +143,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
       }
     }
 
-    output_basis_file = "";
+    write_basis_file = "";
     if (result.count(kWriteBasisFile)) {
       auto& v = result[kWriteBasisFile].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -152,7 +152,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;
-            output_basis_file = arg;
+            write_basis_file = arg;
           }
         }
         if (nonEmpty > 1) {
@@ -160,7 +160,7 @@ bool loadOptions(const HighsLogOptions& report_log_options, int argc,
           return false;
         }
       } else {
-        output_basis_file = v[0];
+        write_basis_file = v[0];
       }
     }
 
