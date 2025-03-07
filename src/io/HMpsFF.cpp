@@ -355,7 +355,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
                                 const HMpsFF::Parsekey keyword) {
   switch (keyword) {
-      // Identify the sections that can be parsed
+      // Identify the sections that cannot be parsed
     case HMpsFF::Parsekey::kDelayedrows:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse DELAYEDROWS section\n");
@@ -363,6 +363,10 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
     case HMpsFF::Parsekey::kModelcuts:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse MODELCUTS section\n");
+      break;
+    case HMpsFF::Parsekey::kUsercuts:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse USERCUTS section\n");
       break;
     case HMpsFF::Parsekey::kIndicators:
       highsLogUser(log_options, HighsLogType::kError,
@@ -448,6 +452,8 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
     key = HMpsFF::Parsekey::kDelayedrows;
   else if (upper_word == "MODELCUTS")
     key = HMpsFF::Parsekey::kModelcuts;
+  else if (upper_word == "USERCUTS")
+    key = HMpsFF::Parsekey::kUsercuts;
   else if (upper_word == "INDICATORS")
     key = HMpsFF::Parsekey::kIndicators;
   else if (upper_word == "SETS")
