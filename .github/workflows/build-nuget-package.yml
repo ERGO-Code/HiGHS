@@ -101,7 +101,7 @@ jobs:
           path: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native/runtimes
 
   build_linux_arm64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     container: stabletec/build-core:debian-11
     steps:
       - uses: actions/checkout@v4
