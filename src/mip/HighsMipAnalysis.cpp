@@ -77,6 +77,14 @@ double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
   return mip_clocks.timer_pointer_->read(highs_timer_clock);
 }
 
+HighsInt HighsMipAnalysis::mipTimerNumCall(const HighsInt mip_clock
+                                           // , const HighsInt thread_id
+) const {
+  if (!analyse_mip_time) return 0;
+  HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
+  return mip_clocks.timer_pointer_->numCall(highs_timer_clock);
+}
+
 void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
   if (header) {
     printf(
@@ -152,7 +160,7 @@ void HighsMipAnalysis::reportMipTimer() {
   //  mip_timer.reportMipNodeSearchClock(mip_clocks);
   //  mip_timer.reportMipDivePrimalHeuristicsClock(mip_clocks);
   //  mip_timer.reportMipSubMipSolveClock(mip_clocks);
-  //  mip_timer.reportMipSolveLpClock(mip_clocks);
+  mip_timer.reportMipSolveLpClock(mip_clocks);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
   //  reportMipSolveLpClock(true);
   //  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);

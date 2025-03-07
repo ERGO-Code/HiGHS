@@ -226,6 +226,17 @@ class HighsTimer {
   }
 
   /**
+   * @brief Return number of calls to a clock
+   */
+  HighsInt numCall(
+      const HighsInt i_clock = 0  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_num_call[i_clock];
+  }
+
+  /**
    * @brief Report timing information for the clock indices in the list
    */
   bool report(const char* grep_stamp,  //!< Character string used to extract
