@@ -26,6 +26,8 @@ Usage:
   bin/highs [OPTION...] [file]
 
       --model_file arg          File of model to solve.
+      --read_basis arg          File of initial basis to read.
+      --write_basis arg         File of final basis to write.
       --read_solution_file arg  File of solution to read.
       --options_file arg        File containing HiGHS options.
       --presolve arg            Presolve: "choose" by default - "on"/"off"
