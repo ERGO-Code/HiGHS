@@ -1550,8 +1550,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       // Zero the costs, integrality and Hessian
       std::vector<double> zero_costs;
       zero_costs.assign(lp.num_col_, 0);
+      const bool has_primal_ray = this->ekk_instance_.status_.has_primal_ray;
       HighsStatus status =
           this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
+      this->ekk_instance_.status_.has_primal_ray = has_primal_ray;
       assert(status == HighsStatus::kOk);
       if (is_qp) {
         HighsHessian zero_hessian;
