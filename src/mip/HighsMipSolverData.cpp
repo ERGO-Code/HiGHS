@@ -48,6 +48,12 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceRandomizedRounding) {
     if (code) return "R";
     return "Randomized rounding";
+  } else if (solution_source == kSolutionSourceZIRound) {
+    if (code) return "Z";
+    return "ZI Round";
+  } else if (solution_source == kSolutionSourceShifting) {
+    if (code) return "I";
+    return "Shifting";    
   } else if (solution_source == kSolutionSourceSolveLp) {
     if (code) return "S";
     return "Solve LP";

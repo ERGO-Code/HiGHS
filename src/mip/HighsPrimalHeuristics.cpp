@@ -1361,11 +1361,11 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
   }
   // re-check for feasibility and add incumbent
   if (hasInfeasibleConstraints) {
-    tryShiftedPoint(currRelSol, 'I');
+    tryShiftedPoint(currRelSol, kSolutionSourceShifting);
   } else {
     if (currentFracInt.size() > 0) ZIRound(currRelSol);
     if (currentFracInt.size() == 0)
-      mipsolver.mipdata_->trySolution(currRelSol, 'I');
+      mipsolver.mipdata_->trySolution(currRelSol, kSolutionSourceShifting);
   }
 }
 
@@ -1469,7 +1469,7 @@ void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
     improvementInFeasibility = prev_ZI_total - ZI_total;
   }
   // re-check for feasibility and add incumbent
-  mipsolver.mipdata_->trySolution(currRelSol, 'Z');
+  mipsolver.mipdata_->trySolution(currRelSol, kSolutionSourceZIRound);
 }
 
 void HighsPrimalHeuristics::feasibilityPump() {

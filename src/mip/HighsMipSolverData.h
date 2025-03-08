@@ -50,6 +50,8 @@ enum MipSolutionSource : int {
   kSolutionSourceSubMip,
   kSolutionSourceEmptyMip,
   kSolutionSourceRandomizedRounding,
+  kSolutionSourceZIRound,
+  kSolutionSourceShifting,
   kSolutionSourceSolveLp,
   kSolutionSourceEvaluateNode,
   kSolutionSourceUnbounded,
