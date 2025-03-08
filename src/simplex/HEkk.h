@@ -73,6 +73,7 @@ class HEkk {
   void clearEkkDataStatus();
   void clearNlaStatus();
   void clearNlaInvertStatus();
+  void clearRayProperties();
 
   void invalidate();
   void invalidateBasisMatrix();

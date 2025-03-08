@@ -1824,7 +1824,7 @@ HighsStatus Highs::getIisInterface() {
     // Full LP option chosen or no dual ray to use
     //
     // Working on the whole model so clear all solver data
-    this->invalidateUserSolverData();
+    this->invalidateSolverData();
     // 1789 Remove this check!
     HighsLp check_lp_before = this->model_.lp_;
     // Apply the elasticity filter to the whole model in order to

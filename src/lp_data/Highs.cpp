@@ -64,7 +64,7 @@ HighsStatus Highs::clearSolver() {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
   clearStandardFormLp();
-  invalidateUserSolverData();
+  invalidateSolverData();
   return returnFromHighs(return_status);
 }
 
@@ -2115,7 +2115,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) {
-    invalidateUserSolverData();
+    invalidateSolverData();
   } else {
     // Solution is rejected, so give a logging message and error
     // return
@@ -3534,6 +3534,13 @@ HighsPostsolveStatus Highs::runPostsolve() {
   return postsolve_status;
 }
 
+
+void Highs::clearDerivedModelProperties() {
+  this->clearPresolve();
+  this->clearStandardFormLp();
+  this->clearRayProperties();  
+}
+
 void Highs::clearPresolve() {
   model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
   presolved_model_.clear();
@@ -3548,7 +3555,7 @@ void Highs::clearStandardFormLp() {
   standard_form_matrix_.clear();
 }
 
-void Highs::invalidateUserSolverData() {
+void Highs::invalidateSolverData() {
   invalidateModelStatus();
   invalidateSolution();
   invalidateBasis();
@@ -3907,7 +3914,7 @@ HighsStatus Highs::callSolveMip() {
   }
   // Ensure that any solver data for users in Highs class members are
   // cleared
-  invalidateUserSolverData();
+  invalidateSolverData();
   if (user_solution) {
     // Recover the col and row values
     solution_.col_value = std::move(user_solution_col_value);
@@ -4328,7 +4335,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status,
     case HighsModelStatus::kPostsolveError:
     case HighsModelStatus::kMemoryLimit:
       // Don't clear the model status!
-      //      invalidateUserSolverData();
+      //      invalidateSolverData();
       invalidateInfo();
       invalidateSolution();
       invalidateBasis();

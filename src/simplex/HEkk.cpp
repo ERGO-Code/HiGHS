@@ -80,6 +80,18 @@ void HEkk::clearNlaInvertStatus() {
   this->status_.has_fresh_invert = false;
 }
 
+void HEkk::clearRayProperties() {
+  // Invalidate dual and primal ray data
+  this->status_.has_dual_ray = false;
+  this->status_.has_primal_ray = false;
+  this->info_.dual_ray_row_ = -1;
+  this->info_.dual_ray_sign_ = -1;
+  this->dual_ray_.clear();
+  this->info_.primal_ray_col_ = -1;
+  this->info_.primal_ray_sign_ = -1;
+  this->primal_ray_.clear();
+}
+
 void HEkk::clearEkkPointers() {
   this->callback_ = nullptr;
   this->options_ = nullptr;
@@ -306,15 +318,7 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_fresh_rebuild = false;
   this->status_.has_dual_objective_value = false;
   this->status_.has_primal_objective_value = false;
-  // Invalidate dual and primal ray data
-  this->status_.has_dual_ray = false;
-  this->status_.has_primal_ray = false;
-  this->info_.dual_ray_row_ = -1;
-  this->info_.dual_ray_sign_ = -1;
-  this->dual_ray_.clear();
-  this->info_.primal_ray_col_ = -1;
-  this->info_.primal_ray_sign_ = -1;
-  this->primal_ray_.clear();
+  this->clearRayProperties();
 }
 
 void HEkk::updateStatus(LpAction action) {
