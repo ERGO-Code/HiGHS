@@ -258,4 +258,13 @@ struct HighsSimplexBadBasisChangeRecord {
   double save_value;
 };
 
+struct HighsRayRecord {
+  bool has_ray;
+  HighsInt index;
+  HighsInt sign;
+  std::vector<double> value;
+  HighsRayRecord getRayRecord() const;
+  void setRayRecord(const HighsRayRecord& from_record);
+  void clear();
+};
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

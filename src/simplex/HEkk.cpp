@@ -39,6 +39,8 @@ void HEkk::clear() {
   this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
+  this->primal_ray_record_.clear();
+  this->dual_ray_record_.clear();
 }
 
 void HEkk::clearEkkAllStatus() {
@@ -4364,3 +4366,27 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ap_density = 0;
   row_DSE_density = 0;
 }
+
+HighsRayRecord HighsRayRecord::getRayRecord() const {
+  HighsRayRecord record;
+  record.has_ray = this->has_ray;
+  record.index = this->index;
+  record.sign = this->sign;
+  record.value = this->value;
+  return record;
+}
+
+void HighsRayRecord::setRayRecord(const HighsRayRecord& from_record) {
+  this->has_ray = from_record.has_ray;
+  this->index = from_record.index;
+  this->sign = from_record.sign;
+  this->value = from_record.value;
+}
+
+void HighsRayRecord::clear() {
+  this->has_ray = false;
+  this->index = -1;
+  this->sign = 0;
+  this->value.clear();
+}
+

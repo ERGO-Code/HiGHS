@@ -219,6 +219,9 @@ class HEkk {
   vector<double> primal_ray_;
   vector<double> dual_ray_;
 
+  HighsRayRecord dual_ray_record_;
+  HighsRayRecord primal_ray_record_;
+
   // Data to be retained when dualizing
   HighsInt original_num_col_;
   HighsInt original_num_row_;
