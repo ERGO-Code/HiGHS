@@ -1987,6 +1987,64 @@ void testQpIndefiniteFailure() {
     Highs_destroy(highs);
 }
 
+void testDualRayTwice() {
+    void* highs = Highs_create();
+    int ret;
+    double INF = Highs_getInfinity(highs);
+    ret = Highs_changeObjectiveOffset(highs, 0.0);
+    assert(ret == 0);
+    ret = Highs_setStringOptionValue(highs, "presolve", "off");
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, 0.0, 0.0, 0.0, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+    assert(ret == 0);
+    ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
+    assert(ret == 0);
+    int index[2] = {2, 3};
+    double value[2] = {1.0, -1.0};
+    ret = Highs_addRow(highs, 0.0, 0.0, 2, index, value);
+    assert(ret == 0);
+    index[0] = 2;    index[1] = 3;
+    value[0] = 1.0;  value[1] = 1.0;
+    ret = Highs_addRow(highs, 1.0, INF, 2, index, value);
+    assert(ret == 0);
+    index[0] = 0;    index[1] = 2;
+    value[0] = -2.0; value[1] = 1.0;
+    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+    assert(ret == 0);
+    index[0] = 1;    index[1] = 3;
+    value[0] = -3.0; value[1] = 1.0;
+    ret = Highs_addRow(highs, -INF, 0.0, 2, index, value);
+    assert(ret == 0);
+    ret = Highs_run(highs);
+    assert(ret == 0);
+    int has_dual_ray = 0;
+    double dual_ray_value[4] = {0.0, 0.0, 0.0, 0.0};
+    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+    assert(ret == 0);
+    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 0.0);
+    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -1.0);
+    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], -1.0);
+    ret = Highs_changeColBounds(highs, 1, 1.0, 1.0);
+    assert(ret == 0);
+    ret = Highs_run(highs);
+    assert(ret == 0);
+    ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
+    assert(ret == 0);
+    assertIntValuesEqual("has_dual_ray", has_dual_ray, 1);
+    assertDoubleValuesEqual("dual_ray_value[0]", dual_ray_value[0], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[1]", dual_ray_value[1], 1.0);
+    assertDoubleValuesEqual("dual_ray_value[2]", dual_ray_value[2], -2.0);
+    assertDoubleValuesEqual("dual_ray_value[3]", dual_ray_value[3], 0.0);
+    Highs_destroy(highs);
+    return;
+}
+
 /*
 The horrible C in this causes problems in some of the CI tests,
 so suppress thius test until the C has been improved
@@ -2053,6 +2111,7 @@ int main() {
   testGetModel();
   testMultiObjective();
   testQpIndefiniteFailure();
+  testDualRayTwice();
   return 0;
 }
 //  testSetSolution();
