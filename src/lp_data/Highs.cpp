@@ -1754,15 +1754,15 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
 
 HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
                                     HVector& row_ep_buffer) {
-  has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  has_dual_ray = ekk_instance_.dual_ray_record_.exists;
   if (has_dual_ray) {
     ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
     row_ep_buffer.clear();
     row_ep_buffer.count = 1;
     row_ep_buffer.packFlag = true;
-    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+    HighsInt iRow = ekk_instance_.dual_ray_record_.index;
     row_ep_buffer.index[0] = iRow;
-    row_ep_buffer.array[iRow] = ekk_instance_.info_.dual_ray_sign_;
+    row_ep_buffer.array[iRow] = ekk_instance_.dual_ray_record_.sign;
 
     ekk_instance_.btran(row_ep_buffer, ekk_instance_.info_.row_ep_density);
   }
@@ -3513,11 +3513,10 @@ HighsPostsolveStatus Highs::runPostsolve() {
   return postsolve_status;
 }
 
-
 void Highs::clearDerivedModelProperties() {
   this->clearPresolve();
   this->clearStandardFormLp();
-  this->clearRayProperties();  
+  this->clearRayProperties();
 }
 
 void Highs::clearPresolve() {

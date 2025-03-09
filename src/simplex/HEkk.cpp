@@ -64,8 +64,8 @@ void HEkk::clearEkkDataStatus() {
   status.has_fresh_rebuild = false;
   status.has_dual_objective_value = false;
   status.has_primal_objective_value = false;
-  status.has_dual_ray = false;
-  status.has_primal_ray = false;
+  dual_ray_record_.clear();
+  primal_ray_record_.clear();
 }
 
 void HEkk::clearNlaStatus() {
@@ -84,14 +84,8 @@ void HEkk::clearNlaInvertStatus() {
 
 void HEkk::clearRayProperties() {
   // Invalidate dual and primal ray data
-  this->status_.has_dual_ray = false;
-  this->status_.has_primal_ray = false;
-  this->info_.dual_ray_row_ = -1;
-  this->info_.dual_ray_sign_ = -1;
-  this->dual_ray_.clear();
-  this->info_.primal_ray_col_ = -1;
-  this->info_.primal_ray_sign_ = -1;
-  this->primal_ray_.clear();
+  this->dual_ray_record_.clear();
+  this->primal_ray_record_.clear();
 }
 
 void HEkk::clearEkkPointers() {
@@ -154,8 +148,8 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
-  this->primal_ray_.clear();
-  this->dual_ray_.clear();
+  this->primal_ray_record_.clear();
+  this->dual_ray_record_.clear();
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
@@ -208,10 +202,6 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_workLowerShift_.clear();
   info.backtracking_basis_workUpperShift_.clear();
   info.backtracking_basis_edge_weight_.clear();
-  info.dual_ray_row_ = -1;
-  info.dual_ray_sign_ = 0;
-  info.primal_ray_col_ = -1;
-  info.primal_ray_sign_ = 0;
   info.simplex_strategy = 0;
   info.dual_edge_weight_strategy = 0;
   info.primal_edge_weight_strategy = 0;
@@ -1051,8 +1041,8 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
-  status_.has_dual_ray = false;
-  status_.has_primal_ray = false;
+  dual_ray_record_.exists = false;
+  primal_ray_record_.exists = false;
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
@@ -4033,10 +4023,10 @@ bool HEkk::logicalBasis() const {
 
 bool HEkk::proofOfPrimalInfeasibility() {
   // To be called from outside HEkk when row_ep is not known
-  assert(status_.has_dual_ray);
+  assert(dual_ray_record_.exists);
   HighsLp& lp = this->lp_;
-  HighsInt move_out = info_.dual_ray_sign_;
-  HighsInt row_out = info_.dual_ray_row_;
+  HighsInt move_out = dual_ray_record_.sign;
+  HighsInt row_out = dual_ray_record_.index;
   // Compute the basis inverse row
   HVector row_ep;
   row_ep.setup(lp.num_row_);
@@ -4369,7 +4359,7 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
 
 HighsRayRecord HighsRayRecord::getRayRecord() const {
   HighsRayRecord record;
-  record.has_ray = this->has_ray;
+  record.exists = this->exists;
   record.index = this->index;
   record.sign = this->sign;
   record.value = this->value;
@@ -4377,16 +4367,15 @@ HighsRayRecord HighsRayRecord::getRayRecord() const {
 }
 
 void HighsRayRecord::setRayRecord(const HighsRayRecord& from_record) {
-  this->has_ray = from_record.has_ray;
+  this->exists = from_record.exists;
   this->index = from_record.index;
   this->sign = from_record.sign;
   this->value = from_record.value;
 }
 
 void HighsRayRecord::clear() {
-  this->has_ray = false;
+  this->exists = false;
   this->index = -1;
   this->sign = 0;
   this->value.clear();
 }
-

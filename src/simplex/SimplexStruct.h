@@ -54,9 +54,7 @@ struct HighsSimplexStatus {
   bool has_dual_objective_value =
       false;  // The dual objective function value is known
   bool has_primal_objective_value =
-      false;                    // The dual objective function value is known
-  bool has_dual_ray = false;    // A dual unbounded ray is known
-  bool has_primal_ray = false;  // A primal unbounded ray is known
+      false;  // The dual objective function value is known
 };
 
 struct HighsSimplexInfo {
@@ -133,12 +131,6 @@ struct HighsSimplexInfo {
   std::vector<double> backtracking_basis_workLowerShift_;
   std::vector<double> backtracking_basis_workUpperShift_;
   std::vector<double> backtracking_basis_edge_weight_;
-
-  // Dual and primal ray vectors
-  HighsInt dual_ray_row_;
-  HighsInt dual_ray_sign_;
-  HighsInt primal_ray_col_;
-  HighsInt primal_ray_sign_;
 
   // Options from HighsOptions for the simplex solver
   HighsInt simplex_strategy;
@@ -259,7 +251,7 @@ struct HighsSimplexBadBasisChangeRecord {
 };
 
 struct HighsRayRecord {
-  bool has_ray;
+  bool exists;
   HighsInt index;
   HighsInt sign;
   std::vector<double> value;

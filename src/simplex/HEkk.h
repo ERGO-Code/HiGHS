@@ -216,9 +216,6 @@ class HEkk {
   vector<double> proof_value_;
 
   // Data to be retained after computing primal or dual ray
-  vector<double> primal_ray_;
-  vector<double> dual_ray_;
-
   HighsRayRecord dual_ray_record_;
   HighsRayRecord primal_ray_record_;
 
