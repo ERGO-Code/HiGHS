@@ -2004,7 +2004,7 @@ void testDualRayTwice() {
     assert(ret == 0);
     ret = Highs_addCol(highs, -1.0, 0.0, INF, 0, NULL, NULL);
     assert(ret == 0);
-    int index[2] = {2, 3};
+    HighsInt index[2] = {2, 3};
     double value[2] = {1.0, -1.0};
     ret = Highs_addRow(highs, 0.0, 0.0, 2, index, value);
     assert(ret == 0);
@@ -2022,7 +2022,7 @@ void testDualRayTwice() {
     assert(ret == 0);
     ret = Highs_run(highs);
     assert(ret == 0);
-    int has_dual_ray = 0;
+    HighsInt has_dual_ray = 0;
     double dual_ray_value[4] = {0.0, 0.0, 0.0, 0.0};
     ret = Highs_getDualRay(highs, &has_dual_ray, dual_ray_value);
     assert(ret == 0);
