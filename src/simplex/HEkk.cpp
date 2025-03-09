@@ -39,8 +39,7 @@ void HEkk::clear() {
   this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
-  this->primal_ray_record_.clear();
-  this->dual_ray_record_.clear();
+  this->clearRayRecords();
 }
 
 void HEkk::clearEkkAllStatus() {
@@ -64,8 +63,6 @@ void HEkk::clearEkkDataStatus() {
   status.has_fresh_rebuild = false;
   status.has_dual_objective_value = false;
   status.has_primal_objective_value = false;
-  dual_ray_record_.clear();
-  primal_ray_record_.clear();
 }
 
 void HEkk::clearNlaStatus() {
@@ -82,8 +79,7 @@ void HEkk::clearNlaInvertStatus() {
   this->status_.has_fresh_invert = false;
 }
 
-void HEkk::clearRayProperties() {
-  // Invalidate dual and primal ray data
+void HEkk::clearRayRecords() {
   this->dual_ray_record_.clear();
   this->primal_ray_record_.clear();
 }
@@ -148,8 +144,7 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
-  this->primal_ray_record_.clear();
-  this->dual_ray_record_.clear();
+  this->clearRayRecords();
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
@@ -310,7 +305,7 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_fresh_rebuild = false;
   this->status_.has_dual_objective_value = false;
   this->status_.has_primal_objective_value = false;
-  this->clearRayProperties();
+  this->clearRayRecords();
 }
 
 void HEkk::updateStatus(LpAction action) {
@@ -1041,8 +1036,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
-  dual_ray_record_.exists = false;
-  primal_ray_record_.exists = false;
+  this->clearRayRecords();
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call

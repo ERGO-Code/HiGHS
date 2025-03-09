@@ -2849,6 +2849,7 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
 
 void HEkkPrimal::savePrimalRay() {
   ekk_instance_.primal_ray_record_.exists = true;
+  assert(variable_in >= 0);
   ekk_instance_.primal_ray_record_.index = variable_in;
   ekk_instance_.primal_ray_record_.sign = -move_in;
 }

@@ -1528,8 +1528,8 @@ class Highs {
   // Clears the standard form LP
   void clearStandardFormLp();
 
-  // Clears the ray properties
-  void clearRayProperties() { this->ekk_instance_.clearRayProperties(); }
+  // Clears the ray records
+  void clearRayRecords() { this->ekk_instance_.clearRayRecords(); }
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve

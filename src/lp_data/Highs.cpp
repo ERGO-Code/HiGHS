@@ -3516,7 +3516,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
 void Highs::clearDerivedModelProperties() {
   this->clearPresolve();
   this->clearStandardFormLp();
-  this->clearRayProperties();
+  this->clearRayRecords();
 }
 
 void Highs::clearPresolve() {
