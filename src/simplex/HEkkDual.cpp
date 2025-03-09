@@ -2543,8 +2543,9 @@ bool HEkkDual::proofOfPrimalInfeasibility() {
 }
 
 void HEkkDual::saveDualRay() {
-  ekk_instance_.dual_ray_record_.exists = true;
   assert(row_out >= 0);
+  assert(move_out != kNoRaySign);
+  ekk_instance_.dual_ray_record_.clear();
   ekk_instance_.dual_ray_record_.index = row_out;
   ekk_instance_.dual_ray_record_.sign = move_out;
 }

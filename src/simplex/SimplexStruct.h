@@ -251,7 +251,6 @@ struct HighsSimplexBadBasisChangeRecord {
 };
 
 struct HighsRayRecord {
-  bool exists;
   HighsInt index;
   HighsInt sign;
   std::vector<double> value;

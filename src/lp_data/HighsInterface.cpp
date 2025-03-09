@@ -1514,7 +1514,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   if (num_row == 0) return return_status;
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
-  has_dual_ray = ekk_instance_.dual_ray_record_.exists;
+  has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
   // Declare identifiers to save column costs, integrality, any Hessian and the
   // presolve setting, and a flag to know when they should be
@@ -1567,7 +1567,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       this->setOptionValue("solve_relaxation", true);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
-      has_dual_ray = ekk_instance_.dual_ray_record_.exists;
+      has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
       assert(has_invert);
     }
@@ -1651,7 +1651,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   }
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
-  has_primal_ray = ekk_instance_.primal_ray_record_.exists;
+  has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
   std::string presolve;
   bool solve_relaxation;
@@ -1684,7 +1684,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->setOptionValue("allow_unbounded_or_infeasible", false);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
-      has_primal_ray = ekk_instance_.primal_ray_record_.exists;
+      has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
       assert(has_invert);
     }
@@ -1806,7 +1806,7 @@ HighsStatus Highs::getIisInterface() {
       return HighsStatus::kError;
     }
   }
-  const bool has_dual_ray = ekk_instance_.dual_ray_record_.exists;
+  const bool has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
   if (ray_option && !has_dual_ray)
     highsLogUser(
         options_.log_options, HighsLogType::kWarning,

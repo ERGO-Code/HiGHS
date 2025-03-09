@@ -1754,7 +1754,7 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
 
 HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
                                     HVector& row_ep_buffer) {
-  has_dual_ray = ekk_instance_.dual_ray_record_.exists;
+  has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
   if (has_dual_ray) {
     ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
     row_ep_buffer.clear();

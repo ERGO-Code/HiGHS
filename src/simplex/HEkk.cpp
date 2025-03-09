@@ -4017,7 +4017,7 @@ bool HEkk::logicalBasis() const {
 
 bool HEkk::proofOfPrimalInfeasibility() {
   // To be called from outside HEkk when row_ep is not known
-  assert(dual_ray_record_.exists);
+  assert(dual_ray_record_.index >= 0);
   HighsLp& lp = this->lp_;
   HighsInt move_out = dual_ray_record_.sign;
   HighsInt row_out = dual_ray_record_.index;
@@ -4353,7 +4353,6 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
 
 HighsRayRecord HighsRayRecord::getRayRecord() const {
   HighsRayRecord record;
-  record.exists = this->exists;
   record.index = this->index;
   record.sign = this->sign;
   record.value = this->value;
@@ -4361,15 +4360,13 @@ HighsRayRecord HighsRayRecord::getRayRecord() const {
 }
 
 void HighsRayRecord::setRayRecord(const HighsRayRecord& from_record) {
-  this->exists = from_record.exists;
   this->index = from_record.index;
   this->sign = from_record.sign;
   this->value = from_record.value;
 }
 
 void HighsRayRecord::clear() {
-  this->exists = false;
-  this->index = -1;
-  this->sign = 0;
+  this->index = kNoRayIndex;
+  this->sign = kNoRaySign;
   this->value.clear();
 }
