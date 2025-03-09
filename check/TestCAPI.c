@@ -1989,6 +1989,7 @@ void testQpIndefiniteFailure() {
 
 void testDualRayTwice() {
     void* highs = Highs_create();
+    Highs_setBoolOptionValue(highs, "output_flag", dev_run);
     int ret;
     double INF = Highs_getInfinity(highs);
     ret = Highs_changeObjectiveOffset(highs, 0.0);
