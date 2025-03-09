@@ -1076,18 +1076,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
   mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
-  if (mipsolver.analysis_.analyse_mip_time
-      //      && !mipsolver.submip &&
-      && !valid_basis &&
-      mipsolver.analysis_.mipTimerNumCall(simplex_solve_clock) == 1) {
+  if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
+      mipsolver.analysis_.mipTimerNumCall(simplex_solve_clock) == 1)
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - return from first root LP solve\n",
                  mipsolver.timer_.read());
-    printf("grep-first-root-lp-solve,%s,%s,%g\n",
-           lpsolver.getLp().model_name_.c_str(),
-           lpsolver.modelStatusToString(lpsolver.getModelStatus()).c_str(),
-           mipsolver.timer_.read());
-  }
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
   numlpiters += itercount;
