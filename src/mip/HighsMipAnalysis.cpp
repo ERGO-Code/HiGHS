@@ -147,7 +147,6 @@ void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
 
 void HighsMipAnalysis::reportMipTimer() {
   if (!analyse_mip_time) return;
-  //  assert(analyse_mip_time);
   MipTimer mip_timer;
   mip_timer.reportMipCoreClock(mip_clocks);
   mip_timer.reportMipLevel1Clock(mip_clocks);

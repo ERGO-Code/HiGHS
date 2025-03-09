@@ -1730,6 +1730,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
 void clockOff(HighsMipAnalysis& analysis) {
   if (!analysis.analyse_mip_time) return;
+  // Make sure that exactly one of the following clocks is running
   const int clock0_running =
       analysis.mipTimerRunning(kMipClockEvaluateRootNode0) ? 1 : 0;
   const int clock1_running =
