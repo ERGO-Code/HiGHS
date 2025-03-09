@@ -115,6 +115,22 @@ class MipTimer {
     clock[kMipClockSolve] = timer_pointer->clock_def("MIP solve");
     clock[kMipClockPostsolve] = timer_pointer->clock_def("MIP postsolve");
 
+    // Sometimes the analytic centre clock isn't stopped - because it
+    // runs on a separate thread. Although it would be good to
+    // understand this better, for now don't assert that this clock
+    // has stopped in HighsTimer.h. This is done with a hard-coded
+    // clock ID that needs to equal clock[kMipClockIpmSolveLp]
+    //
+    // Define the clocks for evaluating the LPs first, so that
+    // clock[kMipClockIpmSolveLp] isn't changed by inserting new
+    // clocks
+    clock[kMipClockSimplexBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - simplex basis");
+    clock[kMipClockSimplexNoBasisSolveLp] =
+        timer_pointer->clock_def("Solve LP - simplex no basis");
+    clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
+    assert(clock[kMipClockIpmSolveLp] == 9);
+
     // Level 1 - Should correspond to kMipClockTotal
     clock[kMipClockInit] = timer_pointer->clock_def("Initialise");
     clock[kMipClockRunPresolve] = timer_pointer->clock_def("Run presolve");
@@ -231,17 +247,10 @@ class MipTimer {
     // Sub-MIP clock
     clock[kMipClockSubMipSolve] = timer_pointer->clock_def("Sub-MIP solves");
 
-    // Evaluate LPs
-    clock[kMipClockSimplexBasisSolveLp] =
-        timer_pointer->clock_def("Solve LP - simplex basis");
-    clock[kMipClockSimplexNoBasisSolveLp] =
-        timer_pointer->clock_def("Solve LP - simplex no basis");
-    clock[kMipClockIpmSolveLp] = timer_pointer->clock_def("Solve LP: IPM");
-
     clock[kMipClockProbingImplications] =
         timer_pointer->clock_def("Probing - implications");
     //    clock[] = timer_pointer->clock_def("");
-  }
+  };
 
   bool reportMipClockList(const char* grepStamp,
                           const std::vector<HighsInt> mip_clock_list,

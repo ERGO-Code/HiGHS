@@ -22,7 +22,7 @@
 #include "util/HighsInt.h"
 
 const HighsInt check_clock = -46;
-const HighsInt ipm_clock = 63;
+const HighsInt ipm_clock = 9;
 const bool kNoClockCalls = false;
 
 /**
