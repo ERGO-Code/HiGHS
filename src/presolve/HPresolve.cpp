@@ -1679,13 +1679,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                 numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
                 addednnz);
 
-    // lifting for probing (only performed when probing did not modify the
-    // problem so far)
+    // lifting for probing
     if (mipsolver->options_mip_->mip_lifting_for_probing != -1) {
-      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0) {
-        // apply lifting
+      // only perform lifting if probing did not modify the problem so far
+      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0)
         liftingForProbing();
-      }
       // clear lifting opportunities
       liftingOpportunities.clear();
       implications.storeLiftingOpportunity = nullptr;
