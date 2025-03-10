@@ -1828,7 +1828,7 @@ HighsCliqueTable::computeMaximalCliques(const std::vector<CliqueVar>& vars,
   for (const auto& var : vars)
     maxcolindex = std::max(static_cast<size_t>(var.col), maxcolindex);
 
-  // Set up data
+  // set up data
   std::vector<double> sol;
   sol.resize(maxcolindex + 1);
   for (const auto& var : vars) sol[var.col] = var.val;
