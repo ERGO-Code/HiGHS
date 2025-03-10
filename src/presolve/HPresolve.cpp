@@ -1770,26 +1770,28 @@ void HPresolve::liftingForProbing() {
       }
     }
 
-    // compute cliques
-    auto cliques =
-        cliquetable.computeMaximalCliques(candidates, primal_feastol);
+    if (candidates.size() > 1) {
+      // compute cliques
+      auto cliques =
+          cliquetable.computeMaximalCliques(candidates, primal_feastol);
 
-    // identify clique with highest score
-    for (const auto& clique : cliques) {
-      HighsCDouble score = 0;
-      HighsInt nfill = 0;
-      for (const auto& cliquevar : clique) {
-        score += computeCoeffDiff(coefficients[cliquevar].first,
-                                  coefficients[cliquevar].second);
-        if (coefficients[cliquevar].second == -1) nfill++;
-      }
-      if (score > bestscore) {
-        bestscore = static_cast<double>(score);
-        bestnfill = nfill;
-        bestclique.clear();
-        bestclique.reserve(clique.size());
+      // identify clique with highest score
+      for (const auto& clique : cliques) {
+        HighsCDouble score = 0;
+        HighsInt nfill = 0;
         for (const auto& cliquevar : clique) {
-          bestclique.emplace_back(cliquevar, coefficients[cliquevar].first);
+          score += computeCoeffDiff(coefficients[cliquevar].first,
+                                    coefficients[cliquevar].second);
+          if (coefficients[cliquevar].second == -1) nfill++;
+        }
+        if (score > bestscore) {
+          bestscore = static_cast<double>(score);
+          bestnfill = nfill;
+          bestclique.clear();
+          bestclique.reserve(clique.size());
+          for (const auto& cliquevar : clique) {
+            bestclique.emplace_back(cliquevar, coefficients[cliquevar].first);
+          }
         }
       }
     }

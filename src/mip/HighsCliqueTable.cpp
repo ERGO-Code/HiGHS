@@ -1789,7 +1789,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 }
 
 std::vector<std::vector<HighsCliqueTable::CliqueVar>>
-HighsCliqueTable::computeMaximalCliques(std::vector<CliqueVar>& vars,
+HighsCliqueTable::computeMaximalCliques(const std::vector<CliqueVar>& vars,
                                         double feastol) {
   // return if there are no variables
   if (vars.empty())
@@ -1803,9 +1803,8 @@ HighsCliqueTable::computeMaximalCliques(std::vector<CliqueVar>& vars,
   // Set up data
   std::vector<double> sol;
   sol.resize(maxcolindex + 1);
+  for (const auto& var : vars) sol[var.col] = var.val;
   BronKerboschData data(sol);
-  for (const auto& var : vars)
-    if (var.val) sol[var.col] = 1;
   data.feastol = feastol;
 
   for (const auto& var : vars) {
