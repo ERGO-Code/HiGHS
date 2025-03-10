@@ -25,7 +25,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
-  HighsInt changedend = globaldomain.getChangedCols().size();
+  size_t changedend = globaldomain.getChangedCols().size();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
   HighsInt numImplications = -stackimplicstart;
@@ -47,10 +47,14 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     }
   };
 
-  auto isInfeasible = [&](HighsInt col, double val) {
-    if (!globaldomain.infeasible()) return false;
+  auto doBacktrack = [&](size_t changedend) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
+  };
+
+  auto isInfeasible = [&](HighsInt col, double val) {
+    if (!globaldomain.infeasible()) return false;
+    doBacktrack(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
     storeLiftingOpportunities(col, val);
     return true;
@@ -84,8 +88,8 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     implics.push_back(domchgstack[i]);
   }
 
-  globaldomain.backtrack();
-  globaldomain.clearChangedCols(changedend);
+  // backtrack
+  doBacktrack(changedend);
 
   // add the implications of binary variables to the clique table
   auto binstart = std::partition(implics.begin(), implics.end(),
