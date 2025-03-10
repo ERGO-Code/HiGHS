@@ -91,6 +91,7 @@ public:
     double centringRatioReduction() const {return parameters_.centring_ratio_reduction; }
     double centringAlphaScaling() const{return parameters_.centring_alpha_scaling; }
     ipxint badProductsTolerance() const{return parameters_.bad_products_tolerance; }
+    bool timelessLog() const{return parameters_.timeless_log; }
 
     const Parameters& parameters() const;
     void parameters(const Parameters& new_parameters);

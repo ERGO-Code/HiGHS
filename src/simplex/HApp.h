@@ -132,10 +132,23 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Consider scaling the LP - either with any existing scaling, or by
   // considering computing scaling factors if there are none - and
   // then move to EKK
-  const bool new_scaling = considerScaling(options, incumbent_lp);
-  // If new scaling is performed, the hot start information is
-  // no longer valid
-  if (new_scaling) ekk_instance.clearHotStart();
+  considerScaling(options, incumbent_lp);
+  //
+  if (!status.has_basis && !basis.valid && basis.useful) {
+    // There is no simplex basis, but there is a useful HiGHS basis
+    // that is not validated
+    assert(basis.col_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_col_));
+    assert(basis.row_status.size() ==
+           static_cast<size_t>(incumbent_lp.num_row_));
+    HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
+    if (return_status != HighsStatus::kOk)
+      return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
+    // formSimplexLpBasisAndFactor may introduce variables with
+    // HighsBasisStatus::kNonbasic, so refine it
+    refineBasis(incumbent_lp, solution, basis);
+    basis.valid = true;
+  }
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified
@@ -322,11 +335,14 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
     solve_unscaled_lp = true;
-    // ToDo: ekk_instance.status_.has_dual_ray should now be true if
-    // scaled_model_status == HighsModelStatus::kInfeasible since this
-    // model status depends on the infeasibility proof being true
+    // ToDo: ekk_instance.dual_ray_record_.index != kNoRayIndex should
+    // now be true if scaled_model_status ==
+    // HighsModelStatus::kInfeasible since this model status depends
+    // on the infeasibility proof being true
+    if (scaled_model_status == HighsModelStatus::kInfeasible)
+      assert(ekk_instance.dual_ray_record_.index != kNoRayIndex);
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
-        ekk_instance.status_.has_dual_ray) {
+        ekk_instance.dual_ray_record_.index != kNoRayIndex) {
       ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
       if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }

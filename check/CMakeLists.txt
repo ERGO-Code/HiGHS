@@ -34,8 +34,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestCheckSolution.cpp
       TestEkk.cpp
       TestFactor.cpp
-      TestFreezeBasis.cpp
-      TestHotStart.cpp
       TestMain.cpp
       TestNames.cpp
       TestOptions.cpp
@@ -129,25 +127,29 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
-  add_test(NAME unit-test-build
-          COMMAND ${CMAKE_COMMAND}
-                  --build ${HIGHS_BINARY_DIR}
-                  --target unit_tests
-                  #  --config ${CMAKE_BUILD_TYPE}
-          )
+  if (NOT HIGHS_COVERAGE)
+    add_test(NAME unit-test-build
+            COMMAND ${CMAKE_COMMAND}
+                    --build ${HIGHS_BINARY_DIR}
+                    --target unit_tests
+                    #  --config ${CMAKE_BUILD_TYPE}
+            )
 
+    # Avoid that several build jobs try to concurretly build.
+    set_tests_properties(unit-test-build
+                        PROPERTIES
+                        RESOURCE_LOCK unittestbin)
 
-  # Avoid that several build jobs try to concurretly build.
-  set_tests_properties(unit-test-build
-                      PROPERTIES
-                      RESOURCE_LOCK unittestbin)
-
-  # create a binary running all the tests in the executable
-  add_test(NAME unit_tests_all COMMAND unit_tests --success)
-  set_tests_properties(unit_tests_all
-                      PROPERTIES
-                      DEPENDS unit-test-build)
-  set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+    # create a binary running all the tests in the executable
+    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    set_tests_properties(unit_tests_all
+                        PROPERTIES
+                        DEPENDS unit-test-build)
+    set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+  else()
+    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+  endif()
 
   # An individual test can be added with the command below but the approach
   # above with a single add_test for all the unit tests automatically detects all

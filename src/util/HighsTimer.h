@@ -22,7 +22,7 @@
 #include "util/HighsInt.h"
 
 const HighsInt check_clock = -46;
-const HighsInt ipm_clock = 46;
+const HighsInt ipm_clock = 9;
 const bool kNoClockCalls = false;
 
 /**
@@ -34,7 +34,6 @@ struct HighsClockRecord {
   double start;
   double time;
   std::string name;
-  std::string ch3_name;
 };
 */
 /**
@@ -46,8 +45,6 @@ class HighsTimer {
     num_clock = 0;
     HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
-    run_highs_clock = i_clock;
-    total_clock = run_highs_clock;
 
     presolve_clock = clock_def("Presolve");
     solve_clock = clock_def("Solve");
@@ -58,15 +55,13 @@ class HighsTimer {
    * @brief Define a clock
    */
   HighsInt clock_def(
-      const char* name,  //!< Full-length name (<=16 characters) for the clock
-      const char* ch3_name = "N/A"  //!< 3-character name for the clock
-  ) {
+      const char* name)  //!< Full-length name (<=16 characters) for the clock
+  {
     HighsInt i_clock = num_clock;
     clock_num_call.push_back(0);
     clock_start.push_back(initial_clock_start);
     clock_time.push_back(0);
     clock_names.push_back(name);
-    clock_ch3_names.push_back(ch3_name);
     num_clock++;
     return i_clock;
   }
@@ -81,7 +76,6 @@ class HighsTimer {
       x_clock.start = 0;
       x_clock.time = 0;
       x_clock.name = "";
-      x_clock.ch3_name = "";
     }
     */
 
@@ -106,13 +100,11 @@ class HighsTimer {
     this->clock_num_call.clear();
     this->clock_start.clear();
     this->clock_names.clear();
-    this->clock_ch3_names.clear();
-    HighsInt i_clock = clock_def("Run HiGHS", "RnH");
+    HighsInt i_clock = clock_def("Run HiGHS");
     assert(i_clock == 0);
-    this->run_highs_clock = i_clock;
-    this->presolve_clock = clock_def("Presolve", "Pre");
-    this->solve_clock = clock_def("Solve", "Slv");
-    this->postsolve_clock = clock_def("Postsolve", "Pst");
+    this->presolve_clock = clock_def("Presolve");
+    this->solve_clock = clock_def("Solve");
+    this->postsolve_clock = clock_def("Postsolve");
   }
 
   /**
@@ -124,6 +116,16 @@ class HighsTimer {
       clock_start[i] = initial_clock_start;
       clock_time[i] = 0;
     }
+  }
+
+  /**
+   * @brief write all clocks
+   */
+  void writeAllClocks() {
+    for (HighsInt i = 0; i < num_clock; i++)
+      if (clock_num_call[i])
+        printf("Time %7.5f for %9d calls of clock %3d: %s\n", clock_time[i],
+               int(clock_num_call[i]), int(i), clock_names[i].c_str());
   }
 
   /**
@@ -188,7 +190,7 @@ class HighsTimer {
    * @brief Read the time of a clock
    */
   double read(const HighsInt i_clock = 0  //!< Index of the clock to be read
-  ) {
+  ) const {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
@@ -224,24 +226,15 @@ class HighsTimer {
   }
 
   /**
-   * @brief Start the RunHighs clock
+   * @brief Return number of calls to a clock
    */
-  void startRunHighsClock() { start(run_highs_clock); }
-
-  /**
-   * @brief Stop the RunHighs clock
-   */
-  void stopRunHighsClock() { stop(run_highs_clock); }
-
-  /**
-   * @brief Read the RunHighs clock
-   */
-  double readRunHighsClock() { return read(run_highs_clock); }
-
-  /**
-   * @brief Test whether the RunHighs clock is running
-   */
-  bool runningRunHighsClock() { return running(run_highs_clock); }
+  HighsInt numCall(
+      const HighsInt i_clock = 0  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_num_call[i_clock];
+  }
 
   /**
    * @brief Report timing information for the clock indices in the list
@@ -266,7 +259,7 @@ class HighsTimer {
              //!< before an individual clock is reported
   ) {
     size_t num_clock_list_entries = clock_list.size();
-    double current_run_highs_time = readRunHighsClock();
+    double current_run_highs_time = read();
     bool non_null_report = false;
 
     // Check validity of the clock list and check no clocks are still
@@ -319,7 +312,11 @@ class HighsTimer {
       double time_per_call = 0;
       if (clock_num_call[iClock] > 0) {
         time_per_call = time / clock_num_call[iClock];
-        if (percent_sum_clock_times[i] >= tolerance_percent_report) {
+        const bool report_time =
+            tolerance_percent_report > 0
+                ? percent_sum_clock_times[i] >= tolerance_percent_report
+                : clock_num_call[iClock] > 0;
+        if (report_time) {
           printf("%s-time  %-32s: %11.4e (%5.1f%%", grep_stamp,
                  clock_names[iClock].c_str(), time, percent_run_highs);
           if (ideal_sum_time > 0) {
@@ -350,7 +347,7 @@ class HighsTimer {
   /**
    * @brief Return the current wall-clock time
    */
-  double getWallTime() {
+  double getWallTime() const {
     using namespace std::chrono;
     const double wall_time = kNoClockCalls
                                  ? 0
@@ -375,12 +372,6 @@ class HighsTimer {
   std::vector<double> clock_start;
   std::vector<double> clock_time;
   std::vector<std::string> clock_names;
-  std::vector<std::string> clock_ch3_names;
-  // The index of the RunHighsClock - should always be 0
-  HighsInt run_highs_clock;
-  // Synonym for run_highs_clock that makes more sense when (as in MIP
-  // solver) there is an independent timer
-  HighsInt total_clock;
   // Fundamental clocks
   HighsInt presolve_clock;
   HighsInt solve_clock;

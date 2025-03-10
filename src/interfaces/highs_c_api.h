@@ -1427,6 +1427,25 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const HighsInt* index, const double* value);
 
 /**
+ * Ensure that the constraint matrix of the incumbent model is stored
+ * column-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureColwise(void* highs);
+
+/**
+ * Ensure that the constraint matrix of the incumbent model is stored row-wise.
+ *
+ * @param highs         A pointer to the Highs instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_ensureRowwise(void* highs);
+
+/**
  * Change the objective sense of the model.
  *
  * @param highs     A pointer to the Highs instance.
@@ -1813,7 +1832,7 @@ HighsInt Highs_getColsByMask(const void* highs, const HighsInt* mask,
  * @param from_row      The first row for which to query data for.
  * @param to_row        The last row (inclusive) for which to query data for.
  * @param num_row       An integer to be populated with the number of rows got
- *                      from the smodel.
+ *                      from the model.
  * @param lower         An array of size [to_row - from_row + 1] for the row
  *                      lower bounds.
  * @param upper         An array of size [to_row - from_row + 1] for the row

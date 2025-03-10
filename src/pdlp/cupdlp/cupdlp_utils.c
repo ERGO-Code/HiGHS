@@ -431,7 +431,7 @@ void PDHG_PrintPDHGParam(CUPDLPwork *w) {
   cupdlp_printf("\n");
 }
 
-void PDHG_PrintHugeCUPDHG() {
+void PDHG_PrintHugeCUPDHG(void) {
   cupdlp_printf("\n");
   cupdlp_printf("  ____ _   _ ____  ____  _     ____\n");
   cupdlp_printf(" / ___| | | |  _ \\|  _ \\| |   |  _ \\\n");
@@ -441,7 +441,7 @@ void PDHG_PrintHugeCUPDHG() {
   cupdlp_printf("\n");
 }
 
-void PDHG_PrintUserParamHelper() {
+void PDHG_PrintUserParamHelper(void) {
   PDHG_PrintHugeCUPDHG();
 
   cupdlp_printf("CUPDHG User Parameters:\n");

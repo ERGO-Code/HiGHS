@@ -47,7 +47,7 @@ std::string qpModelStatusToString(const QpModelStatus qp_model_status) {
     case QpModelStatus::kNotset:
       return "Not set";
     case QpModelStatus::kUndetermined:
-      return "Undertermined";
+      return "Undetermined";
     case QpModelStatus::kOptimal:
       return "Optimal";
     case QpModelStatus::kUnbounded:
