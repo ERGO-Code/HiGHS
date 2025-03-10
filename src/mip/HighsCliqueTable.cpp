@@ -1789,6 +1789,34 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 }
 
 std::vector<std::vector<HighsCliqueTable::CliqueVar>>
+HighsCliqueTable::separateCliques(const std::vector<double>& sol,
+                                  const HighsDomain& globaldom,
+                                  double feastol) {
+  exit(0);
+#if 0
+  BronKerboschData data(sol);
+  data.feastol = feastol;
+
+  HighsInt numcols = globaldom.col_lower_.size();
+  assert(int(numcliquesvar.size()) == 2 * numcols);
+  for (HighsInt i = 0; i != numcols; ++i) {
+    if (colsubstituted[i]) continue;
+
+    if (numcliquesvar[CliqueVar(i, 0).index()] != 0 &&
+        CliqueVar(i, 0).weight(sol) > feastol)
+      data.P.emplace_back(i, 0);
+    if (numcliquesvar[CliqueVar(i, 1).index()] != 0 &&
+        CliqueVar(i, 1).weight(sol) > feastol)
+      data.P.emplace_back(i, 1);
+  }
+
+  bronKerboschRecurse(data, data.P.size(), nullptr, 0);
+
+  return std::move(data.cliques);
+#endif
+}
+
+std::vector<std::vector<HighsCliqueTable::CliqueVar>>
 HighsCliqueTable::computeMaximalCliques(const std::vector<CliqueVar>& vars,
                                         double feastol) {
   // return if there are no variables
