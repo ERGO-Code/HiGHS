@@ -1701,9 +1701,10 @@ void HPresolve::liftingForProbing() {
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
   // collect best lifting opportunity for each row in a vector
-  typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingdata;
-  std::vector<std::tuple<HighsInt, std::vector<liftingdata>, double, double>>
-      liftingtable;
+  typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingvar;
+  typedef std::tuple<HighsInt, std::vector<liftingvar>, double, HighsInt>
+      liftingdata;
+  std::vector<liftingdata> liftingtable;
   liftingtable.reserve(liftingOpportunities.size());
 
   // remember overall best score
@@ -1752,7 +1753,7 @@ void HPresolve::liftingForProbing() {
     if (coefficients.empty()) continue;
 
     // vector to hold best clique
-    std::vector<liftingdata> bestclique;
+    std::vector<liftingvar> bestclique;
     double bestscore = -kHighsInf;
     HighsInt bestnfill = 0;
 
@@ -1813,10 +1814,7 @@ void HPresolve::liftingForProbing() {
   // sort according to score
   pdqsort(
       liftingtable.begin(), liftingtable.end(),
-      [&](const std::tuple<HighsInt, std::vector<liftingdata>, double, double>&
-              opp1,
-          const std::tuple<HighsInt, std::vector<liftingdata>, double, double>&
-              opp2) {
+      [&](const liftingdata& opp1, const liftingdata& opp2) {
         double score1 = computeOverallScore(
             std::get<2>(opp1), static_cast<HighsInt>(std::get<1>(opp1).size()),
             std::get<3>(opp1));
