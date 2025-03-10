@@ -66,9 +66,6 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   if (isInfeasible(col, val)) return true;
 
-  // inform caller about lifting opportunities
-  storeLiftingOpportunities(col, val);
-
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
@@ -87,6 +84,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
     implics.push_back(domchgstack[i]);
   }
+
+  // inform caller about lifting opportunities
+  storeLiftingOpportunities(col, val);
 
   // backtrack
   doBacktrack(changedend);
