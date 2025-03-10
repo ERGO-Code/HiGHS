@@ -1514,7 +1514,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   if (num_row == 0) return return_status;
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
-  has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
 
   // Declare identifiers to save column costs, integrality, any Hessian and the
   // presolve setting, and a flag to know when they should be
@@ -1550,9 +1550,15 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       // Zero the costs, integrality and Hessian
       std::vector<double> zero_costs;
       zero_costs.assign(lp.num_col_, 0);
+      // Take a copy of the primal ray record, since this will be
+      // cleared by calling changeColsCost
+      HighsRayRecord primal_ray_record =
+          this->ekk_instance_.primal_ray_record_.getRayRecord();
       HighsStatus status =
           this->changeColsCost(0, lp.num_col_ - 1, zero_costs.data());
       assert(status == HighsStatus::kOk);
+      // Reinstate the primal ray record
+      this->ekk_instance_.primal_ray_record_.setRayRecord(primal_ray_record);
       if (is_qp) {
         HighsHessian zero_hessian;
         this->passHessian(zero_hessian);
@@ -1561,31 +1567,31 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       this->setOptionValue("solve_relaxation", true);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
-      has_dual_ray = ekk_instance_.status_.has_dual_ray;
+      has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
       assert(has_invert);
     }
     if (has_dual_ray) {
-      if (ekk_instance_.dual_ray_.size()) {
+      if (ekk_instance_.dual_ray_record_.value.size()) {
         // Dual ray is already computed
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Copying known dual ray\n");
         for (HighsInt iRow = 0; iRow < num_row; iRow++)
-          dual_ray_value[iRow] = ekk_instance_.dual_ray_[iRow];
+          dual_ray_value[iRow] = ekk_instance_.dual_ray_record_.value[iRow];
       } else if (has_invert) {
         // Dual ray is known and can be calculated
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Solving linear system to compute dual ray\n");
         vector<double> rhs;
-        HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+        HighsInt iRow = ekk_instance_.dual_ray_record_.index;
         rhs.assign(num_row, 0);
-        rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
+        rhs[iRow] = ekk_instance_.dual_ray_record_.sign;
         HighsInt* dual_ray_num_nz = 0;
         basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
         // Now save the dual ray itself
-        ekk_instance_.dual_ray_.resize(num_row);
+        ekk_instance_.dual_ray_record_.value.resize(num_row);
         for (HighsInt iRow = 0; iRow < num_row; iRow++)
-          ekk_instance_.dual_ray_[iRow] = dual_ray_value[iRow];
+          ekk_instance_.dual_ray_record_.value[iRow] = dual_ray_value[iRow];
       } else {
         assert(!has_invert);
         // Dual ray is known but cannot be calculated
@@ -1645,7 +1651,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   }
   bool has_invert = ekk_instance_.status_.has_invert;
   assert(!lp.is_moved_);
-  has_primal_ray = ekk_instance_.status_.has_primal_ray;
+  has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
   std::string presolve;
   bool solve_relaxation;
@@ -1678,23 +1684,23 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->setOptionValue("allow_unbounded_or_infeasible", false);
       HighsStatus call_status = this->run();
       if (call_status != HighsStatus::kOk) return_status = call_status;
-      has_primal_ray = ekk_instance_.status_.has_primal_ray;
+      has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
       assert(has_invert);
     }
     if (has_primal_ray) {
-      if (ekk_instance_.primal_ray_.size()) {
+      if (ekk_instance_.primal_ray_record_.value.size()) {
         // Primal ray is already computed
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Copying known primal ray\n");
         for (HighsInt iCol = 0; iCol < num_col; iCol++)
-          primal_ray_value[iCol] = ekk_instance_.primal_ray_[iCol];
+          primal_ray_value[iCol] = ekk_instance_.primal_ray_record_.value[iCol];
         return return_status;
       } else if (has_invert) {
         // Primal ray is known and can be calculated
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Solving linear system to compute primal ray\n");
-        HighsInt col = ekk_instance_.info_.primal_ray_col_;
+        HighsInt col = ekk_instance_.primal_ray_record_.index;
         assert(ekk_instance_.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
         // Get this pivotal column
         vector<double> rhs;
@@ -1702,7 +1708,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
         column.assign(num_row, 0);
         rhs.assign(num_row, 0);
         lp.ensureColwise();
-        HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
+        HighsInt primal_ray_sign = ekk_instance_.primal_ray_record_.sign;
         if (col < num_col) {
           for (HighsInt iEl = lp.a_matrix_.start_[col];
                iEl < lp.a_matrix_.start_[col + 1]; iEl++)
@@ -1723,9 +1729,9 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
         }
         if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
         // Now save the primal ray itself
-        ekk_instance_.primal_ray_.resize(num_col);
+        ekk_instance_.primal_ray_record_.value.resize(num_col);
         for (HighsInt iCol = 0; iCol < num_col; iCol++)
-          ekk_instance_.primal_ray_[iCol] = primal_ray_value[iCol];
+          ekk_instance_.primal_ray_record_.value[iCol] = primal_ray_value[iCol];
       }
     } else {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -1800,7 +1806,7 @@ HighsStatus Highs::getIisInterface() {
       return HighsStatus::kError;
     }
   }
-  const bool has_dual_ray = ekk_instance_.status_.has_dual_ray;
+  const bool has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
   if (ray_option && !has_dual_ray)
     highsLogUser(
         options_.log_options, HighsLogType::kWarning,
@@ -1811,7 +1817,7 @@ HighsStatus Highs::getIisInterface() {
     assert(ekk_instance_.status_.has_invert);
     assert(!lp.is_moved_);
     std::vector<double> rhs;
-    HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
+    HighsInt iRow = ekk_instance_.dual_ray_record_.index;
     rhs.assign(num_row, 0);
     rhs[iRow] = 1;
     std::vector<double> dual_ray_value(num_row);
@@ -1824,7 +1830,7 @@ HighsStatus Highs::getIisInterface() {
     // Full LP option chosen or no dual ray to use
     //
     // Working on the whole model so clear all solver data
-    this->invalidateUserSolverData();
+    this->invalidateSolverData();
     // 1789 Remove this check!
     HighsLp check_lp_before = this->model_.lp_;
     // Apply the elasticity filter to the whole model in order to
@@ -2450,19 +2456,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
   if (info_.num_primal_infeasibilities == 0 &&
       info_.num_dual_infeasibilities <= 0)
     return HighsStatus::kOk;
-  HighsLogType log_type = HighsLogType::kWarning;
-  model_status_ = HighsModelStatus::kUnknown;
-  HighsStatus return_status = HighsStatus::kWarning;
-  // Check for gross errors
-  if (info_.max_primal_infeasibility >
-          sqrt(options_.primal_feasibility_tolerance) ||
-      (info_.dual_solution_status != kSolutionStatusNone &&
-       info_.max_dual_infeasibility >
-           sqrt(options_.dual_feasibility_tolerance))) {
-    log_type = HighsLogType::kError;
-    model_status_ = HighsModelStatus::kSolveError;
-    return_status = HighsStatus::kError;
-  }
+  model_status_ = HighsModelStatus::kSolveError;
   std::stringstream ss;
   ss.str(std::string());
   ss << highsFormatToString(
@@ -2476,10 +2470,12 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
         info_.max_dual_infeasibility, info_.sum_dual_infeasibilities);
   ss << " infeasibilities\n";
   const std::string report_string = ss.str();
-  highsLogUser(options_.log_options, log_type, "%s", report_string.c_str());
-  highsLogUser(options_.log_options, log_type, "Setting model status to %s\n",
+  highsLogUser(options_.log_options, HighsLogType::kError, "%s",
+               report_string.c_str());
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "Setting model status to %s\n",
                modelStatusToString(model_status_).c_str());
-  return return_status;
+  return HighsStatus::kError;
 }
 
 HighsStatus Highs::invertRequirementError(std::string method_name) const {

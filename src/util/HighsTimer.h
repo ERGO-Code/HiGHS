@@ -22,7 +22,7 @@
 #include "util/HighsInt.h"
 
 const HighsInt check_clock = -46;
-const HighsInt ipm_clock = 46;
+const HighsInt ipm_clock = 9;
 const bool kNoClockCalls = false;
 
 /**
@@ -226,6 +226,17 @@ class HighsTimer {
   }
 
   /**
+   * @brief Return number of calls to a clock
+   */
+  HighsInt numCall(
+      const HighsInt i_clock = 0  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_num_call[i_clock];
+  }
+
+  /**
    * @brief Report timing information for the clock indices in the list
    */
   bool report(const char* grep_stamp,  //!< Character string used to extract
@@ -301,7 +312,11 @@ class HighsTimer {
       double time_per_call = 0;
       if (clock_num_call[iClock] > 0) {
         time_per_call = time / clock_num_call[iClock];
-        if (percent_sum_clock_times[i] >= tolerance_percent_report) {
+        const bool report_time =
+            tolerance_percent_report > 0
+                ? percent_sum_clock_times[i] >= tolerance_percent_report
+                : clock_num_call[iClock] > 0;
+        if (report_time) {
           printf("%s-time  %-32s: %11.4e (%5.1f%%", grep_stamp,
                  clock_names[iClock].c_str(), time, percent_run_highs);
           if (ideal_sum_time > 0) {

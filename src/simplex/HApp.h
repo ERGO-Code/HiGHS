@@ -335,11 +335,14 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // LP, see whether the proof still holds for the unscaled LP. If
     // it does, then there's no need to solve the unscaled LP
     solve_unscaled_lp = true;
-    // ToDo: ekk_instance.status_.has_dual_ray should now be true if
-    // scaled_model_status == HighsModelStatus::kInfeasible since this
-    // model status depends on the infeasibility proof being true
+    // ToDo: ekk_instance.dual_ray_record_.index != kNoRayIndex should
+    // now be true if scaled_model_status ==
+    // HighsModelStatus::kInfeasible since this model status depends
+    // on the infeasibility proof being true
+    if (scaled_model_status == HighsModelStatus::kInfeasible)
+      assert(ekk_instance.dual_ray_record_.index != kNoRayIndex);
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
-        ekk_instance.status_.has_dual_ray) {
+        ekk_instance.dual_ray_record_.index != kNoRayIndex) {
       ekk_instance.setNlaPointersForLpAndScale(ekk_lp);
       if (ekk_instance.proofOfPrimalInfeasibility()) solve_unscaled_lp = false;
     }

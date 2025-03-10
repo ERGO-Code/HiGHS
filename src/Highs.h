@@ -1516,11 +1516,20 @@ class Highs {
   // and basis data
   void setHighsModelStatusAndClearSolutionAndBasis(
       const HighsModelStatus model_status);
+
+  // Clears derived model properties (like any presolved model,
+  // standard form LP, and ray information) that (unlike solution and
+  // basis) cannot be updated
+  void clearDerivedModelProperties();
+
   // Clears the presolved model and its status
   void clearPresolve();
-  //
+
   // Clears the standard form LP
   void clearStandardFormLp();
+
+  // Clears the ray records
+  void clearRayRecords() { this->ekk_instance_.clearRayRecords(); }
   //
   // Methods to clear solver data for users in Highs class members
   // before (possibly) updating them with data from trying to solve
@@ -1528,8 +1537,9 @@ class Highs {
   //
   // Invalidates all solver data in Highs class members by calling
   // invalidateModelStatus(), invalidateSolution(), invalidateBasis(),
-  // invalidateInfo() and invalidateEkk()
-  void invalidateUserSolverData();
+  // invalidateRanging(), invalidateInfo(), invalidateEkk() and
+  // invalidateIis()
+  void invalidateSolverData();
   //
   // Invalidates the model status, solution_ and info_
   void invalidateModelStatusSolutionAndInfo();

@@ -39,6 +39,7 @@ void HEkk::clear() {
   this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
+  this->clearRayRecords();
 }
 
 void HEkk::clearEkkAllStatus() {
@@ -62,8 +63,6 @@ void HEkk::clearEkkDataStatus() {
   status.has_fresh_rebuild = false;
   status.has_dual_objective_value = false;
   status.has_primal_objective_value = false;
-  status.has_dual_ray = false;
-  status.has_primal_ray = false;
 }
 
 void HEkk::clearNlaStatus() {
@@ -78,6 +77,11 @@ void HEkk::clearNlaStatus() {
 void HEkk::clearNlaInvertStatus() {
   this->status_.has_invert = false;
   this->status_.has_fresh_invert = false;
+}
+
+void HEkk::clearRayRecords() {
+  this->dual_ray_record_.clear();
+  this->primal_ray_record_.clear();
 }
 
 void HEkk::clearEkkPointers() {
@@ -140,8 +144,7 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
-  this->primal_ray_.clear();
-  this->dual_ray_.clear();
+  this->clearRayRecords();
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
@@ -194,10 +197,6 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_workLowerShift_.clear();
   info.backtracking_basis_workUpperShift_.clear();
   info.backtracking_basis_edge_weight_.clear();
-  info.dual_ray_row_ = -1;
-  info.dual_ray_sign_ = 0;
-  info.primal_ray_col_ = -1;
-  info.primal_ray_sign_ = 0;
   info.simplex_strategy = 0;
   info.dual_edge_weight_strategy = 0;
   info.primal_edge_weight_strategy = 0;
@@ -306,15 +305,7 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_fresh_rebuild = false;
   this->status_.has_dual_objective_value = false;
   this->status_.has_primal_objective_value = false;
-  // Invalidate dual and primal ray data
-  this->status_.has_dual_ray = false;
-  this->status_.has_primal_ray = false;
-  this->info_.dual_ray_row_ = -1;
-  this->info_.dual_ray_sign_ = -1;
-  this->dual_ray_.clear();
-  this->info_.primal_ray_col_ = -1;
-  this->info_.primal_ray_sign_ = -1;
-  this->primal_ray_.clear();
+  this->clearRayRecords();
 }
 
 void HEkk::updateStatus(LpAction action) {
@@ -1045,8 +1036,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
-  status_.has_dual_ray = false;
-  status_.has_primal_ray = false;
+  this->clearRayRecords();
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
@@ -4027,10 +4017,10 @@ bool HEkk::logicalBasis() const {
 
 bool HEkk::proofOfPrimalInfeasibility() {
   // To be called from outside HEkk when row_ep is not known
-  assert(status_.has_dual_ray);
+  assert(dual_ray_record_.index >= 0);
   HighsLp& lp = this->lp_;
-  HighsInt move_out = info_.dual_ray_sign_;
-  HighsInt row_out = info_.dual_ray_row_;
+  HighsInt move_out = dual_ray_record_.sign;
+  HighsInt row_out = dual_ray_record_.index;
   // Compute the basis inverse row
   HVector row_ep;
   row_ep.setup(lp.num_row_);
@@ -4359,4 +4349,24 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+}
+
+HighsRayRecord HighsRayRecord::getRayRecord() const {
+  HighsRayRecord record;
+  record.index = this->index;
+  record.sign = this->sign;
+  record.value = this->value;
+  return record;
+}
+
+void HighsRayRecord::setRayRecord(const HighsRayRecord& from_record) {
+  this->index = from_record.index;
+  this->sign = from_record.sign;
+  this->value = from_record.value;
+}
+
+void HighsRayRecord::clear() {
+  this->index = kNoRayIndex;
+  this->sign = kNoRaySign;
+  this->value.clear();
 }
