@@ -1865,8 +1865,8 @@ void HPresolve::liftingForProbing() {
   }
 
   highsLogDev(options->log_options, HighsLogType::kInfo,
-              "Lifting for probing modified %d rows, modified %d existing "
-              "non-zeros and introduced %d new non-zeros\n",
+              "Lifting for probing modified %d row(s), modified %d existing "
+              "nonzero(s) and introduced %d new nonzero(s)\n",
               static_cast<int>(numrowsmodified), static_cast<int>(nmod),
               static_cast<int>(nfill));
 }
