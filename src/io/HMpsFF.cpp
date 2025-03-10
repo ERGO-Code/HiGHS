@@ -424,9 +424,9 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, size_t& start,
     key = HMpsFF::Parsekey::kName;
   else if (upper_word == "OBJSENSE")
     key = HMpsFF::Parsekey::kObjsense;
-  else if (upper_word == "MAX")
+  else if (upper_word.substr(0, 3) == "MAX")
     key = HMpsFF::Parsekey::kMax;
-  else if (upper_word == "MIN")
+  else if (upper_word.substr(0, 3) == "MIN")
     key = HMpsFF::Parsekey::kMin;
   else if (upper_word == "ROWS")
     key = HMpsFF::Parsekey::kRows;
