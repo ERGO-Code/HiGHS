@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
 
-  if (read_basis_file != "") {
+  if (cmd_options.cmd_read_basis_file != "") {
     HighsStatus basis_status = highs.readBasis(cmd_options.cmd_read_basis_file);
     if (basis_status == HighsStatus::kError) {
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
   // highs.writeInfo("Info.md");
 
-  if (write_basis_file != "") {
+  if (cmd_options.cmd_write_basis_file != "") {
     HighsStatus basis_status =
         highs.writeBasis(cmd_options.cmd_write_basis_file);
     if (basis_status == HighsStatus::kError) {

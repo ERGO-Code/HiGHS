@@ -114,11 +114,11 @@ void setupCommandLineOptions(CLI::App& app,
                  "File for writing out model solution.")
       ->check(checkSingle);
 
-  app.add_option("--" + kReadBasisFile, cmd_option.cmd_read_basis_file,
+  app.add_option("--" + kReadBasisFile, cmd_options.cmd_read_basis_file,
                  "File for initial basis to read.")
       ->check(checkSingle);
 
-  app.add_option("--" + kWriteBasisFile, cmd_option.cmd_write_basis_file,
+  app.add_option("--" + kWriteBasisFile, cmd_options.cmd_write_basis_file,
                  "File for final basis to write.")
       ->check(checkSingle);
 
