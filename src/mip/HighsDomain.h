@@ -365,8 +365,7 @@ class HighsDomain {
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
         col_lower_(other.col_lower_),
-        col_upper_(other.col_upper_),
-        recordRedundantRows_(other.recordRedundantRows_) {
+        col_upper_(other.col_upper_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -398,7 +397,6 @@ class HighsDomain {
     branchPos_ = other.branchPos_;
     col_lower_ = other.col_lower_;
     col_upper_ = other.col_upper_;
-    recordRedundantRows_ = other.recordRedundantRows_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
