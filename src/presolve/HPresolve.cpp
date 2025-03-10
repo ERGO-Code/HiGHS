@@ -1671,6 +1671,14 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postsolve_stack));
 
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
+                " deleted rows, %" HIGHSINT_FORMAT
+                " deleted "
+                "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
+                numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
+                addednnz);
+
     // lifting for probing (only performed when probing did not modify the
     // problem so far)
     if (mipsolver->options_mip_->mip_lifting_for_probing != -1) {
@@ -1682,14 +1690,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       liftingOpportunities.clear();
       implications.storeLiftingOpportunity = nullptr;
     }
-
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
-                " deleted rows, %" HIGHSINT_FORMAT
-                " deleted "
-                "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
-                numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
-                addednnz);
   }
 
   mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
