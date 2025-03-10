@@ -67,3 +67,32 @@ h.readModel(filename)
 h.run()
 print('Model ', filename, ' has status ', h.getModelStatus())
 ```
+
+## Extracting values efficiently
+
+When arrays of values are returned by `highspy`, accessing them
+entry-by-entry can be very slow. Such arrays should first be converted
+into lists. The following example illustrates how the method
+`getSolution()` is used to obtain the solution of a model.
+
+```python
+import highspy
+
+h = highspy.Highs()
+h.readModel('model.mps')
+h.run()
+
+solution = h.getSolution()
+num_vars = len(solution.col_value)
+
+value = [solution.col_value[icol]
+         for icol in range(num_vars)]
+
+col_value = list(solution.col_value)
+value = [col_value[icol]
+         for icol in range(num_vars)]
+```
+
+For an example LP that is solved in 0.025s, accessing the values
+directly from `solution.col_value` takes 0.04s. Forming the list
+`col_value` and accessing the values directly from it takes 0.0001s.
