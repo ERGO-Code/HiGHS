@@ -2474,8 +2474,7 @@ bool HighsDomain::propagate() {
             cutpoolprop.recomputeCapacityThreshold(i);
           };
 
-          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n",
-          // numproprows);
+          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
 
           for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
