@@ -1712,7 +1712,7 @@ void HPresolve::liftingForProbing() {
   double bestscoretotal = -kHighsInf;
 
   // is lifting allowed to add non-zeros?
-  bool fillAllowed = mipsolver->options_mip_->mip_lifting_for_probing > 0;
+  const bool fillAllowed = mipsolver->options_mip_->mip_lifting_for_probing > 0;
 
   // consider lifting opportunities
   for (const auto& elm : liftingOpportunities) {
