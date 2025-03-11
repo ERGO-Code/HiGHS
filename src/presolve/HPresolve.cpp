@@ -1926,7 +1926,7 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     }
   }
   // modifications to row invalidate lifting opportunities
-  liftingOpportunities[row].clear();
+  liftingOpportunities.erase(row);
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
