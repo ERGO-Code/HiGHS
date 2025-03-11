@@ -1648,8 +1648,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       } else
         val = 1.0;
       addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
-      // modifications to row invalidate lifting opportunities
-      liftingOpportunities[cliqueextension.first].clear();
     }
     extensionvars.clear();
 
@@ -1927,6 +1925,8 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
       impliedDualRowBounds.add(col, row, Avalue[pos]);
     }
   }
+  // modifications to row invalidate lifting opportunities
+  liftingOpportunities[row].clear();
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
