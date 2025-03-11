@@ -660,3 +660,15 @@ TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.run() == HighsStatus::kOk);
 }
+
+TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable lifting for probing
+  highs.setOptionValue("mip_lifting_for_probing", 1);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+}
