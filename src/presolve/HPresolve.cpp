@@ -1695,6 +1695,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 }
 
 void HPresolve::liftingForProbing() {
+  // this method implements lifting for probing as described by Achterberg et
+  // al. (2019) Presolve Reductions in Mixed Integer Programming. INFORMS
+  // Journal on Computing 32(2):473-506.
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   const HighsDomain& domain = mipsolver->mipdata_->domain;
 
