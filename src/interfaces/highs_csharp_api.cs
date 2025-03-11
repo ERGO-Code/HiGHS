@@ -183,7 +183,7 @@ public class HighsLpSolver : IDisposable
 
     private const string highslibname = "highs";
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_call(
         Int32 numcol,
         Int32 numrow,
@@ -204,31 +204,31 @@ public class HighsLpSolver : IDisposable
         int[] rowbasisstatus,
         ref int modelstatus);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern IntPtr Highs_create();
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern void Highs_destroy(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_run(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_readModel(IntPtr highs, string filename);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_writeModel(IntPtr highs, string filename);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_writePresolvedModel(IntPtr highs, string filename);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_writeSolutionPretty(IntPtr highs, string filename);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getInfinity(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passLp(
         IntPtr highs,
         int numcol,
@@ -246,7 +246,7 @@ public class HighsLpSolver : IDisposable
         int[] aindex,
         double[] avalue);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passMip(
         IntPtr highs,
         int numcol,
@@ -265,7 +265,7 @@ public class HighsLpSolver : IDisposable
         double[] avalue,
         int[] highs_integrality);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passModel(
         IntPtr highs,
         int numcol,
@@ -289,7 +289,7 @@ public class HighsLpSolver : IDisposable
         double[] qvalue,
         int[] highs_integrality);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passHessian(
         IntPtr highs,
         int dim,
@@ -299,64 +299,64 @@ public class HighsLpSolver : IDisposable
         int[] qindex,
         double[] qvalue);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setOptionValue(IntPtr highs, string option, string value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setBoolOptionValue(IntPtr highs, string option, int value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setIntOptionValue(IntPtr highs, string option, int value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setDoubleOptionValue(IntPtr highs, string option, double value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setStringOptionValue(IntPtr highs, string option, string value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBoolOptionValue(IntPtr highs, string option, out int value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getIntOptionValue(IntPtr highs, string option, out int value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getDoubleOptionValue(IntPtr highs, string option, out double value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getStringOptionValue(IntPtr highs, string option, [Out] StringBuilder value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getSolution(IntPtr highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getNumCol(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getNumRow(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getNumNz(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getHessianNumNz(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasis(IntPtr highs, int[] colstatus, int[] rowstatus);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern double Highs_getObjectiveValue(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getIterationCount(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getModelStatus(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_addRow(IntPtr highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_addRows(
         IntPtr highs,
         int num_new_row,
@@ -367,7 +367,7 @@ public class HighsLpSolver : IDisposable
         int[] indices,
         double[] values);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_addCol(
         IntPtr highs,
         double cost,
@@ -377,7 +377,7 @@ public class HighsLpSolver : IDisposable
         int[] indices,
         double[] values);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_addCols(
         IntPtr highs,
         int num_new_col,
@@ -389,76 +389,76 @@ public class HighsLpSolver : IDisposable
         int[] indices,
         double[] values);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeObjectiveSense(IntPtr highs, int sense);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColCost(IntPtr highs, int col, double cost);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsCostBySet(IntPtr highs, int num_set_entries, int[] set, double[] cost);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsCostByMask(IntPtr highs, int[] mask, double[] cost);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColBounds(IntPtr highs, int col, double lower, double upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsBoundsByRange(IntPtr highs, int from_col, int to_col, double[] lower, double[] upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeRowBounds(IntPtr highs, int row, double lower, double upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeRowsBoundsBySet(IntPtr highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeRowsBoundsByMask(IntPtr highs, int[] mask, double[] lower, double[] upper);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeColsIntegralityByRange(IntPtr highs, int from_col, int to_col, int[] integrality);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_changeCoeff(IntPtr highs, int row, int col, double value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteColsByRange(IntPtr highs, int from_col, int to_col);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteColsBySet(IntPtr highs, int num_set_entries, int[] set);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteColsByMask(IntPtr highs, int[] mask);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteRowsByRange(IntPtr highs, int from_row, int to_row);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteRowsBySet(IntPtr highs, int num_set_entries, int[] set);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_deleteRowsByMask(IntPtr highs, int[] mask);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getDoubleInfoValue(IntPtr highs, string info, out double value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getIntInfoValue(IntPtr highs, string info, out int value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getInt64InfoValue(IntPtr highs, string info, out long value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_setSolution(IntPtr highs, double[] col_value, double[] row_value, double[] col_dual, double[] row_dual);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getColsByRange(
         IntPtr highs,
         int from_col,
@@ -472,7 +472,7 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getColsBySet(
         IntPtr highs,
         int num_set_entries,
@@ -486,7 +486,7 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getColsByMask(
         IntPtr highs,
         int[] mask,
@@ -499,7 +499,7 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getRowsByRange(
         IntPtr highs,
         int from_row,
@@ -512,7 +512,7 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getRowsBySet(
         IntPtr highs,
         int num_set_entries,
@@ -525,7 +525,7 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getRowsByMask(
         IntPtr highs,
         int[] mask,
@@ -537,16 +537,16 @@ public class HighsLpSolver : IDisposable
         int[] matrix_index,
         double[] matrix_value);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasicVariables(IntPtr highs, int[] basic_variables);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasisInverseRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasisInverseCol(IntPtr highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasisSolve(
         IntPtr highs,
         double[] rhs,
@@ -554,7 +554,7 @@ public class HighsLpSolver : IDisposable
         ref int solution_num_nz,
         int[] solution_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getBasisTransposeSolve(
         IntPtr highs,
         double[] rhs,
@@ -562,28 +562,28 @@ public class HighsLpSolver : IDisposable
         ref int solution_nz,
         int[] solution_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getReducedRow(IntPtr highs, int row, double[] row_vector, ref int row_num_nz, int[] row_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_getReducedColumn(IntPtr highs, int col, double[] col_vector, ref int col_num_nz, int[] col_indices);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_clearModel(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_clearSolver(IntPtr highs);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passColName(IntPtr highs, int col, string name);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_passRowName(IntPtr highs, int row, string name);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_writeOptions(IntPtr highs, string filename);
 
-    [DllImport(highslibname, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(highslibname)]
     private static extern int Highs_writeOptionsDeviations(IntPtr highs, string filename);
 
     public static HighsStatus call(HighsModel model, ref HighsSolution sol, ref HighsBasis bas, ref HighsModelStatus modelstatus)
