@@ -1851,10 +1851,10 @@ void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
   if (numinf == 0 &&
       direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
     // row is redundant
-    redundant_rows_.insert(row);
+    redundantRows_.insert(row);
   } else {
     // row is not redundant anymore
-    redundant_rows_.erase(row);
+    redundantRows_.erase(row);
   }
 }
 

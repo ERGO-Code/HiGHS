@@ -332,7 +332,7 @@ class HighsDomain {
   std::vector<HighsInt> colLowerPos_;
   std::vector<HighsInt> colUpperPos_;
   std::vector<HighsInt> branchPos_;
-  HighsHashTable<HighsInt> redundant_rows_;
+  HighsHashTable<HighsInt> redundantRows_;
   bool recordRedundantRows_ = false;
 
  public:
@@ -639,10 +639,10 @@ class HighsDomain {
 
   bool inSubmip() const { return mipsolver->submip; }
 
-  void clearRedundantRows() { redundant_rows_.clear(); };
+  void clearRedundantRows() { redundantRows_.clear(); };
 
   const HighsHashTable<HighsInt>& getRedundantRows() const {
-    return redundant_rows_;
+    return redundantRows_;
   };
 
   double getRedundantRowValue(HighsInt row) const;
