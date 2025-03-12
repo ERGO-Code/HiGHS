@@ -34,7 +34,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
-  auto storeLiftingOpportunities = [&](HighsInt col, double val) {
+  auto storeLiftingOpportunities = [&](HighsInt col, bool val) {
     // use callback to store new lifting opportunities; negate column index if
     // variable is set to its lower bound
     if (storeLiftingOpportunity != nullptr) {
@@ -52,7 +52,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     globaldomain.clearChangedCols(changedend);
   };
 
-  auto isInfeasible = [&](HighsInt col, double val) {
+  auto isInfeasible = [&](HighsInt col, bool val) {
     if (!globaldomain.infeasible()) return false;
     storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
