@@ -1743,17 +1743,18 @@ HPresolve::Result HPresolve::liftingForProbing(
         coefficients[HighsCliqueTable::CliqueVar{col, val}] = {coef, pos};
     });
 
-    // remove redundant rows and rows with empty coefficient map
-    if (isRedundant || coefficients.empty()) {
-      if (isRedundant) {
-        numrowsremoved++;
-        postsolve_stack.redundantRow(row);
-        removeRow(row);
-        HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
-      }
+    // remove redundant rows
+    if (isRedundant) {
+      numrowsremoved++;
+      postsolve_stack.redundantRow(row);
+      removeRow(row);
       coefficients.clear();
+      HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
       continue;
     }
+
+    // skip rows with empty coefficient map
+    if (coefficients.empty()) continue;
 
     // vector to hold best clique
     std::vector<liftingvar> bestclique;
