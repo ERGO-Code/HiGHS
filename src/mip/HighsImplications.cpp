@@ -40,7 +40,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     if (storeLiftingOpportunity != nullptr) {
       for (const auto& elm : globaldomain.getRedundantRows())
         storeLiftingOpportunity(
-            elm.key(), (val ? 1 : -1) * col,
+            elm.key(), col, val ? 1 : 0,
             (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
       globaldomain.clearRedundantRows();
       globaldomain.setRecordRedundantRows(false);
@@ -54,9 +54,9 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   auto isInfeasible = [&](HighsInt col, double val) {
     if (!globaldomain.infeasible()) return false;
+    storeLiftingOpportunities(col, val);
     doBacktrack(changedend);
     cliquetable.vertexInfeasible(globaldomain, col, val);
-    storeLiftingOpportunities(col, val);
     return true;
   };
 

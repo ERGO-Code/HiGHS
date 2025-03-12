@@ -1524,17 +1524,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         modelHasPercentageContVars(size_t{2})) {
       // store lifting opportunities
       implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
-                                                 double val) {
+                                                 HighsInt val, double coef) {
         // find lifting opportunities for row
         auto& htree = liftingOpportunities[row];
         // add element
-        auto insertresult = htree.insert_or_get(col, val);
-        if (insertresult.second) {
-          numLiftOpps++;
-        } else {
-          double& currentval = *insertresult.first;
-          currentval = val;
-        }
+        auto insertresult = htree.insert_or_get(std::make_pair(col, val), coef);
+        assert(insertresult.second);
+        numLiftOpps++;
       };
     }
 
@@ -1739,13 +1735,13 @@ void HPresolve::liftingForProbing() {
 
     // iterate over elements in hash tree
     const auto& htree = elm.second;
-    htree.for_each([&](HighsInt bincol, double value) {
-      HighsInt col = std::abs(bincol);
+    htree.for_each([&](const std::pair<HighsInt, double>& data, double coef) {
+      HighsInt col = data.first;
+      HighsInt val = data.second;
       HighsInt pos = findNonzero(row, col);
       if ((fillAllowed || pos != -1) && !colDeleted[col] &&
           !domain.isFixed(col))
-        coefficients[HighsCliqueTable::CliqueVar{col, bincol < 0 ? 0 : 1}] = {
-            value, pos};
+        coefficients[HighsCliqueTable::CliqueVar{col, val}] = {coef, pos};
     });
 
     // skip row if map is empty

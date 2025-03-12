@@ -96,7 +96,8 @@ class HPresolve {
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
-  std::unordered_map<HighsInt, HighsHashTree<HighsInt, double>>
+  std::unordered_map<HighsInt,
+                     HighsHashTree<std::pair<HighsInt, HighsInt>, double>>
       liftingOpportunities;
 
   // set with the sizes and indices of equation rows sorted by the size and a

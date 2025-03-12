@@ -1848,14 +1848,14 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
 void HighsDomain::updateRedundantRows(HighsInt row, HighsInt direction,
                                       HighsInt numinf, HighsCDouble activity,
                                       double bound) {
-  if (numinf == 0 &&
-      direction * activity > direction * bound + mipsolver->mipdata_->feastol) {
-    // row is redundant
-    redundantRows_.insert(row);
-  } else {
-    // row is not redundant anymore
-    redundantRows_.erase(row);
+  if (numinf != 0 || direction * activity <=
+                         direction * bound + mipsolver->mipdata_->feastol) {
+    // row that was found to be redundant should not be non-redundant
+    assert(redundantRows_.find(row) == nullptr);
+    return;
   }
+  // row is redundant
+  redundantRows_.insert(row);
 }
 
 double HighsDomain::getRedundantRowValue(HighsInt row) const {
