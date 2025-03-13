@@ -201,6 +201,11 @@ class HPresolve {
 
   void reinsertEquation(HighsInt row);
 
+  void clearLiftingOpportunities(HighsInt row) {
+    auto& search = liftingOpportunities.find(row);
+    if (search != liftingOpportunities.end()) search->second.clear();
+  };
+
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 #endif

@@ -483,6 +483,9 @@ void HPresolve::unlink(HighsInt pos) {
   // remove implied bounds on columns that where implied by this row
   resetColImpliedBoundsDerivedFromRow(Arow[pos]);
 
+  // modifications to row invalidate lifting opportunities
+  clearLiftingOpportunities(Arow[pos]);
+
   // remove non-zero
   Avalue[pos] = 0;
 
@@ -1917,6 +1920,9 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     // remove implied bounds on columns that where implied by this row
     resetColImpliedBoundsDerivedFromRow(row);
 
+    // modifications to row invalidate lifting opportunities
+    clearLiftingOpportunities(row);
+
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
@@ -1929,6 +1935,9 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
       // remove implied bounds on columns that where implied by this row
       resetColImpliedBoundsDerivedFromRow(row);
 
+      // modifications to row invalidate lifting opportunities
+      clearLiftingOpportunities(row);
+
       // remove the locks and contribution to implied (dual) row bounds, then
       // add then again
       impliedRowBounds.remove(row, col, Avalue[pos]);
@@ -1939,8 +1948,6 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
       impliedDualRowBounds.add(col, row, Avalue[pos]);
     }
   }
-  // modifications to row invalidate lifting opportunities
-  liftingOpportunities.erase(row);
 }
 
 HighsTripletListSlice HPresolve::getColumnVector(HighsInt col) const {
