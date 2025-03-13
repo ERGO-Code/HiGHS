@@ -202,7 +202,7 @@ class HPresolve {
   void reinsertEquation(HighsInt row);
 
   void clearLiftingOpportunities(HighsInt row) {
-    auto& search = liftingOpportunities.find(row);
+    auto search = liftingOpportunities.find(row);
     if (search != liftingOpportunities.end()) search->second.clear();
   };
 
