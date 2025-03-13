@@ -17,9 +17,15 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
+
+  // record redundant rows for lifting
+  assert(globaldomain.getRedundantRows().size() == 0);
+  if (storeLiftingOpportunity != nullptr)
+    globaldomain.setRecordRedundantRows(true);
+
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
-  HighsInt changedend = globaldomain.getChangedCols().size();
+  size_t changedend = globaldomain.getChangedCols().size();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
   HighsInt numImplications = -stackimplicstart;
@@ -28,24 +34,36 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
-  if (globaldomain.infeasible()) {
+  auto storeLiftingOpportunities = [&](HighsInt col, bool val) {
+    // use callback to store lifting opportunities
+    if (storeLiftingOpportunity != nullptr) {
+      for (const auto& elm : globaldomain.getRedundantRows())
+        storeLiftingOpportunity(
+            elm.key(), col, val ? 1 : 0,
+            (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
+      globaldomain.clearRedundantRows();
+      globaldomain.setRecordRedundantRows(false);
+    }
+  };
+
+  auto doBacktrack = [&](size_t changedend) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
-    cliquetable.vertexInfeasible(globaldomain, col, val);
+  };
 
+  auto isInfeasible = [&](HighsInt col, bool val) {
+    if (!globaldomain.infeasible()) return false;
+    storeLiftingOpportunities(col, val);
+    doBacktrack(changedend);
+    cliquetable.vertexInfeasible(globaldomain, col, val);
     return true;
-  }
+  };
+
+  if (isInfeasible(col, val)) return true;
 
   globaldomain.propagate();
 
-  if (globaldomain.infeasible()) {
-    globaldomain.backtrack();
-    globaldomain.clearChangedCols(changedend);
-
-    cliquetable.vertexInfeasible(globaldomain, col, val);
-
-    return true;
-  }
+  if (isInfeasible(col, val)) return true;
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
@@ -66,8 +84,11 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     implics.push_back(domchgstack[i]);
   }
 
-  globaldomain.backtrack();
-  globaldomain.clearChangedCols(changedend);
+  // inform caller about lifting opportunities
+  storeLiftingOpportunities(col, val);
+
+  // backtrack
+  doBacktrack(changedend);
 
   // add the implications of binary variables to the clique table
   auto binstart = std::partition(implics.begin(), implics.end(),

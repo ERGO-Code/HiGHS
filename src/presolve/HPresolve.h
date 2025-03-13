@@ -26,6 +26,7 @@
 #include "presolve/HPresolveAnalysis.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
+#include "util/HighsHashTree.h"
 #include "util/HighsLinearSumBounds.h"
 #include "util/HighsMatrixSlice.h"
 
@@ -94,6 +95,10 @@ class HPresolve {
   std::vector<uint8_t> changedColFlag;
 
   std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
+
+  std::unordered_map<HighsInt,
+                     HighsHashTree<std::pair<HighsInt, HighsInt>, double>>
+      liftingOpportunities;
 
   // set with the sizes and indices of equation rows sorted by the size and a
   // vector to access there iterator positions in the set by index for quick
@@ -195,6 +200,11 @@ class HPresolve {
                    HighsInt row, HighsInt col);
 
   void reinsertEquation(HighsInt row);
+
+  void clearLiftingOpportunities(HighsInt row) {
+    auto search = liftingOpportunities.find(row);
+    if (search != liftingOpportunities.end()) search->second.clear();
+  };
 
 #ifndef NDEBUG
   void debugPrintRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
@@ -307,6 +317,8 @@ class HPresolve {
   void addToMatrix(const HighsInt row, const HighsInt col, const double val);
 
   Result runProbing(HighsPostsolveStack& postsolve_stack);
+
+  Result liftingForProbing(HighsPostsolveStack& postsolve_stack);
 
   Result dominatedColumns(HighsPostsolveStack& postsolve_stack);
 

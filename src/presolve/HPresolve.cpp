@@ -122,6 +122,7 @@ bool HPresolve::okSetInput(HighsLp& model_, const HighsOptions& options_,
   if (!okResize(changedColFlag, model->num_col_, uint8_t{1})) return false;
   if (!okResize(colDeleted, model->num_col_)) return false;
   if (!okReserve(changedColIndices, model->num_col_)) return false;
+  if (!okReserve(liftingOpportunities, model->num_row_)) return false;
   numDeletedCols = 0;
   numDeletedRows = 0;
   // initialize substitution opportunities
@@ -481,6 +482,9 @@ void HPresolve::unlink(HighsInt pos) {
 
   // remove implied bounds on columns that where implied by this row
   resetColImpliedBoundsDerivedFromRow(Arow[pos]);
+
+  // modifications to row invalidate lifting opportunities
+  clearLiftingOpportunities(Arow[pos]);
 
   // remove non-zero
   Avalue[pos] = 0;
@@ -1498,6 +1502,41 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
+
+    // lambda to check if model has enough continuous variables to perform
+    // lifting for probing
+    auto modelHasPercentageContVars = [&](size_t percentage) {
+      size_t num_cols = 0, num_cont_cols = 0;
+      for (size_t col = 0; col < colsize.size(); col++) {
+        if (colDeleted[col]) continue;
+        num_cols++;
+        if (model->integrality_[col] == HighsVarType::kContinuous)
+          num_cont_cols++;
+      }
+      return size_t{100} * num_cont_cols >= percentage * num_cols;
+    };
+
+    // collect up to 10 lifting opportunities per row
+    const size_t maxNumLiftOpps = std::max(
+        size_t{100000}, size_t{10} * static_cast<size_t>(model->num_row_));
+
+    // only search for lifting opportunities if at least 2 percent of the
+    // variables in the problem are continuous
+    size_t numLiftOpps = 0;
+    if (mipsolver->options_mip_->mip_lifting_for_probing != -1 &&
+        modelHasPercentageContVars(size_t{2})) {
+      // store lifting opportunities
+      implications.storeLiftingOpportunity = [&](HighsInt row, HighsInt col,
+                                                 HighsInt val, double coef) {
+        // find lifting opportunities for row
+        auto& htree = liftingOpportunities[row];
+        // add element
+        auto insertresult = htree.insert_or_get(std::make_pair(col, val), coef);
+        assert(insertresult.second);
+        numLiftOpps++;
+      };
+    }
+
     for (const auto& binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
@@ -1566,6 +1605,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       ++numProbed;
       numProbes[i] += 1;
 
+      // Stop collecting lifting opportunities if maximum is reached
+      if (numLiftOpps >= maxNumLiftOpps)
+        implications.storeLiftingOpportunity = nullptr;
+
       // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
       // "\n", nprobed,
       //       cliquetable.numCliques());
@@ -1632,10 +1675,214 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
                 "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
                 numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
                 addednnz);
+
+    // lifting for probing
+    if (mipsolver->options_mip_->mip_lifting_for_probing != -1) {
+      // only perform lifting if probing did not modify the problem so far
+      if (numDeletedRows == 0 && numDeletedCols == 0 && addednnz == 0)
+        HPRESOLVE_CHECKED_CALL(liftingForProbing(postsolve_stack));
+      // clear lifting opportunities
+      liftingOpportunities.clear();
+      implications.storeLiftingOpportunity = nullptr;
+    }
   }
 
   mipsolver->analysis_.mipTimerStop(kMipClockProbingPresolve);
   return checkLimits(postsolve_stack);
+}
+
+HPresolve::Result HPresolve::liftingForProbing(
+    HighsPostsolveStack& postsolve_stack) {
+  // this method implements lifting for probing as described by Achterberg et
+  // al. (2019) Presolve Reductions in Mixed Integer Programming. INFORMS
+  // Journal on Computing 32(2):473-506.
+  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
+  const HighsDomain& domain = mipsolver->mipdata_->domain;
+
+  // collect best lifting opportunity for each row in a vector
+  typedef std::pair<HighsCliqueTable::CliqueVar, double> liftingvar;
+  typedef std::tuple<HighsInt, std::vector<liftingvar>, double, HighsInt>
+      liftingdata;
+  std::vector<liftingdata> liftingtable;
+  liftingtable.reserve(liftingOpportunities.size());
+
+  // remember overall best score
+  double bestscoretotal = -kHighsInf;
+
+  // is lifting allowed to add non-zeros?
+  const bool fillallowed = mipsolver->options_mip_->mip_lifting_for_probing > 0;
+
+  // store clique variables and coefficients in a map
+  auto comp = [](const HighsCliqueTable::CliqueVar& c1,
+                 const HighsCliqueTable::CliqueVar& c2) {
+    return c1.col < c2.col || (c1.col == c2.col && c1.val < c2.val);
+  };
+  std::map<HighsCliqueTable::CliqueVar, std::pair<double, HighsInt>,
+           decltype(comp)>
+      coefficients(comp);
+
+  // consider lifting opportunities
+  size_t numrowsremoved = 0;
+  for (const auto& elm : liftingOpportunities) {
+    // get row index and skip deleted rows
+    HighsInt row = elm.first;
+    if (rowDeleted[row]) continue;
+
+    // do not add non-zeros to dense rows
+    const bool dense =
+        rowsize[row] >
+        std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
+
+    // iterate over elements in hash tree
+    const auto& htree = elm.second;
+    bool isredundant = false;
+    htree.for_each([&](const std::pair<HighsInt, HighsInt>& data, double coef) {
+      HighsInt col = data.first;
+      HighsInt val = data.second;
+      HighsInt pos = findNonzero(row, col);
+      isredundant = isredundant || htree.contains(std::make_pair(col, 1 - val));
+      if (!dense && (fillallowed || pos != -1) && !colDeleted[col] &&
+          !domain.isFixed(col))
+        coefficients[HighsCliqueTable::CliqueVar{col, val}] = {coef, pos};
+    });
+
+    // remove redundant rows
+    if (isredundant) {
+      numrowsremoved++;
+      postsolve_stack.redundantRow(row);
+      removeRow(row);
+      coefficients.clear();
+      HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
+      continue;
+    }
+
+    // skip rows with empty coefficient map
+    if (coefficients.empty()) continue;
+
+    // vector to hold best clique
+    std::vector<liftingvar> bestclique;
+    double bestscore = -kHighsInf;
+    HighsInt bestnfill = 0;
+
+    // lambda for computing coefficient difference
+    auto computeCoeffDiff = [&](double newvalue, HighsInt nzpos) {
+      return std::fabs(newvalue - (nzpos == -1 ? 0 : Avalue[nzpos]));
+    };
+
+    // store candidates in a vector
+    std::vector<HighsCliqueTable::CliqueVar> candidates;
+    candidates.reserve(coefficients.size());
+    for (const auto& elm : coefficients) {
+      candidates.push_back(elm.first);
+      // initialize best clique
+      double score = computeCoeffDiff(elm.second.first, elm.second.second);
+      if (score > bestscore) {
+        bestscore = score;
+        bestnfill = elm.second.second == -1 ? 1 : 0;
+        bestclique = {std::make_pair(elm.first, elm.second.first)};
+      }
+    }
+
+    if (candidates.size() > 1) {
+      // compute cliques
+      auto cliques =
+          cliquetable.computeMaximalCliques(candidates, primal_feastol);
+
+      // identify clique with highest score
+      for (const auto& clique : cliques) {
+        HighsCDouble score = 0;
+        HighsInt nfill = 0;
+        for (const auto& cliquevar : clique) {
+          score += computeCoeffDiff(coefficients[cliquevar].first,
+                                    coefficients[cliquevar].second);
+          if (coefficients[cliquevar].second == -1) nfill++;
+        }
+        if (score > bestscore) {
+          bestscore = static_cast<double>(score);
+          bestnfill = nfill;
+          bestclique.clear();
+          bestclique.reserve(clique.size());
+          for (const auto& cliquevar : clique) {
+            bestclique.emplace_back(cliquevar, coefficients[cliquevar].first);
+          }
+        }
+      }
+    }
+
+    // store best clique
+    liftingtable.emplace_back(row, bestclique, bestscore, bestnfill);
+    bestscoretotal = std::max(bestscoretotal, bestscore);
+    coefficients.clear();
+  }
+
+  // lambda for computing score
+  auto computeOverallScore = [&](double score, HighsInt numelms,
+                                 HighsInt numfillin) {
+    const double weight = 0.5;
+    return weight * (score / bestscoretotal) +
+           (1 - weight) * static_cast<double>(numelms - numfillin) /
+               static_cast<double>(numelms);
+  };
+
+  // sort according to score
+  pdqsort(
+      liftingtable.begin(), liftingtable.end(),
+      [&](const liftingdata& opp1, const liftingdata& opp2) {
+        double score1 = computeOverallScore(
+            std::get<2>(opp1), static_cast<HighsInt>(std::get<1>(opp1).size()),
+            std::get<3>(opp1));
+        double score2 = computeOverallScore(
+            std::get<2>(opp2), static_cast<HighsInt>(std::get<1>(opp2).size()),
+            std::get<3>(opp2));
+        return (score1 == score2 ? std::get<0>(opp1) < std::get<0>(opp2)
+                                 : score1 > score2);
+      });
+
+  // perform actual lifting
+  size_t nfill = 0;
+  size_t nmod = 0;
+  size_t numrowsmodified = 0;
+  const size_t maxnfill = std::max(10 * liftingtable.size(),
+                                   static_cast<size_t>(numNonzeros()) / 100);
+  for (const auto& lifting : liftingtable) {
+    // get clique
+    HighsInt row = std::get<0>(lifting);
+    const auto& bestclique = std::get<1>(lifting);
+
+    // check against max. fill-in
+    size_t newfill = static_cast<size_t>(std::get<3>(lifting));
+    if (nfill + newfill > maxnfill) break;
+    nfill += newfill;
+    nmod += bestclique.size() - newfill;
+
+    // update matrix
+    HighsCDouble update = 0.0;
+    for (const auto& elm : bestclique) {
+      // get data
+      const auto& cliquevar = std::get<0>(elm);
+      const double& coeff = std::get<1>(elm);
+      // add non-zero to matrix
+      addToMatrix(row, cliquevar.col, coeff);
+      // compute term to update left-hand / right-hand side
+      if (cliquevar.val == 0) update += coeff;
+    }
+
+    // update left-hand / right-hand sides
+    numrowsmodified++;
+    if (model->row_lower_[row] != -kHighsInf)
+      model->row_lower_[row] += static_cast<double>(update);
+    if (model->row_upper_[row] != kHighsInf)
+      model->row_upper_[row] += static_cast<double>(update);
+  }
+
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "Lifting for probing removed %d and modified %d row(s), added %d "
+              "new and modified %d existing nonzero(s)\n",
+              static_cast<int>(numrowsremoved),
+              static_cast<int>(numrowsmodified), static_cast<int>(nfill),
+              static_cast<int>(nmod));
+
+  return Result::kOk;
 }
 
 void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
@@ -1673,6 +1920,9 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     // remove implied bounds on columns that where implied by this row
     resetColImpliedBoundsDerivedFromRow(row);
 
+    // modifications to row invalidate lifting opportunities
+    clearLiftingOpportunities(row);
+
   } else {
     double sum = Avalue[pos] + val;
     if (std::abs(sum) <= options->small_matrix_value) {
@@ -1684,6 +1934,9 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
 
       // remove implied bounds on columns that where implied by this row
       resetColImpliedBoundsDerivedFromRow(row);
+
+      // modifications to row invalidate lifting opportunities
+      clearLiftingOpportunities(row);
 
       // remove the locks and contribution to implied (dual) row bounds, then
       // add then again
@@ -4152,8 +4405,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
       if (analysis_.allow_rule_[kPresolveRuleParallelRowsAndCols] &&
           numParallelRowColCalls < 5) {
-        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
-                                     numDeletedRows >= 0.5 * model->num_row_)) {
+        if (shrinkProblemEnabled && (numDeletedCols >= model->num_col_ / 2 ||
+                                     numDeletedRows >= model->num_row_ / 2)) {
           shrinkProblem(postsolve_stack);
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
@@ -4203,8 +4456,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       if (!dependentEquationsCalled) {
-        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->num_col_ ||
-                                     numDeletedRows >= 0.5 * model->num_row_)) {
+        if (shrinkProblemEnabled && (numDeletedCols >= model->num_col_ / 2 ||
+                                     numDeletedRows >= model->num_row_ / 2)) {
           shrinkProblem(postsolve_stack);
 
           toCSC(model->a_matrix_.value_, model->a_matrix_.index_,

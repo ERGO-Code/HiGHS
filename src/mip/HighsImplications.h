@@ -65,6 +65,9 @@ class HighsImplications {
     numImplications = 0;
   }
 
+  std::function<void(HighsInt, HighsInt, HighsInt, double)>
+      storeLiftingOpportunity;
+
   void reset() {
     colsubstituted.clear();
     colsubstituted.shrink_to_fit();
