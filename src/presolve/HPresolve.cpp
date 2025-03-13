@@ -1726,25 +1726,25 @@ HPresolve::Result HPresolve::liftingForProbing(
     if (rowDeleted[row]) continue;
 
     // do not add non-zeros to dense rows
-    bool dense =
+    const bool dense =
         rowsize[row] >
         std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
 
     // iterate over elements in hash tree
     const auto& htree = elm.second;
-    bool isRedundant = false;
+    bool isredundant = false;
     htree.for_each([&](const std::pair<HighsInt, HighsInt>& data, double coef) {
       HighsInt col = data.first;
       HighsInt val = data.second;
       HighsInt pos = findNonzero(row, col);
-      isRedundant = isRedundant || htree.contains(std::make_pair(col, 1 - val));
+      isredundant = isredundant || htree.contains(std::make_pair(col, 1 - val));
       if (!dense && (fillallowed || pos != -1) && !colDeleted[col] &&
           !domain.isFixed(col))
         coefficients[HighsCliqueTable::CliqueVar{col, val}] = {coef, pos};
     });
 
     // remove redundant rows
-    if (isRedundant) {
+    if (isredundant) {
       numrowsremoved++;
       postsolve_stack.redundantRow(row);
       removeRow(row);

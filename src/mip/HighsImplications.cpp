@@ -35,8 +35,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
   auto storeLiftingOpportunities = [&](HighsInt col, bool val) {
-    // use callback to store new lifting opportunities; negate column index if
-    // variable is set to its lower bound
+    // use callback to store lifting opportunities
     if (storeLiftingOpportunity != nullptr) {
       for (const auto& elm : globaldomain.getRedundantRows())
         storeLiftingOpportunity(
