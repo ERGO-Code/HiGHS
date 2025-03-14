@@ -46,6 +46,8 @@ options:
                                    "off" 
       --time_limit float         Run time limit (seconds - double).
       --solution_file text       File for writing out model solution.
+      --read_basis_file text     File for initial basis to read. 
+      --write_basis_file text    File for final basis to write. 
       --write_model_file text    File for writing out model.
       --random_seed int          Seed to initialize random number 
                                  generation.

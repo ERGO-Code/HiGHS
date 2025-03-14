@@ -95,6 +95,15 @@ int main(int argc, char** argv) {
   reportModelStatsOrError(log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError) return (int)read_status;
 
+  if (cmd_options.cmd_read_basis_file != "") {
+    HighsStatus basis_status = highs.readBasis(cmd_options.cmd_read_basis_file);
+    if (basis_status == HighsStatus::kError) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Error reading basis from file\n");
+      return (int)basis_status;
+    }
+  }
+
   // Possible read a solution file
   if (cmd_options.read_solution_file != "") {
     HighsStatus read_solution_status =
@@ -128,6 +137,17 @@ int main(int argc, char** argv) {
   if (run_status == HighsStatus::kError) return int(run_status);
 
   // highs.writeInfo("Info.md");
+
+  if (cmd_options.cmd_write_basis_file != "") {
+    HighsStatus basis_status =
+        highs.writeBasis(cmd_options.cmd_write_basis_file);
+    if (basis_status == HighsStatus::kError) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Error writing basis to file\n");
+
+      return (int)basis_status;
+    }
+  }
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file || options.solution_file != "")
