@@ -825,6 +825,7 @@ HighsStatus Highs::presolve() {
   }
   HighsStatus return_status = HighsStatus::kOk;
 
+  this->reportModelStats();
   clearPresolve();
   if (model_.isEmpty()) {
     model_presolve_status_ = HighsPresolveStatus::kNotReduced;
@@ -910,6 +911,7 @@ HighsStatus Highs::presolve() {
 
 HighsStatus Highs::run() {
   if (!options_.use_warm_start) this->clearSolver();
+  this->reportModelStats();
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
   if (num_linear_objective == 0) return this->solve();
   return this->multiobjectiveSolve();

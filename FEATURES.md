@@ -28,6 +28,21 @@ When running from the command lin, changes to default option values are reported
 
 Added callback to allow users to supply integer feasible solutions to the MIP solver during execution
 
+Bug fix for primal heuristics in the MIP solver
+
+Model status is set appropriately when a solver's claimed optimality doesn't satify the general HiGHS primal/dual feasibilily tolerances. Affects IPM without crossover and PDLP
+
+Command line parsing now done with pure C++11 code
+
+Bug fixes in records of primal/dual rays
+
+MPS read utility improved. Error logging is now less verbose; inability to handle USERCUTS section is properly logged
+
+Implemented lifting for probing as described by Achterberg et al in _Presolve Reductions in Mixed Integer Programming._ INFORMS Journal on Computing 32(2):473-506 (2019). Not used by default, but option mip_lifting_for_probing allows it to be used with two levels of modification
+
+
+
+
 
 
 
