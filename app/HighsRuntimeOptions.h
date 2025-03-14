@@ -26,6 +26,8 @@ struct HighsCommandLineOptions {
   int cmd_random_seed = 0;
 
   std::string model_file = "";
+  std::string cmd_read_basis_file = "";
+  std::string cmd_write_basis_file = "";
   std::string options_file = "";
   std::string read_solution_file = "";
   std::string cmd_presolve = "";
@@ -101,23 +103,28 @@ void setupCommandLineOptions(CLI::App& app,
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
                  "Run time limit (seconds - double).");
 
+  const auto checkSingle = [](const std::string& input) -> std::string {
+    if (input.find(' ') != std::string::npos) {
+      return "Multiple files not implemented.";
+    }
+    return {};
+  };
+
   app.add_option("--" + kSolutionFileString, cmd_options.cmd_solution_file,
                  "File for writing out model solution.")
-      ->check([](const std::string& input) -> std::string {
-        if (input.find(' ') != std::string::npos) {
-          return "Multiple files not implemented.";
-        }
-        return {};
-      });
+      ->check(checkSingle);
+
+  app.add_option("--" + kReadBasisFile, cmd_options.cmd_read_basis_file,
+                 "File for initial basis to read.")
+      ->check(checkSingle);
+
+  app.add_option("--" + kWriteBasisFile, cmd_options.cmd_write_basis_file,
+                 "File for final basis to write.")
+      ->check(checkSingle);
 
   app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
                  "File for writing out model.")
-      ->check([](const std::string& input) -> std::string {
-        if (input.find(' ') != std::string::npos) {
-          return "Multiple files not implemented.";
-        }
-        return {};
-      });
+      ->check(checkSingle);
 
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
                  "Seed to initialize random number \ngeneration.");
