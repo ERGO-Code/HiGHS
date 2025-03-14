@@ -24,7 +24,7 @@ When columns and rows are deleted from the incumbent LP after a basic solution h
 
 Fixed bugs in presolve
 
-When running from the command lin, changes to default option values are reported
+When running from the command line, changes to default option values are reported
 
 Added callback to allow users to supply integer feasible solutions to the MIP solver during execution
 

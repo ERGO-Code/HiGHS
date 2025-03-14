@@ -22,27 +22,31 @@ void Highs::reportModelStats() const {
   const HighsLp& lp = this->model_.lp_;
   const HighsHessian& hessian = this->model_.hessian_;
   const HighsLogOptions& log_options = this->options_.log_options;
+  if (!*log_options.output_flag) return;
   HighsInt num_integer = 0;
+  HighsInt num_binary = 0;
   HighsInt num_semi_continuous = 0;
   HighsInt num_semi_integer = 0;
-  for (HighsUInt i = 0; i < lp.integrality_.size(); i++) {
-    switch (lp.integrality_[i]) {
-    case HighsVarType::kInteger:
-      num_integer++;
-      break;
-    case HighsVarType::kSemiContinuous:
-      num_semi_continuous++;
-      break;
-    case HighsVarType::kSemiInteger:
-      num_semi_integer++;
-      break;
-    default:
-      break;
+  for (HighsInt iCol = 0; iCol < static_cast<HighsInt>(lp.integrality_.size());
+       iCol++) {
+    switch (lp.integrality_[iCol]) {
+      case HighsVarType::kInteger:
+        num_integer++;
+        if (lp.col_lower_[iCol] == 0 && lp.col_upper_[iCol] == 1) num_binary++;
+        break;
+      case HighsVarType::kSemiContinuous:
+        num_semi_continuous++;
+        break;
+      case HighsVarType::kSemiInteger:
+        num_semi_integer++;
+        break;
+      default:
+        break;
     }
   }
   std::string problem_type;
   const bool non_continuous =
-    num_integer + num_semi_continuous + num_semi_integer;
+      num_integer + num_semi_continuous + num_semi_integer;
   if (hessian.dim_) {
     if (non_continuous) {
       problem_type = "MIQP";
@@ -60,59 +64,51 @@ void Highs::reportModelStats() const {
   const HighsInt q_num_nz = hessian.dim_ > 0 ? hessian.numNz() : 0;
   if (*log_options.log_dev_level) {
     highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
-		problem_type.c_str(), lp.model_name_.c_str());
+                problem_type.c_str(), lp.model_name_.c_str());
     highsLogDev(log_options, HighsLogType::kInfo,
-		"Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
+                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsLogDev(log_options, HighsLogType::kInfo,
-		"Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
+                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
     if (q_num_nz) {
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
+                  "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+                  "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
     } else {
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
     }
     if (num_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "Integer   : %" HIGHSINT_FORMAT "\n", num_integer);
+                  "Integer   : %" HIGHSINT_FORMAT " (%" HIGHSINT_FORMAT
+                  " binary)\n",
+                  num_integer, num_binary);
     if (num_semi_continuous)
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+                  "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
     if (num_semi_integer)
       highsLogDev(log_options, HighsLogType::kInfo,
-		  "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+                  "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
   } else {
-    highsLogUser(log_options, HighsLogType::kInfo, "%s",
-		 problem_type.c_str());
-    if (lp.model_name_.length())
-      highsLogUser(log_options, HighsLogType::kInfo, " %s",
-		   lp.model_name_.c_str());
-    highsLogUser(log_options, HighsLogType::kInfo,
-		 " has %" HIGHSINT_FORMAT " rows; %" HIGHSINT_FORMAT " cols",
-		 lp.num_row_, lp.num_col_);
+    std::stringstream stats_line;
+    stats_line << problem_type;
+    if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
+    stats_line << " has " << lp.num_row_ << " rows; " << lp.num_col_ << " cols";
     if (q_num_nz) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " matrix nonzeros", a_num_nz);
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " Hessian nonzeros", q_num_nz);
+      stats_line << "; " << a_num_nz << " matrix nonzeros";
+      stats_line << "; " << q_num_nz << " Hessian nonzeros";
     } else {
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " nonzeros", a_num_nz);
+      stats_line << "; " << a_num_nz << " nonzeros";
     }
     if (num_integer)
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " integer variables", num_integer);
+      stats_line << "; " << num_integer << " integer variables (" << num_binary
+                 << " binary)";
     if (num_semi_continuous)
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " semi-continuous variables",
-		   num_semi_continuous);
+      stats_line << "; " << num_semi_continuous << " semi-continuous variables";
     if (num_semi_integer)
-      highsLogUser(log_options, HighsLogType::kInfo,
-		   "; %" HIGHSINT_FORMAT " semi-integer variables",
-		   num_semi_integer);
-    highsLogUser(log_options, HighsLogType::kInfo, "\n");
+      stats_line << "; " << num_semi_integer << " semi-integer variables";
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+                 stats_line.str().c_str());
   }
 }
 

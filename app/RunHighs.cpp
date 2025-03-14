@@ -89,8 +89,7 @@ int main(int argc, char** argv) {
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
   if (read_status == HighsStatus::kError) {
-    highsLogUser(log_options, HighsLogType::kInfo,
-		 "Error loading file\n");
+    highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
     return (int)read_status;
   }
   // Possible read a solution file
