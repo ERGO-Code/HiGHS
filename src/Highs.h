@@ -1484,6 +1484,7 @@ class Highs {
 
   bool written_log_header_ = false;
 
+  void reportModelStats() const;
   HighsStatus solve();
 
   void exactResizeModel() {

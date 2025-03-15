@@ -15,10 +15,6 @@
 // uncomment if we will be shutting down task executor from exe
 // #include "parallel/HighsParallel.h"
 
-void reportModelStatsOrError(const HighsLogOptions& log_options,
-                             const HighsStatus read_status,
-                             const HighsModel& model);
-
 int main(int argc, char** argv) {
   // Create the Highs instance.
   Highs highs;
@@ -92,8 +88,10 @@ int main(int argc, char** argv) {
 
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(cmd_options.model_file);
-  reportModelStatsOrError(log_options, read_status, highs.getModel());
-  if (read_status == HighsStatus::kError) return (int)read_status;
+  if (read_status == HighsStatus::kError) {
+    highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
+    return (int)read_status;
+  }
 
   if (cmd_options.cmd_read_basis_file != "") {
     HighsStatus basis_status = highs.readBasis(cmd_options.cmd_read_basis_file);
@@ -164,107 +162,4 @@ int main(int argc, char** argv) {
   // HighsTaskExecutor::shutdown(true);
 
   return (int)run_status;
-}
-
-void reportModelStatsOrError(const HighsLogOptions& log_options,
-                             const HighsStatus read_status,
-                             const HighsModel& model) {
-  const HighsLp& lp = model.lp_;
-  const HighsHessian& hessian = model.hessian_;
-  if (read_status == HighsStatus::kError) {
-    highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
-  } else {
-    HighsInt num_integer = 0;
-    HighsInt num_semi_continuous = 0;
-    HighsInt num_semi_integer = 0;
-    for (HighsUInt i = 0; i < lp.integrality_.size(); i++) {
-      switch (lp.integrality_[i]) {
-        case HighsVarType::kInteger:
-          num_integer++;
-          break;
-        case HighsVarType::kSemiContinuous:
-          num_semi_continuous++;
-          break;
-        case HighsVarType::kSemiInteger:
-          num_semi_integer++;
-          break;
-        default:
-          break;
-      }
-    }
-    std::string problem_type;
-    const bool non_continuous =
-        num_integer + num_semi_continuous + num_semi_integer;
-    if (hessian.dim_) {
-      if (non_continuous) {
-        problem_type = "MIQP";
-      } else {
-        problem_type = "QP  ";
-      }
-    } else {
-      if (non_continuous) {
-        problem_type = "MIP ";
-      } else {
-        problem_type = "LP  ";
-      }
-    }
-    const HighsInt a_num_nz = lp.a_matrix_.numNz();
-    HighsInt q_num_nz = hessian.numNz();
-    if (*log_options.log_dev_level) {
-      highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
-                  problem_type.c_str(), lp.model_name_.c_str());
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
-      if (q_num_nz) {
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
-      } else {
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
-      }
-      if (num_integer)
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "Integer   : %" HIGHSINT_FORMAT "\n", num_integer);
-      if (num_semi_continuous)
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
-      if (num_semi_integer)
-        highsLogDev(log_options, HighsLogType::kInfo,
-                    "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
-    } else {
-      highsLogUser(log_options, HighsLogType::kInfo, "%s",
-                   problem_type.c_str());
-      if (lp.model_name_.length())
-        highsLogUser(log_options, HighsLogType::kInfo, " %s",
-                     lp.model_name_.c_str());
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   " has %" HIGHSINT_FORMAT " rows; %" HIGHSINT_FORMAT " cols",
-                   lp.num_row_, lp.num_col_);
-      if (q_num_nz) {
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " matrix nonzeros", a_num_nz);
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " Hessian nonzeros", q_num_nz);
-      } else {
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " nonzeros", a_num_nz);
-      }
-      if (num_integer)
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " integer variables", num_integer);
-      if (num_semi_continuous)
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " semi-continuous variables",
-                     num_semi_continuous);
-      if (num_semi_integer)
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "; %" HIGHSINT_FORMAT " semi-integer variables",
-                     num_semi_integer);
-      highsLogUser(log_options, HighsLogType::kInfo, "\n");
-    }
-  }
 }

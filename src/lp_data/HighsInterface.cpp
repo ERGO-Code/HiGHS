@@ -18,6 +18,100 @@
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
 
+void Highs::reportModelStats() const {
+  const HighsLp& lp = this->model_.lp_;
+  const HighsHessian& hessian = this->model_.hessian_;
+  const HighsLogOptions& log_options = this->options_.log_options;
+  if (!*log_options.output_flag) return;
+  HighsInt num_integer = 0;
+  HighsInt num_binary = 0;
+  HighsInt num_semi_continuous = 0;
+  HighsInt num_semi_integer = 0;
+  for (HighsInt iCol = 0; iCol < static_cast<HighsInt>(lp.integrality_.size());
+       iCol++) {
+    switch (lp.integrality_[iCol]) {
+      case HighsVarType::kInteger:
+        num_integer++;
+        if (lp.col_lower_[iCol] == 0 && lp.col_upper_[iCol] == 1) num_binary++;
+        break;
+      case HighsVarType::kSemiContinuous:
+        num_semi_continuous++;
+        break;
+      case HighsVarType::kSemiInteger:
+        num_semi_integer++;
+        break;
+      default:
+        break;
+    }
+  }
+  std::string problem_type;
+  const bool non_continuous =
+      num_integer + num_semi_continuous + num_semi_integer;
+  if (hessian.dim_) {
+    if (non_continuous) {
+      problem_type = "MIQP";
+    } else {
+      problem_type = "QP  ";
+    }
+  } else {
+    if (non_continuous) {
+      problem_type = "MIP ";
+    } else {
+      problem_type = "LP  ";
+    }
+  }
+  const HighsInt a_num_nz = lp.a_matrix_.numNz();
+  const HighsInt q_num_nz = hessian.dim_ > 0 ? hessian.numNz() : 0;
+  if (*log_options.log_dev_level) {
+    highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
+                problem_type.c_str(), lp.model_name_.c_str());
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
+    if (q_num_nz) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+    } else {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+    }
+    if (num_integer)
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Integer   : %" HIGHSINT_FORMAT " (%" HIGHSINT_FORMAT
+                  " binary)\n",
+                  num_integer, num_binary);
+    if (num_semi_continuous)
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "SemiConts : %" HIGHSINT_FORMAT "\n", num_semi_continuous);
+    if (num_semi_integer)
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "SemiInt   : %" HIGHSINT_FORMAT "\n", num_semi_integer);
+  } else {
+    std::stringstream stats_line;
+    stats_line << problem_type;
+    if (lp.model_name_.length()) stats_line << " " << lp.model_name_;
+    stats_line << " has " << lp.num_row_ << " rows; " << lp.num_col_ << " cols";
+    if (q_num_nz) {
+      stats_line << "; " << a_num_nz << " matrix nonzeros";
+      stats_line << "; " << q_num_nz << " Hessian nonzeros";
+    } else {
+      stats_line << "; " << a_num_nz << " nonzeros";
+    }
+    if (num_integer)
+      stats_line << "; " << num_integer << " integer variables (" << num_binary
+                 << " binary)";
+    if (num_semi_continuous)
+      stats_line << "; " << num_semi_continuous << " semi-continuous variables";
+    if (num_semi_integer)
+      stats_line << "; " << num_semi_integer << " semi-integer variables";
+    highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+                 stats_line.str().c_str());
+  }
+}
+
 HighsStatus Highs::formStandardFormLp() {
   this->clearStandardFormLp();
   HighsLp& lp = this->model_.lp_;
