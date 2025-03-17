@@ -783,7 +783,7 @@ void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
   CUPDLPvec *yUpdate = iterates->y[(iter + 1) % 2];
   CUPDLPvec *atyUpdate = iterates->aty[(iter + 1) % 2];
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   cupdlp_movement_interaction_cuda(&dX, &dY, dInteraction, w->buffer2,
       xUpdate->data, x->data, yUpdate->data, y->data, atyUpdate->data, aty->data, nRows, nCols);
 #else

@@ -308,7 +308,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // free memory
   csc_clear_host(csc_cpu);
   problem_clear(prob);
-  #if !(CUPDLP_CPU)
+  #if !defined(CUPDLP_CPU)
     if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess) 
       return HighsStatus::kError; 
     // CHECK_CUDA(cudaDeviceReset())

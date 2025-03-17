@@ -846,7 +846,7 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
                             cupdlp_int ncols, cupdlp_int nrows) {
   cupdlp_retcode retcode = RETCODE_OK;
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   resobj->primalResidual = NULL;
   resobj->dualResidual = NULL;
   resobj->primalResidualAverage = NULL;
@@ -867,7 +867,7 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
   cupdlp_init_zero_vec_double(resobj->dLowerFiltered, ncols);
   cupdlp_init_zero_vec_double(resobj->dUpperFiltered, ncols);
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   resobj->primalInfeasRay = NULL;
   resobj->primalInfeasConstr = NULL;
   resobj->primalInfeasBound = NULL;
@@ -885,7 +885,7 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
 #endif
 
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   resobj->dualInfeasConstr = NULL;
 #else
   cupdlp_init_zero_vec_double(resobj->dualInfeasConstr, ncols);
@@ -1099,7 +1099,7 @@ cupdlp_retcode PDHG_Alloc(CUPDLPwork *w) {
 
   cupdlp_init_zero_vec_double(w->buffer2,
                        MAX(2048, MAX(w->problem->data->nCols, w->problem->data->nRows)));
-#if CUPDLP_CPU || !(USE_KERNELS) || (CUPDLP_DUMP_LINESEARCH_STATS && CUPDLP_DEBUG)
+#if defined(CUPDLP_CPU) || !(USE_KERNELS) || (CUPDLP_DUMP_LINESEARCH_STATS && CUPDLP_DEBUG)
   cupdlp_init_zero_vec_double(w->buffer3,
                        MAX(2048, MAX(w->problem->data->nCols, w->problem->data->nRows)));
 #else

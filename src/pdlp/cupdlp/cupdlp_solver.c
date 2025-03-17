@@ -26,7 +26,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, cupdlp_float *primalResid
   cupdlp_dot(work, lp->nCols, x, problem->cost, dPrimalObj);
   *dPrimalObj = *dPrimalObj * problem->sense_origin + problem->offset;
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   primalResidual = work->buffer2;
 
   cupdlp_primal_feasibility_kernel_cuda(primalResidual, ax, problem->rhs,
@@ -96,7 +96,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, cupdlp_float *dualResidual,
   //    *dDualObj = Dotprod_Neumaier(problem->rhs, y, lp->nRows);
   cupdlp_dot(work, lp->nRows, y, problem->rhs, dDualObj);
 
-  #if !(CUPDLP_CPU) && USE_KERNELS
+  #if !defined(CUPDLP_CPU) && USE_KERNELS
   dualResidual = work->buffer2;
 
   cupdlp_float alpha;
@@ -258,7 +258,7 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
   // cupdlp_float dBoundLbResSq = 0.0;
   // cupdlp_float dBoundUbResSq = 0.0;
 
-#if !(CUPDLP_CPU) && USE_KERNELS
+#if !defined(CUPDLP_CPU) && USE_KERNELS
   cupdlp_twoNormSquared(work, problem->data->nRows, y, &yNrmSq);
   cupdlp_twoNormSquared(work, problem->data->nCols, dSlackPos, &slackPosNrmSq);
   cupdlp_twoNormSquared(work, problem->data->nCols, dSlackNeg, &slackNegSq);
@@ -355,7 +355,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_float pBoundLbResSq = 0.0;
   cupdlp_float pBoundUbResSq = 0.0;
 
-  #if !(CUPDLP_CPU) && USE_KERNELS
+  #if !defined(CUPDLP_CPU) && USE_KERNELS
   // x ray
   cupdlp_twoNorm(work, problem->data->nCols, x, &pScale);
   // pScale /= sqrt(problem->data->nCols);
@@ -1358,7 +1358,7 @@ cupdlp_retcode LP_SolvePDHG(
   if (pdhg->settings->nLogLevel > 1) 
     PDHG_PrintHugeCUPDHG();
 
-#if !(CUPDLP_CPU)
+#if !defined(CUPDLP_CPU)
   if (pdhg->settings->nLogLevel > 1) 
     print_cuda_info(pdhg->cusparsehandle);
 #endif
