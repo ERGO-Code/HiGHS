@@ -337,7 +337,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     else()
         if (CUPDLP_GPU)
             set(pdlpInstances
-                "25fv47\; 5.5018549\;"
+                "25fv47\; 5.50185\;" # 549 release 500 debug
                 "adlittle\; 2.2549505\;"
                 "afiro\;-4.6475325\;"
                 "avgas\;-7.750000\;"
@@ -346,7 +346,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                 "scrs8\; 9.0429693\;"
                 "sctest\; 5.7500000\;"
                 "shell\; 1.20882535\;"
-                "stair\;-2.5126696\;"
+                "stair\;-2.5126696\;" # 96 release 95 debug
                 "standata\; 1.2576995\;"
                 "standgub\; 1.2576993\;"
                 )
