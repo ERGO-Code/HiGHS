@@ -4,8 +4,8 @@ on: [push]
 
 jobs: 
   run-smi: 
-    runs-on: 
-      group: linux-server
+    runs-on:  runner-nvidia-one
+      # group: linux-server
       # labels:
     
     steps: 
