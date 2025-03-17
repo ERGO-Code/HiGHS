@@ -118,7 +118,6 @@ option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 # message(STATUS "Build pdlp with CPU: ${CUPDLP_CPU}")
 
 option(CUPDLP_GPU "Build pdlp with GPU" OFF)
-set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
 
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
@@ -129,9 +128,21 @@ endif()
 
 if (CUPDLP_GPU)
   set (CUPDLP_CPU OFF)
-    list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+    # With FindCUDAConf.cmake
+    # default cuda_home on linux
+    set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
     message(NOTICE "Set build cuPDLP with CUDA")
+    list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
     include(FindCUDAConf.cmake)
+
+    # With deleted FindCUDAConf.cmake
+    # find_package(CUDAToolkit REQUIRED)
+    # set(CUDA_LIBRARY-NOTFOUND, OFF)
+    # message(NOTICE "    - CUDA Libraries detected at ${CUDA_HOME}")
+    # set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    # message(NOTICE "    -   :${CUDA_LIBRARY}")
+
+    message(NOTICE "Set build cuPDLP with CUDA")
 else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)
