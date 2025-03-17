@@ -358,14 +358,14 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
     // count number of equations and rows
     if (has_lower && has_upper && lhs_clp[i] == rhs_clp[i]) {
-      *constraint_type[i] = EQ;
+      (*constraint_type)[i] = EQ;
       (*nEqs)++;
     } else if (has_lower && !has_upper) {
-      *constraint_type[i] = GEQ;
+      (*constraint_type)[i] = GEQ;
     } else if (!has_lower && has_upper) {
-      *constraint_type[i] = LEQ;
+      (*constraint_type)[i] = LEQ;
     } else if (has_lower && has_upper) {
-      *constraint_type[i] = BOUND;
+      (*constraint_type)[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -376,7 +376,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
       // what if regard free as bounded
       printf("Warning: constraint %d has no lower and upper bound\n", i);
-      *constraint_type[i] = BOUND;
+      (*constraint_type)[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -405,7 +405,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // slack bounds
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (*constraint_type[i] == BOUND) {
+    if ((*constraint_type)[i] == BOUND) {
       (*lower)[j] = lhs_clp[i];
       (*upper)[j] = rhs_clp[i];
       j++;
@@ -420,11 +420,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   // permute LP rhs
   // EQ or BOUND first
   for (int i = 0, j = 0; i < *nRows; i++) {
-    if (*constraint_type[i] == EQ) {
+    if ((*constraint_type)[i] == EQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (*constraint_type[i] == BOUND) {
+    } else if ((*constraint_type)[i] == BOUND) {
       (*rhs)[j] = 0.0;
       (*constraint_new_idx)[i] = j;
       j++;
@@ -432,11 +432,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // then LEQ or GEQ
   for (int i = 0, j = *nEqs; i < *nRows; i++) {
-    if (*constraint_type[i] == LEQ) {
+    if ((*constraint_type)[i] == LEQ) {
       (*rhs)[j] = -rhs_clp[i];  // multiply -1
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (*constraint_type[i] == GEQ) {
+    } else if ((*constraint_type)[i] == GEQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
@@ -454,8 +454,8 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     // same order as in rhs
     // EQ or BOUND first
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (*constraint_type[A_csc_idx[j]] == EQ ||
-          *constraint_type[A_csc_idx[j]] == BOUND) {
+      if ((*constraint_type)[A_csc_idx[j]] == EQ ||
+          (*constraint_type)[A_csc_idx[j]] == BOUND) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -463,11 +463,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     }
     // then LEQ or GEQ
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (*constraint_type[A_csc_idx[j]] == LEQ) {
+      if ((*constraint_type)[A_csc_idx[j]] == LEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = -A_csc_val[j];  // multiply -1
         k++;
-      } else if (*constraint_type[A_csc_idx[j]] == GEQ) {
+      } else if ((*constraint_type)[A_csc_idx[j]] == GEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -477,7 +477,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
   // slacks for BOUND
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (*constraint_type[i] == BOUND) {
+    if ((*constraint_type)[i] == BOUND) {
       (*csc_idx)[(*csc_beg)[j]] = (*constraint_new_idx)[i];
       (*csc_val)[(*csc_beg)[j]] = -1.0;
       j++;

@@ -21,6 +21,15 @@
 #include <cuda_runtime.h>
 #endif
 
+// #define CUPDLP_CPP_INIT(var, type, size)                                \
+//   {                                                                     \
+//     (var) = (type *)malloc((size) * sizeof(type));                      \
+//     if ((var) == NULL) {                                                \
+//       retcode = 1;                                                      \
+//       goto exit_cleanup;                                                \
+//     }                                                                   \
+//   }
+
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
 #define cupdlp_init_int(var, size) \
