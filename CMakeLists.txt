@@ -127,20 +127,25 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 # endif()
 
 if (CUPDLP_GPU)
+  if (WIN32)
+    set(BUILD_SHARED_LIBS ON)
+  endif()
+
   set (CUPDLP_CPU OFF)
-    # With FindCUDAConf.cmake
-    # default cuda_home on linux
-    # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
-    # message(NOTICE "Set build cuPDLP with CUDA")
-    # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
-    # include(FindCUDAConf.cmake)
 
-    # With deleted FindCUDAConf.cmake
-    find_package(CUDAToolkit REQUIRED)
-    set(CUDA_LIBRARY-NOTFOUND, OFF)
-    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+  # With FindCUDAConf.cmake
+  # default cuda_home on linux
+  # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+  # message(NOTICE "Set build cuPDLP with CUDA")
+  # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+  # include(FindCUDAConf.cmake)
 
-    message(NOTICE "Set build cuPDLP with CUDA")
+  # With deleted FindCUDAConf.cmake
+  find_package(CUDAToolkit REQUIRED)
+  set(CUDA_LIBRARY-NOTFOUND, OFF)
+  set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+
+  message(NOTICE "Set build cuPDLP with CUDA")
 else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)
@@ -229,8 +234,9 @@ if (BUILD_CXX)
     CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
     CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
+  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+  # not recognised by cl
+  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
   endif()  
 
   # Basic type
