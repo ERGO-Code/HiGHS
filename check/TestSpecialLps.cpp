@@ -47,6 +47,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     REQUIRE(iteration_count == require_iteration_count);
   }
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+  highs.setOptionValue("output_flag", dev_run);
 }
 
 void distillation(Highs& highs) {
@@ -591,6 +592,7 @@ void singularStartingBasis(Highs& highs) {
                                     optimal_objective, dev_run));
 
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+  highs.setOptionValue("output_flag", dev_run);
 
   special_lps.reportSolution(highs, dev_run);
 }

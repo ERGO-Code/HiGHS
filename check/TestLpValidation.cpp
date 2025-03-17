@@ -389,6 +389,10 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
+  REQUIRE(highs.ensureRowwise() == HighsStatus::kOk);
+  REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
+          HighsStatus::kOk);
+  REQUIRE(check_value == to_value);
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {

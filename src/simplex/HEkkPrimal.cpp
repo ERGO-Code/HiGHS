@@ -1931,13 +1931,13 @@ void HEkkPrimal::considerInfeasibleValueIn() {
       // Perturb the upper bound to accommodate the infeasibility
       shiftBound(false, variable_in, value_in,
                  info.numTotRandomValue_[variable_in],
-                 info.workUpper_[variable_in], bound_shift, true);
+                 info.workUpper_[variable_in], bound_shift);
       info.workUpperShift_[variable_in] += bound_shift;
     } else {
       // Perturb the lower bound to accommodate the infeasibility
       shiftBound(true, variable_in, value_in,
                  info.numTotRandomValue_[variable_in],
-                 info.workLower_[variable_in], bound_shift, true);
+                 info.workLower_[variable_in], bound_shift);
       info.workLowerShift_[variable_in] += bound_shift;
     }
     info.bounds_perturbed = true;
@@ -2010,14 +2010,14 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
         // Perturb the upper bound to accommodate the infeasibility
         shiftBound(false, iCol, info.baseValue_[iRow],
                    info.numTotRandomValue_[iCol], info.workUpper_[iCol],
-                   bound_shift, true);
+                   bound_shift);
         info.baseUpper_[iRow] = info.workUpper_[iCol];
         info.workUpperShift_[iCol] += bound_shift;
       } else {
         // Perturb the lower bound to accommodate the infeasibility
         shiftBound(true, iCol, info.baseValue_[iRow],
                    info.numTotRandomValue_[iCol], info.workLower_[iCol],
-                   bound_shift, true);
+                   bound_shift);
         info.baseLower_[iRow] = info.workLower_[iCol];
         info.workLowerShift_[iCol] += bound_shift;
       }
@@ -2076,14 +2076,14 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
           // Perturb the upper bound to accommodate the infeasibility
           shiftBound(false, iCol, info.baseValue_[iRow],
                      info.numTotRandomValue_[iCol], info.workUpper_[iCol],
-                     bound_shift, true);
+                     bound_shift);
           info.baseUpper_[iRow] = info.workUpper_[iCol];
           info.workUpperShift_[iCol] += bound_shift;
         } else {
           // Perturb the lower bound to accommodate the infeasibility
           shiftBound(true, iCol, info.baseValue_[iRow],
                      info.numTotRandomValue_[iCol], info.workLower_[iCol],
-                     bound_shift, true);
+                     bound_shift);
           info.baseLower_[iRow] = info.workLower_[iCol];
           info.workLowerShift_[iCol] += bound_shift;
         }
@@ -2792,7 +2792,16 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
 
 void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
                             const double value, const double random_value,
-                            double& bound, double& shift, const bool report) {
+                            double& bound, double& shift) {
+  // If infeasibility is very large, then adding feasibility may not
+  // yield a new value (see #1144) so new_infeasibility < 0 is false,
+  // tripping the old assert
+  //
+  // Ambros proposed adding feasibility
+  // *(infeasibility/scale_threshold) when
+  // infeasibility/scale_threshold > 1, but this could lead to a large
+  // value for new_infeasibility. Sounds better to accept degeneracy
+  // in this edge case.
   double feasibility = (1 + random_value) * primal_feasibility_tolerance;
   double old_bound = bound;
   std::string type;
@@ -2805,20 +2814,10 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     infeasibility = bound - value;
     assert(infeasibility > 0);
     // Determine the amount by which value will be feasible - so that
-    // it's not degenerate
+    // (ideally) it's not degenerate
     shift = infeasibility + feasibility;
     bound -= shift;
     new_infeasibility = bound - value;
-    if (new_infeasibility >= 0) {
-      printf(
-          "HEkkPrimal::shiftBound LB = %g; random_value = %g; value = %g; "
-          "feasibility = %g; infeasibility = %g; shift = %g; bound = %g; "
-          "new_infeasibility = %g; \n",
-          old_bound, random_value, value, feasibility, infeasibility, shift,
-          bound, new_infeasibility);
-      fflush(stdout);
-    }
-    assert(new_infeasibility < 0);
   } else {
     // Bound to shift is upper
     type = "upper";
@@ -2826,26 +2825,34 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
     infeasibility = value - bound;
     assert(infeasibility > 0);
     // Determine the amount by which value will be feasible - so that
-    // it's not degenerate
+    // (ideally) it's not degenerate
     shift = infeasibility + feasibility;
     bound += shift;
     new_infeasibility = value - bound;
-    assert(new_infeasibility < 0);
   }
-  double error = fabs(-new_infeasibility - feasibility);
-  if (report)
-    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kVerbose,
-                "Value(%4" HIGHSINT_FORMAT
-                ") = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
-                "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
-                iVar, value, type.c_str(), old_bound, infeasibility, shift,
-                bound, new_infeasibility, error);
+  if (new_infeasibility > 0) {
+    // new_infeasibility should be non-positive, and negative unless
+    // bound is excessively large, whereas feasibility is positive
+    double error = std::fabs(new_infeasibility + feasibility);
+    highsLogDev(ekk_instance_.options_->log_options, HighsLogType::kInfo,
+                "HEkkPrimal::shiftBound Value(%4d) = %10.4g exceeds %s: "
+                "random_value = %g; value = %g; "
+                "feasibility = %g; infeasibility = %g; shift = %g; bound = %g; "
+                "new_infeasibility = %g with error %g\n",
+                int(iVar), value, type.c_str(), old_bound, random_value, value,
+                feasibility, infeasibility, shift, bound, new_infeasibility,
+                error);
+    fflush(stdout);
+  }
+  assert(new_infeasibility <= 0);
 }
 
 void HEkkPrimal::savePrimalRay() {
-  ekk_instance_.status_.has_primal_ray = true;
-  ekk_instance_.info_.primal_ray_col_ = variable_in;
-  ekk_instance_.info_.primal_ray_sign_ = -move_in;
+  assert(variable_in >= 0);
+  assert(move_in != kNoRaySign);
+  ekk_instance_.primal_ray_record_.clear();
+  ekk_instance_.primal_ray_record_.index = variable_in;
+  ekk_instance_.primal_ray_record_.sign = -move_in;
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,

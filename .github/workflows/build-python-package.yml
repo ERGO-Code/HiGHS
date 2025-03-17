@@ -75,23 +75,23 @@ jobs:
           python -m pytest 
              
   build_wheel_linux:
-    # ubuntu 22 has a latest version of cmake, but setup-python 
-    # does not seem to provide all necessary modules to find python
-    # from cmake. works on my machine, test the wheels manually
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    strategy:
+        matrix:
+          python: [3.11]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install correct python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ matrix.python }}
 
       - name: Build wheel
         run: |
           python3 --version
           python3 -m pip install cibuildwheel
-          python3 -m cibuildwheel --only cp310-manylinux_x86_64 $GITHUB_WORKSPACE
+          python3 -m cibuildwheel --only cp311-manylinux_x86_64 $GITHUB_WORKSPACE
 
       - name: Install wheel
         run: |
@@ -102,7 +102,36 @@ jobs:
         run: |
           python3 -m pip install pytest
           python3 -m pytest $GITHUB_WORKSPACE
-          
+
+  build_wheel_linux_arm:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+        matrix:
+          python: [3.11]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build wheel
+        run: |
+          python3 --version
+          python3 -m pip install cibuildwheel
+          python3 -m cibuildwheel --only cp311-manylinux_aarch64 $GITHUB_WORKSPACE
+
+      - name: Install wheel
+        run: |
+          ls wheelhouse
+          python3 -m pip install wheelhouse/*.whl
+
+      - name: Test highspy
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest $GITHUB_WORKSPACE
+
   # macos 13 is Intel
   build_wheel_macos_13:
     runs-on: macos-13

@@ -39,6 +39,7 @@ void HEkk::clear() {
   this->basis_.clear();
   this->simplex_nla_.clear();
   this->clearEkkAllStatus();
+  this->clearRayRecords();
 }
 
 void HEkk::clearEkkAllStatus() {
@@ -62,8 +63,6 @@ void HEkk::clearEkkDataStatus() {
   status.has_fresh_rebuild = false;
   status.has_dual_objective_value = false;
   status.has_primal_objective_value = false;
-  status.has_dual_ray = false;
-  status.has_primal_ray = false;
 }
 
 void HEkk::clearNlaStatus() {
@@ -78,6 +77,11 @@ void HEkk::clearNlaStatus() {
 void HEkk::clearNlaInvertStatus() {
   this->status_.has_invert = false;
   this->status_.has_fresh_invert = false;
+}
+
+void HEkk::clearRayRecords() {
+  this->dual_ray_record_.clear();
+  this->primal_ray_record_.clear();
 }
 
 void HEkk::clearEkkPointers() {
@@ -114,9 +118,6 @@ void HEkk::clearEkkData() {
   // clearing Ekk data, so that the simplex basis and HFactor instance
   // are maintained
   //
-  // Does clear any frozen basis data
-  if (this->status_.has_nla) this->simplex_nla_.frozenBasisClearAllData();
-
   // analysis_; No clear yet
 
   this->clearEkkDataInfo();
@@ -143,8 +144,7 @@ void HEkk::clearEkkData() {
   this->proof_index_.clear();
   this->proof_value_.clear();
 
-  this->primal_ray_.clear();
-  this->dual_ray_.clear();
+  this->clearRayRecords();
 
   this->build_synthetic_tick_ = 0.0;
   this->total_synthetic_tick_ = 0.0;
@@ -197,10 +197,6 @@ void HEkk::clearEkkDataInfo() {
   info.backtracking_basis_workLowerShift_.clear();
   info.backtracking_basis_workUpperShift_.clear();
   info.backtracking_basis_edge_weight_.clear();
-  info.dual_ray_row_ = -1;
-  info.dual_ray_sign_ = 0;
-  info.primal_ray_col_ = -1;
-  info.primal_ray_sign_ = 0;
   info.simplex_strategy = 0;
   info.dual_edge_weight_strategy = 0;
   info.primal_edge_weight_strategy = 0;
@@ -276,17 +272,6 @@ void HEkk::clearEkkNlaInfo() {
   info.update_limit = 0;
 }
 
-void HotStart::clear() {
-  this->valid = false;
-  this->refactor_info.clear();
-  this->nonbasicMove.clear();
-}
-
-void HEkk::clearHotStart() {
-  this->hot_start_.clear();
-  this->simplex_nla_.factor_.refactor_info_.clear();
-}
-
 void HEkk::invalidate() {
   this->status_.initialised_for_new_lp = false;
   assert(!this->status_.is_dualized);
@@ -320,15 +305,7 @@ void HEkk::invalidateBasisArtifacts() {
   this->status_.has_fresh_rebuild = false;
   this->status_.has_dual_objective_value = false;
   this->status_.has_primal_objective_value = false;
-  // Invalidate dual and primal ray data
-  this->status_.has_dual_ray = false;
-  this->status_.has_primal_ray = false;
-  this->info_.dual_ray_row_ = -1;
-  this->info_.dual_ray_sign_ = -1;
-  this->dual_ray_.clear();
-  this->info_.primal_ray_col_ = -1;
-  this->info_.primal_ray_sign_ = -1;
-  this->primal_ray_.clear();
+  this->clearRayRecords();
 }
 
 void HEkk::updateStatus(LpAction action) {
@@ -337,7 +314,6 @@ void HEkk::updateStatus(LpAction action) {
   switch (action) {
     case LpAction::kScale:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
       break;
     case LpAction::kNewCosts:
       this->status_.has_fresh_rebuild = false;
@@ -351,11 +327,9 @@ void HEkk::updateStatus(LpAction action) {
       break;
     case LpAction::kNewBasis:
       this->invalidateBasis();
-      this->clearHotStart();
       break;
     case LpAction::kNewCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
@@ -366,40 +340,29 @@ void HEkk::updateStatus(LpAction action) {
         // Clear everything
         this->clear();
       }
-      this->clearHotStart();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasis();
       break;
     case LpAction::kDelNonbasicCols:
       this->clear();
-      this->clearHotStart();
       //    this->invalidateBasis();
       break;
     case LpAction::kDelRows:
       this->clear();
-      this->clearHotStart();
       //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
       assert(1 == 0);
-      this->clearHotStart();
       //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
       break;
     case LpAction::kScaledRow:
       this->invalidateBasisMatrix();
-      this->clearHotStart();
-      break;
-    case LpAction::kHotStart:
-      this->clearEkkData();  //
-      this->clearNlaInvertStatus();
       break;
     case LpAction::kBacktracking:
       this->status_.has_ar_matrix = false;
@@ -1073,8 +1036,7 @@ HighsStatus HEkk::solve(const bool force_phase2) {
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
-  status_.has_dual_ray = false;
-  status_.has_primal_ray = false;
+  this->clearRayRecords();
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
@@ -1105,13 +1067,13 @@ HighsStatus HEkk::solve(const bool force_phase2) {
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - SIP with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK parallel dual simplex solver - PAMI with "
-                   "concurrency of %" HIGHSINT_FORMAT "\n",
-                   info_.num_concurrency);
+                   "concurrency of %d\n",
+                   int(info_.num_concurrency));
     } else {
       highsLogUser(options_->log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");
@@ -2315,21 +2277,11 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   status_.has_ar_matrix = true;
 }
 
-bool HEkk::lpFactorRowCompatible() {
-  // Check for LP-HFactor row compatibility
-  const bool consistent_num_row =
-      this->simplex_nla_.factor_.num_row == this->lp_.num_row_;
-  if (!consistent_num_row) {
-    highsLogDev(options_->log_options, HighsLogType::kError,
-                "HEkk::initialiseSimplexLpBasisAndFactor: LP(%6d, %6d) has "
-                "factor_num_row = %d\n",
-                (int)this->lp_.num_col_, (int)this->lp_.num_row_,
-                (int)this->simplex_nla_.factor_.num_row);
-  }
-  return consistent_num_row;
+bool HEkk::lpFactorRowCompatible() const {
+  return lpFactorRowCompatible(this->lp_.num_row_);
 }
 
-bool HEkk::lpFactorRowCompatible(HighsInt expectedNumRow) {
+bool HEkk::lpFactorRowCompatible(const HighsInt expectedNumRow) const {
   // Check for LP-HFactor row compatibility
   const bool consistent_num_row =
       this->simplex_nla_.factor_.num_row == expectedNumRow;
@@ -3659,7 +3611,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 }
 
 double HEkk::computeBasisCondition(const HighsLp& lp, const bool exact,
-                                   const bool report) {
+                                   const bool report) const {
   HighsInt solver_num_row = lp.num_row_;
   HighsInt solver_num_col = lp.num_col_;
   vector<double> bs_cond_x;
@@ -3818,55 +3770,6 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) {
     assert(1 == 0);
   }
   return rebuild_reason_string;
-}
-
-void HEkk::freezeBasis(HighsInt& frozen_basis_id) {
-  assert(this->status_.has_invert);
-  frozen_basis_id =
-      this->simplex_nla_.freeze(this->basis_, info_.col_aq_density);
-  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
-  if (this->status_.has_dual_steepest_edge_weights) {
-    // Copy the dual edge weights
-    frozen_basis.dual_edge_weight_ = this->dual_edge_weight_;
-  } else {
-    // Clear to indicate no weights
-    frozen_basis.dual_edge_weight_.clear();
-  }
-}
-
-HighsStatus HEkk::unfreezeBasis(const HighsInt frozen_basis_id) {
-  // Check that the ID passed is valid
-  const bool valid_id = this->simplex_nla_.frozenBasisIdValid(frozen_basis_id);
-  if (!valid_id) return HighsStatus::kError;
-  // Copy any dual edge weights now - because the frozen basis is
-  // cleared in simplex_nla_.unfreeze
-  FrozenBasis& frozen_basis = this->simplex_nla_.frozen_basis_[frozen_basis_id];
-  if (frozen_basis.dual_edge_weight_.size()) {
-    this->dual_edge_weight_ = frozen_basis.dual_edge_weight_;
-  } else {
-    this->status_.has_dual_steepest_edge_weights = false;
-  }
-  // Need to identify now whether there will be an invertible
-  // representation to use after unfreezing this basis, as the
-  // evidence is destroyed by the call to unfreeze()
-  const bool will_have_invert =
-      this->simplex_nla_.frozenBasisHasInvert(frozen_basis_id);
-  this->simplex_nla_.unfreeze(frozen_basis_id, basis_);
-  // The pointers to simplex basis components have changed, so have to
-  // tell simplex NLA to refresh the use of the pointer to the basic
-  // indices
-  this->simplex_nla_.setBasicIndexPointers(basis_.basicIndex_.data());
-  updateStatus(LpAction::kNewBounds);
-  // Indicate whether there is a valid factorization after unfreezing
-  this->status_.has_invert = will_have_invert;
-  // If there's no valid factorization, then there cannot be a fresh one
-  if (!this->status_.has_invert) this->status_.has_fresh_invert = false;
-  return HighsStatus::kOk;
-}
-
-HighsStatus HEkk::frozenBasisAllDataClear() {
-  return simplex_nla_.frozenBasisAllDataClear() ? HighsStatus::kOk
-                                                : HighsStatus::kError;
 }
 
 void HEkk::putIterate() {
@@ -4114,10 +4017,10 @@ bool HEkk::logicalBasis() const {
 
 bool HEkk::proofOfPrimalInfeasibility() {
   // To be called from outside HEkk when row_ep is not known
-  assert(status_.has_dual_ray);
+  assert(dual_ray_record_.index >= 0);
   HighsLp& lp = this->lp_;
-  HighsInt move_out = info_.dual_ray_sign_;
-  HighsInt row_out = info_.dual_ray_row_;
+  HighsInt move_out = dual_ray_record_.sign;
+  HighsInt row_out = dual_ray_record_.index;
   // Compute the basis inverse row
   HVector row_ep;
   row_ep.setup(lp.num_row_);
@@ -4446,4 +4349,24 @@ void HighsSimplexStats::initialise(const HighsInt iteration_count_) {
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+}
+
+HighsRayRecord HighsRayRecord::getRayRecord() const {
+  HighsRayRecord record;
+  record.index = this->index;
+  record.sign = this->sign;
+  record.value = this->value;
+  return record;
+}
+
+void HighsRayRecord::setRayRecord(const HighsRayRecord& from_record) {
+  this->index = from_record.index;
+  this->sign = from_record.sign;
+  this->value = from_record.value;
+}
+
+void HighsRayRecord::clear() {
+  this->index = kNoRayIndex;
+  this->sign = kNoRaySign;
+  this->value.clear();
 }

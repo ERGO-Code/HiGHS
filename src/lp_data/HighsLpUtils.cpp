@@ -477,11 +477,14 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   assert((HighsInt)lp.integrality_.size() == lp.num_col_);
   HighsInt num_illegal_lower = 0;
   HighsInt num_illegal_upper = 0;
-  HighsInt num_modified_upper = 0;
+  HighsInt num_tightened_upper = 0;
   HighsInt num_inconsistent_semi = 0;
   HighsInt num_non_semi = 0;
   HighsInt num_non_continuous_variables = 0;
   const double kLowerBoundMu = 10.0;
+
+  std::vector<HighsInt>& save_non_semi_variable_index =
+      lp.mods_.save_non_semi_variable_index;
   std::vector<HighsInt>& inconsistent_semi_variable_index =
       lp.mods_.save_inconsistent_semi_variable_index;
   std::vector<double>& inconsistent_semi_variable_lower_bound_value =
@@ -515,7 +518,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       // Semi-variables with zero lower bound are not semi
       if (lp.col_lower_[iCol] == 0) {
         num_non_semi++;
-        lp.mods_.save_non_semi_variable_index.push_back(iCol);
+        save_non_semi_variable_index.push_back(iCol);
         // Semi-integer become integer so still have a non-continuous variable
         if (lp.integrality_[iCol] == HighsVarType::kSemiInteger)
           num_non_continuous_variables++;
@@ -535,7 +538,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
           tightened_semi_variable_upper_bound_index.push_back(iCol);
           tightened_semi_variable_upper_bound_value.push_back(
               kMaxSemiVariableUpper);
-          num_modified_upper++;
+          num_tightened_upper++;
         }
       }
       num_non_continuous_variables++;
@@ -567,12 +570,12 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     return_status = HighsStatus::kWarning;
   }
   const bool has_illegal_bounds = num_illegal_lower || num_illegal_upper;
-  if (num_modified_upper) {
+  if (num_tightened_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "%" HIGHSINT_FORMAT
                  " semi-continuous/integer variable(s) have upper bounds "
-                 "exceeding %g that can be modified to %g > %g*lower)\n",
-                 num_modified_upper, kMaxSemiVariableUpper,
+                 "exceeding %g that can be tightened to %g > %g*lower)\n",
+                 num_tightened_upper, kMaxSemiVariableUpper,
                  kMaxSemiVariableUpper, kLowerBoundMu);
     return_status = HighsStatus::kWarning;
     if (has_illegal_bounds) {
@@ -580,10 +583,11 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       assert(num_illegal_lower || num_illegal_upper);
       tightened_semi_variable_upper_bound_index.clear();
       tightened_semi_variable_upper_bound_value.clear();
+      num_tightened_upper = 0;
     } else {
       // Apply the upper bound tightenings, saving the over-written
       // values
-      for (HighsInt k = 0; k < num_modified_upper; k++) {
+      for (HighsInt k = 0; k < num_tightened_upper; k++) {
         const double use_upper_bound =
             tightened_semi_variable_upper_bound_value[k];
         const HighsInt iCol = tightened_semi_variable_upper_bound_index[k];
@@ -599,6 +603,7 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
       inconsistent_semi_variable_lower_bound_value.clear();
       inconsistent_semi_variable_upper_bound_value.clear();
       inconsistent_semi_variable_type.clear();
+      num_inconsistent_semi = 0;
     } else {
       for (HighsInt k = 0; k < num_inconsistent_semi; k++) {
         const HighsInt iCol = inconsistent_semi_variable_index[k];
@@ -611,10 +616,10 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   if (num_non_semi) {
     if (has_illegal_bounds) {
       // Don't apply type changes if there are illegal bounds
-      lp.mods_.save_non_semi_variable_index.clear();
+      save_non_semi_variable_index.clear();
     } else {
       for (HighsInt k = 0; k < num_non_semi; k++) {
-        const HighsInt iCol = lp.mods_.save_non_semi_variable_index[k];
+        const HighsInt iCol = save_non_semi_variable_index[k];
         if (lp.integrality_[iCol] == HighsVarType::kSemiContinuous) {
           // Semi-continuous become continuous
           lp.integrality_[iCol] = HighsVarType::kContinuous;
@@ -643,9 +648,14 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
     return_status = HighsStatus::kError;
   }
   made_semi_variable_mods =
-      lp.mods_.save_non_semi_variable_index.size() > 0 ||
-      inconsistent_semi_variable_index.size() > 0 ||
-      tightened_semi_variable_upper_bound_index.size() > 0;
+      num_non_semi > 0 || num_inconsistent_semi > 0 || num_tightened_upper > 0;
+  assert(num_non_semi <= save_non_semi_variable_index.size());
+  assert(num_inconsistent_semi <= inconsistent_semi_variable_index.size());
+  assert(num_tightened_upper <=
+         tightened_semi_variable_upper_bound_index.size());
+  //      save_non_semi_variable_index.size() > 0 ||
+  //      inconsistent_semi_variable_index.size() > 0 ||
+  //      tightened_semi_variable_upper_bound_index.size() > 0;
   return return_status;
 }
 
@@ -676,11 +686,11 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double> col_value) {
   const std::vector<HighsInt>& tightened_semi_variable_upper_bound_index =
       lp.mods_.save_tightened_semi_variable_upper_bound_index;
-  const HighsInt num_modified_upper =
+  const HighsInt num_tightened_upper =
       tightened_semi_variable_upper_bound_index.size();
   HighsInt num_active_modified_upper = 0;
   double min_semi_variable_margin = kHighsInf;
-  for (HighsInt k = 0; k < num_modified_upper; k++) {
+  for (HighsInt k = 0; k < num_tightened_upper; k++) {
     const double value =
         col_value[tightened_semi_variable_upper_bound_index[k]];
     const double upper =
@@ -699,7 +709,7 @@ bool activeModifiedUpperBounds(const HighsOptions& options, const HighsLp& lp,
                  "%" HIGHSINT_FORMAT
                  " semi-variables are active at modified upper bounds\n",
                  num_active_modified_upper);
-  } else if (num_modified_upper) {
+  } else if (num_tightened_upper) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "No semi-variables are active at modified upper bounds:"
                  " a large minimum margin (%g) suggests optimality,"

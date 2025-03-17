@@ -31,6 +31,9 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver, HighsPseudocost& pseudocost)
   countTreeWeight = true;
   childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
+  // the infeasibility flag is overwritten and lost when setDomainChangeStack is
+  // called. therefore, assert that localdom is not infeasible here.
+  assert(!this->localdom.infeasible());
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
 
@@ -1530,7 +1533,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     std::swap(tmpLp, lp);
 
     // reevaluate the node with LP presolve enabled
-    lp->getLpSolver().setOptionValue("presolve", "on");
+    lp->getLpSolver().setOptionValue("presolve", kHighsOnString);
     result = evaluateNode();
 
     if (result == NodeResult::kOpen) {

@@ -30,7 +30,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
-  bool hasUndefined();
+  bool hasUndefined() const;
   void invalidate();
   void clear();
 };
@@ -50,11 +50,12 @@ struct RefactorInfo {
   void clear();
 };
 
+// Unused, but retained since there is a const reference to this in a
+// deprecated method
 struct HotStart {
   bool valid = false;
   RefactorInfo refactor_info;
   std::vector<int8_t> nonbasicMove;
-  void clear();
 };
 
 struct HighsBasis {

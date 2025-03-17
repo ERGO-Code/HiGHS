@@ -21,7 +21,7 @@ of ``B^{-1}``. Methods
 and
 `getBasisTransposeSolve`
 yield the solution
-of ``Bx=b`` and ``Bx=b`` respectively. Finally, the
+of ``Bx=b`` and ``B^{T}x=b`` respectively. Finally, the
 methods
 `getReducedRow`
 and

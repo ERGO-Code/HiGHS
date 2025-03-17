@@ -1816,6 +1816,35 @@ HighsCliqueTable::separateCliques(const std::vector<double>& sol,
 #endif
 }
 
+std::vector<std::vector<HighsCliqueTable::CliqueVar>>
+HighsCliqueTable::computeMaximalCliques(const std::vector<CliqueVar>& vars,
+                                        double feastol) {
+  // return if there are no variables
+  if (vars.empty())
+    return std::vector<std::vector<HighsCliqueTable::CliqueVar>>{};
+
+  // find max column index in clique variables
+  size_t maxcolindex = 0;
+  for (const auto& var : vars)
+    maxcolindex = std::max(static_cast<size_t>(var.col), maxcolindex);
+
+  // set up data
+  std::vector<double> sol;
+  sol.resize(maxcolindex + 1);
+  for (const auto& var : vars) sol[var.col] = var.val;
+  BronKerboschData data(sol);
+  data.feastol = feastol;
+
+  for (const auto& var : vars) {
+    if (colsubstituted[var.col] || colDeleted[var.col]) continue;
+    if (numCliques(var) != 0) data.P.emplace_back(var);
+  }
+
+  bronKerboschRecurse(data, data.P.size(), nullptr, 0);
+
+  return std::move(data.cliques);
+}
+
 void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
                                        HighsInt val) {
   CliqueVar v(col, val);
