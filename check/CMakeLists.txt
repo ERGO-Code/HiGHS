@@ -346,7 +346,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                 "scrs8\; 9.0429693\;"
                 "sctest\; 5.7500000\;"
                 "shell\; 1.20882535\;"
-                "stair\;-2.5126696\;" # 96 release 95 debug
+                "stair\;-2.512669\;" # 96 release 95 debug
                 "standata\; 1.2576995\;"
                 "standgub\; 1.2576993\;"
                 )
