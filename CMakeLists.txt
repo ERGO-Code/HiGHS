@@ -121,10 +121,10 @@ option(CUPDLP_GPU "Build pdlp with GPU" OFF)
 
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
-if (NOT LINUX)
-  set (CUPDLP_GPU OFF)
-  message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
-endif()
+# if (NOT LINUX)
+  # set (CUPDLP_GPU OFF)
+  # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
+# endif()
 
 if (CUPDLP_GPU)
   set (CUPDLP_CPU OFF)
@@ -409,11 +409,16 @@ endif()
 add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
 
-add_compile_options("-Wno-deprecated-declarations")
+if (CUPDLP_GPU AND UNIX)
+  add_compile_options("-Wno-deprecated-declarations")
+endif()
 # add_compile_options("-Wno-implicit-function-declaration")
 
 # set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
-set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+if (UNIX)
+  set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+endif()
+
 
 
 # If Visual Studio targets are being built.
@@ -426,8 +431,15 @@ if(MSVC)
 
   # Try to split large pdb files into objects. 
   # https://github.com/tensorflow/tensorflow/issues/31610
-  add_compile_options("/Z7")
-  add_link_options("/DEBUG:FASTLINK")
+  # add_compile_options("/Z7")
+  # add_link_options("/DEBUG:FASTLINK")
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
+
+  if (NOT CUPDLP_GPU)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+  endif()
+
   if(STDCALL)
     # /Gz - stdcall calling convention
     add_definitions(/Gz)
