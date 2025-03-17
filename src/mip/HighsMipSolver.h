@@ -19,6 +19,13 @@ struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
+enum class HighsMipInstruction {
+  kContinue,
+  kTimeLimit,
+  kInterrupt,
+  kMemoryLimit
+};
+
 class HighsMipSolver {
  public:
   HighsCallback* callback_;

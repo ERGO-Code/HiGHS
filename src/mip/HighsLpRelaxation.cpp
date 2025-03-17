@@ -546,11 +546,13 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
     basis.debug_origin_name = "HighsLpRelaxation::removeCuts";
     lpsolver.setBasis(basis);
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexBasisSolveLp);
+    // Call to Highs::run
     lpsolver.run();
     mipsolver.analysis_.mipTimerStop(kMipClockSimplexBasisSolveLp);
   }
 }
 
+/*
 void HighsLpRelaxation::removeCuts() {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
@@ -566,6 +568,7 @@ void HighsLpRelaxation::removeCuts() {
   assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().row_lower_.size());
 }
+*/
 
 void HighsLpRelaxation::performAging(bool deleteRows) {
   assert(lpsolver.getLp().num_row_ ==
@@ -1074,6 +1077,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
 
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
+  // Call to Highs::run
   HighsStatus callstatus = lpsolver.run();
   mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
   if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
@@ -1222,6 +1226,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("simplex_iteration_limit",
                            info.simplex_iteration_count);
         mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+        // Call to Highs::run
         ipm.run();
         mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
         lpsolver.setBasis(ipm.getBasis(), "HighsLpRelaxation::run IPM basis");

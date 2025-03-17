@@ -314,6 +314,7 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     //    }
 
     mipsolver.analysis_.mipTimerStart(kMipClockIpmSolveLp);
+    // Call to Highs::run
     ipm.run();
     mipsolver.analysis_.mipTimerStop(kMipClockIpmSolveLp);
     const std::vector<double>& sol = ipm.getSolution().col_value;
@@ -1029,6 +1030,7 @@ try_again:
       tmpSolver.setOptionValue("presolve", kHighsOffString);
     tmpSolver.passModel(std::move(fixedModel));
     mipsolver.analysis_.mipTimerStart(kMipClockSimplexNoBasisSolveLp);
+    // Call to Highs::run
     tmpSolver.run();
     mipsolver.analysis_.mipTimerStop(kMipClockSimplexNoBasisSolveLp);
 
