@@ -130,17 +130,15 @@ if (CUPDLP_GPU)
   set (CUPDLP_CPU OFF)
     # With FindCUDAConf.cmake
     # default cuda_home on linux
-    set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
-    message(NOTICE "Set build cuPDLP with CUDA")
-    list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
-    include(FindCUDAConf.cmake)
+    # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+    # message(NOTICE "Set build cuPDLP with CUDA")
+    # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+    # include(FindCUDAConf.cmake)
 
     # With deleted FindCUDAConf.cmake
-    # find_package(CUDAToolkit REQUIRED)
-    # set(CUDA_LIBRARY-NOTFOUND, OFF)
-    # message(NOTICE "    - CUDA Libraries detected at ${CUDA_HOME}")
-    # set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
-    # message(NOTICE "    -   :${CUDA_LIBRARY}")
+    find_package(CUDAToolkit REQUIRED)
+    set(CUDA_LIBRARY-NOTFOUND, OFF)
+    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
 
     message(NOTICE "Set build cuPDLP with CUDA")
 else()
