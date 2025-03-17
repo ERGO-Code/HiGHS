@@ -27,7 +27,7 @@ set(cupdlp_sources
   pdlp/cupdlp/cupdlp_linalg.c
   pdlp/cupdlp/cupdlp_proj.c
   pdlp/cupdlp/cupdlp_restart.c
-  pdlp/cupdlp/cupdlp_scaling_cuda.c
+  pdlp/cupdlp/cupdlp_scaling.c
   pdlp/cupdlp/cupdlp_solver.c
   pdlp/cupdlp/cupdlp_step.c
   pdlp/cupdlp/cupdlp_utils.c)
@@ -38,7 +38,7 @@ set(cupdlp_headers
   pdlp/cupdlp/cupdlp_linalg.h
   pdlp/cupdlp/cupdlp_proj.h
   pdlp/cupdlp/cupdlp_restart.h
-  pdlp/cupdlp/cupdlp_scaling_cuda.h
+  pdlp/cupdlp/cupdlp_scaling.h
   pdlp/cupdlp/cupdlp_solver.h
   pdlp/cupdlp/cupdlp_step.h
   pdlp/cupdlp/cupdlp_utils.c)

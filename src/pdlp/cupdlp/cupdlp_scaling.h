@@ -2,8 +2,8 @@
 // Created by LJS on 23-11-30.
 //
 
-#ifndef CUPDLP_SCALING_CUDA_H
-#define CUPDLP_SCALING_CUDA_H
+#ifndef CUPDLP_SCALING_H
+#define CUPDLP_SCALING_H
 
 #include "cupdlp_defs.h"
 #include "glbopts.h"
