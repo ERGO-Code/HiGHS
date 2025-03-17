@@ -63,6 +63,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       0.0;  // true objVal = sig * c'x - offset, sig = 1 (min) or -1 (max)
   double sense_origin = 1;  // 1 (min) or -1 (max)
   int* constraint_new_idx = NULL;
+  int *constraint_type = NULL;
 
   void* model = NULL;
   void* presolvedmodel = NULL;
@@ -99,16 +100,18 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   getUserParamsFromOptions(options, ifChangeIntParam, intParam,
                            ifChangeFloatParam, floatParam);
 
-  std::vector<int> constraint_type(lp.num_row_);
+  // std::vector<int> constraint_type(lp.num_row_);
 
   formulateLP_highs(lp, &cost, &nCols, &nRows, &nnz, &nEqs, &csc_beg, &csc_idx,
                     &csc_val, &rhs, &lower, &upper, &offset, &sense_origin,
-                    &nCols_origin, &constraint_new_idx, constraint_type.data());
+                    &nCols_origin, &constraint_new_idx, &constraint_type);
 
   const cupdlp_int local_log_level = getCupdlpLogLevel(options);
   if (local_log_level) cupdlp_printf("Solving with cuPDLP-C\n");
 
-  H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
+  // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
+  Init_Scaling(scaling, nCols, nRows, cost, rhs);
+
   cupdlp_int ifScaling = 1;
 
   CUPDLPwork* w = cupdlp_NULL;
@@ -150,8 +153,12 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  PDHG_Scale_Data(local_log_level, csc_cpu, ifScaling, scaling, cost,
-                         lower, upper, rhs);
+
+  // PDHG_Scale_Data(local_log_level, csc_cpu, ifScaling, scaling, cost,
+  //                        lower, upper, rhs);
+
+  PDHG_Scale_Data(csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
+
   scaling_time = getTimeStamp() - scaling_time;
 
   cupdlp_float alloc_matrix_time = 0.0;
@@ -200,8 +207,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       nCols_origin, highs_solution.col_value.data(),
       highs_solution.col_dual.data(), highs_solution.row_value.data(),
       highs_solution.row_dual.data(), &value_valid, &dual_valid, ifSaveSol,
-      fp_sol, constraint_new_idx, constraint_type.data(), &pdlp_model_status,
+      fp_sol, constraint_new_idx, constraint_type, &pdlp_model_status,
       &pdlp_num_iter);
+
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
   model_status = HighsModelStatus::kUnknown;
@@ -301,7 +309,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   csc_clear_host(csc_cpu);
   problem_clear(prob);
   #if !(CUPDLP_CPU)
-    CHECK_CUDA(cudaDeviceReset())
+    if (check_cuda_call(cudaDeviceReset(), __FILE__, __LINE__) != cudaSuccess) 
+      return HighsStatus::kError; 
+    // CHECK_CUDA(cudaDeviceReset())
   #endif
 
   return HighsStatus::kOk;
@@ -312,7 +322,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
                       double** csc_val, double** rhs, double** lower,
                       double** upper, double* offset, double* sense_origin,
                       int* nCols_origin, int** constraint_new_idx,
-                      int* constraint_type) {
+                      int** constraint_type) {
   int retcode = 0;
 
   // problem size for malloc
@@ -338,6 +348,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   const double* A_csc_val = lp.a_matrix_.value_.data();
   int has_lower, has_upper;
 
+  cupdlp_init_int(*constraint_type, *nRows);
   cupdlp_init_int(*constraint_new_idx, *nRows);
 
   // recalculate nRows and nnz for Ax - z = 0
@@ -347,14 +358,14 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
     // count number of equations and rows
     if (has_lower && has_upper && lhs_clp[i] == rhs_clp[i]) {
-      constraint_type[i] = EQ;
+      *constraint_type[i] = EQ;
       (*nEqs)++;
     } else if (has_lower && !has_upper) {
-      constraint_type[i] = GEQ;
+      *constraint_type[i] = GEQ;
     } else if (!has_lower && has_upper) {
-      constraint_type[i] = LEQ;
+      *constraint_type[i] = LEQ;
     } else if (has_lower && has_upper) {
-      constraint_type[i] = BOUND;
+      *constraint_type[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -365,7 +376,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
       // what if regard free as bounded
       printf("Warning: constraint %d has no lower and upper bound\n", i);
-      constraint_type[i] = BOUND;
+      *constraint_type[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
       (*nEqs)++;
@@ -394,7 +405,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // slack bounds
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (constraint_type[i] == BOUND) {
+    if (*constraint_type[i] == BOUND) {
       (*lower)[j] = lhs_clp[i];
       (*upper)[j] = rhs_clp[i];
       j++;
@@ -409,11 +420,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   // permute LP rhs
   // EQ or BOUND first
   for (int i = 0, j = 0; i < *nRows; i++) {
-    if (constraint_type[i] == EQ) {
+    if (*constraint_type[i] == EQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (constraint_type[i] == BOUND) {
+    } else if (*constraint_type[i] == BOUND) {
       (*rhs)[j] = 0.0;
       (*constraint_new_idx)[i] = j;
       j++;
@@ -421,11 +432,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
   }
   // then LEQ or GEQ
   for (int i = 0, j = *nEqs; i < *nRows; i++) {
-    if (constraint_type[i] == LEQ) {
+    if (*constraint_type[i] == LEQ) {
       (*rhs)[j] = -rhs_clp[i];  // multiply -1
       (*constraint_new_idx)[i] = j;
       j++;
-    } else if (constraint_type[i] == GEQ) {
+    } else if (*constraint_type[i] == GEQ) {
       (*rhs)[j] = lhs_clp[i];
       (*constraint_new_idx)[i] = j;
       j++;
@@ -443,8 +454,8 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     // same order as in rhs
     // EQ or BOUND first
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (constraint_type[A_csc_idx[j]] == EQ ||
-          constraint_type[A_csc_idx[j]] == BOUND) {
+      if (*constraint_type[A_csc_idx[j]] == EQ ||
+          *constraint_type[A_csc_idx[j]] == BOUND) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -452,11 +463,11 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
     }
     // then LEQ or GEQ
     for (int j = (*csc_beg)[i]; j < (*csc_beg)[i + 1]; j++) {
-      if (constraint_type[A_csc_idx[j]] == LEQ) {
+      if (*constraint_type[A_csc_idx[j]] == LEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = -A_csc_val[j];  // multiply -1
         k++;
-      } else if (constraint_type[A_csc_idx[j]] == GEQ) {
+      } else if (*constraint_type[A_csc_idx[j]] == GEQ) {
         (*csc_idx)[k] = (*constraint_new_idx)[A_csc_idx[j]];
         (*csc_val)[k] = A_csc_val[j];
         k++;
@@ -466,7 +477,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
 
   // slacks for BOUND
   for (int i = 0, j = nCols_clp; i < *nRows; i++) {
-    if (constraint_type[i] == BOUND) {
+    if (*constraint_type[i] == BOUND) {
       (*csc_idx)[(*csc_beg)[j]] = (*constraint_new_idx)[i];
       (*csc_val)[(*csc_beg)[j]] = -1.0;
       j++;

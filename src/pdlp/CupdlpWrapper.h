@@ -17,6 +17,10 @@
 #include "lp_data/HighsSolution.h"
 #include "pdlp/cupdlp/cupdlp.h"
 
+#ifdef CUPDLP_GPU
+#include <cuda_runtime.h>
+#endif
+
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
 #define cupdlp_init_int(var, size) \
@@ -84,7 +88,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
                       double** csc_val, double** rhs, double** lower,
                       double** upper, double* offset, double* sign_origin,
                       int* nCols_origin, int** constraint_new_idx,
-                      int* constraint_type);
+                      int** constraint_type);
 
 cupdlp_int getCupdlpLogLevel(const HighsOptions& options);
 
