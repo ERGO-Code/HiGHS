@@ -277,22 +277,41 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.25769949\;"
             )
     else()
+        if (CUPDLP_GPU)
+            set(pdlpInstances
+                "25fv47\; 5.5018549\;"
+                "adlittle\; 2.254950\;"
+                "afiro\;-4.6475325\;"
+                "avgas\;-7.75000038\;"
+                "blending\;-3.19999999\;"
+                "chip\;-9.0000000\;"
+                "e226\;-1.16389258\;"
+                "scrs8\; 9.0429623\;"
+                "sctest\; 5.750000001\;"
+                "shell\; 1.20882535\;"
+                "stair\;-2.5126695\;"
+                "standata\; 1.25769951\;"
+                "standgub\; 1.2576993\;"
+                )
+        endif()
         # CUPDLP_GPU or CPU with native termination.
-        set(pdlpInstances
-            "25fv47\; 5.5018360\;"
-            "adlittle\; 2.254953\;"
-            "afiro\;-4.64753126\;"
-            "avgas\;-7.75000038\;"
-            "blending\;-3.19999999\;"
-            "chip\;-9.000000020\;"
-            "e226\;-1.163892070\;"
-            "scrs8\; 9.042970154\;"
-            "sctest\; 5.750000001\;"
-            "shell\; 1.2088253471\;"
-            "stair\;-2.512669020\;"
-            "standata\; 1.257699155\;"
-            "standgub\; 1.257700132\;"
-            )
+        if (CUPDLP_FORCE_NATIVE)
+            set(pdlpInstances
+                "25fv47\; 5.5018360\;"
+                "adlittle\; 2.254953\;"
+                "afiro\;-4.64753126\;"
+                "avgas\;-7.75000038\;"
+                "blending\;-3.19999999\;"
+                "chip\;-9.000000020\;"
+                "e226\;-1.163892070\;"
+                "scrs8\; 9.042970154\;"
+                "sctest\; 5.750000001\;"
+                "shell\; 1.2088253471\;"
+                "stair\;-2.512669020\;"
+                "standata\; 1.257699155\;"
+                "standgub\; 1.257700132\;"
+                )
+        endif()
     endif()
   elseif(WIN32)
     # on windows e226 model status is unknown
