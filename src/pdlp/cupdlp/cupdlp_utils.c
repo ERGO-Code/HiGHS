@@ -1137,44 +1137,44 @@ void PDHG_Destroy(CUPDLPwork **w) {
 
 void PDHG_Init_Data(CUPDLPwork *work) {}
 
-double my_clock(void) {
-
-#ifdef CUPDLP_TIMER
-
-#if defined(_WIN32) || defined(_WIN64)
-  return (double)clock() / CLOCKS_PER_SEC;
-#else
-  struct timeval t;
-  gettimeofday(&t, NULL);
-  return (1e-06 * t.tv_usec + t.tv_sec);
-#endif
-
-#else
-  return 0;
-#endif
-
-}
-
-
 // double my_clock(void) {
-// #ifdef CUPDLP_TIMER
-//   // struct timeval t;
-//   // clock_gettime(&t, NULL);
-//   // gettimeofday(&t, NULL);
-//   double timeee = 0;
 
-// #ifndef WIN32
-//   timeee = time(NULL);
+// #ifdef CUPDLP_TIMER
+
+// #if defined(_WIN32) || defined(_WIN64)
+//   return (double)clock() / CLOCKS_PER_SEC;
 // #else
-//   timeee = clock();
+//   struct timeval t;
+//   gettimeofday(&t, NULL);
+//   return (1e-06 * t.tv_usec + t.tv_sec);
 // #endif
 
-//   return timeee;
-//   // return (1e-06 * t.tv_usec + t.tv_sec);
 // #else
 //   return 0;
 // #endif
+
 // }
+
+
+double my_clock(void) {
+#ifdef CUPDLP_TIMER
+  // struct timeval t;
+  // clock_gettime(&t, NULL);
+  // gettimeofday(&t, NULL);
+  double timeee = 0;
+
+#ifndef WIN32
+  timeee = time(NULL);
+#else
+  timeee = clock();
+#endif
+
+  return timeee;
+  // return (1e-06 * t.tv_usec + t.tv_sec);
+#else
+  return 0;
+#endif
+}
 
 double getTimeStamp(void) { return my_clock(); }
 
