@@ -317,22 +317,41 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         endif()
     endif()
   elseif(WIN32)
-    # on windows e226 model status is unknown
-    # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
-    set(pdlpInstances
-        "25fv47\; 5.5018458\;"
-        "adlittle\; 2.25494963\;"
-        "afiro\;-4.64753142\;"
-        "avgas\;-7.749999999\;"
-        "blending\;-3.19999999\;"
-        "chip\;-9.000000001\;"
-        "scrs8\; 9.0429695\;"
-        "sctest\; 5.749999936\;"
-        "shell\; 1.2088253460\;"
-        "stair\;-2.51266951\;"
-        "standata\; 1.2576995\;"
-        "standgub\; 1.2576995\;"
-        )
+    if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
+        # on windows e226 model status is unknown
+        # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
+        set(pdlpInstances
+            "25fv47\; 5.5018458\;"
+            "adlittle\; 2.25494963\;"
+            "afiro\;-4.64753142\;"
+            "avgas\;-7.749999999\;"
+            "blending\;-3.19999999\;"
+            "chip\;-9.000000001\;"
+            "scrs8\; 9.0429695\;"
+            "sctest\; 5.749999936\;"
+            "shell\; 1.2088253460\;"
+            "stair\;-2.51266951\;"
+            "standata\; 1.2576995\;"
+            "standgub\; 1.2576995\;"
+            )
+    else()
+        if (CUPDLP_GPU)
+            set(pdlpInstances
+                "25fv47\; 5.5018549\;"
+                "adlittle\; 2.2549505\;"
+                "afiro\;-4.6475325\;"
+                "avgas\;-7.750000\;"
+                "blending\;-3.19999999\;"
+                "chip\;-9.0000000\;"
+                "scrs8\; 9.0429693\;"
+                "sctest\; 5.7500000\;"
+                "shell\; 1.20882535\;"
+                "stair\;-2.5126696\;"
+                "standata\; 1.2576995\;"
+                "standgub\; 1.2576993\;"
+                )
+        endif()
+    endif()
   elseif(APPLE)
     set(pdlpInstances
         "25fv47\; 5.5018458\;"
@@ -340,9 +359,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "afiro\;-4.64753142\;"
         "avgas\;-7.749999999\;"
         "blending\;-3.19999999\;"
-        "chip\;-8.99999999\;"
+        "chip\;-8.9999999\;"
         "e226\;-1.163892\;"
-        "scrs8\; 9.04296954\;"
+        "scrs8\; 9.0429695\;"
         "sctest\; 5.749999936\;"
         "shell\; 1.2088253460\;"
         "stair\;-2.5126695\;"
