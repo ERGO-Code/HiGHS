@@ -10,7 +10,7 @@
 
 void PDHG_Project_Bounds(CUPDLPwork *work, double *r);
 
-void PDHG_Project_Row_Duals(CUPDLPwork *work, double *r);
+// void PDHG_Project_Row_Duals(CUPDLPwork *work, double *r);
 
 void PDHG_Restart_Iterate(CUPDLPwork *pdhg);
 

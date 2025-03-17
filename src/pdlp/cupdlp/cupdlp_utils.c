@@ -50,7 +50,23 @@ cupdlp_int csc_clear(CUPDLPcsc *csc) {
     if (csc->colMatElem) {
       CUPDLP_FREE_VEC(csc->colMatElem);
     }
-    CUPDLP_FREE_VEC(csc);
+      cupdlp_free(csc);
+  }
+  return 0;
+}
+
+cupdlp_int csc_clear_host(CUPDLPcsc *csc) {
+  if (csc) {
+    if (csc->colMatBeg) {
+      cupdlp_free(csc->colMatBeg);
+    }
+    if (csc->colMatIdx) {
+      cupdlp_free(csc->colMatIdx);
+    }
+    if (csc->colMatElem) {
+      cupdlp_free(csc->colMatElem);
+    }
+    cupdlp_free(csc);
   }
   return 0;
 }
@@ -71,7 +87,7 @@ cupdlp_int csr_clear(CUPDLPcsr *csr) {
     if (csr->rowMatElem) {
       CUPDLP_FREE_VEC(csr->rowMatElem);
     }
-    CUPDLP_FREE_VEC(csr);
+    cupdlp_free(csr);
   }
   return 0;
 }
@@ -138,7 +154,7 @@ void problem_clear(CUPDLPproblem *problem) {
     if (problem->hasUpper) {
       CUPDLP_FREE_VEC(problem->hasUpper);
     }
-    CUPDLP_FREE_VEC(problem);
+    cupdlp_free(problem);
   }
 }
 
@@ -164,21 +180,21 @@ cupdlp_int vec_clear(CUPDLPvec *vec) {
 
 void iterates_clear(CUPDLPiterates *iterates) {
   if (iterates) {
-    if (iterates->x) {
-      // CUPDLP_FREE_VEC(iterates->x);
-      vec_clear(iterates->x);
+    if (iterates->x[0]) {
+      // CUPDLP_FREE_VEC(iterates->x[0]);
+      vec_clear(iterates->x[0]);
     }
-    if (iterates->y) {
-      // CUPDLP_FREE_VEC(iterates->y);
-      vec_clear(iterates->y);
+    if (iterates->x[1]) {
+      // CUPDLP_FREE_VEC(iterates->x[1]);
+      vec_clear(iterates->x[1]);
     }
-    if (iterates->xUpdate) {
-      // CUPDLP_FREE_VEC(iterates->xUpdate);
-      vec_clear(iterates->xUpdate);
+    if (iterates->y[0]) {
+      // CUPDLP_FREE_VEC(iterates->y[0]);
+      vec_clear(iterates->y[0]);
     }
-    if (iterates->yUpdate) {
-      // CUPDLP_FREE_VEC(iterates->yUpdate);
-      vec_clear(iterates->yUpdate);
+    if (iterates->y[1]) {
+      // CUPDLP_FREE_VEC(iterates->y[1]);
+      vec_clear(iterates->y[1]);
     }
     if (iterates->xSum) {
       CUPDLP_FREE_VEC(iterates->xSum);
@@ -200,31 +216,32 @@ void iterates_clear(CUPDLPiterates *iterates) {
     if (iterates->yLastRestart) {
       CUPDLP_FREE_VEC(iterates->yLastRestart);
     }
-    if (iterates->ax) {
-      // CUPDLP_FREE_VEC(iterates->ax);
-      vec_clear(iterates->ax);
+        if (iterates->ax[0]) {
+      // CUPDLP_FREE_VEC(iterates->ax[0]);
+      vec_clear(iterates->ax[0]);
     }
-    if (iterates->axUpdate) {
-      // CUPDLP_FREE_VEC(iterates->axUpdate);
-      vec_clear(iterates->axUpdate);
+    if (iterates->ax[1]) {
+      // CUPDLP_FREE_VEC(iterates->ax[1]);
+      vec_clear(iterates->ax[1]);
     }
     if (iterates->axAverage) {
       // CUPDLP_FREE_VEC(iterates->axAverage);
       vec_clear(iterates->axAverage);
     }
-    if (iterates->aty) {
-      // CUPDLP_FREE_VEC(iterates->aty);
-      vec_clear(iterates->aty);
+    if (iterates->aty[0]) {
+      // CUPDLP_FREE_VEC(iterates->aty[0]);
+      vec_clear(iterates->aty[0]);
     }
-    if (iterates->atyUpdate) {
-      // CUPDLP_FREE_VEC(iterates->atyUpdate);
-      vec_clear(iterates->atyUpdate);
+    if (iterates->aty[1]) {
+      // CUPDLP_FREE_VEC(iterates->aty[1]);
+      vec_clear(iterates->aty[1]);
     }
     if (iterates->atyAverage) {
       // CUPDLP_FREE_VEC(iterates->atyAverage);
       vec_clear(iterates->atyAverage);
     }
-    CUPDLP_FREE_VEC(iterates);
+    cupdlp_free(iterates);
+
   }
 }
 
@@ -284,7 +301,7 @@ void resobj_clear(CUPDLPresobj *resobj) {
     // if (resobj->dualInfeasBound) {
     //   CUPDLP_FREE_VEC(resobj->dualInfeasBound);
     // }
-    CUPDLP_FREE_VEC(resobj);
+    cupdlp_free(resobj);
   }
 }
 
@@ -307,12 +324,10 @@ void timers_clear(CUPDLPtimers *timers) {
 void scaling_clear(CUPDLPscaling *scaling) {
   if (scaling) {
     if (scaling->colScale) {
-      // cupdlp_free(scaling->colScale);
-      CUPDLP_FREE_VEC(scaling->colScale);  // now on gpu
+      cupdlp_free(scaling->colScale);
     }
     if (scaling->rowScale) {
-      // cupdlp_free(scaling->rowScale);
-      CUPDLP_FREE_VEC(scaling->rowScale);  // now on gpu
+      cupdlp_free(scaling->rowScale);
     }
     cupdlp_free(scaling);
   }
@@ -327,7 +342,6 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   CUPDLPtimers *timers = w->timers;
   CUPDLPscaling *scaling = w->scaling;
 
-  if (w) {
     cupdlp_float begin = getTimeStamp();
 #ifndef CUPDLP_CPU
 
@@ -340,7 +354,8 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     // }
     CHECK_CUBLAS(cublasDestroy(w->cublashandle))
     CHECK_CUSPARSE(cusparseDestroy(w->cusparsehandle))
-    CHECK_CUDA(cudaFree(w->dBuffer))
+    CHECK_CUDA(cudaFree(w->dBuffer_csc_ATy))
+    CHECK_CUDA(cudaFree(w->dBuffer_csr_Ax))
     if (w->buffer2) CUPDLP_FREE_VEC(w->buffer2);
     if (w->buffer3) CUPDLP_FREE_VEC(w->buffer3);
 #endif
@@ -402,7 +417,6 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
       scaling = cupdlp_NULL;
     }
     cupdlp_free(w);
-  }
 
   return 0;
 }
@@ -832,10 +846,20 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
                             cupdlp_int ncols, cupdlp_int nrows) {
   cupdlp_retcode retcode = RETCODE_OK;
 
+#if !(CUPDLP_CPU) && USE_KERNELS
+  resobj->primalResidual = NULL;
+  resobj->dualResidual = NULL;
+  resobj->primalResidualAverage = NULL;
+  resobj->dualResidualAverage = NULL;
+#else
+
   cupdlp_init_zero_vec_double(resobj->primalResidual, nrows);
   cupdlp_init_zero_vec_double(resobj->dualResidual, ncols);
   cupdlp_init_zero_vec_double(resobj->primalResidualAverage, nrows);
   cupdlp_init_zero_vec_double(resobj->dualResidualAverage, ncols);
+
+#endif
+
   cupdlp_init_zero_vec_double(resobj->dSlackPos, ncols);
   cupdlp_init_zero_vec_double(resobj->dSlackNeg, ncols);
   cupdlp_init_zero_vec_double(resobj->dSlackPosAverage, ncols);
@@ -843,13 +867,30 @@ cupdlp_retcode resobj_Alloc(CUPDLPresobj *resobj, CUPDLPproblem *problem,
   cupdlp_init_zero_vec_double(resobj->dLowerFiltered, ncols);
   cupdlp_init_zero_vec_double(resobj->dUpperFiltered, ncols);
 
+#if !(CUPDLP_CPU) && USE_KERNELS
+  resobj->primalInfeasRay = NULL;
+  resobj->primalInfeasConstr = NULL;
+  resobj->primalInfeasBound = NULL;
+  resobj->dualInfeasRay = NULL;
+  resobj->dualInfeasLbRay = NULL;
+  resobj->dualInfeasUbRay = NULL;
+#else
+
   cupdlp_init_zero_vec_double(resobj->primalInfeasRay, ncols);
   cupdlp_init_zero_vec_double(resobj->primalInfeasConstr, nrows);
   cupdlp_init_zero_vec_double(resobj->primalInfeasBound, ncols);
   cupdlp_init_zero_vec_double(resobj->dualInfeasRay, nrows);
   cupdlp_init_zero_vec_double(resobj->dualInfeasLbRay, ncols);
   cupdlp_init_zero_vec_double(resobj->dualInfeasUbRay, ncols);
+#endif
+
+
+#if !(CUPDLP_CPU) && USE_KERNELS
+  resobj->dualInfeasConstr = NULL;
+#else
   cupdlp_init_zero_vec_double(resobj->dualInfeasConstr, ncols);
+#endif
+
   // CUPDLP_INIT_DOUBLE_ZERO_VEC(resobj->dualInfeasBound, nrows);
 
   // need to translate to cuda type
@@ -921,30 +962,30 @@ cupdlp_retcode iterates_Alloc(CUPDLPiterates *iterates, cupdlp_int ncols,
   cupdlp_init_zero_vec_double(iterates->xLastRestart, ncols);
   cupdlp_init_zero_vec_double(iterates->yLastRestart, nrows);
 
-  CUPDLP_INIT_CUPDLP_VEC(iterates->x, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->xUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->x[0], 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->x[1], 1);
   CUPDLP_INIT_CUPDLP_VEC(iterates->xAverage, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->y, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->yUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->y[0], 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->y[1], 1);
   CUPDLP_INIT_CUPDLP_VEC(iterates->yAverage, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->ax, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->axUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->ax[0], 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->ax[1], 1);
   CUPDLP_INIT_CUPDLP_VEC(iterates->axAverage, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->aty, 1);
-  CUPDLP_INIT_CUPDLP_VEC(iterates->atyUpdate, 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->aty[0], 1);
+  CUPDLP_INIT_CUPDLP_VEC(iterates->aty[1], 1);
   CUPDLP_INIT_CUPDLP_VEC(iterates->atyAverage, 1);
 
-  CUPDLP_CALL(vec_Alloc(iterates->x, ncols));
-  CUPDLP_CALL(vec_Alloc(iterates->xUpdate, ncols));
+  CUPDLP_CALL(vec_Alloc(iterates->x[0], ncols));
+  CUPDLP_CALL(vec_Alloc(iterates->x[1], ncols));
   CUPDLP_CALL(vec_Alloc(iterates->xAverage, ncols));
-  CUPDLP_CALL(vec_Alloc(iterates->y, nrows));
-  CUPDLP_CALL(vec_Alloc(iterates->yUpdate, nrows));
+  CUPDLP_CALL(vec_Alloc(iterates->y[0], nrows));
+  CUPDLP_CALL(vec_Alloc(iterates->y[1], nrows));
   CUPDLP_CALL(vec_Alloc(iterates->yAverage, nrows));
-  CUPDLP_CALL(vec_Alloc(iterates->ax, nrows));
-  CUPDLP_CALL(vec_Alloc(iterates->axUpdate, nrows));
+  CUPDLP_CALL(vec_Alloc(iterates->ax[0], nrows));
+  CUPDLP_CALL(vec_Alloc(iterates->ax[1], nrows));
   CUPDLP_CALL(vec_Alloc(iterates->axAverage, nrows));
-  CUPDLP_CALL(vec_Alloc(iterates->aty, ncols));
-  CUPDLP_CALL(vec_Alloc(iterates->atyUpdate, ncols));
+  CUPDLP_CALL(vec_Alloc(iterates->aty[0], ncols));
+  CUPDLP_CALL(vec_Alloc(iterates->aty[1], ncols));
   CUPDLP_CALL(vec_Alloc(iterates->atyAverage, ncols));
 
   // initialization
@@ -1032,7 +1073,7 @@ cupdlp_retcode vec_Alloc(CUPDLPvec *vec, cupdlp_int n) {
   vec->len = n;
 #ifndef CUPDLP_CPU
   CHECK_CUSPARSE(
-      cusparseCreateDnVec(&vec->cuda_vec, n, vec->data, CudaComputeType));
+      cusparseCreateDnVec(&vec->cuda_vec, n, vec->data, CudaComputeType))
 #endif
 
 exit_cleanup:
@@ -1054,10 +1095,16 @@ cupdlp_retcode PDHG_Alloc(CUPDLPwork *w) {
   // buffer
   CUPDLP_INIT_CUPDLP_VEC(w->buffer, 1);
   CUPDLP_CALL(vec_Alloc(w->buffer, w->problem->data->nRows));
+
+
   cupdlp_init_zero_vec_double(w->buffer2,
-                       MAX(w->problem->data->nCols, w->problem->data->nRows));
+                       MAX(2048, MAX(w->problem->data->nCols, w->problem->data->nRows)));
+#if CUPDLP_CPU || !(USE_KERNELS) || (CUPDLP_DUMP_LINESEARCH_STATS && CUPDLP_DEBUG)
   cupdlp_init_zero_vec_double(w->buffer3,
-                       MAX(w->problem->data->nCols, w->problem->data->nRows));
+                       MAX(2048, MAX(w->problem->data->nCols, w->problem->data->nRows)));
+#else
+  w->buffer3 = NULL;
+#endif
 
   // for scaling
   cupdlp_init_zero_vec_double(w->colScale, w->problem->data->nCols);
@@ -1073,12 +1120,13 @@ cupdlp_retcode PDHG_Alloc(CUPDLPwork *w) {
 #ifndef CUPDLP_CPU
   //   CHECK_CUSPARSE(cusparseCreate(&w->cusparsehandle));
   //   CHECK_CUBLAS(cublasCreate(&w->cublashandle));
-  cuda_alloc_MVbuffer(
+    CUPDLP_CALL(cuda_alloc_MVbuffer(
       //   w->problem->data->matrix_format,
       w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
-      w->iterates->x->cuda_vec, w->iterates->ax->cuda_vec,
-      w->problem->data->csr_matrix->cuda_csr, w->iterates->y->cuda_vec,
-      w->iterates->aty->cuda_vec, &w->dBuffer);
+      w->iterates->x[0]->cuda_vec, w->iterates->ax[0]->cuda_vec,
+      w->problem->data->csr_matrix->cuda_csr, w->iterates->y[0]->cuda_vec,
+      w->iterates->aty[0]->cuda_vec, &w->dBuffer_csc_ATy, &w->dBuffer_csr_Ax))
+
   w->timers->AllocMem_CopyMatToDeviceTime += getTimeStamp() - begin;
 #endif
 
@@ -1102,33 +1150,49 @@ exit_cleanup:
 void PDHG_Destroy(CUPDLPwork **w) {
   if (w && *w) {
     PDHG_Clear(*w);
-#ifndef CUPDLP_CPU
-    cudaDeviceReset();
-#endif
   }
 }
 
 void PDHG_Init_Data(CUPDLPwork *work) {}
 
 double my_clock(void) {
-#ifdef CUPDLP_TIMER
-  // struct timeval t;
-  // clock_gettime(&t, NULL);
-  // gettimeofday(&t, NULL);
-  double timeee = 0;
 
-#ifndef WIN32
-  timeee = time(NULL);
+#ifdef CUPDLP_TIMER
+
+#if defined(_WIN32) || defined(_WIN64)
+  return (double)clock() / CLOCKS_PER_SEC;
 #else
-  timeee = clock();
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return (1e-06 * t.tv_usec + t.tv_sec);
 #endif
 
-  return timeee;
-  // return (1e-06 * t.tv_usec + t.tv_sec);
 #else
   return 0;
 #endif
+
 }
+
+
+// double my_clock(void) {
+// #ifdef CUPDLP_TIMER
+//   // struct timeval t;
+//   // clock_gettime(&t, NULL);
+//   // gettimeofday(&t, NULL);
+//   double timeee = 0;
+
+// #ifndef WIN32
+//   timeee = time(NULL);
+// #else
+//   timeee = clock();
+// #endif
+
+//   return timeee;
+//   // return (1e-06 * t.tv_usec + t.tv_sec);
+// #else
+//   return 0;
+// #endif
+// }
 
 double getTimeStamp(void) { return my_clock(); }
 
@@ -1552,14 +1616,21 @@ void PDHG_Dump_Stats(CUPDLPwork *w) {
   cupdlp_printf("------------------------------------------------\n");
   cupdlp_printf("Iteration % 3d\n", w->timers->nIter);
 #if CUPDLP_DUMP_ITERATES
-  vecPrint("x", iterates->x->data, nCols);
-  vecPrint("y", iterates->y->data, nRows);
+
+  cupdlp_int iter = w->timers->nIter;
+  CUPDLPvec *x = iterates->x[iter % 2];
+  CUPDLPvec *y = iterates->y[iter % 2];
+  CUPDLPvec *aty = iterates->aty[iter % 2];
+
+  vecPrint("x", x->data, nCols);
+  vecPrint("y", y->data, nRows);
   vecPrint("xSum", iterates->xSum, nCols);
   vecPrint("ySum", iterates->ySum, nRows);
-  vecPrint("Ax ", iterates->ax->data, nRows);
-  vecPrint("A'y", iterates->aty->data, nCols);
+  vecPrint("Ax ", ax->data, nRows);
+  vecPrint("A'y", aty->data, nCols);
   vecPrint("xLastRestart", iterates->xLastRestart, nCols);
   vecPrint("yLastRestart", iterates->yLastRestart, nRows);
+
 #endif
   cupdlp_printf(
       "PrimalStep: %e, SumPrimalStep: %e, DualStep: %e, SumDualStep: %e\n",

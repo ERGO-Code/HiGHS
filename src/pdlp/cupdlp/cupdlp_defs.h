@@ -330,8 +330,12 @@ struct CUPDLP_ITERATES {
   cupdlp_float *xLastRestart;
   cupdlp_float *yLastRestart;
 
-  CUPDLPvec *x, *xUpdate, *xAverage, *y, *yUpdate, *yAverage, *ax, *axUpdate,
-      *axAverage, *aty, *atyUpdate, *atyAverage;
+  CUPDLPvec *x[2]; // in iteration k, x^k stored in x[k % 2], x^{k+1} created in x[k + 1 % 2]
+  CUPDLPvec *y[2];
+  CUPDLPvec *ax[2];
+  CUPDLPvec *aty[2];
+  CUPDLPvec *xAverage, *yAverage, *axAverage, *atyAverage;
+
 };
 
 struct CUPDLP_STEPSIZE {
@@ -415,7 +419,9 @@ struct CUPDLP_WORK {
 #ifndef CUPDLP_CPU
   // CUDAmv *MV;
   cusparseHandle_t cusparsehandle;
-  void *dBuffer;
+  void *dBuffer_csc_ATy;
+  void *dBuffer_csr_Ax;
+
   // cusparseDnVecDescr_t vecbuffer;
   cublasHandle_t cublashandle;
 #endif

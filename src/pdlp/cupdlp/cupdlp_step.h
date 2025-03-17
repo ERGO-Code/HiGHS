@@ -27,7 +27,11 @@ void PDHG_Update_Average(CUPDLPwork *work);
 
 cupdlp_retcode PDHG_Update_Iterate(CUPDLPwork *pdhg);
 
-void PDHG_primalGradientStep(CUPDLPwork *work, cupdlp_float dPrimalStepSize);
-void PDHG_dualGradientStep(CUPDLPwork *work, cupdlp_float dDualStepSize);
+void PDHG_primalGradientStep(CUPDLPwork *work, CUPDLPvec *xUpdate,
+                             const CUPDLPvec *x, const CUPDLPvec *ATy,
+                             cupdlp_float dPrimalStepSize);
+void PDHG_dualGradientStep(CUPDLPwork *work, CUPDLPvec *yUpdate,
+                           const CUPDLPvec *y, const CUPDLPvec *Ax,
+                           const CUPDLPvec *AxUpdate, cupdlp_float dDualStepSize);
 
 #endif  // CUPDLP_CUPDLP_STEP_H

@@ -20,7 +20,7 @@ double cupdlp_dcs_norm(const cupdlp_dcs *A);
 int cupdlp_dcs_print(const cupdlp_dcs *A, int brief);
 
 /* utilities */
-void *_dcs_calloc(int n, size_t size);
+void *cupdlp_dcs_calloc(int n, size_t size);
 void *cupdlp_dcs_free(void *p);
 void *cupdlp_dcs_realloc(void *p, int n, size_t size, int *ok);
 cupdlp_dcs *cupdlp_dcs_spalloc(int m, int n, int nzmax, int values, int t);
@@ -31,7 +31,6 @@ void *cupdlp_dcs_malloc(int n, size_t size);
 /* utilities */
 double cupdlp_dcs_cumsum(int *p, int *c, int n);
 cupdlp_dcs *cupdlp_dcs_done(cupdlp_dcs *C, void *w, void *x, int ok);
-int *cupdlp_dcs_idone(int *p, cupdlp_dcs *C, void *w, int ok);
 cupdlp_dcs *cupdlp_dcs_transpose(const cupdlp_dcs *A, int values);
 
 #define IS_CSC(A) (A && (A->nz == -1))
