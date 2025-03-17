@@ -3,19 +3,20 @@
 // Same as the JULIA CPU version
 //
 
-#include "pdlp/cupdlp/cupdlp_scaling_cuda.h"
+#include "cupdlp_scaling.h"
 
-#include "pdlp/cupdlp/cupdlp_linalg.h"
+#include "cupdlp_linalg.h"
 // #include "cupdlp_scaling.h"
-#include "pdlp/cupdlp/cupdlp_utils.h"
+#include "cupdlp_utils.h"
 
 // This version disable dScalingTarget, which is the target of scaled matrix
-// elements cupdlp_retcode scale_problem(CUPDLPwork *w, cupdlp_float
-// *col_scaling, cupdlp_float *row_scaling)
-cupdlp_retcode scale_problem_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
-                                  cupdlp_float *lower, cupdlp_float *upper,
-                                  cupdlp_float *rhs, cupdlp_float *col_scaling,
-                                  cupdlp_float *row_scaling) {
+// elements
+// cupdlp_retcode scale_problem(CUPDLPwork *w, cupdlp_float *col_scaling,
+// cupdlp_float *row_scaling)
+cupdlp_retcode scale_problem(CUPDLPcsc *csc, cupdlp_float *cost,
+                             cupdlp_float *lower, cupdlp_float *upper,
+                             cupdlp_float *rhs, cupdlp_float *col_scaling,
+                             cupdlp_float *row_scaling) {
   cupdlp_retcode retcode = RETCODE_OK;
   cupdlp_int nRows = csc->nRows;
   cupdlp_int nCols = csc->nCols;
@@ -42,10 +43,10 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_ruiz_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
-                                        cupdlp_float *lower,
-                                        cupdlp_float *upper, cupdlp_float *rhs,
-                                        CUPDLPscaling *scaling)
+cupdlp_retcode cupdlp_ruiz_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+                                   cupdlp_float *lower,
+                                   cupdlp_float *upper, cupdlp_float *rhs,
+                                   CUPDLPscaling *scaling)
 // cupdlp_retcode cupdlp_ruiz_scaling(CUPDLPwork *work, cupdlp_int max_iter,
 // cupdlp_float norm)
 {
@@ -54,10 +55,10 @@ cupdlp_retcode cupdlp_ruiz_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
   cupdlp_int nRows = csc->nRows;
   cupdlp_int nCols = csc->nCols;
 
-  cupdlp_float *current_col_scaling;  // for variable
-  cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
+  cupdlp_float *current_col_scaling = NULL;  // for variable
+  cupdlp_float *current_row_scaling = NULL;  // for constraint
+  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
 
   for (cupdlp_int i = 0; i < scaling->RuizTimes; i++) {
     cupdlp_zero(current_col_scaling, cupdlp_float, nCols);
@@ -104,8 +105,8 @@ cupdlp_retcode cupdlp_ruiz_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
 
     // apply scaling
     // scale_problem(work, current_col_scaling, current_row_scaling);
-    scale_problem_cuda(csc, cost, lower, upper, rhs, current_col_scaling,
-                       current_row_scaling);
+    scale_problem(csc, cost, lower, upper, rhs, current_col_scaling,
+                  current_row_scaling);
 
     // update scaling
     cupdlp_cdot(scaling->colScale, current_col_scaling, nCols);
@@ -117,23 +118,23 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_l2norm_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
-                                          cupdlp_float *lower,
-                                          cupdlp_float *upper,
-                                          cupdlp_float *rhs,
-                                          CUPDLPscaling *scaling)
+cupdlp_retcode cupdlp_l2norm_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+                                     cupdlp_float *lower,
+                                     cupdlp_float *upper,
+                                     cupdlp_float *rhs,
+                                     CUPDLPscaling *scaling)
 // cupdlp_retcode cupdlp_l2norm_scaling(CUPDLPwork *work)
 {
   cupdlp_retcode retcode = RETCODE_OK;
   cupdlp_int nRows = csc->nRows;
   cupdlp_int nCols = csc->nCols;
 
-  cupdlp_float *current_col_scaling;  // for variable
-  cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
+  cupdlp_float *current_col_scaling = NULL;  // for variable
+  cupdlp_float *current_row_scaling = NULL;  // for constraint
+  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
 
-  if (nRows > 0 && csc != NULL) {
+  if (nRows > 0) {
     for (int j = 0; j < nCols; j++) {
       if (csc->colMatBeg[j] == csc->colMatBeg[j + 1]) {
         current_col_scaling[j] = 1.0;
@@ -156,8 +157,8 @@ cupdlp_retcode cupdlp_l2norm_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
   }
   // apply scaling
   // scale_problem(work, current_col_scaling, current_row_scaling);
-  scale_problem_cuda(csc, cost, lower, upper, rhs, current_col_scaling,
-                     current_row_scaling);
+  scale_problem(csc, cost, lower, upper, rhs, current_col_scaling,
+                current_row_scaling);
 
   // update scaling
   cupdlp_cdot(scaling->colScale, current_col_scaling, nCols);
@@ -169,9 +170,9 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode cupdlp_pc_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
-                                      cupdlp_float *lower, cupdlp_float *upper,
-                                      cupdlp_float *rhs, CUPDLPscaling *scaling)
+cupdlp_retcode cupdlp_pc_scaling(CUPDLPcsc *csc, cupdlp_float *cost,
+                                 cupdlp_float *lower, cupdlp_float *upper,
+                                 cupdlp_float *rhs, CUPDLPscaling *scaling)
 // cupdlp_retcode cupdlp_pc_scaling(CUPDLPwork *work, cupdlp_float alpha)
 {
   cupdlp_retcode retcode = RETCODE_OK;
@@ -179,17 +180,17 @@ cupdlp_retcode cupdlp_pc_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
   cupdlp_int nCols = csc->nCols;
   cupdlp_float alpha = scaling->PcAlpha;
 
-  cupdlp_float *current_col_scaling;  // for variable
-  cupdlp_float *current_row_scaling;  // for constraint
-  CUPDLP_INIT_ZERO_DOUBLE(current_col_scaling, nCols);
-  CUPDLP_INIT_ZERO_DOUBLE(current_row_scaling, nRows);
+  cupdlp_float *current_col_scaling = NULL;  // for variable
+  cupdlp_float *current_row_scaling = NULL;  // for constraint
+  CUPDLP_INIT_ZERO(current_col_scaling, nCols);
+  CUPDLP_INIT_ZERO(current_row_scaling, nRows);
 
   if (alpha > 2.0 || alpha < 0.0) {
     cupdlp_printf("alpha should be in [0, 2]\n");
     exit(1);
   }
 
-  if (nRows > 0 && csc != NULL) {
+  if (nRows > 0) {
     for (int i = 0; i < nCols; i++) {
       for (int j = csc->colMatBeg[i]; j < csc->colMatBeg[i + 1]; j++) {
         current_col_scaling[i] += POWF(ABS(csc->colMatElem[j]), alpha);
@@ -215,8 +216,8 @@ cupdlp_retcode cupdlp_pc_scaling_cuda(CUPDLPcsc *csc, cupdlp_float *cost,
 
   // apply scaling
   // scale_problem(work, current_col_scaling, current_row_scaling);
-  scale_problem_cuda(csc, cost, lower, upper, rhs, current_col_scaling,
-                     current_row_scaling);
+  scale_problem(csc, cost, lower, upper, rhs, current_col_scaling,
+                current_row_scaling);
 
   // update scaling
   cupdlp_cdot(scaling->colScale, current_col_scaling, nCols);
@@ -228,11 +229,10 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
-				      CUPDLPcsc *csc, cupdlp_int ifScaling,
-				      CUPDLPscaling *scaling, cupdlp_float *cost,
-				      cupdlp_float *lower, cupdlp_float *upper,
-				      cupdlp_float *rhs) {
+cupdlp_retcode PDHG_Scale_Data(CUPDLPcsc *csc, cupdlp_int ifScaling,
+                               CUPDLPscaling *scaling, cupdlp_float *cost,
+                               cupdlp_float *lower, cupdlp_float *upper,
+                               cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;
   // scaling->dObjScale = 1.0;
 
@@ -255,12 +255,12 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
   }
   dAvgElem /= csc->colMatBeg[nCols];
 
-  if (log_level) {
-    cupdlp_printf("Problem before rescaling:\n");
-    cupdlp_printf("Absolute value of nonzero constraint matrix elements: largest=%f, "
-		  "smallest=%f, avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
-  }
+  cupdlp_printf("Problem before rescaling:\n");
+  cupdlp_printf(
+      "Absolute value of nonzero constraint matrix elements: largest=%f, "
+      "smallest=%f, avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
+
   // calculate the three statistics of objective vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -274,10 +274,10 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nCols;
-  if (log_level) 
-    cupdlp_printf("Absolute value of objective vector elements: largest=%f, smallest=%f, "
-		  "avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
+  cupdlp_printf(
+      "Absolute value of objective vector elements: largest=%f, smallest=%f, "
+      "avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -291,42 +291,34 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nRows;
-  if (log_level) 
-    cupdlp_printf("Absolute value of rhs vector elements: largest=%f, smallest=%f, "
-		  "avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
+  cupdlp_printf(
+      "Absolute value of rhs vector elements: largest=%f, smallest=%f, "
+      "avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
 //------------------- for debug ------------------
 #endif
 
   if (ifScaling) {
-    if (log_level) {
-      cupdlp_printf("--------------------------------------------------\n");
-      cupdlp_printf("running scaling\n");
-    }
+    cupdlp_printf("--------------------------------------------------\n");
+    cupdlp_printf("running scaling\n");
+
     if (scaling->ifRuizScaling) {
-      if (log_level) 
-	cupdlp_printf("- use Ruiz scaling\n");
-      CUPDLP_CALL(
-          cupdlp_ruiz_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
+      cupdlp_printf("- use Ruiz scaling\n");
+      CUPDLP_CALL(cupdlp_ruiz_scaling(csc, cost, lower, upper, rhs, scaling))
       scaling->ifScaled = 1;
     }
     if (scaling->ifL2Scaling) {
-      if (log_level) 
-	cupdlp_printf("- use L2 scaling\n");
-      CUPDLP_CALL(
-          cupdlp_l2norm_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
+      cupdlp_printf("- use L2 scaling\n");
+      CUPDLP_CALL(cupdlp_l2norm_scaling(csc, cost, lower, upper, rhs, scaling))
       scaling->ifScaled = 1;
     }
     if (scaling->ifPcScaling) {
-      if (log_level) 
-	cupdlp_printf("- use PC scaling\n");
-      CUPDLP_CALL(
-          cupdlp_pc_scaling_cuda(csc, cost, lower, upper, rhs, scaling));
+      cupdlp_printf("- use PC scaling\n");
+      CUPDLP_CALL(cupdlp_pc_scaling(csc, cost, lower, upper, rhs, scaling))
       scaling->ifScaled = 1;
     }
 
-    if (log_level) 
-      cupdlp_printf("--------------------------------------------------\n");
+    cupdlp_printf("--------------------------------------------------\n");
   }
 
   /* make sure the csr matrix is also scaled*/
@@ -347,12 +339,12 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
   }
   dAvgElem /= csc->colMatBeg[nCols];
 
-  if (log_level) {
-    cupdlp_printf("Problem after rescaling:\n");
-    cupdlp_printf("Absolute value of nonzero constraint matrix elements: largest=%f, "
-		  "smallest=%f, avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
-  }
+  cupdlp_printf("Problem after rescaling:\n");
+  cupdlp_printf(
+      "Absolute value of nonzero constraint matrix elements: largest=%f, "
+      "smallest=%f, avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
+
   // calculate the three statistics of objective vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -366,10 +358,10 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nCols;
-  if (log_level) 
-    cupdlp_printf("Absolute value of objective vector elements: largest=%f, smallest=%f, "
-		  "avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
+  cupdlp_printf(
+      "Absolute value of objective vector elements: largest=%f, smallest=%f, "
+      "avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
   // calculate the three statistics of rhs vector
   dMinElem = OUR_DBL_MAX;
   dMaxElem = 0.0;
@@ -383,10 +375,10 @@ cupdlp_retcode H_PDHG_Scale_Data_cuda(cupdlp_int log_level,
     dAvgElem += dAbsElem;
   }
   dAvgElem /= nRows;
-  if (log_level) 
-    cupdlp_printf("Absolute value of rhs vector elements: largest=%f, smallest=%f, "
-		  "avg=%f\n",
-		  dMaxElem, dMinElem, dAvgElem);
+  cupdlp_printf(
+      "Absolute value of rhs vector elements: largest=%f, smallest=%f, "
+      "avg=%f\n",
+      dMaxElem, dMinElem, dAvgElem);
 //------------------- for debug ------------------
 #endif
 
@@ -395,11 +387,13 @@ exit_cleanup:
   return retcode;
 }
 
-cupdlp_retcode H_Init_Scaling(cupdlp_int log_level,
-			      CUPDLPscaling *scaling, cupdlp_int ncols,
-			      cupdlp_int nrows, cupdlp_float *cost,
-			      cupdlp_float *rhs) {
+cupdlp_retcode Init_Scaling(CUPDLPscaling *scaling, cupdlp_int ncols,
+                            cupdlp_int nrows, cupdlp_float *cost,
+                            cupdlp_float *rhs) {
   cupdlp_retcode retcode = RETCODE_OK;
+
+  scaling->rowScale = NULL;
+  scaling->colScale = NULL;
 
   scaling->ifRuizScaling = 1;
   scaling->ifL2Scaling = 0;
@@ -409,8 +403,8 @@ cupdlp_retcode H_Init_Scaling(cupdlp_int log_level,
   scaling->RuizTimes = 10;
   scaling->RuizNorm = INFINITY;
   scaling->PcAlpha = 1.0;
-  CUPDLP_INIT_DOUBLE(scaling->colScale, ncols);
-  CUPDLP_INIT_DOUBLE(scaling->rowScale, nrows);
+  CUPDLP_INIT(scaling->colScale, ncols);
+  CUPDLP_INIT(scaling->rowScale, nrows);
 
   for (cupdlp_int iCol = 0; iCol < ncols; iCol++) scaling->colScale[iCol] = 1.0;
   for (cupdlp_int iRow = 0; iRow < nrows; iRow++) scaling->rowScale[iRow] = 1.0;

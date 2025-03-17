@@ -6,7 +6,7 @@ int main() {
 
   int nDevices;
 
-  cudaGetDeviceCount(&nDevices);
+  CHECK_CUDA(cudaGetDeviceCount(&nDevices))
   //    for (int i = 0; i < nDevices; i++) {
   //        cudaDeviceProp prop;
   //        cudaGetDeviceProperties(&prop, i);
@@ -39,12 +39,12 @@ int main() {
   // alloc and init device vec memory
   cupdlp_float *d_vec1;
   cupdlp_float *d_vec2;
-  cudaMalloc((void **)&d_vec1, len * sizeof(cupdlp_float));
-  cudaMalloc((void **)&d_vec2, len * sizeof(cupdlp_float));
-  cudaMemcpy(d_vec1, h_vec1, len * sizeof(cupdlp_float),
-             cudaMemcpyHostToDevice);
-  cudaMemcpy(d_vec2, h_vec2, len * sizeof(cupdlp_float),
-             cudaMemcpyHostToDevice);
+  CHECK_CUDA(cudaMalloc((void **)&d_vec1, len * sizeof(cupdlp_float)))
+  CHECK_CUDA(cudaMalloc((void **)&d_vec2, len * sizeof(cupdlp_float)))
+  CHECK_CUDA(cudaMemcpy(d_vec1, h_vec1, len * sizeof(cupdlp_float),
+                        cudaMemcpyHostToDevice))
+  CHECK_CUDA(cudaMemcpy(d_vec2, h_vec2, len * sizeof(cupdlp_float),
+                        cudaMemcpyHostToDevice))
 
   // call cupdlp_edot_cuda
   cupdlp_edot_cuda(d_vec1, d_vec2, len);
@@ -54,10 +54,10 @@ int main() {
   // len);
 
   // copy result back to host
-  cudaMemcpy(h_vec1, d_vec1, len * sizeof(cupdlp_float),
-             cudaMemcpyDeviceToHost);
-  cudaMemcpy(h_vec2, d_vec2, len * sizeof(cupdlp_float),
-             cudaMemcpyDeviceToHost);
+  CHECK_CUDA(cudaMemcpy(h_vec1, d_vec1, len * sizeof(cupdlp_float),
+                        cudaMemcpyDeviceToHost))
+  CHECK_CUDA(cudaMemcpy(h_vec2, d_vec2, len * sizeof(cupdlp_float),
+                        cudaMemcpyDeviceToHost))
   cudaError_t errSync = cudaGetLastError();
   cudaError_t errAsync = cudaDeviceSynchronize();
   if (errSync != cudaSuccess)
@@ -74,6 +74,6 @@ int main() {
   // free memory
   free(h_vec1);
   free(h_vec2);
-  cudaFree(d_vec1);
-  cudaFree(d_vec2);
+  CHECK_CUDA(cudaFree(d_vec1))
+  CHECK_CUDA(cudaFree(d_vec2))
 }

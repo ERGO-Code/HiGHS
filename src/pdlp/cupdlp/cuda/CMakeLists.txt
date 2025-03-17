@@ -6,24 +6,12 @@ add_library(cudalin SHARED
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cuh
        ${CUPDLP_INCLUDE_DIR}/cuda/cupdlp_cudalinalg.cu
 )
-
-target_compile_options(cudalin PRIVATE 
-        "$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
-
-# Just testing locally
-# if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     target_compile_options(cudalin PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-G>)
-# endif()
-
 set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-target_include_directories(cudalin PUBLIC "${CMAKE_CUDA_PATH}/include")
-
-# target_include_directories(cudalin PUBLIC "/usr/local/cuda/include")
+target_include_directories(cudalin PUBLIC "/usr/local/cuda/include")
 target_compile_definitions(cudalin
         PUBLIC
         # If the debug configuration pass the DEBUG define to the compiler
-        $<$<CONFIG:Debug>:CUPDLP_DEBUG>
+        $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
 )
 
 target_link_libraries(cudalin ${CUDA_LIBRARY} m)

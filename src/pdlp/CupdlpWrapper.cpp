@@ -150,7 +150,7 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   memcpy(csc_cpu->colMatElem, csc_val, nnz * sizeof(double));
 
   cupdlp_float scaling_time = getTimeStamp();
-  H_PDHG_Scale_Data_cuda(local_log_level, csc_cpu, ifScaling, scaling, cost,
+  PDHG_Scale_Data(local_log_level, csc_cpu, ifScaling, scaling, cost,
                          lower, upper, rhs);
   scaling_time = getTimeStamp() - scaling_time;
 
@@ -239,24 +239,20 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // free(csc_idx);
   // free(csc_val);
   // free(rhs);
-
   // free(constraint_new_idx);
 
   // Scaling
-#ifdef CUPDLP_CPU
+// #ifdef CUPDLP_CPU
 
-  if (scaling->rowScale != nullptr) free(scaling->rowScale);
-  if (scaling->colScale != nullptr) free(scaling->colScale);
-  free(scaling);
+//   if (scaling->rowScale != nullptr) free(scaling->rowScale);
+//   if (scaling->colScale != nullptr) free(scaling->colScale);
+//   free(scaling);
 
-#else
-  // free problem
-  if (scaling) {
-    scaling_clear(scaling);
-  }
-#endif
+// #else
 
-#ifdef CUPDLP_CPU
+// #endif
+
+// #ifdef CUPDLP_CPU
   // free(prob->cost);
   // free(prob->lower);
   // free(prob->upper);
@@ -284,7 +280,12 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // free(csc_cpu->colMatElem);
 
   // free(csc_cpu);
-#endif
+// #endif
+
+  // free problem
+  if (scaling) {
+    scaling_clear(scaling);
+  }
 
   if (cost != NULL) cupdlp_free(cost);
   if (csc_beg != NULL) cupdlp_free(csc_beg);
@@ -294,13 +295,14 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   if (lower != NULL) cupdlp_free(lower);
   if (upper != NULL) cupdlp_free(upper);
   if (constraint_new_idx != NULL) cupdlp_free(constraint_new_idx);
-
-  // constraint type is std::vector
-  // if (constraint_type != NULL) cupdlp_free(constraint_type);
+  if (constraint_type != NULL) cupdlp_free(constraint_type);
 
   // free memory
-  csc_clear(csc_cpu);
+  csc_clear_host(csc_cpu);
   problem_clear(prob);
+  #if !(CUPDLP_CPU)
+    CHECK_CUDA(cudaDeviceReset())
+  #endif
 
   return HighsStatus::kOk;
 }
