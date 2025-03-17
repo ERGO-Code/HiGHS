@@ -406,7 +406,10 @@ if(NOT(${HIGHS_NO_DEFAULT_THREADS} STREQUAL "OFF"))
 endif()
 
 # For debug of cuda locally
-add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+
+# does not work with older CMake 
+# add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+
 # add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
 
 if (CUPDLP_GPU AND UNIX)

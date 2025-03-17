@@ -154,9 +154,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
 
   cupdlp_float scaling_time = getTimeStamp();
 
-  // PDHG_Scale_Data(local_log_level, csc_cpu, ifScaling, scaling, cost,
-  //                        lower, upper, rhs);
-
   PDHG_Scale_Data(csc_cpu, ifScaling, scaling, cost, lower, upper, rhs);
 
   scaling_time = getTimeStamp() - scaling_time;
@@ -209,7 +206,6 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
       highs_solution.row_dual.data(), &value_valid, &dual_valid, ifSaveSol,
       fp_sol, constraint_new_idx, constraint_type, &pdlp_model_status,
       &pdlp_num_iter);
-
   highs_info.pdlp_iteration_count = pdlp_num_iter;
 
   model_status = HighsModelStatus::kUnknown;

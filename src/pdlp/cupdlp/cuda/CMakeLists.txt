@@ -18,11 +18,11 @@ target_compile_definitions(cudalin
         $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
 )
 
-    if (WIN32)
-      target_link_libraries(cudalin ${CUDA_LIBRARY})
-    else()
-      target_link_libraries(cudalin ${CUDA_LIBRARY} m)
-    endif()
+if (WIN32)
+  target_link_libraries(cudalin ${CUDA_LIBRARY})
+else()
+  target_link_libraries(cudalin ${CUDA_LIBRARY} m)
+endif()
 
 # add a test
 add_executable(testcudalin test_cuda_linalg.c)

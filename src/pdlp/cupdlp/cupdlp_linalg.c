@@ -395,7 +395,7 @@ void Ax_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecX,
 
   switch (w->problem->data->matrix_format) {
     case CSR_CSC:
-          cuda_csr_Ax(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
+      cuda_csr_Ax(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
                   vecX, vecAx, w->dBuffer_csr_Ax, alpha, beta);
       break;
     case CSC:
@@ -427,7 +427,7 @@ void ATy_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecY,
 
   switch (w->problem->data->matrix_format) {
     case CSR_CSC:
-          cuda_csc_ATy(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
+      cuda_csc_ATy(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
                    vecY, vecATy, w->dBuffer_csc_ATy, alpha, beta);
       break;
     case CSC:
