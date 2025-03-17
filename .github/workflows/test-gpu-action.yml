@@ -1,0 +1,15 @@
+name: nvidia-smi
+
+on: [push]
+
+jobs: 
+  run-smi: 
+    runs-on: 
+      group: linux-server
+      # labels:
+    
+    steps: 
+
+    - name: Run nvidia smi 
+      run: | 
+        nvidia-smi
