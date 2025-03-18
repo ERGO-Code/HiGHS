@@ -42,10 +42,12 @@ typedef struct {
   double* cutpool_value;
   double* cutpool_lower;
   double* cutpool_upper;
+  HighsInt user_solution_callback_origin;
 } HighsCallbackDataOut;
 
 typedef struct {
   int user_interrupt;
+  double* user_solution;
 } HighsCallbackDataIn;
 
 // Additional callback handling

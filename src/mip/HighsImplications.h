@@ -37,8 +37,14 @@ class HighsImplications {
     double coef;
     double constant;
 
-    double minValue() const { return constant + std::min(coef, 0.0); }
-    double maxValue() const { return constant + std::max(coef, 0.0); }
+    double minValue() const {
+      return static_cast<double>(static_cast<HighsCDouble>(constant) +
+                                 std::min(coef, 0.0));
+    }
+    double maxValue() const {
+      return static_cast<double>(static_cast<HighsCDouble>(constant) +
+                                 std::max(coef, 0.0));
+    }
   };
 
  private:
@@ -58,6 +64,9 @@ class HighsImplications {
     nextCleanupCall = mipsolver.numNonzero();
     numImplications = 0;
   }
+
+  std::function<void(HighsInt, HighsInt, HighsInt, double)>
+      storeLiftingOpportunity;
 
   void reset() {
     colsubstituted.clear();
@@ -148,6 +157,14 @@ class HighsImplications {
                              HighsCutPool& cutpool, double feastol);
 
   void cleanupVarbounds(HighsInt col);
+
+  void cleanupVlb(HighsInt col, HighsInt vlbCol,
+                  HighsImplications::VarBound& vlb, double lb, bool& redundant,
+                  bool& infeasible, bool allowBoundChanges = true) const;
+
+  void cleanupVub(HighsInt col, HighsInt vubCol,
+                  HighsImplications::VarBound& vub, double ub, bool& redundant,
+                  bool& infeasible, bool allowBoundChanges = true) const;
 };
 
 #endif

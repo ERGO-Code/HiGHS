@@ -22,7 +22,7 @@
 #include "util/HighsInt.h"
 
 const HighsInt check_clock = -46;
-const HighsInt ipm_clock = 46;
+const HighsInt ipm_clock = 9;
 const bool kNoClockCalls = false;
 
 /**
@@ -190,7 +190,7 @@ class HighsTimer {
    * @brief Read the time of a clock
    */
   double read(const HighsInt i_clock = 0  //!< Index of the clock to be read
-  ) {
+  ) const {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
     if (i_clock == check_clock) {
@@ -223,6 +223,17 @@ class HighsTimer {
              clock_start[i_clock]);
     }
     return clock_start[i_clock] < 0;
+  }
+
+  /**
+   * @brief Return number of calls to a clock
+   */
+  HighsInt numCall(
+      const HighsInt i_clock = 0  //!< Index of the clock to be read
+  ) {
+    assert(i_clock >= 0);
+    assert(i_clock < num_clock);
+    return clock_num_call[i_clock];
   }
 
   /**
@@ -301,7 +312,11 @@ class HighsTimer {
       double time_per_call = 0;
       if (clock_num_call[iClock] > 0) {
         time_per_call = time / clock_num_call[iClock];
-        if (percent_sum_clock_times[i] >= tolerance_percent_report) {
+        const bool report_time =
+            tolerance_percent_report > 0
+                ? percent_sum_clock_times[i] >= tolerance_percent_report
+                : clock_num_call[iClock] > 0;
+        if (report_time) {
           printf("%s-time  %-32s: %11.4e (%5.1f%%", grep_stamp,
                  clock_names[iClock].c_str(), time, percent_run_highs);
           if (ideal_sum_time > 0) {
@@ -332,7 +347,7 @@ class HighsTimer {
   /**
    * @brief Return the current wall-clock time
    */
-  double getWallTime() {
+  double getWallTime() const {
     using namespace std::chrono;
     const double wall_time = kNoClockCalls
                                  ? 0

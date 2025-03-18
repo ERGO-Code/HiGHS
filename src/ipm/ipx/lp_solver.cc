@@ -649,9 +649,10 @@ void LpSolver::RunCrossover() {
 void LpSolver::PrintSummary() {
   std::stringstream h_logging_stream;
   h_logging_stream.str(std::string());
-  h_logging_stream << "Summary\n"
-                   << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n"
-                   << Textline("Status interior point solve:")
+  h_logging_stream << "Summary\n";
+  if (!control_.timelessLog())
+    h_logging_stream << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n";
+  h_logging_stream << Textline("Status interior point solve:")
                    << StatusString(info_.status_ipm) << '\n'
                    << Textline("Status crossover:")
                    << StatusString(info_.status_crossover) << '\n';

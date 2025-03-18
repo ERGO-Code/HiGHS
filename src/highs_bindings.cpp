@@ -947,7 +947,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kContinuous", HighsVarType::kContinuous)
       .value("kInteger", HighsVarType::kInteger)
       .value("kSemiContinuous", HighsVarType::kSemiContinuous)
-      .value("kSemiInteger", HighsVarType::kSemiInteger);
+      .value("kSemiInteger", HighsVarType::kSemiInteger)
+      .value("kImplicitInteger", HighsVarType::kImplicitInteger);
   py::enum_<HighsOptionType>(m, "HighsOptionType", py::module_local())
       .value("kBool", HighsOptionType::kBool)
       .value("kInt", HighsOptionType::kInt)
@@ -1578,6 +1579,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
              HighsCallbackType::kCallbackMipGetCutPool)
       .value("kCallbackMipDefineLazyConstraints",
              HighsCallbackType::kCallbackMipDefineLazyConstraints)
+      .value("kCallbackMipUserSolution",
+             HighsCallbackType::kCallbackMipUserSolution)
       .value("kCallbackMax", HighsCallbackType::kCallbackMax)
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();

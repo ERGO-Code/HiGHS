@@ -60,7 +60,8 @@ class HMpsFF {
                                          const std::string filename,
                                          HighsModel& model);
 
-  double time_limit = kHighsInf;
+  double time_limit_ = kHighsInf;
+  bool warning_issued_ = false;
 
  private:
   double start_time;
@@ -145,6 +146,7 @@ class HMpsFF {
     kCsection,
     kDelayedrows,
     kModelcuts,
+    kUsercuts,
     kIndicators,
     kSets,
     kSos,

@@ -51,7 +51,6 @@ class OptionRecordBool : public OptionRecord {
   OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
                    bool* Xvalue_pointer, bool Xdefault_value)
       : OptionRecord(HighsOptionType::kBool, Xname, Xdescription, Xadvanced) {
-    advanced = Xadvanced;
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -335,6 +334,7 @@ struct HighsOptionsStruct {
   // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
+  bool timeless_log;
 
   // Options for IPM solver
   HighsInt ipm_iteration_limit;
@@ -364,6 +364,7 @@ struct HighsOptionsStruct {
   bool use_implied_bounds_from_presolve;
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
+  bool use_warm_start;
   HighsInt keep_n_rows;
   HighsInt cost_scale_factor;
   HighsInt allowed_matrix_scale_factor;
@@ -437,6 +438,8 @@ struct HighsOptionsStruct {
   bool mip_improving_solution_save;
   bool mip_improving_solution_report_sparse;
   std::string mip_improving_solution_file;
+  bool mip_root_presolve_only;
+  HighsInt mip_lifting_for_probing;
 
   // Logging callback identifiers
   HighsLogOptions log_options;
@@ -486,6 +489,7 @@ struct HighsOptionsStruct {
         write_presolved_model_file(""),
         output_flag(false),
         log_to_console(false),
+        timeless_log(false),
         ipm_iteration_limit(0),
         pdlp_native_termination(false),
         pdlp_scaling(false),
@@ -503,6 +507,7 @@ struct HighsOptionsStruct {
         use_implied_bounds_from_presolve(false),
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
+        use_warm_start(true),
         keep_n_rows(0),
         cost_scale_factor(0),
         allowed_matrix_scale_factor(0),
@@ -572,7 +577,9 @@ struct HighsOptionsStruct {
         mip_improving_solution_save(false),
         mip_improving_solution_report_sparse(false),
         // clang-format off
-	mip_improving_solution_file("") {};
+        mip_improving_solution_file(""),
+        mip_root_presolve_only(false),
+        mip_lifting_for_probing(-1) {};
   // clang-format on
 };
 
@@ -766,14 +773,15 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "highs_analysis_level", "Analysis level in HiGHS", now_advanced,
-        &highs_analysis_level, kHighsAnalysisLevelMin, kHighsAnalysisLevelMin,
+        &highs_analysis_level, kHighsAnalysisLevelMin,
+        kHighsAnalysisLevelMin,  // kHighsAnalysisLevelMipTime,  //
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_strategy",
         "Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => "
-        "Dual (PAMI); 3 => Dual (SIP); 4 => Primal",
+        "Dual (SIP); 3 => Dual (PAMI); 4 => Primal",
         advanced, &simplex_strategy, kSimplexStrategyMin, kSimplexStrategyDual,
         kSimplexStrategyMax);
     records.push_back(record_int);
@@ -847,6 +855,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("log_to_console",
                                        "Enables or disables console logging",
                                        advanced, &log_to_console, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "timeless_log", "Suppression of time-based data in logging", true,
+        &timeless_log, false);
     records.push_back(record_bool);
 
     record_string =
@@ -1004,6 +1017,17 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &mip_improving_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
+    record_bool = new OptionRecordBool(
+        "mip_root_presolve_only",
+        "Whether MIP presolve is only applied at the root node", advanced,
+        &mip_root_presolve_only, false);
+    records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "mip_lifting_for_probing", "Level of lifting for probing that is used",
+        advanced, &mip_lifting_for_probing, -1, -1, kHighsIInf);
+    records.push_back(record_int);
+
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leaf nodes", advanced,
         &mip_max_leaves, 0, kHighsIInf, kHighsIInf);
@@ -1158,11 +1182,12 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_int = new OptionRecordInt(
-        "log_dev_level",
-        "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
-        kHighsLogDevLevelMax);
+    record_int =
+        new OptionRecordInt("log_dev_level",
+                            "Output development messages: 0 => none; 1 => "
+                            "info; 2 => detailed; 3 => verbose",
+                            advanced, &log_dev_level, kHighsLogDevLevelMin,
+                            kHighsLogDevLevelNone, kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("log_githash", "Log the githash",
@@ -1196,6 +1221,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("mps_parser_type_free",
                                        "Use the free format MPS file reader",
                                        advanced, &mps_parser_type_free, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("use_warm_start",
+                                       "Use any warm start that is available",
+                                       advanced, &use_warm_start, true);
     records.push_back(record_bool);
 
     record_int =

@@ -94,10 +94,11 @@ bool commandLineSolverOk(const HighsLogOptions& report_log_options,
 bool boolFromString(std::string value, bool& bool_value) {
   std::transform(value.begin(), value.end(), value.begin(),
                  [](unsigned char c) { return std::tolower(c); });
-  if (value == "t" || value == "true" || value == "1" || value == "on") {
+  if (value == "t" || value == "true" || value == "1" ||
+      value == kHighsOnString) {
     bool_value = true;
   } else if (value == "f" || value == "false" || value == "0" ||
-             value == "off") {
+             value == kHighsOffString) {
     bool_value = false;
   } else {
     return false;

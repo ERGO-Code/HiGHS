@@ -36,6 +36,9 @@ class HighsMipAnalysis {
   double mipTimerRead(const HighsInt mip_clock = 0
                       //		    , const HighsInt thread_id = 0
   ) const;
+  HighsInt mipTimerNumCall(const HighsInt mip_clock = 0
+                           // , const HighsInt thread_id
+  ) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
 

@@ -36,6 +36,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   analyse_simplex_data =
       analyse_simplex_summary_data || analyse_simplex_runtime_data;
+  highs_run_time = 0;
   last_user_log_time = -kHighsInf;
   delta_user_log_time = 5e0;
 
@@ -54,6 +55,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   //  AnIterNumCostlyDseIt = 0;
   // Copy messaging parameter from options
   messaging(options.log_options);
+  timeless_log = options.timeless_log;
   // Initialise the densities
   col_aq_density = 0;
   row_ep_density = 0;
@@ -380,13 +382,13 @@ void HighsSimplexAnalysis::userInvertReport(const bool force) {
 
 void HighsSimplexAnalysis::userInvertReport(const bool header,
                                             const bool force) {
-  const double highs_run_time = timer_->read();
+  highs_run_time = timeless_log ? highs_run_time + 1 : timer_->read();
   if (!force && highs_run_time < last_user_log_time + delta_user_log_time)
     return;
   analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
   reportIterationObjective(header);
   reportInfeasibility(header);
-  reportRunTime(header, highs_run_time);
+  if (!timeless_log) reportRunTime(header, highs_run_time);
   highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                analysis_log->str().c_str());
   if (!header) last_user_log_time = highs_run_time;
