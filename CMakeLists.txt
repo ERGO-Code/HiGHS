@@ -133,6 +133,8 @@ if (CUPDLP_GPU)
 
   set (CUPDLP_CPU OFF)
 
+  enable_language(CUDA)
+
   # With FindCUDAConf.cmake
   # default cuda_home on linux
   # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
