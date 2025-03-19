@@ -16,11 +16,11 @@ target_include_directories(cudalin PUBLIC "${CMAKE_CUDA_PATH}/include")
 if (WIN32)
   target_link_libraries(cudalin ${CUDA_LIBRARY})
 else()
-  target_compile_definitions(cudalin
-      PUBLIC
-      # If the debug configuration pass the DEBUG define to the compiler
-      $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
-    )
+  # target_compile_definitions(cudalin
+  #     PUBLIC
+  #     # If the debug configuration pass the DEBUG define to the compiler
+  #     $<$<CONFIG:Debug>:-DCUPDLP_DEBUG=1>
+  #   )
   target_link_libraries(cudalin ${CUDA_LIBRARY} m)
 endif()
 
