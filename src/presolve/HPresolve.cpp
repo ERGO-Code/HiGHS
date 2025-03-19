@@ -4584,18 +4584,30 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double time_limit = std::min(0.01 * options->time_limit, 1000.0);
+  const double time_limit =
+      std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
+  double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
+  time_taken += this->timer->read();
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
-    highsLogDev(options->log_options, HighsLogType::kWarning,
-                "HPresolve::removeDependentEquations Timed out\n");
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Presolve dependent equations timed out after limit of %gs\n",
+                 time_limit);
     analysis_.logging_on_ = logging_on;
     if (logging_on)
       analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
     return Result::kOk;
+  } else {
+    double pct_off_timeout = std::fabs(time_taken - time_limit) / time_limit;
+    if (pct_off_timeout < 1.0)
+      highsLogUser(
+          options->log_options, HighsLogType::kWarning,
+          "Presolve dependent equations finished within %g\% of limit of %gs: "
+          "risk of non-deterministic behaviour if solve is repeated\n",
+          pct_off_timeout, time_limit);
   }
   // build_return as rank_deficiency must be valid
   assert(build_return >= 0);
@@ -4616,10 +4628,12 @@ HPresolve::Result HPresolve::removeDependentEquations(
     }
   }
 
-  highsLogDev(
-      options->log_options, HighsLogType::kInfo,
-      "HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
-      (int)num_removed_row, (int)num_removed_nz);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "Presolve dependent equations removed %d rows and %d nonzeros "
+               "in %gs (limit = %gs)",
+               int(num_removed_row), int(num_removed_nz), time_taken,
+               time_limit);
+
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious rows",
