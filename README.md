@@ -143,7 +143,7 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```
+```shell
 $ bin/highs --help
 usage:
       ./bin/highs [options] [file]
@@ -170,6 +170,8 @@ options:
                                    "off" 
       --time_limit float         Run time limit (seconds - double).
       --solution_file text       File for writing out model solution.
+      --read_basis_file text     File for initial basis to read. 
+      --write_basis_file text    File for final basis to write. 
       --write_model_file text    File for writing out model.
       --random_seed int          Seed to initialize random number 
                                  generation.
