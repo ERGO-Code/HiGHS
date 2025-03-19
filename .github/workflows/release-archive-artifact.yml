@@ -30,16 +30,15 @@ jobs:
 
       - name:  Generate archive artifact
         run: |
-          cd ${{runner.workspace}}/archive 
-          tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE 
+          pwd
+          cd ${{runner.workspace}}
+          pwd
+          tar -czvf source-archive.tar.gz HiGHS
           
         # --exclude='./archive'
 
       - name: unzip archive
         run: |
-          cd ${{runner.workspace}}
-          cd archive
-          ls
           tar -xvzf source-archive.tar.gz -C ${{runner.workspace}}/archive_unzipped
 
       - name: ls unziped archive
@@ -47,11 +46,13 @@ jobs:
           cd ${{runner.workspace}}/archive_unzipped
           pwd
           ls
-
-      - name: copy archive
-        run: |
-          cp ${{runner.workspace}}/archive/source-archive.tar.gz .
+          cd HiGHS
           ls
+
+      # - name: copy archive
+      #   run: |
+      #     cp ${{runner.workspace}}/archive/source-archive.tar.gz .
+      #     ls
 
       - name: Release
         uses: softprops/action-gh-release@v2
