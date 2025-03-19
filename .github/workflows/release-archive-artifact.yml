@@ -38,7 +38,7 @@ jobs:
           cd ${{runner.workspace}}
           cd archive
           ls
-          tar -xf source-archive.tar -C ${{runner.workspace}}/archive_unzipped
+          tar -xf source-archive.tar.gz -C ${{runner.workspace}}/archive_unzipped
           cd archive_unzipped
           ls
 
