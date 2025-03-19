@@ -36,7 +36,7 @@ jobs:
       - name: ls archive
         run: |
           cd ${{runner.workspace}}
-          tar -xf source archive.tar -C ${{runner.workspace}}/archive_unzipped
+          tar -xf archive/source_archive.tar -C ${{runner.workspace}}/archive_unzipped
           cd archive_unzipped
           ls
 
