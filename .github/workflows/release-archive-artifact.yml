@@ -41,6 +41,12 @@ jobs:
           tar -xf source-archive.tar.gz -C ${{runner.workspace}}/archive_unzipped
           cd archive_unzipped
           ls
+          
+
+      - name: copy archive
+        run: |
+          cp ${{runner.workspace}}/archive/source-archive.tar.gz .
+          ls
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -48,4 +54,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            archive/source-archive.tar.gz
+            source-archive.tar.gz
