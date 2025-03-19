@@ -4587,7 +4587,7 @@ HPresolve::Result HPresolve::removeDependentEquations(
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "Dependent equations search running on %d equations with time "
                "limit of %.2fs\n",
-               int(matrix.num_col_), time_limit);
+               static_cast<int>(matrix.num_col_), time_limit);
   double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
   time_taken += this->timer->read();
@@ -4633,8 +4633,8 @@ HPresolve::Result HPresolve::removeDependentEquations(
   highsLogUser(options->log_options, HighsLogType::kInfo,
                "Dependent equations search removed %d rows and %d nonzeros "
                "in %.2fs (limit = %.2fs)\n",
-               int(num_removed_row), int(num_removed_nz), time_taken,
-               time_limit);
+               static_cast<int>(num_removed_row),
+               static_cast<int>(num_removed_nz), time_taken, time_limit);
 
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
