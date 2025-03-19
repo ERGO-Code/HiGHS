@@ -16,7 +16,15 @@ jobs:
         run: |
           pwd
           ls 
+          echo $GITHUB_WORKSPACE
+          echo ${runner.workspace}
+          cd ..
+          ls
 
+      - name: working dir
+        run: |
+          pwd
+          ls 
         # tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE
 
       - name: Release
