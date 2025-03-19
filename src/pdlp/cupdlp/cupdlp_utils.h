@@ -8,8 +8,15 @@
 #include <stdio.h>
 #ifdef CUPDLP_TIMER
 #include <time.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <time.h>
+#else
+#include <sys/time.h>
 #endif
-#include "cupdlp_defs.h"
+
+#endif
+#include "pdlp/cupdlp/cupdlp_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +36,7 @@ void resobj_clear(CUPDLPresobj *resobj);
 
 void stepsize_clear(CUPDLPstepsize *stepsize);
 
-void timers_clear(CUPDLPtimers *timers);
+void timers_clear(int log_level, CUPDLPtimers *timers);
 
 void scaling_clear(CUPDLPscaling *scaling);
 
@@ -166,6 +173,8 @@ void csr2dense(CUPDLPdense *dense, CUPDLPcsr *csr);
 void csc2dense(CUPDLPdense *dense, CUPDLPcsc *csc);
 
 cupdlp_int csc_clear(CUPDLPcsc *csc);
+
+cupdlp_int csc_clear_host(CUPDLPcsc *csc);
 
 cupdlp_int csr_clear(CUPDLPcsr *csr);
 

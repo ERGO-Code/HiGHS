@@ -18,7 +18,7 @@ However, the cuPDLP-C scaling may still result in the HiGHS tolerances not being
 
 The following line is not recognised by g++, 
 
-> #if !(CUPDLP_CPU)
+> #if !defined(CUPDLP_CPU)
 
 so I've had to replace all ocurrences by
 
