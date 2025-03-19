@@ -121,7 +121,7 @@ message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
 message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 
-if(CUPDLP_GPU CMAKE_VERSION VERSION_LESS "3.25.0") 
+if(CUPDLP_GPU  AND CMAKE_VERSION VERSION_LESS "3.25.0") 
     message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
 endif()
 
