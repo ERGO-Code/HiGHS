@@ -1,8 +1,8 @@
 ## Build changes
 
-Added code coverage report.
+Added code coverage report
 
-Replaced command line parsing library with CLI11. Removed C++17 reference with cxxopts, which is no longer in HiGHS. 
+Replaced command line parsing library with CLI11. Removed C++17 reference with cxxopts, which is no longer in HiGHS
 
 ## Code changes
 
