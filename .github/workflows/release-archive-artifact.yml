@@ -12,20 +12,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/archive
+
       - name: Generate archive artifact
         run: |
           pwd
           ls 
           echo $GITHUB_WORKSPACE
           echo ${runner.workspace}
-          cd ..
-          ls
 
       - name: working dir
         run: |
-          pwd
-          ls 
-        # tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE
+          cd archive 
+          tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE --exclude='./archive'
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -33,4 +33,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            source-archive.tar.gz
+            archive/source-archive.tar.gz
