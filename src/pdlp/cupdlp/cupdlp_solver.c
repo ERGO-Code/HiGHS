@@ -1174,7 +1174,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 #endif
 
 #ifndef CUPDLP_CPU
-  if (pdhg->settings->nLogLevel>1) {
+  if (pdhg->settings->nLogLevel>0) {
     cupdlp_printf("\n");
     cupdlp_printf("GPU Timing information:\n");
     cupdlp_printf("%21s %e\n", "CudaPrepare", timers->CudaPrepareTime);
