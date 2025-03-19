@@ -146,20 +146,17 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 void freeFixedModelTest(const std::string model_name) {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model_name + ".mps";
-  HighsStatus status;
 
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
   HighsModel model_free = highs.getModel();
 
-  status = highs.setOptionValue("mps_parser_type_free", false);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("mps_parser_type_free", false) ==
+          HighsStatus::kOk);
 
-  status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kWarning);
 
   HighsModel model_fixed = highs.getModel();
 
@@ -415,4 +412,45 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
 
   std::remove(write_model_file.c_str());
+}
+
+TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
+  std::string write_model_file = "temp.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.addCol(1, -kHighsInf, 1, 0, nullptr, nullptr);
+  h.changeColIntegrality(0, HighsVarType::kInteger);
+  h.passColName(0, "x");
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  h.addRow(-10, kHighsInf, 1, index.data(), value.data());
+  h.passRowName(0, "r");
+  h.run();
+  double required_objective_value = h.getInfo().objective_function_value;
+  // writeModel must ensure that there is a line
+  //
+  // MI BOUND x
+  h.writeModel(write_model_file);
+  h.readModel(write_model_file);
+  h.run();
+  REQUIRE(required_objective_value == h.getInfo().objective_function_value);
+  std::remove(write_model_file.c_str());
+}
+
+TEST_CASE("mps-warnings", "[highs_filereader]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/warnings.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsStatus return_status = h.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kWarning);
+}
+
+TEST_CASE("mps-silly-names", "[highs_filereader]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/silly-names.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsStatus return_status = h.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::kOk);
 }

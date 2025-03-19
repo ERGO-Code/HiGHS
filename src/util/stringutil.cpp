@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -73,6 +70,11 @@ void strTrim(char* str) {
 void tolower(std::string& str) {
   std::transform(str.begin(), str.end(), str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
+}
+
+void toupper(std::string& str) {
+  std::transform(str.begin(), str.end(), str.begin(),
+                 [](unsigned char c) { return std::toupper(c); });
 }
 
 std::string& ltrim(std::string& str, const std::string& chars) {

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -34,6 +31,17 @@ template <typename T>
 bool okReserve(std::vector<T>& use_vector, HighsInt dimension) {
   try {
     use_vector.reserve(dimension);
+  } catch (const std::bad_alloc& e) {
+    printf("HighsMemoryAllocation::okReserve fails with %s\n", e.what());
+    return false;
+  }
+  return true;
+}
+
+template <typename T, typename T2>
+bool okReserve(std::unordered_map<T, T2>& use_map, HighsInt dimension) {
+  try {
+    use_map.reserve(dimension);
   } catch (const std::bad_alloc& e) {
     printf("HighsMemoryAllocation::okReserve fails with %s\n", e.what());
     return false;

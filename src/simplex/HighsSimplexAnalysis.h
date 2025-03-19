@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -155,8 +152,10 @@ class HighsSimplexAnalysis {
         max_sum_average_log_extreme_dual_steepest_edge_weight_error(0.0),
         num_invert_report_since_last_header(-1),
         num_iteration_report_since_last_header(-1),
+        highs_run_time(0.0),
         last_user_log_time(-kHighsInf),
         delta_user_log_time(1e0),
+        timeless_log(false),
         average_concurrency(0.0),
         average_fraction_of_possible_minor_iterations_performed(0.0),
         sum_multi_chosen(0),
@@ -431,8 +430,10 @@ class HighsSimplexAnalysis {
 
   HighsInt num_invert_report_since_last_header;
   HighsInt num_iteration_report_since_last_header;
+  double highs_run_time;
   double last_user_log_time;
   double delta_user_log_time;
+  bool timeless_log;
 
   double average_concurrency;
   double average_fraction_of_possible_minor_iterations_performed;

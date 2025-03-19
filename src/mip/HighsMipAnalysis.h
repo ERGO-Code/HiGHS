@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -39,12 +36,17 @@ class HighsMipAnalysis {
   double mipTimerRead(const HighsInt mip_clock = 0
                       //		    , const HighsInt thread_id = 0
   ) const;
+  HighsInt mipTimerNumCall(const HighsInt mip_clock = 0
+                           // , const HighsInt thread_id
+  ) const;
   void reportMipSolveLpClock(const bool header);
   void reportMipTimer();
 
   std::string model_name;
   HighsTimerClock mip_clocks;
   bool analyse_mip_time;
+  std::vector<double> dive_time;
+  std::vector<double> node_search_time;
 };
 
 #endif /* MIP_HIGHSMIPANALYSIS_H_ */

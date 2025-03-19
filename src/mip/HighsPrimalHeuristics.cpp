@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -111,8 +108,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.mip_max_stall_nodes = stallnodes;
   submipoptions.mip_pscost_minreliable = 0;
-  submipoptions.time_limit -=
-      mipsolver.timer_.read(mipsolver.timer_.total_clock);
+  submipoptions.time_limit -= mipsolver.timer_.read();
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
 
   if (!mipsolver.submip) {
@@ -129,7 +125,11 @@ bool HighsPrimalHeuristics::solveSubMip(
         mipsolver.mipdata_->feastol * std::max(curr_abs_gap, 1000.0);
   }
 
-  submipoptions.presolve = "on";
+  // check if only root presolve is allowed
+  if (submipoptions.mip_root_presolve_only)
+    submipoptions.presolve = kHighsOffString;
+  else
+    submipoptions.presolve = kHighsOnString;
   submipoptions.mip_detect_symmetry = false;
   submipoptions.mip_heuristic_effort = 0.8;
   // setup solver and run it
@@ -138,6 +138,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   solution.value_valid = false;
   solution.dual_valid = false;
   // Create HighsMipSolver instance for sub-MIP
+  if (!mipsolver.submip)
+    mipsolver.analysis_.mipTimerStart(kMipClockSubMipSolve);
   HighsMipSolver submipsolver(*mipsolver.callback_, submipoptions, submip,
                               solution, true, mipsolver.submip_level + 1);
   submipsolver.rootbasis = &basis;
@@ -149,6 +151,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.run();
   mipsolver.max_submip_level =
       std::max(submipsolver.max_submip_level + 1, mipsolver.max_submip_level);
+  if (!mipsolver.submip) mipsolver.analysis_.mipTimerStop(kMipClockSubMipSolve);
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
@@ -309,16 +312,17 @@ void HighsPrimalHeuristics::rootReducedCost() {
   double fixingRate = neighbourhood.getFixingRate();
   if (fixingRate < 0.3) return;
 
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRootReducedCost);
   solveSubMip(*mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
               localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
               200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRootReducedCost);
 }
 
 void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
   HighsPseudocost pscost(mipsolver.mipdata_->pseudocost);
   HighsSearch heur(mipsolver, pscost);
   HighsDomain& localdom = heur.getLocalDomain();
@@ -533,14 +537,12 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRENS);
   const bool solve_sub_mip_return =
       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                   localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRENS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
@@ -567,7 +569,10 @@ retry:
 }
 
 void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  // return if domain is infeasible
+  if (mipsolver.mipdata_->domain.infeasible()) return;
+
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   intcols.erase(std::remove_if(intcols.begin(), intcols.end(),
                                [&](HighsInt i) {
@@ -824,14 +829,12 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  mipsolver.analysis_.mipTimerStart(kMipClockSolveSubMipRINS);
   const bool solve_sub_mip_return =
       solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
                   localdom.col_lower_, localdom.col_upper_,
                   500,  // std::max(50, int(0.05 *
                   // (mipsolver.mipdata_->num_leaves))),
                   200 + mipsolver.mipdata_->num_nodes / 20, 12);
-  mipsolver.analysis_.mipTimerStop(kMipClockSolveSubMipRINS);
   if (!solve_sub_mip_return) {
     int64_t new_lp_iterations = lp_iterations + heur.getLocalLpIterations();
     if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
@@ -888,8 +891,12 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
 
-    if (numintcols / (double)mipsolver.numCol() >= 0.2)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * numintcols) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis,
                                      "HighsPrimalHeuristics::tryRoundedPoint");
@@ -975,7 +982,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
 
 void HighsPrimalHeuristics::randomizedRounding(
     const std::vector<double>& relaxationsol) {
-  if (int(relaxationsol.size()) != mipsolver.numCol()) return;
+  if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   auto localdom = mipsolver.mipdata_->domain;
 
@@ -1003,7 +1010,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     }
   }
 
-  if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
+  if (mipsolver.mipdata_->integer_cols.size() !=
+      static_cast<size_t>(mipsolver.numCol())) {
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.setIterationLimit(
@@ -1011,12 +1019,18 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.col_lower_.data(),
                                            localdom.col_upper_.data());
-    if ((5 * intcols.size()) / mipsolver.numCol() >= 1)
-      lprelax.getLpSolver().setOptionValue("presolve", "on");
+
+    // check if only root presolve is allowed
+    if (mipsolver.options_mip_->mip_root_presolve_only)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOffString);
+    if (!mipsolver.options_mip_->mip_root_presolve_only &&
+        (5 * intcols.size()) / mipsolver.numCol() >= 1)
+      lprelax.getLpSolver().setOptionValue("presolve", kHighsOnString);
     else
       lprelax.getLpSolver().setBasis(
           mipsolver.mipdata_->firstrootbasis,
           "HighsPrimalHeuristics::randomizedRounding");
+
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
@@ -1147,7 +1161,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 }
 
 void HighsPrimalHeuristics::centralRounding() {
-  if (HighsInt(mipsolver.mipdata_->analyticCenter.size()) != mipsolver.numCol())
+  if (mipsolver.mipdata_->analyticCenter.size() !=
+      static_cast<size_t>(mipsolver.numCol()))
     return;
 
   if (!mipsolver.mipdata_->firstlpsol.empty())

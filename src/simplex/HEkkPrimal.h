@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -104,8 +101,7 @@ class HEkkPrimal {
   void getBasicPrimalInfeasibility();
   bool correctPrimal(const bool initialise = false);
   void shiftBound(const bool lower, const HighsInt iVar, const double value,
-                  const double random_value, double& bound, double& shift,
-                  const bool report = false);
+                  const double random_value, double& bound, double& shift);
   void savePrimalRay();
   HighsDebugStatus debugPrimalSimplex(const std::string message,
                                       const bool initialise = false);

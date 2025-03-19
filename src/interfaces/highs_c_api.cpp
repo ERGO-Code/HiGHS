@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -803,6 +800,14 @@ HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const HighsInt* index, const double* value) {
   return (HighsInt)((Highs*)highs)
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, index, value);
+}
+
+HighsInt Highs_ensureColwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureColwise();
+}
+
+HighsInt Highs_ensureRowwise(void* highs) {
+  return (HighsInt)((Highs*)highs)->ensureRowwise();
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -16,6 +13,7 @@
 #include <cmath>
 
 #include "mip/MipTimer.h"
+#include "util/HighsUtils.h"
 
 const HighsInt check_mip_clock = -4;
 
@@ -77,6 +75,14 @@ double HighsMipAnalysis::mipTimerRead(const HighsInt mip_clock
   if (!analyse_mip_time) return 0;
   HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
   return mip_clocks.timer_pointer_->read(highs_timer_clock);
+}
+
+HighsInt HighsMipAnalysis::mipTimerNumCall(const HighsInt mip_clock
+                                           // , const HighsInt thread_id
+) const {
+  if (!analyse_mip_time) return 0;
+  HighsInt highs_timer_clock = mip_clocks.clock_[mip_clock];
+  return mip_clocks.timer_pointer_->numCall(highs_timer_clock);
 }
 
 void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
@@ -141,19 +147,27 @@ void HighsMipAnalysis::reportMipSolveLpClock(const bool header) {
 
 void HighsMipAnalysis::reportMipTimer() {
   if (!analyse_mip_time) return;
-  //  assert(analyse_mip_time);
   MipTimer mip_timer;
   mip_timer.reportMipCoreClock(mip_clocks);
   mip_timer.reportMipLevel1Clock(mip_clocks);
-  mip_timer.reportMipSolveLpClock(mip_clocks);
-  mip_timer.reportMipPresolveClock(mip_clocks);
-  mip_timer.reportMipSearchClock(mip_clocks);
-  mip_timer.reportMipDiveClock(mip_clocks);
-  mip_timer.reportMipPrimalHeuristicsClock(mip_clocks);
   mip_timer.reportMipEvaluateRootNodeClock(mip_clocks);
-  mip_timer.reportMipSeparationClock(mip_clocks);
-  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
-  reportMipSolveLpClock(true);
-  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
-  reportMipSolveLpClock(false);
+  //  mip_timer.reportAltEvaluateRootNodeClock(mip_clocks);
+  //  mip_timer.reportMipPresolveClock(mip_clocks);
+  //  mip_timer.reportMipSeparationClock(mip_clocks);
+  //  mip_timer.reportMipSearchClock(mip_clocks);
+  //  mip_timer.reportMipDiveClock(mip_clocks);
+  //  mip_timer.reportMipNodeSearchClock(mip_clocks);
+  //  mip_timer.reportMipDivePrimalHeuristicsClock(mip_clocks);
+  //  mip_timer.reportMipSubMipSolveClock(mip_clocks);
+  mip_timer.reportMipSolveLpClock(mip_clocks);
+  //  mip_timer.csvMipClock(this->model_name, mip_clocks, true, false);
+  //  reportMipSolveLpClock(true);
+  //  mip_timer.csvMipClock(this->model_name, mip_clocks, false, false);
+  //  reportMipSolveLpClock(false);
+  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, true, true);
+  mip_timer.csvEvaluateRootNodeClock(this->model_name, mip_clocks, false, true);
+  //  analyseVectorValues(nullptr, "Node search time",
+  //                      HighsInt(node_search_time.size()), node_search_time);
+  //  analyseVectorValues(nullptr, "Dive time", HighsInt(dive_time.size()),
+  //                      dive_time);
 }

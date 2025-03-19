@@ -2,16 +2,16 @@
 // Created by chuwen on 23-11-28.
 //
 
-#include "cupdlp_proj.h"
+#include "pdlp/cupdlp/cupdlp_proj.h"
 
-#include "cupdlp_defs.h"
-#include "cupdlp_linalg.h"
-#include "cupdlp_restart.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_restart.h"
 // #include "cupdlp_scaling.h"
-#include "cupdlp_solver.h"
-#include "cupdlp_step.h"
-#include "cupdlp_utils.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_solver.h"
+#include "pdlp/cupdlp/cupdlp_step.h"
+#include "pdlp/cupdlp/cupdlp_utils.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 // primal projection: project x to [lower, upper]
 void PDHG_Project_Bounds(CUPDLPwork *work, cupdlp_float *r) {
@@ -24,13 +24,13 @@ void PDHG_Project_Bounds(CUPDLPwork *work, cupdlp_float *r) {
   cupdlp_projlb(r, problem->lower, problem->nCols);
 }
 
-void PDHG_Project_Row_Duals(CUPDLPwork *work, cupdlp_float *r) {
-  CUPDLPproblem *problem = work->problem;
+// void PDHG_Project_Row_Duals(CUPDLPwork *work, cupdlp_float *r) {
+//   CUPDLPproblem *problem = work->problem;
 
-  // cupdlp_projPositive(r + problem->nEqs, r + problem->nEqs, problem->nRows -
-  // problem->nEqs);
-  cupdlp_projPos(r + problem->nEqs, problem->nRows - problem->nEqs);
-}
+//   // cupdlp_projPositive(r + problem->nEqs, r + problem->nEqs, problem->nRows -
+//   // problem->nEqs);
+//   cupdlp_projPos(r + problem->nEqs, problem->nRows - problem->nEqs);
+// }
 
 // void PDHG_Restart_Iterate(CUPDLPwork *pdhg)
 // {
@@ -97,6 +97,12 @@ void PDHG_Restart_Iterate_GPU(CUPDLPwork *pdhg) {
 
   if (restart_choice == PDHG_NO_RESTART) return;
 
+  cupdlp_int iter = pdhg->timers->nIter;
+  CUPDLPvec *x = iterates->x[iter % 2];
+  CUPDLPvec *y = iterates->y[iter % 2];
+  CUPDLPvec *ax = iterates->ax[iter % 2];
+  CUPDLPvec *aty = iterates->aty[iter % 2];
+
   stepsize->dSumPrimalStep = 0.0;
   stepsize->dSumDualStep = 0.0;
   CUPDLP_ZERO_VEC(iterates->xSum, cupdlp_float, problem->nCols);
@@ -114,14 +120,11 @@ void PDHG_Restart_Iterate_GPU(CUPDLPwork *pdhg) {
     // cupdlp_copy(iterates->aty, iterates->atyAverage, cupdlp_float,
     // problem->nCols);
 
-    CUPDLP_COPY_VEC(iterates->x->data, iterates->xAverage->data, cupdlp_float,
-                    problem->nCols);
-    CUPDLP_COPY_VEC(iterates->y->data, iterates->yAverage->data, cupdlp_float,
-                    problem->nRows);
-    CUPDLP_COPY_VEC(iterates->ax->data, iterates->axAverage->data, cupdlp_float,
-                    problem->nRows);
-    CUPDLP_COPY_VEC(iterates->aty->data, iterates->atyAverage->data,
-                    cupdlp_float, problem->nCols);
+    CUPDLP_COPY_VEC(x->data, iterates->xAverage->data, cupdlp_float, problem->nCols);
+    CUPDLP_COPY_VEC(y->data, iterates->yAverage->data, cupdlp_float, problem->nRows);
+    CUPDLP_COPY_VEC(ax->data, iterates->axAverage->data, cupdlp_float, problem->nRows);
+    CUPDLP_COPY_VEC(aty->data, iterates->atyAverage->data, cupdlp_float, problem->nCols);
+
   } else {
     resobj->dPrimalFeasLastRestart = resobj->dPrimalFeas;
     resobj->dDualFeasLastRestart = resobj->dDualFeas;
@@ -133,10 +136,9 @@ void PDHG_Restart_Iterate_GPU(CUPDLPwork *pdhg) {
   // cupdlp_copy(iterates->xLastRestart, iterates->x, cupdlp_float,
   // problem->nCols); cupdlp_copy(iterates->yLastRestart, iterates->y,
   // cupdlp_float, problem->nRows);
-  CUPDLP_COPY_VEC(iterates->xLastRestart, iterates->x->data, cupdlp_float,
-                  problem->nCols);
-  CUPDLP_COPY_VEC(iterates->yLastRestart, iterates->y->data, cupdlp_float,
-                  problem->nRows);
+
+  CUPDLP_COPY_VEC(iterates->xLastRestart, x->data, cupdlp_float, problem->nCols);
+  CUPDLP_COPY_VEC(iterates->yLastRestart, y->data, cupdlp_float, problem->nRows);
 
   iterates->iLastRestartIter = timers->nIter;
 

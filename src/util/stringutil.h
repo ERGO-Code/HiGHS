@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -26,6 +23,7 @@ void strTrim(char* str);
 // std::string& str_tolower(std::string s);
 
 void tolower(std::string& str);
+void toupper(std::string& str);
 
 const std::string default_non_chars = "\t\n\v\f\r ";
 std::string& ltrim(std::string& str,

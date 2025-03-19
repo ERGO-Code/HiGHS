@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -265,5 +262,37 @@ HighsLp withoutSemiVariables(const HighsLp& lp, HighsSolution& solution,
                              const double primal_feasibility_tolerance);
 
 void removeRowsOfCountOne(const HighsLogOptions& log_options, HighsLp& lp);
+
+// Get subvectors from data structure of data0, data1, data2 and
+// matrix, where the storage of the matrix is compatible with the
+// vectors to be extracted from it
+//
+// Data to be extracted is given by sub_* being nullpointer
+//
+// * cost, lower and upper bounds for columns, and column-wise LP constraint
+// matrix
+//
+// * lower and upper bounds for rows, and row-wise LP constraint
+// * matrix. "cost" is nullptr, and so must be sub_vector_data0
+//
+void getSubVectors(const HighsIndexCollection& index_collection,
+                   const HighsInt data_dim, const double* data0,
+                   const double* data1, const double* data2,
+                   const HighsSparseMatrix& matrix, HighsInt& num_sub_vector,
+                   double* sub_vector_data0, double* sub_vector_data1,
+                   double* sub_vector_data2, HighsInt& sub_matrix_num_nz,
+                   HighsInt* sub_matrix_start, HighsInt* sub_matrix_index,
+                   double* sub_matrix_value);
+
+void getSubVectorsTranspose(const HighsIndexCollection& index_collection,
+                            const HighsInt data_dim, const double* data0,
+                            const double* data1, const double* data2,
+                            const HighsSparseMatrix& matrix,
+                            HighsInt& num_sub_vector, double* sub_vector_data0,
+                            double* sub_vector_data1, double* sub_vector_data2,
+                            HighsInt& sub_matrix_num_nz,
+                            HighsInt* sub_matrix_start,
+                            HighsInt* sub_matrix_index,
+                            double* sub_matrix_value);
 
 #endif  // LP_DATA_HIGHSLPUTILS_H_

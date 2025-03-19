@@ -13,6 +13,19 @@ if (FORTRAN AND NOT BUILD_EXTRA_UNIT_ONLY)
         ${HIGHS_SOURCE_DIR}/check)
 endif()
 
+# if (CUPLDP_GPU AND BUILD_CXX)
+#     # add a test
+#     add_executable(testcudalin ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cuda_linalg.c)
+#     add_executable(testcublas ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda/test_cublas.c)
+
+#     set_target_properties(testcudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+#     #target_include_directories(cudalinalg PRIVATE ${CUPDLP_INCLUDE_DIR}/cuda)
+#     target_link_libraries(testcudalin PRIVATE highs ${CUDA_LIBRARY})
+
+#     set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+#     target_link_libraries(testcublas PRIVATE highs ${CUDA_LIBRARY})
+# endif()
+
 if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # prepare Catch library
   set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/extern)
@@ -34,8 +47,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestCheckSolution.cpp
       TestEkk.cpp
       TestFactor.cpp
-      TestFreezeBasis.cpp
-      TestHotStart.cpp
       TestMain.cpp
       TestNames.cpp
       TestOptions.cpp
@@ -100,6 +111,16 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   if (FAST_BUILD)
     target_link_libraries(unit_tests highs Catch)
+
+    if (CUPDLP_GPU)
+        if (WIN32)
+            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY})
+        else()
+            target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
+        endif()
+        target_include_directories(unit_tests PRIVATE ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp/cuda)
+        set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    endif()
   else()
     target_link_libraries(unit_tests libhighs Catch)
   endif()
@@ -129,25 +150,29 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
   # Check whether test executable builds OK.
-  add_test(NAME unit-test-build
-          COMMAND ${CMAKE_COMMAND}
-                  --build ${HIGHS_BINARY_DIR}
-                  --target unit_tests
-                  #  --config ${CMAKE_BUILD_TYPE}
-          )
+  if (NOT HIGHS_COVERAGE)
+    add_test(NAME unit-test-build
+            COMMAND ${CMAKE_COMMAND}
+                    --build ${HIGHS_BINARY_DIR}
+                    --target unit_tests
+                    #  --config ${CMAKE_BUILD_TYPE}
+            )
 
+    # Avoid that several build jobs try to concurretly build.
+    set_tests_properties(unit-test-build
+                        PROPERTIES
+                        RESOURCE_LOCK unittestbin)
 
-  # Avoid that several build jobs try to concurretly build.
-  set_tests_properties(unit-test-build
-                      PROPERTIES
-                      RESOURCE_LOCK unittestbin)
-
-  # create a binary running all the tests in the executable
-  add_test(NAME unit_tests_all COMMAND unit_tests --success)
-  set_tests_properties(unit_tests_all
-                      PROPERTIES
-                      DEPENDS unit-test-build)
-  set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+    # create a binary running all the tests in the executable
+    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    set_tests_properties(unit_tests_all
+                        PROPERTIES
+                        DEPENDS unit-test-build)
+    set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+  else()
+    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
+  endif()
 
   # An individual test can be added with the command below but the approach
   # above with a single add_test for all the unit tests automatically detects all
@@ -237,38 +262,96 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       )
 
   if (UNIX AND NOT APPLE)
-    set(pdlpInstances
-        "25fv47\; 5.50184588\;"
-        "adlittle\; 2.254949631\;"
-        "afiro\;-4.64753142\;"
-        "avgas\;-7.749999999\;"
-        "blending\;-3.19999999\;"
-        "chip\;-9.000000001\;"
-        "e226\;-1.16389293\;"
-        "scrs8\; 9.042969511\;"
-        "sctest\; 5.749999936\;"
-        "shell\; 1.2088253460\;"
-        "stair\;-2.51266951\;"
-        "standata\; 1.257699499\;"
-        "standgub\; 1.25769949\;"
-        )
+    if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
+        set(pdlpInstances
+            "25fv47\; 5.50184588\;"
+            "adlittle\; 2.254949631\;"
+            "afiro\;-4.64753142\;"
+            "avgas\;-7.749999999\;"
+            "blending\;-3.19999999\;"
+            "chip\;-9.000000001\;"
+            "e226\;-1.16389293\;"
+            "scrs8\; 9.042969511\;"
+            "sctest\; 5.749999936\;"
+            "shell\; 1.2088253460\;"
+            "stair\;-2.51266951\;"
+            "standata\; 1.257699499\;"
+            "standgub\; 1.25769949\;"
+            )
+    else()
+        if (CUPDLP_GPU)
+            set(pdlpInstances
+                "25fv47\; 5.5018549\;"
+                "adlittle\; 2.254950\;"
+                "afiro\;-4.6475325\;"
+                "avgas\;-7.75000038\;"
+                "blending\;-3.19999999\;"
+                "chip\;-9.0000000\;"
+                "e226\;-1.16389258\;"
+                "scrs8\; 9.0429623\;"
+                "sctest\; 5.750000001\;"
+                "shell\; 1.20882535\;"
+                "stair\;-2.5126695\;"
+                "standata\; 1.25769951\;"
+                "standgub\; 1.2576993\;"
+                )
+        else()
+        # CUPDLP_GPU or CPU with native termination.
+            if (CUPDLP_FORCE_NATIVE)
+                set(pdlpInstances
+                    "25fv47\; 5.5018360\;"
+                    "adlittle\; 2.254953\;"
+                    "afiro\;-4.64753126\;"
+                    "avgas\;-7.75000038\;"
+                    "blending\;-3.19999999\;"
+                    "chip\;-9.000000020\;"
+                    "e226\;-1.163892070\;"
+                    "scrs8\; 9.042970154\;"
+                    "sctest\; 5.750000001\;"
+                    "shell\; 1.2088253471\;"
+                    "stair\;-2.512669020\;"
+                    "standata\; 1.257699155\;"
+                    "standgub\; 1.257700132\;"
+                    )
+            endif()
+        endif()
+    endif()
   elseif(WIN32)
-    # on windows e226 model status is unknown
-    # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
-    set(pdlpInstances
-        "25fv47\; 5.5018458\;"
-        "adlittle\; 2.25494963\;"
-        "afiro\;-4.64753142\;"
-        "avgas\;-7.749999999\;"
-        "blending\;-3.19999999\;"
-        "chip\;-9.000000001\;"
-        "scrs8\; 9.0429695\;"
-        "sctest\; 5.749999936\;"
-        "shell\; 1.2088253460\;"
-        "stair\;-2.51266951\;"
-        "standata\; 1.2576995\;"
-        "standgub\; 1.2576995\;"
-        )
+    if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
+        # on windows e226 model status is unknown
+        # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
+        set(pdlpInstances
+            "25fv47\; 5.5018458\;"
+            "adlittle\; 2.25494963\;"
+            "afiro\;-4.64753142\;"
+            "avgas\;-7.749999999\;"
+            "blending\;-3.19999999\;"
+            "chip\;-9.000000001\;"
+            "scrs8\; 9.0429695\;"
+            "sctest\; 5.749999936\;"
+            "shell\; 1.2088253460\;"
+            "stair\;-2.51266951\;"
+            "standata\; 1.2576995\;"
+            "standgub\; 1.2576995\;"
+            )
+    else()
+        if (CUPDLP_GPU)
+            set(pdlpInstances
+                "25fv47\; 5.50185\;" # 549 release 500 debug
+                "adlittle\; 2.2549505\;"
+                "afiro\;-4.6475325\;"
+                "avgas\;-7.750000\;"
+                "blending\;-3.19999999\;"
+                "chip\;-9.0000000\;"
+                "scrs8\; 9.0429693\;"
+                "sctest\; 5.7500000\;"
+                "shell\; 1.20882535\;"
+                "stair\;-2.512669\;" # 96 release 95 debug
+                "standata\; 1.2576995\;"
+                "standgub\; 1.2576993\;"
+                )
+        endif()
+    endif()
   elseif(APPLE)
     set(pdlpInstances
         "25fv47\; 5.5018458\;"
@@ -276,9 +359,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "afiro\;-4.64753142\;"
         "avgas\;-7.749999999\;"
         "blending\;-3.19999999\;"
-        "chip\;-8.9999988715\;"
+        "chip\;-8.9999999\;"
         "e226\;-1.163892\;"
-        "scrs8\; 9.04296953\;"
+        "scrs8\; 9.0429695\;"
         "sctest\; 5.749999936\;"
         "shell\; 1.2088253460\;"
         "stair\;-2.5126695\;"
@@ -451,5 +534,18 @@ if (BUILD_EXTRA_UNIT_TESTS AND BUILD_EXTRA_UNIT_ONLY)
                         PROPERTIES
                         DEPENDS unit-test-extra-build)
     set_tests_properties(unit_tests_extra PROPERTIES TIMEOUT 10000) 
+
+    if (CUPDLP_GPU)
+        set_target_properties(unit_tests_extra PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        target_link_libraries(unit_tests_extra ${CUDA_LIBRARY})
+
+        add_executable(cublas_example cublas_example.cpp)
+        set_target_properties(cublas_example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        target_link_libraries(cublas_example ${CUDA_LIBRARY})
+
+        add_executable(cublas_gpu_start cublas_gpu_start.cpp)
+        set_target_properties(cublas_gpu_start PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+        target_link_libraries(cublas_gpu_start ${CUDA_LIBRARY})
+    endif()
 
 endif()

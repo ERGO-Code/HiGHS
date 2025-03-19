@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -20,9 +17,15 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
+
+  // record redundant rows for lifting
+  assert(globaldomain.getRedundantRows().size() == 0);
+  if (storeLiftingOpportunity != nullptr)
+    globaldomain.setRecordRedundantRows(true);
+
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   const auto& domchgreason = globaldomain.getDomainChangeReason();
-  HighsInt changedend = globaldomain.getChangedCols().size();
+  size_t changedend = globaldomain.getChangedCols().size();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
   HighsInt numImplications = -stackimplicstart;
@@ -31,24 +34,36 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
 
-  if (globaldomain.infeasible()) {
+  auto storeLiftingOpportunities = [&](HighsInt col, bool val) {
+    // use callback to store lifting opportunities
+    if (storeLiftingOpportunity != nullptr) {
+      for (const auto& elm : globaldomain.getRedundantRows())
+        storeLiftingOpportunity(
+            elm.key(), col, val ? 1 : 0,
+            (val ? -1 : 1) * globaldomain.getRedundantRowValue(elm.key()));
+      globaldomain.clearRedundantRows();
+      globaldomain.setRecordRedundantRows(false);
+    }
+  };
+
+  auto doBacktrack = [&](size_t changedend) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
-    cliquetable.vertexInfeasible(globaldomain, col, val);
+  };
 
+  auto isInfeasible = [&](HighsInt col, bool val) {
+    if (!globaldomain.infeasible()) return false;
+    storeLiftingOpportunities(col, val);
+    doBacktrack(changedend);
+    cliquetable.vertexInfeasible(globaldomain, col, val);
     return true;
-  }
+  };
+
+  if (isInfeasible(col, val)) return true;
 
   globaldomain.propagate();
 
-  if (globaldomain.infeasible()) {
-    globaldomain.backtrack();
-    globaldomain.clearChangedCols(changedend);
-
-    cliquetable.vertexInfeasible(globaldomain, col, val);
-
-    return true;
-  }
+  if (isInfeasible(col, val)) return true;
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
@@ -69,8 +84,11 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     implics.push_back(domchgstack[i]);
   }
 
-  globaldomain.backtrack();
-  globaldomain.clearChangedCols(changedend);
+  // inform caller about lifting opportunities
+  storeLiftingOpportunities(col, val);
+
+  // backtrack
+  doBacktrack(changedend);
 
   // add the implications of binary variables to the clique table
   auto binstart = std::partition(implics.begin(), implics.end(),
@@ -700,42 +718,11 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   std::vector<HighsInt> delVbds;
 
   vubs[col].for_each([&](HighsInt vubCol, VarBound& vub) {
-    mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                               vub.constant);
-
-    if (vub.coef > 0) {
-      double minub = vub.constant;
-      double maxub = vub.constant + vub.coef;
-      if (minub >= ub - mipsolver.mipdata_->feastol)
-        delVbds.push_back(vubCol);  // variable bound is redundant
-      else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-        vub.coef = ub - vub.constant;  // coefficient can be tightened
-        mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                   vub.constant);
-      } else if (maxub < ub - mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, col, maxub,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    } else {
-      HighsCDouble minub = HighsCDouble(vub.constant) + vub.coef;
-      double maxub = vub.constant;
-      if (minub >= ub - mipsolver.mipdata_->feastol)
-        delVbds.push_back(vubCol);  // variable bound is redundant
-      else if (maxub > ub + mipsolver.mipdata_->epsilon) {
-        // variable bound can be tightened
-        vub.constant = ub;
-        vub.coef = double(minub - ub);
-        mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
-                                                   vub.constant);
-      } else if (maxub < ub - mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, col, maxub,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    }
+    bool redundant = false;
+    bool infeasible = false;
+    cleanupVub(col, vubCol, vub, ub, redundant, infeasible);
+    if (redundant) delVbds.push_back(vubCol);
+    if (infeasible) return;
   });
 
   if (!delVbds.empty()) {
@@ -744,44 +731,94 @@ void HighsImplications::cleanupVarbounds(HighsInt col) {
   }
 
   vlbs[col].for_each([&](HighsInt vlbCol, VarBound& vlb) {
-    mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                               vlb.constant);
-
-    if (vlb.coef > 0) {
-      HighsCDouble maxlb = HighsCDouble(vlb.constant) + vlb.coef;
-      double minlb = vlb.constant;
-      if (maxlb <= lb + mipsolver.mipdata_->feastol)
-        delVbds.push_back(vlbCol);  // variable bound is redundant
-      else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-        // variable bound can be tightened
-        vlb.constant = lb;
-        vlb.coef = double(maxlb - lb);
-        mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                   vlb.constant);
-      } else if (minlb > lb + mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, col, minlb,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-
-    } else {
-      double maxlb = vlb.constant;
-      double minlb = vlb.constant + vlb.coef;
-      if (maxlb <= lb + mipsolver.mipdata_->feastol)
-        delVbds.push_back(vlbCol);  // variable bound is redundant
-      else if (minlb < lb - mipsolver.mipdata_->epsilon) {
-        vlb.coef = lb - vlb.constant;  // variable bound can be tightened
-        mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
-                                                   vlb.constant);
-      } else if (minlb > lb + mipsolver.mipdata_->epsilon) {
-        mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, col, minlb,
-            HighsDomain::Reason::unspecified());
-        if (mipsolver.mipdata_->domain.infeasible()) return;
-      }
-    }
+    bool redundant = false;
+    bool infeasible = false;
+    cleanupVlb(col, vlbCol, vlb, lb, redundant, infeasible);
+    if (redundant) delVbds.push_back(vlbCol);
+    if (infeasible) return;
   });
 
   for (HighsInt vlbCol : delVbds) vlbs[col].erase(vlbCol);
+}
+
+void HighsImplications::cleanupVlb(HighsInt col, HighsInt vlbCol,
+                                   HighsImplications::VarBound& vlb, double lb,
+                                   bool& redundant, bool& infeasible,
+                                   bool allowBoundChanges) const {
+  // initialize
+  redundant = false;
+  infeasible = false;
+
+  // return if there is no variable bound
+  if (vlbCol == -1) return;
+
+  // check variable lower bound
+  mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                             vlb.constant);
+
+  HighsCDouble maxlb = vlb.maxValue();
+  HighsCDouble minlb = vlb.minValue();
+
+  if (maxlb <= lb + mipsolver.mipdata_->feastol) {
+    // variable bound is redundant
+    redundant = true;
+  } else if (minlb < lb - mipsolver.mipdata_->epsilon) {
+    // coefficient can be tightened
+    double newcoef = static_cast<double>(lb - maxlb);
+    if (vlb.coef < 0) {
+      vlb.coef = newcoef;
+    } else {
+      vlb.constant = lb;
+      vlb.coef = -newcoef;
+    }
+    // check tightened variable lower bound
+    mipsolver.mipdata_->debugSolution.checkVlb(col, vlbCol, vlb.coef,
+                                               vlb.constant);
+  } else if (allowBoundChanges && minlb > lb + mipsolver.mipdata_->epsilon) {
+    mipsolver.mipdata_->domain.changeBound(HighsBoundType::kLower, col,
+                                           static_cast<double>(minlb),
+                                           HighsDomain::Reason::unspecified());
+    infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
+}
+
+void HighsImplications::cleanupVub(HighsInt col, HighsInt vubCol,
+                                   HighsImplications::VarBound& vub, double ub,
+                                   bool& redundant, bool& infeasible,
+                                   bool allowBoundChanges) const {
+  // initialize
+  redundant = false;
+  infeasible = false;
+
+  // return if there is no variable bound
+  if (vubCol == -1) return;
+
+  // check variable upper bound
+  mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                             vub.constant);
+
+  HighsCDouble maxub = vub.maxValue();
+  HighsCDouble minub = vub.minValue();
+
+  if (minub >= ub - mipsolver.mipdata_->feastol) {
+    // variable bound is redundant
+    redundant = true;
+  } else if (maxub > ub + mipsolver.mipdata_->epsilon) {
+    // coefficient can be tightened
+    double newcoef = static_cast<double>(ub - minub);
+    if (vub.coef > 0) {
+      vub.coef = newcoef;
+    } else {
+      vub.constant = ub;
+      vub.coef = -newcoef;
+    }
+    // check tightened variable upper bound
+    mipsolver.mipdata_->debugSolution.checkVub(col, vubCol, vub.coef,
+                                               vub.constant);
+  } else if (allowBoundChanges && maxub < ub - mipsolver.mipdata_->epsilon) {
+    mipsolver.mipdata_->domain.changeBound(HighsBoundType::kUpper, col,
+                                           static_cast<double>(maxub),
+                                           HighsDomain::Reason::unspecified());
+    infeasible = mipsolver.mipdata_->domain.infeasible();
+  }
 }

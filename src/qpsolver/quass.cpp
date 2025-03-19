@@ -31,7 +31,7 @@ static void loginformation(Runtime& rt, Basis& basis, CholeskyFactor& factor,
   rt.statistics.nullspacedimension.push_back(rt.instance.num_var -
                                              basis.getnumactive());
   rt.statistics.objval.push_back(rt.instance.objval(rt.primal));
-  rt.statistics.time.push_back(timer.readRunHighsClock());
+  rt.statistics.time.push_back(timer.read());
   SumNum sm =
       rt.instance.sumnumprimalinfeasibilities(rt.primal, rt.rowactivity);
   rt.statistics.sum_primal_infeasibilities.push_back(sm.sum);
@@ -337,7 +337,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     }
 
     // check time limit
-    if (timer.readRunHighsClock() >= runtime.settings.time_limit) {
+    if (timer.read() >= runtime.settings.time_limit) {
       runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
@@ -350,7 +350,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     }
 
     // LOGGING
-    double run_time = timer.readRunHighsClock();
+    double run_time = timer.read();
     if ((runtime.statistics.num_iterations %
                  runtime.settings.reportingfequency ==
              0 ||

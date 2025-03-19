@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -20,9 +17,10 @@
 
 enum class FilereaderRetcode {
   kOk = 0,
-  kFileNotFound = 1,
-  kParserError = 2,
-  kNotImplemented = 3,
+  kWarning = 1,
+  kFileNotFound = 2,
+  kParserError = 3,
+  kNotImplemented = 4,
   kTimeout
 };
 

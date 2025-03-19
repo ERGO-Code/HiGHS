@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -1046,9 +1043,11 @@ void HighsLpRelaxation::setObjectiveLimit(double objlim) {
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
-  lpsolver.setOptionValue(
-      "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
-                        mipsolver.timer_.read(mipsolver.timer_.total_clock));
+  const double this_time_limit =
+      std::max(lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
+                   mipsolver.timer_.read(),
+               0.0);
+  lpsolver.setOptionValue("time_limit", this_time_limit);
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
   const HighsInt simplex_solve_clock = valid_basis
@@ -1077,7 +1076,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   mipsolver.analysis_.mipTimerStart(simplex_solve_clock);
   HighsStatus callstatus = lpsolver.run();
   mipsolver.analysis_.mipTimerStop(simplex_solve_clock);
-
+  if (mipsolver.analysis_.analyse_mip_time && !valid_basis &&
+      mipsolver.analysis_.mipTimerNumCall(simplex_solve_clock) == 1)
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "MIP-Timing: %11.2g - return from first root LP solve\n",
+                 mipsolver.timer_.read());
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
   numlpiters += itercount;
@@ -1210,6 +1213,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         ipm.setOptionValue("output_flag", false);
         ipm.setOptionValue("solver", "ipm");
         ipm.setOptionValue("ipm_iteration_limit", 200);
+        // check if only root presolve is allowed
+        if (mipsolver.options_mip_->mip_root_presolve_only)
+          ipm.setOptionValue("presolve", kHighsOffString);
         ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff

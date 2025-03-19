@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -2546,9 +2543,11 @@ bool HEkkDual::proofOfPrimalInfeasibility() {
 }
 
 void HEkkDual::saveDualRay() {
-  ekk_instance_.status_.has_dual_ray = true;
-  ekk_instance_.info_.dual_ray_row_ = row_out;
-  ekk_instance_.info_.dual_ray_sign_ = move_out;
+  assert(row_out >= 0);
+  assert(move_out != kNoRaySign);
+  ekk_instance_.dual_ray_record_.clear();
+  ekk_instance_.dual_ray_record_.index = row_out;
+  ekk_instance_.dual_ray_record_.sign = move_out;
 }
 
 void HEkkDual::assessPhase1Optimality() {

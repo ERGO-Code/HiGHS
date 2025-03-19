@@ -3,6 +3,7 @@
 
 #include "cupdlp_defs.h"
 #include "cupdlp_utils.h"
+
 #ifndef CUPDLP_CPU
 #include "cuda/cupdlp_cudalinalg.cuh"
 #endif
@@ -162,11 +163,11 @@ void cupdlp_projPos(cupdlp_float *x, const cupdlp_int len);
 /* xout = min(x, 0) */
 void cupdlp_projNeg(cupdlp_float *x, const cupdlp_int len);
 
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
-                  const cupdlp_float bound, const cupdlp_int len);
+// void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+//                   const cupdlp_float bound, const cupdlp_int len);
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
-                  const cupdlp_float bound, const cupdlp_int len);
+// void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+//                   const cupdlp_float bound, const cupdlp_int len);
 
 void cupdlp_filterlb(cupdlp_float *x, const cupdlp_float *lb,
                      const cupdlp_float bound, const cupdlp_int len);
@@ -180,4 +181,9 @@ void cupdlp_initvec(cupdlp_float *x, const cupdlp_float val,
 void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
                                              cupdlp_float *dMovement,
                                              cupdlp_float *dIteraction);
+
+// WIP
+// double get_fabs_value(double* vec, int index);
+// double get_fabs_value(double* vec, int index, int N);
+
 #endif  // CUPDLP_CUPDLP_LINALG_H

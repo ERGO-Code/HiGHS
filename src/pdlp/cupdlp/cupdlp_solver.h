@@ -5,8 +5,8 @@
 #ifndef CUPDLP_CUPDLP_SOLVER_H
 #define CUPDLP_CUPDLP_SOLVER_H
 
-#include "cupdlp_defs.h"
-#include "glbopts.h"
+#include "pdlp/cupdlp/cupdlp_defs.h"
+#include "pdlp/cupdlp/glbopts.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,16 +20,16 @@ extern "C" {
     }                                                            \
   }
 
-void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, double *primalResidual,
-                                     const double *ax, const double *x,
-                                     double *dPrimalFeasibility,
-                                     double *dPrimalObj);
+void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, cupdlp_float *primalResidual,
+                                     const cupdlp_float *ax, const cupdlp_float *x,
+                                     cupdlp_float *dPrimalFeasibility,
+                                     cupdlp_float *dPrimalObj);
 
-void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, double *dualResidual,
-                                   const double *aty, const double *x,
-                                   const double *y, double *dDualFeasibility,
-                                   double *dDualObj, double *dComplementarity,
-                                   double *dSlackPos, double *dSlackNeg);
+void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, cupdlp_float *dualResidual,
+                                   const cupdlp_float *aty, const cupdlp_float *x,
+                                   const cupdlp_float *y, cupdlp_float *dDualFeasibility,
+                                   cupdlp_float *dDualObj, cupdlp_float *dComplementarity,
+                                   cupdlp_float *dSlackPos, cupdlp_float *dSlackNeg);
 
 void PDHG_Compute_Residuals(CUPDLPwork *work);
 

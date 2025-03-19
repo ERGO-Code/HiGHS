@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -167,6 +164,9 @@ const double kMinDualSteepestEdgeWeight = 1e-4;
 const HighsInt kNoRowSought = -2;
 const HighsInt kNoRowChosen = -1;
 
+const HighsInt kNoRayIndex = -1;
+const HighsInt kNoRaySign = 0;
+
 // Switch to use code to check that, unless the basis supplied by the
 // MIP solver was alien, the simplex solver starts from dual
 // feasibility.
@@ -185,7 +185,6 @@ enum class LpAction {
   kDelRowsBasisOk,
   kScaledCol,
   kScaledRow,
-  kHotStart,
   kBacktracking
 };
 

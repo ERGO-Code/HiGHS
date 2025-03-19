@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -787,9 +784,7 @@ class HighsPostsolveStack {
   */
 
   // Only used for debugging
-  void undoUntil(const HighsOptions& options,
-                 const std::vector<HighsInt>& flagRow,
-                 const std::vector<HighsInt>& flagCol, HighsSolution& solution,
+  void undoUntil(const HighsOptions& options, HighsSolution& solution,
                  HighsBasis& basis, size_t numReductions) {
     reductionValues.resetPosition();
 
