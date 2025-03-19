@@ -1,4 +1,4 @@
-#include "cupdlp_cs.h"
+#include "pdlp/cupdlp/cupdlp_cs.h"
 
 /* CSparse routines for reading inputs. Referenced from Tim Davis Suite Sparse
  */

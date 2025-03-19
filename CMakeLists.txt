@@ -114,6 +114,47 @@ set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
+# option(CUPDLP_GPU "Build pdlp with CPU" ON)
+# message(STATUS "Build pdlp with CPU: ${CUPDLP_CPU}")
+
+option(CUPDLP_GPU "Build pdlp with GPU" OFF)
+
+message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
+
+# if (NOT LINUX)
+  # set (CUPDLP_GPU OFF)
+  # message(STATUS "CUPLDP with Nvidia is only supported on Linux at the moment. Using CPU version.")
+# endif()
+
+if (CUPDLP_GPU)
+  if (WIN32)
+    set(BUILD_SHARED_LIBS ON)
+  endif()
+
+  set (CUPDLP_CPU OFF)
+
+  # With FindCUDAConf.cmake
+  # default cuda_home on linux
+  # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
+  # message(NOTICE "Set build cuPDLP with CUDA")
+  # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+  # include(FindCUDAConf.cmake)
+
+  # With deleted FindCUDAConf.cmake
+  find_package(CUDAToolkit REQUIRED)
+  set(CUDA_LIBRARY-NOTFOUND, OFF)
+  set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+
+  message(NOTICE "Set build cuPDLP with CUDA")
+else()
+  set (CUPDLP_CPU ON)
+    set(CUDA_LIBRARY-NOTFOUND true)
+endif()
+
+# option to force native termination, mostly for testing new GPU code
+# in comparison with the CPU
+option(CUPDLP_FORCE_NATIVE "Build pdlp with native termination" OFF)
+
 if (BUILD_CXX)
   # Default Build Type to be Release
   get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -193,8 +234,9 @@ if (BUILD_CXX)
     CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR  
     CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
+  # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") 
+  # not recognised by cl
+  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++11") 
   endif()  
 
   # Basic type
@@ -273,7 +315,13 @@ if (BUILD_CXX)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
     message(STATUS "IPO / LTO: enabled")
   endif()
+  if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+      message(STATUS "IPO / LTO is not supported at the moment when PDLP is using GPU: LTO disabled.")
+  endif()
+
 endif()
+
 
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles(
@@ -363,6 +411,25 @@ if(NOT(${HIGHS_NO_DEFAULT_THREADS} STREQUAL "OFF"))
 	message(STATUS "Default multithreading: disabled")
 endif()
 
+# For debug of cuda locally
+
+# does not work with older CMake 
+# add_compile_options("$<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<COMPILE_LANGUAGE:CUDA>>:-G>")
+
+# add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-G>")
+
+if (CUPDLP_GPU AND UNIX)
+  add_compile_options("-Wno-deprecated-declarations")
+endif()
+# add_compile_options("-Wno-implicit-function-declaration")
+
+# set(CMAKE_C_FLAGS "-Wno-deprecated-declarations")
+if (UNIX)
+  set(CMAKE_C_FLAGS "-Wno-implicit-function-declaration")
+endif()
+
+
+
 # If Visual Studio targets are being built.
 if(MSVC)
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/W0>")
@@ -373,8 +440,15 @@ if(MSVC)
 
   # Try to split large pdb files into objects. 
   # https://github.com/tensorflow/tensorflow/issues/31610
-  add_compile_options("/Z7")
-  add_link_options("/DEBUG:FASTLINK")
+  # add_compile_options("/Z7")
+  # add_link_options("/DEBUG:FASTLINK")
+
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
+
+  if (NOT CUPDLP_GPU)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+  endif()
+
   if(STDCALL)
     # /Gz - stdcall calling convention
     add_definitions(/Gz)
