@@ -1529,7 +1529,7 @@ HighsStatus Highs::solve() {
       if (have_unknown_reduced_solution)
         highsLogUser(
             options_.log_options, HighsLogType::kWarning,
-            "Running postsolve on non-optimal solution of reduced LP\n");
+            "Running postsolve on non-optimal solution of reduced LP\n\n");
       // If presolve is nontrivial, extract the optimal solution
       // and basis for the presolved problem in order to generate
       // the solution and basis for postsolve to use to generate a

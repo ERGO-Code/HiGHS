@@ -1174,7 +1174,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 #endif
 
 #ifndef CUPDLP_CPU
-  if (pdhg->settings->nLogLevel>0) {
+  if (pdhg->settings->nLogLevel>1) {
     cupdlp_printf("\n");
     cupdlp_printf("GPU Timing information:\n");
     cupdlp_printf("%21s %e\n", "CudaPrepare", timers->CudaPrepareTime);
@@ -1182,7 +1182,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
 		  timers->AllocMem_CopyMatToDeviceTime);
     cupdlp_printf("%21s %e\n", "CopyVecToDevice", timers->CopyVecToDeviceTime);
     cupdlp_printf("%21s %e\n", "DeviceMatVecProd", timers->DeviceMatVecProdTime);
-    cupdlp_printf("%21s %e\n", "CopyVecToHost", timers->CopyVecToHostTime);
+    cupdlp_printf("%21s %e\n\n", "CopyVecToHost", timers->CopyVecToHostTime);
   }
 #endif
 
