@@ -36,7 +36,7 @@ void resobj_clear(CUPDLPresobj *resobj);
 
 void stepsize_clear(CUPDLPstepsize *stepsize);
 
-void timers_clear(CUPDLPtimers *timers);
+void timers_clear(int log_level, CUPDLPtimers *timers);
 
 void scaling_clear(CUPDLPscaling *scaling);
 

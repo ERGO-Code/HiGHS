@@ -304,10 +304,12 @@ void stepsize_clear(CUPDLPstepsize *stepsize) {
   }
 }
 
-void timers_clear(CUPDLPtimers *timers) {
+void timers_clear(int log_level, CUPDLPtimers *timers) {
 #ifndef CUPDLP_CPU
+if (log_level)
   cupdlp_printf("%20s %e\n", "Free Device memory", timers->FreeDeviceMemTime);
 #endif
+
 
   if (timers) {
     cupdlp_free(timers);
@@ -334,6 +336,7 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   CUPDLPstepsize *stepsize = w->stepsize;
   CUPDLPtimers *timers = w->timers;
   CUPDLPscaling *scaling = w->scaling;
+
 
   cupdlp_float begin = getTimeStamp();
 #ifndef CUPDLP_CPU
@@ -394,7 +397,7 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
     stepsize_clear(stepsize);
   }
   if (timers) {
-    timers_clear(timers);
+  timers_clear(w->settings->nLogLevel, timers);
   }
   if (scaling) {
     // scaling_clear(scaling);
