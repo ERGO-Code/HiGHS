@@ -114,12 +114,16 @@ set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
-# option(CUPDLP_GPU "Build pdlp with CPU" ON)
-# message(STATUS "Build pdlp with CPU: ${CUPDLP_CPU}")
 
 option(CUPDLP_GPU "Build pdlp with GPU" OFF)
-
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
+
+option(CUPDLP_FIND_CUDA "Build pdlp with GPU" OFF)
+message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
+
+if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0") 
+    message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
+endif()
 
 # if (NOT LINUX)
   # set (CUPDLP_GPU OFF)
@@ -132,20 +136,21 @@ if (CUPDLP_GPU)
   endif()
 
   set (CUPDLP_CPU OFF)
-
-  # With FindCUDAConf.cmake
-  # default cuda_home on linux
-  # set(CUDA_HOME "/usr/local/cuda" CACHE STRING "Cuda path to install")
-  # message(NOTICE "Set build cuPDLP with CUDA")
-  # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
-  # include(FindCUDAConf.cmake)
-
-  # With deleted FindCUDAConf.cmake
-  find_package(CUDAToolkit REQUIRED)
-  set(CUDA_LIBRARY-NOTFOUND, OFF)
-  set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
-
   message(NOTICE "Set build cuPDLP with CUDA")
+
+  if (CUPDLP_FIND_CUDA)
+    # With FindCUDAConf.cmake
+    # Need to have the CUDA_HOME environment variable set.
+    include(FindCUDAConf)
+  else() 
+    # Without FindCUDAConf.cmake
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    
+    set(CUDA_LIBRARY-NOTFOUND, OFF)
+    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+  endif()
+
 else()
   set (CUPDLP_CPU ON)
     set(CUDA_LIBRARY-NOTFOUND true)

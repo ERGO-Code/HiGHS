@@ -8,7 +8,7 @@ add_library(cudalin SHARED
 )
 set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
+# set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
 
 target_include_directories(cudalin PUBLIC "${CMAKE_CUDA_PATH}/include")
 
