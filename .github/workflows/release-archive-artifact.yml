@@ -15,16 +15,29 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/archive
 
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/archive_unzipped
+
       - name: Generate archive artifact
         run: |
           pwd
-          ls 
-          echo $GITHUB_WORKSPACE
+          echo ${{runner.workspace}}
+
+        # ls 
+        # echo $GITHUB_WORKSPACE
 
       - name: working dir
         run: |
-          cd archive 
-          tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE --exclude='./archive'
+          cd ${{runner.workspace}}/archive 
+          tar -czvf source-archive.tar.gz $GITHUB_WORKSPACE 
+          
+        # --exclude='./archive'
+
+      - name: ls archive
+          cd ${{runner.workspace}}
+          tar -xf source archive.tar -C ${{runner.workspace}}/archive_unzipped
+          cd archive_unzipped
+          ls
 
       - name: Release
         uses: softprops/action-gh-release@v2
