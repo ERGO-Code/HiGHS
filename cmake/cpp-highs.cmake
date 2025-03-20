@@ -48,27 +48,48 @@ install(FILES ${PROJECT_BINARY_DIR}/highs_export.h
 
 string (TOLOWER ${PROJECT_NAME} lower)
 
-install(TARGETS highs
-   EXPORT ${lower}-targets
-   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
-  
-# Add library targets to the build-tree export set
-export(TARGETS highs
-  NAMESPACE ${PROJECT_NAMESPACE}::highs
-  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+if (NOT CUPDLP_GPU)
+  install(TARGETS highs
+      EXPORT ${lower}-targets
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+      
+  if (NOT HIGHS_COVERAGE)
+    # Add library targets to the build-tree export set
+    export(TARGETS highs
+      NAMESPACE ${PROJECT_NAMESPACE}::highs
+      FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  endif()
+else()
+  install(TARGETS highs cudalin
+      EXPORT ${lower}-targets
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/highs)
+      
+  if (NOT HIGHS_COVERAGE)
+    # Add library targets to the build-tree export set
+    export(TARGETS highs cudalin
+      NAMESPACE ${PROJECT_NAMESPACE}::highs
+      FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  endif()
+endif()
 
-install(EXPORT ${lower}-targets
-  NAMESPACE ${PROJECT_NAMESPACE}::
-  FILE highs-targets.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
-# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
-# install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
-#   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+if (NOT HIGHS_COVERAGE)
+  install(EXPORT ${lower}-targets
+    NAMESPACE ${PROJECT_NAMESPACE}::
+    FILE highs-targets.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${lower})
+  # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+  # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+  #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()
 
 
 include(CMakePackageConfigHelpers)

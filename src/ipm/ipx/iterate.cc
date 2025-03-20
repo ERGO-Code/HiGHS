@@ -617,8 +617,8 @@ void Iterate::ComputeObjectives() const {
     if (postprocessed_) {
         // Compute objective values as defined for the LP model.
         offset_ = 0.0;
-        pobjective_ = Dot(c, x_);
-        dobjective_ = Dot(b, y_);
+        pobjective_ = model_.offset() + Dot(c, x_);
+        dobjective_ = model_.offset() + Dot(b, y_);
         for (Int j = 0; j < n+m; j++) {
             if (std::isfinite(lb[j]))
                 dobjective_ += lb[j] * zl_[j];
@@ -630,7 +630,7 @@ void Iterate::ComputeObjectives() const {
         // (after fixing and implying variables). The offset is such that
         // pobjective_ + offset_ is the primal objective after postprocessing.
         offset_ = 0.0;
-        pobjective_ = 0.0;
+        pobjective_ = model_.offset();
         for (Int j = 0; j < n+m; j++) {
             if (StateOf(j) != State::fixed)
                 pobjective_ += c[j] * x_[j];
@@ -643,7 +643,7 @@ void Iterate::ComputeObjectives() const {
                 offset_ += (zl_[j]-zu_[j]) * x_[j];
             }
         }
-        dobjective_ = Dot(b, y_);
+        dobjective_ = model_.offset() + Dot(b, y_);
         for (Int j = 0; j < n+m; j++) {
             if (has_barrier_lb(j))
                 dobjective_ += lb[j] * zl_[j];

@@ -28,7 +28,8 @@ public:
     //  IPX_ERROR_invalid_dimension
     //  IPX_ERROR_invalid_matrix
     //  IPX_ERROR_invalid_vector
-    Int LoadModel(Int num_var, const double* obj, const double* lb,
+    Int LoadModel(Int num_var, const double offset,
+		  const double* obj, const double* lb,
                   const double* ub, Int num_constr, const Int* Ap,
                   const Int* Ai, const double* Ax, const double* rhs,
                   const char* constr_type);
@@ -94,7 +95,7 @@ public:
     Int GetBasicSolution(double* x, double* slack, double* y, double* z,
                          Int* cbasis, Int* vbasis) const;
 
-    // Returns/sets all paramters. Without calling SetParameters(), the solver
+    // Returns/sets all parameters. Without calling SetParameters(), the solver
     // uses the default values of a Parameters object.
     Parameters GetParameters() const;
     void SetParameters(Parameters new_parameters);

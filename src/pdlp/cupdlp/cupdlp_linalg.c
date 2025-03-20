@@ -1,5 +1,5 @@
 
-#include "cupdlp_linalg.h"
+#include "pdlp/cupdlp/cupdlp_linalg.h"
 
 /**
  * The function `ScatterCol` performs a scatter operation on a specific
@@ -363,19 +363,6 @@ void ScaleVector(cupdlp_float weight, cupdlp_float *x, cupdlp_int n) {
 #endif
 }
 
-void cupdlp_hasLower(cupdlp_float *haslb, const cupdlp_float *lb,
-                     const cupdlp_float bound, const cupdlp_int len) {
-  for (int i = 0; i < len; i++) {
-    haslb[i] = lb[i] > bound ? 1.0 : 0.0;
-  }
-}
-
-void cupdlp_hasUpper(cupdlp_float *hasub, const cupdlp_float *ub,
-                     const cupdlp_float bound, const cupdlp_int len) {
-  for (int i = 0; i < len; i++) {
-    hasub[i] = ub[i] < bound ? 1.0 : 0.0;
-  }
-}
 
 void cupdlp_filter_lower_bound(cupdlp_float *x, const cupdlp_float *lb,
                                const cupdlp_float bound, const cupdlp_int len) {
@@ -408,19 +395,16 @@ void Ax_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecX,
 
   switch (w->problem->data->matrix_format) {
     case CSR_CSC:
-      // cuda_csc_Ax(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
-      //             vecX, vecAx, w->dBuffer, alpha, beta);
-
       cuda_csr_Ax(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
-                  vecX, vecAx, w->dBuffer, alpha, beta);
+                  vecX, vecAx, w->dBuffer_csr_Ax, alpha, beta);
       break;
     case CSC:
-      cuda_csc_Ax(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
-                  vecX, vecAx, w->dBuffer, alpha, beta);
+      cupdlp_printf("Error: Ax_single_gpu requires CSR matrix\n");
+      exit(1);
       break;
     case CSR:
       cuda_csr_Ax(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
-                  vecX, vecAx, w->dBuffer, alpha, beta);
+                  vecX, vecAx, w->dBuffer_csr_Ax, alpha, beta);
       break;
     default:
       cupdlp_printf("Error: Unknown matrix format in Ax_single_gpu\n");
@@ -443,18 +427,16 @@ void ATy_single_gpu(CUPDLPwork *w, cusparseDnVecDescr_t vecY,
 
   switch (w->problem->data->matrix_format) {
     case CSR_CSC:
-      // cuda_csr_ATy(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
-      //              vecY, vecATy, w->dBuffer, alpha, beta);
       cuda_csc_ATy(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
-                   vecY, vecATy, w->dBuffer, alpha, beta);
+                   vecY, vecATy, w->dBuffer_csc_ATy, alpha, beta);
       break;
     case CSC:
       cuda_csc_ATy(w->cusparsehandle, w->problem->data->csc_matrix->cuda_csc,
-                   vecY, vecATy, w->dBuffer, alpha, beta);
+                   vecY, vecATy, w->dBuffer_csc_ATy, alpha, beta);
       break;
     case CSR:
-      cuda_csr_ATy(w->cusparsehandle, w->problem->data->csr_matrix->cuda_csr,
-                   vecY, vecATy, w->dBuffer, alpha, beta);
+      cupdlp_printf("Error: ATy_single_gpu requires CSC matrix\n");
+      exit(1);
       break;
     default:
       printf("Error: Unknown matrix format in Ax_single_gpu\n");
@@ -490,7 +472,7 @@ void Ax(CUPDLPwork *w, CUPDLPvec *ax, const CUPDLPvec *x) {
       break;
     case MULTI_GPU:
 #ifndef CUPDLP_CPU
-      Ax_multi_gpu(d, ax, x);
+      Ax_multi_gpu(d, ax->data, x->data);
 #else
       printf("GPU not supported in CPU build\n");
       exit(1);
@@ -725,23 +707,23 @@ void cupdlp_projNeg(cupdlp_float *x, const cupdlp_int len) {
   cupdlp_projSameub(x, 0.0, len);
 }
 
-void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
-                  const cupdlp_float bound, const cupdlp_int len) {
-#ifndef CUPDLP_CPU
-  cupdlp_haslb_cuda(haslb, lb, bound, len);
-#else
-  cupdlp_hasLower(haslb, lb, bound, len);
-#endif
-}
+// void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+// #ifndef CUPDLP_CPU
+//   cupdlp_haslb_cuda(haslb, lb, bound, len);
+// #else
+//   cupdlp_hasLower(haslb, lb, bound, len);
+// #endif
+// }
 
-void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
-                  const cupdlp_float bound, const cupdlp_int len) {
-#ifndef CUPDLP_CPU
-  cupdlp_hasub_cuda(hasub, ub, bound, len);
-#else
-  cupdlp_hasUpper(hasub, ub, bound, len);
-#endif
-}
+// void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub,
+//                   const cupdlp_float bound, const cupdlp_int len) {
+// #ifndef CUPDLP_CPU
+//   cupdlp_hasub_cuda(hasub, ub, bound, len);
+// #else
+//   cupdlp_hasUpper(hasub, ub, bound, len);
+// #endif
+// }
 
 void cupdlp_filterlb(cupdlp_float *x, const cupdlp_float *lb,
                      const cupdlp_float bound, const cupdlp_int len) {
@@ -770,6 +752,7 @@ void cupdlp_initvec(cupdlp_float *x, const cupdlp_float val,
 #endif
 }
 
+/*
 void cupdlp_sub(cupdlp_float *xout, const cupdlp_float *x1,
                 const cupdlp_float *x2, const cupdlp_int len) {
 #ifndef CUPDLP_CPU
@@ -780,6 +763,7 @@ void cupdlp_sub(cupdlp_float *xout, const cupdlp_float *x1,
   cupdlp_axpy(NULL, len, &alpha, x2, xout);
 #endif
 }
+*/
 
 void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
                                              cupdlp_float *dMovement,
@@ -791,13 +775,47 @@ void cupdlp_compute_interaction_and_movement(CUPDLPwork *w,
   cupdlp_float dX = 0.0;
   cupdlp_float dY = 0.0;
 
-  cupdlp_sub(w->buffer2, iterates->x->data, iterates->xUpdate->data, nCols);
-  cupdlp_twoNorm(w, nCols, w->buffer2, &dX);
-  cupdlp_sub(w->buffer3, iterates->y->data, iterates->yUpdate->data, nRows);
-  cupdlp_twoNorm(w, nRows, w->buffer3, &dY);
+  cupdlp_int iter = w->timers->nIter;
+  CUPDLPvec *x = iterates->x[iter % 2];
+  CUPDLPvec *y = iterates->y[iter % 2];
+  CUPDLPvec *aty = iterates->aty[iter % 2];
+  CUPDLPvec *xUpdate = iterates->x[(iter + 1) % 2];
+  CUPDLPvec *yUpdate = iterates->y[(iter + 1) % 2];
+  CUPDLPvec *atyUpdate = iterates->aty[(iter + 1) % 2];
 
-  *dMovement = pow(dX, 2.0) * 0.5 * beta + pow(dY, 2.0) / (2.0 * beta);
-
-  cupdlp_sub(w->buffer3, iterates->aty->data, iterates->atyUpdate->data, nCols);
-  cupdlp_dot(w, nCols, w->buffer2, w->buffer3, dInteraction);
+#if !defined(CUPDLP_CPU) && USE_KERNELS
+  cupdlp_movement_interaction_cuda(&dX, &dY, dInteraction, w->buffer2,
+      xUpdate->data, x->data, yUpdate->data, y->data, atyUpdate->data, aty->data, nRows, nCols);
+#else
+    cupdlp_diffTwoNormSquared(w, x->data, xUpdate->data, nCols, &dX);
+    cupdlp_diffTwoNormSquared(w, y->data, yUpdate->data, nRows, &dY);
+    //      Δx' (AΔy)
+    cupdlp_diffDotDiff(w, x->data, xUpdate->data, aty->data, atyUpdate->data,
+                       nCols, dInteraction);
+#endif
+  *dMovement = dX * 0.5 * beta + dY / (2.0 * beta);
 }
+
+// WIP iinfnormabslocaltermination
+// double get_fabs_value(double* vec, int index, int N) {
+// #ifdef CUPDLP_CPU
+//   return vec[index];
+// #else 
+//   int success = -1; 
+
+//   // double result = 0;
+//   // get_gpu_vec_element(vec, index, &result, &success);
+
+//   double * b;
+//   b = (double *)malloc (N * sizeof (*b));
+//   get_gpu_vec(vec, index, b, &success);
+
+//   if (!success)
+//     return 0;
+
+//   // return result;
+
+//   return b[index];
+
+// #endif
+// }

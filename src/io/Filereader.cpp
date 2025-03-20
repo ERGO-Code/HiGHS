@@ -75,6 +75,7 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::kOk:
+    case FilereaderRetcode::kWarning:
       break;
     case FilereaderRetcode::kFileNotFound:
       highsLogUser(log_options, HighsLogType::kError, "File %s not found\n",

@@ -17,19 +17,28 @@
 
 #include "util/HighsInt.h"
 
+const HighsInt avgas_num_col = 8;
+const HighsInt avgas_num_row = 10;
+
 /**
  * @brief Utilities for tests with AVGAS
  */
 class Avgas {
  public:
-  void row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
-           std::vector<double>& rowLower, std::vector<double>& rowUpper,
-           std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
-           std::vector<double>& ARvalue);
+  void addRow(const HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
+              std::vector<double>& rowLower, std::vector<double>& rowUpper,
+              std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
+              std::vector<double>& ARvalue);
 
-  void col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
-           std::vector<double>& colCost, std::vector<double>& colLower,
-           std::vector<double>& colUpper, std::vector<HighsInt>& Astart,
-           std::vector<HighsInt>& Aindex, std::vector<double>& Avalue);
+  void getRow(const HighsInt row, double& lower, double& upper,
+              std::vector<HighsInt>& index, std::vector<double>& value);
+
+  void addCol(const HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
+              std::vector<double>& colCost, std::vector<double>& colLower,
+              std::vector<double>& colUpper, std::vector<HighsInt>& Astart,
+              std::vector<HighsInt>& Aindex, std::vector<double>& Avalue);
+
+  void getCol(const HighsInt col, double& cost, double& lower, double& upper,
+              std::vector<HighsInt>& index, std::vector<double>& value);
 };
 #endif /* SIMPLEX_AVGAS_H_ */

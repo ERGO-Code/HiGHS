@@ -2,7 +2,7 @@
 """
 module(
     name = "highs",
-    version = "1.9.0",
+    version = "1.10.0",
 )
 
 bazel_dep(

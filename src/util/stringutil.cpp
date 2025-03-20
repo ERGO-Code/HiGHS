@@ -72,6 +72,11 @@ void tolower(std::string& str) {
                  [](unsigned char c) { return std::tolower(c); });
 }
 
+void toupper(std::string& str) {
+  std::transform(str.begin(), str.end(), str.begin(),
+                 [](unsigned char c) { return std::toupper(c); });
+}
+
 std::string& ltrim(std::string& str, const std::string& chars) {
   str.erase(0, str.find_first_not_of(chars));
   return str;
