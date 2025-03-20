@@ -172,10 +172,10 @@ restart:
       return;
     }
     if (analysis_.analyse_mip_time && !submip)
-    if (analysis_.analyse_mip_time & !submip)
-      highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "MIP-Timing: %11.2g - starting evaluate root node\n",
-                   timer_.read());
+      if (analysis_.analyse_mip_time & !submip)
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "MIP-Timing: %11.2g - starting evaluate root node\n",
+                     timer_.read());
     analysis_.mipTimerStart(kMipClockEvaluateRootNode);
     mipdata_->evaluateRootNode();
     analysis_.mipTimerStop(kMipClockEvaluateRootNode);
