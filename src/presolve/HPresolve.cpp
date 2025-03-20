@@ -4782,10 +4782,6 @@ HPresolve::Result HPresolve::removeDependentEquations(
 
   HighsSparseMatrix matrix;
   matrix.num_col_ = equations.size();
-  highsLogDev(options->log_options, HighsLogType::kInfo,
-              "HPresolve::removeDependentEquations Got %d equations, checking "
-              "for dependent equations\n",
-              static_cast<int>(matrix.num_col_));
   matrix.num_row_ = model->num_col_ + 1;
   matrix.start_.resize(matrix.num_col_ + 1);
   matrix.start_[0] = 0;
@@ -4826,18 +4822,36 @@ HPresolve::Result HPresolve::removeDependentEquations(
   //
   // ToDo: This is strictly non-deterministic, but so conservative
   // that it'll only reap the cases when factor.build never finishes
-  const double time_limit = std::min(0.01 * options->time_limit, 1000.0);
+  const double time_limit =
+      std::max(1.0, std::min(0.01 * options->time_limit, 1000.0));
   factor.setTimeLimit(time_limit);
   // Determine rank deficiency of the equations
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "Dependent equations search running on %d equations with time "
+               "limit of %.2fs\n",
+               static_cast<int>(matrix.num_col_), time_limit);
+  double time_taken = -this->timer->read();
   HighsInt build_return = factor.build();
+  time_taken += this->timer->read();
   if (build_return == kBuildKernelReturnTimeout) {
     // HFactor::build has timed out, so just return
-    highsLogDev(options->log_options, HighsLogType::kWarning,
-                "HPresolve::removeDependentEquations Timed out\n");
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Dependent equations search terminated after %.3gs due to "
+                 "expected time exceeding limit\n",
+                 time_taken);
     analysis_.logging_on_ = logging_on;
     if (logging_on)
       analysis_.stopPresolveRuleLog(kPresolveRuleDependentFreeCols);
     return Result::kOk;
+  } else {
+    double pct_off_timeout =
+        1e2 * std::fabs(time_taken - time_limit) / time_limit;
+    if (pct_off_timeout < 1.0)
+      highsLogUser(options->log_options, HighsLogType::kWarning,
+                   "Dependent equations search finished within %.2f%% of limit "
+                   "of %.2fs: "
+                   "risk of non-deterministic behaviour if solve is repeated\n",
+                   pct_off_timeout, time_limit);
   }
   // build_return as rank_deficiency must be valid
   assert(build_return >= 0);
@@ -4857,11 +4871,11 @@ HPresolve::Result HPresolve::removeDependentEquations(
       num_fictitious_rows_skipped++;
     }
   }
-
-  highsLogDev(
-      options->log_options, HighsLogType::kInfo,
-      "HPresolve::removeDependentEquations Removed %d rows and %d nonzeros",
-      static_cast<int>(num_removed_row), static_cast<int>(num_removed_nz));
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "Dependent equations search removed %d rows and %d nonzeros "
+               "in %.2fs (limit = %.2fs)\n",
+               static_cast<int>(num_removed_row),
+               static_cast<int>(num_removed_nz), time_taken, time_limit);
   if (num_fictitious_rows_skipped)
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 ", avoiding %d fictitious rows",
