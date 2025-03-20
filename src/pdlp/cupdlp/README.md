@@ -1,6 +1,6 @@
 # cuPDLP-C observations
 
-This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues experienced when integrating them into HiGHS.
+This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues experienced when integrating them into HiGHS. In March 2025 it was updated to https://github.com/COPT-Public/cuPDLP-C/commit/7b94c41efca42fa176a129a935b59718e1455fad. 
 
 ## Termination of cuPDLP-C
 
@@ -29,13 +29,6 @@ directive" in the case of the following, but it's not a problem for
 now, as CUPDLP_CPU is set
 
 > #ifndef CUPDLP_CPU & USE_KERNELS
-
-## cmake issues
-
-CUPDLP_CPU and CUPDLP_DEBUG should both set when building. However, they are not recognised so are forced by the following lines in cupdlp_defs.h
-
-#define CUPDLP_CPU
-#define CUPDLP_DEBUG (1)
 
 ## Use of macro definitions within C++
 
@@ -100,22 +93,3 @@ The `cuPDLP-c` iteration count is held in `pdhg->timers->nIter`, but `pdhg` is d
 ## To be done
 
 - Make CupldlpWrapper.cpp look more like C++ than C
-
-+## Using a GPU
-+
-+### Install CUDA
-+
-+* sudo apt update && sudo apt upgrade
-+* sudo apt autoremove nvidia* --purge
-+* sudo apt update && sudo apt upgrade
-+* nvcc --version
-+* sudo apt install nvidia-cuda-toolkit
-+
-+### Building PDLP
-+
-+export HIGHS_HOME=/home/jajhall/install
-+export CUDA_HOME=/usr/lib/cuda
-+
-+
-+
-+

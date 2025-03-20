@@ -2,6 +2,8 @@
 
 Added code coverage report
 
+Replaced command line parsing library with CLI11. Removed C++17 reference with cxxopts, which is no longer in HiGHS
+
 ## Code changes
 
 Any LP offset is communicated to the IPM solver, and used in logging and primal/dual objective calculations. 
@@ -34,15 +36,14 @@ Model status is set appropriately when a solver's claimed optimality doesn't sat
 
 Command line parsing now done with pure C++11 code
 
+Added command line flags to read basis from and write basis to a file 
+
 Bug fixes in records of primal/dual rays
 
 MPS read utility improved. Error logging is now less verbose; inability to handle USERCUTS section is properly logged
 
 Implemented lifting for probing as described by Achterberg et al in _Presolve Reductions in Mixed Integer Programming._ INFORMS Journal on Computing 32(2):473-506 (2019). Not used by default, but option mip_lifting_for_probing allows it to be used with two levels of modification
 
+Propagated updates from cuPDLP-C
 
-
-
-
-
-
+Added GPU support for cuPDLP-C
