@@ -1,7 +1,5 @@
 # [HiGHS on a GPU](@id highs-gpu)
 
-## Using HiGHS on a GPU
-
 HiGHS can run `cuPDLP-C` on Nvidia GPUs.
 
 ### Requiremets
