@@ -583,7 +583,7 @@ class HighsPostsolveStack {
                             const std::vector<HighsInt>& index,
                             HighsInt origSize) {
     values.resize(origSize);
-#if 1
+#ifdef DEBUG_EXTRA
     // Fill vector with NaN for debugging purposes
     std::vector<T> valuesNew;
     valuesNew.resize(origSize, std::numeric_limits<T>::signaling_NaN());
