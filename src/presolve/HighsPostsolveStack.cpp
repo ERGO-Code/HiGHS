@@ -763,21 +763,24 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   if (basis.valid)
     assert(basis.col_status[duplicateCol] != HighsBasisStatus::kNonbasic);
 
-  bool illegal_duplicateCol_lower =
-      solution.col_value[duplicateCol] <
-      duplicateColLower - options.mip_feasibility_tolerance;
-  bool illegal_duplicateCol_upper =
-      solution.col_value[duplicateCol] >
-      duplicateColUpper + options.mip_feasibility_tolerance;
-  bool illegal_col_lower =
-      solution.col_value[col] < colLower - options.mip_feasibility_tolerance;
-  bool illegal_col_upper =
-      solution.col_value[col] > colUpper + options.mip_feasibility_tolerance;
-  bool illegal_residual =
-      !okResidual(solution.col_value[col], solution.col_value[duplicateCol]);
-  bool error = illegal_duplicateCol_lower || illegal_duplicateCol_upper ||
-               illegal_col_lower || illegal_col_upper || illegal_residual;
-  if (error) {
+  auto hasError = [&]() {
+    bool illegal_duplicateCol_lower =
+        solution.col_value[duplicateCol] <
+        duplicateColLower - options.mip_feasibility_tolerance;
+    bool illegal_duplicateCol_upper =
+        solution.col_value[duplicateCol] >
+        duplicateColUpper + options.mip_feasibility_tolerance;
+    bool illegal_col_lower =
+        solution.col_value[col] < colLower - options.mip_feasibility_tolerance;
+    bool illegal_col_upper =
+        solution.col_value[col] > colUpper + options.mip_feasibility_tolerance;
+    bool illegal_residual =
+        !okResidual(solution.col_value[col], solution.col_value[duplicateCol]);
+    return (illegal_duplicateCol_lower || illegal_duplicateCol_upper ||
+            illegal_col_lower || illegal_col_upper || illegal_residual);
+  };
+
+  if (hasError()) {
     if (debug_report)
       printf(
           "DuplicateColumn::undo error: col = %d(%g), duplicateCol = %d(%g)\n"
@@ -787,30 +790,12 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
           colUpper, colIntegral, duplicateColLower, duplicateColUpper,
           duplicateColIntegral);
     // Fix error due to undo
-    undoFix(options, solution);
-    illegal_duplicateCol_lower =
-        solution.col_value[duplicateCol] <
-        duplicateColLower - options.mip_feasibility_tolerance;
-    illegal_duplicateCol_upper =
-        solution.col_value[duplicateCol] >
-        duplicateColUpper + options.mip_feasibility_tolerance;
-    illegal_col_lower =
-        solution.col_value[col] < colLower - options.mip_feasibility_tolerance;
-    illegal_col_upper =
-        solution.col_value[col] > colUpper + options.mip_feasibility_tolerance;
-    illegal_residual =
-        !okResidual(solution.col_value[col], solution.col_value[duplicateCol]);
+    undoFix(options, solution, mergeVal);
   } else {
     return;
   }
   const bool allow_assert = false;
-  if (allow_assert) {
-    assert(!illegal_duplicateCol_lower);
-    assert(!illegal_duplicateCol_upper);
-    assert(!illegal_col_lower);
-    assert(!illegal_col_upper);
-    assert(!illegal_residual);
-  }
+  if (allow_assert) assert(!hasError());
   // Following undoFix, set any basis status, ideally keeping col basic
   if (basis.valid) {
     bool duplicateCol_basic = false;
@@ -998,7 +983,8 @@ bool HighsPostsolveStack::DuplicateColumn::okMerge(
 }
 
 void HighsPostsolveStack::DuplicateColumn::undoFix(
-    const HighsOptions& options, HighsSolution& solution) const {
+    const HighsOptions& options, HighsSolution& solution,
+    const double mergeValue) const {
   const double mip_feasibility_tolerance = options.mip_feasibility_tolerance;
   const double primal_feasibility_tolerance =
       options.primal_feasibility_tolerance;
@@ -1015,9 +1001,6 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
     return v >= l - primal_feasibility_tolerance &&
            v <= u + primal_feasibility_tolerance;
   };
-  const double merge_value = col_value[col];
-  const double value_max = 1000;
-  const double eps = 1e-8;
   const double scale = colScale;
   const bool x_int = colIntegral;
   const bool y_int = duplicateColIntegral;
@@ -1034,107 +1017,77 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
       y_int ? std::floor(duplicateColUpper + mip_feasibility_tolerance)
             : duplicateColUpper;
   if (kAllowDeveloperAssert) assert(scale);
-  double x_v = merge_value;
-  double y_v;
+  double x_v = mergeValue;
+  double y_v = -kHighsInf;
 
-  //  assert(x_int);
-  //  assert(y_int);
-  //  assert(scale < 0);
-  if (x_int) {
-    double x_0 = 0;
-    double x_d = 0;
-    double x_1 = 0;
-    double x_free = false;
-    if (x_lo <= -kHighsInf) {
-      if (x_up >= kHighsInf) {
-        // x is free
-        x_free = true;
-        x_0 = 0;
-        x_d = 1.0;
-        x_1 = value_max;
+  auto checkIntVar = [](double z_lo, double z_up, double& z_0, double& z_d,
+                        double& z_1, bool& z_free) {
+    const double value_max = 1000;
+    z_0 = 0;
+    z_d = 0;
+    z_1 = 0;
+    z_free = false;
+    if (z_lo <= -kHighsInf) {
+      if (z_up >= kHighsInf) {
+        // z is free
+        z_free = true;
+        z_0 = 0;
+        z_d = 1.0;
+        z_1 = value_max;
       } else {
-        // x is (-int, u]
-        x_0 = x_up;
-        x_d = -1.0;
-        x_1 = -value_max;
+        // z is (-int, u]
+        z_0 = z_up;
+        z_d = -1.0;
+        z_1 = -value_max;
       }
     } else {
-      if (x_up >= kHighsInf) {
-        // x is [l, inf)
-        x_0 = x_lo;
-        x_d = 1.0;
-        x_1 = value_max;
-      } else {
-        // x is [l, u]
-        x_0 = x_lo;
-        x_d = 1.0;
-        x_1 = x_up;
-      }
+      // z is [l, u] or [l, inf) respectively
+      z_0 = z_lo;
+      z_d = 1.0;
+      z_1 = z_up >= kHighsInf ? value_max : z_up;
     }
+  };
+
+  auto findValue = [&](double& z_value, double z_0, double z_1, double z_delta,
+                       double& other_value, double other_lower,
+                       double other_upper, bool other_int) {
+    const double eps = 1e-8;
+    for (z_value = z_0;; z_value += z_delta) {
+      other_value = double((HighsCDouble(mergeValue) - z_value) / scale);
+      if (isFeasible(other_lower, other_value, other_upper) &&
+          (!other_int || isInteger(other_value)))
+        return true;
+      if (z_delta > 0 && z_value + z_delta >= z_1 + eps) return false;
+      if (z_delta < 0 && z_value + z_delta <= z_1 - eps) return false;
+    }
+    return false;
+  };
+
+  if (x_int) {
+    double x_0;
+    double x_d;
+    double x_1;
+    bool x_free;
+    checkIntVar(x_lo, x_up, x_0, x_d, x_1, x_free);
     // x is integer, so look through its possible values to find a
     // suitable y
     if (x_free && debug_report) printf("DuplicateColumn::undo x is free\n");
     if (debug_report)
       printf("DuplicateColumn::undo Using x (%g; %g; %g)\n", x_0, x_d, x_1);
-    bool found_y = false;
-    for (x_v = x_0;; x_v += x_d) {
-      //      printf("x_v = %g\n", x_v);
-      y_v = double((HighsCDouble(merge_value) - x_v) / scale);
-      if (isFeasible(y_lo, y_v, y_up)) {
-        found_y = !y_int || isInteger(y_v);
-        if (found_y) break;
-      }
-      if (x_d > 0 && x_v + x_d >= x_1 + eps) break;
-      if (x_d < 0 && x_v + x_d <= x_1 - eps) break;
-    }
+    bool found_y = findValue(x_v, x_0, x_1, x_d, y_v, y_lo, y_up, y_int);
     if (allow_assert) assert(found_y);
   } else if (y_int) {
-    double y_0 = 0;
-    double y_d = 0;
-    double y_1 = 0;
-    double y_free = false;
-    if (y_lo <= -kHighsInf) {
-      if (y_up >= kHighsInf) {
-        // y is free
-        y_free = true;
-        y_0 = 0;
-        y_d = 1.0;
-        y_1 = value_max;
-      } else {
-        // y is (-int, u]
-        y_0 = y_up;
-        y_d = -1.0;
-        y_1 = -value_max;
-      }
-    } else {
-      if (y_up >= kHighsInf) {
-        // y is [l, inf)
-        y_0 = y_lo;
-        y_d = 1.0;
-        y_1 = value_max;
-      } else {
-        // y is [l, u]
-        y_0 = y_lo;
-        y_d = 1.0;
-        y_1 = y_up;
-      }
-    }
+    double y_0;
+    double y_d;
+    double y_1;
+    bool y_free;
+    checkIntVar(y_lo, y_up, y_0, y_d, y_1, y_free);
     // y is integer, so look through its possible values to find a
     // suitable x
     if (y_free && debug_report) printf("DuplicateColumn::undo y is free\n");
     if (debug_report)
       printf("DuplicateColumn::undo Using y (%g; %g; %g)\n", y_0, y_d, y_1);
-    bool found_x = false;
-    for (y_v = y_0;; y_v += y_d) {
-      //      printf("y_v = %g\n", y_v);
-      x_v = double((HighsCDouble(merge_value) - HighsCDouble(y_v) * scale));
-      if (isFeasible(x_lo, x_v, x_up)) {
-        found_x = !x_int || isInteger(x_v);
-        if (found_x) break;
-      }
-      if (y_d > 0 && y_v + y_d >= y_1 + eps) break;
-      if (y_d < 0 && y_v + y_d <= y_1 - eps) break;
-    }
+    bool found_x = findValue(y_v, y_0, y_1, y_d, x_v, x_lo, x_up, x_int);
     if (allow_assert) assert(found_x);
   } else {
     // x and y are both continuous
@@ -1144,13 +1097,13 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
       v_m_a_ylo = scale > 0 ? kHighsInf : -kHighsInf;
     } else {
       v_m_a_ylo =
-          double((HighsCDouble(merge_value) - HighsCDouble(y_lo) * scale));
+          double((HighsCDouble(mergeValue) - HighsCDouble(y_lo) * scale));
     }
     if (y_up >= kHighsInf) {
       v_m_a_yup = scale > 0 ? -kHighsInf : kHighsInf;
     } else {
       v_m_a_yup =
-          double((HighsCDouble(merge_value) - HighsCDouble(y_up) * scale));
+          double((HighsCDouble(mergeValue) - HighsCDouble(y_up) * scale));
     }
     // Need to ensure that y puts x in [x_l, x_u]
     if (scale > 0) {
@@ -1170,11 +1123,11 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
         if (x_v < x_lo - primal_feasibility_tolerance) {
           // Try y_v corresponding to x_lo
           x_v = x_lo;
-          y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           if (y_v < y_lo - primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
             x_v = x_lo - primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           }
         }
       } else if (y_lo > -kHighsInf) {
@@ -1190,19 +1143,19 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
           // Try y_v corresponding to x_up
           //	  if (kAllowDeveloperAssert) assert(1==102);
           x_v = x_up;
-          y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           if (y_v > y_up + primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
             if (debug_report) printf("DuplicateColumn::undoFix 2==102\n");
             if (kAllowDeveloperAssert) assert(2 == 102);
             x_v = x_up + primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           }
         }
       } else {
         // y is free, so use x_v = max(0, x_lo)
         x_v = std::max(0.0, x_lo);
-        y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+        y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
       }
     } else {  // scale < 0
       if (debug_report)
@@ -1223,13 +1176,13 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
           // Try y_v corresponding to x_lo
           //	  if (kAllowDeveloperAssert) assert(11==101);
           x_v = x_lo;
-          y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           if (y_v > y_up + primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
             if (debug_report) printf("DuplicateColumn::undoFix 12==101\n");
             if (kAllowDeveloperAssert) assert(12 == 101);
             x_v = x_lo - primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           }
         }
       } else if (y_up < kHighsInf) {
@@ -1245,26 +1198,26 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
           // Try y_v corresponding to x_up
           //	  if (kAllowDeveloperAssert) assert(11==102);
           x_v = x_up;
-          y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           if (y_v < y_lo - primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
             if (debug_report) printf("DuplicateColumn::undoFix 12==102\n");
             if (kAllowDeveloperAssert) assert(12 == 102);
             x_v = x_up + primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
           }
         }
       } else {
         // y is free, so use x_v = max(0, x_lo)
         x_v = std::max(0.0, x_lo);
-        y_v = double((HighsCDouble(merge_value) - x_v) / scale);
+        y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
       }
     }
   }
   const double residual_tolerance = 1e-12;
   double residual =
       std::fabs(double(HighsCDouble(x_v) + HighsCDouble(y_v) * scale -
-                       HighsCDouble(merge_value)));
+                       HighsCDouble(mergeValue)));
   const bool x_y_ok =
       isFeasible(x_lo, x_v, x_up) && isFeasible(y_lo, y_v, y_up) &&
       (!x_int || isInteger(x_v)) && (!y_int || isInteger(y_v)) &&
@@ -1329,7 +1282,7 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
   check = residual <= residual_tolerance;
   if (debug_report)
     printf("DuplicateColumn::undo%s x = %g; y = %g to give x + (%g)y = %g",
-           x_y_ok ? "" : " ERROR", x_v, y_v, scale, merge_value);
+           x_y_ok ? "" : " ERROR", x_v, y_v, scale, mergeValue);
   if (x_y_ok) {
     if (debug_report) printf(": FIXED\n");
   } else if (check) {

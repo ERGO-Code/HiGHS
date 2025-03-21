@@ -212,7 +212,8 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
     bool okMerge(const double tolerance) const;
-    void undoFix(const HighsOptions& options, HighsSolution& solution) const;
+    void undoFix(const HighsOptions& options, HighsSolution& solution,
+                 const double mergeValue) const;
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
@@ -582,7 +583,7 @@ class HighsPostsolveStack {
                             const std::vector<HighsInt>& index,
                             HighsInt origSize) {
     values.resize(origSize);
-#ifdef DEBUG_EXTRA
+#if 1
     // Fill vector with NaN for debugging purposes
     std::vector<T> valuesNew;
     valuesNew.resize(origSize, std::numeric_limits<T>::signaling_NaN());
