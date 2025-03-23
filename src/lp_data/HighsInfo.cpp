@@ -35,6 +35,7 @@ void HighsInfo::invalidate() {
   num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violations = kHighsIllegalComplementarityViolation;
   primal_dual_integral = -kHighsInf;

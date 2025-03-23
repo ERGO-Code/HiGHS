@@ -94,6 +94,8 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
+				  const double complementarity_tolerance,
+                                  HighsInt& num_complementarity_violations,
                                   double& max_complementarity_violation,
                                   double& sum_complementarity_violations);
 

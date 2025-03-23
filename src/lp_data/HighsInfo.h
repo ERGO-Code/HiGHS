@@ -110,6 +110,7 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
+  HighsInt num_complementarity_violations;
   double max_complementarity_violation;
   double sum_complementarity_violations;
   double primal_dual_integral;

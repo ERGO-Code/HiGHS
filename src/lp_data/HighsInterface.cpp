@@ -1714,6 +1714,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
     this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    this->info_.num_complementarity_violations =
+        kHighsIllegalComplementarityCount;
     this->info_.max_complementarity_violation =
         kHighsIllegalComplementarityViolation;
     this->info_.sum_complementarity_violations =

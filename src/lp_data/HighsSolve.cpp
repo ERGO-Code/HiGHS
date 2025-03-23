@@ -69,13 +69,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                           return_status, "solveLpCupdlp");
     }
     if (return_status == HighsStatus::kError) return return_status;
-    // IPM (and PDLP?) can claim optimality with large primal and/or
-    // dual residual errors, so must correct any residual errors that
-    // exceed the tolerance in this scenario.
+    // PDLP and IPM (without crossover) can claim optimality with a
+    // duality gap or primal/dual residual errors that do not satisfy
+    // HiGHS tolerances
     //
     // OK to correct residual errors whatever the model status, as
     // it's only changed in the case of optimality
-    correctResiduals(solver_object);
+    //    correctResiduals(solver_object);
 
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
@@ -162,29 +162,32 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       const HighsInfo& info = solver_object.highs_info_;
       if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
         if (info.num_primal_infeasibilities || info.num_dual_infeasibilities) {
-          if (info.num_primal_infeasibilities) {
+          if (info.num_primal_infeasibilities) 
             highsLogUser(options.log_options, HighsLogType::kWarning,
-                         "PDLP claims optimality, but with num/max/sum %d / "
-                         "%9.4g / %9.4g primal infeasibilities\n",
+                         "PDLP claims optimality, but with "
+                         "num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
                          int(info.num_primal_infeasibilities),
                          info.max_primal_infeasibility,
                          info.sum_primal_infeasibilities);
-          } else if (info.num_dual_infeasibilities) {
+	  if (info.num_dual_infeasibilities) 
             highsLogUser(options.log_options, HighsLogType::kWarning,
-                         "PDLP claims optimality, but with num/max/sum %d / "
-                         "%9.4g / %9.4g dual infeasibilities\n",
+                         "%s"
+                         "num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
+			 !info.num_primal_infeasibilities ?
+                         "PDLP claims optimality, but with " :
+			 "                                 " ,
                          int(info.num_dual_infeasibilities),
                          info.max_dual_infeasibility,
                          info.sum_dual_infeasibilities);
-          }
           highsLogUser(options.log_options, HighsLogType::kWarning,
-                       "                        and          max/sum     %9.4g "
-                       "/ %9.4g complementarity violations\n",
+			 "                             and "
+                         "num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
+                         int(info.num_complementarity_violations),
                        info.max_complementarity_violation,
                        info.sum_complementarity_violations);
           highsLogUser(
               options.log_options, HighsLogType::kWarning,
-              "                        so set model status to \"unknown\"\n");
+              "                        so set model status to \"Unknown\"\n");
           solver_object.model_status_ = HighsModelStatus::kUnknown;
         }
       } else if (solver_object.model_status_ ==

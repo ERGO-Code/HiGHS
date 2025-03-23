@@ -91,6 +91,7 @@ void testSolver(Highs& highs, const std::string solver,
   }
   // Following simplex or IPM+Crossover, nonbasic variables are on bounds
   // complementarity_violation
+  REQUIRE(info.num_complementarity_violations == 0);
   REQUIRE(info.max_complementarity_violation == 0);
   REQUIRE(info.sum_complementarity_violations == 0);
 

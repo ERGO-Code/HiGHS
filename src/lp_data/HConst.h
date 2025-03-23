@@ -292,6 +292,7 @@ const HighsInt kHighsIllegalErrorIndex = -1;
 // Illegal values for complementarity violations used to indicate that true
 // values aren't known
 const double kHighsIllegalComplementarityViolation = kHighsInf;
+const HighsInt kHighsIllegalComplementarityCount = -1;
 
 // Maximum upper bound on semi-variables
 const double kMaxSemiVariableUpper = 1e5;
