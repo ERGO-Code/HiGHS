@@ -1048,12 +1048,22 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
     }
   };
 
+  auto computeValue = [mergeValue, scale](double value) {
+    return static_cast<double>((static_cast<HighsCDouble>(mergeValue) - value) /
+                               scale);
+  };
+
+  auto computeInvValue = [mergeValue, scale](double value) {
+    return static_cast<double>(static_cast<HighsCDouble>(mergeValue) -
+                               static_cast<HighsCDouble>(value) * scale);
+  };
+
   auto findValue = [&](double& z_value, double z_0, double z_1, double z_delta,
                        double& other_value, double other_lower,
                        double other_upper, bool other_int) {
     const double eps = 1e-8;
     for (z_value = z_0;; z_value += z_delta) {
-      other_value = double((HighsCDouble(mergeValue) - z_value) / scale);
+      other_value = computeValue(z_value);
       if (isFeasible(other_lower, other_value, other_upper) &&
           (!other_int || isInteger(other_value)))
         return true;
@@ -1061,6 +1071,16 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
       if (z_delta < 0 && z_value + z_delta <= z_1 - eps) return false;
     }
     return false;
+  };
+
+  auto setXValue = [&](double value) {
+    x_v = value;
+    y_v = computeValue(value);
+  };
+
+  auto setYValue = [&](double value) {
+    y_v = value;
+    x_v = computeInvValue(value);
   };
 
   if (x_int) {
@@ -1096,14 +1116,12 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
     if (y_lo <= -kHighsInf) {
       v_m_a_ylo = scale > 0 ? kHighsInf : -kHighsInf;
     } else {
-      v_m_a_ylo =
-          double((HighsCDouble(mergeValue) - HighsCDouble(y_lo) * scale));
+      v_m_a_ylo = computeInvValue(y_lo);
     }
     if (y_up >= kHighsInf) {
       v_m_a_yup = scale > 0 ? -kHighsInf : kHighsInf;
     } else {
-      v_m_a_yup =
-          double((HighsCDouble(mergeValue) - HighsCDouble(y_up) * scale));
+      v_m_a_yup = computeInvValue(y_up);
     }
     // Need to ensure that y puts x in [x_l, x_u]
     if (scale > 0) {
@@ -1118,16 +1136,13 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
         if (kAllowDeveloperAssert)
           assert(x_up + primal_feasibility_tolerance >= v_m_a_yup);
         // This assignment is OK unless x_v < x_lo-eps
-        y_v = y_up;
-        x_v = v_m_a_yup;
+        setYValue(y_up);
         if (x_v < x_lo - primal_feasibility_tolerance) {
           // Try y_v corresponding to x_lo
-          x_v = x_lo;
-          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+          setXValue(x_lo);
           if (y_v < y_lo - primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
-            x_v = x_lo - primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+            setXValue(x_lo - primal_feasibility_tolerance);
           }
         }
       } else if (y_lo > -kHighsInf) {
@@ -1137,32 +1152,24 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
         if (kAllowDeveloperAssert)
           assert(x_lo - primal_feasibility_tolerance <= v_m_a_ylo);
         // This assignment is OK unless x_v > x_up-eps
-        y_v = y_lo;
-        x_v = v_m_a_ylo;
+        setYValue(y_lo);
         if (x_v > x_up + primal_feasibility_tolerance) {
           // Try y_v corresponding to x_up
-          //	  if (kAllowDeveloperAssert) assert(1==102);
-          x_v = x_up;
-          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+          setXValue(x_up);
           if (y_v > y_up + primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
-            if (debug_report) printf("DuplicateColumn::undoFix 2==102\n");
-            if (kAllowDeveloperAssert) assert(2 == 102);
-            x_v = x_up + primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+            setXValue(x_up + primal_feasibility_tolerance);
           }
         }
       } else {
         // y is free, so use x_v = max(0, x_lo)
-        x_v = std::max(0.0, x_lo);
-        y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+        setXValue(std::max(0.0, x_lo));
       }
     } else {  // scale < 0
       if (debug_report)
         printf("DuplicateColumn::undo [V-a(y_l), V-a(y_u)] == [%g, %g]\n",
                v_m_a_ylo, v_m_a_yup);
       // V-ay is in [V-a(y_l), V-a(y_u)] == [v_m_a_ylo, v_m_a_yup]
-      //
       if (y_lo > -kHighsInf) {
         // If v_m_a_ylo is right of x_up+eps then [v_m_a_ylo, v_m_a_yup] is
         // right of [x_lo-eps, x_up+eps] so there's no solution. [Could
@@ -1170,19 +1177,13 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
         if (kAllowDeveloperAssert)
           assert(x_up + primal_feasibility_tolerance >= v_m_a_ylo);
         // This assignment is OK unless x_v < x_lo-eps
-        y_v = y_lo;
-        x_v = v_m_a_ylo;
+        setYValue(y_lo);
         if (x_v < x_lo - primal_feasibility_tolerance) {
           // Try y_v corresponding to x_lo
-          //	  if (kAllowDeveloperAssert) assert(11==101);
-          x_v = x_lo;
-          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+          setXValue(x_lo);
           if (y_v > y_up + primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
-            if (debug_report) printf("DuplicateColumn::undoFix 12==101\n");
-            if (kAllowDeveloperAssert) assert(12 == 101);
-            x_v = x_lo - primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+            setXValue(x_lo - primal_feasibility_tolerance);
           }
         }
       } else if (y_up < kHighsInf) {
@@ -1192,25 +1193,18 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
         if (kAllowDeveloperAssert)
           assert(x_lo - primal_feasibility_tolerance <= v_m_a_yup);
         // This assignment is OK unless x_v < x_lo-eps
-        y_v = y_up;
-        x_v = v_m_a_yup;
+        setYValue(y_up);
         if (x_v > x_up + primal_feasibility_tolerance) {
           // Try y_v corresponding to x_up
-          //	  if (kAllowDeveloperAssert) assert(11==102);
-          x_v = x_up;
-          y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+          setXValue(x_up);
           if (y_v < y_lo - primal_feasibility_tolerance) {
             // Very tight: use x_v on its margin and hope!
-            if (debug_report) printf("DuplicateColumn::undoFix 12==102\n");
-            if (kAllowDeveloperAssert) assert(12 == 102);
-            x_v = x_up + primal_feasibility_tolerance;
-            y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+            setXValue(x_up + primal_feasibility_tolerance);
           }
         }
       } else {
         // y is free, so use x_v = max(0, x_lo)
-        x_v = std::max(0.0, x_lo);
-        y_v = double((HighsCDouble(mergeValue) - x_v) / scale);
+        setXValue(std::max(0.0, x_lo));
       }
     }
   }
