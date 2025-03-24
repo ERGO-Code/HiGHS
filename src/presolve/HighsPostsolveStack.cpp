@@ -707,8 +707,9 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     solution.col_value[col] = colLower;
   else
     solution.col_value[col] = std::min(0.0, colUpper);
-  solution.col_value[duplicateCol] =
-      double((HighsCDouble(mergeVal) - solution.col_value[col]) / colScale);
+  solution.col_value[duplicateCol] = static_cast<double>(
+      (static_cast<HighsCDouble>(mergeVal) - solution.col_value[col]) /
+      colScale);
 
   bool recomputeCol = false;
 
@@ -746,8 +747,9 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
       assert(!basis.valid);
       solution.col_value[col] = std::ceil(solution.col_value[col] -
                                           options.mip_feasibility_tolerance);
-      solution.col_value[duplicateCol] =
-          double((HighsCDouble(mergeVal) - solution.col_value[col]) / colScale);
+      solution.col_value[duplicateCol] = static_cast<double>(
+          (static_cast<HighsCDouble>(mergeVal) - solution.col_value[col]) /
+          colScale);
     }
   } else {
     // setting col to its lower bound yielded a feasible value for
@@ -1209,9 +1211,8 @@ void HighsPostsolveStack::DuplicateColumn::undoFix(
     }
   }
   const double residual_tolerance = 1e-12;
-  double residual =
-      std::fabs(double(HighsCDouble(x_v) + HighsCDouble(y_v) * scale -
-                       HighsCDouble(mergeValue)));
+  double residual = std::fabs(static_cast<double>(
+      static_cast<HighsCDouble>(x_v) - computeInvValue(y_v)));
   const bool x_y_ok =
       isFeasible(x_lo, x_v, x_up) && isFeasible(y_lo, y_v, y_up) &&
       (!x_int || isInteger(x_v)) && (!y_int || isInteger(y_v)) &&
