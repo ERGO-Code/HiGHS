@@ -3,5 +3,5 @@ Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 
 [compat]
-Clang = "0.14, 0.17"
+Clang = "0.14, 0.17, 0.18"
 Documenter = "0.27"
