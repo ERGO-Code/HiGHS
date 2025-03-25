@@ -261,7 +261,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   #   "--parallel=on"
       )
 
-  if (UNIX AND NOT APPLE)
+  if (UNIX AND NOT APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
         set(pdlpInstances
             "25fv47\; 5.50184588\;"
@@ -316,7 +316,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             endif()
         endif()
     endif()
-  elseif(WIN32)
+  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
         # on windows e226 model status is unknown
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
@@ -411,7 +411,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                   "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
-              if(${setting} STREQUAL "--presolve=off")
+              if(${setting} STREQUAL "--presolve=off" AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM"))
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")

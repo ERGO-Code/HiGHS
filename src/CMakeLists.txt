@@ -296,6 +296,9 @@ else()
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
   endif()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
+  endif()
 
   # Configure the config file for the build tree:
   # Either list all the src/* directories here, or put explicit paths in all the

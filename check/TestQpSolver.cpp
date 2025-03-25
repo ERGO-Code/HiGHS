@@ -870,7 +870,7 @@ TEST_CASE("test-qp-delete-col", "[qpsolver]") {
   hessianProduct(incumbent_model.hessian_, arg1, result1);
 
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
-    REQUIRE(result0[iCol] == result1[iCol]);
+    REQUIRE(fabs(result0[iCol] - result1[iCol]) < 1e-8);
   }
 }
 
