@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -362,7 +359,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   // HPresolve::removeDependentEquations
   HighsTimer build_timer;
   build_timer_ = &build_timer;
-  build_timer.startRunHighsClock();
+  build_timer.start();
 
   const bool report_lu = false;
   // Ensure that the A matrix is valid for factorization
@@ -895,7 +892,7 @@ HighsInt HFactor::buildKernel() {
     }
     // Determine whether to return due to exceeding the time limit
     if (check_for_timeout && search_k % timer_frequency == 0) {
-      double current_time = build_timer_->readRunHighsClock();
+      double current_time = build_timer_->read();
       double time_difference = current_time - previous_iteration_time;
       previous_iteration_time = current_time;
       double iteration_time = time_difference / (1.0 * timer_frequency);

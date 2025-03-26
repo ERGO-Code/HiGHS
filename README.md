@@ -143,31 +143,45 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```
+```shell
 $ bin/highs --help
-HiGHS options
-Usage:
-  bin/highs [OPTION...] [file]
+usage:
+      ./bin/highs [options] [file]
 
-      --model_file arg          File of model to solve.
-      --read_solution_file arg  File of solution to read.
-      --options_file arg        File containing HiGHS options.
-      --presolve arg            Presolve: "choose" by default - "on"/"off"
-                                are alternatives.
-      --solver arg              Solver: "choose" by default - "simplex"/"ipm"
-                                are alternatives.
-      --parallel arg            Parallel solve: "choose" by default -
-                                "on"/"off" are alternatives.
-      --run_crossover arg       Run crossover: "on" by default -
-                                "choose"/"off" are alternatives.
-      --time_limit arg          Run time limit (seconds - double).
-      --solution_file arg       File for writing out model solution.
-      --write_model_file arg    File for writing out model.
-      --random_seed arg         Seed to initialize random number generation.
-      --ranging arg             Compute cost, bound, RHS and basic solution
-                                ranging.
-      --version                 Print version.
-  -h, --help                    Print help.
+options:
+      --model_file file          File of model to solve.
+      --options_file file        File containing HiGHS options.
+      --read_solution_file file  File of solution to read.
+      --presolve text            Set presolve option to: 
+                                   "choose" * default 
+                                   "on"
+                                   "off"
+      --solver text              Set solver option to: 
+                                   "choose" * default 
+                                   "simplex"
+                                   "ipm" 
+      --parallel text            Set parallel option to: 
+                                   "choose" * default 
+                                   "on" 
+                                   "off" 
+      --run_crossover text       Set run_crossover option to: 
+                                   "choose" 
+                                   "on" * default 
+                                   "off" 
+      --time_limit float         Run time limit (seconds - double).
+      --solution_file text       File for writing out model solution.
+      --read_basis_file text     File for initial basis to read. 
+      --write_basis_file text    File for final basis to write. 
+      --write_model_file text    File for writing out model.
+      --random_seed int          Seed to initialize random number 
+                                 generation.
+      --ranging text             Compute cost, bound, RHS and basic 
+                                 solution ranging:
+                                   "on"
+                                   "off" * default 
+  -v, --version                  Print version.
+  -h, --help                     Print help. 
+
 ```
 For a full list of options, see the [options page](https://ergo-code.github.io/HiGHS/stable/options/definitions/) of the documentation website.
 
@@ -208,7 +222,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.8.0
+dotnet add package Highs.Native --version 1.10.0
 ```
 
 The nuget package contains runtime libraries for 

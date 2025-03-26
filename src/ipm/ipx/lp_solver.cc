@@ -12,13 +12,14 @@
 
 namespace ipx {
 
-Int LpSolver::LoadModel(Int num_var, const double* obj, const double* lb,
+Int LpSolver::LoadModel(Int num_var, const double offset,
+			const double* obj, const double* lb,
                         const double* ub, Int num_constr, const Int* Ap,
                         const Int* Ai, const double* Ax, const double* rhs,
                         const char* constr_type) {
     ClearModel();
     Int errflag = model_.Load(control_, num_constr, num_var, Ap, Ai, Ax, rhs,
-                              constr_type, obj, lb, ub);
+                              constr_type, offset, obj, lb, ub);
     model_.GetInfo(&info_);
     return errflag;
 }
@@ -354,7 +355,11 @@ void LpSolver::ClearSolution() {
 }
 
 void LpSolver::InteriorPointSolve() {
-  control_.hLog("Interior Point Solve\n");
+    if (control_.runCentring()) {
+      control_.hLog("Interior point solve for analytic centre\n");
+    } else {
+      control_.hLog("Interior point solve\n");
+    }
 
     // Allocate new iterate and set tolerances for IPM termination test.
     iterate_.reset(new Iterate(model_));
@@ -644,9 +649,10 @@ void LpSolver::RunCrossover() {
 void LpSolver::PrintSummary() {
   std::stringstream h_logging_stream;
   h_logging_stream.str(std::string());
-  h_logging_stream << "Summary\n"
-                   << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n"
-                   << Textline("Status interior point solve:")
+  h_logging_stream << "Summary\n";
+  if (!control_.timelessLog())
+    h_logging_stream << Textline("Runtime:") << fix2(control_.Elapsed()) << "s\n";
+  h_logging_stream << Textline("Status interior point solve:")
                    << StatusString(info_.status_ipm) << '\n'
                    << Textline("Status crossover:")
                    << StatusString(info_.status_crossover) << '\n';

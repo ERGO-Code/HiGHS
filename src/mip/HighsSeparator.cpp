@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -17,9 +14,9 @@
 #include "mip/HighsMipSolver.h"
 
 HighsSeparator::HighsSeparator(const HighsMipSolver& mipsolver,
-                               const char* name, const char* ch3_name)
+                               const char* name)
     : numCutsFound(0), numCalls(0) {
-  clockIndex = mipsolver.timer_.clock_def(name, ch3_name);
+  clockIndex = mipsolver.timer_.clock_def(name);
 }
 
 void HighsSeparator::run(HighsLpRelaxation& lpRelaxation,

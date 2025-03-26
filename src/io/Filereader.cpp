@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -78,6 +75,7 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::kOk:
+    case FilereaderRetcode::kWarning:
       break;
     case FilereaderRetcode::kFileNotFound:
       highsLogUser(log_options, HighsLogType::kError, "File %s not found\n",

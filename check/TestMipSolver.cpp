@@ -677,8 +677,21 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
       // Solve
       highs.passModel(lp);
       highs.run();
-      REQUIRE(highs.getModelStatus() ==
-              HighsModelStatus::kUnboundedOrInfeasible);
+      HighsModelStatus required_model_status;
+      if (k == 0) {
+        // Presolve off
+        if (l == 0) {
+          // MIP solver proves infeasiblilty
+          required_model_status = HighsModelStatus::kInfeasible;
+        } else {
+          // Relaxation is unbounded, but origin is feasible
+          required_model_status = HighsModelStatus::kUnbounded;
+        }
+      } else {
+        // Presolve on, and identifies primal infeasible or unbounded
+        required_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+      }
+      REQUIRE(highs.getModelStatus() == required_model_status);
     }
     highs.setOptionValue("presolve", kHighsOnString);
   }
@@ -688,7 +701,7 @@ TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   Highs highs;
   // No presolve
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("presolve", "off");
+  highs.setOptionValue("presolve", kHighsOffString);
 
   // IP without constraints and fractional bounds on variables
   HighsLp lp;
@@ -759,7 +772,7 @@ void distillationMIP(Highs& highs) {
   special_lps.distillationMip(lp, require_model_status, optimal_objective);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve doesn't reduce the LP
-  solve(highs, "on", require_model_status, optimal_objective);
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
 void rowlessMIP(Highs& highs) {
@@ -780,6 +793,42 @@ void rowlessMIP(Highs& highs) {
   optimal_objective = -1.0;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve reduces the LP to empty
-  solve(highs, "on", require_model_status, optimal_objective);
-  solve(highs, "off", require_model_status, optimal_objective);
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -187612.944194;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/2171.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -22375.7585461;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 6.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }

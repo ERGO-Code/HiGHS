@@ -10,6 +10,8 @@
 ./HiGHS_CopyrightHeader.pl ../src/mip/*.h
 ./HiGHS_CopyrightHeader.pl ../src/lp_data/*.h
 ./HiGHS_CopyrightHeader.pl ../src/lp_data/*.cpp
+./HiGHS_CopyrightHeader.pl ../src/pdlp/*.cpp
+./HiGHS_CopyrightHeader.pl ../src/pdlp/*.h
 ./HiGHS_CopyrightHeader.pl ../src/presolve/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/presolve/*.h
 ./HiGHS_CopyrightHeader.pl ../src/simplex/*.h

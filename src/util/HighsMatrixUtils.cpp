@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -68,7 +65,7 @@ HighsStatus assessMatrix(
   //
   // Check whether the first start is zero
   if (matrix_start[0]) {
-    highsLogUser(log_options, HighsLogType::kWarning,
+    highsLogUser(log_options, HighsLogType::kError,
                  "%s matrix start vector begins with %" HIGHSINT_FORMAT
                  " rather than 0\n",
                  matrix_name.c_str(), matrix_start[0]);

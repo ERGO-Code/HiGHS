@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -284,6 +281,9 @@ class HighsCliqueTable {
   std::vector<std::vector<CliqueVar>> separateCliques(
       const std::vector<double>& sol, const HighsDomain& globaldom,
       double feastol);
+
+  std::vector<std::vector<CliqueVar>> computeMaximalCliques(
+      const std::vector<CliqueVar>& vars, double feastol);
 
   void cleanupFixed(HighsDomain& globaldom);
 

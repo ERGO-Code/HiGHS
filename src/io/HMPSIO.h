@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -54,7 +51,7 @@ FilereaderRetcode readMps(
     vector<HighsVarType>& integerColumn, std::string& objective_name,
     vector<std::string>& col_names, vector<std::string>& row_names,
     HighsInt& Qdim, vector<HighsInt>& Qstart, vector<HighsInt>& Qindex,
-    vector<double>& Qvalue, HighsInt& cost_row_location,
+    vector<double>& Qvalue, HighsInt& cost_row_location, bool& warning_issued,
     const HighsInt keep_n_rows = 0);
 
 HighsStatus writeMps(

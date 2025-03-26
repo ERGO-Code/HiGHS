@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -26,8 +23,8 @@
 #include "mip/HighsTransformedLp.h"
 
 HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
-  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa", "Ibd");
-  cliqueClock = mipsolver.timer_.clock_def("Clique sepa", "Clq");
+  implBoundClock = mipsolver.timer_.clock_def("Implbound sepa");
+  cliqueClock = mipsolver.timer_.clock_def("Clique sepa");
   separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));

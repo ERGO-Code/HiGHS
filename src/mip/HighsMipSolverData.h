@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -32,6 +29,38 @@
 #include "presolve/HighsPostsolveStack.h"
 #include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
+
+struct HighsPrimaDualIntegral {
+  double value;
+  double prev_lb;
+  double prev_ub;
+  double prev_gap;
+  double prev_time;
+  void initialise();
+};
+
+enum MipSolutionSource : int {
+  kSolutionSourceNone = -1,
+  kSolutionSourceMin = kSolutionSourceNone,
+  kSolutionSourceBranching,
+  kSolutionSourceCentralRounding,
+  kSolutionSourceFeasibilityPump,
+  kSolutionSourceHeuristic,
+  //  kSolutionSourceInitial,
+  kSolutionSourceSubMip,
+  kSolutionSourceEmptyMip,
+  kSolutionSourceRandomizedRounding,
+  kSolutionSourceSolveLp,
+  kSolutionSourceEvaluateNode,
+  kSolutionSourceUnbounded,
+  kSolutionSourceTrivialZ,
+  kSolutionSourceTrivialL,
+  kSolutionSourceTrivialU,
+  kSolutionSourceTrivialP,
+  kSolutionSourceUserSolution,
+  kSolutionSourceCleanup,
+  kSolutionSourceCount
+};
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -88,12 +117,16 @@ struct HighsMipSolverData {
 
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;
+  double disptime;
   double last_disptime;
   int64_t firstrootlpiters;
   int64_t num_nodes;
   int64_t num_leaves;
   int64_t num_leaves_before_run;
   int64_t num_nodes_before_run;
+  int64_t total_repair_lp;
+  int64_t total_repair_lp_feasible;
+  int64_t total_repair_lp_iterations;
   int64_t total_lp_iterations;
   int64_t heuristic_lp_iterations;
   int64_t sepa_lp_iterations;
@@ -112,6 +145,8 @@ struct HighsMipSolverData {
   std::vector<double> incumbent;
 
   HighsNodeQueue nodequeue;
+
+  HighsPrimaDualIntegral primal_dual_integral;
 
   HighsDebugSol debugSolution;
 
@@ -148,12 +183,16 @@ struct HighsMipSolverData {
         maxTreeSizeLog2(0),
         pruned_treeweight(0),
         avgrootlpiters(0.0),
+        disptime(0.0),
         last_disptime(0.0),
         firstrootlpiters(0),
         num_nodes(0),
         num_leaves(0),
         num_leaves_before_run(0),
         num_nodes_before_run(0),
+        total_repair_lp(0),
+        total_repair_lp_feasible(0),
+        total_repair_lp_iterations(0),
         total_lp_iterations(0),
         heuristic_lp_iterations(0),
         sepa_lp_iterations(0),
@@ -173,6 +212,9 @@ struct HighsMipSolverData {
     domain.addConflictPool(conflictPool);
   }
 
+  bool solutionRowFeasible(const std::vector<double>& solution) const;
+  HighsModelStatus trivialHeuristics();
+
   void startAnalyticCenterComputation(
       const highs::parallel::TaskGroup& taskGroup);
   void finishAnalyticCenterComputation(
@@ -188,6 +230,15 @@ struct HighsMipSolverData {
                               std::unique_ptr<SymmetryDetectionData>& symData);
   void finishSymmetryDetection(const highs::parallel::TaskGroup& taskGroup,
                                std::unique_ptr<SymmetryDetectionData>& symData);
+
+  void updatePrimalDualIntegral(const double from_lower_bound,
+                                const double to_lower_bound,
+                                const double from_upper_bound,
+                                const double to_upper_bound,
+                                const bool check_bound_change = true,
+                                const bool check_prev_data = true);
+  double limitsToGap(const double use_lower_bound, const double use_upper_bound,
+                     double& lb, double& ub) const;
 
   double computeNewUpperLimit(double upper_bound, double mip_abs_gap,
                               double mip_rel_gap) const;
@@ -206,16 +257,23 @@ struct HighsMipSolverData {
   double percentageInactiveIntegers() const;
   void performRestart();
   bool checkSolution(const std::vector<double>& solution) const;
-  bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool trySolution(const std::vector<double>& solution,
+                   const int solution_source = kSolutionSourceNone);
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
-  bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj,
+                    const int solution_source,
+                    const bool print_display_line = true,
+                    const bool is_user_solution = false);
 
   const std::vector<double>& getSolution() const;
 
-  void printDisplayLine(char source = ' ');
+  std::string solutionSourceToString(const int solution_source,
+                                     const bool code = true);
+  void printSolutionSourceKey();
+  void printDisplayLine(const int solution_source = kSolutionSourceNone);
 
   void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
@@ -228,9 +286,12 @@ struct HighsMipSolverData {
   bool checkLimits(int64_t nodeOffset = 0) const;
   void limitsToBounds(double& dual_bound, double& primal_bound,
                       double& mip_rel_gap) const;
+  void setCallbackDataOut(const double mipsolver_objective_value) const;
   bool interruptFromCallbackWithData(const int callback_type,
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
+  void callbackUserSolution(const double mipsolver_objective_value,
+                            const HighsInt user_solution_callback_origin);
 };
 
 #endif

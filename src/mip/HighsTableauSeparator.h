@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -31,7 +28,7 @@ class HighsTableauSeparator : public HighsSeparator {
                           HighsCutPool& cutpool) override;
 
   HighsTableauSeparator(const HighsMipSolver& mipsolver)
-      : HighsSeparator(mipsolver, "Tableau sepa", "Tbl"), numTries(0) {}
+      : HighsSeparator(mipsolver, "Tableau sepa"), numTries(0) {}
 };
 
 #endif

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -63,7 +60,8 @@ class HMpsFF {
                                          const std::string filename,
                                          HighsModel& model);
 
-  double time_limit = kHighsInf;
+  double time_limit_ = kHighsInf;
+  bool warning_issued_ = false;
 
  private:
   double start_time;
@@ -148,6 +146,7 @@ class HMpsFF {
     kCsection,
     kDelayedrows,
     kModelcuts,
+    kUsercuts,
     kIndicators,
     kSets,
     kSos,

@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -33,7 +30,7 @@ struct HighsSolution {
   std::vector<double> col_dual;
   std::vector<double> row_value;
   std::vector<double> row_dual;
-  bool hasUndefined();
+  bool hasUndefined() const;
   void invalidate();
   void clear();
 };
@@ -53,22 +50,36 @@ struct RefactorInfo {
   void clear();
 };
 
+// Unused, but retained since there is a const reference to this in a
+// deprecated method
 struct HotStart {
   bool valid = false;
   RefactorInfo refactor_info;
   std::vector<int8_t> nonbasicMove;
-  void clear();
 };
 
 struct HighsBasis {
+  // Logical flags for a HiGHS basis:
+  //
+  // valid: has been factored by HiGHS
+  //
+  // alien: a basis that's been set externally, so cannot be assumed
+  // to even have the right number of basic and nonbasic variables
+  //
+  // useful: a basis that may be useful
+  //
+  // Need useful since, by default, a basis is alien but not useful
   bool valid = false;
   bool alien = true;
+  bool useful = false;
   bool was_alien = true;
   HighsInt debug_id = -1;
   HighsInt debug_update_count = -1;
   std::string debug_origin_name = "None";
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
+  void print(std::string message = "") const;
+  void printScalars(std::string message = "") const;
   void invalidate();
   void clear();
 };
@@ -142,6 +153,30 @@ struct HighsIllConditioningRecord {
 struct HighsIllConditioning {
   std::vector<HighsIllConditioningRecord> record;
   void clear();
+};
+
+struct HighsLinearObjective {
+  double weight;
+  double offset;
+  std::vector<double> coefficients;
+  double abs_tolerance;
+  double rel_tolerance;
+  HighsInt priority;
+  void clear();
+};
+
+struct HighsSimplexStats {
+  bool valid;
+  HighsInt iteration_count;
+  HighsInt num_invert;
+  HighsInt last_invert_num_el;
+  HighsInt last_factored_basis_num_el;
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  void report(FILE* file, const std::string message = "") const;
+  void initialise(const HighsInt iteration_count_ = 0);
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

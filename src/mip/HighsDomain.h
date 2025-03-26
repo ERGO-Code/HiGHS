@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -311,7 +308,7 @@ class HighsDomain {
   std::deque<CutpoolPropagation> cutpoolpropagation;
   std::deque<ConflictPoolPropagation> conflictPoolPropagation;
 
-  bool infeasible_ = 0;
+  bool infeasible_ = false;
   Reason infeasible_reason;
   HighsInt infeasible_pos;
 
@@ -327,11 +324,16 @@ class HighsDomain {
 
   void recomputeCapacityThreshold(HighsInt row);
 
+  void updateRedundantRows(HighsInt row, HighsInt direction, HighsInt numInf,
+                           HighsCDouble activity, double bound);
+
   double doChangeBound(const HighsDomainChange& boundchg);
 
   std::vector<HighsInt> colLowerPos_;
   std::vector<HighsInt> colUpperPos_;
   std::vector<HighsInt> branchPos_;
+  HighsHashTable<HighsInt> redundantRows_;
+  bool recordRedundantRows_ = false;
 
  public:
   std::vector<double> col_lower_;
@@ -636,6 +638,16 @@ class HighsDomain {
   HighsInt numModelNonzeros() const { return mipsolver->numNonzero(); }
 
   bool inSubmip() const { return mipsolver->submip; }
+
+  void clearRedundantRows() { redundantRows_.clear(); };
+
+  const HighsHashTable<HighsInt>& getRedundantRows() const {
+    return redundantRows_;
+  };
+
+  double getRedundantRowValue(HighsInt row) const;
+
+  void setRecordRedundantRows(bool val) { recordRedundantRows_ = val; };
 };
 
 #endif

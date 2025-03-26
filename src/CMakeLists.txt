@@ -129,6 +129,7 @@ else()
   # Define library in modern CMake using target_*()
   # No interfaces (apart from c); No ipx; New (short) ctest instances.
   add_library(highs)
+
   add_library(${PROJECT_NAMESPACE}::highs ALIAS highs)
 
   if(${BUILD_SHARED_LIBS})
@@ -152,6 +153,7 @@ else()
     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>
     # $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/highs>
   )
+
 
   # target_include_directories(highs PRIVATE
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
@@ -177,6 +179,33 @@ else()
   #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
+  
+  # Optional Cuda 
+  if (CUPDLP_GPU)
+  #   enable_language(CXX CUDA)
+  #   target_sources(highs PRIVATE ${cuda_sources})
+
+  #   set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  #   target_link_libraries(highs ${CUDA_LIBRARY} m)
+  
+    # target_include_directories(highs PUBLIC "/usr/local/include")
+
+    target_include_directories(highs PUBLIC "${CMAKE_CUDA_PATH}/include")
+    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/")
+
+    add_subdirectory(pdlp/cupdlp/cuda)
+
+    if (WIN32)
+      target_link_libraries(highs cudalin ${CUDA_LIBRARY})
+    else()
+      target_link_libraries(highs cudalin ${CUDA_LIBRARY} m)
+    endif()
+    
+    set_target_properties(highs PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  endif()
+
   target_include_directories(highs PRIVATE ${include_dirs})
 
   if(MSVC)
@@ -266,6 +295,9 @@ else()
   if (UNIX)
     target_compile_options(highs PRIVATE "-Wno-unused-variable")
     target_compile_options(highs PRIVATE "-Wno-unused-const-variable")
+  endif()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
   endif()
 
   # Configure the config file for the build tree:

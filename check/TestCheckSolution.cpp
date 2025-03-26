@@ -1,4 +1,5 @@
-#include <cstdio>
+// #include <cstdio>
+#include <iostream>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -393,6 +394,52 @@ TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
   REQUIRE(highs.setSolution(solution) == HighsStatus::kError);
   solution.col_value.assign(lp.num_col_, 0);
   REQUIRE(highs.setSolution(solution) == HighsStatus::kOk);
+}
+
+TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
+  HighsLp lp;
+  lp.num_col_ = 5;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {8, 5, 3, 11, 7};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 1);
+  lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {11};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 5};
+  lp.a_matrix_.index_ = {0, 1, 2, 3, 4};
+  lp.a_matrix_.value_ = {4, 3, 1, 5, 4};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  //  REQUIRE(h.writeSolution("", kSolutionStylePretty) == HighsStatus::kOk);
+  const std::vector<double>& col_value = h.getSolution().col_value;
+  std::string miplib_sol_file = "miplib.sol";
+  FILE* file = fopen(miplib_sol_file.c_str(), "w");
+  REQUIRE(file != 0);
+  fprintf(file, "=obj= 22\n");
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    std::string col_name = "c" + std::to_string(int(iCol));
+    lp.col_names_.push_back(col_name);
+    if (std::fabs(col_value[iCol]) < 1e-2) continue;
+    std::string line = col_name + " 1\n";
+    fprintf(file, "%s", line.c_str());
+  }
+  fclose(file);
+  // Can't read file yet, as model has no column names
+  REQUIRE(h.readSolution(miplib_sol_file) == HighsStatus::kError);
+
+  // Pass model again now that column names have been defined
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  //  REQUIRE(h.writeModel("miplib.mps") == HighsStatus::kOk);
+  REQUIRE(h.readSolution(miplib_sol_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  std::remove(miplib_sol_file.c_str());
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string model,

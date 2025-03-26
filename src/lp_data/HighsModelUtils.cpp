@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -104,7 +101,11 @@ std::string statusToString(const HighsBasisStatus status, const double lower,
       return "BS";
       break;
     case HighsBasisStatus::kUpper:
-      return "UB";
+      if (lower == upper) {
+        return "FX";
+      } else {
+        return "UB";
+      }
       break;
     case HighsBasisStatus::kZero:
       return "FR";

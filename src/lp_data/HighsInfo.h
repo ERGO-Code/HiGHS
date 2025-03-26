@@ -2,9 +2,6 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2024 by Julian Hall, Ivet Galabova,    */
-/*    Leona Gottwald and Michael Feldmeier                               */
-/*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -115,6 +112,7 @@ struct HighsInfoStruct {
   double sum_dual_infeasibilities;
   double max_complementarity_violation;
   double sum_complementarity_violations;
+  double primal_dual_integral;
 };
 
 class HighsInfo : public HighsInfoStruct {
@@ -272,6 +270,11 @@ class HighsInfo : public HighsInfoStruct {
     record_double = new InfoRecordDouble(
         "sum_complementarity_violations", "Sum of complementarity violations",
         advanced, &sum_complementarity_violations, 0);
+    records.push_back(record_double);
+
+    record_double =
+        new InfoRecordDouble("primal_dual_integral", "Primal-dual integral",
+                             advanced, &primal_dual_integral, 0);
     records.push_back(record_double);
   }
 

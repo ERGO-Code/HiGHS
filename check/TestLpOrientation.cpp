@@ -10,8 +10,6 @@ const bool dev_run = false;
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {
   Avgas avgas;
-  const HighsInt avgas_num_col = 8;
-  const HighsInt avgas_num_row = 10;
   HighsInt num_row = 0;
   HighsInt num_row_nz = 0;
   vector<double> rowLower;
@@ -21,11 +19,10 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<double> ARvalue;
 
   for (HighsInt row = 0; row < avgas_num_row; row++)
-    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
-              ARvalue);
+    avgas.addRow(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
+                 ARvalue);
 
-  ARstart.resize(num_row + 1);
-  ARstart[num_row] = num_row_nz;
+  ARstart.push_back(num_row_nz);
 
   HighsInt num_col = 0;
   HighsInt num_col_nz = 0;
@@ -36,10 +33,10 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   vector<HighsInt> Aindex;
   vector<double> Avalue;
   for (HighsInt col = 0; col < avgas_num_col; col++)
-    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
-              Aindex, Avalue);
-  Astart.resize(num_col + 1);
-  Astart[num_col] = num_col_nz;
+    avgas.addCol(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
+                 Aindex, Avalue);
+  Astart.push_back(num_col_nz);
+
   assert(num_col_nz == num_row_nz);
 
   double optimal_objective_function_value = -7.75;
@@ -102,20 +99,18 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   highs.clearModel();
   highs.addCols(num_col, colCost.data(), colLower.data(), colUpper.data(), 0,
                 NULL, NULL, NULL);
-  vector<double> one_row_Lower;
-  vector<double> one_row_Upper;
-  vector<HighsInt> one_row_start;
+  double one_row_lower;
+  double one_row_upper;
   vector<HighsInt> one_row_index;
   vector<double> one_row_value;
+  HighsInt one_row_num_nz;
   for (HighsInt row = 0; row < avgas_num_row; row++) {
-    HighsInt one_row_numnz = 0;
-    HighsInt one_row_numrow = 0;
-    avgas.row(row, one_row_numrow, one_row_numnz, one_row_Lower, one_row_Upper,
-              one_row_start, one_row_index, one_row_value);
-    REQUIRE(highs.addRows(1, one_row_Lower.data(), one_row_Upper.data(),
-                          one_row_numnz, one_row_start.data(),
-                          one_row_index.data(),
-                          one_row_value.data()) == HighsStatus::kOk);
+    avgas.getRow(row, one_row_lower, one_row_upper, one_row_index,
+                 one_row_value);
+    one_row_num_nz = one_row_index.size();
+    REQUIRE(highs.addRow(one_row_lower, one_row_upper, one_row_num_nz,
+                         one_row_index.data(),
+                         one_row_value.data()) == HighsStatus::kOk);
   }
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
