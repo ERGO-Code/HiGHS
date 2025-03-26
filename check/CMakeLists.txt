@@ -441,7 +441,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off" AND 
                 (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
-                (NOT OPT_LEVEL_CHANGED))
+                (NOT OPT_LEVEL_CHANGED) AND
+                (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
