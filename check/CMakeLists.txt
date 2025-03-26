@@ -223,17 +223,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
    )
 
    set(successRiscVInstances
-      "25fv47\;3103\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "etamacro\;531\;-7.5571523330\;"
-      "greenbea\;5156\;-7.2555248130\;"
-      "stair\;531\;-2.5126695119\;" # last like mac arm
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "shell\;623\; 1.2088253460\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
+      "25fv47\;3103\; 5.5018458\;"
+      "80bau3b\;3705\; 9.8722419\;"
+      "etamacro\;531\;-7.5571523\;"
+      "greenbea\;5156\;-7.2555248\;"
+      "stair\;531\;-2.5126695\;" # last like mac arm
+      "adlittle\;74\; 2.2549496\;"
+      "afiro\;22\;-4.6475314\;"
+      "shell\;623\; 1.2088253\;"
+      "standata\;72\; 1.2576995\;"
+      "standgub\;68\; 1.2576995\;"
+      "standmps\;218\; 1.4060175\;"
    )
 
   set(infeasibleInstances
