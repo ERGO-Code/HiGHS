@@ -54,6 +54,19 @@ else()
   set(GITHASH "n/a")
 endif()
 
+# message("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  message(STATUS "Compiler is IntelLLVM")
+  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0") 
+      message(FATAL_ERROR "Need at least CMake 3.23 for IntelLLVM support of IntelDPCPP package on Windows")
+  elseif(CMAKE_VERSION VERSION_LESS "3.23.0")
+      message(FATAL_ERROR "CMake 3.20.5 is the minimum recommended for IntelLLVM on Linux")
+  endif()
+
+  find_package(IntelSYCL REQUIRED)
+endif()
+
+
 message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
