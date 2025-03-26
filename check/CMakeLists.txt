@@ -94,16 +94,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       Avgas.cpp)
 
   set(OPT_LEVEL_CHANGED OFF)
-  if(CMAKE_CXX_FLAGS MATCHES "-O[0-9s]")
-    message(STATUS "User has specified an optimization level: ${CMAKE_CXX_FLAGS}")
-    if(NOT CMAKE_CXX_FLAGS MATCHES "-O3")
-    set(OPT_LEVEL_CHANGED ON)
-  #  else()
-    #  message(STATUS "No user-defined optimization level detected.")
-  endif()
 
   if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
-    message(WARNING "User has overridden the default optimization level for Release mode.")
+    # message(MESSAGE "User has overridden the default optimization level for Release mode.")
     set(OPT_LEVEL_CHANGED ON)
   endif()
 
