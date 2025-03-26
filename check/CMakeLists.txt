@@ -93,9 +93,25 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestMipSolver.cpp
       Avgas.cpp)
 
-  if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
-      NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
-    set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
+  set(OPT_LEVEL_CHANGED OFF)
+  if(CMAKE_CXX_FLAGS MATCHES "-O[0-9s]")
+    message(STATUS "User has specified an optimization level: ${CMAKE_CXX_FLAGS}")
+    if(NOT CMAKE_CXX_FLAGS MATCHES "-O3")
+    set(OPT_LEVEL_CHANGED ON)
+  #  else()
+    #  message(STATUS "No user-defined optimization level detected.")
+  endif()
+
+  if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
+    message(WARNING "User has overridden the default optimization level for Release mode.")
+    set(OPT_LEVEL_CHANGED ON)
+  endif()
+
+  if (NOT OPT_LEVEL_CHANGED)
+    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
+        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
+        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
+    endif()
   endif()
 
   if (BUILD_EXTRA_UNIT_TESTS)
@@ -430,7 +446,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                   "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
-              if(${setting} STREQUAL "--presolve=off" AND (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM"))
+              if(${setting} STREQUAL "--presolve=off" AND 
+                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
+                (NOT OPT_LEVEL_CHANGED))
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
