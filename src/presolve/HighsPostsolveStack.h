@@ -212,7 +212,8 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options, HighsSolution& solution,
               HighsBasis& basis) const;
     bool okMerge(const double tolerance) const;
-    void undoFix(const HighsOptions& options, HighsSolution& solution) const;
+    void undoFix(const HighsOptions& options, HighsSolution& solution,
+                 const double mergeValue) const;
     void transformToPresolvedSpace(std::vector<double>& primalSol) const;
   };
 
@@ -572,7 +573,9 @@ class HighsPostsolveStack {
   }
 
   bool isColLinearlyTransformable(HighsInt col) const {
-    return (linearlyTransformable[col] != 0);
+    assert(col >= 0);
+    assert(static_cast<size_t>(col) < origColIndex.size());
+    return (linearlyTransformable[origColIndex[col]] != 0);
   }
 
   template <typename T>
