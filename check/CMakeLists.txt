@@ -447,7 +447,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
     add_instancetests(successMacArmInstances "Optimal")
-  elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
+  elseif(LINUX AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
     endif()
