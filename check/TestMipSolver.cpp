@@ -820,3 +820,19 @@ TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   const double optimal_objective = -22375.7585461;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
+
+
+TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable both heuristics
+  highs.setOptionValue("mip_heuristic_run_ZIRound", true);
+  highs.setOptionValue("mip_heuristic_run_Shifting", true);  
+  highs.readModel(model_file);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 82.19999924;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
