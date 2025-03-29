@@ -2072,13 +2072,14 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         model.addVars(num_vars, np.array([0.0, 0.0]), np.array([2.0, 4.0]))
         obj1 = highspy.HighsLinearObjective()
         obj1.offset = 0
-        obj1.coefficients = [-1, 0]
-        obj1.priority = 1
-        obj1.abs_tolerance = 1
+        obj1.coefficients = [1, 0]
+        obj1.priority = 2
+        obj1.rel_tolerance = 0.1
+        obj1.abs_tolerance = 0.2
         obj2 = highspy.HighsLinearObjective()
         obj2.offset=0
-        obj2.coefficients=[-3, -4]
-        obj2.priority=2
+        obj2.coefficients=[3, 4]
+        obj2.priority=1
         model.addLinearObjective(obj1)
         model.addLinearObjective(obj2)
         model.addRow(0.0, 20.0, num_vars, np.arange(num_vars), np.array([5.0, 4.0]))
