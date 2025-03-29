@@ -822,7 +822,8 @@ TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
