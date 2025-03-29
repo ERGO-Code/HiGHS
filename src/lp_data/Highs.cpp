@@ -2979,22 +2979,17 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
-  const HighsInt num_col = this->model_.lp_.num_col_;
-  if (col < 0 || col >= num_col) {
+  if (col < 0 || col >= this->model_.lp_.num_col_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Index %d for column integrality is outside the range [0, "
                  "num_col = %d)\n",
-                 int(col), int(num_col));
+                 int(col), int(this->model_.lp_.num_col_));
     return HighsStatus::kError;
   }
-  if (static_cast<size_t>(col) < this->model_.lp_.integrality_.size()) {
-    integrality = this->model_.lp_.integrality_[col];
-    return HighsStatus::kOk;
-  } else {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Model integrality does not exist for index %d\n", int(col));
-    return HighsStatus::kError;
-  }
+  integrality = static_cast<size_t>(col) < this->model_.lp_.integrality_.size()
+                    ? this->model_.lp_.integrality_[col]
+                    : HighsVarType::kContinuous;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
