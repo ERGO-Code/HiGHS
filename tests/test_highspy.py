@@ -2083,9 +2083,7 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         model.addLinearObjective(obj1)
         model.addLinearObjective(obj2)
         model.addRow(0.0, 20.0, num_vars, np.arange(num_vars), np.array([5.0, 4.0]))
-        # Solve the model
         model.run()
 
-        # Get the solution status
         status = model.getModelStatus()
         self.assertEqual(status, highspy.HighsModelStatus.kOptimal)
