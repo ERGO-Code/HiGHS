@@ -290,6 +290,17 @@ class HighsModel:
 
     def __init__(self) -> None: ...
 
+class HighsLinearObjective:
+    weight: float
+    offset: float
+    coefficients: list[float]
+    abs_tolerance: float
+    rel_tolerance: float
+    priority: int
+    
+    def __init__(self) -> None: ...
+
+
 class HighsModelStatus:
     """
     Members:

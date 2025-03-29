@@ -10,6 +10,7 @@ from ._core import (
     ObjSense,
     HighsVarType,
     HighsStatus,
+    HighsLinearObjective,
     cb,  # type: ignore
     _Highs,  # type: ignore
     readonly_ptr_wrapper_double,
@@ -249,6 +250,27 @@ class Highs(_Highs):
 
         super().changeObjectiveSense(ObjSense.kMaximize)
         return self.solve()
+    
+    def addLinearObjective(self, linear_objective: HighsLinearObjective):
+        """
+       Adds linear objective data to HiGHS.
+        
+        Args:
+            linear_objective: A HighsLinearObjective object representing the objective to add.
+            
+        Returns:
+            A HighsStatus object indicating whether the call succeeded..
+        """
+        return super().addLinearObjective(linear_objective)
+
+    def clearLinearObjectives(self):
+        """
+        Clears any multiple linear objective data in HiGHS.
+        
+        Returns:
+            A HighsStatus object indicating whether the call succeeded..
+        """
+        return super().clearLinearObjectives()
 
     @staticmethod
     def internal_get_value(
