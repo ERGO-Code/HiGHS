@@ -1,0 +1,33 @@
+name: build-intel-windows
+
+on:
+  push:
+    # branches:
+    #   - main
+
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Intel oneAPI Basekit
+      run: choco install intel-oneapi-basekit
+
+ #     Invoke-WebRequest -Uri "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7108df8b-6db2-4b5e-87b9-bd6aebd6ea64/w_BaseKit_p_2024.0.0.49580_offline.exe" -OutFile "installer.exe"
+ #     Start-Process -FilePath "installer.exe" -ArgumentList "/quiet", "/norestart", "/log=install.log" -NoNewWindow -Wait
+
+ # - name: Set up Intel Compiler Environment
+ #   run: |
+ #     $env:ONEAPI_ROOT="C:\Program Files (x86)\Intel\oneAPI"
+ #     & "${env:ONEAPI_ROOT}\setvars.bat" > $null
+ #     echo "ICPX_VERSION=$(icpx --version)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+    - name: Check compiler
+      run: |
+        icpx --version
+        icx --version
