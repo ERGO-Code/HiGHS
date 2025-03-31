@@ -33,7 +33,7 @@ jobs:
       run:
         shell: bash
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: cache install
       id: cache-install
       uses: actions/cache@v2
