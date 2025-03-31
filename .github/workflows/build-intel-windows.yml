@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: cache install
       id: cache-install
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: C:\Program Files (x86)\Intel\oneAPI\compiler
         key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/scripts/cache_exclude_windows.sh') }}
