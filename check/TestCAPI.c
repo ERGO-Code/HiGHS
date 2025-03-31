@@ -743,8 +743,8 @@ void fullApiOptions() {
   assert(return_status == kHighsStatusOk);
   assert(check_simplex_scale_strategy == simplex_scale_strategy);
   assert(min_simplex_scale_strategy == 0);
-  assert(max_simplex_scale_strategy == 5);
-  assert(default_simplex_scale_strategy == 1);
+  assert(max_simplex_scale_strategy == 4);
+  assert(default_simplex_scale_strategy == 2);
 
   // There are some functions to check what type of option value you should
   // provide.
