@@ -4,7 +4,6 @@
 
 const bool dev_run = false;
 
-
 void testDualObjective(const std::string model) {
   HighsStatus return_status;
 

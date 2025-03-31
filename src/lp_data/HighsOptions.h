@@ -788,7 +788,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_scale_strategy",
-        "Simplex scaling strategy: off / choose / equilibration (default) / forced "
+        "Simplex scaling strategy: off / choose / equilibration (default) / "
+        "forced "
         "equilibration / max value (0/1/2/3/4)",
         advanced, &simplex_scale_strategy, kSimplexScaleStrategyMin,
         kSimplexScaleStrategyEquilibration, kSimplexScaleStrategyMax);
