@@ -34,17 +34,21 @@ jobs:
         shell: bash
     steps:
     - uses: actions/checkout@v4
+
     - name: cache install
       id: cache-install
       uses: actions/cache@v4
       with:
         path: C:\Program Files (x86)\Intel\oneAPI\compiler
-        key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/scripts/cache_exclude_windows.sh') }}
+        key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/.github/cache_exclude_windows.sh') }}
+
     - name: install
       if: steps.cache-install.outputs.cache-hit != 'true'
       run: .github/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_CPP_COMPONENTS
+
     - name: build
       run: .github/build_windows.bat c++ "" $SAMPLES_TAG
+
     - name: exclude unused files from cache
       if: steps.cache-install.outputs.cache-hit != 'true'
       shell: bash
