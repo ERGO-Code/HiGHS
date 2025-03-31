@@ -17,7 +17,7 @@ jobs:
           rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
           sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
       
-      - name: install oneAPI dpcpp compiler
+      - name: install oneAPI basekit
         shell: bash
         run: |
           sudo apt update
@@ -37,6 +37,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=install \
           -DCMAKE_CXX_COMPILER=icpx \
           -DCMAKE_C_COMPILER=icx \
+          -DALL_TESTS=ON \
           -DIntelDPCPP_DIR="/opt/intel/oneapi/compiler/latest/linux/cmake/SYCL" \
 
         # -DMKL_ROOT="/opt/intel/oneapi/mkl/latest" \
