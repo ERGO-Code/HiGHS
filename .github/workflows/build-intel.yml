@@ -23,6 +23,11 @@ jobs:
           sudo apt update
           sudo apt install intel-basekit
          
+      - name: Check compiler
+        run: |
+          icpx --version
+          icx --version
+
       # - name: install oneAPI MKL library
       #   shell: bash
       #   run: |
