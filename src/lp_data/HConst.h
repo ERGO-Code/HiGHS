@@ -50,9 +50,10 @@ enum SimplexScaleStrategy {
   kSimplexScaleStrategyChoose,                          // 1
   kSimplexScaleStrategyEquilibration,                   // 2
   kSimplexScaleStrategyForcedEquilibration,             // 3
-  kSimplexScaleStrategyMaxValue015,                     // 4
-  kSimplexScaleStrategyMaxValue0157,                    // 5
-  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue0157
+  kSimplexScaleStrategyMaxValue,                        // 4
+  kSimplexScaleStrategyMaxValue015 = kSimplexScaleStrategyMaxValue,
+  kSimplexScaleStrategyMaxValue0157 = kSimplexScaleStrategyMaxValue,
+  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue
 };
 
 enum HighsDebugLevel {

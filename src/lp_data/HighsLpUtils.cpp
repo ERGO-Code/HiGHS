@@ -1265,8 +1265,9 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
 
-  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
-         options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
+  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue);
+  assert(kSimplexScaleStrategyMaxValue015 == kSimplexScaleStrategyMaxValue);
+  assert(kSimplexScaleStrategyMaxValue0157 == kSimplexScaleStrategyMaxValue);
 
   // The 015(7) values refer to bit settings in FICO's scaling options.
   // Specifically
