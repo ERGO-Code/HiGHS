@@ -7,7 +7,7 @@ Mathematically, optimization problems have exact feasibilty conditions and, for 
 To discuss tolerances, their use in different solvers, and how to assess the situation where solutions deemed optimal by a solver are flagged up as non-optimal by HiGHS, consider the standard form LP problem with ``n`` variables and ``m`` equations (``n\ge m``) that is assumed to have  an optimal solution.
 ```math
 \begin{aligned}
-\min                \quad & c^T\! x        \\
+\textrm{minimize}   \quad & c^T\! x        \\
 \textrm{subject to} \quad & Ax = b  \\
                           & x \ge 0,
 \end{aligned}
