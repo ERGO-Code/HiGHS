@@ -69,6 +69,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
 
+  // Collecting absolute and relative errors, and the corresponding
+  // indices is required for Glpsol output
   HighsInt& max_absolute_primal_infeasibility_index =
       primal_dual_errors.max_primal_infeasibility.absolute_index;
   double& max_absolute_primal_infeasibility_value =
@@ -144,8 +146,12 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
 
+  HighsInt& max_absolute_primal_residual_index =
+      primal_dual_errors.max_primal_residual.absolute_index;
   double& max_absolute_primal_residual_value =
       primal_dual_errors.max_primal_residual.absolute_value;
+  HighsInt& max_relative_primal_residual_index =
+      primal_dual_errors.max_primal_residual.relative_index;
   double& max_relative_primal_residual_value =
       primal_dual_errors.max_primal_residual.relative_value;
 
@@ -153,8 +159,12 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
 
+  HighsInt& max_absolute_dual_residual_index =
+      primal_dual_errors.max_dual_residual.absolute_index;
   double& max_absolute_dual_residual_value =
       primal_dual_errors.max_dual_residual.absolute_value;
+  HighsInt& max_relative_dual_residual_index =
+      primal_dual_errors.max_dual_residual.relative_index;
   double& max_relative_dual_residual_value =
       primal_dual_errors.max_dual_residual.relative_value;
 
@@ -388,9 +398,11 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         num_primal_residual++;
       if (max_absolute_primal_residual_value < absolute_primal_residual) {
         max_absolute_primal_residual_value = absolute_primal_residual;
+        max_absolute_primal_residual_index = iRow;
       }
       if (max_relative_primal_residual_value < relative_primal_residual) {
         max_relative_primal_residual_value = relative_primal_residual;
+        max_relative_primal_residual_index = iRow;
       }
       sum_primal_residual += absolute_primal_residual;
     }
@@ -412,9 +424,11 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         if (absolute_dual_residual > large_residual_error) num_dual_residual++;
         if (max_absolute_dual_residual_value < absolute_dual_residual) {
           max_absolute_dual_residual_value = absolute_dual_residual;
+          max_absolute_dual_residual_index = iCol;
         }
         if (max_relative_dual_residual_value < relative_dual_residual) {
           max_relative_dual_residual_value = relative_dual_residual;
+          max_relative_dual_residual_index = iCol;
         }
         sum_dual_residual += absolute_dual_residual;
       }

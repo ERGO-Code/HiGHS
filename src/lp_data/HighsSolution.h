@@ -27,6 +27,8 @@ class HighsOptions;
 
 using std::string;
 
+// Collecting absolute and relative errors, and the corresponding
+// indices is required for Glpsol output
 struct HighsError {
   double absolute_value;
   HighsInt absolute_index;
