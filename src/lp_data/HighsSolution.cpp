@@ -1567,34 +1567,37 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 }
 
 void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, const std::string& solver) {
-  HighsLogType log_type = info.num_primal_infeasibilities || info.num_dual_infeasibilities || info.num_complementarity_violations ? HighsLogType::kWarning : HighsLogType::kInfo;
+  HighsLogType log_type =
+    info.num_primal_residual_errors || info.num_dual_residual_errors ||
+    info.num_primal_infeasibilities || info.num_dual_infeasibilities ||
+    info.num_complementarity_violations ? HighsLogType::kWarning : HighsLogType::kInfo;
 
   highsLogUser(options.log_options, log_type, "LP solution KKT conditions\n");
 
   highsLogUser(options.log_options,
-	       info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g primal residual errors\n",
+	       info.num_primal_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual errors\n",
 	       info.num_primal_residual_errors > 0 ? "" : "         ",	       
   	       int(info.num_primal_residual_errors),
   	       info.max_primal_residual_error,
   	       info.sum_primal_residual_errors);
   highsLogUser(options.log_options,
-	       info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g dual residual errors\n",
+	       info.num_dual_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual errors\n",
 	       info.num_dual_residual_errors > 0 ? "" : "         ",	       
   	       int(info.num_dual_residual_errors),
   	       info.max_dual_residual_error,
   	       info.sum_dual_residual_errors);
   highsLogUser(options.log_options,
 	       info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal infeasibilities\n",
 	       info.num_primal_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_primal_infeasibilities),
 	       info.max_primal_infeasibility,
 	       info.sum_primal_infeasibilities);
   highsLogUser(options.log_options, 
 	       info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual infeasibilities\n",
 	       info.num_dual_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_dual_infeasibilities),
 	       info.max_dual_infeasibility,
