@@ -284,6 +284,11 @@ const HighsInt kMaxAllowedMatrixPow2Scale = 30;
 const double kHighsIllegalInfeasibilityMeasure = kHighsInf;
 const HighsInt kHighsIllegalInfeasibilityCount = -1;
 
+// Illegal values of num/max/sum residual - used to indicate that true
+// values aren't known
+const double kHighsIllegalResidualMeasure = kHighsInf;
+const HighsInt kHighsIllegalResidualCount = -1;
+
 // Illegal values for HighsError - used to indicate that true
 // values aren't known
 const double kHighsIllegalErrorValue = kHighsInf;

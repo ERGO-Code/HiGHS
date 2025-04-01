@@ -308,6 +308,7 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double primal_residual_tolerance;
   double dual_residual_tolerance;
+  double complementarity_tolerance;
   double objective_bound;
   double objective_target;
   HighsInt threads;
@@ -465,6 +466,7 @@ struct HighsOptionsStruct {
         ipm_optimality_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
+	complementarity_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),
@@ -725,6 +727,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
         &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "complementarity_tolerance", "Complementarity tolerance", advanced,
+        &complementarity_tolerance, 1e-10, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

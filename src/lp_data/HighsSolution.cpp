@@ -65,30 +65,26 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
                     const bool get_residuals) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
   // highs_info are the values computed in this method.
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
-
-  // Collecting absolute and relative errors, and the corresponding
-  // indices is required for Glpsol output
-  HighsInt& max_absolute_primal_infeasibility_index =
-      primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
-  double& max_absolute_primal_infeasibility_value =
-      highs_info.max_primal_infeasibility;
-  HighsInt& max_relative_primal_infeasibility_index =
-      primal_dual_errors.glpsol_max_primal_infeasibility.relative_index;
-  double& max_relative_primal_infeasibility_value =
-      primal_dual_errors.glpsol_max_primal_infeasibility.relative_value;
-
+  double& max_absolute_primal_infeasibility_value = highs_info.max_primal_infeasibility;
   double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
 
   HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
-
-  HighsInt& max_dual_infeasibility_index =
-      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
   double& max_dual_infeasibility_value = highs_info.max_dual_infeasibility;
-
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
+
+  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
+  double& max_primal_residual = primal_dual_errors.sum_primal_residual;
+  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
+
+  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
+  double& max_dual_residual = primal_dual_errors.sum_dual_residual;
+  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
   HighsInt& num_complementarity_violations =
       highs_info.num_complementarity_violations;
@@ -100,19 +96,39 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_absolute_primal_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  primal_dual_errors.glpsol_max_primal_infeasibility.invalidate();
   highs_info.primal_solution_status = kSolutionStatusNone;
 
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
 
-  primal_dual_errors.glpsol_max_dual_infeasibility.invalidate();
-  highs_info.dual_solution_status = kSolutionStatusNone;
+  num_primal_residual =  kHighsIllegalResidualCount;
+  max_primal_residual = kHighsIllegalResidualMeasure;
+  sum_primal_residual = kHighsIllegalResidualMeasure;
+
+  num_dual_residual =  kHighsIllegalResidualCount;
+  max_dual_residual = kHighsIllegalResidualMeasure;
+  sum_dual_residual = kHighsIllegalResidualMeasure;
 
   num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violations = kHighsIllegalComplementarityViolation;
+
+  // Collecting absolute and relative errors, and the corresponding
+  // indices is required for Glpsol output
+  HighsInt& max_absolute_primal_infeasibility_index =
+      primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
+  HighsInt& max_relative_primal_infeasibility_index =
+      primal_dual_errors.glpsol_max_primal_infeasibility.relative_index;
+  double& max_relative_primal_infeasibility_value =
+      primal_dual_errors.glpsol_max_primal_infeasibility.relative_value;
+  HighsInt& max_dual_infeasibility_index =
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
+
+  primal_dual_errors.glpsol_max_primal_infeasibility.invalidate();
+  primal_dual_errors.glpsol_max_dual_infeasibility.invalidate();
+
+  highs_info.dual_solution_status = kSolutionStatusNone;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
@@ -144,8 +160,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
   }
 
-  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
-
   HighsInt& max_absolute_primal_residual_index =
       primal_dual_errors.glpsol_max_primal_residual.absolute_index;
   double& max_absolute_primal_residual_value =
@@ -155,10 +169,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   double& max_relative_primal_residual_value =
       primal_dual_errors.glpsol_max_primal_residual.relative_value;
 
-  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
-
-  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
-
   HighsInt& max_absolute_dual_residual_index =
       primal_dual_errors.glpsol_max_dual_residual.absolute_index;
   double& max_absolute_dual_residual_value =
@@ -167,8 +177,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       primal_dual_errors.glpsol_max_dual_residual.relative_index;
   double& max_relative_dual_residual_value =
       primal_dual_errors.glpsol_max_dual_residual.relative_value;
-
-  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
   HighsInt& num_nonzero_basic_duals =
       primal_dual_errors.num_nonzero_basic_duals;
@@ -364,7 +372,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
     const bool have_values = getComplementarityViolations(lp, solution,
-							  primal_feasibility_tolerance,
+							  complementarity_tolerance,
 							  num_complementarity_violations,
 							  max_complementarity_violation,
 							  sum_complementarity_violations);
@@ -1568,47 +1576,52 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 
 void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, const std::string& solver) {
   HighsLogType log_type =
-    info.num_primal_residual_errors || info.num_dual_residual_errors ||
     info.num_primal_infeasibilities || info.num_dual_infeasibilities ||
+    info.num_primal_residual_errors || info.num_dual_residual_errors ||
     info.num_complementarity_violations ? HighsLogType::kWarning : HighsLogType::kInfo;
 
   highsLogUser(options.log_options, log_type, "LP solution KKT conditions\n");
 
-  highsLogUser(options.log_options,
-	       info.num_primal_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual errors\n",
-	       info.num_primal_residual_errors > 0 ? "" : "         ",	       
-  	       int(info.num_primal_residual_errors),
-  	       info.max_primal_residual_error,
-  	       info.sum_primal_residual_errors);
-  highsLogUser(options.log_options,
-	       info.num_dual_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual errors\n",
-	       info.num_dual_residual_errors > 0 ? "" : "         ",	       
-  	       int(info.num_dual_residual_errors),
-  	       info.max_dual_residual_error,
-  	       info.sum_dual_residual_errors);
   highsLogUser(options.log_options,
 	       info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
 	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal infeasibilities\n",
 	       info.num_primal_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_primal_infeasibilities),
 	       info.max_primal_infeasibility,
-	       info.sum_primal_infeasibilities);
+	       info.sum_primal_infeasibilities,
+	       options.primal_feasibility_tolerance);
   highsLogUser(options.log_options, 
 	       info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
 	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual infeasibilities\n",
 	       info.num_dual_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_dual_infeasibilities),
 	       info.max_dual_infeasibility,
-	       info.sum_dual_infeasibilities);
+	       info.sum_dual_infeasibilities,
+	       options.dual_feasibility_tolerance);
+  highsLogUser(options.log_options,
+	       info.num_primal_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual errors\n",
+	       info.num_primal_residual_errors > 0 ? "" : "         ",	       
+  	       int(info.num_primal_residual_errors),
+  	       info.max_primal_residual_error,
+  	       info.sum_primal_residual_errors,
+	       options.primal_residual_tolerance);
+  highsLogUser(options.log_options,
+	       info.num_dual_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual errors\n",
+	       info.num_dual_residual_errors > 0 ? "" : "         ",	       
+  	       int(info.num_dual_residual_errors),
+  	       info.max_dual_residual_error,
+  	       info.sum_dual_residual_errors,
+	       options.dual_residual_tolerance);
   highsLogUser(options.log_options, 
 	       info.num_complementarity_violations > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
 	       "%s   num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
 	       info.num_complementarity_violations > 0 ? "" : "         ",	       
 	       int(info.num_complementarity_violations),
 	       info.max_complementarity_violation,
-	       info.sum_complementarity_violations);
+	       info.sum_complementarity_violations,
+	       options.complementarity_tolerance);
 }
 
 bool HighsSolution::hasUndefined() const {
