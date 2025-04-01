@@ -30,13 +30,17 @@ jobs:
         path: C:\Program Files (x86)\Intel\oneAPI\compiler
         key: oneapiinstall
 
-    - name: download
+    # - name: download
+    #   if: steps.cache-oneapi.outputs.cache-hit != 'true'
+    #   run: |
+    #     wget $WINDOWS_BASEKIT_URL 
+    #     pwd
+    #     ls
+    #     ./intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
+
+    - name: install
       if: steps.cache-oneapi.outputs.cache-hit != 'true'
-      run: |
-        wget $WINDOWS_BASEKIT_URL 
-        pwd
-        ls
-        ./intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
+      run: .github/install_windows.bat $WINDOWS_BASEKIT_URL 
 
     # - name: ls
     #   run: |
