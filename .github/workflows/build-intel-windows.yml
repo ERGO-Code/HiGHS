@@ -124,5 +124,5 @@ jobs:
     - name: Check compiler
       run: |
         "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
-        icx --version
+        icx.exe --version
       # icpx --version
