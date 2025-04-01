@@ -22,21 +22,48 @@ jobs:
     - name: Install wget for Windows
       run: choco install wget --no-progress
 
+    - name: Cache oneAPI
+      id: cache-oneapi
+      uses: actions/cache@v4
+      with:
+        # path: oneinstall
+        path: C:\Program Files (x86)\Intel\oneAPI\compiler
+        key: oneapiinstall
+
     - name: download
+      if: steps.cache-oneapi.outputs.cache-hit != 'true'
       run: |
         wget $WINDOWS_BASEKIT_URL 
-
-    - name: install 
-      run: mkdir oneinstall
-
-    - name: install 
-      run: |
-        intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept --install-dir=oneinstall
-
-    - name: ls
-      run: |
         pwd
-        ls oneinstall
+        ls
+        intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
+
+    # - name: ls
+    #   run: |
+    #     pwd
+    #     ls
+
+    # - name: install 
+    #   run: mkdir oneinstall
+
+    # - name: cache install
+    #   id: cache-install
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: C:\Program Files (x86)\Intel\oneAPI\compiler
+    #     key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}-compiler-${{ hashFiles('**/.github/cache_exclude_windows.sh') }}
+
+    # - name: install
+    #   if: steps.cache-install.outputs.cache-hit != 'true'
+
+    # - name: install 
+    #   run: |
+    #     intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept --install-dir=oneinstall
+
+    # - name: ls
+    #   run: |
+    #     pwd
+    #     ls oneinstall
 
 
 
