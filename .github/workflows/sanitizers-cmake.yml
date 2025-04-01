@@ -20,7 +20,7 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
           cmake --build . --parallel
 
       - name: Run
@@ -46,7 +46,7 @@ jobs:
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
           cmake --build . --parallel
 
       - name: Run
