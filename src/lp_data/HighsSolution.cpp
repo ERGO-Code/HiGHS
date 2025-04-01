@@ -144,12 +144,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
 
-  HighsInt& max_absolute_primal_residual_index =
-      primal_dual_errors.max_primal_residual.absolute_index;
   double& max_absolute_primal_residual_value =
       primal_dual_errors.max_primal_residual.absolute_value;
-  HighsInt& max_relative_primal_residual_index =
-      primal_dual_errors.max_primal_residual.relative_index;
   double& max_relative_primal_residual_value =
       primal_dual_errors.max_primal_residual.relative_value;
 
@@ -157,12 +153,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
 
-  HighsInt& max_absolute_dual_residual_index =
-      primal_dual_errors.max_dual_residual.absolute_index;
   double& max_absolute_dual_residual_value =
       primal_dual_errors.max_dual_residual.absolute_value;
-  HighsInt& max_relative_dual_residual_index =
-      primal_dual_errors.max_dual_residual.relative_index;
   double& max_relative_dual_residual_value =
       primal_dual_errors.max_dual_residual.relative_value;
 
@@ -367,50 +359,12 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
 
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
-    num_complementarity_violations = 0;
-    max_complementarity_violation = 0;
-    sum_complementarity_violations = 0;
-    double primal_residual = 0;
-    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
-      const bool is_col = iVar < lp.num_col_;
-      const HighsInt iRow = iVar - lp.num_col_;
-      const double primal =
-          is_col ? solution.col_value[iVar] : solution.row_value[iRow];
-      const double dual =
-          is_col ? solution.col_dual[iVar] : solution.row_dual[iRow];
-      const double lower = is_col ? lp.col_lower_[iVar] : lp.row_lower_[iRow];
-      const double upper = is_col ? lp.col_upper_[iVar] : lp.row_upper_[iRow];
-      if (lower <= -kHighsInf && upper >= kHighsInf) {
-        // Free
-        primal_residual = 1;
-      } else {
-        const double mid = (lower + upper) * 0.5;
-        primal_residual = primal < mid ? std::fabs(lower - primal)
-                                       : std::fabs(upper - primal);
-      }
-      const double dual_residual = std::fabs(dual);
-      const double complementarity_violation = primal_residual * dual_residual;
-      if (complementarity_violation > primal_feasibility_tolerance) num_complementarity_violations++;
-      sum_complementarity_violations += complementarity_violation;
-      max_complementarity_violation =
-          std::max(complementarity_violation, max_complementarity_violation);
-    }
-    HighsInt check_num_complementarity_violations;
-    double check_max_complementarity_violation;
-    double check_sum_complementarity_violations;
-    const bool have_values = getComplementarityViolations(
-			  lp, solution,
-			  primal_feasibility_tolerance,
-			  check_num_complementarity_violations,
-			  check_max_complementarity_violation,
-			  check_sum_complementarity_violations);
+    const bool have_values = getComplementarityViolations(lp, solution,
+							  primal_feasibility_tolerance,
+							  num_complementarity_violations,
+							  max_complementarity_violation,
+							  sum_complementarity_violations);
     assert(have_values);
-    assert(check_num_complementarity_violations ==
-           num_complementarity_violations);
-    assert(check_max_complementarity_violation ==
-           max_complementarity_violation);
-    assert(check_sum_complementarity_violations ==
-           sum_complementarity_violations);
   }
 
   if (get_residuals) {
@@ -434,11 +388,9 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         num_primal_residual++;
       if (max_absolute_primal_residual_value < absolute_primal_residual) {
         max_absolute_primal_residual_value = absolute_primal_residual;
-        max_absolute_primal_residual_index = iRow;
       }
       if (max_relative_primal_residual_value < relative_primal_residual) {
         max_relative_primal_residual_value = relative_primal_residual;
-        max_relative_primal_residual_index = iRow;
       }
       sum_primal_residual += absolute_primal_residual;
     }
@@ -460,11 +412,9 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         if (absolute_dual_residual > large_residual_error) num_dual_residual++;
         if (max_absolute_dual_residual_value < absolute_dual_residual) {
           max_absolute_dual_residual_value = absolute_dual_residual;
-          max_absolute_dual_residual_index = iCol;
         }
         if (max_relative_dual_residual_value < relative_dual_residual) {
           max_relative_dual_residual_value = relative_dual_residual;
-          max_relative_dual_residual_index = iCol;
         }
         sum_dual_residual += absolute_dual_residual;
       }
