@@ -523,10 +523,12 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 if (DEBUG_MEMORY STREQUAL "Address")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
 
@@ -544,9 +546,11 @@ if (DEBUG_MEMORY STREQUAL "Address")
 elseif (DEBUG_MEMORY STREQUAL "Thread")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=thread,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=thread,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
@@ -561,9 +565,11 @@ elseif (DEBUG_MEMORY STREQUAL "Thread")
 elseif (DEBUG_MEMORY STREQUAL "Leak")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=leak,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=leak,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 

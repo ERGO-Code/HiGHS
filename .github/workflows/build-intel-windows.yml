@@ -36,7 +36,7 @@ jobs:
         wget $WINDOWS_BASEKIT_URL 
         pwd
         ls
-        ./intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
+        .\intel-oneapi-base-toolkit-2025.1.0.650_offline.exe -a --silent --eula accept 
 
     # - name: ls
     #   run: |

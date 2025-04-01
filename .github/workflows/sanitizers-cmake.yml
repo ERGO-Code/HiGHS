@@ -2,7 +2,7 @@ name: sanitizers-cmake
 on: [ push]
 
 jobs:
-  sanitizer_release:
+  sanitizer_relwithdebinfo:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
