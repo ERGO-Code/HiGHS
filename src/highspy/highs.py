@@ -10,6 +10,7 @@ from ._core import (
     ObjSense,
     HighsVarType,
     HighsStatus,
+    HighsLinearObjective,
     cb,  # type: ignore
     _Highs,  # type: ignore
     readonly_ptr_wrapper_double,
@@ -249,7 +250,6 @@ class Highs(_Highs):
 
         super().changeObjectiveSense(ObjSense.kMaximize)
         return self.solve()
-
     @staticmethod
     def internal_get_value(
         array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]], readonly_ptr_wrapper_double],
