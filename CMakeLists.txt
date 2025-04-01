@@ -565,20 +565,16 @@ elseif (DEBUG_MEMORY STREQUAL "Thread")
 elseif (DEBUG_MEMORY STREQUAL "Leak")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=leak,undefined \
-      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=leak,undefined \
-      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
       -fsanitize=leak,undefined \
-      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=leak,undefined \
-      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
 endif()
 
