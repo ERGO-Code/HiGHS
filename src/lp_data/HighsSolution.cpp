@@ -1584,7 +1584,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, con
 
   highsLogUser(options.log_options,
 	       info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal infeasibilities\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal infeasibilities (tolerance = %9.4g)\n",
 	       info.num_primal_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_primal_infeasibilities),
 	       info.max_primal_infeasibility,
@@ -1592,7 +1592,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, con
 	       options.primal_feasibility_tolerance);
   highsLogUser(options.log_options, 
 	       info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual infeasibilities\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual infeasibilities (tolerance = %9.4g)\n",
 	       info.num_dual_infeasibilities > 0 ? "" : "         ",	       
 	       int(info.num_dual_infeasibilities),
 	       info.max_dual_infeasibility,
@@ -1600,7 +1600,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, con
 	       options.dual_feasibility_tolerance);
   highsLogUser(options.log_options,
 	       info.num_primal_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual errors\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual errors (tolerance = %9.4g)\n",
 	       info.num_primal_residual_errors > 0 ? "" : "         ",	       
   	       int(info.num_primal_residual_errors),
   	       info.max_primal_residual_error,
@@ -1608,7 +1608,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, con
 	       options.primal_residual_tolerance);
   highsLogUser(options.log_options,
 	       info.num_dual_residual_errors > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual errors\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual errors (tolerance = %9.4g)\n",
 	       info.num_dual_residual_errors > 0 ? "" : "         ",	       
   	       int(info.num_dual_residual_errors),
   	       info.max_dual_residual_error,
@@ -1616,7 +1616,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, con
 	       options.dual_residual_tolerance);
   highsLogUser(options.log_options, 
 	       info.num_complementarity_violations > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
-	       "%s   num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
+	       "%s   num/max/sum %6d / %9.4g / %9.4g complementarity violations (tolerance = %9.4g)\n",
 	       info.num_complementarity_violations > 0 ? "" : "         ",	       
 	       int(info.num_complementarity_violations),
 	       info.max_complementarity_violation,
