@@ -1554,12 +1554,19 @@ HighsStatus Highs::solve() {
         solution_.value_valid = true;
         //          if (ipx_no_crossover) {
         if (!basis_.valid) {
-          // Have a primal-dual solution, but no basis, since IPX
-          // was used without crossover, either because
-          // run_crossover was "off" or "choose" and IPX determined
-          // optimality
+          // Have a primal-dual solution, but no basis, since PDLP or
+          // IPX without crossover were used. In the case of IPX, this
+          // was because either run_crossover was "off" or "choose"
+          // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
+
+	  HighsPrimalDualErrors primal_dual_errors;
+	  const bool get_residuals = true;
+	  getLpKktFailures(options_, model_.lp_,
+			   solution_, basis_, info_,
+			   primal_dual_errors, get_residuals);
+	  reportLpKktFailures(options_, info_);
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP

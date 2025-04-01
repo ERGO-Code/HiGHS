@@ -143,4 +143,8 @@ bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
+void reportLpKktFailures(const HighsOptions& options,
+			 const HighsInfo& highs_info,
+			 const std::string& solver = "");
+
 #endif  // LP_DATA_HIGHSSOLUTION_H_

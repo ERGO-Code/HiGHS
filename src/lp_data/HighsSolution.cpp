@@ -1608,6 +1608,36 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
          basis.row_status.size() == static_cast<size_t>(lp.num_row_);
 }
 
+void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info, const std::string& solver) {
+  HighsLogType log_type = info.num_primal_infeasibilities || info.num_dual_infeasibilities || info.num_complementarity_violations ? HighsLogType::kWarning : HighsLogType::kInfo;
+  highsLogUser(options.log_options, log_type, "LP solution KKT conditions\n");
+  //	       "num/max/sum %6d / %9.4g / %9.4g primal residual errors\n",
+  //	       int(info.num_primal_infeasibilities),
+  //	       info.max_primal_infeasibility,
+  //	       info.sum_primal_infeasibilities);
+  highsLogUser(options.log_options,
+	       info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
+	       info.num_primal_infeasibilities > 0 ? "" : "         ",	       
+	       int(info.num_primal_infeasibilities),
+	       info.max_primal_infeasibility,
+	       info.sum_primal_infeasibilities);
+  highsLogUser(options.log_options, 
+	       info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
+	       info.num_dual_infeasibilities > 0 ? "" : "         ",	       
+	       int(info.num_dual_infeasibilities),
+	       info.max_dual_infeasibility,
+	       info.sum_dual_infeasibilities);
+  highsLogUser(options.log_options, 
+	       info.num_complementarity_violations > 0 ? HighsLogType::kWarning : HighsLogType::kInfo,
+	       "%s   num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
+	       info.num_complementarity_violations > 0 ? "" : "         ",	       
+	       int(info.num_complementarity_violations),
+	       info.max_complementarity_violation,
+	       info.sum_complementarity_violations);
+}
+
 bool HighsSolution::hasUndefined() const {
   for (HighsInt iCol = 0; iCol < HighsInt(this->col_value.size()); iCol++)
     if (this->col_value[iCol] == kHighsUndefined) return true;
