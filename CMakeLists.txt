@@ -522,15 +522,18 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 
 # -fno-sanitize=function,vptr \
 
+if (NOT DEBUG_MEMORY STREQUAL "Off")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # add_compile_options($<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<$<COMPILE_LANGUAGE:CXX, C>>:-fno-sanitize=function,vptr>>)
+    add_compile_options($<$<AND:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fno-sanitize=function,vptr>)
+  endif()
+endif()
+
 if (DEBUG_MEMORY STREQUAL "Address")
   # add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CXX, C>:-fsanitize=address,undefined>>)
   # $<$<CONFIG:Debug>:DEBUG_MODE>
   # $<$<CONFIG:Debug>:DEBUG_MODE> 
 
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # add_compile_options($<$<AND:$<CONFIG:Debug,RelWithDebInfo>,$<$<COMPILE_LANGUAGE:CXX, C>>:-fno-sanitize=function,vptr>>)
-    add_compile_options($<$<AND:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fno-sanitize=function,vptr>)
-  endif()
 
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
