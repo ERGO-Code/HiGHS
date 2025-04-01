@@ -72,20 +72,20 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   // Collecting absolute and relative errors, and the corresponding
   // indices is required for Glpsol output
   HighsInt& max_absolute_primal_infeasibility_index =
-      primal_dual_errors.max_primal_infeasibility.absolute_index;
+      primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
   double& max_absolute_primal_infeasibility_value =
       highs_info.max_primal_infeasibility;
   HighsInt& max_relative_primal_infeasibility_index =
-      primal_dual_errors.max_primal_infeasibility.relative_index;
+      primal_dual_errors.glpsol_max_primal_infeasibility.relative_index;
   double& max_relative_primal_infeasibility_value =
-      primal_dual_errors.max_primal_infeasibility.relative_value;
+      primal_dual_errors.glpsol_max_primal_infeasibility.relative_value;
 
   double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
 
   HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
 
   HighsInt& max_dual_infeasibility_index =
-      primal_dual_errors.max_dual_infeasibility.absolute_index;
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
   double& max_dual_infeasibility_value = highs_info.max_dual_infeasibility;
 
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
@@ -100,14 +100,14 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_absolute_primal_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  primal_dual_errors.max_primal_infeasibility.invalidate();
+  primal_dual_errors.glpsol_max_primal_infeasibility.invalidate();
   highs_info.primal_solution_status = kSolutionStatusNone;
 
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility_value = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
 
-  primal_dual_errors.max_dual_infeasibility.invalidate();
+  primal_dual_errors.glpsol_max_dual_infeasibility.invalidate();
   highs_info.dual_solution_status = kSolutionStatusNone;
 
   num_complementarity_violations = kHighsIllegalComplementarityCount;
@@ -131,7 +131,7 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     num_primal_infeasibility = 0;
     max_absolute_primal_infeasibility_value = 0;
     sum_primal_infeasibility = 0;
-    primal_dual_errors.max_primal_infeasibility.reset();
+    primal_dual_errors.glpsol_max_primal_infeasibility.reset();
     if (have_dual_solution) {
       // There's a dual solution, so check its size and initialise the
       // infeasibility counts
@@ -140,40 +140,38 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       num_dual_infeasibility = 0;
       max_dual_infeasibility_value = 0;
       sum_dual_infeasibility = 0;
-      primal_dual_errors.max_dual_infeasibility.reset();
+      primal_dual_errors.glpsol_max_dual_infeasibility.reset();
     }
   }
 
   HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
 
   HighsInt& max_absolute_primal_residual_index =
-      primal_dual_errors.max_primal_residual.absolute_index;
+      primal_dual_errors.glpsol_max_primal_residual.absolute_index;
   double& max_absolute_primal_residual_value =
-      primal_dual_errors.max_primal_residual.absolute_value;
+      primal_dual_errors.glpsol_max_primal_residual.absolute_value;
   HighsInt& max_relative_primal_residual_index =
-      primal_dual_errors.max_primal_residual.relative_index;
+      primal_dual_errors.glpsol_max_primal_residual.relative_index;
   double& max_relative_primal_residual_value =
-      primal_dual_errors.max_primal_residual.relative_value;
+      primal_dual_errors.glpsol_max_primal_residual.relative_value;
 
   double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
 
   HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
 
   HighsInt& max_absolute_dual_residual_index =
-      primal_dual_errors.max_dual_residual.absolute_index;
+      primal_dual_errors.glpsol_max_dual_residual.absolute_index;
   double& max_absolute_dual_residual_value =
-      primal_dual_errors.max_dual_residual.absolute_value;
+      primal_dual_errors.glpsol_max_dual_residual.absolute_value;
   HighsInt& max_relative_dual_residual_index =
-      primal_dual_errors.max_dual_residual.relative_index;
+      primal_dual_errors.glpsol_max_dual_residual.relative_index;
   double& max_relative_dual_residual_value =
-      primal_dual_errors.max_dual_residual.relative_value;
+      primal_dual_errors.glpsol_max_dual_residual.relative_value;
 
   double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
   HighsInt& num_nonzero_basic_duals =
       primal_dual_errors.num_nonzero_basic_duals;
-  HighsInt& num_large_nonzero_basic_duals =
-      primal_dual_errors.num_large_nonzero_basic_duals;
   double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
   double& sum_nonzero_basic_duals = primal_dual_errors.sum_nonzero_basic_duals;
 
@@ -187,27 +185,26 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     num_primal_residual = 0;
     max_absolute_primal_residual_value = 0;
     sum_primal_residual = 0;
-    primal_dual_errors.max_primal_residual.reset();
+    primal_dual_errors.glpsol_max_primal_residual.reset();
   } else {
     num_primal_residual = kHighsIllegalInfeasibilityCount;
     max_absolute_primal_residual_value = kHighsIllegalInfeasibilityMeasure;
     sum_primal_residual = kHighsIllegalInfeasibilityMeasure;
-    primal_dual_errors.max_primal_residual.invalidate();
+    primal_dual_errors.glpsol_max_primal_residual.invalidate();
   }
   if (have_dual_solution && get_residuals) {
     num_dual_residual = 0;
     max_absolute_dual_residual_value = 0;
     sum_dual_residual = 0;
-    primal_dual_errors.max_dual_residual.reset();
+    primal_dual_errors.glpsol_max_dual_residual.reset();
   } else {
     num_dual_residual = kHighsIllegalInfeasibilityCount;
     max_absolute_dual_residual_value = kHighsIllegalInfeasibilityMeasure;
     sum_dual_residual = kHighsIllegalInfeasibilityMeasure;
-    primal_dual_errors.max_dual_residual.invalidate();
+    primal_dual_errors.glpsol_max_dual_residual.invalidate();
   }
   if (have_basis) {
     num_nonzero_basic_duals = 0;
-    num_large_nonzero_basic_duals = 0;
     max_nonzero_basic_dual = 0;
     sum_nonzero_basic_duals = 0;
 
@@ -216,7 +213,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     sum_off_bound_nonbasic = 0;
   } else {
     num_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
-    num_large_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
     max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
     sum_nonzero_basic_duals = kHighsIllegalInfeasibilityMeasure;
 
@@ -321,8 +317,6 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
         double abs_basic_dual = dual_infeasibility;
         if (abs_basic_dual > 0) {
           num_nonzero_basic_duals++;
-          if (abs_basic_dual > dual_feasibility_tolerance)
-            num_large_nonzero_basic_duals++;
           max_nonzero_basic_dual =
               std::max(abs_basic_dual, max_nonzero_basic_dual);
           sum_nonzero_basic_duals += abs_basic_dual;
@@ -450,16 +444,16 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   }
   // Assign the two entries in primal_dual_errors that are accumulated
   // in highs_info
-  primal_dual_errors.max_primal_infeasibility.absolute_value =
+  primal_dual_errors.glpsol_max_primal_infeasibility.absolute_value =
       highs_info.max_primal_infeasibility;
   ;
-  primal_dual_errors.max_dual_infeasibility.absolute_value =
+  primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value =
       highs_info.max_dual_infeasibility;
   // Relative dual_infeasibility data is the same as absolute
-  primal_dual_errors.max_dual_infeasibility.relative_value =
-      primal_dual_errors.max_dual_infeasibility.absolute_value;
-  primal_dual_errors.max_dual_infeasibility.relative_index =
-      primal_dual_errors.max_dual_infeasibility.absolute_index;
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_value =
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_index =
+      primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
 }
 
 // Gets the KKT failures for a variable. The lack of a basis status is

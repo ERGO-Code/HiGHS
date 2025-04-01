@@ -39,9 +39,10 @@ struct HighsError {
   void invalidate();
 };
 
+// These are values used for HighsSolutionDebug, or for Glpsol output,
+// so not worthy of being in HighsInfo
 struct HighsPrimalDualErrors {
   HighsInt num_nonzero_basic_duals;
-  HighsInt num_large_nonzero_basic_duals;
   double max_nonzero_basic_dual;
   double sum_nonzero_basic_duals;
   HighsInt num_off_bound_nonbasic;
@@ -51,10 +52,10 @@ struct HighsPrimalDualErrors {
   double sum_primal_residual;
   HighsInt num_dual_residual;
   double sum_dual_residual;
-  HighsError max_primal_residual;
-  HighsError max_primal_infeasibility;
-  HighsError max_dual_residual;
-  HighsError max_dual_infeasibility;
+  HighsError glpsol_max_primal_residual;
+  HighsError glpsol_max_primal_infeasibility;
+  HighsError glpsol_max_dual_residual;
+  HighsError glpsol_max_dual_infeasibility;
 };
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
