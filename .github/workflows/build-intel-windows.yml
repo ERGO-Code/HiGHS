@@ -27,7 +27,7 @@ jobs:
       uses: actions/cache@v4
       with:
         # path: oneinstall
-        path: C:\Program Files (x86)\Intel\oneAPI\compiler
+        path: C:\Program Files (x86)\Intel\oneAPI
         key: oneapiinstall
 
     # - name: download
