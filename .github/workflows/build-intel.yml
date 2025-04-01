@@ -25,6 +25,7 @@ jobs:
          
       - name: Check compiler
         run: |
+          source /opt/intel/oneapi/setvars.sh
           icpx --version
           icx --version
 
