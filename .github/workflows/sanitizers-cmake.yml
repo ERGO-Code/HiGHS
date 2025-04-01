@@ -2,7 +2,7 @@ name: sanitizers-cmake
 on: [ push]
 
 jobs:
-  sanitizer_relwithdebinfo:
+  gcc_relwithdebinfo:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -28,7 +28,7 @@ jobs:
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-  sanitizer_debug:
+  gcc_debug:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -47,6 +47,58 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          cmake --build . --parallel
+
+      - name: Run
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  clang_relwithdebinfo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        sanitizer: [Address, Thread, Leak]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake and Build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake --build . --parallel
+
+      - name: Run
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+  clang_debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        sanitizer: [Address, Thread, Leak]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake and Build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           cmake --build . --parallel
 
       - name: Run

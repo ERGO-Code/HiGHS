@@ -523,6 +523,12 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 # -fno-sanitize=function,vptr \
 
 if (DEBUG_MEMORY STREQUAL "Address")
+  # add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CXX, C>:-fsanitize=address,undefined>>)
+  
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:$<$<COMPILE_LANGUAGE:CXX, C>:-fno-sanitize=function,vptr>>)
+  endif()
+
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
