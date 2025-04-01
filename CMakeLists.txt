@@ -532,10 +532,12 @@ if (DEBUG_MEMORY STREQUAL "Address")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
 
@@ -549,9 +551,11 @@ elseif (DEBUG_MEMORY STREQUAL "Thread")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
       -fsanitize=thread,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=thread,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
 
 elseif (DEBUG_MEMORY STREQUAL "Leak")
@@ -564,9 +568,11 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ 
       -fsanitize=leak,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=leak,undefined \
+      -fno-sanitize=function,vptr \
       -fno-omit-frame-pointer ")
 endif()
 
