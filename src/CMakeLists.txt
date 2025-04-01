@@ -300,6 +300,11 @@ else()
     target_compile_options(highs PUBLIC "-Wno-invalid-offsetof")
   endif()
 
+  check_cxx_compiler_flag("-Wno-invalid-offsetof" COMPILER_SUPPORTS_INVALID_OFFSET)
+  if(COMPILER_SUPPORTS_INVALID_OFFSET)
+      target_compile_options(highs PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:-Wno-invalid-offsetof>")
+  endif()
+
   # Configure the config file for the build tree:
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
