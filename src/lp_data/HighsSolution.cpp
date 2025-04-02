@@ -1357,8 +1357,9 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
   HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsSimplexStatus& ekk_status = ekk_instance.status_;
   lp.ensureColwise();
+  const bool passed_scaled = lp.is_scaled_;
   // Consider scaling the LP
-  const bool new_scaling = considerScaling(options, lp);
+  if (!passed_scaled) considerScaling(options, lp);
   const bool check_basis = basis.alien || (!basis.valid && basis.useful);
   if (check_basis) {
     // The basis needs to be checked for rank deficiency, and possibly
@@ -1370,7 +1371,11 @@ HighsStatus formSimplexLpBasisAndFactor(HighsLpSolverObject& solver_object,
     assert(!only_from_known_basis);
     accommodateAlienBasis(solver_object);
     basis.alien = false;
-    lp.unapplyScale();
+    // Unapply any scaling used only for factorization to check and
+    // complete the basis
+    if (!passed_scaled) lp.unapplyScale();
+    // Check that any scaling the LP arrived with has not been removed
+    assert(lp.is_scaled_ == passed_scaled);
     return HighsStatus::kOk;
   }
   // Move the HighsLpSolverObject's LP to EKK

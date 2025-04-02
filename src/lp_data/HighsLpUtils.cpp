@@ -1439,6 +1439,7 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
 }
 
 void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
+  assert(scale.has_scaling);
   assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
   assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
   assert(solution.row_value.size() == static_cast<size_t>(scale.num_row));
