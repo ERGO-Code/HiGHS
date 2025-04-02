@@ -572,10 +572,18 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
       -fsanitize=leak,undefined \
       -fno-omit-frame-pointer")
 
-  set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer ")
-  set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
-      -fno-omit-frame-pointer ")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+  else()
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+  endif()
+
 endif()
 
 # HiGHS coverage update in progress
