@@ -19,8 +19,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install wget for Windows
-      run: choco install wget --no-progress
+    # - name: Install wget for Windows
+    #   run: choco install wget --no-progress
 
     - name: Cache oneAPI
       id: cache-oneapi
