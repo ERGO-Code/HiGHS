@@ -744,11 +744,11 @@ HighsInt Highs_setCallback(void* highs, HighsCCallbackType user_callback,
   return static_cast<int>(status);
 }
 
-HighsInt Highs_startCallback(void* highs, const int callback_type) {
+HighsInt Highs_startCallback(void* highs, const HighsInt callback_type) {
   return (HighsInt)((Highs*)highs)->startCallback(callback_type);
 }
 
-HighsInt Highs_stopCallback(void* highs, const int callback_type) {
+HighsInt Highs_stopCallback(void* highs, const HighsInt callback_type) {
   return (HighsInt)((Highs*)highs)->stopCallback(callback_type);
 }
 
@@ -1291,9 +1291,9 @@ HighsInt Highs_getPresolvedLp(const void* highs, const HighsInt a_format,
                               a_start, a_index, a_value, integrality);
 }
 
-HighsInt Highs_crossover(void* highs, const int num_col, const int num_row,
-                         const double* col_value, const double* col_dual,
-                         const double* row_dual) {
+HighsInt Highs_crossover(void* highs, const HighsInt num_col,
+                         const HighsInt num_row, const double* col_value,
+                         const double* col_dual, const double* row_dual) {
   HighsSolution solution;
   if (col_value) {
     solution.value_valid = true;

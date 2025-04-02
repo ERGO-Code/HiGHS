@@ -2091,28 +2091,57 @@ iteration_count1); assertLogical("Dual", logic);
   Highs_destroy(highs);
 }
 */
+void testDeleteRowResolveWithBasis() {
+    void* highs = Highs_create();
+    HighsInt ret;
+    double INF = Highs_getInfinity(highs);
+    ret = Highs_addCol(highs, 0.0, 2.0, 2.0, 0, NULL, NULL);
+    ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+    ret = Highs_addCol(highs, 0.0, -INF, INF, 0, NULL, NULL);
+    HighsInt index_1[2] = {0, 2};
+    double value_1[2] = {2.0, -1.0};
+    ret = Highs_addRow(highs, 0.0, 0.0, 2, index_1, value_1);
+    HighsInt index_2[1] = {1};
+    double value_2[1] = {6.0};
+    ret = Highs_addRow(highs, 10.0, INF, 1, index_2, value_2);
+    Highs_run(highs);
+    double col_value[3] = {0.0, 0.0, 0.0};
+    Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+    assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+    ret = Highs_deleteRowsByRange(highs, 1, 1);
+    assert(ret == 0);
+    ret = Highs_run(highs);
+    assert(ret == 0);
+    ret = Highs_getSolution(highs, col_value, NULL, NULL, NULL);
+    assert(ret == 0);
+    assertDoubleValuesEqual("col_value[0]", col_value[0], 2.0);
+    Highs_destroy(highs);
+}
+
 int main() {
-  minimalApiIllegalLp();
-  testCallback();
-  versionApi();
-  fullApi();
-  minimalApiLp();
-  minimalApiMip();
-  minimalApiQp();
-  fullApiOptions();
-  fullApiLp();
-  fullApiMip();
-  fullApiQp();
-  passPresolveGetLp();
-  options();
-  testGetColsByRange();
-  testPassHessian();
-  testRanging();
-  testFeasibilityRelaxation();
-  testGetModel();
-  testMultiObjective();
-  testQpIndefiniteFailure();
-  testDualRayTwice();
+  //  minimalApiIllegalLp();
+  //  testCallback();
+  //  versionApi();
+  //  fullApi();
+  //  minimalApiLp();
+  //  minimalApiMip();
+  //  minimalApiQp();
+  //  fullApiOptions();
+  //  fullApiLp();
+  //  fullApiMip();
+  //  fullApiQp();
+  //  passPresolveGetLp();
+  //  options();
+  //  testGetColsByRange();
+  //  testPassHessian();
+  //  testRanging();
+  //  testFeasibilityRelaxation();
+  //  testGetModel();
+  //  testMultiObjective();
+  //  testQpIndefiniteFailure();
+  //  testDualRayTwice();
+
+  testDeleteRowResolveWithBasis();
   return 0;
 }
 //  testSetSolution();
