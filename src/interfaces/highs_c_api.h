@@ -1002,8 +1002,9 @@ HighsInt Highs_getDualRay(const void* highs, HighsInt* has_dual_ray,
  * @param highs                                   A pointer to the Highs
  *                                                instance.
  * @param has_dual_unboundedness_direction        A pointer to a HighsInt to
- *                                                store 1 if the dual 
- *                                                unboundedness direction exists.
+ *                                                store 1 if the dual
+ *                                                unboundedness direction
+ *                                                exists.
  * @param dual_unboundedness_direction_value      An array of length [num_col]
  *                                                filled with the unboundedness
  *                                                direction.
