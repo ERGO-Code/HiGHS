@@ -157,6 +157,47 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
         break;
     }
   }
+
+  // Read solution file option.
+  if (c.cmd_read_solution_file != "") {
+    if (setLocalOptionValue(report_log_options, kReadSolutionFileString,
+                            options.log_options, options.records,
+                            c.cmd_read_solution_file) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Read basis file option.
+  if (c.cmd_read_basis_file != "") {
+    if (setLocalOptionValue(report_log_options, kReadBasisFileString,
+                            options.log_options, options.records,
+                            c.cmd_read_basis_file) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Write model file option.
+  if (c.cmd_write_model_file != "") {
+    if (setLocalOptionValue(report_log_options, kWriteModelFileString,
+                            options.log_options, options.records,
+                            c.cmd_write_model_file) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Write solution file option.
+  if (c.cmd_write_solution_file != "") {
+    if (setLocalOptionValue(report_log_options, kWriteSolutionFileString,
+                            options.log_options, options.records,
+                            c.cmd_write_solution_file) != OptionStatus::kOk)
+      return false;
+  }
+
+  // Write basis file option.
+  if (c.cmd_write_basis_file != "") {
+    if (setLocalOptionValue(report_log_options, kWriteBasisFileString,
+                            options.log_options, options.records,
+                            c.cmd_write_basis_file) != OptionStatus::kOk)
+      return false;
+  }
+
   // Handle command line option specifications.
   // Presolve option.
   if (c.cmd_presolve != "") {
@@ -195,23 +236,6 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     if (setLocalOptionValue(report_log_options, kTimeLimitString,
                             options.records,
                             c.cmd_time_limit) != OptionStatus::kOk)
-      return false;
-  }
-
-  // Solution file option.
-  if (c.cmd_write_solution_file != "") {
-    if (setLocalOptionValue(report_log_options, kWriteSolutionFileString,
-                            options.log_options, options.records,
-                            c.cmd_write_solution_file) != OptionStatus::kOk)
-      return false;
-  }
-
-  // Write model file option.
-  if (c.cmd_write_model_file != "") {
-    // std::cout << "Multiple write model files not implemented.\n";
-    if (setLocalOptionValue(report_log_options, kWriteModelFileString,
-                            options.log_options, options.records,
-                            c.cmd_write_model_file) != OptionStatus::kOk)
       return false;
   }
 

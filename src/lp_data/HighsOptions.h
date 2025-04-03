@@ -329,9 +329,9 @@ struct HighsOptionsStruct {
   HighsInt simplex_max_concurrency;
 
   std::string log_file;
-  bool write_model_to_file;
-  bool write_presolved_model_to_file;
-  bool write_solution_to_file;
+  bool write_model_to_file; // Deprecated: remove in V2.0
+  bool write_presolved_model_to_file; // Deprecated: remove in V2.0
+  bool write_solution_to_file; // Deprecated: remove in V2.0
   HighsInt write_solution_style;
   HighsInt glpsol_cost_row_location;
   std::string write_presolved_model_file;

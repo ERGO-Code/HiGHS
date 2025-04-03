@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     return (int)read_status;
   }
 
-  if (options.write_presolved_model_to_file) {
+  if (options.write_presolved_model_file != "") {
     // Run presolve and write the presolved model to a file
     HighsStatus status = highs.presolve();
     if (status == HighsStatus::kError) return int(status);
