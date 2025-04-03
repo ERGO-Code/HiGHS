@@ -455,8 +455,8 @@ struct HighsOptionsStruct {
         parallel(""),
         run_crossover(""),
         time_limit(0.0),
-	read_solution_file(""),
-	read_basis_file(""),
+        read_solution_file(""),
+        read_basis_file(""),
         write_model_file(""),
         solution_file(""),
         write_basis_file(""),
@@ -940,8 +940,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
-        kReadSolutionFileString, "Read solution file", advanced, &read_solution_file,
-        kHighsFilenameDefault);
+        kReadSolutionFileString, "Read solution file", advanced,
+        &read_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
@@ -955,8 +955,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_string);
 
     record_string =
-        new OptionRecordString(kWriteSolutionFileString, "Write solution file", advanced,
-                               &solution_file, kHighsFilenameDefault);
+        new OptionRecordString(kWriteSolutionFileString, "Write solution file",
+                               advanced, &solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(
