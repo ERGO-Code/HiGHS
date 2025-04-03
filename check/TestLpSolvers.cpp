@@ -1,6 +1,7 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
+#include <fstream>
 
 const bool dev_run = false;
 
@@ -398,4 +399,46 @@ TEST_CASE("use_warm_start", "[highs_lp_solver]") {
   h.run();
   HighsInt iteration_count = h.getInfo().simplex_iteration_count;
   REQUIRE(iteration_count == required_iteration_count);
+}
+
+bool fileExists(const std::string& file_name) {
+  std::ifstream infile(file_name);
+  return static_cast<bool>(infile.good());
+}
+
+TEST_CASE("highs-files", "[highs_lp_solver]") {
+  Highs h;
+  std::string write_solution_file = "temp.sol";
+  std::string write_basis_file = "temp.bas";
+  std::string write_model_file = "temp.mps";
+  h.setOptionValue("output_flag", dev_run);
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  h.setOptionValue("solution_file", write_solution_file);
+  h.setOptionValue("write_basis_file", write_basis_file);
+  h.setOptionValue("write_model_file", write_model_file);
+
+  h.run();
+  REQUIRE(fileExists(write_model_file));
+  REQUIRE(fileExists(write_solution_file));
+  REQUIRE(fileExists(write_basis_file));
+  
+  h.setOptionValue("solution_file", "");
+  h.setOptionValue("write_basis_file", "");
+  h.setOptionValue("write_model_file", "");
+
+  REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);;
+  
+  HighsInt iteration_count = h.getInfo().simplex_iteration_count;
+
+  h.setOptionValue("read_basis_file", write_basis_file);
+  h.run();
+  REQUIRE(iteration_count == h.getInfo().simplex_iteration_count);
+
+  //  std::remove(write_model_file.c_str());
+  //  std::remove(write_solution_file.c_str());
+  //  std::remove(write_basis_file.c_str());
+  
 }

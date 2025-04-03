@@ -4604,3 +4604,63 @@ HighsStatus Highs::openLogFile(const std::string& log_file) {
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
+
+void HighsFiles::clear() {
+  this->empty = true;
+  this->read_solution_file = "";
+  this->read_basis_file = "";
+  this->write_model_file = "";
+  this->write_solution_file = "";
+  this->write_basis_file = "";
+}
+
+bool Highs::optionsHasHighsFiles() const {
+  if (this->options_.read_solution_file != "") return true;
+  if (this->options_.read_basis_file != "") return true;
+  if (this->options_.write_model_file != "") return true;
+  if (this->options_.solution_file != "") return true;
+  if (this->options_.write_basis_file != "") return true;
+  return false;
+}
+
+void Highs::saveHighsFiles() {
+  this->files_.empty = true;
+  if (this->options_.read_solution_file != "") {
+    this->files_.read_solution_file = this->options_.read_solution_file;
+    this->options_.read_solution_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.read_basis_file != "") {
+    this->files_.read_basis_file = this->options_.read_basis_file;
+    this->options_.read_basis_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.write_model_file != "") {
+    this->files_.write_model_file = this->options_.write_model_file;
+    this->options_.write_model_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.solution_file != "") {
+    this->files_.write_solution_file = this->options_.solution_file;
+    this->options_.solution_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.write_basis_file != "") {
+    this->files_.write_basis_file = this->options_.write_basis_file;
+    this->options_.write_basis_file = "";
+    this->files_.empty = false;
+  }
+}
+
+void Highs::getHighsFiles() {
+  if (this->files_.empty) return;
+  this->options_.read_solution_file = this->files_.read_solution_file;
+  this->options_.read_basis_file = this->files_.read_basis_file;
+  this->options_.write_model_file = this->files_.write_model_file;
+  this->options_.solution_file = this->files_.write_solution_file;
+  this->options_.write_basis_file = this->files_.write_basis_file;
+  this->files_.clear();
+}
+
+
+

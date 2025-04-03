@@ -110,15 +110,15 @@ void setupCommandLineOptions(CLI::App& app,
     return {};
   };
 
-  app.add_option("--" + kSolutionFileString, cmd_options.cmd_solution_file,
+  app.add_option("--" + kWriteSolutionFileString, cmd_options.cmd_solution_file,
                  "File for writing out model solution.")
       ->check(checkSingle);
 
-  app.add_option("--" + kReadBasisFile, cmd_options.cmd_read_basis_file,
+  app.add_option("--" + kReadBasisFileString, cmd_options.cmd_read_basis_file,
                  "File for initial basis to read.")
       ->check(checkSingle);
 
-  app.add_option("--" + kWriteBasisFile, cmd_options.cmd_write_basis_file,
+  app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
                  "File for final basis to write.")
       ->check(checkSingle);
 
@@ -212,7 +212,7 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
 
   // Solution file option.
   if (c.cmd_solution_file != "") {
-    if (setLocalOptionValue(report_log_options, kSolutionFileString,
+    if (setLocalOptionValue(report_log_options, kReadSolutionFileString,
                             options.log_options, options.records,
                             c.cmd_solution_file) != OptionStatus::kOk ||
         setLocalOptionValue(report_log_options, "write_solution_to_file",
