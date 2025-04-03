@@ -913,25 +913,19 @@ HighsStatus Highs::run() {
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
-    if (this->options_.read_solution_file != "") {
-      printf("!!! Highs::run !!! reading solution file %s\n",
-             this->options_.read_solution_file.c_str());
+    if (this->options_.read_solution_file != "") 
       status = this->readSolution(this->options_.read_solution_file);
-    }
-    if (this->options_.read_basis_file != "") {
-      printf("!!! Highs::run !!! reading basis file %s\n",
-             this->options_.read_basis_file.c_str());
+    if (this->options_.read_basis_file != "")
       status = this->readBasis(this->options_.read_basis_file);
-    }
-    if (this->options_.write_model_file != "") {
-      printf("!!! Highs::run !!! writing model file %s\n",
-             this->options_.write_model_file.c_str());
+    if (this->options_.write_model_file != "")
       status = this->writeModel(this->options_.write_model_file);
-    }
     if (status != HighsStatus::kOk) return status;
+    // Save all the Highs files names from options_ to Highs::files_
+    // so that any relating to files written after run() are saved,
+    // and all can be reset to the user's values
     this->saveHighsFiles();
   }
-  // No subsequent calls to run() can have HiGHS files in options, so
+  // No subsequent calls to run() can have HiGHS files in options_, so
   // options_had_highs_files is false in any future calls to
   // Highs::run(), so solution and basis files are only written when
   // returning to this call
@@ -944,19 +938,13 @@ HighsStatus Highs::run() {
     HighsStatus status = this->solve();
     if (options_had_highs_files) {
       // This call to Highs::run() had HiGHS files in options, so
-      // recover HiGHS files to options
+      // recover HiGHS files to options_
       this->getHighsFiles();
       this->files_.clear();
-      if (this->options_.solution_file != "") {
-        printf("!!! Highs::run !!! writing solution file %s\n",
-               this->options_.solution_file.c_str());
+      if (this->options_.solution_file != "")
         status = this->writeSolution(this->options_.solution_file);
-      }
-      if (this->options_.write_basis_file != "") {
-        printf("!!! Highs::run !!! writing basis file %s\n",
-               this->options_.write_basis_file.c_str());
+      if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
-      }
     }
     return status;
   }
