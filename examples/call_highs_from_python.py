@@ -242,8 +242,8 @@ def user_callback(
     data_in,
     user_callback_data
 ):
-    # dev_run = True
-    dev_run = False
+    dev_run = True
+    #dev_run = False
 
     # Callback for MIP Improving Solution
     if callback_type == hscb.HighsCallbackType.kCallbackMipImprovingSolution:
@@ -251,10 +251,11 @@ def user_callback(
         assert user_callback_data is not None, "User callback data is None!"
 
         if dev_run:
-            print(f"userCallback(type {callback_type};")
-            print(f"data {user_callback_data:.4g}): {message}")
-            print(f"with objective {data_out.objective_function_value}")
+            print(f"userCallback(type {callback_type}; "
+                  f"data {user_callback_data:.4g}): {message} "
+                  f"with objective {data_out.objective_function_value:.4g}")
             print(f"and solution[0] = {data_out.mip_solution[0]}")
+            print(f"and solution[1] = {data_out.mip_solution[1]}")
 
         # Check and update the objective function value
         assert (
@@ -289,11 +290,12 @@ def user_callback(
 
         elif callback_type == hscb.HighsCallbackType.kCallbackMipInterrupt:
             if dev_run:
-                print(f"userInterruptCallback(type {callback_type}): {message}")
+                print(f"userInterruptCallback(type {callback_type}; "
+                  f"data {user_callback_data:.4g}): {message} "
+                  f"with objective {data_out.objective_function_value:.4g}")
                 print(f"Dual bound = {data_out.mip_dual_bound:.4g}")
                 print(f"Primal bound = {data_out.mip_primal_bound:.4g}")
                 print(f"Gap = {data_out.mip_gap:.4g}")
-                print(f"Objective = {data_out.objective_function_value:.4g}")
 
             data_in.user_interrupt = (
                 data_out.objective_function_value < user_callback_data
