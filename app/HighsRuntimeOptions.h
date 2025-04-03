@@ -29,7 +29,7 @@ struct HighsCommandLineOptions {
   std::string cmd_read_basis_file = "";
   std::string cmd_write_basis_file = "";
   std::string options_file = "";
-  std::string read_solution_file = "";
+  std::string cmd_read_solution_file = "";
   std::string cmd_presolve = "";
   std::string cmd_solver = "";
   std::string cmd_parallel = "";
@@ -65,7 +65,7 @@ void setupCommandLineOptions(CLI::App& app,
       })
       ->check(CLI::ExistingFile);
 
-  app.add_option("--" + kReadSolutionFileString, cmd_options.read_solution_file,
+  app.add_option("--" + kReadSolutionFileString, cmd_options.cmd_read_solution_file,
                  "File of solution to read.")
       ->check([](const std::string& input) -> std::string {
         if (input.find(' ') != std::string::npos) {
