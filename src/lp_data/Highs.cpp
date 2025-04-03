@@ -913,7 +913,7 @@ HighsStatus Highs::run() {
   const bool options_had_highs_files = this->optionsHasHighsFiles();
   if (options_had_highs_files) {
     HighsStatus status = HighsStatus::kOk;
-    if (this->options_.read_solution_file != "") 
+    if (this->options_.read_solution_file != "")
       status = this->readSolution(this->options_.read_solution_file);
     if (this->options_.read_basis_file != "")
       status = this->readBasis(this->options_.read_basis_file);

@@ -62,7 +62,7 @@ void setupCommandLineOptions(CLI::App& app,
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString,
-		 cmd_options.cmd_read_solution_file,
+                 cmd_options.cmd_read_solution_file,
                  "File of solution to read.")
       ->check(checkSingle)
       ->check(CLI::ExistingFile);
@@ -78,7 +78,7 @@ void setupCommandLineOptions(CLI::App& app,
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kWriteSolutionFileString,
-		 cmd_options.cmd_write_solution_file,
+                 cmd_options.cmd_write_solution_file,
                  "File for writing out solution.")
       ->check(checkSingle)
       ->check(CLI::ExistingFile);
