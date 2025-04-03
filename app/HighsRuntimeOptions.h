@@ -34,45 +34,56 @@ struct HighsCommandLineOptions {
   std::string cmd_solver = "";
   std::string cmd_parallel = "";
   std::string cmd_crossover = "";
-  std::string cmd_solution_file = "";
+  std::string cmd_write_solution_file = "";
   std::string cmd_write_model_file = "";
   std::string cmd_ranging = "";
 };
 
 void setupCommandLineOptions(CLI::App& app,
                              HighsCommandLineOptions& cmd_options) {
+  const auto checkSingle = [](const std::string& input) -> std::string {
+    if (input.find(' ') != std::string::npos) {
+      return "Multiple files not implemented.";
+    }
+    return {};
+  };
+
   // Command line file specifications.
   app.add_option("--" + kModelFileString + "," + kModelFileString,
                  cmd_options.model_file, "File of model to solve.")
       // Can't use required here because it breaks version printing with -v.
       // ->required()
-      ->check([](const std::string& input) -> std::string {
-        // std::cout << "Input is: " << input << std::endl;
-        if (input.find(' ') != std::string::npos) {
-          return "Multiple files not implemented.";
-        }
-        return {};
-      })
+      ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kOptionsFileString, cmd_options.options_file,
                  "File containing HiGHS options.")
-      ->check([](const std::string& input) -> std::string {
-        if (input.find(' ') != std::string::npos) {
-          return "Multiple files not implemented.";
-        }
-        return {};
-      })
+      ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   app.add_option("--" + kReadSolutionFileString, cmd_options.cmd_read_solution_file,
                  "File of solution to read.")
-      ->check([](const std::string& input) -> std::string {
-        if (input.find(' ') != std::string::npos) {
-          return "Multiple files not implemented.";
-        }
-        return {};
-      })
+      ->check(checkSingle)
+      ->check(CLI::ExistingFile);
+
+  app.add_option("--" + kReadBasisFileString, cmd_options.cmd_read_basis_file,
+                 "File of initial basis to read.")
+      ->check(checkSingle)
+      ->check(CLI::ExistingFile);
+
+  app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
+                 "File for writing out model.")
+      ->check(checkSingle)
+      ->check(CLI::ExistingFile);
+
+  app.add_option("--" + kWriteSolutionFileString, cmd_options.cmd_write_solution_file,
+                 "File for writing out solution.")
+      ->check(checkSingle)
+      ->check(CLI::ExistingFile);
+
+  app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
+                 "File for writing out final basis.")
+      ->check(checkSingle)
       ->check(CLI::ExistingFile);
 
   // Command line option specifications.
@@ -102,29 +113,6 @@ void setupCommandLineOptions(CLI::App& app,
 
   app.add_option("--" + kTimeLimitString, cmd_options.cmd_time_limit,
                  "Run time limit (seconds - double).");
-
-  const auto checkSingle = [](const std::string& input) -> std::string {
-    if (input.find(' ') != std::string::npos) {
-      return "Multiple files not implemented.";
-    }
-    return {};
-  };
-
-  app.add_option("--" + kWriteSolutionFileString, cmd_options.cmd_solution_file,
-                 "File for writing out model solution.")
-      ->check(checkSingle);
-
-  app.add_option("--" + kReadBasisFileString, cmd_options.cmd_read_basis_file,
-                 "File for initial basis to read.")
-      ->check(checkSingle);
-
-  app.add_option("--" + kWriteBasisFileString, cmd_options.cmd_write_basis_file,
-                 "File for final basis to write.")
-      ->check(checkSingle);
-
-  app.add_option("--" + kWriteModelFileString, cmd_options.cmd_write_model_file,
-                 "File for writing out model.")
-      ->check(checkSingle);
 
   app.add_option("--" + kRandomSeedString, cmd_options.cmd_random_seed,
                  "Seed to initialize random number \ngeneration.");
@@ -211,12 +199,10 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
   }
 
   // Solution file option.
-  if (c.cmd_solution_file != "") {
-    if (setLocalOptionValue(report_log_options, kReadSolutionFileString,
+  if (c.cmd_write_solution_file != "") {
+    if (setLocalOptionValue(report_log_options, kWriteSolutionFileString,
                             options.log_options, options.records,
-                            c.cmd_solution_file) != OptionStatus::kOk ||
-        setLocalOptionValue(report_log_options, "write_solution_to_file",
-                            options.records, true) != OptionStatus::kOk)
+                            c.cmd_write_solution_file) != OptionStatus::kOk)
       return false;
   }
 
@@ -225,9 +211,7 @@ bool loadOptions(const CLI::App& app, const HighsLogOptions& report_log_options,
     // std::cout << "Multiple write model files not implemented.\n";
     if (setLocalOptionValue(report_log_options, kWriteModelFileString,
                             options.log_options, options.records,
-                            c.cmd_write_model_file) != OptionStatus::kOk ||
-        setLocalOptionValue(report_log_options, "write_model_to_file",
-                            options.records, true) != OptionStatus::kOk)
+                            c.cmd_write_model_file) != OptionStatus::kOk)
       return false;
   }
 
