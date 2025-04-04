@@ -343,9 +343,11 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     solve_unscaled_lp = true;
     // ToDo: ekk_instance.dual_ray_record_.index != kNoRayIndex should
     // now be true if scaled_model_status ==
-    // HighsModelStatus::kInfeasible since this model status depends
-    // on the infeasibility proof being true
-    if (scaled_model_status == HighsModelStatus::kInfeasible)
+    // HighsModelStatus::kInfeasible and dual simplex was the exit
+    // algorithm since this model status depends on the infeasibility
+    // proof being true
+    if (scaled_model_status == HighsModelStatus::kInfeasible &&
+        ekk_instance.exit_algorithm_ == SimplexAlgorithm::kDual)
       assert(ekk_instance.dual_ray_record_.index != kNoRayIndex);
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
         ekk_instance.dual_ray_record_.index != kNoRayIndex) {
