@@ -649,9 +649,11 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   }
   made_semi_variable_mods =
       num_non_semi > 0 || num_inconsistent_semi > 0 || num_tightened_upper > 0;
-  assert(num_non_semi <= save_non_semi_variable_index.size());
-  assert(num_inconsistent_semi <= inconsistent_semi_variable_index.size());
-  assert(num_tightened_upper <=
+  assert(static_cast<size_t>(num_non_semi) <=
+         save_non_semi_variable_index.size());
+  assert(static_cast<size_t>(num_inconsistent_semi) <=
+         inconsistent_semi_variable_index.size());
+  assert(static_cast<size_t>(num_tightened_upper) <=
          tightened_semi_variable_upper_bound_index.size());
   //      save_non_semi_variable_index.size() > 0 ||
   //      inconsistent_semi_variable_index.size() > 0 ||

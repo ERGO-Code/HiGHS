@@ -383,7 +383,6 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
 }
 
 TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
-  HighsStatus return_status;
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
