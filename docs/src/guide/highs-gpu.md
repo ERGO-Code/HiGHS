@@ -4,7 +4,7 @@ From HiGHS v1.10.0, its first order primal-dual LP (PDLP) solver [cuPDLP-C](http
 
 ### PDLP: A health warning
 
-First order solvers for LP are still very much "work in progress". Although impressive results have been reported, these are often to lower accuracy than is achieved by simplex and interior point solvers, have been obtained using top-of-the-range GPUs, and not achieved for all problem classes. Note that, due to PDLP using internal scaling and relative termination conditions, a solution deemed optimal by PDLP may not be accepted as optimal by HiGHS. The user should consider the infeasibility data returned by [HighsInfo](@ref HighsInfo) to decide whether the solution is acceptable to them.
+First order solvers for LP are still very much "work in progress". Although impressive results have been reported, these are often to lower accuracy than is achieved by simplex and interior point solvers, have been obtained using top-of-the-range GPUs, and not achieved for all problem classes. Note that, due to PDLP using relative termination conditions, a solution deemed optimal by PDLP may not be accepted as optimal by HiGHS. The user should consider the infeasibility data returned by [HighsInfo](@ref HighsInfo) to decide whether the solution is acceptable to them.
 
 If you use the HiGHS PDLP solver, in the first instance it is recommended that you increase the primal and dual feasibility tolerances to `1e-4`, since these are the default values used natively by cuPDLP-C, and will result in the algorithm terminating much sooner.
 

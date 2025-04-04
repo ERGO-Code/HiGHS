@@ -135,6 +135,7 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // then move to EKK
   considerScaling(options, incumbent_lp);
   //
+  const bool was_scaled = incumbent_lp.is_scaled_;
   if (!status.has_basis && !basis.valid && basis.useful) {
     // There is no simplex basis, but there is a useful HiGHS basis
     // that is not validated
@@ -150,6 +151,8 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     refineBasis(incumbent_lp, solution, basis);
     basis.valid = true;
   }
+  // Check that scaling has not been removed
+  assert(incumbent_lp.is_scaled_ == was_scaled);
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified
@@ -222,6 +225,9 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
             kSimplexUnscaledSolutionStrategyNone ||
         options.simplex_unscaled_solution_strategy ==
             kSimplexUnscaledSolutionStrategyRefine) {
+      // Check that the incumbent LP has scaling and is scaled
+      assert(incumbent_lp.scale_.has_scaling);
+      assert(incumbent_lp.is_scaled_);
       //
       // Solve the scaled LP!
       //
@@ -338,9 +344,11 @@ inline HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     solve_unscaled_lp = true;
     // ToDo: ekk_instance.dual_ray_record_.index != kNoRayIndex should
     // now be true if scaled_model_status ==
-    // HighsModelStatus::kInfeasible since this model status depends
-    // on the infeasibility proof being true
-    if (scaled_model_status == HighsModelStatus::kInfeasible)
+    // HighsModelStatus::kInfeasible and dual simplex was the exit
+    // algorithm since this model status depends on the infeasibility
+    // proof being true
+    if (scaled_model_status == HighsModelStatus::kInfeasible &&
+        ekk_instance.exit_algorithm_ == SimplexAlgorithm::kDual)
       assert(ekk_instance.dual_ray_record_.index != kNoRayIndex);
     if (scaled_model_status == HighsModelStatus::kInfeasible &&
         ekk_instance.dual_ray_record_.index != kNoRayIndex) {

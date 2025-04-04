@@ -74,7 +74,6 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   HighsInt row_block_num_col = 2;
   HighsInt row_block_num_row = 3;
   HighsInt col_block_num_col = 3;
-  HighsInt col_block_num_row = 3;
 
   HighsLp lp;
   lp.num_col_ = row_block_num_col + col_block_num_col;
@@ -126,7 +125,6 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
   row_block_row_lower = lp.row_lower_;
   row_block_row_upper = lp.row_upper_;
 
-  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
   HighsInt row_block_num_nz;
   std::vector<HighsInt> row_block_start;
   std::vector<HighsInt> row_block_index;
@@ -159,7 +157,6 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
            (int)highs_lp.a_matrix_.format_);
 
   // Column block
-  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
   HighsInt col_block_num_nz = 6;
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
@@ -186,7 +183,6 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   HighsInt row_block_num_col = 5;
   HighsInt row_block_num_row = 3;
   HighsInt col_block_num_col = 3;
-  HighsInt col_block_num_row = 3;
 
   HighsLp lp;
   lp.num_col_ = row_block_num_col + col_block_num_col;
@@ -238,7 +234,6 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
   row_block_row_lower = lp.row_lower_;
   row_block_row_upper = lp.row_upper_;
 
-  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
   HighsInt row_block_num_nz;
   std::vector<HighsInt> row_block_start;
   std::vector<HighsInt> row_block_index;
@@ -271,7 +266,6 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
            (int)highs_lp.a_matrix_.format_);
 
   // Column block
-  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
   HighsInt col_block_num_nz = 6;
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
@@ -300,7 +294,6 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
   HighsInt row_block_num_col = 5;
   HighsInt row_block_num_row = 3;
   HighsInt col_block_num_col = 3;
-  HighsInt col_block_num_row = 3;
 
   HighsLp lp;
   lp.num_col_ = row_block_num_col + col_block_num_col;
@@ -358,7 +351,6 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
   row_block_row_lower = lp.row_lower_;
   row_block_row_upper = lp.row_upper_;
 
-  HighsInt row_block_format = (HighsInt)MatrixFormat::kRowwise;
   HighsInt row_block_num_nz;
   std::vector<HighsInt> row_block_start;
   std::vector<HighsInt> row_block_index;
@@ -391,7 +383,6 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
            (int)highs_lp.a_matrix_.format_);
 
   // Column block
-  HighsInt col_block_format = (HighsInt)MatrixFormat::kColwise;
   HighsInt col_block_num_nz = 6;
   std::vector<HighsInt> col_block_start = {0, 2, 4};
   std::vector<HighsInt> col_block_index = {0, 1, 1, 2, 0, 1};
@@ -1994,7 +1985,6 @@ TEST_CASE("zero-matrix-entries", "[highs_data]") {
 
 void testAvgasGetRow(Highs& h) {
   Avgas avgas;
-  double cost;
   double lower;
   double upper;
   std::vector<HighsInt> index;

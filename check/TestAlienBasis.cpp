@@ -305,9 +305,6 @@ TEST_CASE("AlienBasis-delay-singularity0", "[highs_test_alien_basis]") {
   const HighsInt perturbed_entry = 3;
   const double perturbation = -1e-12;
   matrix.value_[perturbed_entry] += perturbation;
-  const HighsInt num_row = matrix.num_row_;
-  const HighsInt num_col = matrix.num_col_;
-  const HighsInt num_basic_col = num_col;
   HighsInt rank_deficiency;
   HighsInt required_rank_deficiency;
   required_rank_deficiency = 2;
@@ -339,9 +336,6 @@ TEST_CASE("AlienBasis-delay-singularity1", "[highs_test_alien_basis]") {
   const double perturbation_multiplier = 1 + 1e-12;
   for (HighsInt iEl = perturbed_from_entry; iEl < perturbed_to_entry; iEl++)
     matrix.value_[iEl] *= perturbation_multiplier;
-  const HighsInt num_row = matrix.num_row_;
-  const HighsInt num_col = matrix.num_col_;
-  const HighsInt num_basic_col = num_col;
   HighsInt rank_deficiency;
   HighsInt required_rank_deficiency;
   required_rank_deficiency = 1;

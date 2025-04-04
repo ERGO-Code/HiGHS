@@ -649,9 +649,11 @@ HighsStatus assessSemiVariables(HighsLp& lp, const HighsOptions& options,
   }
   made_semi_variable_mods =
       num_non_semi > 0 || num_inconsistent_semi > 0 || num_tightened_upper > 0;
-  assert(num_non_semi <= save_non_semi_variable_index.size());
-  assert(num_inconsistent_semi <= inconsistent_semi_variable_index.size());
-  assert(num_tightened_upper <=
+  assert(static_cast<size_t>(num_non_semi) <=
+         save_non_semi_variable_index.size());
+  assert(static_cast<size_t>(num_inconsistent_semi) <=
+         inconsistent_semi_variable_index.size());
+  assert(static_cast<size_t>(num_tightened_upper) <=
          tightened_semi_variable_upper_bound_index.size());
   //      save_non_semi_variable_index.size() > 0 ||
   //      inconsistent_semi_variable_index.size() > 0 ||
@@ -1265,8 +1267,9 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.a_matrix_.index_;
   vector<double>& Avalue = lp.a_matrix_.value_;
 
-  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
-         options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
+  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue);
+  assert(kSimplexScaleStrategyMaxValue015 == kSimplexScaleStrategyMaxValue);
+  assert(kSimplexScaleStrategyMaxValue0157 == kSimplexScaleStrategyMaxValue);
 
   // The 015(7) values refer to bit settings in FICO's scaling options.
   // Specifically
@@ -1438,6 +1441,7 @@ HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
 }
 
 void unscaleSolution(HighsSolution& solution, const HighsScale& scale) {
+  assert(scale.has_scaling);
   assert(solution.col_value.size() == static_cast<size_t>(scale.num_col));
   assert(solution.col_dual.size() == static_cast<size_t>(scale.num_col));
   assert(solution.row_value.size() == static_cast<size_t>(scale.num_row));

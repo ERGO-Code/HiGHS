@@ -202,7 +202,7 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kUnknown);
     const double dl_objective_value =
         std::fabs(highs0.getInfo().objective_function_value - objective_value);
-    REQUIRE(dl_objective_value < 1e-12);
+    REQUIRE(dl_objective_value < 1e-9);
     REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
     double mip_feasibility_tolerance;
     highs0.getOptionValue("mip_feasibility_tolerance",

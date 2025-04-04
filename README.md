@@ -152,7 +152,11 @@ options:
       --model_file file          File of model to solve.
       --options_file file        File containing HiGHS options.
       --read_solution_file file  File of solution to read.
-      --presolve text            Set presolve option to: 
+      --read_basis_file text     File of initial basis to read. 
+      --write_model_file text    File for writing out model.
+      --solution_file text       File for writing out solution.
+      --write_basis_file text    File for writing out final basis.
+      --presolve text            Set presolve option to:
                                    "choose" * default 
                                    "on"
                                    "off"
@@ -169,15 +173,11 @@ options:
                                    "on" * default 
                                    "off" 
       --time_limit float         Run time limit (seconds - double).
-      --solution_file text       File for writing out model solution.
-      --read_basis_file text     File for initial basis to read. 
-      --write_basis_file text    File for final basis to write. 
-      --write_model_file text    File for writing out model.
       --random_seed int          Seed to initialize random number 
                                  generation.
       --ranging text             Compute cost, bound, RHS and basic 
                                  solution ranging:
-                                   "on"
+                                   "on" 
                                    "off" * default 
   -v, --version                  Print version.
   -h, --help                     Print help. 
