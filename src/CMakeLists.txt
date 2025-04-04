@@ -105,7 +105,7 @@ if(NOT FAST_BUILD)
 
   # Configure the config file for the install
   set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}/highs")
-  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
   # Configure the pkg-config file for the install
