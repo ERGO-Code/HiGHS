@@ -466,7 +466,7 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   h.setOptionValue("write_model_file", "");
 
   REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
-  //  h.setOptionValue("read_solution_file", write_solution_file);
+  h.setOptionValue("read_solution_file", write_solution_file);
   HighsStatus run_status = h.run();
 
   REQUIRE(run_status == HighsStatus::kOk);
