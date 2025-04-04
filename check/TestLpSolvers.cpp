@@ -457,9 +457,14 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   h.run();
 
-  REQUIRE(fileExists(write_model_file));
-  REQUIRE(fileExists(write_solution_file));
+  // Ideally we'd check that the files have been created, but this
+  // breaks the meson build
+  //
+  // REQUIRE(fileExists(write_model_file));
+  // REQUIRE(fileExists(write_solution_file));
 
-  std::remove(write_model_file.c_str());
-  std::remove(write_solution_file.c_str());
+  // However, std::remove returning zero is a test for existence
+  REQUIRE(std::remove(write_model_file.c_str()) == 0);
+  REQUIRE(std::remove(write_solution_file.c_str()) == 0);
+  REQUIRE(std::remove(write_basis_file.c_str()) != 0);
 }
