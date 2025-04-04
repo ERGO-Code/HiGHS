@@ -407,9 +407,9 @@ bool fileExists(const std::string& file_name) {
 
 TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   Highs h;
-  std::string write_solution_file = "temp.sol";
-  std::string write_basis_file = "temp.bas";
-  std::string write_model_file = "temp.mps";
+  std::string write_solution_file = "lp-temp.sol";
+  std::string write_basis_file = "lp-temp.bas";
+  std::string write_model_file = "lp-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
@@ -429,10 +429,12 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   h.setOptionValue("write_basis_file", "");
   h.setOptionValue("write_model_file", "");
 
+  h.setOptionValue("read_basis_file", write_basis_file);
+
   REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
 
-  h.setOptionValue("read_basis_file", write_basis_file);
   h.run();
+
   REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   std::remove(write_model_file.c_str());
@@ -442,9 +444,9 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
 
 TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   Highs h;
-  std::string write_solution_file = "temp.sol";
-  std::string write_basis_file = "temp.bas";
-  std::string write_model_file = "temp.mps";
+  std::string write_solution_file = "mip-temp.sol";
+  std::string write_basis_file = "mip-temp.bas";
+  std::string write_model_file = "mip-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
@@ -454,25 +456,15 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   h.setOptionValue("write_model_file", write_model_file);
 
   h.run();
-  // Removed to get back to meson build CI test passing
-  //
-  //  const int64_t mip_node_count = h.getInfo().mip_node_count;
 
-  // Ideally we'd check that the files have been created, but this
-  // causes the meson build CI test to fail
-  //
-  // REQUIRE(fileExists(write_model_file));
-  // REQUIRE(fileExists(write_solution_file));
+  const int64_t mip_node_count = h.getInfo().mip_node_count;
 
-  // However, std::remove returning zero is a test for existence
-  //
-  // But this also causes the meson build CI test to fail!
-  //  REQUIRE(std::remove(write_model_file.c_str()) == 0);
-  //  REQUIRE(std::remove(write_solution_file.c_str()) == 0);
-  //  REQUIRE(std::remove(write_basis_file.c_str()) != 0);
+  REQUIRE(fileExists(write_model_file));
+  REQUIRE(fileExists(write_solution_file));
 
-  // Removed to get back to meson build CI test passing
-  //
+  h.setOptionValue("solution_file", "");
+  h.setOptionValue("write_model_file", "");
+
   //  REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
   //  h.setOptionValue("read_solution_file", write_solution_file);
   //  HighsStatus run_status = h.run();
