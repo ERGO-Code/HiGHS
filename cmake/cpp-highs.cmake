@@ -101,21 +101,6 @@ else()
   set(CONF_ZLIB "")
 endif()
     
-include(CMakePackageConfigHelpers)
-
-# configure_package_config_file(cmake/${PROJECT_NAME}Config.cmake.in
-#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-#   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-#   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-# write_basic_package_version_file(
-#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-#   COMPATIBILITY SameMajorVersion)
-# install( #   FILES
-#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-#   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-#   COMPONENT Devel)
-
 
 include(CMakePackageConfigHelpers)
 string (TOUPPER "${PROJECT_NAME}" PACKAGE_PREFIX)
@@ -137,6 +122,13 @@ install(
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
   COMPONENT Devel)
 
+# Configure the pkg-config file for the install
+configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+  "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 
 # highs_cxx_test()
 # CMake function to generate and build C++ test.
@@ -149,14 +141,6 @@ function(highs_cxx_test FILE_NAME)
   get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
   get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
-
-  # added libdir_relative_path below instead
-  # if(APPLE)
-  #   set(CMAKE_INSTALL_RPATH
-  #     "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
-  # elseif(UNIX)
-  #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
-  # endif()
 
   add_executable(${TEST_NAME} "")
   target_sources(${TEST_NAME} PRIVATE ${FILE_NAME})
@@ -194,14 +178,6 @@ function(highs_c_test FILE_NAME)
   get_filename_component(TEST_NAME ${FILE_NAME} NAME_WE)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
   get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
-
-  # added libdir_relative_path below instead
-  # if(APPLE)
-  #   set(CMAKE_INSTALL_RPATH
-  #     "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
-  # elseif(UNIX)
-  #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
-  # endif()
 
   add_executable(${TEST_NAME} "")
   target_sources(${TEST_NAME} PRIVATE ${FILE_NAME})
