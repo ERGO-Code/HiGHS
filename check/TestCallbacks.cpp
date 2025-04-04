@@ -34,7 +34,7 @@ struct MipData {
 
 struct UserMipSolution {
   double optimal_objective_value;
-  double* optimal_solution;
+  std::vector<double> optimal_solution;
   HighsInt require_user_solution_callback_origin;
 };
 
@@ -435,7 +435,7 @@ TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
 
     UserMipSolution user_callback_data;
     user_callback_data.optimal_objective_value = objective_function_value0;
-    user_callback_data.optimal_solution = optimal_solution.data();
+    user_callback_data.optimal_solution = std::move(optimal_solution);
     user_callback_data.require_user_solution_callback_origin =
         require_origin[iModel];
     void* p_user_callback_data = (void*)(&user_callback_data);
