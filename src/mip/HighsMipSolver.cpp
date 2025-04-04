@@ -851,9 +851,7 @@ void HighsMipSolver::callbackGetCutPool() const {
   HighsCallbackDataOut& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
-  HighsInt num_cut;
-
-  mipdata_->lp.getCutPool(data_out.cutpool_num_col, num_cut,
+  mipdata_->lp.getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
                           data_out.cutpool_lower, data_out.cutpool_upper,
                           cut_matrix);
 

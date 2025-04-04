@@ -174,7 +174,7 @@ HighsCallbackFunctionType userMipCutPoolCallback =
       if (dev_run) {
         printf("userMipCutPoolCallback: dim(%2d, %2d, %2d)\n",
                int(data_out->cutpool_num_col), int(data_out->cutpool_num_cut),
-               int(data_out->cutpool_num_nz));
+               int(data_out->cutpool_value.size()));
         for (HighsInt iCut = 0; iCut < data_out->cutpool_num_cut; iCut++) {
           printf("Cut %d\n", int(iCut));
           for (HighsInt iEl = data_out->cutpool_start[iCut];

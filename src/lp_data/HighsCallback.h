@@ -43,6 +43,7 @@ struct HighsCallbackDataOut {
   double mip_gap;
   std::vector<double> mip_solution;
   HighsInt cutpool_num_col;
+  HighsInt cutpool_num_cut;
   std::vector<HighsInt> cutpool_start;
   std::vector<HighsInt> cutpool_index;
   std::vector<double> cutpool_value;
