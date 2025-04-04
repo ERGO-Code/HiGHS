@@ -436,7 +436,7 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
 
   h.setOptionValue("read_basis_file", write_basis_file);
   h.run();
-  //REQUIRE(h.getInfo().simplex_iteration_count == 0);
+  REQUIRE(h.getInfo().simplex_iteration_count == 0);
 
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
