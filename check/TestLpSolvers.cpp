@@ -456,15 +456,27 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   h.setOptionValue("write_model_file", write_model_file);
 
   h.run();
+  const int64_t mip_node_count = h.getInfo().mip_node_count;
 
   // Ideally we'd check that the files have been created, but this
-  // breaks the meson build
+  // causes the meson build CI test to fail
   //
   // REQUIRE(fileExists(write_model_file));
   // REQUIRE(fileExists(write_solution_file));
 
   // However, std::remove returning zero is a test for existence
-  REQUIRE(std::remove(write_model_file.c_str()) == 0);
-  REQUIRE(std::remove(write_solution_file.c_str()) == 0);
-  REQUIRE(std::remove(write_basis_file.c_str()) != 0);
+  //
+  // But this also causes the meson build CI test to fail!
+  //  REQUIRE(std::remove(write_model_file.c_str()) == 0);
+  //  REQUIRE(std::remove(write_solution_file.c_str()) == 0);
+  //  REQUIRE(std::remove(write_basis_file.c_str()) != 0);
+
+  REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
+
+  h.setOptionValue("read_solution_file", write_solution_file);
+  h.run();
+  REQUIRE(h.getInfo().mip_node_count < mip_node_count);
+
+  std::remove(write_model_file.c_str());
+  std::remove(write_solution_file.c_str());
 }
