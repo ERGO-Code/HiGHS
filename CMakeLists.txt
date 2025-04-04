@@ -40,14 +40,14 @@ option(FAST_BUILD "Fast build: " ON)
 
 find_program(GIT git)
 
-if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
+if((GIT) AND(EXISTS ${PROJECT_SOURCE_DIR}/.git))
     execute_process(
     COMMAND ${GIT} status
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR} OUTPUT_QUIET)
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_QUIET)
 
     execute_process(
     COMMAND ${GIT} describe --always
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
   # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
 else()
@@ -521,7 +521,7 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 # string(TIMESTAMP TODAY "%Y-%m-%d")
 # message(STATUS "Compilation date: " ${TODAY})
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+configure_file(${PROJECT_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if (DEBUG_MEMORY STREQUAL "Address")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
@@ -702,22 +702,22 @@ if(NOT FAST_BUILD)
 
   include_directories(
     ${HIGHS_BINARY_DIR}
-    ${HIGHS_SOURCE_DIR}/app
-    ${HIGHS_SOURCE_DIR}/extern
-    ${HIGHS_SOURCE_DIR}/extern/zstr
-    ${HIGHS_SOURCE_DIR}/src
-    ${HIGHS_SOURCE_DIR}/src/io
-    ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp
-    ${HIGHS_SOURCE_DIR}/src/ipm/ipx
-    ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
-    ${HIGHS_SOURCE_DIR}/src/lp_data
-    ${HIGHS_SOURCE_DIR}/src/mip
-    ${HIGHS_SOURCE_DIR}/src/model
-    ${HIGHS_SOURCE_DIR}/src/presolve
-    ${HIGHS_SOURCE_DIR}/src/qpsolver
-    ${HIGHS_SOURCE_DIR}/src/simplex
-    ${HIGHS_SOURCE_DIR}/src/test
-    ${HIGHS_SOURCE_DIR}/src/util)
+    ${PROJECT_SOURCE_DIR}/app
+    ${PROJECT_SOURCE_DIR}/extern
+    ${PROJECT_SOURCE_DIR}/extern/zstr
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/io
+    ${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/src/ipm/ipx
+    ${PROJECT_SOURCE_DIR}/src/ipm/basiclu
+    ${PROJECT_SOURCE_DIR}/src/lp_data
+    ${PROJECT_SOURCE_DIR}/src/mip
+    ${PROJECT_SOURCE_DIR}/src/model
+    ${PROJECT_SOURCE_DIR}/src/presolve
+    ${PROJECT_SOURCE_DIR}/src/qpsolver
+    ${PROJECT_SOURCE_DIR}/src/simplex
+    ${PROJECT_SOURCE_DIR}/src/test
+    ${PROJECT_SOURCE_DIR}/src/util)
 
   # explicitly switch on colored output for ninja
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

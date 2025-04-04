@@ -10,7 +10,7 @@ set(headers ${highs_headers} ${cupdlp_headers} ${ipx_headers} ${basiclu_headers}
 # Configure the config windows version file
 if(MSVC)
   string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
-  configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+  configure_file(${PROJECT_SOURCE_DIR}/version.rc.in
     "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
   set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
 else()
@@ -99,17 +99,17 @@ if(NOT FAST_BUILD)
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
   # Configure the config file for the install
   set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}/highs")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
   # Configure the pkg-config file for the install
-  configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+  configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
   # Install the targets of the highs export group, the config file so that other
@@ -174,9 +174,9 @@ else()
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>)
 
   # target_include_directories(highs PRIVATE
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/>
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/filereader>
-  #   $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/pdqsort>)
+  #   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/>
+  #   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/filereader>
+  #   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/pdqsort>)
 
   target_sources(highs PRIVATE ${sources} ${headers} ${win_version_file})
   
@@ -254,7 +254,7 @@ else()
 
   if(ZLIB AND ZLIB_FOUND)
     target_include_directories(highs PRIVATE
-      $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/extern/zstr>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs ZLIB::ZLIB)
     set(CONF_DEPS 
@@ -304,17 +304,17 @@ else()
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${HIGHS_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
   # Configure the config file for the install
   set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
-  configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
   # Configure the pkg-config file for the install
-  configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
+  configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
     "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
   # Install the targets of the highs export group, the config file so that other

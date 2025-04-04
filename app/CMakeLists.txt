@@ -3,7 +3,7 @@ if(FAST_BUILD)
     # Configure the config windows version file
     if(MSVC)
       string(REPLACE "." ","  PROJECT_RC_VERSION "${PROJECT_VERSION}")
-      configure_file(${HIGHS_SOURCE_DIR}/version.rc.in
+      configure_file(${PROJECT_SOURCE_DIR}/version.rc.in
         "${HIGHS_BINARY_DIR}/version.rc" @ONLY)
       set(win_version_file ${HIGHS_BINARY_DIR}/version.rc)
     else()
@@ -14,7 +14,7 @@ if(FAST_BUILD)
     target_sources(highs-bin PRIVATE RunHighs.cpp HighsRuntimeOptions.h ${win_version_file})
 
     target_include_directories(highs-bin PRIVATE
-      $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>
     )
 
     set_target_properties(highs-bin PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -70,9 +70,8 @@ else()
 
   target_link_libraries(highs libhighs)
 
-
   target_include_directories(highs PRIVATE
-    $<BUILD_INTERFACE:${HIGHS_SOURCE_DIR}/app>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/app>
   )
 
   # install the binary

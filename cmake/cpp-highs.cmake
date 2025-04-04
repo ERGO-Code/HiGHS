@@ -114,26 +114,37 @@ function(highs_cxx_test FILE_NAME)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
   get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
 
-  if(APPLE)
-    set(CMAKE_INSTALL_RPATH
-      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
-  elseif(UNIX)
-    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
-  endif()
+  # added libdir_relative_path below instead
+  # if(APPLE)
+  #   set(CMAKE_INSTALL_RPATH
+  #     "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  # elseif(UNIX)
+  #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
+  # endif()
 
   add_executable(${TEST_NAME} ${FILE_NAME})
   target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  # target_compile_features(${TEST_NAME} PRIVATE cxx_std_17)
+
+  target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)
   target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+
+  include(GNUInstallDirs)
+  if(APPLE)
+    set_target_properties(${TEST_NAME} PROPERTIES
+      INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  elseif(UNIX)
+    cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
+      BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
+      OUTPUT_VARIABLE libdir_relative_path)
+    set_target_properties(${TEST_NAME} PROPERTIES
+      INSTALL_RPATH "$ORIGIN/${libdir_relative_path}:$ORIGIN")
+  endif()
 
   if(BUILD_TESTING)
     add_test(NAME cxx_${COMPONENT_NAME}_${TEST_NAME} COMMAND ${TEST_NAME})
   endif()
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
-
-# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
-# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)
 
 # highs_c_test()
 # CMake function to generate and build C++ test.
@@ -147,23 +158,34 @@ function(highs_c_test FILE_NAME)
   get_filename_component(COMPONENT_DIR ${FILE_NAME} DIRECTORY)
   get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
 
-  if(APPLE)
-    set(CMAKE_INSTALL_RPATH
-      "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
-  elseif(UNIX)
-    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
-  endif()
+  # added libdir_relative_path below instead
+  # if(APPLE)
+  #   set(CMAKE_INSTALL_RPATH
+  #     "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  # elseif(UNIX)
+  #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
+  # endif()
 
   add_executable(${TEST_NAME} ${FILE_NAME})
   target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  # target_compile_features(${TEST_NAME} PRIVATE cxx_std_17)
+
+  target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)
   target_link_libraries(${TEST_NAME} PRIVATE ${PROJECT_NAMESPACE}::highs)
+
+  include(GNUInstallDirs)
+  if(APPLE)
+    set_target_properties(${TEST_NAME} PROPERTIES
+      INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
+  elseif(UNIX)
+    cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
+      BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
+      OUTPUT_VARIABLE libdir_relative_path)
+    set_target_properties(${TEST_NAME} PROPERTIES
+      INSTALL_RPATH "$ORIGIN/${libdir_relative_path}:$ORIGIN")
+  endif()
 
   if(BUILD_TESTING)
     add_test(NAME c_${COMPONENT_NAME}_${TEST_NAME} COMMAND ${TEST_NAME})
   endif()
   message(STATUS "Configuring test ${FILE_NAME}: ...DONE")
 endfunction()
-
-# set_target_properties(highs PROPERTIES INTERFACE_${PROJECT_NAME}_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
-# set_target_properties(highs PROPERTIES COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION)

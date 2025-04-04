@@ -1,25 +1,25 @@
 set(include_dirs_python
-    ${CMAKE_SOURCE_DIR}/extern
-    ${CMAKE_SOURCE_DIR}/extern/filereader
-    ${CMAKE_SOURCE_DIR}/extern/pdqsort
-    ${CMAKE_SOURCE_DIR}/extern/zstr
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/interfaces
-    ${CMAKE_SOURCE_DIR}/src/io
-    ${CMAKE_SOURCE_DIR}/src/ipm
-    ${CMAKE_SOURCE_DIR}/src/ipm/ipx
-    ${CMAKE_SOURCE_DIR}/src/ipm/basiclu
-    ${CMAKE_SOURCE_DIR}/src/lp_data
-    ${CMAKE_SOURCE_DIR}/src/mip
-    ${CMAKE_SOURCE_DIR}/src/model
-    ${CMAKE_SOURCE_DIR}/src/parallel
-    ${CMAKE_SOURCE_DIR}/src/pdlp
-    ${CMAKE_SOURCE_DIR}/src/pdlp/cupdlp
-    ${CMAKE_SOURCE_DIR}/src/presolve
-    ${CMAKE_SOURCE_DIR}/src/qpsolver
-    ${CMAKE_SOURCE_DIR}/src/simplex
-    ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/src/util
+    ${PROJECT_SOURCE_DIR}/extern
+    ${PROJECT_SOURCE_DIR}/extern/filereader
+    ${PROJECT_SOURCE_DIR}/extern/pdqsort
+    ${PROJECT_SOURCE_DIR}/extern/zstr
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/interfaces
+    ${PROJECT_SOURCE_DIR}/src/io
+    ${PROJECT_SOURCE_DIR}/src/ipm
+    ${PROJECT_SOURCE_DIR}/src/ipm/ipx
+    ${PROJECT_SOURCE_DIR}/src/ipm/basiclu
+    ${PROJECT_SOURCE_DIR}/src/lp_data
+    ${PROJECT_SOURCE_DIR}/src/mip
+    ${PROJECT_SOURCE_DIR}/src/model
+    ${PROJECT_SOURCE_DIR}/src/parallel
+    ${PROJECT_SOURCE_DIR}/src/pdlp
+    ${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/src/presolve
+    ${PROJECT_SOURCE_DIR}/src/qpsolver
+    ${PROJECT_SOURCE_DIR}/src/simplex
+    ${PROJECT_SOURCE_DIR}/src/test
+    ${PROJECT_SOURCE_DIR}/src/util
     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
 set(cupdlp_sources_python
