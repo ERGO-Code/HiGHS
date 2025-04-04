@@ -2600,7 +2600,7 @@ void HighsMipSolverData::callbackUserSolution(
   assert(!interrupt);
   if (mipsolver.callback_->data_in.user_solution.size() ==
       mipsolver.orig_model_->num_col_) {
-    const std::vector<double>& user_solution = mipsolver.callback_->data_in.user_solution;
+    const auto& user_solution = mipsolver.callback_->data_in.user_solution;
     double bound_violation_ = 0;
     double row_violation_ = 0;
     double integrality_violation_ = 0;
