@@ -35,11 +35,15 @@ if(FAST_BUILD)
         set_target_properties(highs-bin PROPERTIES INSTALL_RPATH 
         "@loader_path/../${CMAKE_INSTALL_LIBDIR};@loader_path")
     elseif (UNIX)
-      cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
-             BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
-             OUTPUT_VARIABLE libdir_relative_path)
-      set_target_properties(highs-bin PROPERTIES INSTALL_RPATH
-        "$ORIGIN/${libdir_relative_path}")
+        set_target_properties(highs-bin PROPERTIES INSTALL_RPATH 
+        "$ORIGIN:$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+      
+      # cmake_path is 3.20, leave for later.
+      # cmake_path(RELATIVE_PATH CMAKE_INSTALL_FULL_LIBDIR
+      #        BASE_DIRECTORY ${CMAKE_INSTALL_FULL_BINDIR}
+      #        OUTPUT_VARIABLE libdir_relative_path)
+      # set_target_properties(highs-bin PROPERTIES INSTALL_RPATH
+      #   "$ORIGIN/${libdir_relative_path}")
     endif()
 
     # install the binary
