@@ -2261,9 +2261,18 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
                                void* user_callback_data) {
   this->callback_.clear();
   this->callback_.user_callback =
-      [c_callback](int a, const std::string& b, const HighsCallbackDataOut* c,
-                   HighsCallbackDataIn* d,
-                   void* e) { c_callback(a, b.c_str(), c, d, e); };
+      [c_callback](int a, const std::string& b, const HighsCallbackDataOut* cb_out,
+                   HighsCallbackDataIn* cb_in,
+                   void* e) { 
+        HighsCCallbackDataOut cc_out = static_cast<HighsCCallbackDataOut>(*cb_out);
+        HighsCCallbackDataIn cc_in;
+        cc_in.user_interrupt = 0;
+        cc_in.user_solution_size = 0;
+        cc_in.user_solution = nullptr;
+
+        c_callback(a, b.c_str(), &cc_out, &cc_in, e); 
+        *cb_in = cc_in;  // copy the data in
+      };
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;

@@ -878,19 +878,18 @@ void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->callbackActive(kCallbackMipGetCutPool));
   HighsCallbackDataOut& data_out = callback_->data_out;
 
-  std::vector<double> cut_lower;
-  std::vector<double> cut_upper;
   HighsSparseMatrix cut_matrix;
+  HighsInt num_cut;
 
-  mipdata_->lp.getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,
-                          cut_lower, cut_upper, cut_matrix);
+  mipdata_->lp.getCutPool(data_out.cutpool_num_col, num_cut,
+                          data_out.cutpool_lower, data_out.cutpool_upper,
+                          cut_matrix);
 
-  data_out.cutpool_num_nz = cut_matrix.numNz();
-  data_out.cutpool_start = cut_matrix.start_.data();
-  data_out.cutpool_index = cut_matrix.index_.data();
-  data_out.cutpool_value = cut_matrix.value_.data();
-  data_out.cutpool_lower = cut_lower.data();
-  data_out.cutpool_upper = cut_upper.data();
+  // take ownership
+  data_out.cutpool_start = std::move(cut_matrix.start_);
+  data_out.cutpool_index = std::move(cut_matrix.index_);
+  data_out.cutpool_value = std::move(cut_matrix.value_);
+
   callback_->user_callback(kCallbackMipGetCutPool, "MIP cut pool",
                            &callback_->data_out, &callback_->data_in,
                            callback_->user_callback_data);

@@ -13,7 +13,7 @@
 #include <cassert>
 
 void HighsCallback::clearHighsCallbackDataOut() {
-  this->data_out.log_type = -1;
+  this->data_out.log_type = HighsLogType::kInfo;
   this->data_out.running_time = -1;
   this->data_out.simplex_iteration_count = -1;
   this->data_out.ipm_iteration_count = -1;
@@ -23,21 +23,19 @@ void HighsCallback::clearHighsCallbackDataOut() {
   this->data_out.mip_primal_bound = kHighsInf;
   this->data_out.mip_dual_bound = -kHighsInf;
   this->data_out.mip_gap = -1;
-  this->data_out.mip_solution = nullptr;
-  this->data_out.cutpool_num_col = 0;
-  this->data_out.cutpool_num_cut = 0;
-  this->data_out.cutpool_num_nz = 0;
-  this->data_out.cutpool_start = nullptr;
-  this->data_out.cutpool_index = nullptr;
-  this->data_out.cutpool_value = nullptr;
-  this->data_out.cutpool_lower = nullptr;
-  this->data_out.cutpool_upper = nullptr;
-  this->data_out.user_solution_callback_origin = 0;
+  this->data_out.mip_solution.clear();
+  this->data_out.cutpool_start.clear();
+  this->data_out.cutpool_index.clear();
+  this->data_out.cutpool_value.clear();
+  this->data_out.cutpool_lower.clear();
+  this->data_out.cutpool_upper.clear();
+  this->data_out.user_solution_callback_origin =
+      userMipSolutionCallbackOrigin::kUserMipSolutionCallbackOriginAfterSetup;
 }
 
 void HighsCallback::clearHighsCallbackDataIn() {
   this->data_in.user_interrupt = false;
-  this->data_in.user_solution = nullptr;
+  this->data_in.user_solution.clear();
 }
 
 void HighsCallback::clear() {
@@ -79,4 +77,67 @@ bool HighsCallback::callbackAction(const int callback_type,
       callback_type == kCallbackMipUserSolution)
     assert(!action);
   return action;
+}
+
+// Conversions for C API
+
+// Convert HighsCallbackDataOut to HighsCCallbackDataOut
+HighsCallbackDataOut::operator HighsCCallbackDataOut() const {
+  HighsCCallbackDataOut c_data_out;
+  c_data_out.log_type = static_cast<int>(log_type);
+  c_data_out.running_time = running_time;
+  c_data_out.simplex_iteration_count = simplex_iteration_count;
+  c_data_out.ipm_iteration_count = ipm_iteration_count;
+  c_data_out.pdlp_iteration_count = pdlp_iteration_count;
+  c_data_out.objective_function_value = objective_function_value;
+
+  c_data_out.mip_node_count = mip_node_count;
+  c_data_out.mip_total_lp_iterations = mip_total_lp_iterations;
+  c_data_out.mip_primal_bound = mip_primal_bound;
+  c_data_out.mip_dual_bound = mip_dual_bound;
+  c_data_out.mip_gap = mip_gap;
+  c_data_out.mip_solution_size = mip_solution.size();
+  c_data_out.mip_solution =
+      mip_solution.empty() ? nullptr : const_cast<double*>(mip_solution.data());
+
+  c_data_out.cutpool_num_col = cutpool_num_col;
+  c_data_out.cutpool_num_cut = cutpool_lower.size();
+  c_data_out.cutpool_num_nz = cutpool_value.size();
+  c_data_out.cutpool_start = cutpool_start.empty()
+                                 ? nullptr
+                                 : const_cast<HighsInt*>(cutpool_start.data());
+  c_data_out.cutpool_index = cutpool_index.empty()
+                                 ? nullptr
+                                 : const_cast<HighsInt*>(cutpool_index.data());
+  c_data_out.cutpool_value = cutpool_value.empty()
+                                 ? nullptr
+                                 : const_cast<double*>(cutpool_value.data());
+  c_data_out.cutpool_lower = cutpool_lower.empty()
+                                 ? nullptr
+                                 : const_cast<double*>(cutpool_lower.data());
+  c_data_out.cutpool_upper = cutpool_upper.empty()
+                                 ? nullptr
+                                 : const_cast<double*>(cutpool_upper.data());
+
+  c_data_out.user_solution_callback_origin =
+      static_cast<HighsInt>(user_solution_callback_origin);
+  return c_data_out;
+}
+
+HighsCallbackDataIn HighsCallbackDataIn::operator=(
+    const HighsCCallbackDataIn& data_in) {
+  user_interrupt = data_in.user_interrupt != 0;
+  user_solution.clear();
+
+  // copy data from callback
+  if (data_in.user_solution != nullptr) {
+    user_solution.resize(data_in.user_solution_size);
+
+    if (data_in.user_solution_size > 0) {
+      user_solution.assign(data_in.user_solution,
+                           data_in.user_solution + data_in.user_solution_size);
+    }
+  }
+
+  return *this;
 }

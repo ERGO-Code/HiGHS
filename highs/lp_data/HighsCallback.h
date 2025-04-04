@@ -26,6 +26,40 @@ enum userMipSolutionCallbackOrigin {
   kUserMipSolutionCallbackOriginEvaluateRootNode4
 };
 
+/**
+ * Struct to handle callback output data
+ */
+struct HighsCallbackDataOut {
+  HighsLogType log_type;
+  double running_time;
+  HighsInt simplex_iteration_count;
+  HighsInt ipm_iteration_count;
+  HighsInt pdlp_iteration_count;
+  double objective_function_value;
+  int64_t mip_node_count;
+  int64_t mip_total_lp_iterations;
+  double mip_primal_bound;
+  double mip_dual_bound;
+  double mip_gap;
+  std::vector<double> mip_solution;
+  HighsInt cutpool_num_col;
+  std::vector<HighsInt> cutpool_start;
+  std::vector<HighsInt> cutpool_index;
+  std::vector<double> cutpool_value;
+  std::vector<double> cutpool_lower;
+  std::vector<double> cutpool_upper;
+  userMipSolutionCallbackOrigin user_solution_callback_origin;
+  
+  operator HighsCCallbackDataOut() const;
+};
+
+struct HighsCallbackDataIn {
+  bool user_interrupt = false;
+  std::vector<double> user_solution;
+
+  HighsCallbackDataIn operator=(const HighsCCallbackDataIn& data_in);
+};
+
 using HighsCallbackFunctionType =
     std::function<void(int, const std::string&, const HighsCallbackDataOut*,
                        HighsCallbackDataIn*, void*)>;

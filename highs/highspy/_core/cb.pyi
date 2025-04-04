@@ -26,6 +26,7 @@ __all__ = [
 
 class HighsCallbackDataIn:
     user_interrupt: int
+    user_solution: list[float]
     def __init__(self) -> None: ...
 
 class HighsCallbackDataOut:
@@ -39,9 +40,14 @@ class HighsCallbackDataOut:
     pdlp_iteration_count: int
     running_time: float
     simplex_iteration_count: int
+    mip_solution: list[float]
+    cutpool_num_col: int
+    cutpool_start: list[int]
+    cutpool_index: list[int]
+    cutpool_value: list[float]
+    cutpool_lower: list[float]
+    cutpool_upper: list[float]
     def __init__(self) -> None: ...
-    @property
-    def mip_solution(self) -> highspy._core.readonly_ptr_wrapper_double: ...
 
 class HighsCallbackType:
     """

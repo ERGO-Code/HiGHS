@@ -33,7 +33,7 @@ class readonly_ptr_wrapper {
 
   py::array_t<T, py::array::c_style> to_array(std::size_t size) {
     return py::array_t<T, py::array::c_style>(py::buffer_info(
-        ptr, sizeof(T), py::format_descriptor<T>::format(), 1, {size}, {1}));
+        ptr, sizeof(T), py::format_descriptor<T>::format(), 1, {size}, { sizeof(double) }));
   }
 
  private:
@@ -1585,12 +1585,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .value("kNumCallbackType", HighsCallbackType::kNumCallbackType)
       .export_values();
   // Classes
-  py::class_<readonly_ptr_wrapper<double>>(m, "readonly_ptr_wrapper_double", py::module_local())
-      .def(py::init<double*>())
-      .def("__getitem__", &readonly_ptr_wrapper<double>::operator[])
-      .def("__bool__", &readonly_ptr_wrapper<double>::is_valid)
-      .def("to_array", &readonly_ptr_wrapper<double>::to_array);
-  py::class_<HighsCallbackDataOut>(callbacks, "HighsCallbackDataOut", py::module_local())
+  py::class_<HighsCallbackDataOut>(callbacks, "HighsCallbackDataOut",
+                                   py::module_local())
       .def(py::init<>())
       .def_readwrite("log_type", &HighsCallbackDataOut::log_type)
       .def_readwrite("running_time", &HighsCallbackDataOut::running_time)
@@ -1607,12 +1603,15 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsCallbackDataOut::mip_primal_bound)
       .def_readwrite("mip_dual_bound", &HighsCallbackDataOut::mip_dual_bound)
       .def_readwrite("mip_gap", &HighsCallbackDataOut::mip_gap)
-      .def_property_readonly(
-          "mip_solution",
-          [](const HighsCallbackDataOut& self) -> readonly_ptr_wrapper<double> {
-            return readonly_ptr_wrapper<double>(self.mip_solution);
-          });
+      .def_readwrite("mip_solution", &HighsCallbackDataOut::mip_solution)
+      .def_readwrite("cutpool_num_col", &HighsCallbackDataOut::cutpool_num_col)
+      .def_readwrite("cutpool_index", &HighsCallbackDataOut::cutpool_index)
+      .def_readwrite("cutpool_value", &HighsCallbackDataOut::cutpool_value)
+      .def_readwrite("cutpool_lower", &HighsCallbackDataOut::cutpool_lower)
+      .def_readwrite("cutpool_upper", &HighsCallbackDataOut::cutpool_upper);
+
   py::class_<HighsCallbackDataIn>(callbacks, "HighsCallbackDataIn", py::module_local())
       .def(py::init<>())
-      .def_readwrite("user_interrupt", &HighsCallbackDataIn::user_interrupt);
+      .def_readwrite("user_interrupt", &HighsCallbackDataIn::user_interrupt)
+      .def_readwrite("user_solution", &HighsCallbackDataIn::user_solution);
 }

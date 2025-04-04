@@ -12,7 +12,7 @@
 const HighsInt dev_run = 0;
 const double double_equal_tolerance = 1e-5;
 
-void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out,
+void checkGetCallbackDataOutPointer(const HighsCCallbackDataOut* data_out,
                                     const char* name, HighsInt valid) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (valid) {
@@ -28,7 +28,7 @@ void checkGetCallbackDataOutPointer(const HighsCallbackDataOut* data_out,
   }
 }
 
-void checkGetCallbackDataOutHighsInt(const HighsCallbackDataOut* data_out,
+void checkGetCallbackDataOutHighsInt(const HighsCCallbackDataOut* data_out,
                                      const char* name, HighsInt value) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (!name_p) {
@@ -46,7 +46,7 @@ void checkGetCallbackDataOutHighsInt(const HighsCallbackDataOut* data_out,
   }
 }
 
-void checkGetCallbackDataOutInt(const HighsCallbackDataOut* data_out,
+void checkGetCallbackDataOutInt(const HighsCCallbackDataOut* data_out,
                                 const char* name, int value) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (!name_p) {
@@ -64,7 +64,7 @@ void checkGetCallbackDataOutInt(const HighsCallbackDataOut* data_out,
   }
 }
 
-void checkGetCallbackDataOutInt64(const HighsCallbackDataOut* data_out,
+void checkGetCallbackDataOutInt64(const HighsCCallbackDataOut* data_out,
                                   const char* name, int64_t value) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (!name_p) {
@@ -82,7 +82,7 @@ void checkGetCallbackDataOutInt64(const HighsCallbackDataOut* data_out,
   }
 }
 
-void checkGetCallbackDataOutDouble(const HighsCallbackDataOut* data_out,
+void checkGetCallbackDataOutDouble(const HighsCCallbackDataOut* data_out,
                                    const char* name, double value) {
   const void* name_p = Highs_getCallbackDataOutItem(data_out, name);
   if (!name_p) {
@@ -101,8 +101,8 @@ void checkGetCallbackDataOutDouble(const HighsCallbackDataOut* data_out,
 }
 
 static void userCallback(const int callback_type, const char* message,
-                         const HighsCallbackDataOut* data_out,
-                         HighsCallbackDataIn* data_in,
+                         const HighsCCallbackDataOut* data_out,
+                         HighsCCallbackDataIn* data_in,
                          void* user_callback_data) {
   // Extract the double value pointed to from void* user_callback_data
   const double local_callback_data =
