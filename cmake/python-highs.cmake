@@ -46,7 +46,7 @@ target_link_libraries(_core PRIVATE pybind11::headers)
 target_sources(_core PUBLIC ${sources_python} ${headers_python})
 
 # include directories for python 
-target_include_directories(_core PRIVATE ${include_dirs_python})
+target_include_directories(_core PUBLIC ${include_dirs_python})
 
 # This is passing in the version as a define just as an example
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
