@@ -48,7 +48,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   const double required_col_dual1 = 0;
   const double required_row_dual0 = 0.8;
   const double required_row_dual1 = 0;
-  const double required_row_dual2 = 0;
 
   // At the optimal solution g-Qx = [0.8, -1.6] with only constraint 0
   // active. It has normal [1, -2], so dual of 0.8 is correct
@@ -479,8 +478,6 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
   HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
 
   HighsModel local_model;
   HighsLp& lp = local_model.lp_;
@@ -519,10 +516,6 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
-  HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
-
   HighsLp lp;
   HighsHessian hessian;
 
@@ -561,10 +554,6 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
-  HighsStatus return_status;
-  HighsModelStatus model_status;
-  double required_objective_function_value;
-
   HighsLp lp;
   HighsHessian hessian;
 
@@ -999,7 +988,6 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  const HighsInfo& info = highs.getInfo();
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
