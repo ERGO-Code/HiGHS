@@ -432,7 +432,6 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   h.setOptionValue("write_model_file", "");
 
   REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
-  ;
 
   h.setOptionValue("read_basis_file", write_basis_file);
   h.run();
@@ -458,8 +457,8 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
 
   h.run();
 
-  //  REQUIRE(fileExists(write_model_file));
-  //  REQUIRE(fileExists(write_solution_file));
+  REQUIRE(fileExists(write_model_file));
+  REQUIRE(fileExists(write_solution_file));
 
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
