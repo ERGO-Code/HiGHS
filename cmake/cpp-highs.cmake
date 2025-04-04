@@ -16,8 +16,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Includes
 target_include_directories(highs INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
   $<INSTALL_INTERFACE:include>
+  $<INSTALL_INTERFACE:include/highs>
   )
 
 # Properties
