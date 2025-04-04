@@ -100,7 +100,7 @@ if(NOT FAST_BUILD)
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
   set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
   # Configure the config file for the install
