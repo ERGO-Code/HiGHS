@@ -42,6 +42,7 @@ class HighsCallbackDataOut:
     simplex_iteration_count: int
     mip_solution: list[float]
     cutpool_num_col: int
+    cutpool_num_cut: int
     cutpool_start: list[int]
     cutpool_index: list[int]
     cutpool_value: list[float]
