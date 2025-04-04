@@ -1605,6 +1605,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("mip_gap", &HighsCallbackDataOut::mip_gap)
       .def_readwrite("mip_solution", &HighsCallbackDataOut::mip_solution)
       .def_readwrite("cutpool_num_col", &HighsCallbackDataOut::cutpool_num_col)
+      .def_readwrite("cutpool_num_cut", &HighsCallbackDataOut::cutpool_num_cut)
       .def_readwrite("cutpool_index", &HighsCallbackDataOut::cutpool_index)
       .def_readwrite("cutpool_value", &HighsCallbackDataOut::cutpool_value)
       .def_readwrite("cutpool_lower", &HighsCallbackDataOut::cutpool_lower)
