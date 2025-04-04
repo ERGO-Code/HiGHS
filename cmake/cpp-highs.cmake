@@ -94,15 +94,49 @@ if (NOT HIGHS_COVERAGE)
 endif()
 
 
+if(ZLIB AND ZLIB_FOUND)
+  set(CONF_Z "find_dependency(ZLIB)")
+  set(CONF_ZLIB ${CONF_Z})
+else() 
+  set(CONF_ZLIB "")
+endif()
+    
 include(CMakePackageConfigHelpers)
-string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX)
-# configure_package_config_file(src/HConfig.cmake.in
-#   "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config.cmake"
+
+# configure_package_config_file(cmake/${PROJECT_NAME}Config.cmake.in
+#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
 #   INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 #   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+# write_basic_package_version_file(
+#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+#   COMPATIBILITY SameMajorVersion)
+# install( #   FILES
+#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+#   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+#   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+#   COMPONENT Devel)
+
+
+include(CMakePackageConfigHelpers)
+string (TOUPPER "${PROJECT_NAME}" PACKAGE_PREFIX)
+string (TOLOWER "${PROJECT_NAME}" PACKAGE_PREFIX_L)
+
+configure_package_config_file(cmake/highs-config.cmake.in
+  "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX_L}-config.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
 write_basic_package_version_file(
-  "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX}-config-version.cmake"
+  "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX_L}-config-version.cmake"
   COMPATIBILITY SameMajorVersion)
+
+install(
+  FILES
+  "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX_L}-config.cmake"
+  "${PROJECT_BINARY_DIR}/${PACKAGE_PREFIX_L}-config-version.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
+  COMPONENT Devel)
+
 
 # highs_cxx_test()
 # CMake function to generate and build C++ test.

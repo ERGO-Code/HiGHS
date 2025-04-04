@@ -258,11 +258,6 @@ else()
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/extern/zstr>
     )
     target_link_libraries(highs ZLIB::ZLIB)
-    set(CONF_DEPS 
-      "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)\nfind_dependency(ZLIB)")
-    set(CONF_DEPENDENCIES ${CONF_DEPS})
-  else() 
-    set(CONF_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(Threads)")
   endif()
     
 
@@ -310,14 +305,15 @@ else()
   # Either list all the src/* directories here, or put explicit paths in all the
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
-  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
-    "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
+
+        # set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+        # configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+        #   "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
   # Configure the config file for the install
-  set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
-  configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
-    "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
+        # set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../${CMAKE_INSTALL_INCLUDEDIR}")
+        # configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+        #   "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
   # Configure the pkg-config file for the install
   configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
@@ -326,8 +322,10 @@ else()
   # Install the targets of the highs export group, the config file so that other
   # cmake-projects can link easily against highs, and the pkg-config flie so that
   # other projects can easily build against highs
-  install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+
+        # install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
+        #   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/highs)
+
   install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
