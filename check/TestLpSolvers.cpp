@@ -465,15 +465,14 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   h.setOptionValue("solution_file", "");
   h.setOptionValue("write_model_file", "");
 
-  //  REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
+  REQUIRE(h.readModel(write_model_file) == HighsStatus::kOk);
   //  h.setOptionValue("read_solution_file", write_solution_file);
-  //  HighsStatus run_status = h.run();
-  //
-  // This appears to cause the meson build CI test to fail
-  // REQUIRE(run_status == HighsStatus::kOk);
+  HighsStatus run_status = h.run();
+
+  REQUIRE(run_status == HighsStatus::kOk);
 
   // This also causes the meson build CI test to fail!
-  // REQUIRE(h.getInfo().mip_node_count < mip_node_count);
+  REQUIRE(h.getInfo().mip_node_count < mip_node_count);
 
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
