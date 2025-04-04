@@ -27,7 +27,7 @@ set(cupdlp_sources_python
   src/pdlp/cupdlp/cupdlp_linalg.c
   src/pdlp/cupdlp/cupdlp_proj.c
   src/pdlp/cupdlp/cupdlp_restart.c
-  src/pdlp/cupdlp/cupdlp_scaling_cuda.c
+  src/pdlp/cupdlp/cupdlp_scaling.c
   src/pdlp/cupdlp/cupdlp_solver.c
   src/pdlp/cupdlp/cupdlp_step.c
   src/pdlp/cupdlp/cupdlp_utils.c)
@@ -38,10 +38,16 @@ set(cupdlp_headers_python
   src/pdlp/cupdlp/cupdlp_linalg.h
   src/pdlp/cupdlp/cupdlp_proj.h
   src/pdlp/cupdlp/cupdlp_restart.h
-  src/pdlp/cupdlp/cupdlp_scaling_cuda.h
+  src/pdlp/cupdlp/cupdlp_scaling.h
   src/pdlp/cupdlp/cupdlp_solver.h
   src/pdlp/cupdlp/cupdlp_step.h
   src/pdlp/cupdlp/cupdlp_utils.c)
+
+set(cuda_sources_python
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cu
+  pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
+  pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu)
 
 set(basiclu_sources_python
   src/ipm/basiclu/basiclu_factorize.c

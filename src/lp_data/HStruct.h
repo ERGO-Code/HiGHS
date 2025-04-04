@@ -16,11 +16,14 @@
 
 #include "lp_data/HConst.h"
 
-struct HighsIterationCounts {
-  HighsInt simplex = 0;
-  HighsInt ipm = 0;
-  HighsInt crossover = 0;
-  HighsInt qp = 0;
+struct HighsFiles {
+  bool empty = true;
+  std::string read_solution_file = "";
+  std::string read_basis_file = "";
+  std::string write_model_file = "";
+  std::string write_solution_file = "";
+  std::string write_basis_file = "";
+  void clear();
 };
 
 struct HighsSolution {

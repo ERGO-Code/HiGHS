@@ -1,5 +1,5 @@
 project('highs', 'cpp', 'c',
-  version : '1.9.0',
+  version : '1.10.0',
   meson_version: '>= 1.1.0',
   default_options : ['warning_level=1',
                      'cpp_std=c++17',
@@ -39,7 +39,6 @@ Wno_invalid_offsetof = cc.get_supported_arguments('-Wno-invalid-offsetof')
 Wno_maybe_uninitialized = cc.get_supported_arguments('-Wno-maybe-uninitialized')
 Wno_sometimes_uninitialized = cc.get_supported_arguments('-Wno-sometimes-uninitialized')
 Wno_unused_label = cc.get_supported_arguments('-Wno-unused-label')
-Wno_use_after_free = cc.get_supported_arguments('-Wno-use-after-free')
 Wno_unused_but_set_variable = cc.get_supported_arguments('-Wno-unused-but-set-variable')
 Wno_unused_variable = cc.get_supported_arguments('-Wno-unused-variable')
 Wno_use_after_free = cc.get_supported_arguments('-Wno-use-after-free')

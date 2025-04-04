@@ -17,6 +17,19 @@
 #include "lp_data/HighsSolution.h"
 #include "pdlp/cupdlp/cupdlp.h"
 
+#ifdef CUPDLP_GPU
+#include <cuda_runtime.h>
+#endif
+
+// #define CUPDLP_CPP_INIT(var, type, size)                                \
+//   {                                                                     \
+//     (var) = (type *)malloc((size) * sizeof(type));                      \
+//     if ((var) == NULL) {                                                \
+//       retcode = 1;                                                      \
+//       goto exit_cleanup;                                                \
+//     }                                                                   \
+//   }
+
 typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 
 #define cupdlp_init_int(var, size) \
@@ -34,14 +47,15 @@ typedef enum CONSTRAINT_TYPE { EQ = 0, LEQ, GEQ, BOUND } constraint_type;
 #define cupdlp_init_data(var, size) \
   { (var) = (CUPDLPdata*)malloc((size) * sizeof(CUPDLPdata)); }
 
+#ifdef CUPDLP_CPU
+
 #define cupdlp_init_vec_double(var, size) \
   { (var) = (double*)malloc((size) * sizeof(double)); }
 
-#define cupdlp_init_zero_vec_double(var, size) \
-  { (var) = (double*)calloc(size, sizeof(double)); }
-
 #define cupdlp_copy_vec(dst, src, type, size) \
   memcpy(dst, src, sizeof(type) * (size))
+
+#endif
 
 //#define cupdlp_init_csc_cpu(var, size)	\
 //   {\
@@ -83,7 +97,7 @@ int formulateLP_highs(const HighsLp& lp, double** cost, int* nCols, int* nRows,
                       double** csc_val, double** rhs, double** lower,
                       double** upper, double* offset, double* sign_origin,
                       int* nCols_origin, int** constraint_new_idx,
-                      int* constraint_type);
+                      int** constraint_type);
 
 cupdlp_int getCupdlpLogLevel(const HighsOptions& options);
 

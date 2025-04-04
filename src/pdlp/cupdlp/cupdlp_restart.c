@@ -1,4 +1,4 @@
-#include "cupdlp_restart.h"
+#include "pdlp/cupdlp/cupdlp_restart.h"
 
 PDHG_restart_choice PDHG_Check_Restart_GPU(CUPDLPwork *work) {
   CUPDLPproblem *problem = work->problem;

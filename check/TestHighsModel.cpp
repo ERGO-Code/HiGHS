@@ -103,7 +103,8 @@ TEST_CASE("highs-integrality", "[highs_model]") {
 
   HighsVarType integrality;
   REQUIRE(highs.getColIntegrality(-1, integrality) == HighsStatus::kError);
-  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kError);
+  REQUIRE(highs.getColIntegrality(0, integrality) == HighsStatus::kOk);
+  REQUIRE(integrality == HighsVarType::kContinuous);
   REQUIRE(highs.getColIntegrality(lp.num_col_, integrality) ==
           HighsStatus::kError);
 

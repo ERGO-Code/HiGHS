@@ -35,7 +35,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.9.0
+        run: dotnet pack -c Release /p:Version=1.10.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -81,7 +81,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.9.0
+        run: dotnet pack -c Release /p:Version=1.10.0
 
       - name: Add local feed 
         run: dotnet nuget add source ${{runner.workspace}}/nugets
@@ -125,7 +125,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.9.0
+        run: dotnet pack -c Release /p:Version=1.10.0
 
       - name: Add local feed 
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -169,7 +169,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.9.0
+        run: dotnet pack -c Release /p:Version=1.10.0
 
       - name: Add local feed 
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -214,7 +214,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{runner.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.9.0
+        run: dotnet pack -c Release /p:Version=1.10.0
 
       - name: Add local feed 
         run: dotnet nuget add source -n name ${{runner.workspace}}\nugets 
@@ -230,5 +230,5 @@ jobs:
           dotnet new console
           rm Program.cs 
           cp ${{runner.workspace}}\HiGHS\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.9.0 -s ${{runner.workspace}}\nugets 
+          dotnet add package Highs.Native -v 1.10.0 -s ${{runner.workspace}}\nugets 
           dotnet run

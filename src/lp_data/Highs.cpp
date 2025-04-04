@@ -825,6 +825,7 @@ HighsStatus Highs::presolve() {
   }
   HighsStatus return_status = HighsStatus::kOk;
 
+  this->reportModelStats();
   clearPresolve();
   if (model_.isEmpty()) {
     model_presolve_status_ = HighsPresolveStatus::kNotReduced;
@@ -909,9 +910,44 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  const bool options_had_highs_files = this->optionsHasHighsFiles();
+  if (options_had_highs_files) {
+    HighsStatus status = HighsStatus::kOk;
+    if (this->options_.read_solution_file != "")
+      status = this->readSolution(this->options_.read_solution_file);
+    if (this->options_.read_basis_file != "")
+      status = this->readBasis(this->options_.read_basis_file);
+    if (this->options_.write_model_file != "")
+      status = this->writeModel(this->options_.write_model_file);
+    if (status != HighsStatus::kOk) return status;
+    // Save all the Highs files names from options_ to Highs::files_
+    // so that any relating to files written after run() are saved,
+    // and all can be reset to the user's values
+    this->saveHighsFiles();
+  }
+  // No subsequent calls to run() can have HiGHS files in options_, so
+  // options_had_highs_files is false in any future calls to
+  // Highs::run(), so solution and basis files are only written when
+  // returning to this call
+  assert(!this->optionsHasHighsFiles());
+
   if (!options_.use_warm_start) this->clearSolver();
+  this->reportModelStats();
   HighsInt num_linear_objective = this->multi_linear_objective_.size();
-  if (num_linear_objective == 0) return this->solve();
+  if (num_linear_objective == 0) {
+    HighsStatus status = this->solve();
+    if (options_had_highs_files) {
+      // This call to Highs::run() had HiGHS files in options, so
+      // recover HiGHS files to options_
+      this->getHighsFiles();
+      this->files_.clear();
+      if (this->options_.solution_file != "")
+        status = this->writeSolution(this->options_.solution_file);
+      if (this->options_.write_basis_file != "")
+        status = this->writeBasis(this->options_.write_basis_file);
+    }
+    return status;
+  }
   return this->multiobjectiveSolve();
 }
 
@@ -1527,7 +1563,7 @@ HighsStatus Highs::solve() {
       if (have_unknown_reduced_solution)
         highsLogUser(
             options_.log_options, HighsLogType::kWarning,
-            "Running postsolve on non-optimal solution of reduced LP\n");
+            "Running postsolve on non-optimal solution of reduced LP\n\n");
       // If presolve is nontrivial, extract the optimal solution
       // and basis for the presolved problem in order to generate
       // the solution and basis for postsolve to use to generate a
@@ -2977,22 +3013,17 @@ HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
 
 HighsStatus Highs::getColIntegrality(const HighsInt col,
                                      HighsVarType& integrality) const {
-  const HighsInt num_col = this->model_.lp_.num_col_;
-  if (col < 0 || col >= num_col) {
+  if (col < 0 || col >= this->model_.lp_.num_col_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Index %d for column integrality is outside the range [0, "
                  "num_col = %d)\n",
-                 int(col), int(num_col));
+                 int(col), int(this->model_.lp_.num_col_));
     return HighsStatus::kError;
   }
-  if (static_cast<size_t>(col) < this->model_.lp_.integrality_.size()) {
-    integrality = this->model_.lp_.integrality_[col];
-    return HighsStatus::kOk;
-  } else {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Model integrality does not exist for index %d\n", int(col));
-    return HighsStatus::kError;
-  }
+  integrality = static_cast<size_t>(col) < this->model_.lp_.integrality_.size()
+                    ? this->model_.lp_.integrality_[col]
+                    : HighsVarType::kContinuous;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
@@ -4606,4 +4637,61 @@ HighsStatus Highs::openLogFile(const std::string& log_file) {
 
 void Highs::resetGlobalScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
+}
+
+void HighsFiles::clear() {
+  this->empty = true;
+  this->read_solution_file = "";
+  this->read_basis_file = "";
+  this->write_model_file = "";
+  this->write_solution_file = "";
+  this->write_basis_file = "";
+}
+
+bool Highs::optionsHasHighsFiles() const {
+  if (this->options_.read_solution_file != "") return true;
+  if (this->options_.read_basis_file != "") return true;
+  if (this->options_.write_model_file != "") return true;
+  if (this->options_.solution_file != "") return true;
+  if (this->options_.write_basis_file != "") return true;
+  return false;
+}
+
+void Highs::saveHighsFiles() {
+  this->files_.empty = true;
+  if (this->options_.read_solution_file != "") {
+    this->files_.read_solution_file = this->options_.read_solution_file;
+    this->options_.read_solution_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.read_basis_file != "") {
+    this->files_.read_basis_file = this->options_.read_basis_file;
+    this->options_.read_basis_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.write_model_file != "") {
+    this->files_.write_model_file = this->options_.write_model_file;
+    this->options_.write_model_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.solution_file != "") {
+    this->files_.write_solution_file = this->options_.solution_file;
+    this->options_.solution_file = "";
+    this->files_.empty = false;
+  }
+  if (this->options_.write_basis_file != "") {
+    this->files_.write_basis_file = this->options_.write_basis_file;
+    this->options_.write_basis_file = "";
+    this->files_.empty = false;
+  }
+}
+
+void Highs::getHighsFiles() {
+  if (this->files_.empty) return;
+  this->options_.read_solution_file = this->files_.read_solution_file;
+  this->options_.read_basis_file = this->files_.read_basis_file;
+  this->options_.write_model_file = this->files_.write_model_file;
+  this->options_.solution_file = this->files_.write_solution_file;
+  this->options_.write_basis_file = this->files_.write_basis_file;
+  this->files_.clear();
 }

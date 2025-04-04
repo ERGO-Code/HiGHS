@@ -143,7 +143,7 @@ When HiGHS is run from the command line, some fundamental option values may be
 specified directly. Many more may be specified via a file. Formally, the usage
 is:
 
-```
+```shell
 $ bin/highs --help
 usage:
       ./bin/highs [options] [file]
@@ -152,7 +152,11 @@ options:
       --model_file file          File of model to solve.
       --options_file file        File containing HiGHS options.
       --read_solution_file file  File of solution to read.
-      --presolve text            Set presolve option to: 
+      --read_basis_file text     File of initial basis to read. 
+      --write_model_file text    File for writing out model.
+      --solution_file text       File for writing out solution.
+      --write_basis_file text    File for writing out final basis.
+      --presolve text            Set presolve option to:
                                    "choose" * default 
                                    "on"
                                    "off"
@@ -169,13 +173,11 @@ options:
                                    "on" * default 
                                    "off" 
       --time_limit float         Run time limit (seconds - double).
-      --solution_file text       File for writing out model solution.
-      --write_model_file text    File for writing out model.
       --random_seed int          Seed to initialize random number 
                                  generation.
       --ranging text             Compute cost, bound, RHS and basic 
                                  solution ranging:
-                                   "on"
+                                   "on" 
                                    "off" * default 
   -v, --version                  Print version.
   -h, --help                     Print help. 
@@ -220,7 +222,7 @@ The nuget package Highs.Native is on https://www.nuget.org, at https://www.nuget
 It can be added to your C# project with `dotnet`
 
 ```shell
-dotnet add package Highs.Native --version 1.9.0
+dotnet add package Highs.Native --version 1.10.0
 ```
 
 The nuget package contains runtime libraries for 
