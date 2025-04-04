@@ -93,26 +93,7 @@ int main(int argc, char** argv) {
     return (int)read_status;
   }
 
-  if (cmd_options.cmd_read_basis_file != "") {
-    HighsStatus basis_status = highs.readBasis(cmd_options.cmd_read_basis_file);
-    if (basis_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error reading basis from file\n");
-      return (int)basis_status;
-    }
-  }
-
-  // Possible read a solution file
-  if (cmd_options.read_solution_file != "") {
-    HighsStatus read_solution_status =
-        highs.readSolution(cmd_options.read_solution_file);
-    if (read_solution_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error loading solution file\n");
-      return (int)read_solution_status;
-    }
-  }
-  if (options.write_presolved_model_to_file) {
+  if (options.write_presolved_model_file != "") {
     // Run presolve and write the presolved model to a file
     HighsStatus status = highs.presolve();
     if (status == HighsStatus::kError) return int(status);
@@ -135,28 +116,6 @@ int main(int argc, char** argv) {
   if (run_status == HighsStatus::kError) return int(run_status);
 
   // highs.writeInfo("Info.md");
-
-  if (cmd_options.cmd_write_basis_file != "") {
-    HighsStatus basis_status =
-        highs.writeBasis(cmd_options.cmd_write_basis_file);
-    if (basis_status == HighsStatus::kError) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Error writing basis to file\n");
-
-      return (int)basis_status;
-    }
-  }
-
-  // Possibly write the solution to a file
-  if (options.write_solution_to_file || options.solution_file != "")
-    highs.writeSolution(options.solution_file, options.write_solution_style);
-
-  // Possibly write the model to a file
-  if (options.write_model_to_file) {
-    HighsStatus write_model_status = highs.writeModel(options.write_model_file);
-    if (write_model_status == HighsStatus::kError)
-      return (int)write_model_status;  // todo: change to write model error
-  }
 
   // Shut down task executor: optional and wip
   // HighsTaskExecutor::shutdown(true);
