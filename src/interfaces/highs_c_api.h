@@ -2359,7 +2359,7 @@ void Highs_resetGlobalScheduler(const HighsInt blocking);
  * @returns A void* pointer to the callback data item, or NULL if item_name not
  * valid
  */
-const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+const void* Highs_getCallbackDataOutItem(const HighsCCallbackDataOut* data_out,
                                          const char* item_name);
 
 // *********************

@@ -1433,7 +1433,7 @@ void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
 }
 
-const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
+const void* Highs_getCallbackDataOutItem(const HighsCCallbackDataOut* data_out,
                                          const char* item_name) {
   // Accessor function for HighsCallbackDataOut
   //

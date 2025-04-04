@@ -34,6 +34,7 @@ typedef struct {
   double mip_dual_bound;
   double mip_gap;
   double* mip_solution;
+  HighsInt mip_solution_size;
   HighsInt cutpool_num_col;
   HighsInt cutpool_num_cut;
   HighsInt cutpool_num_nz;
@@ -43,17 +44,18 @@ typedef struct {
   double* cutpool_lower;
   double* cutpool_upper;
   HighsInt user_solution_callback_origin;
-} HighsCallbackDataOut;
+} HighsCCallbackDataOut;
 
 typedef struct {
   int user_interrupt;
+  HighsInt user_solution_size;
   double* user_solution;
-} HighsCallbackDataIn;
+} HighsCCallbackDataIn;
 
 // Additional callback handling
 typedef void (*HighsCCallbackType)(int, const char*,
-                                   const HighsCallbackDataOut*,
-                                   HighsCallbackDataIn*, void*);
+                                   const HighsCCallbackDataOut*,
+                                   HighsCCallbackDataIn*, void*);
 
 #ifdef __cplusplus
 }

@@ -291,7 +291,7 @@ struct HighsMipSolverData {
                                      const double mipsolver_objective_value,
                                      const std::string message = "") const;
   void callbackUserSolution(const double mipsolver_objective_value,
-                            const HighsInt user_solution_callback_origin);
+      const userMipSolutionCallbackOrigin user_solution_callback_origin);
 };
 
 #endif

@@ -13,7 +13,6 @@ from ._core import (
     HighsLinearObjective,
     cb,  # type: ignore
     _Highs,  # type: ignore
-    readonly_ptr_wrapper_double,
     kHighsInf,
 )
 
@@ -179,19 +178,17 @@ class Highs(_Highs):
         """
         return self.solve()
 
-    # reset the objective and sense, then solve
-    def minimize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
+    # reset the objective
+    def setObjective(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None, sense: Optional[ObjSense] = None):
         """
-        Solves a minimization of the objective and optionally updates the costs.
+        Updates the costs.
 
         Args:
             obj: An optional highs_linear_expression representing the new objective function.
+            sense: An optional ObjSense value representing the new objective sense.
 
         Raises:
             Exception: If obj is an inequality or not a highs_linear_expression.
-
-        Returns:
-            A HighsStatus object containing the solve status after minimization.
         """
         if obj is not None:
             # if we have a single variable, wrap it in a linear expression
@@ -212,7 +209,24 @@ class Highs(_Highs):
             super().changeColsCost(len(idxs), idxs, vals)
             super().changeObjectiveOffset(expr.constant or 0.0)
 
-        super().changeObjectiveSense(ObjSense.kMinimize)
+        if sense is not None:
+            super().changeObjectiveSense(sense)
+
+    # reset the objective and sense, then solve
+    def minimize(self, obj: Optional[Union[highs_var, highs_linear_expression]] = None):
+        """
+        Solves a minimization of the objective and optionally updates the costs.
+
+        Args:
+            obj: An optional highs_linear_expression representing the new objective function.
+
+        Raises:
+            Exception: If obj is an inequality or not a highs_linear_expression.
+
+        Returns:
+            A HighsStatus object containing the solve status after minimization.
+        """
+        self.setObjective(obj, ObjSense.kMinimize)
         return self.solve()
 
     # reset the objective and sense, then solve
@@ -229,30 +243,12 @@ class Highs(_Highs):
         Returns:
             A HighsStatus object containing the solve status after maximization.
         """
-        if obj is not None:
-            # if we have a single variable, wrap it in a linear expression
-            expr = highs_linear_expression(obj) if isinstance(obj, highs_var) else obj
-
-            if expr.bounds is not None:
-                raise Exception("Objective cannot be an inequality")
-
-            # reset objective
-            super().changeColsCost(
-                self.numVariables,
-                np.arange(self.numVariables, dtype=np.int32),
-                np.full(self.numVariables, 0, dtype=np.float64),
-            )
-
-            # if we have duplicate variables, add the vals
-            idxs, vals = expr.unique_elements()
-            super().changeColsCost(len(idxs), idxs, vals)
-            super().changeObjectiveOffset(expr.constant or 0.0)
-
-        super().changeObjectiveSense(ObjSense.kMaximize)
+        self.setObjective(obj, ObjSense.kMaximize)
         return self.solve()
+
     @staticmethod
     def internal_get_value(
-        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]], readonly_ptr_wrapper_double],
+        array_values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
         index_collection: Union[
             Integral, highs_var, highs_cons, highs_linear_expression, Mapping[Any, Any], Sequence[Any], np.ndarray[Any, np.dtype[Any]]
         ],
@@ -1203,7 +1199,7 @@ class Highs(_Highs):
         data_in: Optional[cb.HighsCallbackDataIn],
         user_callback_data: Any,
     ):
-        user_callback_data.callbacks[int(callback_type)].fire(message, data_out, data_in)
+        user_callback_data.callbacks[int(callback_type)].fire(callback_type, message, data_out, data_in)
 
     def enableCallbacks(self):
         """
@@ -1216,9 +1212,16 @@ class Highs(_Highs):
             if len(c.callbacks) > 0:
                 self.startCallback(c.callback_type)
 
+    def clearCallbacks(self):
+        """
+        Clears all callbacks.
+        """
+        for c in self.callbacks:
+            c.clear()
+
     def disableCallbacks(self):
         """
-        Disables all callbacks.
+        Disables all callbacks, but does not clear them.
         """
         status = super().setCallback(None, None)  # this will also stop all callbacks
 
@@ -1264,8 +1267,8 @@ class Highs(_Highs):
             self.cbMipInterrupt -= self.__user_interrupt_event
 
     def __user_interrupt_event(self, e: HighsCallbackEvent):
-        if self.__solver_should_stop and e.data_in is not None:
-            e.data_in.user_interrupt = True
+        if self.__solver_should_stop:
+            e.interrupt()
 
     @property
     def cbLogging(self):
@@ -1359,19 +1362,28 @@ class Highs(_Highs):
 ## Callback support
 ##
 class HighsCallbackEvent(object):
-    __slots__ = ["message", "data_out", "data_in", "user_data"]
+    __slots__ = ["callback_type", "message", "data_out", "data_in", "user_data"]
 
     def __init__(
         self,
+        callback_type: cb.HighsCallbackType,
         message: str,
         data_out: cb.HighsCallbackDataOut,
         data_in: Optional[cb.HighsCallbackDataIn],
-        user_data: Optional[Any],
+        user_data: Optional[Any]
     ):
+        self.callback_type = callback_type
         self.message = message
         self.data_out = data_out
         self.data_in = data_in
         self.user_data = user_data
+
+    def interrupt(self, interrupt_value: bool = True):
+        """
+        Sets the user interrupt flag in the callback data.
+        """
+        if self.data_in is not None:
+            self.data_in.user_interrupt = interrupt_value
 
     def val(
         self,
@@ -1468,6 +1480,7 @@ class HighsCallback(object):
 
     def fire(
         self,
+        callback_type: cb.HighsCallbackType,
         message: str,
         data_out: cb.HighsCallbackDataOut,
         data_in: cb.HighsCallbackDataIn,
@@ -1475,7 +1488,7 @@ class HighsCallback(object):
         """
         Fires the event, executing all subscribed callbacks.
         """
-        e = HighsCallbackEvent(message, data_out, data_in, None)
+        e = HighsCallbackEvent(callback_type, message, data_out, data_in, None)
 
         for fn, user_data in zip(self.callbacks, self.user_callback_data):
             e.user_data = user_data
@@ -1792,7 +1805,7 @@ class highs_linear_expression(object):
 
     def evaluate(
         self,
-        values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]], readonly_ptr_wrapper_double],
+        values: Union[Sequence[float], np.ndarray[Any, np.dtype[np.float64]]],
     ) -> Union[float, bool]:
         """
         Evaluates the linear expression given a solution array (values).

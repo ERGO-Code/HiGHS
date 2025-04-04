@@ -728,7 +728,7 @@ void HighsMipSolverData::runSetup() {
         mipsolver.callback_->active[kCallbackMipSolution]) {
       assert(!mipsolver.submip);
       mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_;
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipSolution, mipsolver.solution_objective_,
           "Feasible solution");
@@ -1046,7 +1046,7 @@ try_again:
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&
       mipsolver.callback_->active[kCallbackMipSolution]) {
     mipsolver.callback_->clearHighsCallbackDataOut();
-    mipsolver.callback_->data_out.mip_solution = solution.col_value.data();
+    mipsolver.callback_->data_out.mip_solution = solution.col_value;
     const bool interrupt = interruptFromCallbackWithData(
         kCallbackMipSolution, mipsolver_objective_value, "Feasible solution");
     assert(!interrupt);
@@ -2423,7 +2423,7 @@ void HighsMipSolverData::saveReportMipSolution(const double new_upper_limit) {
   if (mipsolver.callback_->user_callback) {
     if (mipsolver.callback_->active[kCallbackMipImprovingSolution]) {
       mipsolver.callback_->clearHighsCallbackDataOut();
-      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_.data();
+      mipsolver.callback_->data_out.mip_solution = mipsolver.solution_;
       const bool interrupt = interruptFromCallbackWithData(
           kCallbackMipImprovingSolution, mipsolver.solution_objective_,
           "Improving solution");
@@ -2493,7 +2493,7 @@ bool HighsMipSolverData::interruptFromCallbackWithData(
 
 void HighsMipSolverData::callbackUserSolution(
     const double mipsolver_objective_value,
-    const HighsInt user_solution_callback_origin) {
+    const userMipSolutionCallbackOrigin user_solution_callback_origin) {
   setCallbackDataOut(mipsolver_objective_value);
   mipsolver.callback_->data_out.user_solution_callback_origin =
       user_solution_callback_origin;
@@ -2502,10 +2502,9 @@ void HighsMipSolverData::callbackUserSolution(
   const bool interrupt = mipsolver.callback_->callbackAction(
       kCallbackMipUserSolution, "MIP User solution");
   assert(!interrupt);
-  if (mipsolver.callback_->data_in.user_solution) {
-    std::vector<double> user_solution(mipsolver.orig_model_->num_col_);
-    for (HighsInt iCol = 0; iCol < mipsolver.orig_model_->num_col_; iCol++)
-      user_solution[iCol] = mipsolver.callback_->data_in.user_solution[iCol];
+  if (mipsolver.callback_->data_in.user_solution.size() ==
+      mipsolver.orig_model_->num_col_) {
+    const std::vector<double>& user_solution = mipsolver.callback_->data_in.user_solution;
     double bound_violation_ = 0;
     double row_violation_ = 0;
     double integrality_violation_ = 0;
