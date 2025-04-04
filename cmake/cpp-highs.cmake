@@ -122,7 +122,8 @@ function(highs_cxx_test FILE_NAME)
   #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
   # endif()
 
-  add_executable(${TEST_NAME} ${FILE_NAME})
+  add_executable(${TEST_NAME} "")
+  target_sources(${TEST_NAME} PRIVATE ${FILE_NAME})
   target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
   target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)
@@ -166,7 +167,8 @@ function(highs_c_test FILE_NAME)
   #   set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}:$ORIGIN/../lib64:$ORIGIN/../lib:$ORIGIN")
   # endif()
 
-  add_executable(${TEST_NAME} ${FILE_NAME})
+  add_executable(${TEST_NAME} "")
+  target_sources(${TEST_NAME} PRIVATE ${FILE_NAME})
   target_include_directories(${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
   target_compile_features(${TEST_NAME} PRIVATE cxx_std_11)

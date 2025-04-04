@@ -10,8 +10,7 @@ set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
 
-target_include_directories(cudalin PUBLIC "${CMAKE_CUDA_PATH}/include")
-
+target_include_directories(cudalin PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
 if (WIN32)
   target_link_libraries(cudalin ${CUDA_LIBRARY})

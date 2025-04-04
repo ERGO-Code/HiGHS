@@ -191,7 +191,7 @@ else()
   
     # target_include_directories(highs PUBLIC "/usr/local/include")
 
-    target_include_directories(highs PUBLIC "${CMAKE_CUDA_PATH}/include")
+    target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
     set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/")
 
     add_subdirectory(pdlp/cupdlp/cuda)
