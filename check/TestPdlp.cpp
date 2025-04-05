@@ -241,3 +241,40 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   }
 }
+
+TEST_CASE("pdlp-hot-start", "[pdlp]") {
+  SpecialLps special_lps;
+  HighsLp lp;
+
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  special_lps.ThreeDLp(lp, require_model_status, optimal_objective);
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  const HighsInfo& info = h.getInfo();
+  const HighsOptions& options = h.getOptions();
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("primal_feasibility_tolerance", 1e-4);
+  h.setOptionValue("dual_feasibility_tolerance", 1e-4);
+  HighsStatus run_status = h.run();
+  if (dev_run) h.writeSolution("", 1);
+  REQUIRE(std::abs(info.objective_function_value - optimal_objective) <
+          double_equal_tolerance);
+  const bool not_optimal = false;
+  if (not_optimal) {
+    REQUIRE(run_status == HighsStatus::kWarning);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kUnknown);
+  } else {
+    REQUIRE(run_status == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  }
+  h.writeSolution("", 1);
+  std::vector<HighsInt> index = {0, 1, 2};
+  std::vector<double> value = {1, 1, 1};
+  h.addRow(-kHighsInf, 2, 3, index.data(), value.data());
+  run_status = h.run();
+  h.writeSolution("", 1);
+}
