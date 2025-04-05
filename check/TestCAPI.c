@@ -126,7 +126,7 @@ static void userCallback(const int callback_type, const char* message,
       printf("userCallback(%11.4g): improving solution with objective = %g\n",
              local_callback_data, objective_function_value);
     // Now test all more simply
-    checkGetCallbackDataOutInt(data_out, kHighsCallbackDataOutLogTypeName, 0);
+    checkGetCallbackDataOutInt(data_out, kHighsCallbackDataOutLogTypeName, 1);
     checkGetCallbackDataOutDouble(
         data_out, kHighsCallbackDataOutRunningTimeName, data_out->running_time);
     checkGetCallbackDataOutHighsInt(
