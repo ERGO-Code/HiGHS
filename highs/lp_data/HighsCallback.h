@@ -50,7 +50,7 @@ struct HighsCallbackDataOut {
   std::vector<double> cutpool_lower;
   std::vector<double> cutpool_upper;
   userMipSolutionCallbackOrigin user_solution_callback_origin;
-  
+
   operator HighsCCallbackDataOut() const;
 };
 
