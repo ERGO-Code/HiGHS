@@ -1065,9 +1065,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
 
   // Primal infeasibility
   absolute_error_value = errors.glpsol_max_primal_infeasibility.absolute_value;
-  absolute_error_index = errors.glpsol_max_primal_infeasibility.absolute_index + 1;
+  absolute_error_index =
+      errors.glpsol_max_primal_infeasibility.absolute_index + 1;
   relative_error_value = errors.glpsol_max_primal_infeasibility.relative_value;
-  relative_error_index = errors.glpsol_max_primal_infeasibility.relative_index + 1;
+  relative_error_index =
+      errors.glpsol_max_primal_infeasibility.relative_index + 1;
   if (!absolute_error_value) absolute_error_index = 0;
   if (!relative_error_value) relative_error_index = 0;
   bool on_col = absolute_error_index > 0 && absolute_error_index <= lp.num_col_;
@@ -1121,9 +1123,11 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
 
     // Dual infeasibility
     absolute_error_value = errors.glpsol_max_dual_infeasibility.absolute_value;
-    absolute_error_index = errors.glpsol_max_dual_infeasibility.absolute_index + 1;
+    absolute_error_index =
+        errors.glpsol_max_dual_infeasibility.absolute_index + 1;
     relative_error_value = errors.glpsol_max_dual_infeasibility.relative_value;
-    relative_error_index = errors.glpsol_max_dual_infeasibility.relative_index + 1;
+    relative_error_index =
+        errors.glpsol_max_dual_infeasibility.relative_index + 1;
     if (!absolute_error_value) absolute_error_index = 0;
     if (!relative_error_value) relative_error_index = 0;
     bool on_col =

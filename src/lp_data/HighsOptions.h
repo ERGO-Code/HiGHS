@@ -473,7 +473,7 @@ struct HighsOptionsStruct {
         ipm_optimality_tolerance(0.0),
         primal_residual_tolerance(0.0),
         dual_residual_tolerance(0.0),
-	complementarity_tolerance(0.0),
+        complementarity_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
         threads(0),

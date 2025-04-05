@@ -97,7 +97,7 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
-				  const double complementarity_tolerance,
+                                  const double complementarity_tolerance,
                                   HighsInt& num_complementarity_violations,
                                   double& max_complementarity_violation,
                                   double& sum_complementarity_violations);
@@ -147,7 +147,7 @@ bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
 void reportLpKktFailures(const HighsOptions& options,
-			 const HighsInfo& highs_info,
-			 const std::string& solver = "");
+                         const HighsInfo& highs_info,
+                         const std::string& solver = "");
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_

@@ -1595,12 +1595,11 @@ HighsStatus Highs::solve() {
           solution_.dual_valid = true;
           basis_.invalidate();
 
-	  HighsPrimalDualErrors primal_dual_errors;
-	  const bool get_residuals = true;
-	  getLpKktFailures(options_, model_.lp_,
-			   solution_, basis_, info_,
-			   primal_dual_errors, get_residuals);
-	  reportLpKktFailures(options_, info_);
+          HighsPrimalDualErrors primal_dual_errors;
+          const bool get_residuals = true;
+          getLpKktFailures(options_, model_.lp_, solution_, basis_, info_,
+                           primal_dual_errors, get_residuals);
+          reportLpKktFailures(options_, info_);
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP

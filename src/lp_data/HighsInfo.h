@@ -289,9 +289,9 @@ class HighsInfo : public HighsInfoStruct {
                                    &num_dual_residual_errors, -1);
     records.push_back(record_int);
 
-    record_double = new InfoRecordDouble(
-        "max_dual_residual_error", "Maximum dual residual error", advanced,
-        &max_dual_residual_error, 0);
+    record_double = new InfoRecordDouble("max_dual_residual_error",
+                                         "Maximum dual residual error",
+                                         advanced, &max_dual_residual_error, 0);
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(

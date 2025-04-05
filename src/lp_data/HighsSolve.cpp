@@ -162,29 +162,30 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       const HighsInfo& info = solver_object.highs_info_;
       if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
         if (info.num_primal_infeasibilities || info.num_dual_infeasibilities) {
-          if (info.num_primal_infeasibilities) 
-            highsLogUser(options.log_options, HighsLogType::kWarning,
-                         "PDLP claims optimality, but with "
-                         "num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
-                         int(info.num_primal_infeasibilities),
-                         info.max_primal_infeasibility,
-                         info.sum_primal_infeasibilities);
-	  if (info.num_dual_infeasibilities) 
-            highsLogUser(options.log_options, HighsLogType::kWarning,
-                         "%s"
-                         "num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
-			 !info.num_primal_infeasibilities ?
-                         "PDLP claims optimality, but with " :
-			 "                                 " ,
-                         int(info.num_dual_infeasibilities),
-                         info.max_dual_infeasibility,
-                         info.sum_dual_infeasibilities);
-          highsLogUser(options.log_options, HighsLogType::kWarning,
-			 "                             and "
-                         "num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
-                         int(info.num_complementarity_violations),
-                       info.max_complementarity_violation,
-                       info.sum_complementarity_violations);
+          if (info.num_primal_infeasibilities)
+            highsLogUser(
+                options.log_options, HighsLogType::kWarning,
+                "PDLP claims optimality, but with "
+                "num/max/sum %6d / %9.4g / %9.4g primal infeasibilities\n",
+                int(info.num_primal_infeasibilities),
+                info.max_primal_infeasibility, info.sum_primal_infeasibilities);
+          if (info.num_dual_infeasibilities)
+            highsLogUser(
+                options.log_options, HighsLogType::kWarning,
+                "%s"
+                "num/max/sum %6d / %9.4g / %9.4g dual infeasibilities\n",
+                !info.num_primal_infeasibilities
+                    ? "PDLP claims optimality, but with "
+                    : "                                 ",
+                int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
+                info.sum_dual_infeasibilities);
+          highsLogUser(
+              options.log_options, HighsLogType::kWarning,
+              "                             and "
+              "num/max/sum %6d / %9.4g / %9.4g complementarity violations\n",
+              int(info.num_complementarity_violations),
+              info.max_complementarity_violation,
+              info.sum_complementarity_violations);
           highsLogUser(
               options.log_options, HighsLogType::kWarning,
               "                        so set model status to \"Unknown\"\n");
@@ -216,8 +217,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = true;
   getLpKktFailures(solver_object.options_, solver_object.lp_,
-		   solver_object.solution_, solver_object.basis_, solver_object.highs_info_,
-                   primal_dual_errors, get_residuals);
+                   solver_object.solution_, solver_object.basis_,
+                   solver_object.highs_info_, primal_dual_errors,
+                   get_residuals);
   reportLpKktFailures(solver_object.options_, solver_object.highs_info_);
 
   return return_status;
