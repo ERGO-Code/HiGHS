@@ -1913,9 +1913,9 @@ restart:
   disptime = 0;
 
   if (mipsolver.options_mip_->mip_heuristic_run_ZIRound) heuristics.ZIRound(firstlpsol);
-  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding1);
+  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
-  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding1);
+  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding);
   if (mipsolver.options_mip_->mip_heuristic_run_Shifting) heuristics.Shifting(firstlpsol);
 
   heuristics.flushStatistics();
