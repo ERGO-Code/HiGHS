@@ -1553,6 +1553,8 @@ HighsStatus Highs::solve() {
         model_presolve_status_ == HighsPresolveStatus::kReduced &&
         model_status_ == HighsModelStatus::kUnknown;
 
+    // #2251 Ultimately model_status_ == HighsModelStatus::kUnknown won't be passed down
+    //    assert(model_status_ != HighsModelStatus::kUnknown);
     if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
       // ToDo Put this in a separate method
       assert(model_status_ == HighsModelStatus::kOptimal ||
@@ -1586,7 +1588,6 @@ HighsStatus Highs::solve() {
         solution_.clear();
         solution_ = presolve_.data_.recovered_solution_;
         solution_.value_valid = true;
-        //          if (ipx_no_crossover) {
         if (!basis_.valid) {
           // Have a primal-dual solution, but no basis, since PDLP or
           // IPX without crossover were used. In the case of IPX, this
@@ -1684,7 +1685,10 @@ HighsStatus Highs::solve() {
 
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
-  if (!no_incumbent_lp_solution_or_basis) info_.valid = true;
+  if (!no_incumbent_lp_solution_or_basis) {
+    this->lpKktCheck();
+    info_.valid = true;
+  }
 
   double lp_solve_final_time = timer_.read();
   double this_solve_time = lp_solve_final_time - initial_time;

@@ -69,14 +69,6 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                                           return_status, "solveLpCupdlp");
     }
     if (return_status == HighsStatus::kError) return return_status;
-    // PDLP and IPM (without crossover) can claim optimality with a
-    // duality gap or primal/dual residual errors that do not satisfy
-    // HiGHS tolerances
-    //
-    // OK to correct residual errors whatever the model status, as
-    // it's only changed in the case of optimality
-    //    correctResiduals(solver_object);
-
     // Non-error return requires a primal solution
     assert(solver_object.solution_.value_valid);
     // Get the objective and any KKT failures
