@@ -521,11 +521,14 @@ bool getVariableKktFailures(
   value_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
   // Determine whether the variable is at a bound using the basis
   // status (if valid) or value residual.
-  bool at_a_bound = value_residual <= primal_feasibility_tolerance;
+  //
+  // bool at_a_bound = value_residual <= primal_feasibility_tolerance;
   if (status_pointer != NULL) {
     // If the variable is basic, then consider it not to be at a bound
     // so that any dual value yields an infeasibility value
-    if (*status_pointer == HighsBasisStatus::kBasic) at_a_bound = false;
+    //
+    //    if (*status_pointer == HighsBasisStatus::kBasic) at_a_bound = false;
+    //
     // With very large values, accuracy is lost in adding/subtracting
     // the feasibility tolerance from the bounds, so skip if this may
     // occur
@@ -542,6 +545,8 @@ bool getVariableKktFailures(
                           value <= upper + primal_feasibility_tolerance;
     }
   }
+  /*
+  // Abandoned in favour of complementarity measure - whih is what's in KKT really!
   if (at_a_bound) {
     // At a bound
     double middle = (lower + upper) * 0.5;
@@ -561,6 +566,43 @@ bool getVariableKktFailures(
   } else {
     // Off bounds (or free)
     dual_infeasibility = fabs(dual);
+  }
+  */
+  // Now just look for dual sign errors that exceed the tolerance. For
+  // boxed variables the test is discontinuous at the midpoint, but
+  // any meaningful dual value on a meaningful interval will show up
+  // as a large complementarity error
+  if (lower < upper) {
+    double length = upper-lower;
+    // Non-fixed variable
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      // Free variable
+      dual_infeasibility = fabs(dual);
+    } else if (length*length > primal_feasibility_tolerance) {
+      // Interval length is meaningful
+      //
+      // Compute the mid-point of the bound interval. This will be
+      // +infinity for LB variables; -infinity for UB variables;
+      // finite for boxed and fixed variables
+      const double middle = (lower + upper) * 0.5;
+      if (value < middle) {
+	// Below the mid-point, so use lower bound optimality condition:
+	// feasiblity is dual >= -tolerance
+	dual_infeasibility = std::max(-dual, 0.);
+      } else {
+	// Below the mid-point, so use upper bound optimality condition:
+	// feasiblity is dual <= tolerance
+	dual_infeasibility = std::max(dual, 0.);
+      }
+    } else {
+      // Interval length is less than
+      // sqrt(primal_feasibility_tolerance) so dual infeasibility is
+      // hard to define
+      dual_infeasibility = 0;
+    }
+  } else {
+    // Fixed variable
+    dual_infeasibility = 0;
   }
   return status_value_ok;
 }
@@ -1707,3 +1749,126 @@ void HighsBasis::clear() {
   this->row_status.clear();
   this->col_status.clear();
 }
+
+HighsStatus ipxSolutionToHighsSolutionNew(
+    const HighsOptions& options, const HighsLp& lp,
+    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
+    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
+    const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
+    const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
+    const std::vector<double>& ipx_zu, 
+    HighsSolution& highs_solution) {
+  // Resize the HighsSolution
+  highs_solution.col_value.resize(lp.num_col_);
+  highs_solution.row_value.resize(lp.num_row_);
+  highs_solution.col_dual.resize(lp.num_col_);
+  highs_solution.row_dual.resize(lp.num_row_);
+
+  const std::vector<double>& ipx_col_value = ipx_x;
+  const std::vector<double>& ipx_row_value = ipx_slack_vars;
+
+  // Row activities are needed to set activity values of free rows -
+  // which are ignored by IPX
+  vector<double> row_activity;
+  const bool get_row_activities = ipx_num_row < lp.num_row_;
+  if (get_row_activities) row_activity.assign(lp.num_row_, 0);
+  HighsInt ipx_slack = lp.num_col_;
+  assert(ipx_num_row == lp.num_row_);
+  HighsInt dual_infeasibility_count = 0;
+  const bool report_dual_infeasibility = true;
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double rsdu;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double value = ipx_col_value[iCol];
+    if (get_row_activities) {
+      // Accumulate row activities to assign value to free rows
+      for (HighsInt el = lp.a_matrix_.start_[iCol];
+           el < lp.a_matrix_.start_[iCol + 1]; el++) {
+        HighsInt row = lp.a_matrix_.index_[el];
+        row_activity[row] += value * lp.a_matrix_.value_[el];
+      }
+    }
+    double dual = ipx_zl[iCol] - ipx_zu[iCol];
+    highs_solution.col_value[iCol] = value;
+    highs_solution.col_dual[iCol] = dual;
+    if (report_dual_infeasibility) {
+      getVariableKktFailures(options.primal_feasibility_tolerance,
+			     options.dual_feasibility_tolerance,
+			     lp.col_lower_[iCol], lp.col_upper_[iCol],
+			     value, dual,
+			     nullptr,
+			     HighsVarType::kContinuous,
+			     primal_infeasibility,
+			     relative_primal_infeasibility,
+			     dual_infeasibility,
+			     rsdu);
+      bool dual_infeasible = dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible) printf("IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = %11.4g %d\n",
+				  int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol],
+				  rsdu, dual, int(++dual_infeasibility_count));
+    }
+  }
+  HighsInt ipx_row = 0;
+  ipx_slack = lp.num_col_;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
+      // Free row - removed by IPX so set it to its row activity
+      highs_solution.row_value[iRow] = row_activity[iRow];
+      highs_solution.row_dual[iRow] = 0;
+      continue;
+    }
+    // Non-free row, so IPX will have it
+    double value = 0;
+    double dual = 0;
+    if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
+      assert(constraint_type[ipx_row] == '=');
+      // Boxed row - look at its slack
+      value = ipx_col_value[ipx_slack];
+      dual = ipx_zl[ipx_slack] - ipx_zu[ipx_slack];
+      // Update the slack to be used for boxed rows
+      ipx_slack++;
+    } else {
+      value = rhs[ipx_row] - ipx_row_value[ipx_row];
+      dual = ipx_y[ipx_row];
+    }
+    highs_solution.row_value[iRow] = value;
+    highs_solution.row_dual[iRow] = dual;
+    // Update the IPX row index
+    ipx_row++;
+    if (report_dual_infeasibility) {
+      getVariableKktFailures(options.primal_feasibility_tolerance,
+			     options.dual_feasibility_tolerance,
+			     lp.row_lower_[iRow], lp.row_upper_[iRow],
+			     value, dual,
+			     nullptr,
+			     HighsVarType::kContinuous,
+			     primal_infeasibility,
+			     relative_primal_infeasibility,
+			     dual_infeasibility,
+			     rsdu);
+      bool dual_infeasible = dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible) printf("IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = %11.4g %d\n",
+				  int(iRow), lp.row_lower_[iRow], value,  lp.row_upper_[iRow],
+				  rsdu, dual, int(++dual_infeasibility_count));
+    }
+  }
+  assert(ipx_row == ipx_num_row);
+  assert(ipx_slack == ipx_num_col);
+  if (lp.sense_ == ObjSense::kMaximize) {
+    // Flip dual values since original LP is maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      highs_solution.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      highs_solution.row_dual[iRow] *= -1;
+  }
+
+  // Indicate that the primal and dual solution are known
+  highs_solution.value_valid = true;
+  highs_solution.dual_valid = true;
+  return HighsStatus::kOk;
+}
+

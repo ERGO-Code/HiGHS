@@ -119,6 +119,15 @@ HighsStatus ipxSolutionToHighsSolution(
     const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
     HighsSolution& highs_solution);
 
+HighsStatus ipxSolutionToHighsSolutionNew(
+    const HighsOptions& options, const HighsLp& lp,
+    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
+    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
+    const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
+    const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
+    const std::vector<double>& ipx_zu, 
+    HighsSolution& highs_solution);
+
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
