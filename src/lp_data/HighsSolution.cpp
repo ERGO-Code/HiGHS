@@ -36,7 +36,7 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  getKktFailures(options, model.lp_, gradient, solution, basis, highs_info,
+  getKktFailures(options, model.isQp(), model.lp_, gradient, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
@@ -53,11 +53,11 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
-  getKktFailures(options, lp, lp.col_cost_, solution, basis, highs_info,
+  getKktFailures(options, false, lp, lp.col_cost_, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
-void getKktFailures(const HighsOptions& options, const HighsLp& lp,
+void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp& lp,
                     const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
@@ -87,11 +87,13 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   double& sum_dual_residual_error = highs_info.sum_dual_residual_errors;
 
   HighsInt& num_complementarity_violation =
-      highs_info.num_complementarity_violations;
+    highs_info.num_complementarity_violations;
   double& max_complementarity_violation =
-      highs_info.max_complementarity_violation;
+    highs_info.max_complementarity_violation;
   double& sum_complementarity_violation =
-      highs_info.sum_complementarity_violations;
+    highs_info.sum_complementarity_violations;
+  double& relative_primal_dual_objective_error =
+    highs_info.relative_primal_dual_objective_error;
 
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
@@ -113,7 +115,9 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violation = kHighsIllegalComplementarityViolation;
 
-  // Collecting absolute and relative errors, and the corresponding
+  relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+
+      // Collecting absolute and relative errors, and the corresponding
   // indices is required for Glpsol output
   HighsInt& max_primal_infeasibility_index =
       primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
@@ -436,12 +440,12 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
     }
   }
 
-  if (have_dual_solution) {
+  if (!is_qp && have_dual_solution) {
     // Determine the relative primal-dual objective error, PDLP-style
     double dual_objective_value;
     bool status = computeDualObjectiveValue(lp, solution, dual_objective_value);
     assert(status);
-    highs_info.relative_primal_dual_objective_error = 
+    relative_primal_dual_objective_error = 
       std::fabs(highs_info.objective_function_value - dual_objective_value) /
       (1.0 + std::fabs(highs_info.objective_function_value) + std::fabs(dual_objective_value));
   }

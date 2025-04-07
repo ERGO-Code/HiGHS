@@ -117,14 +117,15 @@ HighsDebugStatus debugHighsSolution(
       true;  // options.highs_debug_level >= kHighsDebugLevelCostly;
 
   vector<double> gradient;
-  if (hessian.dim_ > 0) {
+  const bool is_qp = hessian.dim_ > 0;
+  if (is_qp) {
     hessian.product(solution.col_value, gradient);
   } else {
     gradient.assign(lp.num_col_, 0);
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     gradient[iCol] += lp.col_cost_[iCol];
-  getKktFailures(options, lp, gradient, solution, basis, local_highs_info,
+  getKktFailures(options, is_qp, lp, gradient, solution, basis, local_highs_info,
                  primal_dual_errors, get_residuals);
   HighsInt& num_primal_infeasibility =
       local_highs_info.num_primal_infeasibilities;
