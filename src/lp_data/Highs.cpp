@@ -1901,7 +1901,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
   bool have_dual_objective_value = false;
-  if (!this->model_.isQp())
+  if (!this->model_.isQp()) 
     have_dual_objective_value = computeDualObjectiveValue(
         model_.lp_, solution_, dual_objective_function_value);
   return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
@@ -4593,14 +4593,13 @@ void Highs::reportSolvedLpQpStats() {
                  info_.objective_function_value);
   }
   if (solution_.dual_valid && !this->model_.isQp()) {
+    // #2251 for checking >>>
     double dual_objective_value;
     HighsStatus status = this->getDualObjectiveValue(dual_objective_value);
     assert(status == HighsStatus::kOk);
-    const double relative_primal_dual_gap =
-        std::fabs(info_.objective_function_value - dual_objective_value) /
-        std::max(1.0, std::fabs(info_.objective_function_value));
+    // #2251 for checking <<<
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Relative P-D gap    : %17.10e\n", relative_primal_dual_gap);
+                 "Relative P-D error  : %17.10e\n", info_.relative_primal_dual_objective_error);
   }
   if (!options_.timeless_log) {
     double run_time = timer_.read();

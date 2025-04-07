@@ -435,6 +435,17 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp,
       }
     }
   }
+
+  if (have_dual_solution) {
+    // Determine the relative primal-dual objective error, PDLP-style
+    double dual_objective_value;
+    bool status = computeDualObjectiveValue(lp, solution, dual_objective_value);
+    assert(status);
+    highs_info.relative_primal_dual_objective_error = 
+      std::fabs(highs_info.objective_function_value - dual_objective_value) /
+      (1.0 + std::fabs(highs_info.objective_function_value) + std::fabs(dual_objective_value));
+  }
+
   // Assign primal solution status
   if (num_primal_infeasibility) {
     highs_info.primal_solution_status = kSolutionStatusInfeasible;
@@ -1648,7 +1659,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning
                                                    : HighsLogType::kInfo,
                "%s   num/max/sum %6d / %9.4g / %9.4g     primal "
-               "infeasibilities (tolerance = %9.4g)\n",
+               "infeasibilities   (tolerance = %9.4g)\n",
                info.num_primal_infeasibilities > 0 ? "" : "         ",
                int(info.num_primal_infeasibilities),
                info.max_primal_infeasibility, info.sum_primal_infeasibilities,
@@ -1657,7 +1668,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning
                                                  : HighsLogType::kInfo,
                "%s   num/max/sum %6d / %9.4g / %9.4g       dual "
-               "infeasibilities (tolerance = %9.4g)\n",
+               "infeasibilities   (tolerance = %9.4g)\n",
                info.num_dual_infeasibilities > 0 ? "" : "         ",
                int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
                info.sum_dual_infeasibilities,
@@ -1666,7 +1677,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.num_primal_residual_errors > 0 ? HighsLogType::kWarning
                                                    : HighsLogType::kInfo,
                "%s   num/max/sum %6d / %9.4g / %9.4g     primal residual "
-               "errors (tolerance = %9.4g)\n",
+               "errors   (tolerance = %9.4g)\n",
                info.num_primal_residual_errors > 0 ? "" : "         ",
                int(info.num_primal_residual_errors),
                info.max_primal_residual_error, info.sum_primal_residual_errors,
@@ -1675,7 +1686,7 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.num_dual_residual_errors > 0 ? HighsLogType::kWarning
                                                  : HighsLogType::kInfo,
                "%s   num/max/sum %6d / %9.4g / %9.4g       dual residual "
-               "errors (tolerance = %9.4g)\n",
+               "errors   (tolerance = %9.4g)\n",
                info.num_dual_residual_errors > 0 ? "" : "         ",
                int(info.num_dual_residual_errors), info.max_dual_residual_error,
                info.sum_dual_residual_errors, options.dual_residual_tolerance);
@@ -1683,12 +1694,23 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.num_complementarity_violations > 0 ? HighsLogType::kWarning
                                                        : HighsLogType::kInfo,
                "%s   num/max/sum %6d / %9.4g / %9.4g complementarity "
-               "violations (tolerance = %9.4g)\n",
+               "violations   (tolerance = %9.4g)\n",
                info.num_complementarity_violations > 0 ? "" : "         ",
                int(info.num_complementarity_violations),
                info.max_complementarity_violation,
                info.sum_complementarity_violations,
                options.complementarity_tolerance);
+  if (info.relative_primal_dual_objective_error != kHighsIllegalComplementarityViolation) {
+    highsLogUser(options.log_options,
+		 info.relative_primal_dual_objective_error > options.complementarity_tolerance
+		 ? HighsLogType::kWarning
+		 : HighsLogType::kInfo,
+		 "%s                                    %9.4g"
+		 " relative P-D objective error (tolerance = %9.4g)\n",
+		 info.relative_primal_dual_objective_error > options.complementarity_tolerance ? "" : "         ",
+		 info.relative_primal_dual_objective_error,
+		 options.complementarity_tolerance);
+  }
 }
 
 bool HighsSolution::hasUndefined() const {

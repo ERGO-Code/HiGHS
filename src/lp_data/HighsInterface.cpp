@@ -1714,12 +1714,19 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     this->info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
     this->info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    this->info_.num_primal_residual_errors = kHighsIllegalInfeasibilityCount;
+    this->info_.max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    this->info_.sum_primal_residual_errors = kHighsIllegalInfeasibilityMeasure;
+    this->info_.num_dual_residual_errors = kHighsIllegalInfeasibilityCount;
+    this->info_.max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    this->info_.sum_dual_residual_errors = kHighsIllegalInfeasibilityMeasure;
     this->info_.num_complementarity_violations =
         kHighsIllegalComplementarityCount;
     this->info_.max_complementarity_violation =
         kHighsIllegalComplementarityViolation;
     this->info_.sum_complementarity_violations =
         kHighsIllegalComplementarityViolation;
+    this->info_.relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
     if (has_dual_ray) {
       assert(this->info_.num_primal_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
@@ -3552,9 +3559,15 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
     info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    info_.max_complementarity_violation = kHighsIllegalComplementarityViolation;
-    info_.sum_complementarity_violations =
+    info.num_dual_residual_errors = kHighsIllegalInfeasibilityCount;
+    info.max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    info.sum_dual_residual_errors = kHighsIllegalInfeasibilityMeasure;
+    info.num_complementarity_violations = kHighsIllegalComplementarityCount;
+    info.max_complementarity_violation =
+      kHighsIllegalComplementarityViolation;
+    info.sum_complementarity_violations =
         kHighsIllegalComplementarityViolation;
+    info.relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
     this->solution_.value_valid = true;
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
   }

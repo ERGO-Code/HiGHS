@@ -1068,12 +1068,26 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::max_dual_infeasibility)
       .def_readwrite("sum_dual_infeasibilities",
                      &HighsInfo::sum_dual_infeasibilities)
+      .def_readwrite("num_primal_residual_errors",
+		     &HighsInfo::num_primal_residual_errors)
+      .def_readwrite("max_primal_residual_error",
+		     &HighsInfo::max_primal_residual_error)
+      .def_readwrite("sum_primal_residual_errors",
+		     &HighsInfo::sum_primal_residual_errors)
+      .def_readwrite("num_dual_residual_errors",
+		     &HighsInfo::num_dual_residual_errors)
+      .def_readwrite("max_dual_residual_error",
+		     &HighsInfo::max_dual_residual_error)
+      .def_readwrite("sum_dual_residual_errors",
+		     &HighsInfo::sum_dual_residual_errors)
       .def_readwrite("num_complementarity_violations",
                      &HighsInfo::num_complementarity_violations)
       .def_readwrite("max_complementarity_violation",
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
                      &HighsInfo::sum_complementarity_violations)
+      .def_readwrite("relative_primal_dual_objective_error",
+		   &HighsInfo::relative_primal_dual_objective_error)
       .def_readwrite("primal_dual_integral",
                      &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())
