@@ -78,13 +78,29 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
-  HighsInt& num_primal_residual_error = highs_info.num_primal_residual_errors;
-  double& max_primal_residual_error = highs_info.max_primal_residual_error;
-  double& sum_primal_residual_error = highs_info.sum_primal_residual_errors;
+  //# 2251
 
-  HighsInt& num_dual_residual_error = highs_info.num_dual_residual_errors;
-  double& max_dual_residual_error = highs_info.max_dual_residual_error;
-  double& sum_dual_residual_error = highs_info.sum_dual_residual_errors;
+  HighsInt num_relative_primal_residual_error_;
+  double sum_relative_primal_residual_error_;
+  HighsInt num_relative_dual_residual_error_;
+  double sum_relative_dual_residual_error_;
+  const bool use_relative_residual_errors = false;
+
+  HighsInt& num_primal_residual_error = use_relative_residual_errors ? num_relative_primal_residual_error_ : highs_info.num_primal_residual_errors;
+  double& max_primal_residual_error = use_relative_residual_errors ? primal_dual_errors.glpsol_max_primal_residual.relative_value : highs_info.max_primal_residual_error;
+  double& sum_primal_residual_error = use_relative_residual_errors ? sum_relative_primal_residual_error_ : highs_info.sum_primal_residual_errors;
+
+  HighsInt& num_dual_residual_error = use_relative_residual_errors ? num_relative_dual_residual_error_ : highs_info.num_dual_residual_errors;
+  double& max_dual_residual_error = use_relative_residual_errors ? primal_dual_errors.glpsol_max_dual_residual.relative_value : highs_info.max_dual_residual_error;
+  double& sum_dual_residual_error = use_relative_residual_errors ? sum_relative_dual_residual_error_ : highs_info.sum_dual_residual_errors;
+
+  HighsInt& num_relative_primal_residual_error = use_relative_residual_errors ? highs_info.num_primal_residual_errors : num_relative_primal_residual_error_;
+  double& max_relative_primal_residual_error = use_relative_residual_errors ? highs_info.max_primal_residual_error : primal_dual_errors.glpsol_max_primal_residual.relative_value;
+  double& sum_relative_primal_residual_error = use_relative_residual_errors ? highs_info.sum_primal_residual_errors : sum_relative_primal_residual_error_;
+
+  HighsInt& num_relative_dual_residual_error = use_relative_residual_errors ? highs_info.num_dual_residual_errors : num_relative_dual_residual_error_;
+  double& max_relative_dual_residual_error = use_relative_residual_errors ? highs_info.max_dual_residual_error : primal_dual_errors.glpsol_max_dual_residual.relative_value;
+  double& sum_relative_dual_residual_error = use_relative_residual_errors ? highs_info.sum_dual_residual_errors : sum_relative_dual_residual_error_;
 
   HighsInt& num_complementarity_violation =
       highs_info.num_complementarity_violations;
@@ -137,13 +153,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   HighsInt& max_relative_primal_residual_index =
       primal_dual_errors.glpsol_max_primal_residual.relative_index;
-  double& max_relative_primal_residual_error =
-      primal_dual_errors.glpsol_max_primal_residual.relative_value;
-
   HighsInt& max_relative_dual_residual_index =
       primal_dual_errors.glpsol_max_dual_residual.relative_index;
-  double& max_relative_dual_residual_error =
-      primal_dual_errors.glpsol_max_dual_residual.relative_value;
 
   HighsInt& num_nonzero_basic_dual = primal_dual_errors.num_nonzero_basic_duals;
   double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
@@ -194,22 +205,35 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     num_primal_residual_error = 0;
     max_primal_residual_error = 0;
     sum_primal_residual_error = 0;
+    num_relative_primal_residual_error = 0;
+    max_relative_primal_residual_error = 0;
+    sum_relative_primal_residual_error = 0;
     primal_dual_errors.glpsol_max_primal_residual.reset();
+    
   } else {
     num_primal_residual_error = kHighsIllegalInfeasibilityCount;
     max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
     sum_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    num_relative_primal_residual_error = kHighsIllegalInfeasibilityCount;
+    max_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    sum_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
     primal_dual_errors.glpsol_max_primal_residual.invalidate();
   }
   if (have_dual_solution && get_residuals) {
     num_dual_residual_error = 0;
     max_dual_residual_error = 0;
     sum_dual_residual_error = 0;
+    num_relative_dual_residual_error = 0;
+    max_relative_dual_residual_error = 0;
+    sum_relative_dual_residual_error = 0;
     primal_dual_errors.glpsol_max_dual_residual.reset();
   } else {
     num_dual_residual_error = kHighsIllegalInfeasibilityCount;
     max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
     sum_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    num_relative_dual_residual_error = kHighsIllegalInfeasibilityCount;
+    max_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    sum_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
     primal_dual_errors.glpsol_max_dual_residual.invalidate();
   }
   if (have_basis) {
