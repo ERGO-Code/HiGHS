@@ -1516,4 +1516,3 @@ void HighsBasis::clear() {
   this->row_status.clear();
   this->col_status.clear();
 }
-

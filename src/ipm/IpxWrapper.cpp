@@ -868,7 +868,7 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
                           y.data(), zl.data(), zu.data());
 
   ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
-			     num_row, x, slack, y, zl, zu, highs_solution);
+                             num_row, x, slack, y, zl, zu, highs_solution);
 }
 
 void reportSolveData(const HighsLogOptions& log_options,

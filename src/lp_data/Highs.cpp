@@ -1747,12 +1747,20 @@ HighsStatus Highs::solve() {
                   "difference = %g\n",
                   this_solve_time, sum_time, rlv_time_difference);
   }
-  // Assess success according to the scaled model status, unless
-  // something worse has happened earlier
+  // Assess success according to the scaled model status, regardless
+  // of whether anything worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(model_status_);
-  return_status =
-      interpretCallStatus(options_.log_options, call_status, return_status,
-                          "highsStatusFromHighsModelStatus");
+  //  # 2251
+  return_status = call_status;
+  //  return_status =
+  //      interpretCallStatus(options_.log_options, call_status, return_status,
+  //                          "highsStatusFromHighsModelStatus");
+  //  if (return_status != call_status) {
+  //    printf("Highs::solve() %d = return_status != call_status = %d;
+  //    model_status_ = %s\n",
+  //	   int(return_status), int(call_status),
+  //	   this->model_statusToString(model_status_).c_str());
+  //  }
   return returnFromRun(return_status, undo_mods);
 }
 
