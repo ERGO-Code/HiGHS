@@ -3793,7 +3793,7 @@ HighsStatus Highs::multiobjectiveSolve() {
     *multi_objective_log << "\n";
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
                  multi_objective_log->str().c_str());
-    return this->solve();
+    return this->optimizeModel();
   }
 
   // Objectives are applied lexicographically
@@ -3874,8 +3874,8 @@ HighsStatus Highs::multiobjectiveSolve() {
     *multi_objective_log << "\n";
     highsLogUser(options_.log_options, HighsLogType::kInfo, "%s",
                  multi_objective_log->str().c_str());
-    HighsStatus solve_status = this->solve();
-    if (solve_status == HighsStatus::kError)
+    HighsStatus optimize_model_status = this->optimizeModel();
+    if (optimize_model_status == HighsStatus::kError)
       return returnFromLexicographicOptimization(HighsStatus::kError,
                                                  original_lp_num_row);
     if (model_status_ != HighsModelStatus::kOptimal) {

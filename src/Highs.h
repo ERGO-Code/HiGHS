@@ -1477,16 +1477,16 @@ class Highs {
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
-  // returnFromOptimize() was called after the previous call to
-  // Highs::optimize() and, assuming that this is always done, it checks
-  // whether Highs::optimize() is called recursively.
-  bool called_return_from_optimize = true;
+  // returnFromOptimizeModel() was called after the previous call to
+  // Highs::optimizeModel() and, assuming that this is always done, it checks
+  // whether Highs::optimizeModel() is called recursively.
+  bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
 
   bool written_log_header_ = false;
 
   void reportModelStats() const;
-  HighsStatus solve();
+  HighsStatus optimizeModel();
 
   void exactResizeModel() {
     this->model_.lp_.exactResize();
@@ -1569,8 +1569,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromOptimize(const HighsStatus return_status,
-				 const bool undo_mods);
+  HighsStatus returnFromOptimizeModel(const HighsStatus return_status,
+                                      const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
