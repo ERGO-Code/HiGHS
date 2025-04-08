@@ -39,6 +39,10 @@ set_target_properties(highs PROPERTIES
   COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION
 )
 
+if(MSVC)
+  target_link_options(highs PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+endif()
+
 ###################
 ## Install rules ##
 ###################
@@ -76,7 +80,7 @@ if (CUPDLP_GPU)
     # Add library targets to the build-tree export set
     export(TARGETS cudalin
       NAMESPACE ${PROJECT_NAMESPACE}::
-      FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+      APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
   endif()
 endif()
 
