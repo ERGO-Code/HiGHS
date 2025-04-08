@@ -821,6 +821,18 @@ TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
+TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 6.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
 
 TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
   std::string model_file =

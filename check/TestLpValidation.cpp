@@ -41,7 +41,6 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
-  HighsStatus return_status;
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
 
   if (dev_run) printf("Give valid number of columns\n");
@@ -396,7 +395,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {
-  HighsStatus return_status;
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsInt num_col = 10;
@@ -655,8 +653,6 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
 
 TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   Highs highs;
-  const HighsInfo& info = highs.getInfo();
-  const HighsSolution& solution = highs.getSolution();
   double epsilon = 1e-10;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;

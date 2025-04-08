@@ -88,19 +88,33 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      Avgas.cpp
       TestSpecialLps.cpp
       TestLpSolvers.cpp
-      TestMipSolver.cpp)
+      TestMipSolver.cpp
+      Avgas.cpp)
 
-    if (BUILD_EXTRA_UNIT_TESTS)
-        list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
-        message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
-        include(highs-unit-tests)
+  set(OPT_LEVEL_CHANGED OFF)
 
-        set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
-        message(STATUS ${TEST_SOURCES})
+  if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
+    # message(MESSAGE "User has overridden the default optimization level for Release mode.")
+    set(OPT_LEVEL_CHANGED ON)
+  endif()
+
+  if (LINUX AND NOT OPT_LEVEL_CHANGED AND CMAKE_CXX_COMPILER_ID STREQUAL "g++" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if (NOT ((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")) AND 
+        NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)"))
+        set(TEST_SOURCES ${TEST_SOURCES} TestLpSolversIterations.cpp)
     endif()
+  endif()
+
+  if (BUILD_EXTRA_UNIT_TESTS)
+      list(APPEND CMAKE_MODULE_PATH "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+      message(STATUS "${HIGHS_SOURCE_DIR}/check/highs-unit-tests")
+      include(highs-unit-tests)
+
+      set(TEST_SOURCES ${TEST_SOURCES} ${HIGHS_EXTRA_UNIT_TESTS})
+      message(STATUS ${TEST_SOURCES})
+  endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
 
@@ -217,6 +231,20 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
    )
 
+   set(successRiscVInstances
+      "25fv47\;3103\; 5.5018458\;"
+      "80bau3b\;3705\; 9.8722419\;"
+      "etamacro\;531\;-7.5571523\;"
+      "greenbea\;5156\;-7.2555248\;"
+      "stair\;531\;-2.5126695\;" # last like mac arm
+      "adlittle\;74\; 2.2549496\;"
+      "afiro\;22\;-4.6475314\;"
+      "shell\;623\; 1.2088253\;"
+      "standata\;72\; 1.2576995\;"
+      "standgub\;68\; 1.2576995\;"
+      "standmps\;218\; 1.4060175\;"
+   )
+
   set(infeasibleInstances
       "bgetam\;        infeasible"
       "box1\;          infeasible"
@@ -261,7 +289,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   #   "--parallel=on"
       )
 
-  if (UNIX AND NOT APPLE)
+  if (UNIX AND NOT APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
         set(pdlpInstances
             "25fv47\; 5.50184588\;"
@@ -316,7 +344,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             endif()
         endif()
     endif()
-  elseif(WIN32)
+  elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     if (CUPDLP_CPU AND NOT CUPDLP_FORCE_NATIVE)
         # on windows e226 model status is unknown
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
@@ -411,7 +439,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                   "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
-              if(${setting} STREQUAL "--presolve=off")
+              if(${setting} STREQUAL "--presolve=off" AND 
+                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
+                (NOT OPT_LEVEL_CHANGED) AND
+                (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
@@ -428,6 +459,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
     add_instancetests(successMacArmInstances "Optimal")
+  elseif(LINUX AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
+        add_instancetests(successRiscVInstances "Optimal")
+    endif()
   else()
     add_instancetests(successInstances "Optimal")
   endif()

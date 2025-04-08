@@ -267,8 +267,8 @@ const HighsInt kKeepNRowsKeepRows = 1;
 
 // Strings for command line options
 const string kModelFileString = "model_file";
-const string kReadBasisFile = "read_basis_file";
-const string kWriteBasisFile = "write_basis_file";
+const string kReadBasisFileString = "read_basis_file";
+const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
@@ -276,7 +276,7 @@ const string kRunCrossoverString = "run_crossover";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
 const string kRandomSeedString = "random_seed";
-const string kSolutionFileString = "solution_file";
+const string kWriteSolutionFileString = "solution_file";
 const string kRangingString = "ranging";
 const string kVersionString = "version";
 const string kWriteModelFileString = "write_model_file";
@@ -293,8 +293,11 @@ struct HighsOptionsStruct {
   std::string parallel;
   std::string run_crossover;
   double time_limit;
-  std::string solution_file;
+  std::string read_solution_file;
+  std::string read_basis_file;
   std::string write_model_file;
+  std::string solution_file;
+  std::string write_basis_file;
   HighsInt random_seed;
   std::string ranging;
 
@@ -326,6 +329,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_max_concurrency;
 
   std::string log_file;
+  // Three bools are deprecated: remove in V2.0
   bool write_model_to_file;
   bool write_presolved_model_to_file;
   bool write_solution_to_file;
@@ -458,8 +462,11 @@ struct HighsOptionsStruct {
         parallel(""),
         run_crossover(""),
         time_limit(0.0),
-        solution_file(""),
+        read_solution_file(""),
+        read_basis_file(""),
         write_model_file(""),
+        solution_file(""),
+        write_basis_file(""),
         random_seed(0),
         ranging(""),
         infinite_cost(0.0),
@@ -794,10 +801,11 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_scale_strategy",
-        "Simplex scaling strategy: off / choose / equilibration / forced "
-        "equilibration / max value 0 / max value 1 (0/1/2/3/4/5)",
+        "Simplex scaling strategy: off / choose / equilibration (default) / "
+        "forced "
+        "equilibration / max value (0/1/2/3/4)",
         advanced, &simplex_scale_strategy, kSimplexScaleStrategyMin,
-        kSimplexScaleStrategyChoose, kSimplexScaleStrategyMax);
+        kSimplexScaleStrategyEquilibration, kSimplexScaleStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -867,11 +875,6 @@ class HighsOptions : public HighsOptionsStruct {
         "timeless_log", "Suppression of time-based data in logging", true,
         &timeless_log, false);
     records.push_back(record_bool);
-
-    record_string =
-        new OptionRecordString(kSolutionFileString, "Solution file", advanced,
-                               &solution_file, kHighsFilenameDefault);
-    records.push_back(record_string);
 
     record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
                                            &log_file, "");
@@ -944,7 +947,27 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string = new OptionRecordString(
+        kReadSolutionFileString, "Read solution file", advanced,
+        &read_solution_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kReadBasisFileString, "Read basis file", advanced, &read_basis_file,
+        kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
         kWriteModelFileString, "Write model file", advanced, &write_model_file,
+        kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_string =
+        new OptionRecordString(kWriteSolutionFileString, "Write solution file",
+                               advanced, &solution_file, kHighsFilenameDefault);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kWriteBasisFileString, "Write basis file", advanced, &write_basis_file,
         kHighsFilenameDefault);
     records.push_back(record_string);
 

@@ -55,7 +55,6 @@ bool checkDualUnboundednessDirection(
     Highs& highs, const vector<double>& dual_unboundedness_direction_value) {
   const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.num_col_;
-  HighsInt numRow = lp.num_row_;
   double dual_unboundedness_direction_error_norm = 0;
   const vector<double>& colLower = lp.col_lower_;
   const vector<double>& colUpper = lp.col_upper_;
@@ -714,7 +713,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
           HighsStatus::kOk);
   std::string presolve_status = "off";
-  bool presolve_off = true;
   HighsModelStatus require_model_status =
       allow_unbounded_or_infeasible ? HighsModelStatus::kUnboundedOrInfeasible
                                     : HighsModelStatus::kUnbounded;
@@ -772,7 +770,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
     highs.clearSolver();
 
     presolve_status = "on";
-    presolve_off = false;
     REQUIRE(highs.setOptionValue("presolve", kHighsOnString) ==
             HighsStatus::kOk);
     highs.clearSolver();
@@ -811,7 +808,6 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
           HighsStatus::kOk);
   std::string presolve_status = "off";
-  bool presolve_off = true;
   HighsModelStatus require_model_status =
       allow_unbounded_or_infeasible ? HighsModelStatus::kUnboundedOrInfeasible
                                     : HighsModelStatus::kUnbounded;
@@ -869,7 +865,6 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
     highs.clearSolver();
 
     presolve_status = "on";
-    presolve_off = false;
     REQUIRE(highs.setOptionValue("presolve", kHighsOnString) ==
             HighsStatus::kOk);
     highs.clearSolver();

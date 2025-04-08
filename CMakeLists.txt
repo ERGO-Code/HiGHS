@@ -54,6 +54,19 @@ else()
   set(GITHASH "n/a")
 endif()
 
+# message("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  message(STATUS "Compiler is IntelLLVM")
+  if (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS "3.23.0") 
+      message(FATAL_ERROR "Need at least CMake 3.23 for IntelLLVM support of IntelDPCPP package on Windows")
+  elseif(CMAKE_VERSION VERSION_LESS "3.23.0")
+      message(FATAL_ERROR "CMake 3.20.5 is the minimum recommended for IntelLLVM on Linux")
+  endif()
+
+  find_package(IntelSYCL REQUIRED)
+endif()
+
+
 message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
@@ -110,7 +123,6 @@ option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 # Only Debug is theted atm 
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
-
 
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
@@ -388,12 +400,13 @@ if (NOT HIGHS_COVERAGE AND NOT APPLE)
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
       check_cxx_compiler_flag("-mpopcntd" COMPILER_SUPPORTS_POPCNTD)
       if(COMPILER_SUPPORTS_POPCNTD)
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
+          # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
+          add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-mpopcntd>")
       endif()
   else()
       check_cxx_compiler_flag("-mpopcnt" COMPILER_SUPPORTS_POPCNT)
       if(COMPILER_SUPPORTS_POPCNT)
-          add_compile_options(-mpopcnt)
+          add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-mpopcnt>")
       endif()
   endif()
 endif()
@@ -661,12 +674,12 @@ if(NOT FAST_BUILD)
     if(NOT CI)
       add_custom_target(coverage
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
-        COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info --ignore-errors gcov,source
+        COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info --ignore-errors gcov,source
-        #COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-        COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info      
-        #COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+        COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+        COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Resetting code coverage counters to zero.
@@ -677,9 +690,7 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
         COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info --ignore-errors gcov,source
-        COMMAND cp ${CMAKE_BINARY_DIR}/coverage.info ${CMAKE_BINARY_DIR}/../        
-        COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Resetting code coverage counters to zero.")

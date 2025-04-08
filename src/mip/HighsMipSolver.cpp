@@ -884,7 +884,8 @@ bool HighsMipSolver::solutionFeasible(
 
   obj = lp->offset_;
 
-  if (kAllowDeveloperAssert) assert(HighsInt(col_value.size()) == lp->num_col_);
+  if (kAllowDeveloperAssert)
+    assert(col_value.size() == static_cast<size_t>(lp->num_col_));
   for (HighsInt i = 0; i != lp->num_col_; ++i) {
     const double value = col_value[i];
     obj += lp->col_cost_[i] * value;
@@ -915,7 +916,7 @@ bool HighsMipSolver::solutionFeasible(
     std::vector<double> row_value;
     if (pass_row_value) {
       if (kAllowDeveloperAssert)
-        assert(HighsInt((*pass_row_value).size()) == lp->num_col_);
+        assert((*pass_row_value).size() == static_cast<size_t>(lp->num_row_));
     } else {
       calculateRowValuesQuad(*lp, col_value, row_value);
     }

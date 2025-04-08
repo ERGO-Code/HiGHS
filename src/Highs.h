@@ -1459,6 +1459,7 @@ class Highs {
   HighsRanging ranging_;
   HighsIis iis_;
   std::vector<HighsObjectiveSolution> saved_objective_and_solution_;
+  HighsFiles files_;
 
   HighsPresolveStatus model_presolve_status_ =
       HighsPresolveStatus::kNotPresolved;
@@ -1694,6 +1695,10 @@ class Highs {
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(
       const HighsLinearObjective* linear_objective = nullptr) const;
+
+  bool optionsHasHighsFiles() const;
+  void saveHighsFiles();
+  void getHighsFiles();
 };
 
 // Start of deprecated methods not in the Highs class
