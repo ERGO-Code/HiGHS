@@ -814,57 +814,68 @@ HighsStatus ipxSolutionToHighsSolution(
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, const HighsModelStatus model_status,
-    HighsSolution& highs_solution) {
+    const std::vector<double>& ipx_zu, HighsSolution& highs_solution) {
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
   highs_solution.col_dual.resize(lp.num_col_);
   highs_solution.row_dual.resize(lp.num_row_);
 
-  const double primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
 
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
-  const bool get_row_activities = true;  // ipx_num_row < lp.num_row_;
+  const bool get_row_activities = ipx_num_row < lp.num_row_;
   if (get_row_activities) row_activity.assign(lp.num_row_, 0);
   HighsInt ipx_slack = lp.num_col_;
   assert(ipx_num_row == lp.num_row_);
-  double dual_residual_norm = 0;
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    double value = ipx_col_value[col];
+  HighsInt dual_infeasibility_count = 0;
+  const bool report_dual_infeasibility = true;
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double rsdu;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double value = ipx_col_value[iCol];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      double check_dual = lp.col_cost_[col];
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; el++) {
+      for (HighsInt el = lp.a_matrix_.start_[iCol];
+           el < lp.a_matrix_.start_[iCol + 1]; el++) {
         HighsInt row = lp.a_matrix_.index_[el];
         row_activity[row] += value * lp.a_matrix_.value_[el];
-        check_dual -= ipx_y[row] * lp.a_matrix_.value_[el];
       }
-      double dual_residual =
-          std::fabs(check_dual - (ipx_zl[col] - ipx_zu[col]));
-      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
     }
-    double dual = ipx_zl[col] - ipx_zu[col];
-    highs_solution.col_value[col] = value;
-    highs_solution.col_dual[col] = dual;
+    double dual = ipx_zl[iCol] - ipx_zu[iCol];
+    highs_solution.col_value[iCol] = value;
+    highs_solution.col_dual[iCol] = dual;
+    if (report_dual_infeasibility) {
+      getVariableKktFailures(
+          options.primal_feasibility_tolerance,
+          options.dual_feasibility_tolerance, lp.col_lower_[iCol],
+          lp.col_upper_[iCol], value, dual, nullptr, HighsVarType::kContinuous,
+          primal_infeasibility, relative_primal_infeasibility,
+          dual_infeasibility, rsdu);
+      bool dual_infeasible =
+          dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible)
+        printf(
+            "IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
+            "%11.4g %d\n",
+            int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol], rsdu,
+            dual, int(++dual_infeasibility_count));
+    }
   }
   HighsInt ipx_row = 0;
   ipx_slack = lp.num_col_;
-  double delta_norm = 0;
-  for (HighsInt row = 0; row < lp.num_row_; row++) {
-    double lower = lp.row_lower_[row];
-    double upper = lp.row_upper_[row];
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
-      highs_solution.row_value[row] = row_activity[row];
-      highs_solution.row_dual[row] = 0;
+      highs_solution.row_value[iRow] = row_activity[iRow];
+      highs_solution.row_dual[iRow] = 0;
       continue;
     }
     // Non-free row, so IPX will have it
@@ -881,234 +892,25 @@ HighsStatus ipxSolutionToHighsSolution(
       value = rhs[ipx_row] - ipx_row_value[ipx_row];
       dual = ipx_y[ipx_row];
     }
-    delta_norm = std::max(std::fabs(value - row_activity[row]), delta_norm);
-    highs_solution.row_value[row] = value;
-    highs_solution.row_dual[row] = dual;
+    highs_solution.row_value[iRow] = value;
+    highs_solution.row_dual[iRow] = dual;
     // Update the IPX row index
     ipx_row++;
-  }
-  //  if (delta_norm >= dual_feasibility_tolerance)
-  highsLogDev(
-      options.log_options, HighsLogType::kInfo,
-      "ipxSolutionToHighsSolution: Norm of dual residual values is %10.4g\n",
-      dual_residual_norm);
-  highsLogDev(
-      options.log_options, HighsLogType::kInfo,
-      "ipxSolutionToHighsSolution: Norm of delta     row values is %10.4g\n",
-      delta_norm);
-  const bool force_dual_feasibility = false;  // true;
-  const bool minimal_truncation = true;
-  if (model_status == HighsModelStatus::kOptimal &&
-      (force_dual_feasibility || minimal_truncation)) {
-    double primal_truncation_norm = 0;
-    double dual_truncation_norm = 0;
-    double col_primal_truncation_norm = 0;
-    double col_dual_truncation_norm = 0;
-    HighsInt num_primal_truncations = 0;
-    HighsInt num_dual_truncations = 0;
-    HighsInt num_col_primal_truncations = 0;
-    HighsInt num_col_dual_truncations = 0;
-    HighsInt col = 0, row = 0;
-    double lower, upper, value, dual;
-    const HighsInt check_col = -127;
-    const HighsInt check_row = -37;
-    // Truncating to tolerances can lead to infeasibilities by margin
-    // of machine precision
-    const double primal_margin = 0;  // primal_feasibility_tolerance;
-    const double dual_margin = 0;    // dual_feasibility_tolerance;
-    double max_abs_primal_value = 0;
-    for (HighsInt var = 0; var < lp.num_col_ + lp.num_row_; var++) {
-      if (var == lp.num_col_) {
-        col_primal_truncation_norm = primal_truncation_norm;
-        col_dual_truncation_norm = dual_truncation_norm;
-        num_col_primal_truncations = num_primal_truncations;
-        num_col_dual_truncations = num_dual_truncations;
-        primal_truncation_norm = 0;
-        dual_truncation_norm = 0;
-        num_primal_truncations = 0;
-        num_dual_truncations = 0;
-      }
-      const bool is_col = var < lp.num_col_;
-      if (is_col) {
-        col = var;
-        lower = lp.col_lower_[col];
-        upper = lp.col_upper_[col];
-        value = highs_solution.col_value[col];
-        dual = highs_solution.col_dual[col];
-        if (col == check_col) {
-          printf("Column %d\n", (int)check_col);
-        }
-      } else {
-        row = var - lp.num_col_;
-        lower = lp.row_lower_[row];
-        upper = lp.row_upper_[row];
-        value = highs_solution.row_value[row];
-        dual = highs_solution.row_dual[row];
-        if (row == check_row) {
-          printf("Row %d\n", (int)check_row);
-        }
-      }
-      // Continue if equality: cannot have dual infeasibility
-      if (lower >= upper) continue;
-      double dual_truncation = 0;
-      double primal_truncation = 0;
-      double dual_infeasibility = 0;
-      double residual = std::fabs(std::max(lower - value, value - upper));
-      double new_value = value;
-      double new_dual = dual;
-      const bool at_lower = value <= lower + primal_feasibility_tolerance;
-      const bool at_upper = value >= upper - primal_feasibility_tolerance;
-      // Continue if at distinct bounds: cannot have dual infeasibility
-      if (at_lower && at_upper) continue;
-      if (at_lower) {
-        dual_infeasibility = -dual;
-      } else if (at_upper) {
-        dual_infeasibility = dual;
-      } else {
-        dual_infeasibility = std::fabs(dual);
-      }
-      // Continue if no dual infeasibility
-      if (dual_infeasibility <= dual_feasibility_tolerance) continue;
-
-      if (residual < dual_infeasibility && !force_dual_feasibility) {
-        /*
-          // Residual is less than dual infeasibility, or not forcing
-          // dual feasibility, so truncate value
-          if (at_lower) {
-            assert(10 == 50);
-          } else if (at_upper) {
-            assert(11 == 50);
-          } else {
-            // Off bound
-            if (lower <= -kHighsInf) {
-              if (upper >= kHighsInf) {
-                // Free shouldn't be possible, as residual would be inf
-                assert(12 == 50);
-              } else {
-                // Upper bounded, so assume dual is negative
-                if (dual > 0) assert(13 == 50);
-              }
-            } else if (upper >= kHighsInf) {
-              // Lower bounded, so assume dual is positive
-              if (dual < 0) assert(14 == 50);
-            }
-          }
-        */
-        num_primal_truncations++;
-        if (dual > 0) {
-          // Put closest to lower
-          if (value < lower) {
-            new_value = lower - primal_margin;
-          } else {
-            new_value = lower + primal_margin;
-          }
-        } else {
-          // Put closest to upper
-          if (value < upper) {
-            new_value = upper - primal_margin;
-          } else {
-            new_value = upper + primal_margin;
-          }
-        }
-      } else {
-        // Residual is greater than dual infeasibility, or forcing
-        // dual feasibility, so truncate dual
-        num_dual_truncations++;
-        if (at_lower) {
-          // At lower bound, so possibly truncate to -dual_margin
-          new_dual = -dual_margin;
-        } else if (at_upper) {
-          // At upper bound, so possibly truncate to dual_margin
-          new_dual = dual_margin;
-        } else {
-          // Between bounds so possibly set dual to signed dual_margin
-          if (dual > 0) {
-            new_dual = dual_margin;
-          } else {
-            new_dual = -dual_margin;
-          }
-        }
-      }
-      primal_truncation = std::fabs(value - new_value);
-      dual_truncation = std::fabs(dual - new_dual);
-      primal_truncation_norm =
-          std::max(primal_truncation, primal_truncation_norm);
-      dual_truncation_norm = std::max(dual_truncation, dual_truncation_norm);
-      /*if (dual_truncation > 1e-2 || primal_truncation > 1e-2)
+    if (report_dual_infeasibility) {
+      getVariableKktFailures(
+          options.primal_feasibility_tolerance,
+          options.dual_feasibility_tolerance, lp.row_lower_[iRow],
+          lp.row_upper_[iRow], value, dual, nullptr, HighsVarType::kContinuous,
+          primal_infeasibility, relative_primal_infeasibility,
+          dual_infeasibility, rsdu);
+      bool dual_infeasible =
+          dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible)
         printf(
-            "%s %4d: [%11.4g, %11.4g, %11.4g] residual = %11.4g; new = %11.4g; "
-            "truncation = %11.4g | "
-            "dual = %11.4g; new = %11.4g; truncation = %11.4g\n",
-            is_col ? "Col" : "Row", (int)(is_col ? col : row), lower, value,
-            upper, residual, new_value, primal_truncation, dual, new_dual,
-            dual_truncation);
-      */
-      max_abs_primal_value =
-          std::max(std::abs(new_value), max_abs_primal_value);
-      if (is_col) {
-        highs_solution.col_value[col] = new_value;
-        highs_solution.col_dual[col] = new_dual;
-      } else {
-        highs_solution.row_value[row] = new_value;
-        highs_solution.row_dual[row] = new_dual;
-      }
-    }
-    // Assess the truncations
-    //  if (dual_truncation_norm >= dual_margin)
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d col  primal "
-                "truncations is %10.4g\n",
-                num_col_primal_truncations, col_primal_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d row  primal "
-                "truncations is %10.4g\n",
-                num_primal_truncations, primal_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d col    dual "
-                "truncations is %10.4g\n",
-                num_col_dual_truncations, col_dual_truncation_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Norm of %6d row    dual "
-                "truncations is %10.4g\n",
-                num_dual_truncations, dual_truncation_norm);
-    // Determine the new residuals
-
-    vector<double> final_row_activity;
-    final_row_activity.assign(lp.num_row_, 0);
-    dual_residual_norm = 0;
-    for (HighsInt col = 0; col < lp.num_col_; col++) {
-      double check_dual = lp.col_cost_[col];
-      for (HighsInt el = lp.a_matrix_.start_[col];
-           el < lp.a_matrix_.start_[col + 1]; el++) {
-        HighsInt row = lp.a_matrix_.index_[el];
-        final_row_activity[row] +=
-            highs_solution.col_value[col] * lp.a_matrix_.value_[el];
-        check_dual -= highs_solution.row_dual[row] * lp.a_matrix_.value_[el];
-      }
-      double dual_residual =
-          std::fabs(check_dual - highs_solution.col_dual[col]);
-      dual_residual_norm = std::max(dual_residual, dual_residual_norm);
-    }
-    double primal_residual_norm = 0;
-    for (HighsInt row = 0; row < lp.num_row_; row++) {
-      double primal_residual =
-          std::fabs(final_row_activity[row] - highs_solution.row_value[row]);
-      primal_residual_norm = std::max(primal_residual, primal_residual_norm);
-    }
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Final norm of primal residual "
-                "values is %10.4g\n",
-                primal_residual_norm);
-    highsLogDev(options.log_options, HighsLogType::kInfo,
-                "ipxSolutionToHighsSolution: Final norm of dual   residual "
-                "values is %10.4g\n",
-                dual_residual_norm);
-    if (max_abs_primal_value > kExcessivePrimalValue) {
-      //    highsLogUser(options.log_options, HighsLogType::kInfo,
-      printf(
-          "ipxSolutionToHighsSolution: "
-          "Excessive corrected |primal value| is %10.4g\n",
-          max_abs_primal_value);
+            "IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
+            "%11.4g %d\n",
+            int(iRow), lp.row_lower_[iRow], value, lp.row_upper_[iRow], rsdu,
+            dual, int(++dual_infeasibility_count));
     }
   }
   assert(ipx_row == ipx_num_row);
@@ -1512,73 +1314,6 @@ void accommodateAlienBasis(HighsLpSolverObject& solver_object) {
   assert(num_basic_variables == num_row);
 }
 
-void correctResiduals(HighsLpSolverObject& solver_object) {
-  HighsOptions& options = solver_object.options_;
-  HighsSolution& solution = solver_object.solution_;
-  const bool& have_primal_solution = solution.value_valid;
-  const bool& have_dual_solution = solution.dual_valid;
-  assert(have_primal_solution);
-  assert(have_dual_solution);
-  HighsLp& lp = solver_object.lp_;
-  std::vector<double> check_row_value;
-  std::vector<double> check_col_dual;
-  lp.a_matrix_.productQuad(check_row_value, solution.col_value);
-  if (have_dual_solution) {
-    lp.a_matrix_.productTransposeQuad(check_col_dual, solution.row_dual);
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      check_col_dual[iCol] -= lp.col_cost_[iCol];
-  }
-  double norm_primal_residual = 0;
-  HighsInt num_primal_correction = 0;
-  double max_primal_correction = 0;
-  double sum_primal_correction = 0;
-  double use_primal_residual_tolerance = options.primal_residual_tolerance;
-
-  double norm_dual_residual = 0;
-  HighsInt num_dual_correction = 0;
-  double max_dual_correction = 0;
-  double sum_dual_correction = 0;
-  double use_dual_residual_tolerance = options.dual_residual_tolerance;
-
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    double primal_residual = check_row_value[iRow] - solution.row_value[iRow];
-    double abs_primal_residual = std::fabs(primal_residual);
-    if (abs_primal_residual > use_primal_residual_tolerance) {
-      solution.row_value[iRow] += primal_residual;
-      double check_primal_residual =
-          std::fabs(check_row_value[iRow] - solution.row_value[iRow]);
-      assert(check_primal_residual < 1e-10);
-      num_primal_correction++;
-      max_primal_correction =
-          std::max(abs_primal_residual, max_primal_correction);
-      sum_primal_correction += abs_primal_residual;
-    }
-    norm_primal_residual = std::max(abs_primal_residual, norm_primal_residual);
-  }
-  if (have_dual_solution) {
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      double dual_residual = check_col_dual[iCol] + solution.col_dual[iCol];
-      double abs_dual_residual = std::fabs(dual_residual);
-      if (abs_dual_residual > use_dual_residual_tolerance) {
-        solution.col_dual[iCol] -= dual_residual;
-        num_dual_correction++;
-        max_dual_correction = std::max(abs_dual_residual, max_dual_correction);
-        sum_dual_correction += abs_dual_residual;
-      }
-      norm_dual_residual = std::max(abs_dual_residual, norm_dual_residual);
-    }
-  }
-
-  if (num_primal_correction > 0 || num_dual_correction > 0)
-    highsLogUser(
-        options.log_options, HighsLogType::kWarning,
-        "LP solver residuals: primal = %g; dual = %g yield num/max/sum primal "
-        "(%d/%g/%g) and dual (%d/%g/%g) corrections\n",
-        norm_primal_residual, norm_dual_residual, int(num_primal_correction),
-        max_primal_correction, sum_primal_correction, int(num_dual_correction),
-        max_dual_correction, sum_dual_correction);
-}
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.model_status_ = HighsModelStatus::kNotset;
   solver_object.highs_info_.objective_function_value = 0;
@@ -1782,123 +1517,3 @@ void HighsBasis::clear() {
   this->col_status.clear();
 }
 
-HighsStatus ipxSolutionToHighsSolutionNew(
-    const HighsOptions& options, const HighsLp& lp,
-    const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
-    const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
-    const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, HighsSolution& highs_solution) {
-  // Resize the HighsSolution
-  highs_solution.col_value.resize(lp.num_col_);
-  highs_solution.row_value.resize(lp.num_row_);
-  highs_solution.col_dual.resize(lp.num_col_);
-  highs_solution.row_dual.resize(lp.num_row_);
-
-  const std::vector<double>& ipx_col_value = ipx_x;
-  const std::vector<double>& ipx_row_value = ipx_slack_vars;
-
-  // Row activities are needed to set activity values of free rows -
-  // which are ignored by IPX
-  vector<double> row_activity;
-  const bool get_row_activities = ipx_num_row < lp.num_row_;
-  if (get_row_activities) row_activity.assign(lp.num_row_, 0);
-  HighsInt ipx_slack = lp.num_col_;
-  assert(ipx_num_row == lp.num_row_);
-  HighsInt dual_infeasibility_count = 0;
-  const bool report_dual_infeasibility = true;
-  double primal_infeasibility;
-  double relative_primal_infeasibility;
-  double dual_infeasibility;
-  double rsdu;
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    double value = ipx_col_value[iCol];
-    if (get_row_activities) {
-      // Accumulate row activities to assign value to free rows
-      for (HighsInt el = lp.a_matrix_.start_[iCol];
-           el < lp.a_matrix_.start_[iCol + 1]; el++) {
-        HighsInt row = lp.a_matrix_.index_[el];
-        row_activity[row] += value * lp.a_matrix_.value_[el];
-      }
-    }
-    double dual = ipx_zl[iCol] - ipx_zu[iCol];
-    highs_solution.col_value[iCol] = value;
-    highs_solution.col_dual[iCol] = dual;
-    if (report_dual_infeasibility) {
-      getVariableKktFailures(
-          options.primal_feasibility_tolerance,
-          options.dual_feasibility_tolerance, lp.col_lower_[iCol],
-          lp.col_upper_[iCol], value, dual, nullptr, HighsVarType::kContinuous,
-          primal_infeasibility, relative_primal_infeasibility,
-          dual_infeasibility, rsdu);
-      bool dual_infeasible =
-          dual_infeasibility > options.dual_feasibility_tolerance;
-      if (dual_infeasible)
-        printf(
-            "IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
-            "%11.4g %d\n",
-            int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol], rsdu,
-            dual, int(++dual_infeasibility_count));
-    }
-  }
-  HighsInt ipx_row = 0;
-  ipx_slack = lp.num_col_;
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    double lower = lp.row_lower_[iRow];
-    double upper = lp.row_upper_[iRow];
-    if (lower <= -kHighsInf && upper >= kHighsInf) {
-      // Free row - removed by IPX so set it to its row activity
-      highs_solution.row_value[iRow] = row_activity[iRow];
-      highs_solution.row_dual[iRow] = 0;
-      continue;
-    }
-    // Non-free row, so IPX will have it
-    double value = 0;
-    double dual = 0;
-    if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
-      assert(constraint_type[ipx_row] == '=');
-      // Boxed row - look at its slack
-      value = ipx_col_value[ipx_slack];
-      dual = ipx_zl[ipx_slack] - ipx_zu[ipx_slack];
-      // Update the slack to be used for boxed rows
-      ipx_slack++;
-    } else {
-      value = rhs[ipx_row] - ipx_row_value[ipx_row];
-      dual = ipx_y[ipx_row];
-    }
-    highs_solution.row_value[iRow] = value;
-    highs_solution.row_dual[iRow] = dual;
-    // Update the IPX row index
-    ipx_row++;
-    if (report_dual_infeasibility) {
-      getVariableKktFailures(
-          options.primal_feasibility_tolerance,
-          options.dual_feasibility_tolerance, lp.row_lower_[iRow],
-          lp.row_upper_[iRow], value, dual, nullptr, HighsVarType::kContinuous,
-          primal_infeasibility, relative_primal_infeasibility,
-          dual_infeasibility, rsdu);
-      bool dual_infeasible =
-          dual_infeasibility > options.dual_feasibility_tolerance;
-      if (dual_infeasible)
-        printf(
-            "IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
-            "%11.4g %d\n",
-            int(iRow), lp.row_lower_[iRow], value, lp.row_upper_[iRow], rsdu,
-            dual, int(++dual_infeasibility_count));
-    }
-  }
-  assert(ipx_row == ipx_num_row);
-  assert(ipx_slack == ipx_num_col);
-  if (lp.sense_ == ObjSense::kMaximize) {
-    // Flip dual values since original LP is maximization
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      highs_solution.col_dual[iCol] *= -1;
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-      highs_solution.row_dual[iRow] *= -1;
-  }
-
-  // Indicate that the primal and dual solution are known
-  highs_solution.value_valid = true;
-  highs_solution.dual_valid = true;
-  return HighsStatus::kOk;
-}
