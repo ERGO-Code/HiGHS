@@ -268,8 +268,8 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test/KktCh2.cpp
-    test/DevKkt.cpp
+    test_kkt/KktCh2.cpp
+    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -415,8 +415,8 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test/DevKkt.h
-    test/KktCh2.h
+    test_kkt/DevKkt.h
+    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h

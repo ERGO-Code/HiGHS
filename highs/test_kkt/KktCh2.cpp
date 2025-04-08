@@ -5,7 +5,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file test/KktChStep.cpp
+/**@file test_kkt/KktChStep.cpp
  * @brief
  */
 #include "test_kkt/KktCh2.h"

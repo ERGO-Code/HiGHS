@@ -5,7 +5,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file test/DevKkt.h
+/**@file test_kkt/DevKkt.h
  * @brief
  */
 #ifndef TEST_KKT_DEV_KKT_H_

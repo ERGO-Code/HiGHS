@@ -164,7 +164,7 @@ class HMpsFF {
 
   enum class Boundtype { kLe, kEq, kGe };  //, kFr };
 
-  // see https://docs.mosek.com/latest/capi/mps-format.html#csection-optional
+  // see https://docs.mosek.com/latest_kkt/capi/mps-format.html#csection-optional
   enum class ConeType { kZero, kQuad, kRQuad, kPExp, kPPow, kDExp, kDPow };
 
   std::string objective_name;

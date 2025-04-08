@@ -61,7 +61,7 @@ cc_library(
         # "highs/presolve",
         # "highs/qpsolver",
         # "highs/simplex",
-        # "highs/test",
+        # "highs/test_kkt",
         # "highs/util",
         "bazel-bin",
     ],
