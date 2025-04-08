@@ -12,6 +12,7 @@ import Clang: Generators
 
 highs_src = joinpath(dirname(dirname(@__DIR__)), "highs")
 c_api = joinpath(highs_src, "interfaces", "highs_c_api.h")
+libhighs_filename = joinpath(@__DIR__, "libhighs.jl")
 
 Generators.build!(
     Generators.create_context(
@@ -19,7 +20,7 @@ Generators.build!(
         [Generators.get_default_args(); "-I$highs_src"; "-I$(@__DIR__)"],
         Dict{String,Any}(
             "general" => Dict{String,Any}(
-                "output_file_path" => joinpath(@__DIR__, "libhighs.jl"),
+                "output_file_path" => libhighs_filename,
                 "library_name" => "libhighs",
                 "print_using_CEnum" => false,
                 "extract_c_comment_style" => "doxygen",
@@ -28,7 +29,15 @@ Generators.build!(
     ),
 )
 
-open(joinpath(@__DIR__, "libhighs.jl"), "a") do io
+write(
+    libhighs_filename,
+    replace(
+        read(libhighs_filename, String),
+        "[`HighsInt`](@ref)" => "`HighsInt`",
+    ),
+)
+
+open(libhighs_filename, "a") do io
     for line in readlines(c_api)
         m = match(r"const HighsInt kHighs([a-zA-Z]+) = (-?[0-9]+);", line)
         if m === nothing
