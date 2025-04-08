@@ -1477,11 +1477,11 @@ class Highs {
 
   HighsInt max_threads = 0;
   // This is strictly for debugging. It's used to check whether
-  // returnFromRun() was called after the previous call to
-  // Highs::run() and, assuming that this is always done, it checks
-  // whether Highs::run() is called recursively.
-  bool called_return_from_run = true;
-  HighsInt debug_run_call_num_ = 0;
+  // returnFromOptimize() was called after the previous call to
+  // Highs::optimize() and, assuming that this is always done, it checks
+  // whether Highs::optimize() is called recursively.
+  bool called_return_from_optimize = true;
+  HighsInt debug_optimize_call_num_ = 0;
 
   bool written_log_header_ = false;
 
@@ -1569,8 +1569,8 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromRun(const HighsStatus return_status,
-                            const bool undo_mods);
+  HighsStatus returnFromOptimize(const HighsStatus return_status,
+				 const bool undo_mods);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
