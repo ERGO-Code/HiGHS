@@ -939,8 +939,7 @@ bool HighsPrimalHeuristics::tryShiftedPoint(const std::vector<double>& point,
     double intval = point[col];
     double rounded;
     // make sure that solution value is integral
-    if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol)
-      continue;
+    if (fractionality(intval, &rounded) > mipsolver.mipdata_->feastol) continue;
     intval = rounded;
     intval = std::min(localdom.col_upper_[col], intval);
     intval = std::max(localdom.col_lower_[col], intval);
@@ -985,8 +984,8 @@ bool HighsPrimalHeuristics::tryShiftedPoint(const std::vector<double>& point,
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
-        ZIRound(lprelax.getLpSolver().getSolution().col_value);
-        return mipsolver.mipdata_->trySolution(
+      ZIRound(lprelax.getLpSolver().getSolution().col_value);
+      return mipsolver.mipdata_->trySolution(
           lprelax.getLpSolver().getSolution().col_value, source);
     }
   }

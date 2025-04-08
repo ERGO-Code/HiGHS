@@ -1092,34 +1092,30 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_RINS",
-        "Run RINS heuristic: Default = true", advanced,
-        &mip_heuristic_run_RINS, true);
+    record_bool = new OptionRecordBool("mip_heuristic_run_RINS",
+                                       "Run RINS heuristic: Default = true",
+                                       advanced, &mip_heuristic_run_RINS, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool(
-        "mip_heuristic_run_RENS",
-        "Run RENS heuristic: Default = true", advanced, 
-        &mip_heuristic_run_RENS, true);
+    record_bool = new OptionRecordBool("mip_heuristic_run_RENS",
+                                       "Run RENS heuristic: Default = true",
+                                       advanced, &mip_heuristic_run_RENS, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "mip_heuristic_run_rootReducedCost",
-        "Run rootReducedCost heuristic: Default = true", advanced, 
+        "Run rootReducedCost heuristic: Default = true", advanced,
         &mip_heuristic_run_rootReducedCost, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
-        "mip_heuristic_run_ZIRound",
-        "Run ZI Round heuristic: Default = false", advanced,
-        &mip_heuristic_run_ZIRound, false);
+        "mip_heuristic_run_ZIRound", "Run ZI Round heuristic: Default = false",
+        advanced, &mip_heuristic_run_ZIRound, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
-        "mip_heuristic_run_Shifting",
-        "Run Shifting heuristic: Default = false", advanced,
-        &mip_heuristic_run_Shifting, false);
+        "mip_heuristic_run_Shifting", "Run Shifting heuristic: Default = false",
+        advanced, &mip_heuristic_run_Shifting, false);
     records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(

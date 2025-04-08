@@ -256,7 +256,7 @@ restart:
             analysis_.mipTimerStop(kMipClockDiveRandomizedRounding);
           }
 
-         if (mipdata_->incumbent.empty()) {
+          if (mipdata_->incumbent.empty()) {
             if (options_mip_->mip_heuristic_run_RENS) {
               analysis_.mipTimerStart(kMipClockDiveRens);
               mipdata_->heuristics.RENS(

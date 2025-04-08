@@ -60,7 +60,7 @@ class HighsPrimalHeuristics {
   bool tryRoundedPoint(const std::vector<double>& point,
                        const int solution_source);
 
-  bool tryShiftedPoint(const std::vector<double>& point, char source);  
+  bool tryShiftedPoint(const std::vector<double>& point, char source);
 
   bool linesearchRounding(const std::vector<double>& point1,
                           const std::vector<double>& point2,
@@ -69,9 +69,8 @@ class HighsPrimalHeuristics {
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
   void Shifting(const std::vector<double>& relaxationsol);
-  
+
   void ZIRound(const std::vector<double>& relaxationsol);
-  
 };
 
 #endif
