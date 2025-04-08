@@ -16,8 +16,8 @@
 ./HiGHS_CopyrightHeader.pl ../highs/presolve/*.h
 ./HiGHS_CopyrightHeader.pl ../highs/simplex/*.h
 ./HiGHS_CopyrightHeader.pl ../highs/simplex/*.cpp
-./HiGHS_CopyrightHeader.pl ../highs/test/*.h
-./HiGHS_CopyrightHeader.pl ../highs/test/*.cpp
+./HiGHS_CopyrightHeader.pl ../highs/test_kkt/*.h
+./HiGHS_CopyrightHeader.pl ../highs/test_kkt/*.cpp
 ./HiGHS_CopyrightHeader.pl ../highs/util/*.h
 ./HiGHS_CopyrightHeader.pl ../highs/util/*.cpp
 ./HiGHS_CopyrightHeader.pl ../app/RunHighs.cpp

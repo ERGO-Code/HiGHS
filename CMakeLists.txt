@@ -716,7 +716,7 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs/presolve
     ${PROJECT_SOURCE_DIR}/highs/qpsolver
     ${PROJECT_SOURCE_DIR}/highs/simplex
-    ${PROJECT_SOURCE_DIR}/highs/test
+    ${PROJECT_SOURCE_DIR}/highs/test_kkt
     ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja

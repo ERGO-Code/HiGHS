@@ -18,7 +18,7 @@ set(include_dirs_python
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
     $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
@@ -266,8 +266,8 @@ set(highs_sources_python
     highs/simplex/HSimplexNlaFreeze.cpp
     highs/simplex/HSimplexNlaProductForm.cpp
     highs/simplex/HSimplexReport.cpp
-    highs/test/KktCh2.cpp
-    highs/test/DevKkt.cpp
+    highs/test_kkt/KktCh2.cpp
+    highs/test_kkt/DevKkt.cpp
     highs/util/HFactor.cpp
     highs/util/HFactorDebug.cpp
     highs/util/HFactorExtend.cpp
@@ -410,8 +410,8 @@ set(highs_headers_python
     highs/simplex/SimplexConst.h
     highs/simplex/SimplexStruct.h
     highs/simplex/SimplexTimer.h
-    highs/test/DevKkt.h
-    highs/test/KktCh2.h
+    highs/test_kkt/DevKkt.h
+    highs/test_kkt/KktCh2.h
     highs/util/FactorTimer.h
     highs/util/HFactor.h
     highs/util/HFactorConst.h
