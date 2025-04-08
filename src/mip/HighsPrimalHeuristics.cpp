@@ -924,16 +924,15 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
+      const auto& lpsol = lprelax.getLpSolver().getSolution().col_value;
       if (!integerFeasible) {
         // there may be fractional integer variables -> try ZIRound heuristic
-        ZIRound(lprelax.getLpSolver().getSolution().col_value);
-        return mipsolver.mipdata_->trySolution(
-            lprelax.getLpSolver().getSolution().col_value, solution_source);
+        ZIRound(lpsol);
+        return mipsolver.mipdata_->trySolution(lpsol, solution_source);
       } else {
         // all integer variables are fixed -> add incumbent
-        mipsolver.mipdata_->addIncumbent(
-            lprelax.getLpSolver().getSolution().col_value,
-            lprelax.getObjective(), solution_source);
+        mipsolver.mipdata_->addIncumbent(lpsol, lprelax.getObjective(),
+                                         solution_source);
         return true;
       }
     }
