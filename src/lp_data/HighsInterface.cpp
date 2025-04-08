@@ -2653,6 +2653,17 @@ HighsStatus Highs::lpKktCheck() {
             int(info.num_primal_residual_errors),
             int(info.num_dual_residual_errors),
             info.relative_primal_dual_objective_error);
+        printf(
+            "   num/max/sum %6d / %9.4g / %9.4g     primal residual errors   "
+            "(tolerance = %9.4g)\n",
+            int(info.num_primal_residual_errors),
+            info.max_primal_residual_error, info.sum_primal_residual_errors,
+            options.primal_residual_tolerance);
+        printf(
+            "   num/max/sum %6d / %9.4g / %9.4g       dual residual errors   "
+            "(tolerance = %9.4g)\n",
+            int(info.num_dual_residual_errors), info.max_dual_residual_error,
+            info.sum_dual_residual_errors, options.dual_residual_tolerance);
       }
       assert(info.num_complementarity_violations == 0);
       assert(info.num_primal_residual_errors == 0);
