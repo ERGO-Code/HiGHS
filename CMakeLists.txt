@@ -521,7 +521,7 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 # string(TIMESTAMP TODAY "%Y-%m-%d")
 # message(STATUS "Compilation date: " ${TODAY})
 
-configure_file(${PROJECT_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+configure_file(${PROJECT_SOURCE_DIR}/highs/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if (DEBUG_MEMORY STREQUAL "Address")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
@@ -679,7 +679,7 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
         COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/highs --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
@@ -693,7 +693,7 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
         COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/highs --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Resetting code coverage counters to zero.")
@@ -705,19 +705,19 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/app
     ${PROJECT_SOURCE_DIR}/extern
     ${PROJECT_SOURCE_DIR}/extern/zstr
-    ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_SOURCE_DIR}/src/io
-    ${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp
-    ${PROJECT_SOURCE_DIR}/src/ipm/ipx
-    ${PROJECT_SOURCE_DIR}/src/ipm/basiclu
-    ${PROJECT_SOURCE_DIR}/src/lp_data
-    ${PROJECT_SOURCE_DIR}/src/mip
-    ${PROJECT_SOURCE_DIR}/src/model
-    ${PROJECT_SOURCE_DIR}/src/presolve
-    ${PROJECT_SOURCE_DIR}/src/qpsolver
-    ${PROJECT_SOURCE_DIR}/src/simplex
-    ${PROJECT_SOURCE_DIR}/src/test
-    ${PROJECT_SOURCE_DIR}/src/util)
+    ${PROJECT_SOURCE_DIR}/highs
+    ${PROJECT_SOURCE_DIR}/highs/io
+    ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/highs/ipm/ipx
+    ${PROJECT_SOURCE_DIR}/highs/ipm/basiclu
+    ${PROJECT_SOURCE_DIR}/highs/lp_data
+    ${PROJECT_SOURCE_DIR}/highs/mip
+    ${PROJECT_SOURCE_DIR}/highs/model
+    ${PROJECT_SOURCE_DIR}/highs/presolve
+    ${PROJECT_SOURCE_DIR}/highs/qpsolver
+    ${PROJECT_SOURCE_DIR}/highs/simplex
+    ${PROJECT_SOURCE_DIR}/highs/test
+    ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -731,7 +731,7 @@ if(NOT FAST_BUILD)
   # endif()
 
   # Targets
-  add_subdirectory(src)
+  add_subdirectory(highs)
   add_subdirectory(app)
   if(BUILD_TESTING)
     enable_testing()

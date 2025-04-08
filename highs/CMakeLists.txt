@@ -96,10 +96,10 @@ if(NOT FAST_BUILD)
     FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
   # Configure the config file for the build tree:
-  # Either list all the src/* directories here, or put explicit paths in all the
+  # Either list all the highs/* directories here, or put explicit paths in all the
   # include statements.
   # M reckons that the latter is more transparent, and I'm inclined to agree.
-  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+  set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/highs" "${HIGHS_BINARY_DIR}")
   configure_file(${PROJECT_SOURCE_DIR}/cmake/highs-config.cmake.in
     "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
@@ -155,7 +155,7 @@ else()
   if (CUPDLP_GPU)
 
     target_include_directories(highs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
-    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/")
+    set(CUPDLP_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/")
 
     add_subdirectory(pdlp/cupdlp/cuda)
 

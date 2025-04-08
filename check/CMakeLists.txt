@@ -9,7 +9,7 @@ if (FORTRAN AND NOT BUILD_EXTRA_UNIT_ONLY)
         target_link_libraries(fortrantest highs FortranHighs)
     endif()
     target_include_directories(fortrantest PUBLIC 
-        ${PROJECT_SOURCE_DIR}/src/interfaces
+        ${PROJECT_SOURCE_DIR}/highs/interfaces
         ${PROJECT_SOURCE_DIR}/check)
 endif()
 
@@ -120,7 +120,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         else()
             target_link_libraries(unit_tests cudalin ${CUDA_LIBRARY} m)
         endif()
-        target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/pdlp/cupdlp/cuda)
+        target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp/cuda)
         set_target_properties(unit_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     endif()
   else()

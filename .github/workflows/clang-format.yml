@@ -11,7 +11,7 @@ jobs:
     - uses: DoozyX/clang-format-lint-action@v0.18
       with:
         source: 
-          'app/ src/Highs.h ./src/lp_data ./src/mip ./src/model ./src/simplex ./src/presolve  ./src/simplex ./src/util ./src/test ./src/qpsolver'
-        # ./src/test ./interfaces'
+          'app/ highs/Highs.h ./highs/lp_data ./highs/mip ./highs/model ./highs/simplex ./highs/presolve  ./highs/simplex ./highs/util ./highs/test ./highs/qpsolver'
+        # ./highs/test ./interfaces'
         extensions: 'h,cpp,c'
         clangFormatVersion: 18
