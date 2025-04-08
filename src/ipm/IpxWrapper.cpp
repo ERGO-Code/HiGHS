@@ -870,11 +870,11 @@ void getHighsNonVertexSolution(const HighsOptions& options, const HighsLp& lp,
   const bool new_method = true;
   if (new_method) {
     ipxSolutionToHighsSolutionNew(options, lp, rhs, constraint_type, num_col,
-				  num_row, x, slack, y, zl, zu, highs_solution);
+                                  num_row, x, slack, y, zl, zu, highs_solution);
   } else {
     ipxSolutionToHighsSolution(options, lp, rhs, constraint_type, num_col,
-			       num_row, x, slack, y, zl, zu, model_status,
-			       highs_solution);
+                               num_row, x, slack, y, zl, zu, model_status,
+                               highs_solution);
   }
 }
 

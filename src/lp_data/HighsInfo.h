@@ -310,9 +310,10 @@ class HighsInfo : public HighsInfoStruct {
         advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
 
-    record_double = new InfoRecordDouble(
-        "relative_primal_dual_objective_error", "Relative prima-dual objective error",
-        advanced, &relative_primal_dual_objective_error, 0);
+    record_double =
+        new InfoRecordDouble("relative_primal_dual_objective_error",
+                             "Relative primal-dual objective error", advanced,
+                             &relative_primal_dual_objective_error, 0);
     records.push_back(record_double);
 
     record_double =

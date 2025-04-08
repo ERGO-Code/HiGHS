@@ -1938,8 +1938,9 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
   info_.dual_objective_value = 0;
   const HighsInt num_tot = lp_.num_col_ + lp_.num_row_;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    if (basis_.nonbasicFlag_[iCol]) 
-      info_.dual_objective_value += info_.workValue_[iCol] * info_.workDual_[iCol];
+    if (basis_.nonbasicFlag_[iCol])
+      info_.dual_objective_value +=
+          info_.workValue_[iCol] * info_.workDual_[iCol];
   }
   info_.dual_objective_value *= cost_scale_;
   if (phase != 1) {

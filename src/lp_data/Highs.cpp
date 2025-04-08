@@ -1553,7 +1553,8 @@ HighsStatus Highs::solve() {
         model_presolve_status_ == HighsPresolveStatus::kReduced &&
         model_status_ == HighsModelStatus::kUnknown;
 
-    // #2251 Ultimately model_status_ == HighsModelStatus::kUnknown won't be passed down
+    // #2251 Ultimately model_status_ == HighsModelStatus::kUnknown won't be
+    // passed down
     //    assert(model_status_ != HighsModelStatus::kUnknown);
     if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
       // ToDo Put this in a separate method
@@ -1595,12 +1596,6 @@ HighsStatus Highs::solve() {
           // and IPX determined optimality
           solution_.dual_valid = true;
           basis_.invalidate();
-
-          HighsPrimalDualErrors primal_dual_errors;
-          const bool get_residuals = true;
-          getLpKktFailures(options_, model_.lp_, solution_, basis_, info_,
-                           primal_dual_errors, get_residuals);
-          reportLpKktFailures(options_, info_);
         } else {
           //
           // Hot-start the simplex solver for the incumbent LP
@@ -1905,7 +1900,7 @@ HighsStatus Highs::getIis(HighsIis& iis) {
 HighsStatus Highs::getDualObjectiveValue(
     double& dual_objective_function_value) const {
   bool have_dual_objective_value = false;
-  if (!this->model_.isQp()) 
+  if (!this->model_.isQp())
     have_dual_objective_value = computeDualObjectiveValue(
         model_.lp_, solution_, dual_objective_function_value);
   return have_dual_objective_value ? HighsStatus::kOk : HighsStatus::kError;
@@ -3772,7 +3767,6 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
   return_status = solveLp(solver_object, message);
   // Extract the model status
   model_status_ = solver_object.model_status_;
-  if (model_status_ == HighsModelStatus::kOptimal) return checkOptimality("LP");
   return return_status;
 }
 
@@ -4603,7 +4597,8 @@ void Highs::reportSolvedLpQpStats() {
     assert(status == HighsStatus::kOk);
     // #2251 for checking <<<
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Relative P-D error  : %17.10e\n", info_.relative_primal_dual_objective_error);
+                 "Relative P-D error  : %17.10e\n",
+                 info_.relative_primal_dual_objective_error);
   }
   if (!options_.timeless_log) {
     double run_time = timer_.read();

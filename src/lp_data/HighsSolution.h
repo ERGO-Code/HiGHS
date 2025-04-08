@@ -78,8 +78,8 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
-void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp& lp,
-                    const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const bool is_qp,
+                    const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
@@ -125,8 +125,7 @@ HighsStatus ipxSolutionToHighsSolutionNew(
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, 
-    HighsSolution& highs_solution);
+    const std::vector<double>& ipx_zu, HighsSolution& highs_solution);
 
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,

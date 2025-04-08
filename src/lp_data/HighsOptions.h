@@ -1107,7 +1107,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
+        "mip_feasibility_tolerance", "MIP integrality tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
     records.push_back(record_double);
 

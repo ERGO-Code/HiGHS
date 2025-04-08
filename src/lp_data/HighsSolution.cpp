@@ -36,8 +36,8 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  getKktFailures(options, model.isQp(), model.lp_, gradient, solution, basis, highs_info,
-                 primal_dual_errors, get_residuals);
+  getKktFailures(options, model.isQp(), model.lp_, gradient, solution, basis,
+                 highs_info, primal_dual_errors, get_residuals);
 }
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
@@ -57,8 +57,8 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                  primal_dual_errors, get_residuals);
 }
 
-void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp& lp,
-                    const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const bool is_qp,
+                    const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
@@ -87,13 +87,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp
   double& sum_dual_residual_error = highs_info.sum_dual_residual_errors;
 
   HighsInt& num_complementarity_violation =
-    highs_info.num_complementarity_violations;
+      highs_info.num_complementarity_violations;
   double& max_complementarity_violation =
-    highs_info.max_complementarity_violation;
+      highs_info.max_complementarity_violation;
   double& sum_complementarity_violation =
-    highs_info.sum_complementarity_violations;
+      highs_info.sum_complementarity_violations;
   double& relative_primal_dual_objective_error =
-    highs_info.relative_primal_dual_objective_error;
+      highs_info.relative_primal_dual_objective_error;
 
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
@@ -117,7 +117,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp
 
   relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
 
-      // Collecting absolute and relative errors, and the corresponding
+  // Collecting absolute and relative errors, and the corresponding
   // indices is required for Glpsol output
   HighsInt& max_primal_infeasibility_index =
       primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
@@ -445,9 +445,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp, const HighsLp
     double dual_objective_value;
     bool status = computeDualObjectiveValue(lp, solution, dual_objective_value);
     assert(status);
-    relative_primal_dual_objective_error = 
-      std::fabs(highs_info.objective_function_value - dual_objective_value) /
-      (1.0 + std::fabs(highs_info.objective_function_value) + std::fabs(dual_objective_value));
+    relative_primal_dual_objective_error =
+        std::fabs(highs_info.objective_function_value - dual_objective_value) /
+        (1.0 + std::fabs(highs_info.objective_function_value) +
+         std::fabs(dual_objective_value));
   }
 
   // Assign primal solution status
@@ -561,8 +562,8 @@ bool getVariableKktFailures(
     }
   }
   /*
-  // Abandoned in favour of complementarity measure - whih is what's in KKT really!
-  if (at_a_bound) {
+  // Abandoned in favour of complementarity measure - whih is what's in KKT
+  really! if (at_a_bound) {
     // At a bound
     double middle = (lower + upper) * 0.5;
     if (lower < upper) {
@@ -588,12 +589,12 @@ bool getVariableKktFailures(
   // any meaningful dual value on a meaningful interval will show up
   // as a large complementarity error
   if (lower < upper) {
-    double length = upper-lower;
+    double length = upper - lower;
     // Non-fixed variable
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free variable
       dual_infeasibility = fabs(dual);
-    } else if (length*length > primal_feasibility_tolerance) {
+    } else if (length * length > primal_feasibility_tolerance) {
       // Interval length is meaningful
       //
       // Compute the mid-point of the bound interval. This will be
@@ -601,13 +602,13 @@ bool getVariableKktFailures(
       // finite for boxed and fixed variables
       const double middle = (lower + upper) * 0.5;
       if (value < middle) {
-	// Below the mid-point, so use lower bound optimality condition:
-	// feasiblity is dual >= -tolerance
-	dual_infeasibility = std::max(-dual, 0.);
+        // Below the mid-point, so use lower bound optimality condition:
+        // feasiblity is dual >= -tolerance
+        dual_infeasibility = std::max(-dual, 0.);
       } else {
-	// Below the mid-point, so use upper bound optimality condition:
-	// feasiblity is dual <= tolerance
-	dual_infeasibility = std::max(dual, 0.);
+        // Below the mid-point, so use upper bound optimality condition:
+        // feasiblity is dual <= tolerance
+        dual_infeasibility = std::max(dual, 0.);
       }
     } else {
       // Interval length is less than
@@ -1704,16 +1705,21 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.max_complementarity_violation,
                info.sum_complementarity_violations,
                options.complementarity_tolerance);
-  if (info.relative_primal_dual_objective_error != kHighsIllegalComplementarityViolation) {
+  if (info.relative_primal_dual_objective_error !=
+      kHighsIllegalComplementarityViolation) {
     highsLogUser(options.log_options,
-		 info.relative_primal_dual_objective_error > options.complementarity_tolerance
-		 ? HighsLogType::kWarning
-		 : HighsLogType::kInfo,
-		 "%s                                    %9.4g"
-		 " relative P-D objective error (tolerance = %9.4g)\n",
-		 info.relative_primal_dual_objective_error > options.complementarity_tolerance ? "" : "         ",
-		 info.relative_primal_dual_objective_error,
-		 options.complementarity_tolerance);
+                 info.relative_primal_dual_objective_error >
+                         options.complementarity_tolerance
+                     ? HighsLogType::kWarning
+                     : HighsLogType::kInfo,
+                 "%s                                    %9.4g"
+                 " relative P-D objective error (tolerance = %9.4g)\n",
+                 info.relative_primal_dual_objective_error >
+                         options.complementarity_tolerance
+                     ? ""
+                     : "         ",
+                 info.relative_primal_dual_objective_error,
+                 options.complementarity_tolerance);
   }
 }
 
@@ -1782,8 +1788,7 @@ HighsStatus ipxSolutionToHighsSolutionNew(
     const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     const std::vector<double>& ipx_y, const std::vector<double>& ipx_zl,
-    const std::vector<double>& ipx_zu, 
-    HighsSolution& highs_solution) {
+    const std::vector<double>& ipx_zu, HighsSolution& highs_solution) {
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.num_col_);
   highs_solution.row_value.resize(lp.num_row_);
@@ -1820,20 +1825,20 @@ HighsStatus ipxSolutionToHighsSolutionNew(
     highs_solution.col_value[iCol] = value;
     highs_solution.col_dual[iCol] = dual;
     if (report_dual_infeasibility) {
-      getVariableKktFailures(options.primal_feasibility_tolerance,
-			     options.dual_feasibility_tolerance,
-			     lp.col_lower_[iCol], lp.col_upper_[iCol],
-			     value, dual,
-			     nullptr,
-			     HighsVarType::kContinuous,
-			     primal_infeasibility,
-			     relative_primal_infeasibility,
-			     dual_infeasibility,
-			     rsdu);
-      bool dual_infeasible = dual_infeasibility > options.dual_feasibility_tolerance;
-      if (dual_infeasible) printf("IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = %11.4g %d\n",
-				  int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol],
-				  rsdu, dual, int(++dual_infeasibility_count));
+      getVariableKktFailures(
+          options.primal_feasibility_tolerance,
+          options.dual_feasibility_tolerance, lp.col_lower_[iCol],
+          lp.col_upper_[iCol], value, dual, nullptr, HighsVarType::kContinuous,
+          primal_infeasibility, relative_primal_infeasibility,
+          dual_infeasibility, rsdu);
+      bool dual_infeasible =
+          dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible)
+        printf(
+            "IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
+            "%11.4g %d\n",
+            int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol], rsdu,
+            dual, int(++dual_infeasibility_count));
     }
   }
   HighsInt ipx_row = 0;
@@ -1866,20 +1871,20 @@ HighsStatus ipxSolutionToHighsSolutionNew(
     // Update the IPX row index
     ipx_row++;
     if (report_dual_infeasibility) {
-      getVariableKktFailures(options.primal_feasibility_tolerance,
-			     options.dual_feasibility_tolerance,
-			     lp.row_lower_[iRow], lp.row_upper_[iRow],
-			     value, dual,
-			     nullptr,
-			     HighsVarType::kContinuous,
-			     primal_infeasibility,
-			     relative_primal_infeasibility,
-			     dual_infeasibility,
-			     rsdu);
-      bool dual_infeasible = dual_infeasibility > options.dual_feasibility_tolerance;
-      if (dual_infeasible) printf("IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = %11.4g %d\n",
-				  int(iRow), lp.row_lower_[iRow], value,  lp.row_upper_[iRow],
-				  rsdu, dual, int(++dual_infeasibility_count));
+      getVariableKktFailures(
+          options.primal_feasibility_tolerance,
+          options.dual_feasibility_tolerance, lp.row_lower_[iRow],
+          lp.row_upper_[iRow], value, dual, nullptr, HighsVarType::kContinuous,
+          primal_infeasibility, relative_primal_infeasibility,
+          dual_infeasibility, rsdu);
+      bool dual_infeasible =
+          dual_infeasibility > options.dual_feasibility_tolerance;
+      if (dual_infeasible)
+        printf(
+            "IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
+            "%11.4g %d\n",
+            int(iRow), lp.row_lower_[iRow], value, lp.row_upper_[iRow], rsdu,
+            dual, int(++dual_infeasibility_count));
     }
   }
   assert(ipx_row == ipx_num_row);
@@ -1897,4 +1902,3 @@ HighsStatus ipxSolutionToHighsSolutionNew(
   highs_solution.dual_valid = true;
   return HighsStatus::kOk;
 }
-
