@@ -257,8 +257,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // Without a primal solution, nothing can be done!
   if (!have_primal_solution) return;
 
-  // Residuals are formed via their positive and negative terms so
-  // that meaningful relative values can be computed
+  // Residuals are formed for Glpsol via their positive and negative
+  // terms so that meaningful relative values can be computed
   std::vector<double> primal_positive_sum;
   std::vector<double> primal_negative_sum;
   std::vector<double> dual_positive_sum;
@@ -395,7 +395,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       }
     }
   }
-
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
     const bool have_values = getComplementarityViolations(
@@ -404,6 +403,14 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     assert(have_values);
   }
 
+  std::vector<double> primal_activity;
+  std::vector<double> dual_activity;
+  if (get_residuals) {
+    lp.a_matrix_.productQuad(primal_activity, solution.col_value);
+    if (have_dual_solution) 
+      lp.a_matrix_.productTranspose(dual_activity, solution.row_dual);
+  }
+      
   if (get_residuals) {
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
       double term = -solution.row_value[iRow];
@@ -414,6 +421,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       }
       assert(primal_positive_sum[iRow] >= 0);
       assert(primal_negative_sum[iRow] >= 0);
+
+      double primal_activity_residual = std::fabs(primal_activity[iRow]-solution.row_value[iRow]);
+      if (primal_activity_residual > 1e-8) {
+	printf("primal_activity_residual = %g\n", primal_activity_residual);
+      }
+      assert(primal_activity_residual < 1e-8);
+
       double primal_residual_error =
           std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow]);
       double relative_primal_residual_error =
@@ -443,6 +457,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         }
         assert(dual_positive_sum[iCol] >= 0);
         assert(dual_negative_sum[iCol] >= 0);
+	double dual_activity_residual = std::fabs(dual_activity[iCol]-gradient[iCol]+solution.col_dual[iCol]);
+	if (dual_activity_residual > 1e-8) {
+	  printf("dual_activity_residual = %g\n", dual_activity_residual);
+	}
+	assert(dual_activity_residual < 1e-8);
         double dual_residual_error =
             std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol]);
         double relative_dual_residual_error =
