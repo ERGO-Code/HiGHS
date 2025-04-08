@@ -927,7 +927,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       const auto& lpsol = lprelax.getLpSolver().getSolution().col_value;
       if (!integerFeasible) {
         // there may be fractional integer variables -> try ZIRound heuristic
-        ZIRound(lpsol);
+        ziRound(lpsol);
         return mipsolver.mipdata_->trySolution(lpsol, solution_source);
       } else {
         // all integer variables are fixed -> add incumbent
@@ -1070,7 +1070,7 @@ void HighsPrimalHeuristics::randomizedRounding(
   }
 }
 
-void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
   std::vector<double> currRelSol = relaxationsol;
@@ -1311,13 +1311,13 @@ void HighsPrimalHeuristics::Shifting(const std::vector<double>& relaxationsol) {
     tryRoundedPoint(currRelSol, kSolutionSourceShifting);
   } else {
     if (currentFracInt.size() > 0)
-      ZIRound(currRelSol);
+      ziRound(currRelSol);
     else
       mipsolver.mipdata_->trySolution(currRelSol, kSolutionSourceShifting);
   }
 }
 
-void HighsPrimalHeuristics::ZIRound(const std::vector<double>& relaxationsol) {
+void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
   // if (mipsolver.submip) return;
   if (relaxationsol.size() != static_cast<size_t>(mipsolver.numCol())) return;
 
