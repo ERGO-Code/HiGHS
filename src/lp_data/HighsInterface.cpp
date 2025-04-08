@@ -2583,7 +2583,7 @@ HighsStatus Highs::checkOptimality(const std::string& solver_type) {
 }
 
 HighsStatus Highs::lpKktCheck() {
-  if (!this->solution_.value_valid) return;
+  if (!this->solution_.value_valid) return HighsStatus::kOk;
   HighsInfo& info = this->info_;
   const HighsOptions& options = this->options_;
   const HighsSolution& solution = this->solution_;
@@ -2603,7 +2603,7 @@ HighsStatus Highs::lpKktCheck() {
     model_status_ = HighsModelStatus::kUnbounded;
   if (model_status_ != HighsModelStatus::kOptimal &&
       model_status_ != HighsModelStatus::kUnknown)
-    return;
+    return HighsStatus::kOk;
   bool was_optimal = model_status_ == HighsModelStatus::kOptimal;
   bool kkt_ok = true;
   bool written_optimality_error_header = false;
