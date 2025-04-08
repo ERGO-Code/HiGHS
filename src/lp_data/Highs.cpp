@@ -1630,9 +1630,8 @@ HighsStatus Highs::optimizeModel() {
           HighsOptions save_options = options_;
           const bool full_logging = false;
           if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
-          // Force the use of simplex to clean up if IPM has been used
-          // to solve the presolved problem
-          if (options_.solver == kIpmString) options_.solver = kSimplexString;
+          // Force the use of simplex to clean up
+          options_.solver = kSimplexString;
           options_.simplex_strategy = kSimplexStrategyChoose;
           // Ensure that the parallel solver isn't used
           options_.simplex_min_concurrency = 1;
