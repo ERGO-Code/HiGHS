@@ -56,6 +56,13 @@ install(TARGETS highs
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+      
+if (NOT HIGHS_COVERAGE)
+  # Add library targets to the build-tree export set
+  export(TARGETS highs
+    NAMESPACE ${PROJECT_NAMESPACE}::
+    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+endif()
 
 if (CUPDLP_GPU)
   install(TARGETS cudalin
@@ -64,6 +71,13 @@ if (CUPDLP_GPU)
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+      
+  if (NOT HIGHS_COVERAGE)
+    # Add library targets to the build-tree export set
+    export(TARGETS cudalin
+      NAMESPACE ${PROJECT_NAMESPACE}::
+      FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  endif()
 endif()
 
 if (NOT HIGHS_COVERAGE)
