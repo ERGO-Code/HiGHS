@@ -468,7 +468,7 @@ if(MSVC)
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
 
   if (NOT CUPDLP_GPU)
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
+    add_link_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
   endif()
 
   if(STDCALL)
