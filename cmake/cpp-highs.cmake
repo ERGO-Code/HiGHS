@@ -39,10 +39,6 @@ set_target_properties(highs PROPERTIES
   COMPATIBLE_INTERFACE_STRING ${PROJECT_NAME}_MAJOR_VERSION
 )
 
-if(MSVC)
-  target_link_options(highs PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
-endif()
-
 ###################
 ## Install rules ##
 ###################
