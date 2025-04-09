@@ -1123,7 +1123,7 @@ void HighsPrimalHeuristics::shifting(const std::vector<double>& relaxationsol) {
         HighsInt end = mipsolver.mipdata_->ARstart_[r + 1];
         for (HighsInt jInd = start; jInd != end; ++jInd) {
           auto it = findPairByIndex(current_fractional_integers,
-                                    mipsolver.mipdata_->ArIndexex_[jInd]);
+                                    mipsolver.mipdata_->ARindex_[jInd]);
           fractionalIntegerFound = it != current_fractional_integers.end();
           if (fractionalIntegerFound) break;
         }
