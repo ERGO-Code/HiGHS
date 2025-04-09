@@ -523,12 +523,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   // Copy these for debugAnalysePrimalDualErrors, since it only has
   // primal_dual_errors
-  primal_dual_errors.num_primal_residual =
-      highs_info.num_primal_residual_errors;
-  primal_dual_errors.sum_primal_residual =
-      highs_info.sum_primal_residual_errors;
-  primal_dual_errors.num_dual_residual = highs_info.num_dual_residual_errors;
-  primal_dual_errors.sum_dual_residual = highs_info.sum_dual_residual_errors;
+  primal_dual_errors.glpsol_num_primal_residual_errors = highs_info.num_primal_residual_errors;
+  primal_dual_errors.glpsol_sum_primal_residual_errors = highs_info.sum_primal_residual_errors;
+  primal_dual_errors.glpsol_num_dual_residual_errors = highs_info.num_dual_residual_errors;
+  primal_dual_errors.glpsol_sum_dual_residual_errors = highs_info.sum_dual_residual_errors;
 
   primal_dual_errors.glpsol_max_primal_residual.absolute_value =
       max_primal_residual_error;

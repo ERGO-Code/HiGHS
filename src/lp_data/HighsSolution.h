@@ -48,10 +48,10 @@ struct HighsPrimalDualErrors {
   HighsInt num_off_bound_nonbasic;
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
-  HighsInt num_primal_residual;
-  double sum_primal_residual;
-  HighsInt num_dual_residual;
-  double sum_dual_residual;
+  HighsInt glpsol_num_primal_residual_errors;
+  double glpsol_sum_primal_residual_errors;
+  HighsInt glpsol_num_dual_residual_errors;
+  double glpsol_sum_dual_residual_errors;
   HighsError glpsol_max_primal_residual;
   HighsError glpsol_max_primal_infeasibility;
   HighsError glpsol_max_dual_residual;
