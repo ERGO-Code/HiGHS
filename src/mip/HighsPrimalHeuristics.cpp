@@ -1417,7 +1417,7 @@ void HighsPrimalHeuristics::ziRound(const std::vector<double>& relaxationsol) {
     improvementInFeasibility = prev_ZI_total - ZI_total;
   }
   // re-check for feasibility and add incumbent
-  mipsolver.mipdata_->trySolution(currRelSol, kSolutionSourceZIRound);
+  mipsolver.mipdata_->trySolution(currRelSol, kSolutionSourceZiRound);
 }
 
 void HighsPrimalHeuristics::feasibilityPump() {

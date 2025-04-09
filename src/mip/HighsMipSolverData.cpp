@@ -48,7 +48,7 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceRandomizedRounding) {
     if (code) return "R";
     return "Randomized rounding";
-  } else if (solution_source == kSolutionSourceZIRound) {
+  } else if (solution_source == kSolutionSourceZiRound) {
     if (code) return "Z";
     return "ZI Round";
   } else if (solution_source == kSolutionSourceShifting) {
@@ -1917,9 +1917,9 @@ restart:
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round)
     heuristics.ziRound(firstlpsol);
-  mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding);
+  analysis.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
-  mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding);
+  analysis.mipTimerStop(kMipClockRandomizedRounding);
   if (mipsolver.options_mip_->mip_heuristic_run_shifting)
     heuristics.shifting(firstlpsol);
 
