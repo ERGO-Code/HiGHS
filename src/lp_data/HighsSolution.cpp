@@ -38,7 +38,7 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
   model.objectiveGradient(solution.col_value, gradient);
   getKktFailures(options, model.isQp(), model.lp_, gradient, solution, 
                  highs_info, primal_dual_errors, get_residuals);
-  getPrimalDualBasisFailures(options, model.lp_, solution, basis, primal_dual_errors);
+  getPrimalDualBasisErrors(options, model.lp_, solution, basis, primal_dual_errors);
 }
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
@@ -56,7 +56,7 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const bool get_residuals) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
                  primal_dual_errors, get_residuals);
-  getPrimalDualBasisFailures(options, lp, solution, basis, primal_dual_errors);
+  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
 }
 
 void getKktFailures(const HighsOptions& options, const bool is_qp,
@@ -552,10 +552,239 @@ void getVariableKktFailures(
   }
 }
 
-void getPrimalDualBasisFailures(const HighsOptions& options, 
-				const HighsLp& lp, 
-				const HighsSolution& solution, const HighsBasis& basis,
-				HighsPrimalDualErrors& primal_dual_errors) {
+void getPrimalDualGlpsolErrors(const HighsOptions& options, 
+			       const HighsLp& lp, const std::vector<double>& gradient,
+			       const HighsSolution& solution,
+			       HighsPrimalDualErrors& primal_dual_errors) {
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+
+  // clang-format off
+  HighsInt& num_primal_residual_error = primal_dual_errors.glpsol_num_primal_residual_errors;
+  double&   sum_primal_residual_error = primal_dual_errors.glpsol_sum_primal_residual_errors;
+  
+  HighsInt& num_dual_residual_error = primal_dual_errors.glpsol_num_dual_residual_errors;
+  double&   sum_dual_residual_error = primal_dual_errors.glpsol_sum_dual_residual_errors;
+  
+  double&   max_primal_residual_error = primal_dual_errors.glpsol_max_primal_residual.absolute_value;
+  HighsInt& max_primal_residual_index = primal_dual_errors.glpsol_max_primal_residual.absolute_index;
+
+  double&   max_relative_primal_residual_error = primal_dual_errors.glpsol_max_primal_residual.relative_value;
+  HighsInt& max_relative_primal_residual_index = primal_dual_errors.glpsol_max_primal_residual.relative_index;
+
+  double&   max_primal_infeasibility =       primal_dual_errors.glpsol_max_primal_infeasibility.absolute_value;
+  HighsInt& max_primal_infeasibility_index = primal_dual_errors.glpsol_max_primal_infeasibility.absolute_index;
+
+  double&   max_relative_primal_infeasibility =       primal_dual_errors.glpsol_max_primal_infeasibility.relative_value;
+  HighsInt& max_relative_primal_infeasibility_index = primal_dual_errors.glpsol_max_primal_infeasibility.relative_index;
+
+  double&   max_dual_residual_error = primal_dual_errors.glpsol_max_dual_residual.absolute_value;
+  HighsInt& max_dual_residual_index = primal_dual_errors.glpsol_max_dual_residual.absolute_index;
+
+  double&   max_relative_dual_residual_error = primal_dual_errors.glpsol_max_dual_residual.relative_value;
+  HighsInt& max_relative_dual_residual_index = primal_dual_errors.glpsol_max_dual_residual.relative_index;
+
+  double&   max_dual_infeasibility =       primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
+  HighsInt& max_dual_infeasibility_index = primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
+  // clang-format on
+
+  // Relative dual infeasiblities are same as absolute
+  
+
+  primal_dual_errors.glpsol_max_primal_infeasibility.invalidate();
+  primal_dual_errors.glpsol_max_dual_infeasibility.invalidate();
+
+  const bool have_primal_solution = solution.value_valid;
+  const bool have_dual_solution = solution.dual_valid;
+  const bool have_integrality = lp.integrality_.size() != 0;
+
+  // Check that there is no dual solution if there's no primal solution
+  assert(have_primal_solution || !have_dual_solution);
+
+  if (have_primal_solution) {
+    // There's a primal solution, so check its size and initialise the
+    // infeasibility counts
+    assert((int)solution.col_value.size() >= lp.num_col_);
+    assert((int)solution.row_value.size() >= lp.num_row_);
+    //    num_primal_infeasibility = 0;
+    max_primal_infeasibility = 0;
+    //    sum_primal_infeasibility = 0;
+    primal_dual_errors.glpsol_max_primal_infeasibility.reset();
+    if (have_dual_solution) {
+      // There's a dual solution, so check its size and initialise the
+      // infeasibility counts
+      assert((int)solution.col_dual.size() >= lp.num_col_);
+      assert((int)solution.row_dual.size() >= lp.num_row_);
+      //      num_dual_infeasibility = 0;
+      max_dual_infeasibility = 0;
+      //      sum_dual_infeasibility = 0;
+      primal_dual_errors.glpsol_max_dual_infeasibility.reset();
+    }
+  }
+
+  if (have_primal_solution) {
+    num_primal_residual_error = 0;
+    max_primal_residual_error = 0;
+    //    sum_primal_residual_error = 0;
+    //    num_relative_primal_residual_error = 0;
+    max_relative_primal_residual_error = 0;
+    //    sum_relative_primal_residual_error = 0;
+    primal_dual_errors.glpsol_max_primal_residual.reset();
+    
+  } else {
+    num_primal_residual_error = kHighsIllegalInfeasibilityCount;
+    max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    sum_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    num_relative_primal_residual_error = kHighsIllegalInfeasibilityCount;
+    max_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    sum_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    primal_dual_errors.glpsol_max_primal_residual.invalidate();
+  }
+  if (have_dual_solution) {
+    num_dual_residual_error = 0;
+    max_dual_residual_error = 0;
+    //    sum_dual_residual_error = 0;
+    //    num_relative_dual_residual_error = 0;
+    max_relative_dual_residual_error = 0;
+    //    sum_relative_dual_residual_error = 0;
+    primal_dual_errors.glpsol_max_dual_residual.reset();
+  } else {
+    num_dual_residual_error = kHighsIllegalInfeasibilityCount;
+    max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    sum_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    num_relative_dual_residual_error = kHighsIllegalInfeasibilityCount;
+    max_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    //    sum_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    primal_dual_errors.glpsol_max_dual_residual.invalidate();
+  }
+  // Without a primal solution, nothing can be done!
+  if (!have_primal_solution) return;
+
+  // Residuals are formed for Glpsol via their positive and negative
+  // terms so that meaningful relative values can be computed
+  std::vector<double> primal_positive_sum;
+  std::vector<double> primal_negative_sum;
+  std::vector<double> dual_positive_sum;
+  std::vector<double> dual_negative_sum;
+  primal_positive_sum.assign(lp.num_row_, 0);
+  primal_negative_sum.assign(lp.num_row_, 0);
+  if (have_dual_solution) {
+    dual_positive_sum.resize(lp.num_col_);
+    dual_negative_sum.resize(lp.num_col_);
+  }
+
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double value_residual;
+  double lower;
+  double upper;
+  double value;
+  double dual = 0;
+  HighsVarType integrality = HighsVarType::kContinuous;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    if (iVar < lp.num_col_) {
+      HighsInt iCol = iVar;
+      lower = lp.col_lower_[iCol];
+      upper = lp.col_upper_[iCol];
+      value = solution.col_value[iCol];
+      if (have_dual_solution) dual = solution.col_dual[iCol];
+      if (have_integrality) integrality = lp.integrality_[iCol];
+    } else {
+      HighsInt iRow = iVar - lp.num_col_;
+      lower = lp.row_lower_[iRow];
+      upper = lp.row_upper_[iRow];
+      value = solution.row_value[iRow];
+      if (have_dual_solution) dual = solution.row_dual[iRow];
+      integrality = HighsVarType::kContinuous;
+    }
+    // Flip dual according to lp.sense_
+    dual *= (HighsInt)lp.sense_;
+
+    getVariableKktFailures(primal_feasibility_tolerance,
+			   dual_feasibility_tolerance,
+			   lower, upper,
+			   value, dual,
+			   integrality,
+			   primal_infeasibility,
+			   relative_primal_infeasibility,
+			   dual_infeasibility,
+			   value_residual);
+    // Accumulate primal infeasibilities
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      //      num_primal_infeasibility++;
+    }
+    if (max_primal_infeasibility < primal_infeasibility) {
+      max_primal_infeasibility = primal_infeasibility;
+      max_primal_infeasibility_index = iVar;
+    }
+    if (max_relative_primal_infeasibility < relative_primal_infeasibility) {
+      max_relative_primal_infeasibility = relative_primal_infeasibility;
+      max_relative_primal_infeasibility_index = iVar;
+    }
+    //    sum_primal_infeasibility += primal_infeasibility;
+
+    if (have_dual_solution) {
+      // Accumulate dual infeasibilities
+      if (dual_infeasibility > dual_feasibility_tolerance) {
+	//        num_dual_infeasibility++;
+      }
+      if (max_dual_infeasibility < dual_infeasibility) {
+        max_dual_infeasibility = dual_infeasibility;
+        max_dual_infeasibility_index = iVar;
+      }
+      //      sum_dual_infeasibility += dual_infeasibility;
+    }
+    if (iVar < lp.num_col_) {
+      HighsInt iCol = iVar;
+      if (have_dual_solution) {
+        if (gradient[iCol] > 0) {
+          dual_positive_sum[iCol] = gradient[iCol];
+        } else {
+          dual_negative_sum[iCol] = -gradient[iCol];
+        }
+      }
+      for (HighsInt el = lp.a_matrix_.start_[iCol];
+           el < lp.a_matrix_.start_[iCol + 1]; el++) {
+        HighsInt iRow = lp.a_matrix_.index_[el];
+        double Avalue = lp.a_matrix_.value_[el];
+        double term = value * Avalue;
+        if (term > 0) {
+          primal_positive_sum[iRow] += term;
+        } else {
+          primal_negative_sum[iRow] -= term;
+        }
+        // @FlipRowDual += became -=
+        if (have_dual_solution) {
+          double term = -solution.row_dual[iRow] * Avalue;
+          if (term > 0) {
+            dual_positive_sum[iCol] += term;
+          } else {
+            dual_negative_sum[iCol] -= term;
+          }
+        }
+      }
+    }
+  }
+
+  // Relative dual infeasiblities are same as absolute
+  // clang-format off
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_value =
+  primal_dual_errors.glpsol_max_dual_infeasibility.absolute_value;
+
+  primal_dual_errors.glpsol_max_dual_infeasibility.relative_index =
+  primal_dual_errors.glpsol_max_dual_infeasibility.absolute_index;
+  // clang-format on
+
+}
+
+void getPrimalDualBasisErrors(const HighsOptions& options, 
+			      const HighsLp& lp, 
+			      const HighsSolution& solution, const HighsBasis& basis,
+			      HighsPrimalDualErrors& primal_dual_errors) {
   double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   const bool& have_primal_solution = solution.value_valid;
@@ -645,7 +874,7 @@ void getPrimalDualBasisFailures(const HighsOptions& options,
 
     if (!status_value_ok)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "getPrimalDualBasisFailures: %s %d status-value error: [%23.18g; "
+                   "getPrimalDualBasisErrors: %s %d status-value error: [%23.18g; "
                    "%23.18g; %23.18g] has "
                    "residual %g\n",
                    iVar < lp.num_col_ ? "Column" : "Row   ",
@@ -907,12 +1136,15 @@ HighsStatus ipxSolutionToHighsSolution(
           dual_infeasibility, rsdu);
       bool dual_infeasible =
           dual_infeasibility > options.dual_feasibility_tolerance;
+      /*
+      // 2251
       if (dual_infeasible)
         printf(
             "IPX2Highs Col %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
             "%11.4g %d\n",
             int(iCol), lp.col_lower_[iCol], value, lp.col_upper_[iCol], rsdu,
             dual, int(++dual_infeasibility_count));
+      */
     }
   }
   HighsInt ipx_row = 0;
@@ -953,12 +1185,15 @@ HighsStatus ipxSolutionToHighsSolution(
           dual_infeasibility, rsdu);
       bool dual_infeasible =
           dual_infeasibility > options.dual_feasibility_tolerance;
+      /*
+      // 2251
       if (dual_infeasible)
         printf(
             "IPX2Highs Row %6d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g, Dual = "
             "%11.4g %d\n",
             int(iRow), lp.row_lower_[iRow], value, lp.row_upper_[iRow], rsdu,
             dual, int(++dual_infeasibility_count));
+      */
     }
   }
   assert(ipx_row == ipx_num_row);
