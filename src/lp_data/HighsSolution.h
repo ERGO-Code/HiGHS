@@ -81,7 +81,6 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
