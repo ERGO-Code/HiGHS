@@ -257,14 +257,14 @@ restart:
           }
 
           if (mipdata_->incumbent.empty()) {
-            if (options_mip_->mip_heuristic_run_RENS) {
+            if (options_mip_->mip_heuristic_run_rens) {
               analysis_.mipTimerStart(kMipClockDiveRens);
               mipdata_->heuristics.RENS(
                   mipdata_->lp.getLpSolver().getSolution().col_value);
               analysis_.mipTimerStop(kMipClockDiveRens);
             }
           } else {
-            if (options_mip_->mip_heuristic_run_RINS) {
+            if (options_mip_->mip_heuristic_run_rins) {
               analysis_.mipTimerStart(kMipClockDiveRins);
               mipdata_->heuristics.RINS(
                   mipdata_->lp.getLpSolver().getSolution().col_value);

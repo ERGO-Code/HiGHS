@@ -841,8 +841,8 @@ TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   // Enable both heuristics
-  highs.setOptionValue("mip_heuristic_run_ZIRound", true);
-  highs.setOptionValue("mip_heuristic_run_Shifting", true);  
+  highs.setOptionValue("mip_heuristic_run_zi_round", true);
+  highs.setOptionValue("mip_heuristic_run_shifting", true);  
   highs.readModel(model_file);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 82.19999924;

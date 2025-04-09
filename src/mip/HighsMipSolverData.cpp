@@ -121,20 +121,21 @@ HighsMipSolverData::getInfeasibleRows(
     const std::vector<double>& solution) const {
   std::vector<std::tuple<HighsInt, HighsInt, double>> infeasibleRows;
   for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
-    double rowactivity = 0.0;  // HighsCDouble?
-
     HighsInt start = ARstart_[i];
     HighsInt end = ARstart_[i + 1];
 
+    HighsCDouble row_activity_quad = 0.0;
     for (HighsInt j = start; j != end; ++j)
-      rowactivity += solution[ARindex_[j]] * ARvalue_[j];
+      row_activity_quad +=
+          static_cast<HighsCDouble>(solution[ARindex_[j]]) * ARvalue_[j];
 
-    if (rowactivity > mipsolver.rowUpper(i) + feastol) {
-      double difference = std::abs(rowactivity - mipsolver.rowUpper(i));
+    double row_activity = static_cast<double>(row_activity_quad);
+    if (row_activity > mipsolver.rowUpper(i) + feastol) {
+      double difference = std::abs(row_activity - mipsolver.rowUpper(i));
       infeasibleRows.push_back({i, +1, difference});
     }
-    if (rowactivity < mipsolver.rowLower(i) - feastol) {
-      double difference = std::abs(mipsolver.rowLower(i) - rowactivity);
+    if (row_activity < mipsolver.rowLower(i) - feastol) {
+      double difference = std::abs(mipsolver.rowLower(i) - row_activity);
       infeasibleRows.push_back({i, -1, difference});
     }
   }
@@ -1632,7 +1633,7 @@ bool HighsMipSolverData::rootSeparationRound(
 
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
-    if (mipsolver.options_mip_->mip_heuristic_run_Shifting)
+    if (mipsolver.options_mip_->mip_heuristic_run_shifting)
       heuristics.Shifting(solvals);
     heuristics.flushStatistics();
     status = evaluateRootLp();
@@ -1715,7 +1716,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
       }
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
-          mipsolver.options_mip_->mip_heuristic_run_ZIRound)
+          mipsolver.options_mip_->mip_heuristic_run_zi_round)
         heuristics.ZIRound(lp.getLpSolver().getSolution().col_value);
 
     } else
@@ -1914,12 +1915,12 @@ restart:
   last_disptime = -kHighsInf;
   disptime = 0;
 
-  if (mipsolver.options_mip_->mip_heuristic_run_ZIRound)
+  if (mipsolver.options_mip_->mip_heuristic_run_zi_round)
     heuristics.ZIRound(firstlpsol);
   mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
   mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding);
-  if (mipsolver.options_mip_->mip_heuristic_run_Shifting)
+  if (mipsolver.options_mip_->mip_heuristic_run_shifting)
     heuristics.Shifting(firstlpsol);
 
   heuristics.flushStatistics();
@@ -2111,11 +2112,11 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-  if (mipsolver.options_mip_->mip_heuristic_run_ZIRound) {
+  if (mipsolver.options_mip_->mip_heuristic_run_zi_round) {
     heuristics.ZIRound(firstlpsol);
     heuristics.flushStatistics();
   }
-  if (mipsolver.options_mip_->mip_heuristic_run_Shifting) {
+  if (mipsolver.options_mip_->mip_heuristic_run_shifting) {
     heuristics.Shifting(rootlpsol);
     heuristics.flushStatistics();
   }
@@ -2174,7 +2175,7 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    if (mipsolver.options_mip_->mip_heuristic_run_rootReducedCost) {
+    if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
       analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
       heuristics.rootReducedCost();
       analysis.mipTimerStop(kMipClockRootHeuristicsReducedCost);
@@ -2205,7 +2206,7 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     if (checkLimits()) return clockOff(analysis);
-    if (mipsolver.options_mip_->mip_heuristic_run_RENS) {
+    if (mipsolver.options_mip_->mip_heuristic_run_rens) {
       analysis.mipTimerStart(kMipClockRootHeuristicsRens);
       heuristics.RENS(rootlpsol);
       analysis.mipTimerStop(kMipClockRootHeuristicsRens);
