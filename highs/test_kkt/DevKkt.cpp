@@ -8,7 +8,7 @@
 /**@file
  * @brief
  */
-#include "test/DevKkt.h"
+#include "test_kkt/DevKkt.h"
 
 #include <cassert>
 #include <cmath>

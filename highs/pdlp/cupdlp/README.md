@@ -32,7 +32,7 @@ now, as CUPDLP_CPU is set
 
 ## Use of macro definitions within C++
 
-When definitions in [glbopts.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/glbopts.h) such as the following are used in [CupdlpWrapper.cpp](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.cpp) there is a g++ compiler error, because `typeof` isn't recognised
+When definitions in `glbopts.h` are used in `CupdlpWrapper.cpp` there is a g++ compiler error, because `typeof` isn't recognised
 
 > #define CUPDLP_INIT(var, size)                                  \
   {                                                             \
@@ -57,11 +57,11 @@ Three methods
 * `void cupdlp_haslb(cupdlp_float *haslb, const cupdlp_float *lb, const cupdlp_float bound, const cupdlp_int len);`
 * `void cupdlp_hasub(cupdlp_float *hasub, const cupdlp_float *ub, const cupdlp_float bound, const cupdlp_int len);`
 
-are declared in [cupdlp_linalg.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.h) and defined in [cupdlp_linalg.c](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/cupdlp_linalg.c) but not picked up by g++. Hence duplicate methods are declared and defined in [CupdlpWrapper.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.h) and [CupdlpWrapper.cpp](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/CupdlpWrapper.cpp).
+are declared in `cupdlp_linalg.h` and defined in `cupdlp_linalg.c` but not picked up by g++. Hence duplicate methods are declared and defined in `CupdlpWrapper.h` and `CupdlpWrapper.cpp`.
 
 ## Use of macro definitions within C
 
-Although the macro definitions in [glbopts.h](https://github.com/ERGO-Code/HiGHS/blob/add-pdlp/src/pdlp/cupdlp/glbopts.h) are fine when used in C under Linux, they cause the following compiler errors on Windows.
+Although the macro definitions in `glbopts.h` are fine when used in C under Linux, they cause the following compiler errors on Windows.
 
 > error C2146: syntax error: missing ';' before identifier 'calloc' (or 'malloc')
 

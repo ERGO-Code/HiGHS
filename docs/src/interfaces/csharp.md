@@ -35,7 +35,7 @@ Details for building locally can be found in `nuget/README.md`.
 
 The C# API can be called directly. Here are observations on calling the HiGHS C# API from C#:
 
- * The file `HiGHS/src/interfaces/highs_csharp_api.cs` contains all the PInvoke you need. 
+ * The file `HiGHS/highs/interfaces/highs_csharp_api.cs` contains all the PInvoke you need. 
  * Make sure, that the native HiGHS library (`highs.dll`, `libhighs.dll`,
    `libhighs.so`, ... depending on your platform) can be found at runtime. How
    to do this is platform dependent, copying it next to your C# executable

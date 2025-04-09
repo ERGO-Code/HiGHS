@@ -10,7 +10,7 @@
 
 import Clang: Generators
 
-highs_src = joinpath(dirname(dirname(@__DIR__)), "src")
+highs_src = joinpath(dirname(dirname(@__DIR__)), "highs")
 c_api = joinpath(highs_src, "interfaces", "highs_c_api.h")
 libhighs_filename = joinpath(@__DIR__, "libhighs.jl")
 
