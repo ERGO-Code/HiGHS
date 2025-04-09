@@ -95,6 +95,11 @@ bool getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& relative_primal_infeasibility,
                             double& dual_infeasibility, double& value_residual);
 
+void getPrimalDualBasisFailures(const HighsOptions& options, 
+				const HighsLp& lp, 
+				const HighsSolution& solution, const HighsBasis& basis,
+				HighsPrimalDualErrors& primal_dual_errors);
+
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   const double complementarity_tolerance,

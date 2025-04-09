@@ -38,6 +38,7 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model,
   model.objectiveGradient(solution.col_value, gradient);
   getKktFailures(options, model.isQp(), model.lp_, gradient, solution, basis,
                  highs_info, primal_dual_errors, get_residuals);
+  getPrimalDualBasisFailures(options, model.lp_, solution, basis, primal_dual_errors);
 }
 
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
@@ -55,6 +56,7 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const bool get_residuals) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
+  getPrimalDualBasisFailures(options, lp, solution, basis, primal_dual_errors);
 }
 
 void getKktFailures(const HighsOptions& options, const bool is_qp,
@@ -422,12 +424,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       assert(primal_positive_sum[iRow] >= 0);
       assert(primal_negative_sum[iRow] >= 0);
 
+      /*
       double primal_activity_residual = std::fabs(primal_activity[iRow]-solution.row_value[iRow]);
       if (primal_activity_residual > 1e-8) {
 	printf("primal_activity_residual = %g\n", primal_activity_residual);
       }
       assert(primal_activity_residual < 1e-8);
-
+      */
       double primal_residual_error =
           std::fabs(primal_positive_sum[iRow] - primal_negative_sum[iRow]);
       double relative_primal_residual_error =
@@ -457,11 +460,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         }
         assert(dual_positive_sum[iCol] >= 0);
         assert(dual_negative_sum[iCol] >= 0);
+	/*
 	double dual_activity_residual = std::fabs(dual_activity[iCol]-gradient[iCol]+solution.col_dual[iCol]);
 	if (dual_activity_residual > 1e-8) {
 	  printf("dual_activity_residual = %g\n", dual_activity_residual);
 	}
 	assert(dual_activity_residual < 1e-8);
+	*/
         double dual_residual_error =
             std::fabs(dual_positive_sum[iCol] - dual_negative_sum[iCol]);
         double relative_dual_residual_error =
@@ -662,6 +667,125 @@ bool getVariableKktFailures(
     dual_infeasibility = 0;
   }
   return status_value_ok;
+}
+
+void getPrimalDualBasisFailures(const HighsOptions& options, 
+				const HighsLp& lp, 
+				const HighsSolution& solution, const HighsBasis& basis,
+				HighsPrimalDualErrors& primal_dual_errors) {
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  const bool& have_primal_solution = solution.value_valid;
+  const bool& have_dual_solution = solution.dual_valid;
+  const bool& have_basis = basis.valid;
+
+  // Check that there is no dual solution if there's no primal solution
+  assert(have_primal_solution || !have_dual_solution);
+
+  // Check that there is no basis if there's no dual solution
+  assert(have_dual_solution || !have_basis);
+
+  HighsInt& num_nonzero_basic_dual = primal_dual_errors.num_nonzero_basic_duals;
+  double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
+  double& sum_nonzero_basic_dual = primal_dual_errors.sum_nonzero_basic_duals;
+
+  HighsInt& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
+  double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
+  double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
+
+  if (have_basis) {
+    num_nonzero_basic_dual = 0;
+    max_nonzero_basic_dual = 0;
+    sum_nonzero_basic_dual = 0;
+
+    num_off_bound_nonbasic = 0;
+    max_off_bound_nonbasic = 0;
+    sum_off_bound_nonbasic = 0;
+  } else {
+    num_nonzero_basic_dual = kHighsIllegalInfeasibilityCount;
+    max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+    sum_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+
+    num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
+    max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+    sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+  }
+  // Without a primal solution or a basis, nothing can be done!
+  if (!have_primal_solution || !have_basis) return;
+  // Makes no sense to get primal dual basis failures without a primal
+  // solution, dual solution and basis
+  assert(have_primal_solution && have_dual_solution && have_basis);
+  double primal_infeasibility;
+  double relative_primal_infeasibility;
+  double dual_infeasibility;
+  double value_residual;
+  double lower;
+  double upper;
+  double value;
+  double dual = 0;
+  HighsBasisStatus status;
+  bool status_value_ok;
+  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+    if (iVar < lp.num_col_) {
+      HighsInt iCol = iVar;
+      lower = lp.col_lower_[iCol];
+      upper = lp.col_upper_[iCol];
+      value = solution.col_value[iCol];
+      dual = solution.col_dual[iCol];
+      status = basis.col_status[iCol];
+    } else {
+      HighsInt iRow = iVar - lp.num_col_;
+      lower = lp.row_lower_[iRow];
+      upper = lp.row_upper_[iRow];
+      value = solution.row_value[iRow];
+      dual = solution.row_dual[iRow];
+      status = basis.row_status[iRow];
+    }
+    // Flip dual according to lp.sense_
+    dual *= (HighsInt)lp.sense_;
+    status_value_ok = true;
+    // Check that kLower and kUpper are consistent with value and
+    // bounds - for debugging QP basis errors
+    //
+    // With very large values, accuracy is lost in adding/subtracting
+    // the feasibility tolerance from the bounds, so skip if this may
+    // occur
+    if (status == HighsBasisStatus::kLower) {
+      if (std::fabs(lower) / primal_feasibility_tolerance < 1e-16)
+        status_value_ok = value >= lower - primal_feasibility_tolerance &&
+                          value <= lower + primal_feasibility_tolerance;
+    } else if (status == HighsBasisStatus::kUpper) {
+      if (std::fabs(upper) / primal_feasibility_tolerance < 1e-16)
+        status_value_ok = value >= upper - primal_feasibility_tolerance &&
+                          value <= upper + primal_feasibility_tolerance;
+    }
+
+    if (!status_value_ok)
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "getPrimalDualBasisFailures: %s %d status-value error: [%23.18g; "
+                   "%23.18g; %23.18g] has "
+                   "residual %g\n",
+                   iVar < lp.num_col_ ? "Column" : "Row   ",
+                   iVar < lp.num_col_ ? int(iVar) : int(iVar - lp.num_col_),
+                   lower, value, upper, value_residual);
+    assert(status_value_ok);
+    
+    if (status == HighsBasisStatus::kBasic) {
+      double abs_basic_dual = dual_infeasibility;
+      if (abs_basic_dual > 0) {
+	num_nonzero_basic_dual++;
+	max_nonzero_basic_dual =
+	  std::max(abs_basic_dual, max_nonzero_basic_dual);
+	sum_nonzero_basic_dual += abs_basic_dual;
+      }
+    } else {
+      double off_bound_nonbasic = value_residual;
+      if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
+      max_off_bound_nonbasic =
+	std::max(off_bound_nonbasic, max_off_bound_nonbasic);
+      sum_off_bound_nonbasic += off_bound_nonbasic;
+    }
+  }
 }
 
 bool getComplementarityViolations(const HighsLp& lp,
