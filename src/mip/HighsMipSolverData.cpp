@@ -1634,7 +1634,7 @@ bool HighsMipSolverData::rootSeparationRound(
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
     if (mipsolver.options_mip_->mip_heuristic_run_shifting)
-      heuristics.Shifting(solvals);
+      heuristics.shifting(solvals);
     heuristics.flushStatistics();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
@@ -1717,7 +1717,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
 
       if (status == HighsLpRelaxation::Status::kOptimal &&
           mipsolver.options_mip_->mip_heuristic_run_zi_round)
-        heuristics.ZIRound(lp.getLpSolver().getSolution().col_value);
+        heuristics.ziRound(lp.getLpSolver().getSolution().col_value);
 
     } else
       status = lp.getStatus();
@@ -1916,12 +1916,12 @@ restart:
   disptime = 0;
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round)
-    heuristics.ZIRound(firstlpsol);
+    heuristics.ziRound(firstlpsol);
   mipsolver.analysis_.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
   mipsolver.analysis_.mipTimerStop(kMipClockRandomizedRounding);
   if (mipsolver.options_mip_->mip_heuristic_run_shifting)
-    heuristics.Shifting(firstlpsol);
+    heuristics.shifting(firstlpsol);
 
   heuristics.flushStatistics();
 
@@ -2113,11 +2113,11 @@ restart:
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
   if (mipsolver.options_mip_->mip_heuristic_run_zi_round) {
-    heuristics.ZIRound(firstlpsol);
+    heuristics.ziRound(firstlpsol);
     heuristics.flushStatistics();
   }
   if (mipsolver.options_mip_->mip_heuristic_run_shifting) {
-    heuristics.Shifting(rootlpsol);
+    heuristics.shifting(rootlpsol);
     heuristics.flushStatistics();
   }
 

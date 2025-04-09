@@ -66,9 +66,9 @@ class HighsPrimalHeuristics {
 
   void randomizedRounding(const std::vector<double>& relaxationsol);
 
-  void Shifting(const std::vector<double>& relaxationsol);
+  void shifting(const std::vector<double>& relaxationsol);
 
-  void ZIRound(const std::vector<double>& relaxationsol);
+  void ziRound(const std::vector<double>& relaxationsol);
 };
 
 #endif
