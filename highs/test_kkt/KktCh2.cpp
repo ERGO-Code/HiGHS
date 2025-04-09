@@ -5,15 +5,15 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file test/KktChStep.cpp
+/**@file test_kkt/KktChStep.cpp
  * @brief
  */
-#include "test/KktCh2.h"
+#include "test_kkt/KktCh2.h"
 
 #include <cassert>
 #include <utility>
 
-#include "test/DevKkt.h"
+#include "test_kkt/DevKkt.h"
 
 using std::cout;
 using std::endl;
