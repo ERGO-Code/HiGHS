@@ -128,6 +128,7 @@ HighsDebugStatus debugHighsSolution(
   getKktFailures(options, is_qp, lp, gradient, solution, 
                  local_highs_info, primal_dual_errors, get_residuals);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
+  getPrimalDualGlpsolErrors(options, lp, gradient, solution, primal_dual_errors);
   HighsInt& num_primal_infeasibility =
       local_highs_info.num_primal_infeasibilities;
   HighsInt& num_dual_infeasibility = local_highs_info.num_dual_infeasibilities;
