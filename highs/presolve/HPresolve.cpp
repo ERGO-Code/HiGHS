@@ -3774,7 +3774,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       }
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
-                                 double maxAbsCoefValue) {
+                                 HighsCDouble maxAbsCoefValue) {
         // iterate over non-zero positions instead of iterating over the
         // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
         // latter contains pointers to Acol and Avalue that may be invalidated
@@ -3786,25 +3786,25 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
           // get column index and coefficient
           HighsInt col = Acol[rowiter];
-          double val = Avalue[rowiter];
+          double val = direction * Avalue[rowiter];
 
           // skip continuous variables
           if (model->integrality_[col] == HighsVarType::kContinuous) continue;
 
-          if (direction * val > maxAbsCoefValue + primal_feastol) {
+          if (val > maxAbsCoefValue + primal_feastol) {
             assert(model->col_upper_[col] != kHighsInf);
             // new matrix coefficient is direction * maxAbsCoefValue; subtract
             // existing matrix coefficient to get delta
-            double delta = direction * maxAbsCoefValue - val;
-            addToMatrix(row, col, delta);
-            rhs += static_cast<HighsCDouble>(delta) * model->col_upper_[col];
-          } else if (direction * val < -maxAbsCoefValue - primal_feastol) {
+            HighsCDouble delta = direction * (maxAbsCoefValue - val);
+            addToMatrix(row, col, static_cast<double>(delta));
+            rhs += delta * model->col_upper_[col];
+          } else if (val < -maxAbsCoefValue - primal_feastol) {
             assert(model->col_lower_[col] != -kHighsInf);
             // new matrix coefficient is (-direction) * maxAbsCoefValue;
             // subtract existing matrix coefficient to get delta
-            double delta = -direction * maxAbsCoefValue - val;
-            addToMatrix(row, col, delta);
-            rhs += static_cast<HighsCDouble>(delta) * model->col_lower_[col];
+            HighsCDouble delta = -direction * (maxAbsCoefValue + val);
+            addToMatrix(row, col, static_cast<double>(delta));
+            rhs += delta * model->col_lower_[col];
           }
         }
       };
@@ -3814,7 +3814,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // <= constraint: try to strengthen coefficients
         HighsCDouble rhs = model->row_upper_[row];
         strengthenCoefs(rhs, HighsInt{1},
-                        impliedRowUpper - model->row_upper_[row]);
+                        static_cast<HighsCDouble>(impliedRowUpper) -
+                            model->row_upper_[row]);
         model->row_upper_[row] = static_cast<double>(rhs);
       }
 
@@ -3823,7 +3824,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
         // >= constraint: try to strengthen coefficients
         HighsCDouble rhs = model->row_lower_[row];
         strengthenCoefs(rhs, HighsInt{-1},
-                        model->row_lower_[row] - impliedRowLower);
+                        model->row_lower_[row] -
+                            static_cast<HighsCDouble>(impliedRowLower));
         model->row_lower_[row] = static_cast<double>(rhs);
       }
     }
