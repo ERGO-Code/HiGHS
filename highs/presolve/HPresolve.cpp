@@ -3774,13 +3774,16 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
       }
 
       auto strengthenCoefs = [&](HighsCDouble& rhs, HighsInt direction,
-                                 double maxCoefValue) {
+                                 double maxAbsCoefValue) {
         // iterate over non-zero positions instead of iterating over the
         // HighsMatrixSlice (provided by HPresolve::getStoredRow) because the
         // latter contains pointers to Acol and Avalue that may be invalidated
         // if these vectors are reallocated (see std::vector::push_back
         // performed in HPresolve::addToMatrix).
         for (HighsInt rowiter : rowpositions) {
+          // max. absolute coefficient should not be negative
+          assert(maxAbsCoefValue >= 0);
+
           // get column index and coefficient
           HighsInt col = Acol[rowiter];
           double val = Avalue[rowiter];
@@ -3788,14 +3791,20 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           // skip continuous variables
           if (model->integrality_[col] == HighsVarType::kContinuous) continue;
 
-          if (direction * val > maxCoefValue + primal_feastol) {
-            double delta = direction * maxCoefValue - val;
+          if (direction * val > maxAbsCoefValue + primal_feastol) {
+            assert(model->col_upper_[col] != kHighsInf);
+            // new matrix coefficient is direction * maxAbsCoefValue; subtract
+            // existing matrix coefficient to get delta
+            double delta = direction * maxAbsCoefValue - val;
             addToMatrix(row, col, delta);
-            rhs += delta * model->col_upper_[col];
-          } else if (direction * val < -maxCoefValue - primal_feastol) {
-            double delta = -direction * maxCoefValue - val;
+            rhs += static_cast<HighsCDouble>(delta) * model->col_upper_[col];
+          } else if (direction * val < -maxAbsCoefValue - primal_feastol) {
+            assert(model->col_lower_[col] != -kHighsInf);
+            // new matrix coefficient is (-direction) * maxAbsCoefValue;
+            // subtract existing matrix coefficient to get delta
+            double delta = -direction * maxAbsCoefValue - val;
             addToMatrix(row, col, delta);
-            rhs += delta * model->col_lower_[col];
+            rhs += static_cast<HighsCDouble>(delta) * model->col_lower_[col];
           }
         }
       };
