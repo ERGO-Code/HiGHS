@@ -125,9 +125,11 @@ HighsDebugStatus debugHighsSolution(
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     gradient[iCol] += lp.col_cost_[iCol];
-  getKktFailures(options, is_qp, lp, gradient, solution, local_highs_info, get_residuals);
+  getKktFailures(options, is_qp, lp, gradient, solution, local_highs_info,
+                 get_residuals);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, gradient, solution, primal_dual_errors);
+  getPrimalDualGlpsolErrors(options, lp, gradient, solution,
+                            primal_dual_errors);
   HighsInt& num_primal_infeasibility =
       local_highs_info.num_primal_infeasibilities;
   HighsInt& num_dual_infeasibility = local_highs_info.num_dual_infeasibilities;
@@ -338,7 +340,8 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         "PrDuErrors : %-9s Primal residual:           num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
-        value_adjective.c_str(), primal_dual_errors.glpsol_num_primal_residual_errors,
+        value_adjective.c_str(),
+        primal_dual_errors.glpsol_num_primal_residual_errors,
         primal_dual_errors.glpsol_max_primal_residual.absolute_value,
         primal_dual_errors.glpsol_sum_primal_residual_errors);
   }
@@ -364,7 +367,8 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
         "PrDuErrors : %-9s Dual residual:             num = %7" HIGHSINT_FORMAT
         "; "
         "max = %9.4g; sum = %9.4g\n",
-        value_adjective.c_str(), primal_dual_errors.glpsol_num_dual_residual_errors,
+        value_adjective.c_str(),
+        primal_dual_errors.glpsol_num_dual_residual_errors,
         primal_dual_errors.glpsol_max_dual_residual.absolute_value,
         primal_dual_errors.glpsol_sum_dual_residual_errors);
   }

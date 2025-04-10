@@ -2697,8 +2697,7 @@ HighsStatus Highs::lpKktCheck() {
             int(info.num_dual_residual_errors), info.max_dual_residual_error,
             info.sum_dual_residual_errors, options.dual_residual_tolerance);
     }
-    if (info.primal_dual_objective_error >
-        options.complementarity_tolerance) {
+    if (info.primal_dual_objective_error > options.complementarity_tolerance) {
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,

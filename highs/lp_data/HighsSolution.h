@@ -87,21 +87,19 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
-                            const HighsVarType integrality,
-			    uint8_t& at_status,
-			    uint8_t& mid_status,
-                            double& primal_infeasibility,
+                            const HighsVarType integrality, uint8_t& at_status,
+                            uint8_t& mid_status, double& primal_infeasibility,
                             double& dual_infeasibility);
 
-void getPrimalDualGlpsolErrors(const HighsOptions& options, 
-			       const HighsLp& lp, const std::vector<double>& gradient,
-			       const HighsSolution& solution,
-			       HighsPrimalDualErrors& primal_dual_errors);
+void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
+                               const std::vector<double>& gradient,
+                               const HighsSolution& solution,
+                               HighsPrimalDualErrors& primal_dual_errors);
 
-void getPrimalDualBasisErrors(const HighsOptions& options, 
-			      const HighsLp& lp, 
-			      const HighsSolution& solution, const HighsBasis& basis,
-			      HighsPrimalDualErrors& primal_dual_errors);
+void getPrimalDualBasisErrors(const HighsOptions& options, const HighsLp& lp,
+                              const HighsSolution& solution,
+                              const HighsBasis& basis,
+                              HighsPrimalDualErrors& primal_dual_errors);
 
 bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
