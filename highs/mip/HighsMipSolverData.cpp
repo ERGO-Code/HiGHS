@@ -48,6 +48,12 @@ std::string HighsMipSolverData::solutionSourceToString(
   } else if (solution_source == kSolutionSourceRandomizedRounding) {
     if (code) return "R";
     return "Randomized rounding";
+  } else if (solution_source == kSolutionSourceZiRound) {
+    if (code) return "Z";
+    return "ZI Round";
+  } else if (solution_source == kSolutionSourceShifting) {
+    if (code) return "I";
+    return "Shifting";
   } else if (solution_source == kSolutionSourceSolveLp) {
     if (code) return "S";
     return "Solve LP";
@@ -108,6 +114,32 @@ bool HighsMipSolverData::checkSolution(
   }
 
   return true;
+}
+
+std::vector<std::tuple<HighsInt, HighsInt, double>>
+HighsMipSolverData::getInfeasibleRows(
+    const std::vector<double>& solution) const {
+  std::vector<std::tuple<HighsInt, HighsInt, double>> infeasibleRows;
+  for (HighsInt i = 0; i != mipsolver.model_->num_row_; ++i) {
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
+
+    HighsCDouble row_activity_quad = 0.0;
+    for (HighsInt j = start; j != end; ++j)
+      row_activity_quad +=
+          static_cast<HighsCDouble>(solution[ARindex_[j]]) * ARvalue_[j];
+
+    double row_activity = static_cast<double>(row_activity_quad);
+    if (row_activity > mipsolver.rowUpper(i) + feastol) {
+      double difference = std::abs(row_activity - mipsolver.rowUpper(i));
+      infeasibleRows.push_back({i, +1, difference});
+    }
+    if (row_activity < mipsolver.rowLower(i) - feastol) {
+      double difference = std::abs(mipsolver.rowLower(i) - row_activity);
+      infeasibleRows.push_back({i, -1, difference});
+    }
+  }
+  return infeasibleRows;
 }
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
@@ -1601,6 +1633,8 @@ bool HighsMipSolverData::rootSeparationRound(
 
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
+    if (mipsolver.options_mip_->mip_heuristic_run_shifting)
+      heuristics.shifting(solvals);
     heuristics.flushStatistics();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
@@ -1680,6 +1714,11 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
         num_leaves += 1;
         return HighsLpRelaxation::Status::kInfeasible;
       }
+
+      if (status == HighsLpRelaxation::Status::kOptimal &&
+          mipsolver.options_mip_->mip_heuristic_run_zi_round)
+        heuristics.ziRound(lp.getLpSolver().getSolution().col_value);
+
     } else
       status = lp.getStatus();
 
@@ -1876,9 +1915,14 @@ restart:
   last_disptime = -kHighsInf;
   disptime = 0;
 
+  if (mipsolver.options_mip_->mip_heuristic_run_zi_round)
+    heuristics.ziRound(firstlpsol);
   analysis.mipTimerStart(kMipClockRandomizedRounding);
   heuristics.randomizedRounding(firstlpsol);
   analysis.mipTimerStop(kMipClockRandomizedRounding);
+  if (mipsolver.options_mip_->mip_heuristic_run_shifting)
+    heuristics.shifting(firstlpsol);
+
   heuristics.flushStatistics();
 
   analysis.mipTimerStart(kMipClockEvaluateRootLp);
@@ -2068,6 +2112,15 @@ restart:
   rootlpsolobj = lp.getObjective();
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
+  if (mipsolver.options_mip_->mip_heuristic_run_zi_round) {
+    heuristics.ziRound(firstlpsol);
+    heuristics.flushStatistics();
+  }
+  if (mipsolver.options_mip_->mip_heuristic_run_shifting) {
+    heuristics.shifting(rootlpsol);
+    heuristics.flushStatistics();
+  }
+
   if (!analyticCenterComputed && compute_analytic_centre) {
     if (checkLimits()) return clockOff(analysis);
 
@@ -2122,10 +2175,12 @@ restart:
     if (rootlpsol.empty()) break;
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-    analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
-    heuristics.rootReducedCost();
-    analysis.mipTimerStop(kMipClockRootHeuristicsReducedCost);
-    heuristics.flushStatistics();
+    if (mipsolver.options_mip_->mip_heuristic_run_root_reduced_cost) {
+      analysis.mipTimerStart(kMipClockRootHeuristicsReducedCost);
+      heuristics.rootReducedCost();
+      analysis.mipTimerStop(kMipClockRootHeuristicsReducedCost);
+      heuristics.flushStatistics();
+    }
 
     if (checkLimits()) return clockOff(analysis);
 
@@ -2151,10 +2206,12 @@ restart:
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
     if (checkLimits()) return clockOff(analysis);
-    analysis.mipTimerStart(kMipClockRootHeuristicsRens);
-    heuristics.RENS(rootlpsol);
-    analysis.mipTimerStop(kMipClockRootHeuristicsRens);
-    heuristics.flushStatistics();
+    if (mipsolver.options_mip_->mip_heuristic_run_rens) {
+      analysis.mipTimerStart(kMipClockRootHeuristicsRens);
+      heuristics.RENS(rootlpsol);
+      analysis.mipTimerStop(kMipClockRootHeuristicsRens);
+      heuristics.flushStatistics();
+    }
 
     if (checkLimits()) return clockOff(analysis);
     // if there are new global bound changes we re-evaluate the LP and do one
