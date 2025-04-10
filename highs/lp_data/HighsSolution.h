@@ -88,9 +88,10 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
                             const HighsVarType integrality,
-                            double& absolute_primal_infeasibility,
-                            double& relative_primal_infeasibility,
-                            double& dual_infeasibility, double& value_residual);
+			    uint8_t& at_status,
+			    uint8_t& mid_status,
+                            double& primal_infeasibility,
+                            double& dual_infeasibility);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, 
 			       const HighsLp& lp, const std::vector<double>& gradient,
