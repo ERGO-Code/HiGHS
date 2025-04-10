@@ -5,11 +5,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file test/DevKkt.h
+/**@file test_kkt/DevKkt.h
  * @brief
  */
-#ifndef TEST_DEV_KKT_H_
-#define TEST_DEV_KKT_H_
+#ifndef TEST_KKT_DEV_KKT_H_
+#define TEST_KKT_DEV_KKT_H_
 
 #include <map>
 #include <vector>

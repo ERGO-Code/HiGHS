@@ -40,14 +40,14 @@ option(FAST_BUILD "Fast build: " ON)
 
 find_program(GIT git)
 
-if((GIT) AND(EXISTS ${HIGHS_SOURCE_DIR}/.git))
+if((GIT) AND(EXISTS ${PROJECT_SOURCE_DIR}/.git))
     execute_process(
     COMMAND ${GIT} status
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR} OUTPUT_QUIET)
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_QUIET)
 
     execute_process(
     COMMAND ${GIT} describe --always
-    WORKING_DIRECTORY ${HIGHS_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
   # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
 else()
@@ -71,6 +71,9 @@ message(STATUS "Git hash: " ${GITHASH})
 # By default only build the C++ library.
 option(BUILD_CXX "Build C++ library" ON)
 message(STATUS "Build C++ library: ${BUILD_CXX}")
+
+option(BUILD_CXX_EXE "Build C++ executable" ON)
+message(STATUS "Build C++ library: ${BUILD_CXX_EXE}")
 
 option(BUILD_TESTING "Build Tests" ON)
 
@@ -463,10 +466,7 @@ if(MSVC)
   # add_link_options("/DEBUG:FASTLINK")
 
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Z7>")
-
-  if (NOT CUPDLP_GPU)
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
-  endif()
+  add_link_options("$<$<COMPILE_LANGUAGE:C,CXX>:/DEBUG:FASTLINK>")
 
   if(STDCALL)
     # /Gz - stdcall calling convention
@@ -518,7 +518,7 @@ set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 # string(TIMESTAMP TODAY "%Y-%m-%d")
 # message(STATUS "Compilation date: " ${TODAY})
 
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+configure_file(${PROJECT_SOURCE_DIR}/highs/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 if (DEBUG_MEMORY STREQUAL "Address")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
@@ -676,7 +676,7 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
         COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/highs --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
         COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
@@ -690,7 +690,7 @@ if(NOT FAST_BUILD)
         COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
         COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
-        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+        COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/highs --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
         VERBATIM
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Resetting code coverage counters to zero.")
@@ -699,22 +699,22 @@ if(NOT FAST_BUILD)
 
   include_directories(
     ${HIGHS_BINARY_DIR}
-    ${HIGHS_SOURCE_DIR}/app
-    ${HIGHS_SOURCE_DIR}/extern
-    ${HIGHS_SOURCE_DIR}/extern/zstr
-    ${HIGHS_SOURCE_DIR}/src
-    ${HIGHS_SOURCE_DIR}/src/io
-    ${HIGHS_SOURCE_DIR}/src/pdlp/cupdlp
-    ${HIGHS_SOURCE_DIR}/src/ipm/ipx
-    ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
-    ${HIGHS_SOURCE_DIR}/src/lp_data
-    ${HIGHS_SOURCE_DIR}/src/mip
-    ${HIGHS_SOURCE_DIR}/src/model
-    ${HIGHS_SOURCE_DIR}/src/presolve
-    ${HIGHS_SOURCE_DIR}/src/qpsolver
-    ${HIGHS_SOURCE_DIR}/src/simplex
-    ${HIGHS_SOURCE_DIR}/src/test
-    ${HIGHS_SOURCE_DIR}/src/util)
+    ${PROJECT_SOURCE_DIR}/app
+    ${PROJECT_SOURCE_DIR}/extern
+    ${PROJECT_SOURCE_DIR}/extern/zstr
+    ${PROJECT_SOURCE_DIR}/highs
+    ${PROJECT_SOURCE_DIR}/highs/io
+    ${PROJECT_SOURCE_DIR}/highs/pdlp/cupdlp
+    ${PROJECT_SOURCE_DIR}/highs/ipm/ipx
+    ${PROJECT_SOURCE_DIR}/highs/ipm/basiclu
+    ${PROJECT_SOURCE_DIR}/highs/lp_data
+    ${PROJECT_SOURCE_DIR}/highs/mip
+    ${PROJECT_SOURCE_DIR}/highs/model
+    ${PROJECT_SOURCE_DIR}/highs/presolve
+    ${PROJECT_SOURCE_DIR}/highs/qpsolver
+    ${PROJECT_SOURCE_DIR}/highs/simplex
+    ${PROJECT_SOURCE_DIR}/highs/test_kkt
+    ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -728,7 +728,7 @@ if(NOT FAST_BUILD)
   # endif()
 
   # Targets
-  add_subdirectory(src)
+  add_subdirectory(highs)
   add_subdirectory(app)
   if(BUILD_TESTING)
     enable_testing()

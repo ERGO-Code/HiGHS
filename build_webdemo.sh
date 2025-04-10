@@ -14,7 +14,7 @@
 # This will create the file `build_webdemo/bin/highs.html`. For fast edit
 # iterations run
 
-#     find src app | entr -rs 'make -C build_webdemo highs; echo'
+#     find highs app | entr -rs 'make -C build_webdemo highs; echo'
 
 # This will rebuild `highs.html` every time a source file is modified (e.g.
 # from Visual Studio Code).
