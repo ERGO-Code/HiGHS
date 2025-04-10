@@ -390,14 +390,15 @@ cupdlp_int PDHG_Clear(CUPDLPwork *w) {
   timers->FreeDeviceMemTime += getTimeStamp() - begin;
 #endif
 
+  // Call timers_clear, before clearing settings
+  if (timers) {
+    timers_clear(settings->nLogLevel, timers);
+  }
   if (settings) {
     settings_clear(settings);
   }
   if (stepsize) {
     stepsize_clear(stepsize);
-  }
-  if (timers) {
-  timers_clear(w->settings->nLogLevel, timers);
   }
   if (scaling) {
     // scaling_clear(scaling);

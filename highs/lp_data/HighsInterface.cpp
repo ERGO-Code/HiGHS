@@ -3749,7 +3749,7 @@ HighsStatus Highs::multiobjectiveSolve() {
         "%2d %11.6g %11.6g %11.6g %11.6g %11d  ", int(iObj),
         linear_objective.weight, linear_objective.offset,
         linear_objective.abs_tolerance, linear_objective.rel_tolerance,
-        linear_objective.priority);
+        int(linear_objective.priority));
     if (lp.num_col_ < coeff_logging_size_limit) {
       for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
         *multi_objective_log << highsFormatToString(
