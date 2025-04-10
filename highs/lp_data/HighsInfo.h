@@ -119,7 +119,7 @@ struct HighsInfoStruct {
   HighsInt num_complementarity_violations;
   double max_complementarity_violation;
   double sum_complementarity_violations;
-  double relative_primal_dual_objective_error;
+  double primal_dual_objective_error;
   double primal_dual_integral;
 };
 
@@ -311,9 +311,9 @@ class HighsInfo : public HighsInfoStruct {
     records.push_back(record_double);
 
     record_double =
-        new InfoRecordDouble("relative_primal_dual_objective_error",
-                             "Relative primal-dual objective error", advanced,
-                             &relative_primal_dual_objective_error, 0);
+        new InfoRecordDouble("primal_dual_objective_error",
+                             "Primal-dual objective error", advanced,
+                             &primal_dual_objective_error, 0);
     records.push_back(record_double);
 
     record_double =

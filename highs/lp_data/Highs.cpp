@@ -4608,8 +4608,8 @@ void Highs::reportSolvedLpQpStats() {
     assert(status == HighsStatus::kOk);
     // #2251 for checking <<<
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "Relative P-D error  : %17.10e\n",
-                 info_.relative_primal_dual_objective_error);
+                 "P-D objective error : %17.10e\n",
+                 info_.primal_dual_objective_error);
   }
   if (!options_.timeless_log) {
     double run_time = timer_.read();

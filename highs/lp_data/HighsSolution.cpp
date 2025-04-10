@@ -114,8 +114,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       highs_info.max_complementarity_violation;
   double& sum_complementarity_violation =
       highs_info.sum_complementarity_violations;
-  double& relative_primal_dual_objective_error =
-      highs_info.relative_primal_dual_objective_error;
+  double& primal_dual_objective_error =
+      highs_info.primal_dual_objective_error;
 
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
@@ -137,7 +137,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violation = kHighsIllegalComplementarityViolation;
 
-  relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+  primal_dual_objective_error = kHighsIllegalComplementarityViolation;
 
   highs_info.primal_solution_status = kSolutionStatusNone;
   highs_info.dual_solution_status = kSolutionStatusNone;
@@ -259,78 +259,132 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double ipx_norm_costs = 0.0;
   double pdlp_norm_costs = 0.0;
   double highs_norm_costs = 0.0;
-  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
-    if (iVar < lp.num_col_) {
-      HighsInt iCol = iVar;
-      cost = gradient[iCol];
-      lower = lp.col_lower_[iCol];
-      upper = lp.col_upper_[iCol];
-      value = solution.col_value[iCol];
-      if (have_dual_solution) dual = solution.col_dual[iCol];
-      if (have_integrality) integrality = lp.integrality_[iCol];
-      ipx_norm_costs = std::max(std::fabs(cost), ipx_norm_costs);
-      pdlp_norm_costs += cost*cost;
-      if (dual*dual < dual_feasibility_tolerance) {
-	// Dual close to zero
-	highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+  // Pass twice through this loop, once to determine the bound and
+  // cost norms, and once to use them to assess relative
+  // infeasibilities and residual errors
+  for (HighsInt pass = 0; pass < 2; pass++) {
+    for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+      if (iVar < lp.num_col_) {
+	HighsInt iCol = iVar;
+	cost = gradient[iCol];
+	lower = lp.col_lower_[iCol];
+	upper = lp.col_upper_[iCol];
+	value = solution.col_value[iCol];
+	if (have_dual_solution) dual = solution.col_dual[iCol];
+	if (have_integrality) integrality = lp.integrality_[iCol];
+	if (pass == 0) {
+	  ipx_norm_costs = std::max(std::fabs(cost), ipx_norm_costs);
+	  pdlp_norm_costs += cost*cost;
+	  if (dual*dual < dual_feasibility_tolerance) {
+	    // Dual close to zero
+	    highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+	  }
+	}
+      } else {
+	HighsInt iRow = iVar - lp.num_col_;
+	lower = lp.row_lower_[iRow];
+	upper = lp.row_upper_[iRow];
+	value = solution.row_value[iRow];
+	if (have_dual_solution) dual = solution.row_dual[iRow];
+	integrality = HighsVarType::kContinuous;
+	if (pass == 0) {
+	  if (lower > -kHighsInf) pdlp_norm_bounds += lower*lower;
+	  if (upper < kHighsInf) pdlp_norm_bounds += upper*upper;
+	}
+	if (lower > -kHighsInf) ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
+	if (upper < kHighsInf) ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
       }
-    } else {
-      HighsInt iRow = iVar - lp.num_col_;
-      lower = lp.row_lower_[iRow];
-      upper = lp.row_upper_[iRow];
-      value = solution.row_value[iRow];
-      if (have_dual_solution) dual = solution.row_dual[iRow];
-      integrality = HighsVarType::kContinuous;
-      if (lower > -kHighsInf) pdlp_norm_bounds += lower*lower;
-      if (upper < kHighsInf) pdlp_norm_bounds += upper*upper;
-    }
-    if (lower > -kHighsInf) ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
-    if (upper < kHighsInf) ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
-    // Flip dual according to lp.sense_
-    dual *= (HighsInt)lp.sense_;
+      // Flip dual according to lp.sense_
+      dual *= (HighsInt)lp.sense_;
+      getVariableKktFailures(primal_feasibility_tolerance,
+			     dual_feasibility_tolerance,
+			     lower, upper,
+			     value, dual,
+			     integrality,
+			     at_status[iVar],
+			     mid_status[iVar],
+			     primal_infeasibility,
+			     dual_infeasibility);
+      if (pass == 0) {
+	// If the primal value is close to a bound then include the bound
+	// in the active bound norm
+	double residual = 0;
+	if (at_status[iVar] == kLo) {
+	  residual = std::fabs(lower - value);
+	  highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
+	} else if (at_status[iVar] == kUp) {
+	  residual = std::fabs(value - upper);
+	  highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
+	}
+	// #2251 For checking logical correctness 
+	assert(residual*residual < primal_feasibility_tolerance);
+      } else {
+	// Accumulate primal infeasibilities
+	if (primal_infeasibility > primal_feasibility_tolerance) {
+	  num_primal_infeasibility++;
+	}
+	if (max_primal_infeasibility < primal_infeasibility) {
+	  max_primal_infeasibility = primal_infeasibility;
+	}
+	sum_primal_infeasibility += primal_infeasibility;
 
-    getVariableKktFailures(primal_feasibility_tolerance,
-			   dual_feasibility_tolerance,
-			   lower, upper,
-			   value, dual,
-			   integrality,
-			   at_status[iVar],
-			   mid_status[iVar],
-			   primal_infeasibility,
-			   dual_infeasibility);
+	if (have_dual_solution) {
+	  // Accumulate dual infeasibilities
+	  if (dual_infeasibility > dual_feasibility_tolerance) {
+	    num_dual_infeasibility++;
+	  }
+	  if (max_dual_infeasibility < dual_infeasibility) {
+	    max_dual_infeasibility = dual_infeasibility;
+	  }
+	  sum_dual_infeasibility += dual_infeasibility;
+	}
 
-    // If the primal value is close to a bound then include the bound
-    // in the active bound norm
-    double residual = 0;
-    if (at_status[iVar] == kLo) {
-      residual = std::fabs(lower - value);
-      highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
-    } else if (at_status[iVar] == kUp) {
-      residual = std::fabs(value - upper);
-      highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
-    }
-    assert(residual*residual < primal_feasibility_tolerance);
-
-
-    // Accumulate primal infeasibilities
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      num_primal_infeasibility++;
-    }
-    if (max_primal_infeasibility < primal_infeasibility) {
-      max_primal_infeasibility = primal_infeasibility;
-    }
-    sum_primal_infeasibility += primal_infeasibility;
-
-    if (have_dual_solution) {
-      // Accumulate dual infeasibilities
-      if (dual_infeasibility > dual_feasibility_tolerance) {
-        num_dual_infeasibility++;
+	if (get_residuals) {
+	  /*
+	    double primal_activity_residual = std::fabs(primal_activity[iRow]-solution.row_value[iRow]);
+	    if (primal_activity_residual > 1e-8) {
+	    printf("primal_activity_residual = %g\n", primal_activity_residual);
+	    }
+	    assert(primal_activity_residual < 1e-8);
+	  */
+	  double primal_residual_error = 0;//2251
+	  double relative_primal_residual_error = 0;//2251
+	  if (primal_residual_error > primal_residual_tolerance) {
+	    num_primal_residual_error++;
+	  }
+	  if (max_primal_residual_error < primal_residual_error) {
+	    max_primal_residual_error = primal_residual_error;
+	  }
+	  if (max_relative_primal_residual_error < relative_primal_residual_error) {
+	    max_relative_primal_residual_error = relative_primal_residual_error;
+	  }
+	  sum_primal_residual_error += primal_residual_error;
+	}
       }
-      if (max_dual_infeasibility < dual_infeasibility) {
-        max_dual_infeasibility = dual_infeasibility;
+      if (get_residuals && have_dual_solution) {
+	/*
+	  double dual_activity_residual = std::fabs(dual_activity[iCol]-gradient[iCol]+solution.col_dual[iCol]);
+	  if (dual_activity_residual > 1e-8) {
+	  printf("dual_activity_residual = %g\n", dual_activity_residual);
+	  }
+	  assert(dual_activity_residual < 1e-8);
+	*/
+	double dual_residual_error =0;//2251
+	double relative_dual_residual_error =0;//2251
+	if (dual_residual_error > dual_residual_tolerance) {
+	  num_dual_residual_error++;
+	}
+	if (max_dual_residual_error < dual_residual_error) {
+	  max_dual_residual_error = dual_residual_error;
+	}
+	if (max_relative_dual_residual_error < relative_dual_residual_error) {
+	  max_relative_dual_residual_error = relative_dual_residual_error;
+	}
+	sum_dual_residual_error += dual_residual_error;
       }
-      sum_dual_infeasibility += dual_infeasibility;
     }
+    pdlp_norm_costs = std::sqrt(pdlp_norm_costs);
+    pdlp_norm_bounds = std::sqrt(pdlp_norm_bounds);
   }
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
@@ -340,62 +394,26 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     assert(have_values);
   }
 
-  if (get_residuals) {
-    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      /*
-      double primal_activity_residual = std::fabs(primal_activity[iRow]-solution.row_value[iRow]);
-      if (primal_activity_residual > 1e-8) {
-	printf("primal_activity_residual = %g\n", primal_activity_residual);
-      }
-      assert(primal_activity_residual < 1e-8);
-      */
-      double primal_residual_error = 0;//2251
-      double relative_primal_residual_error = 0;//2251
-      if (primal_residual_error > primal_residual_tolerance) {
-        num_primal_residual_error++;
-      }
-      if (max_primal_residual_error < primal_residual_error) {
-        max_primal_residual_error = primal_residual_error;
-      }
-      if (max_relative_primal_residual_error < relative_primal_residual_error) {
-        max_relative_primal_residual_error = relative_primal_residual_error;
-      }
-      sum_primal_residual_error += primal_residual_error;
-    }
-  }
-  if (get_residuals && have_dual_solution) {
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      /*
-	double dual_activity_residual = std::fabs(dual_activity[iCol]-gradient[iCol]+solution.col_dual[iCol]);
-	if (dual_activity_residual > 1e-8) {
-	printf("dual_activity_residual = %g\n", dual_activity_residual);
-	}
-	assert(dual_activity_residual < 1e-8);
-      */
-      double dual_residual_error =0;//2251
-      double relative_dual_residual_error =0;//2251
-      if (dual_residual_error > dual_residual_tolerance) {
-	num_dual_residual_error++;
-      }
-      if (max_dual_residual_error < dual_residual_error) {
-	max_dual_residual_error = dual_residual_error;
-      }
-      if (max_relative_dual_residual_error < relative_dual_residual_error) {
-	max_relative_dual_residual_error = relative_dual_residual_error;
-      }
-      sum_dual_residual_error += dual_residual_error;
-    }
-  }
-
+  double ipx_primal_dual_objective_error = 0;
+  double pdlp_primal_dual_objective_error = 0;
   if (!is_qp && have_dual_solution) {
-    // Determine the relative primal-dual objective error, PDLP-style
+    // Determine the primal-dual objective error
+    //
+    // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
+    // 0.5*std::abs(pobjective+dobjective));
+    //
+    // PDLP computes dRelObjGap = fabs(dPrimalObj - dDualObj) / (1.0 +
+    // fabs(dPrimalObj) + fabs(dDualObj));
     double dual_objective_value;
     bool dual_objective_status = computeDualObjectiveValue(lp, solution, dual_objective_value);
     assert(dual_objective_status);
-    relative_primal_dual_objective_error =
-        std::fabs(highs_info.objective_function_value - dual_objective_value) /
-        (1.0 + std::fabs(highs_info.objective_function_value) +
-         std::fabs(dual_objective_value));
+    const double objective_difference = highs_info.objective_function_value - dual_objective_value;
+    const double abs_objective_difference = std::fabs(objective_difference);
+    const double ipx_denominator = 1.0 + 0.5 * std::fabs(highs_info.objective_function_value + dual_objective_value);
+    const double pdlp_denominator = 1.0 + std::fabs(highs_info.objective_function_value) + std::fabs(dual_objective_value);
+    ipx_primal_dual_objective_error = objective_difference/ipx_denominator;
+    pdlp_primal_dual_objective_error = abs_objective_difference/pdlp_denominator;
+    primal_dual_objective_error = pdlp_primal_dual_objective_error;
   }
 
   // Assign primal solution status
@@ -1691,20 +1709,20 @@ void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                info.max_complementarity_violation,
                info.sum_complementarity_violations,
                options.complementarity_tolerance);
-  if (info.relative_primal_dual_objective_error !=
+  if (info.primal_dual_objective_error !=
       kHighsIllegalComplementarityViolation) {
     highsLogUser(options.log_options,
-                 info.relative_primal_dual_objective_error >
+                 info.primal_dual_objective_error >
                          options.complementarity_tolerance
                      ? HighsLogType::kWarning
                      : HighsLogType::kInfo,
                  "%s                                    %9.4g"
                  " relative P-D objective error (tolerance = %9.4g)\n",
-                 info.relative_primal_dual_objective_error >
+                 info.primal_dual_objective_error >
                          options.complementarity_tolerance
                      ? ""
                      : "         ",
-                 info.relative_primal_dual_objective_error,
+                 info.primal_dual_objective_error,
                  options.complementarity_tolerance);
   }
 }

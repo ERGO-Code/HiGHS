@@ -1086,8 +1086,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::max_complementarity_violation)
       .def_readwrite("sum_complementarity_violations",
                      &HighsInfo::sum_complementarity_violations)
-      .def_readwrite("relative_primal_dual_objective_error",
-		   &HighsInfo::relative_primal_dual_objective_error)
+      .def_readwrite("primal_dual_objective_error",
+		   &HighsInfo::primal_dual_objective_error)
       .def_readwrite("primal_dual_integral",
                      &HighsInfo::primal_dual_integral);
   py::class_<HighsOptions>(m, "HighsOptions", py::module_local())

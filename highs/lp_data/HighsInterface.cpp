@@ -1726,7 +1726,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         kHighsIllegalComplementarityViolation;
     this->info_.sum_complementarity_violations =
         kHighsIllegalComplementarityViolation;
-    this->info_.relative_primal_dual_objective_error =
+    this->info_.primal_dual_objective_error =
         kHighsIllegalComplementarityViolation;
     if (has_dual_ray) {
       assert(this->info_.num_primal_infeasibilities > 0);
@@ -2643,7 +2643,7 @@ HighsStatus Highs::lpKktCheck() {
       if (info.num_complementarity_violations != 0 ||
           info.num_primal_residual_errors != 0 ||
           info.num_dual_residual_errors != 0 ||
-          info.relative_primal_dual_objective_error >
+          info.primal_dual_objective_error >
               options.complementarity_tolerance) {
         printf(
             "Optimal basic solution has %d complementarity violations; %d "
@@ -2652,7 +2652,7 @@ HighsStatus Highs::lpKktCheck() {
             int(info.num_complementarity_violations),
             int(info.num_primal_residual_errors),
             int(info.num_dual_residual_errors),
-            info.relative_primal_dual_objective_error);
+            info.primal_dual_objective_error);
         printf(
             "   num/max/sum %6d / %9.4g / %9.4g     primal residual errors   "
             "(tolerance = %9.4g)\n",
@@ -2668,7 +2668,7 @@ HighsStatus Highs::lpKktCheck() {
       assert(info.num_complementarity_violations == 0);
       assert(info.num_primal_residual_errors == 0);
       assert(info.num_dual_residual_errors == 0);
-      assert(info.relative_primal_dual_objective_error <=
+      assert(info.primal_dual_objective_error <=
              options.complementarity_tolerance);
     }
   } else {
@@ -2697,14 +2697,14 @@ HighsStatus Highs::lpKktCheck() {
             int(info.num_dual_residual_errors), info.max_dual_residual_error,
             info.sum_dual_residual_errors, options.dual_residual_tolerance);
     }
-    if (info.relative_primal_dual_objective_error >
+    if (info.primal_dual_objective_error >
         options.complementarity_tolerance) {
       foundOptimalityError();
       if (was_optimal)
         highsLogUser(log_options, HighsLogType::kWarning,
                      "                                    %9.4g"
                      " relative P-D objective error (tolerance = %9.4g)\n",
-                     info.relative_primal_dual_objective_error,
+                     info.primal_dual_objective_error,
                      options.complementarity_tolerance);
     }
   }
@@ -3704,8 +3704,7 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info.num_complementarity_violations = kHighsIllegalComplementarityCount;
     info.max_complementarity_violation = kHighsIllegalComplementarityViolation;
     info.sum_complementarity_violations = kHighsIllegalComplementarityViolation;
-    info.relative_primal_dual_objective_error =
-        kHighsIllegalComplementarityViolation;
+    info.primal_dual_objective_error = kHighsIllegalComplementarityViolation;
     this->solution_.value_valid = true;
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
   }

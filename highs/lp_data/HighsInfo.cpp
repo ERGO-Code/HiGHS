@@ -44,7 +44,7 @@ void HighsInfo::invalidate() {
   num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
   sum_complementarity_violations = kHighsIllegalComplementarityViolation;
-  relative_primal_dual_objective_error = kHighsIllegalComplementarityViolation;
+  primal_dual_objective_error = kHighsIllegalComplementarityViolation;
   primal_dual_integral = -kHighsInf;
 }
 
