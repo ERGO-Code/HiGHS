@@ -128,7 +128,7 @@ void Avgas::getRow(const HighsInt row, double& lower, double& upper,
     index.push_back(7);
     value.push_back(-2);
   } else {
-    if (dev_run) printf("Avgas: row %d out of range\n", HighsInt(row));
+    if (dev_run) printf("Avgas: row %d out of range\n", static_cast<int>(row));
   }
 }
 
@@ -240,6 +240,6 @@ void Avgas::getCol(const HighsInt col, double& cost, double& lower,
     index.push_back(9);
     value.push_back(-2);
   } else {
-    if (dev_run) printf("Avgas: col %d out of range\n", HighsInt(col));
+    if (dev_run) printf("Avgas: col %d out of range\n", static_cast<int>(col));
   }
 }

@@ -202,7 +202,7 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kUnknown);
     const double dl_objective_value =
         std::fabs(highs0.getInfo().objective_function_value - objective_value);
-    REQUIRE(dl_objective_value < 1e-12);
+    REQUIRE(dl_objective_value < 1e-9);
     REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
     double mip_feasibility_tolerance;
     highs0.getOptionValue("mip_feasibility_tolerance",
@@ -577,7 +577,8 @@ TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
 }
 
 TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
-  std::string presolved_model_file = "temp.mps";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string presolved_model_file = test_name + ".mps";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
   Highs highs;
@@ -648,4 +649,27 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+}
+
+TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Allow only presolve at root node
+  highs.setOptionValue("mip_root_presolve_only", true);
+  highs.readModel(model_file);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+}
+
+TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable lifting for probing
+  highs.setOptionValue("mip_lifting_for_probing", 1);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
 }

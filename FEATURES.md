@@ -2,20 +2,17 @@
 
 ## Code changes
 
-Any LP offset is communicated to the IPM solver, and used in logging and primal/dual objective calculations. 
+Fixed incorrect assertion in `HighsMipSolver::solutionFeasible()` (fixing [#2204](https://github.com/ERGO-Code/HiGHS/issues/2204)))
 
-If there is a valid basis when Highs::run() is called, presolve isn't skipped unless the solver option is "simplex" or "choose" (when simplex will always be chosen if there is an advanced basis).
+getColIntegrality now returns `HighsVarType::kContinuous` when `model_.lp_.integrality_` is empty (fixing [#2261](https://github.com/ERGO-Code/HiGHS/issues/2261))
 
-Added basis solve methods to highspy
+Now ensuring that when solving a scaled LP with useful but unvalidated basis, it does not lose its scaling after validation, since the scaling factors will be applied to the solution (fixing [#2267](https://github.com/ERGO-Code/HiGHS/issues/2267))
 
-Added methods to get primal/dual ray and dual unboundedness direction to highspy
+By setting non-empty values of options `read_solution_file`, `read_basis_file`, `write_model_file` (with extension `.lp` or `.mps`), `write_solution_file`, `solution_file`, `write_basis_file`, these files will be read or written when calling `Highs::run()`. Hence options previously only available via the command line interface can be use (for example) by modelling languages that only call `Highs::run()` (fixing [#2269](https://github.com/ERGO-Code/HiGHS/issues/2269)).
 
-When a presolved LP has model status kUnknown, rather than returning this to the user, it performs postsolve and then uses the basis to solve the original LP
+Bug [#2273](https://github.com/ERGO-Code/HiGHS/issues/2273)) fixed
 
-Fixed bug in presolve when pointers stored in HighsMatrixSlice get invalidated when the coefficient matrix is reallocated (e.g. when non-zeros are added in HPresolve::addToMatrix)
+As part of [#2286](https://github.com/ERGO-Code/HiGHS/pull/2286)), the root of the HiGHS source files is now `highs/`, rather than `src/`
 
-Primal and dual residual tolerances - applied following IPM or PDLP solution - now documented as options
+ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
 
-Highs::getCols (Highs::getRows) now runs in linear time if the internal constraint matrix is stored column-wise (row-wise). Added ensureColwise/Rowwise to the Highs class, the C API and highspy so that users can set the internal constraint matrix storage orientation
-
-When columns and rows are deleted from the incumbent LP after a basic solution has been found, HiGHS no longer invalidates the basis. Now it maintains the basic and nonbasic status of the remaining variables and constraints. When the model is re-solved, this information is used to construct a starting basis.

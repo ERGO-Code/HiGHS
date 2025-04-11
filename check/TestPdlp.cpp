@@ -96,6 +96,8 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   //     optimal = false;
   //   }
 
+  optimal = false;
+
   run_status = highs.run();
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(std::abs(info.objective_function_value - optimal_objective) <

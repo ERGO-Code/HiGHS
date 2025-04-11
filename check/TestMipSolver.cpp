@@ -509,6 +509,8 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
 
 TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
   // Introduced due to #1325 observing that LI and UI are needed
   HighsLp lp;
   lp.num_col_ = 6;
@@ -536,7 +538,6 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   const double obj0 = highs.getObjectiveValue();
   if (dev_run) printf("Optimum at first run: %g\n", obj0);
   // now write out to MPS and load again
-  const std::string test_mps = "test.mps";
   highs.writeModel(test_mps);
   highs.readModel(test_mps);
   highs.run();
@@ -549,8 +550,9 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string solution_file = test_name + ".sol";
   const std::string model = "flugpl";
-  const std::string solution_file = "MipImproving.sol";
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
@@ -617,7 +619,8 @@ TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
 }
 
 TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
-  const std::string solution_file = "MipImproving.sol";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string solution_file = test_name + ".sol";
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_improving_solution_save", true);
@@ -800,10 +803,50 @@ void rowlessMIP(Highs& highs) {
 TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2122.lp";
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
   highs.readModel(filename);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -187612.944194;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/2171.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -22375.7585461;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2204.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 6.0;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
+TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable both heuristics
+  highs.setOptionValue("mip_heuristic_run_zi_round", true);
+  highs.setOptionValue("mip_heuristic_run_shifting", true);
+  highs.readModel(model_file);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 82.19999924;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }

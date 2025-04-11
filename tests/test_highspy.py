@@ -112,9 +112,9 @@ class TestHighsPy(unittest.TestCase):
 
     def test_version(self):
         h = self.get_basic_model()
-        self.assertEqual(h.version(), "1.9.0")
+        self.assertEqual(h.version(), "1.10.0")
         self.assertEqual(h.versionMajor(), 1)
-        self.assertEqual(h.versionMinor(), 9)
+        self.assertEqual(h.versionMinor(), 10)
         self.assertEqual(h.versionPatch(), 0)
 
     def test_basics(self):
@@ -2059,3 +2059,31 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         expr = y + x <= 5
         self.assertEqual(repr(expr), "-inf <= 1.0_v1  1.0_v0 <= 5.0")
         self.assertEqual(str(expr), "-inf <= 1.0_v0  1.0_v1 <= 5.0")
+
+    def test_lexicographic_optimization(self):
+        # max f1 = X1
+        # max f2 = 3 X1 + 4 X2
+        # st  X1 <= 2
+        #     X2 <= 4
+        #     5 X1 + 4 X2 <= 20
+        model = highspy.Highs()
+        model.setOptionValue("blend_multi_objectives", False)
+        num_vars = 2
+        model.addVars(num_vars, np.array([0.0, 0.0]), np.array([2.0, 4.0]))
+        obj1 = highspy.HighsLinearObjective()
+        obj1.offset = 0
+        obj1.coefficients = [1, 0]
+        obj1.priority = 2
+        obj1.rel_tolerance = 0.1
+        obj1.abs_tolerance = 0.2
+        obj2 = highspy.HighsLinearObjective()
+        obj2.offset=0
+        obj2.coefficients=[3, 4]
+        obj2.priority=1
+        model.addLinearObjective(obj1)
+        model.addLinearObjective(obj2)
+        model.addRow(0.0, 20.0, num_vars, np.arange(num_vars), np.array([5.0, 4.0]))
+        model.run()
+
+        status = model.getModelStatus()
+        self.assertEqual(status, highspy.HighsModelStatus.kOptimal)

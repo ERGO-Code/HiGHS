@@ -20,7 +20,7 @@ set(headers_python ${highs_headers_python}
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG)
 
-python_add_library(_core MODULE src/highs_bindings.cpp WITH_SOABI)
+python_add_library(_core MODULE highs/highs_bindings.cpp WITH_SOABI)
 
 # Pybind11
 # include(FetchContent)
@@ -44,16 +44,6 @@ target_link_libraries(_core PRIVATE pybind11::headers)
 
 # sources for python 
 target_sources(_core PUBLIC ${sources_python} ${headers_python})
-
-# Cuda Python 
-# if (CUPDLP_GPU)
-#     enable_language(CXX CUDA)
-#     target_sources(_core PRIVATE ${cuda_sources_python})
-
-#     target_include_directories(_core PUBLIC "/usr/local/cuda/include")
-#     set_target_properties(_core PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-# endif()
-
 
 # include directories for python 
 target_include_directories(_core PUBLIC ${include_dirs_python})
