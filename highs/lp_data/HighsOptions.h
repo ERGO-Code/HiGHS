@@ -437,6 +437,12 @@ struct HighsOptionsStruct {
   double mip_abs_gap;
   double mip_heuristic_effort;
   double mip_min_logging_interval;
+  bool mip_heuristic_run_rins;
+  bool mip_heuristic_run_rens;
+  bool mip_heuristic_run_root_reduced_cost;
+  bool mip_heuristic_run_zi_round;
+  bool mip_heuristic_run_shifting;
+
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
@@ -1108,6 +1114,32 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_heuristic_effort", "Effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool("mip_heuristic_run_rins",
+                                       "Run RINS heuristic: Default = true",
+                                       advanced, &mip_heuristic_run_rins, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip_heuristic_run_rens",
+                                       "Run RENS heuristic: Default = true",
+                                       advanced, &mip_heuristic_run_rens, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_root_reduced_cost",
+        "Run rootReducedCost heuristic: Default = true", advanced,
+        &mip_heuristic_run_root_reduced_cost, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_zi_round", "Run ZI Round heuristic: Default = false",
+        advanced, &mip_heuristic_run_zi_round, false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool(
+        "mip_heuristic_run_shifting", "Run Shifting heuristic: Default = false",
+        advanced, &mip_heuristic_run_shifting, false);
+    records.push_back(record_bool);
 
     record_double = new OptionRecordDouble(
         "mip_rel_gap",
