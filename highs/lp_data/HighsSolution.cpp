@@ -474,50 +474,62 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   const bool report = false;
   if (report) {
     printf("\ngetKktFailures:: IPX cost norm = %8.3g; bound norm = %8.3g\n",
-	   ipx_norm_costs, ipx_norm_bounds);
-    printf("getKktFailures:: IPX primal infeasibility (abs/rel):    %8.3g / %8.3g\n",
-	   ipx_primal_infeasibility, ipx_relative_primal_infeasibility);
+           ipx_norm_costs, ipx_norm_bounds);
+    printf(
+        "getKktFailures:: IPX primal infeasibility (abs/rel):    %8.3g / "
+        "%8.3g\n",
+        ipx_primal_infeasibility, ipx_relative_primal_infeasibility);
     if (have_dual_solution)
-      printf("getKktFailures:: IPX dual infeasibility (abs/rel):      %8.3g / "
-	     "%8.3g\n",
-	     ipx_dual_infeasibility, ipx_relative_dual_infeasibility);
+      printf(
+          "getKktFailures:: IPX dual infeasibility (abs/rel):      %8.3g / "
+          "%8.3g\n",
+          ipx_dual_infeasibility, ipx_relative_dual_infeasibility);
     if (get_residuals) {
-      printf("getKktFailures:: IPX primal residual (abs/rel):         %8.3g / "
-	     "%8.3g\n",
-	     ipx_primal_residual, ipx_relative_primal_residual);
+      printf(
+          "getKktFailures:: IPX primal residual (abs/rel):         %8.3g / "
+          "%8.3g\n",
+          ipx_primal_residual, ipx_relative_primal_residual);
       if (have_dual_solution)
-	printf("getKktFailures:: IPX dual residual (abs/rel):           %8.3g / "
-	       "%8.3g\n",
-	       ipx_dual_residual, ipx_relative_dual_residual);
+        printf(
+            "getKktFailures:: IPX dual residual (abs/rel):           %8.3g / "
+            "%8.3g\n",
+            ipx_dual_residual, ipx_relative_dual_residual);
     }
     if (!is_qp && have_dual_solution)
-      printf("getKktFailures:: IPX objective gap (abs/rel):           %8.3g / "
-	     "%8.3g\n",
-	     ipx_primal_dual_objective_error,
-	     ipx_relative_primal_dual_objective_error);
-    
+      printf(
+          "getKktFailures:: IPX objective gap (abs/rel):           %8.3g / "
+          "%8.3g\n",
+          ipx_primal_dual_objective_error,
+          ipx_relative_primal_dual_objective_error);
+
     printf("\ngetKktFailures:: PDLP cost norm = %8.3g; bound norm = %8.3g\n",
-	   pdlp_norm_costs, pdlp_norm_bounds);
-    printf("getKktFailures:: PDLP primal infeasibility (abs/rel):   %8.3g / %8.3g\n",
-	   pdlp_primal_infeasibility, pdlp_relative_primal_infeasibility);
+           pdlp_norm_costs, pdlp_norm_bounds);
+    printf(
+        "getKktFailures:: PDLP primal infeasibility (abs/rel):   %8.3g / "
+        "%8.3g\n",
+        pdlp_primal_infeasibility, pdlp_relative_primal_infeasibility);
     if (have_dual_solution)
-      printf("getKktFailures:: PDLP dual infeasibility (abs/rel):     %8.3g / "
-	     "%8.3g\n",
-	     pdlp_dual_infeasibility, pdlp_relative_dual_infeasibility);
+      printf(
+          "getKktFailures:: PDLP dual infeasibility (abs/rel):     %8.3g / "
+          "%8.3g\n",
+          pdlp_dual_infeasibility, pdlp_relative_dual_infeasibility);
     if (get_residuals) {
-      printf("getKktFailures:: PDLP primal residual (abs/rel):        %8.3g / "
-	     "%8.3g\n",
-	     pdlp_primal_residual, pdlp_relative_primal_residual);
+      printf(
+          "getKktFailures:: PDLP primal residual (abs/rel):        %8.3g / "
+          "%8.3g\n",
+          pdlp_primal_residual, pdlp_relative_primal_residual);
       if (have_dual_solution)
-	printf("getKktFailures:: PDLP dual residual (abs/rel):          %8.3g / "
-	       "%8.3g\n",
-	       pdlp_dual_residual, pdlp_relative_dual_residual);
+        printf(
+            "getKktFailures:: PDLP dual residual (abs/rel):          %8.3g / "
+            "%8.3g\n",
+            pdlp_dual_residual, pdlp_relative_dual_residual);
     }
     if (!is_qp && have_dual_solution)
-      printf("getKktFailures:: PDLP objective gap (abs/rel):          %8.3g / "
-	     "%8.3g\n",
-	     pdlp_primal_dual_objective_error,
-	     pdlp_relative_primal_dual_objective_error);
+      printf(
+          "getKktFailures:: PDLP objective gap (abs/rel):          %8.3g / "
+          "%8.3g\n",
+          pdlp_primal_dual_objective_error,
+          pdlp_relative_primal_dual_objective_error);
   }
 
   // Assign primal solution status
