@@ -406,10 +406,11 @@ bool fileExists(const std::string& file_name) {
 }
 
 TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string write_solution_file = test_name + ".sol";
+  const std::string write_basis_file = test_name + ".bas";
+  const std::string write_model_file = test_name + ".mps";
   Highs h;
-  std::string write_solution_file = "lp-temp.sol";
-  std::string write_basis_file = "lp-temp.bas";
-  std::string write_model_file = "lp-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
@@ -443,10 +444,11 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
 }
 
 TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string write_solution_file = test_name + ".sol";
+  const std::string write_basis_file = test_name + ".bas";
+  const std::string write_model_file = test_name + ".mps";
   Highs h;
-  std::string write_solution_file = "mip-temp.sol";
-  std::string write_basis_file = "mip-temp.bas";
-  std::string write_model_file = "mip-temp.mps";
   h.setOptionValue("output_flag", dev_run);
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";

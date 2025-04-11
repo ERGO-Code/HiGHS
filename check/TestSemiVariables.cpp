@@ -273,6 +273,8 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
 }
 
 TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_mps = test_name + ".mps";
   // Introduced due to a semi-variable possibly having an infinite
   // upper bound that needs to be written to MPS in order to define
   // variable type
@@ -287,7 +289,6 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   if (dev_run) printf("Optimum at first run: %g\n", obj0);
 
   // now write out to MPS and load again
-  const std::string test_mps = "test.mps";
   highs.writeModel(test_mps);
   highs.readModel(test_mps);
   highs.run();

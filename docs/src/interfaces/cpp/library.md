@@ -1,4 +1,4 @@
-The HiGHS library is defined in the [`highs/Highs.h`](https://github.com/ERGO-Code/HiGHS/blob/master/highs/Highs.h) header file. It contains the definition of the methods and members of the class. 
+The HiGHS library is defined in the [`highs/Highs.h`](https://github.com/ERGO-Code/HiGHS/blob/master/src/Highs.h) header file. It contains the definition of the methods and members of the class. 
 
 ## Define model
 

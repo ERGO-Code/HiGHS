@@ -577,7 +577,8 @@ TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
 }
 
 TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
-  std::string presolved_model_file = "temp.mps";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string presolved_model_file = test_name + ".mps";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
   Highs highs;
