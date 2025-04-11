@@ -3788,23 +3788,29 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
           HighsInt col = Acol[rowiter];
           double val = direction * Avalue[rowiter];
 
+          // get lower and upper bounds
+          double col_lower =
+              std::max(implColLower[col], model->col_lower_[col]);
+          double col_upper =
+              std::min(implColUpper[col], model->col_upper_[col]);
+
           // skip continuous variables
           if (model->integrality_[col] == HighsVarType::kContinuous) continue;
 
           if (val > maxAbsCoefValue + primal_feastol) {
-            assert(model->col_upper_[col] != kHighsInf);
+            assert(col_upper != kHighsInf);
             // new matrix coefficient is direction * maxAbsCoefValue; subtract
             // existing matrix coefficient to get delta
             HighsCDouble delta = direction * (maxAbsCoefValue - val);
             addToMatrix(row, col, static_cast<double>(delta));
-            rhs += delta * model->col_upper_[col];
+            rhs += delta * col_upper;
           } else if (val < -maxAbsCoefValue - primal_feastol) {
-            assert(model->col_lower_[col] != -kHighsInf);
+            assert(col_lower != -kHighsInf);
             // new matrix coefficient is (-direction) * maxAbsCoefValue;
             // subtract existing matrix coefficient to get delta
             HighsCDouble delta = -direction * (maxAbsCoefValue + val);
             addToMatrix(row, col, static_cast<double>(delta));
-            rhs += delta * model->col_lower_[col];
+            rhs += delta * col_lower;
           }
         }
       };
