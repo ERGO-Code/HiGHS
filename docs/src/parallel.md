@@ -3,15 +3,15 @@
 ## Generally
 
 HiGHS currently has limited opportunities for exploiting parallel
-computing. These are currently restricted to the dual simplex solver
-for LP, and the MIP solver. Details of these and future plans are set
-out below.
+computing. When using a CPU, these are currently restricted to the
+dual simplex solver for LP, and the MIP solver. Details of these and
+future plans are set out below. HiGHS has an implementation of a first
+order method (PDLP) for solving LPs that can exploit the availability of a
+[GPU](@ref highs-gpu).
 
 By default, when running in parallel, HiGHS will use half the
 available threads on a machine. This number can be modified by setting
-the value of the
-[threads](@ref)
-option.
+the value of the [threads](@ref) option.
 
 ## Dual simplex
 
@@ -42,20 +42,25 @@ parallel dual simplex solver is unlikely to be worth using.
 ## MIP
 
 The only parallel computation currently implemented in the MIP solver
-occurs when performing symmetry detection on the model, and when
-querying clique tables. This parallelism is always advantageous, so is
-performed regardless of the value of the
-[parallel](@ref) option.
+occurs when performing symmetry detection on the model, when querying
+clique tables, and when the interior point solver is used to compute
+the analytic centre. This parallelism is always advantageous, so is
+performed regardless of the value of the [parallel](@ref) option.
 
 ## Future plans
 
-The MIP solver has been written with parallel tree seach in mind, and
-it is hoped that this will be implemented before the end of 2024. The
-parallel LP solver will also enhance the MIP solver performance by
-speeding up the solution of the root node.
+The MIP solver has been written with parallel tree search in mind. Some
+work has started (Feb 2025), and it is hoped that a prototype solver
+will be available during 2025.
 
-Development of a parallel interior point solver will start in 2023,
-and is expected to be completed by the end of 2024.
+Development of a new parallel interior point solver began 2023, and a
+prototype solver is expected to be be available during 2025.
+
+First-order solvers for LP are still very much in their infancy, and
+are not robust. Hence the availability of a PDLP solver for LP is
+unlikely to be used to enhance other solvers in HiGHS in the short or
+medium term.
+
 
 
 

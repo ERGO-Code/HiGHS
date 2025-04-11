@@ -79,6 +79,8 @@ TEST_CASE("external-options", "[highs_options]") {
 }
 
 TEST_CASE("internal-options", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string model_file = test_name + ".mps";
   HighsOptions options;
   HighsLogOptions report_log_options = options.log_options;
   if (!dev_run) options.output_flag = false;
@@ -209,7 +211,6 @@ TEST_CASE("internal-options", "[highs_options]") {
                           options.log_options, options.records, "ml.mps");
   REQUIRE(return_status == OptionStatus::kIllegalValue);
 
-  std::string model_file = "ml.mps";
   return_status =
       setLocalOptionValue(report_log_options, kPresolveString,
                           options.log_options, options.records, model_file);
@@ -260,6 +261,8 @@ TEST_CASE("internal-options", "[highs_options]") {
 }
 
 TEST_CASE("highs-options", "[highs_options]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string options_file = test_name + ".set";
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsStatus return_status = highs.writeOptions("Highs.set");
@@ -446,7 +449,6 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.setOptionValue(kModelFileString, model_file);
   REQUIRE(return_status == HighsStatus::kError);
 
-  std::string options_file = "Highs.set";
   return_status = highs.writeOptions(options_file);
   REQUIRE(return_status == HighsStatus::kOk);
 

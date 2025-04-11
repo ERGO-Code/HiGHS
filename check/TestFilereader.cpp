@@ -199,6 +199,7 @@ TEST_CASE("filereader-free-format-parser-lp", "[highs_filereader]") {
 
 // No commas in test case name.
 TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
@@ -212,14 +213,14 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   HighsLp lp_mps = highs.getLp();
 
   // Write lp
-  std::string filename_lp = "adlittle.lp";
+  std::string filename_lp = test_name + ".lp";
   status = highs.writeModel(filename_lp);
   REQUIRE(status == HighsStatus::kOk);
 
   /*
   bool are_the_same;
   // Write ems
-  std::string filename_ems = "adlittle.ems";
+  std::string filename_ems = test_name + ".ems";
   status = highs.writeModel(filename_ems);
   REQUIRE(status == HighsStatus::kOk);
 
@@ -357,9 +358,10 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
 // }
 
 TEST_CASE("writeLocalModel", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string write_model_file = test_name + ".mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  std::string write_model_file = "foo.mps";
   HighsModel model;
   HighsLp& lp = model.lp_;
   ;
@@ -415,7 +417,8 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
 }
 
 TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
-  std::string write_model_file = "temp.mps";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string write_model_file = test_name + ".mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.addCol(1, -kHighsInf, 1, 0, nullptr, nullptr);
