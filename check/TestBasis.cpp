@@ -13,8 +13,8 @@ void testBasisRestart(Highs& highs, const std::string& basis_file, const bool fr
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  const std::string basis_file = test_name + "adlittle.bas";
-  const std::string invalid_basis_file = test_name + "InvalidBasis.bas";
+  const std::string basis_file = test_name + ".bas";
+  const std::string invalid_basis_file = test_name + "-Invalid.bas";
 
   HighsStatus return_status;
   std::string model0_file =
