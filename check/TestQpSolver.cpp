@@ -33,6 +33,7 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   double required_objective_function_value;
   double required_x0;
   double required_x1;
@@ -116,7 +117,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   // Test writeModel by writing out qjh.mps...
-  filename = "qjh.mps";
+  filename = test_name + ".mps";
   highs.writeModel(filename);
 
   // ... and reading it in again

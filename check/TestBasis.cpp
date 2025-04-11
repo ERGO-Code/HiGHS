@@ -7,8 +7,10 @@
 const bool dev_run = false;
 HighsBasis basis_data;
 
-void testBasisReloadModel(Highs& highs, const std::string& basis_file, const bool from_file);
-void testBasisRestart(Highs& highs, const std::string& basis_file, const bool from_file);
+void testBasisReloadModel(Highs& highs, const std::string& basis_file,
+                          const bool from_file);
+void testBasisRestart(Highs& highs, const std::string& basis_file,
+                      const bool from_file);
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
@@ -21,7 +23,6 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-
 
   Highs highs;
   if (!dev_run) {
@@ -184,7 +185,8 @@ TEST_CASE("Basis-singular", "[highs_basis_data]") {
 }
 
 // No commas in test case name.
-void testBasisReloadModel(Highs& highs, const std::string& basis_file, const bool from_file) {
+void testBasisReloadModel(Highs& highs, const std::string& basis_file,
+                          const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
   HighsStatus return_status;
@@ -232,7 +234,8 @@ void testBasisReloadModel(Highs& highs, const std::string& basis_file, const boo
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 
-void testBasisRestart(Highs& highs, const std::string& basis_file, const bool from_file) {
+void testBasisRestart(Highs& highs, const std::string& basis_file,
+                      const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after changing a bound, solving
   // - so that the internal basis changes - and then restoring the

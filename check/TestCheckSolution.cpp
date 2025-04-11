@@ -8,7 +8,8 @@
 
 const bool dev_run = false;
 
-void runWriteReadCheckSolution(Highs& highs, const std::string& test_name, const std::string& model,
+void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
+                               const std::string& model,
                                const HighsModelStatus require_model_status,
                                const HighsInt write_solution_style);
 
@@ -449,7 +450,7 @@ TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
-			       const std::string& model,
+                               const std::string& model,
                                const HighsModelStatus require_model_status,
                                const HighsInt write_solution_style) {
   HighsStatus run_status;
