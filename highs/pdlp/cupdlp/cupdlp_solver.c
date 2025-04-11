@@ -63,22 +63,7 @@ void PDHG_Compute_Primal_Feasibility(CUPDLPwork *work, cupdlp_float *primalResid
     cupdlp_edot(primalResidual, work->rowScale, lp->nRows);
   }
 
-  if (work->settings->iInfNormAbsLocalTermination) {
-    cupdlp_int index;
-    cupdlp_infNormIndex(work, lp->nRows, primalResidual, &index);
-    *dPrimalFeasibility = fabs(primalResidual[index]);
-
-// WIP only allow native for the moment
-// #ifdef CUPDLP_CPU
-//     *dPrimalFeasibility = fabs(primalResidual[index]);
-// #else
-//     double res_value = get_fabs_value(primalResidual, index, lp->nRows);
-//     *dPrimalFeasibility = fabs(res_value);   
-// #endif
-
-  } else {
-    cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
-  }
+  cupdlp_twoNorm(work, lp->nRows, primalResidual, dPrimalFeasibility);
 
 #endif
 }
@@ -215,22 +200,7 @@ void PDHG_Compute_Dual_Feasibility(CUPDLPwork *work, cupdlp_float *dualResidual,
     cupdlp_edot(dualResidual, work->colScale, lp->nCols);
   }
 
-  if (work->settings->iInfNormAbsLocalTermination) {
-    cupdlp_int index;
-    cupdlp_infNormIndex(work, lp->nCols, dualResidual, &index);
-    *dDualFeasibility = fabs(dualResidual[index]);
-
-// WIP only allow native for the moment
-// #ifdef CUPDLP_CPU
-//     *dDualFeasibility = fabs(dualResidual[index]);
-// #else
-//     double res_value = get_fabs_value(dualResidual, index, lp->nCols);
-//     *dDualFeasibility = fabs(res_value);   
-// #endif
-
-  } else {
-    cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
-  }
+  cupdlp_twoNorm(work, lp->nCols, dualResidual, dDualFeasibility);
 
 #endif
 }
@@ -825,16 +795,9 @@ cupdlp_bool PDHG_Check_Termination(CUPDLPwork *pdhg, int bool_print) {
   }
 
 #endif
-  int bool_pass = 0;
-  if (pdhg->settings->iInfNormAbsLocalTermination) {
-    bool_pass =
-      (resobj->dPrimalFeas < settings->dPrimalTol) &&
-      (resobj->dDualFeas < settings->dDualTol);
-  } else {
-    bool_pass =
-      (resobj->dPrimalFeas < settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
-      (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost));
-  }
+  int bool_pass =
+    (resobj->dPrimalFeas < settings->dPrimalTol * (1.0 + scaling->dNormRhs)) &&
+    (resobj->dDualFeas < settings->dDualTol * (1.0 + scaling->dNormCost));
   bool_pass = bool_pass && (resobj->dRelObjGap < settings->dGapTol);
   return bool_pass;
 }
@@ -1005,10 +968,7 @@ cupdlp_retcode PDHG_Solve(CUPDLPwork *pdhg) {
         break;
       }
 
-      // Don't allow "average" termination if
-      // iInfNormAbsLocalTermination is set
-      if (!pdhg->settings->iInfNormAbsLocalTermination &&
-	  PDHG_Check_Termination_Average(pdhg, termination_print)) {
+      if (PDHG_Check_Termination_Average(pdhg, termination_print)) {
 	// cupdlp_printf("Optimal average solution.\n");
 	
     cupdlp_int iter = pdhg->timers->nIter;

@@ -471,7 +471,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     primal_dual_objective_error = pdlp_relative_primal_dual_objective_error;
   }
 
-  const bool report = false;
+  const bool report = true;
   if (report) {
     printf("\ngetKktFailures:: IPX cost norm = %8.3g; bound norm = %8.3g\n",
            ipx_norm_costs, ipx_norm_bounds);

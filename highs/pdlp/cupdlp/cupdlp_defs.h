@@ -186,7 +186,6 @@ struct CUPDLP_SETTINGS {
   cupdlp_float dPrimalTol;
   cupdlp_float dDualTol;
   cupdlp_float dGapTol;
-  cupdlp_int iInfNormAbsLocalTermination;
 
   // max iter and time
   cupdlp_int nIterLim;

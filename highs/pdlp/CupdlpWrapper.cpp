@@ -112,6 +112,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
 
+  if (local_log_level) cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
+				     scaling->dNormCost, scaling->dNormRhs);
+
   cupdlp_int ifScaling = 1;
 
   CUPDLPwork* w = cupdlp_NULL;
@@ -712,32 +715,6 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeIntParam[E_RESTART_METHOD] = true;
   intParam[E_RESTART_METHOD] = int(options.pdlp_e_restart_method);
-  //
-
-  // for the moment only native termination is allowed with GPU
-#ifdef CUPDLP_CPU
-#ifdef CUPDLP_FORCE_NATIVE
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
-  if (!options.pdlp_native_termination) {
-    printf(
-        "Warning: CUPDLP_FORCE_NATIVE is on. Forcing "
-        "pdlp_native_termination=on.\n");
-  }
-#else
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = true;
-  intParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = !options.pdlp_native_termination;
-#endif
-#else
-  ifChangeIntParam[I_INF_NORM_ABS_LOCAL_TERMINATION] = false;
-
-  if (intParam[N_LOG_LEVEL]) {
-    if (!options.pdlp_native_termination) {
-      printf(
-          "GPU only supports pdlp_native_termination=on. Forcing "
-          "pdlp_native_termination=on.\n");
-    }
-  }
-#endif
 }
 
 void analysePdlpSolution(const HighsOptions& options, const HighsLp& lp,
