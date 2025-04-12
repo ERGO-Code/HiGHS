@@ -220,6 +220,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double pdlp_dual_infeasibility = 0;
   double pdlp_primal_residual = 0;
   double pdlp_dual_residual = 0;
+  
+  double max_col_primal_infeasibility = 0;
+  double max_col_dual_infeasibility = 0;
+
+  double pdlp_col_primal_infeasibility = 0;
+  double pdlp_col_dual_infeasibility = 0;
 
   double primal_infeasibility;
   double relative_primal_infeasibility;
@@ -396,34 +402,50 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       }
     }
     if (pass == 0) {
+      max_col_primal_infeasibility = max_primal_infeasibility;
+      max_col_dual_infeasibility = max_dual_infeasibility;
+
+      pdlp_col_primal_infeasibility = pdlp_primal_infeasibility;
+      pdlp_col_dual_infeasibility = pdlp_dual_infeasibility;
+
+      max_primal_infeasibility = 0;
+      max_dual_infeasibility = 0;
+
+      pdlp_primal_infeasibility = 0;
+      pdlp_dual_infeasibility = 0;
+
       pdlp_norm_costs = std::sqrt(pdlp_norm_costs);
       pdlp_norm_bounds = std::sqrt(pdlp_norm_bounds);
     }
   }
+
+  double ipx_col_primal_infeasibility = max_col_primal_infeasibility;
+  double ipx_col_dual_infeasibility = max_col_dual_infeasibility;
+
+  double ipx_row_primal_infeasibility = max_primal_infeasibility;
+  double ipx_row_dual_infeasibility = max_dual_infeasibility;
+
+  double pdlp_row_primal_infeasibility = pdlp_primal_infeasibility;
+  double pdlp_row_dual_infeasibility = pdlp_dual_infeasibility;
+
+  max_primal_infeasibility = std::max(max_col_primal_infeasibility, max_primal_infeasibility);
+  max_dual_infeasibility = std::max(max_col_dual_infeasibility, max_dual_infeasibility);
+
+  pdlp_primal_infeasibility = std::sqrt(pdlp_col_primal_infeasibility + pdlp_row_primal_infeasibility);
+  pdlp_dual_infeasibility = std::sqrt(pdlp_col_dual_infeasibility + pdlp_row_dual_infeasibility);
+
+  pdlp_col_primal_infeasibility = std::sqrt(pdlp_col_primal_infeasibility);
+  pdlp_row_primal_infeasibility = std::sqrt(pdlp_row_primal_infeasibility);
+  pdlp_col_dual_infeasibility = std::sqrt(pdlp_col_dual_infeasibility);
+  pdlp_row_dual_infeasibility = std::sqrt(pdlp_row_dual_infeasibility);
+  
   double ipx_primal_infeasibility = max_primal_infeasibility;
   double ipx_dual_infeasibility = max_dual_infeasibility;
-  pdlp_primal_infeasibility = std::sqrt(pdlp_primal_infeasibility);
-  pdlp_dual_infeasibility = std::sqrt(pdlp_dual_infeasibility);
-  double ipx_relative_primal_infeasibility =
-      ipx_primal_infeasibility / (1. + ipx_norm_bounds);
-  double ipx_relative_dual_infeasibility =
-      ipx_dual_infeasibility / (1. + ipx_norm_costs);
-  double pdlp_relative_primal_infeasibility =
-      pdlp_primal_infeasibility / (1. + pdlp_norm_bounds);
-  double pdlp_relative_dual_infeasibility =
-      pdlp_dual_infeasibility / (1. + pdlp_norm_costs);
 
   double ipx_primal_residual = max_primal_residual_error;
   double ipx_dual_residual = max_dual_residual_error;
   pdlp_primal_residual = std::sqrt(pdlp_primal_residual);
   pdlp_dual_residual = std::sqrt(pdlp_dual_residual);
-  double ipx_relative_primal_residual =
-      ipx_primal_residual / (1. + ipx_norm_bounds);
-  double ipx_relative_dual_residual = ipx_dual_residual / (1. + ipx_norm_costs);
-  double pdlp_relative_primal_residual =
-      pdlp_primal_residual / (1. + pdlp_norm_bounds);
-  double pdlp_relative_dual_residual =
-      pdlp_dual_residual / (1. + pdlp_norm_costs);
 
   if (have_dual_solution) {
     // Determine the sum of complementarity violations
@@ -473,61 +495,61 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   const bool report = true;
   if (report) {
-    printf("\ngetKktFailures:: IPX cost norm = %8.3g; bound norm = %8.3g\n",
+    printf("\ngetKktFailures:: IPX cost norm = %9.2e; bound norm = %9.2e\n",
            ipx_norm_costs, ipx_norm_bounds);
+    printf("getKktFailures:: IPX  	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
     printf(
-        "getKktFailures:: IPX primal infeasibility (abs/rel):    %8.3g / "
-        "%8.3g\n",
-        ipx_primal_infeasibility, ipx_relative_primal_infeasibility);
+        "getKktFailures:: IPX  primal infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
+        ipx_primal_infeasibility, ipx_primal_infeasibility / (1. + ipx_norm_bounds),
+	ipx_col_primal_infeasibility, ipx_col_primal_infeasibility / (1. + ipx_norm_bounds),
+	ipx_row_primal_infeasibility, ipx_row_primal_infeasibility / (1. + ipx_norm_bounds));
     if (have_dual_solution)
       printf(
-          "getKktFailures:: IPX dual infeasibility (abs/rel):      %8.3g / "
-          "%8.3g\n",
-          ipx_dual_infeasibility, ipx_relative_dual_infeasibility);
+          "getKktFailures:: IPX    dual infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
+          ipx_dual_infeasibility, ipx_dual_infeasibility / (1. + ipx_norm_costs),
+	  ipx_col_dual_infeasibility, ipx_col_dual_infeasibility / (1. + ipx_norm_costs),
+	  ipx_row_dual_infeasibility, ipx_row_dual_infeasibility / (1. + ipx_norm_costs));
     if (get_residuals) {
       printf(
-          "getKktFailures:: IPX primal residual (abs/rel):         %8.3g / "
-          "%8.3g\n",
-          ipx_primal_residual, ipx_relative_primal_residual);
+          "getKktFailures:: IPX  primal residual      %9.2e / %9.2e\n",
+          ipx_primal_residual, ipx_primal_residual / (1. + ipx_norm_bounds));
       if (have_dual_solution)
         printf(
-            "getKktFailures:: IPX dual residual (abs/rel):           %8.3g / "
-            "%8.3g\n",
-            ipx_dual_residual, ipx_relative_dual_residual);
+            "getKktFailures:: IPX    dual residual      %9.2e / %9.2e\n",
+            ipx_dual_residual, ipx_dual_residual / (1. + ipx_norm_costs));
     }
     if (!is_qp && have_dual_solution)
       printf(
-          "getKktFailures:: IPX objective gap (abs/rel):           %8.3g / "
-          "%8.3g\n",
+          "getKktFailures:: IPX  objective gap        %9.2e / %9.2e\n",
           ipx_primal_dual_objective_error,
           ipx_relative_primal_dual_objective_error);
 
-    printf("\ngetKktFailures:: PDLP cost norm = %8.3g; bound norm = %8.3g\n",
+    printf("\ngetKktFailures:: PDLP cost norm = %9.2e; bound norm = %9.2e\n",
            pdlp_norm_costs, pdlp_norm_bounds);
+    printf("getKktFailures:: PDLP 	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
     printf(
-        "getKktFailures:: PDLP primal infeasibility (abs/rel):   %8.3g / "
-        "%8.3g\n",
-        pdlp_primal_infeasibility, pdlp_relative_primal_infeasibility);
+        "getKktFailures:: PDLP primal infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
+        pdlp_primal_infeasibility, pdlp_primal_infeasibility / (1. + pdlp_norm_bounds),
+	pdlp_col_primal_infeasibility, pdlp_col_primal_infeasibility / (1. + pdlp_norm_bounds),
+	pdlp_row_primal_infeasibility, pdlp_row_primal_infeasibility / (1. + pdlp_norm_bounds));
     if (have_dual_solution)
       printf(
-          "getKktFailures:: PDLP dual infeasibility (abs/rel):     %8.3g / "
-          "%8.3g\n",
-          pdlp_dual_infeasibility, pdlp_relative_dual_infeasibility);
+          "getKktFailures:: PDLP   dual infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
+          pdlp_dual_infeasibility, pdlp_dual_infeasibility / (1. + pdlp_norm_costs),
+	  pdlp_col_dual_infeasibility, pdlp_col_dual_infeasibility / (1. + pdlp_norm_costs),
+	  pdlp_row_dual_infeasibility, pdlp_row_dual_infeasibility / (1. + pdlp_norm_costs));
     if (get_residuals) {
       printf(
-          "getKktFailures:: PDLP primal residual (abs/rel):        %8.3g / "
-          "%8.3g\n",
-          pdlp_primal_residual, pdlp_relative_primal_residual);
+          "getKktFailures:: PDLP primal residual      %9.2e / %9.2e\n",
+          pdlp_primal_residual, pdlp_primal_residual / (1. + pdlp_norm_bounds));
       if (have_dual_solution)
         printf(
-            "getKktFailures:: PDLP dual residual (abs/rel):          %8.3g / "
-            "%8.3g\n",
-            pdlp_dual_residual, pdlp_relative_dual_residual);
+            "getKktFailures:: PDLP   dual residual      %9.2e / %9.2e\n",
+            pdlp_dual_residual, pdlp_dual_residual / (1. + pdlp_norm_costs));
     }
     if (!is_qp && have_dual_solution)
       printf(
-          "getKktFailures:: PDLP objective gap (abs/rel):          %8.3g / "
-          "%8.3g\n",
+          "getKktFailures:: PDLP objective gap        %9.2e / %9.2e\n",
           pdlp_primal_dual_objective_error,
           pdlp_relative_primal_dual_objective_error);
   }

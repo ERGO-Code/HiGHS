@@ -1188,8 +1188,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "pdlp_d_gap_tol",
-        "Duality gap tolerance for PDLP solver: Default = 1e-4", advanced,
-        &pdlp_d_gap_tol, 1e-12, 1e-4, kHighsInf);
+        "Duality gap tolerance for PDLP solver: Default = 1e-7", advanced,
+        &pdlp_d_gap_tol, 1e-12, 1e-7, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
