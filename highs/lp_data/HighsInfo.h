@@ -112,13 +112,10 @@ struct HighsInfoStruct {
   double sum_dual_infeasibilities;
   HighsInt num_primal_residual_errors;
   double max_primal_residual_error;
-  double sum_primal_residual_errors;
   HighsInt num_dual_residual_errors;
   double max_dual_residual_error;
-  double sum_dual_residual_errors;
   HighsInt num_complementarity_violations;
   double max_complementarity_violation;
-  double sum_complementarity_violations;
   double primal_dual_objective_error;
   double primal_dual_integral;
 };
@@ -280,11 +277,6 @@ class HighsInfo : public HighsInfoStruct {
         &max_primal_residual_error, 0);
     records.push_back(record_double);
 
-    record_double = new InfoRecordDouble(
-        "sum_primal_residual_errors", "Sum of primal residual errors", advanced,
-        &sum_primal_residual_errors, 0);
-    records.push_back(record_double);
-
     record_int = new InfoRecordInt("num_dual_residual_errors",
                                    "Number of dual residual errors", advanced,
                                    &num_dual_residual_errors, -1);
@@ -296,18 +288,8 @@ class HighsInfo : public HighsInfoStruct {
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(
-        "sum_dual_residual_errors", "Sum of dual residual errors", advanced,
-        &sum_dual_residual_errors, 0);
-    records.push_back(record_double);
-
-    record_double = new InfoRecordDouble(
         "max_complementarity_violation", "Max complementarity violation",
         advanced, &max_complementarity_violation, 0);
-    records.push_back(record_double);
-
-    record_double = new InfoRecordDouble(
-        "sum_complementarity_violations", "Sum of complementarity violations",
-        advanced, &sum_complementarity_violations, 0);
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(

@@ -70,7 +70,6 @@ inline HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   if (solver_object.model_status_ == HighsModelStatus::kOptimal) {
     solver_object.highs_info_.num_complementarity_violations = 0;
     solver_object.highs_info_.max_complementarity_violation = 0;
-    solver_object.highs_info_.sum_complementarity_violations = 0;
   }
   return return_status;
 }

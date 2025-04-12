@@ -37,13 +37,10 @@ void HighsInfo::invalidate() {
   sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
   num_primal_residual_errors = kHighsIllegalInfeasibilityCount;
   max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-  sum_primal_residual_errors = kHighsIllegalInfeasibilityMeasure;
   num_dual_residual_errors = kHighsIllegalInfeasibilityCount;
   max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-  sum_dual_residual_errors = kHighsIllegalInfeasibilityMeasure;
   num_complementarity_violations = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
-  sum_complementarity_violations = kHighsIllegalComplementarityViolation;
   primal_dual_objective_error = kHighsIllegalComplementarityViolation;
   primal_dual_integral = -kHighsInf;
 }

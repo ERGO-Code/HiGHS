@@ -105,8 +105,7 @@ bool getComplementarityViolations(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   const double complementarity_tolerance,
                                   HighsInt& num_complementarity_violations,
-                                  double& max_complementarity_violation,
-                                  double& sum_complementarity_violations);
+                                  double& max_complementarity_violation);
 
 bool computeDualObjectiveValue(const HighsLp& lp, const HighsSolution& solution,
                                double& dual_objective_value);
