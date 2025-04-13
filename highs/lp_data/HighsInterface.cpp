@@ -2641,30 +2641,46 @@ HighsStatus Highs::lpKktCheck() {
       if (info.num_complementarity_violations != 0 ||
           info.num_primal_residual_errors != 0 ||
           info.num_dual_residual_errors != 0 ||
+          info.num_relative_primal_residual_errors != 0 ||
+          info.num_relative_dual_residual_errors != 0 ||
           info.primal_dual_objective_error >
               options.complementarity_tolerance) {
         printf(
-            "Optimal basic solution has %d complementarity violations; %d "
-            "primal residual errors; %d dual residual errors; %g primal dual "
+            "Optimal basic solution has %d complementarity violations; %d (%d) "
+            "primal (relative) residual errors; %d (%d) dual (relative) residual errors; %g primal dual "
             "objective error\n",
             int(info.num_complementarity_violations),
             int(info.num_primal_residual_errors),
+            int(info.num_relative_primal_residual_errors),
             int(info.num_dual_residual_errors),
+            int(info.num_relative_dual_residual_errors),
             info.primal_dual_objective_error);
         printf(
-            "   num/max/sum %6d / %9.4g          primal residual errors         "
+            "   num/max %6d / %9.4g          primal residual errors         "
             "(tolerance = %9.4g)\n",
             int(info.num_primal_residual_errors), info.max_primal_residual_error, 
             options.primal_residual_tolerance);
         printf(
-            "   num/max/sum %6d / %9.4g            dual residual errors         "
+            "   num/max %6d / %9.4g  relative primal residual errors         "
+            "(tolerance = %9.4g)\n",
+            int(info.num_relative_primal_residual_errors), info.max_relative_primal_residual_error, 
+            options.primal_residual_tolerance);
+        printf(
+            "   num/max %6d / %9.4g            dual residual errors         "
             "(tolerance = %9.4g)\n",
             int(info.num_dual_residual_errors), info.max_dual_residual_error,
+            options.dual_residual_tolerance);
+        printf(
+            "   num/max %6d / %9.4g  relative   dual residual errors         "
+            "(tolerance = %9.4g)\n",
+            int(info.num_relative_dual_residual_errors), info.max_relative_dual_residual_error,
             options.dual_residual_tolerance);
       }
       assert(info.num_complementarity_violations == 0);
       assert(info.num_primal_residual_errors == 0);
+      assert(info.num_relative_primal_residual_errors == 0);
       assert(info.num_dual_residual_errors == 0);
+      assert(info.num_relative_dual_residual_errors == 0);
       assert(info.primal_dual_objective_error <=
              options.complementarity_tolerance);
     }
@@ -3693,8 +3709,12 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
     info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
     info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-    info.num_dual_residual_errors = kHighsIllegalInfeasibilityCount;
-    info.max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    info_.num_relative_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+    info_.max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    info.num_dual_residual_errors = kHighsIllegalResidualCount;
+    info.max_dual_residual_error = kHighsIllegalResidualMeasure;
+    info.num_relative_dual_residual_errors = kHighsIllegalResidualCount;
+    info.max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
     info.num_complementarity_violations = kHighsIllegalComplementarityCount;
     info.max_complementarity_violation = kHighsIllegalComplementarityViolation;
     info.primal_dual_objective_error = kHighsIllegalComplementarityViolation;

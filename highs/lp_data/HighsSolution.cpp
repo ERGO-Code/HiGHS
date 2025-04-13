@@ -87,21 +87,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
   double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
-  HighsInt num_relative_primal_infeasibility_;
-  double max_relative_primal_infeasibility_;
-  HighsInt num_relative_dual_infeasibility_;
-  double max_relative_dual_infeasibility_;
-  
-  HighsInt num_relative_primal_residual_error_;
-  double max_relative_primal_residual_error_;
-  HighsInt num_relative_dual_residual_error_;
-  double max_relative_dual_residual_error_;
-  
-  HighsInt& num_relative_primal_infeasibility = num_relative_primal_infeasibility_;
-  double& max_relative_primal_infeasibility = max_relative_primal_infeasibility_;
+  HighsInt& num_relative_primal_infeasibility = highs_info.num_relative_primal_infeasibilities;
+  double& max_relative_primal_infeasibility = highs_info.max_relative_primal_infeasibility;
 
-  HighsInt& num_relative_dual_infeasibility = num_relative_dual_infeasibility_;
-  double& max_relative_dual_infeasibility = max_relative_dual_infeasibility_;
+  HighsInt& num_relative_dual_infeasibility = highs_info.num_relative_dual_infeasibilities;
+  double& max_relative_dual_infeasibility = highs_info.max_relative_dual_infeasibility;
 
   HighsInt& num_primal_residual_error = highs_info.num_primal_residual_errors;
   double& max_primal_residual_error = highs_info.max_primal_residual_error;
@@ -109,11 +99,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   HighsInt& num_dual_residual_error = highs_info.num_dual_residual_errors;
   double& max_dual_residual_error = highs_info.max_dual_residual_error;
 
-  HighsInt& num_relative_primal_residual_error = num_relative_primal_residual_error_;
-  double& max_relative_primal_residual_error = max_relative_primal_residual_error_;
+  HighsInt& num_relative_primal_residual_error = highs_info.num_relative_primal_residual_errors;
+  double& max_relative_primal_residual_error = highs_info.max_relative_primal_residual_error;
 
-  HighsInt& num_relative_dual_residual_error = num_relative_dual_residual_error_;
-  double& max_relative_dual_residual_error = max_relative_dual_residual_error_;
+  HighsInt& num_relative_dual_residual_error = highs_info.num_relative_dual_residual_errors;
+  double& max_relative_dual_residual_error = highs_info.max_relative_dual_residual_error;
 
   HighsInt& num_complementarity_violation =
       highs_info.num_complementarity_violations;
@@ -122,30 +112,6 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   double& primal_dual_objective_error = highs_info.primal_dual_objective_error;
 
-  num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-
-  num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-
-  num_relative_primal_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  num_relative_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-  max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  
-  num_primal_residual_error = kHighsIllegalResidualCount;
-  max_primal_residual_error = kHighsIllegalResidualMeasure;
-
-  num_dual_residual_error = kHighsIllegalResidualCount;
-  max_dual_residual_error = kHighsIllegalResidualMeasure;
-
-  num_relative_primal_residual_error = kHighsIllegalResidualCount;
-  max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
-  num_relative_dual_residual_error = kHighsIllegalResidualCount;
-  max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
-  
   num_complementarity_violation = kHighsIllegalComplementarityCount;
   max_complementarity_violation = kHighsIllegalComplementarityViolation;
 
@@ -169,39 +135,55 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     num_primal_infeasibility = 0;
     max_primal_infeasibility = 0;
     sum_primal_infeasibility = 0;
-    if (have_dual_solution) {
-      // There's a dual solution, so check its size and initialise the
-      // infeasibility counts
-      assert((int)solution.col_dual.size() >= lp.num_col_);
-      assert((int)solution.row_dual.size() >= lp.num_row_);
-      num_dual_infeasibility = 0;
-      max_dual_infeasibility = 0;
-      sum_dual_infeasibility = 0;
+    num_relative_primal_infeasibility = 0;
+    max_relative_primal_infeasibility = 0;
+    if (get_residuals) {
+      num_primal_residual_error = 0;
+      max_primal_residual_error = 0;
+      num_relative_primal_residual_error = 0;
+      max_relative_primal_residual_error = 0;
+    } 
+  } else {
+    num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
+    max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    num_relative_primal_infeasibility = kHighsIllegalInfeasibilityCount;
+    max_relative_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    if (get_residuals) {
+      num_primal_residual_error = kHighsIllegalResidualCount;
+      max_primal_residual_error = kHighsIllegalResidualMeasure;
+      num_relative_primal_residual_error = kHighsIllegalResidualCount;
+      max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
     }
   }
-
-  if (have_primal_solution && get_residuals) {
-    num_primal_residual_error = 0;
-    max_primal_residual_error = 0;
-    num_relative_primal_residual_error = 0;
-    max_relative_primal_residual_error = 0;
-
+  if (have_dual_solution) {
+    // There's a dual solution, so check its size and initialise the
+    // infeasibility counts
+    assert((int)solution.col_dual.size() >= lp.num_col_);
+    assert((int)solution.row_dual.size() >= lp.num_row_);
+    num_dual_infeasibility = 0;
+    max_dual_infeasibility = 0;
+    sum_dual_infeasibility = 0;
+    num_relative_dual_infeasibility = 0;
+    max_relative_dual_infeasibility = 0;
+    if (get_residuals) {
+      num_dual_residual_error = 0;
+      max_dual_residual_error = 0;
+      num_relative_dual_residual_error = 0;
+      max_relative_dual_residual_error = 0;
+    }
   } else {
-    num_primal_residual_error = kHighsIllegalInfeasibilityCount;
-    max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-    num_relative_primal_residual_error = kHighsIllegalInfeasibilityCount;
-    max_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-  }
-  if (have_dual_solution && get_residuals) {
-    num_dual_residual_error = 0;
-    max_dual_residual_error = 0;
-    num_relative_dual_residual_error = 0;
-    max_relative_dual_residual_error = 0;
-  } else {
-    num_dual_residual_error = kHighsIllegalInfeasibilityCount;
-    max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-    num_relative_dual_residual_error = kHighsIllegalInfeasibilityCount;
-    max_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+    max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    num_relative_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+    max_relative_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    if (get_residuals) {
+      num_dual_residual_error = kHighsIllegalResidualCount;
+      max_dual_residual_error = kHighsIllegalResidualMeasure;
+      num_relative_dual_residual_error = kHighsIllegalResidualCount;
+      max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
+    }
   }
   // Without a primal solution, nothing can be done!
   if (!have_primal_solution) return;
@@ -333,30 +315,36 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         }
       } else {
         // Accumulate primal infeasibilities
-        if (primal_infeasibility > primal_feasibility_tolerance) {
+        if (primal_infeasibility > primal_feasibility_tolerance) 
           num_primal_infeasibility++;
-        }
-        if (max_primal_infeasibility < primal_infeasibility) {
+        if (max_primal_infeasibility < primal_infeasibility)
           max_primal_infeasibility = primal_infeasibility;
-        }
         sum_primal_infeasibility += primal_infeasibility;
-        if (!is_col) {
+        if (!is_col) 
           pdlp_primal_infeasibility +=
               primal_infeasibility * primal_infeasibility;
-        }
+
+	double relative_primal_infeasibility = primal_infeasibility / (1.0 + highs_norm_bounds);
+        if (relative_primal_infeasibility > primal_feasibility_tolerance) 
+          num_relative_primal_infeasibility++;
+        if (max_relative_primal_infeasibility < relative_primal_infeasibility)
+          max_relative_primal_infeasibility = relative_primal_infeasibility;
 
         if (have_dual_solution) {
           // Accumulate dual infeasibilities
-          if (dual_infeasibility > dual_feasibility_tolerance) {
+          if (dual_infeasibility > dual_feasibility_tolerance) 
             num_dual_infeasibility++;
-          }
-          if (max_dual_infeasibility < dual_infeasibility) {
+          if (max_dual_infeasibility < dual_infeasibility) 
             max_dual_infeasibility = dual_infeasibility;
-          }
           sum_dual_infeasibility += dual_infeasibility;
-          if (is_col) {
+          if (is_col) 
             pdlp_dual_infeasibility += dual_infeasibility * dual_infeasibility;
-          }
+
+	  double relative_dual_infeasibility = dual_infeasibility / (1.0 + highs_norm_costs);
+	  if (relative_dual_infeasibility > dual_feasibility_tolerance) 
+	    num_relative_dual_infeasibility++;
+	  if (max_relative_dual_infeasibility < relative_dual_infeasibility)
+	    max_relative_dual_infeasibility = relative_dual_infeasibility;
         }
 
         if (!is_col && get_residuals) {
@@ -366,16 +354,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               std::fabs(primal_activity[iRow] - solution.row_value[iRow]);
           double relative_primal_residual_error =
               primal_residual_error / (1.0 + highs_norm_bounds);
-          if (primal_residual_error > primal_residual_tolerance) {
+          if (primal_residual_error > primal_residual_tolerance) 
             num_primal_residual_error++;
-          }
-          if (max_primal_residual_error < primal_residual_error) {
+          if (max_primal_residual_error < primal_residual_error) 
             max_primal_residual_error = primal_residual_error;
-          }
           if (max_relative_primal_residual_error <
-              relative_primal_residual_error) {
+              relative_primal_residual_error) 
             max_relative_primal_residual_error = relative_primal_residual_error;
-          }
           pdlp_primal_residual += primal_residual_error * primal_residual_error;
         }
         if (is_col && get_residuals && have_dual_solution) {
@@ -385,15 +370,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               std::fabs(dual_activity[iCol] + solution.col_dual[iCol]);
           double relative_dual_residual_error =
               dual_residual_error / (1.0 + highs_norm_costs);
-          if (dual_residual_error > dual_residual_tolerance) {
+          if (dual_residual_error > dual_residual_tolerance) 
             num_dual_residual_error++;
-          }
-          if (max_dual_residual_error < dual_residual_error) {
+          if (max_dual_residual_error < dual_residual_error) 
             max_dual_residual_error = dual_residual_error;
-          }
-          if (max_relative_dual_residual_error < relative_dual_residual_error) {
+          if (max_relative_dual_residual_error < relative_dual_residual_error) 
             max_relative_dual_residual_error = relative_dual_residual_error;
-          }
           pdlp_dual_residual += dual_residual_error * dual_residual_error;
         }
       }
@@ -492,9 +474,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   const bool report = true;
   if (report) {
-    printf("\ngetKktFailures:: IPX cost norm = %9.2e; bound norm = %9.2e\n",
+    printf("\ngetKktFailures:: IPX   cost norm = %9.2e; bound norm = %9.2e\n",
            ipx_norm_costs, ipx_norm_bounds);
-    printf("getKktFailures:: IPX  	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
+    printf("getKktFailures:: PDLP  cost norm = %9.2e; bound norm = %9.2e\n",
+           pdlp_norm_costs, pdlp_norm_bounds);
+    printf("getKktFailures:: HiGHS cost norm = %9.2e; bound norm = %9.2e\n",
+           highs_norm_costs, highs_norm_bounds);
+    printf("\ngetKktFailures:: IPX  	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
     printf(
         "getKktFailures:: IPX  primal infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
         ipx_primal_infeasibility, ipx_primal_infeasibility / (1. + ipx_norm_bounds),
@@ -521,9 +507,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           ipx_primal_dual_objective_error,
           ipx_relative_primal_dual_objective_error);
 
-    printf("\ngetKktFailures:: PDLP cost norm = %9.2e; bound norm = %9.2e\n",
-           pdlp_norm_costs, pdlp_norm_bounds);
-    printf("getKktFailures:: PDLP 	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
+    printf("\ngetKktFailures:: PDLP 	                    LP  (abs / rel)           Col (abs / rel)           Row (abs / rel)\n");
     printf(
         "getKktFailures:: PDLP primal infeasibility %9.2e / %9.2e     %9.2e / %9.2e     %9.2e / %9.2e\n",
         pdlp_primal_infeasibility, pdlp_primal_infeasibility / (1. + pdlp_norm_bounds),
@@ -731,13 +715,13 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
     primal_dual_errors.glpsol_max_primal_residual.reset();
 
   } else {
-    num_primal_residual_error = kHighsIllegalInfeasibilityCount;
-    max_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-    //    sum_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
-    //    num_relative_primal_residual_error = kHighsIllegalInfeasibilityCount;
-    max_relative_primal_residual_error = kHighsIllegalInfeasibilityMeasure;
+    num_primal_residual_error = kHighsIllegalResidualCount;
+    max_primal_residual_error = kHighsIllegalResidualMeasure;
+    //    sum_primal_residual_error = kHighsIllegalResidualMeasure;
+    //    num_relative_primal_residual_error = kHighsIllegalResidualCount;
+    max_relative_primal_residual_error = kHighsIllegalResidualMeasure;
     //    sum_relative_primal_residual_error =
-    //    kHighsIllegalInfeasibilityMeasure;
+    //    kHighsIllegalResidualMeasure;
     primal_dual_errors.glpsol_max_primal_residual.invalidate();
   }
   if (have_dual_solution) {
@@ -749,12 +733,12 @@ void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
     //    sum_relative_dual_residual_error = 0;
     primal_dual_errors.glpsol_max_dual_residual.reset();
   } else {
-    num_dual_residual_error = kHighsIllegalInfeasibilityCount;
-    max_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-    //    sum_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-    //    num_relative_dual_residual_error = kHighsIllegalInfeasibilityCount;
-    max_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
-    //    sum_relative_dual_residual_error = kHighsIllegalInfeasibilityMeasure;
+    num_dual_residual_error = kHighsIllegalResidualCount;
+    max_dual_residual_error = kHighsIllegalResidualMeasure;
+    //    sum_dual_residual_error = kHighsIllegalResidualMeasure;
+    //    num_relative_dual_residual_error = kHighsIllegalResidualCount;
+    max_relative_dual_residual_error = kHighsIllegalResidualMeasure;
+    //    sum_relative_dual_residual_error = kHighsIllegalResidualMeasure;
     primal_dual_errors.glpsol_max_dual_residual.invalidate();
   }
   // Without a primal solution, nothing can be done!
@@ -1773,72 +1757,60 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 void reportLpKktFailures(const HighsOptions& options, const HighsInfo& info,
                          const std::string& solver) {
   HighsLogType log_type = info.num_primal_infeasibilities ||
-                                  info.num_dual_infeasibilities ||
-                                  info.num_primal_residual_errors ||
-                                  info.num_dual_residual_errors ||
-                                  info.num_complementarity_violations
-                              ? HighsLogType::kWarning
-                              : HighsLogType::kInfo;
+    info.num_dual_infeasibilities ||
+    info.num_primal_residual_errors ||
+    info.num_dual_residual_errors ||
+    info.num_complementarity_violations
+    ? HighsLogType::kWarning
+    : HighsLogType::kInfo;
 
   highsLogUser(options.log_options, log_type, "HighsSolution.cpp reportLpKktFailures\n");
   highsLogUser(options.log_options, log_type, "LP solution KKT conditions\n");
 
-  highsLogUser(options.log_options,
-               info.num_primal_infeasibilities > 0 ? HighsLogType::kWarning
-                                                   : HighsLogType::kInfo,
-               "%s   num/max/sum %6d / %9.4g / %9.4g primal "
-               "infeasibilities       (tolerance = %9.4g)\n",
-               info.num_primal_infeasibilities > 0 ? "" : "         ",
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "num/max %6d / %9.4g (relative %6d / %9.4g) primal "
+               "infeasibilities     (tolerance = %9.4g)\n",
                int(info.num_primal_infeasibilities),
-               info.max_primal_infeasibility, info.sum_primal_infeasibilities,
-               options.primal_feasibility_tolerance);
-  highsLogUser(options.log_options,
-               info.num_dual_infeasibilities > 0 ? HighsLogType::kWarning
-                                                 : HighsLogType::kInfo,
-               "%s   num/max/sum %6d / %9.4g / %9.4g   dual "
-               "infeasibilities       (tolerance = %9.4g)\n",
-               info.num_dual_infeasibilities > 0 ? "" : "         ",
-               int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
-               info.sum_dual_infeasibilities,
-               options.dual_feasibility_tolerance);
-  highsLogUser(options.log_options,
-               info.num_primal_residual_errors > 0 ? HighsLogType::kWarning
-                                                   : HighsLogType::kInfo,
-               "%s   num/max     %6d / %9.4g             primal residual "
-               "errors       (tolerance = %9.4g)\n",
-               info.num_primal_residual_errors > 0 ? "" : "         ",
+               info.max_primal_infeasibility,
+               int(info.num_relative_primal_infeasibilities),
+               info.max_relative_primal_infeasibility,
+               options.primal_residual_tolerance);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "num/max %6d / %9.4g (relative %6d / %9.4g)   dual "
+               "infeasibilities     (tolerance = %9.4g)\n",
+               int(info.num_dual_infeasibilities),
+	       info.max_dual_infeasibility,
+               int(info.num_relative_dual_infeasibilities),
+	       info.max_relative_dual_infeasibility,
+               options.dual_residual_tolerance);
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "num/max %6d / %9.4g (relative %6d / %9.4g) primal residual "
+               "errors     (tolerance = %9.4g)\n",
                int(info.num_primal_residual_errors),
                info.max_primal_residual_error,
+               int(info.num_relative_primal_residual_errors),
+               info.max_relative_primal_residual_error,
                options.primal_residual_tolerance);
-  highsLogUser(options.log_options,
-               info.num_dual_residual_errors > 0 ? HighsLogType::kWarning
-                                                 : HighsLogType::kInfo,
-               "%s   num/max     %6d / %9.4g               dual residual "
-               "errors       (tolerance = %9.4g)\n",
-               info.num_dual_residual_errors > 0 ? "" : "         ",
-               int(info.num_dual_residual_errors), info.max_dual_residual_error,
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "num/max %6d / %9.4g (relative %6d / %9.4g)   dual residual "
+               "errors     (tolerance = %9.4g)\n",
+               int(info.num_dual_residual_errors),
+	       info.max_dual_residual_error,
+               int(info.num_relative_dual_residual_errors),
+	       info.max_relative_dual_residual_error,
                options.dual_residual_tolerance);
-  highsLogUser(options.log_options,
-               info.num_complementarity_violations > 0 ? HighsLogType::kWarning
-                                                       : HighsLogType::kInfo,
-               "%s   num/max     %6d / %9.4g             complementarity "
-               "violations   (tolerance = %9.4g)\n",
-               info.num_complementarity_violations > 0 ? "" : "         ",
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "num/max %6d / %9.4g                               complementarity "
+               "violations (tolerance = %9.4g)\n",
                int(info.num_complementarity_violations),
                info.max_complementarity_violation,
                options.complementarity_tolerance);
   if (info.primal_dual_objective_error !=
       kHighsIllegalComplementarityViolation) {
     highsLogUser(
-        options.log_options,
-        info.primal_dual_objective_error > options.complementarity_tolerance
-            ? HighsLogType::kWarning
-            : HighsLogType::kInfo,
-        "%s                                    %9.4g"
-        " relative P-D objective error (tolerance = %9.4g)\n",
-        info.primal_dual_objective_error > options.complementarity_tolerance
-            ? ""
-            : "         ",
+        options.log_options, HighsLogType::kInfo,
+        "                 %9.4g"
+        "                               P-D objective error        (tolerance = %9.4g)\n",
         info.primal_dual_objective_error, options.complementarity_tolerance);
   }
 }
