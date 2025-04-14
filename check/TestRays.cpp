@@ -374,13 +374,6 @@ void testUnboundedMpsLp(const std::string model,
                         const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  if (model == "gas11") {
-    highs.setOptionValue("output_flag", true);
-    highs.setOptionValue("log_dev_level", 3);
-    highs.setOptionValue("highs_analysis_level",
-                         kHighsAnalysisLevelSolverRuntimeData);
-  }
-
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
 
   std::string model_file;
