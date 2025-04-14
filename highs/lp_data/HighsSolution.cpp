@@ -79,6 +79,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double complementarity_tolerance = options.complementarity_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    primal_feasibility_tolerance = options.kkt_tolerance;
+    dual_feasibility_tolerance = options.kkt_tolerance;
+    primal_residual_tolerance = options.kkt_tolerance;
+    dual_residual_tolerance = options.kkt_tolerance;
+    complementarity_tolerance = options.kkt_tolerance;
+  }
   // highs_info are the values computed in this method.
 
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
@@ -266,11 +273,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       norm = std::max(abs_value, norm);
     } else if (options.relative_kkt_error_norm == 1) {
       norm += abs_value;
-    } else if (options.relative_kkt_error_norm == 2)  {
+    } else if (options.relative_kkt_error_norm == 2) {
       norm += value * value;
     }
   };
-  auto updateRelativeMeasure = [&](const double value, double& relative_measure) {
+  auto updateRelativeMeasure = [&](const double value,
+                                   double& relative_measure) {
     double abs_value = std::fabs(value);
     if (options.relative_kkt_error_norm == 0) {
       relative_measure = std::max(abs_value, relative_measure);
@@ -399,7 +407,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               relative_bound_measure =
                   std::max(std::fabs(upper), relative_bound_measure);
             }
-            assert(0 < relative_bound_measure && relative_bound_measure < kHighsInf);
+            assert(0 < relative_bound_measure &&
+                   relative_bound_measure < kHighsInf);
           }
           double relative_primal_infeasibility =
               primal_infeasibility / (1.0 + relative_bound_measure);
@@ -433,7 +442,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               // infeasiblility.
               updateRelativeMeasure(cost, relative_cost_measure);
             }
-            assert(0 < relative_cost_measure && relative_cost_measure < kHighsInf);
+            assert(0 < relative_cost_measure &&
+                   relative_cost_measure < kHighsInf);
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
             if (relative_dual_infeasibility > dual_feasibility_tolerance)
@@ -1884,6 +1894,20 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
 
 void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                          const HighsInfo& info, const std::string& solver) {
+  const HighsLogOptions& log_options = options.log_options;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    primal_feasibility_tolerance = options.kkt_tolerance;
+    dual_feasibility_tolerance = options.kkt_tolerance;
+    primal_residual_tolerance = options.kkt_tolerance;
+    dual_residual_tolerance = options.kkt_tolerance;
+    complementarity_tolerance = options.kkt_tolerance;
+  }
+
   HighsLogType log_type = info.num_primal_infeasibilities ||
                                   info.num_dual_infeasibilities ||
                                   info.num_primal_residual_errors ||
@@ -1892,54 +1916,50 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                               ? HighsLogType::kWarning
                               : HighsLogType::kInfo;
 
-  highsLogUser(options.log_options, log_type,
+  highsLogUser(log_options, log_type,
                "HighsSolution.cpp reportLpKktFailures\n");
-  highsLogUser(options.log_options, log_type, "LP solution KKT conditions\n");
+  highsLogUser(log_options, log_type, "LP solution KKT conditions\n");
 
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "num/max %6d / %9.4g (relative %6d / %9.4g) primal "
-               "infeasibilities     (tolerance = %9.4g)\n",
-               int(info.num_primal_infeasibilities),
-               info.max_primal_infeasibility,
-               int(info.num_relative_primal_infeasibilities),
-               info.max_relative_primal_infeasibility,
-               options.primal_feasibility_tolerance);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
+  highsLogUser(
+      log_options, HighsLogType::kInfo,
+      "num/max %6d / %9.4g (relative %6d / %9.4g) primal "
+      "infeasibilities     (tolerance = %4.0e)\n",
+      int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+      int(info.num_relative_primal_infeasibilities),
+      info.max_relative_primal_infeasibility, primal_feasibility_tolerance);
+  highsLogUser(log_options, HighsLogType::kInfo,
                "num/max %6d / %9.4g (relative %6d / %9.4g)   dual "
-               "infeasibilities     (tolerance = %9.4g)\n",
+               "infeasibilities     (tolerance = %4.0e)\n",
                int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
                int(info.num_relative_dual_infeasibilities),
                info.max_relative_dual_infeasibility,
-               options.dual_feasibility_tolerance);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "num/max %6d / %9.4g (relative %6d / %9.4g) primal residual "
-               "errors     (tolerance = %9.4g)\n",
-               int(info.num_primal_residual_errors),
-               info.max_primal_residual_error,
-               int(info.num_relative_primal_residual_errors),
-               info.max_relative_primal_residual_error,
-               options.primal_residual_tolerance);
-  highsLogUser(options.log_options, HighsLogType::kInfo,
+               dual_feasibility_tolerance);
+  highsLogUser(
+      log_options, HighsLogType::kInfo,
+      "num/max %6d / %9.4g (relative %6d / %9.4g) primal residual "
+      "errors     (tolerance = %4.0e)\n",
+      int(info.num_primal_residual_errors), info.max_primal_residual_error,
+      int(info.num_relative_primal_residual_errors),
+      info.max_relative_primal_residual_error, primal_residual_tolerance);
+  highsLogUser(log_options, HighsLogType::kInfo,
                "num/max %6d / %9.4g (relative %6d / %9.4g)   dual residual "
-               "errors     (tolerance = %9.4g)\n",
+               "errors     (tolerance = %4.0e)\n",
                int(info.num_dual_residual_errors), info.max_dual_residual_error,
                int(info.num_relative_dual_residual_errors),
-               info.max_relative_dual_residual_error,
-               options.dual_residual_tolerance);
+               info.max_relative_dual_residual_error, dual_residual_tolerance);
   highsLogUser(
-      options.log_options, HighsLogType::kInfo,
+      log_options, HighsLogType::kInfo,
       "num/max %6d / %9.4g                               complementarity "
-      "violations (tolerance = %9.4g)\n",
+      "violations (tolerance = %4.0e)\n",
       int(info.num_complementarity_violations),
-      info.max_complementarity_violation, options.complementarity_tolerance);
+      info.max_complementarity_violation, complementarity_tolerance);
   if (info.primal_dual_objective_error !=
       kHighsIllegalComplementarityViolation) {
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "                 %9.4g"
-                 "                               P-D objective error        "
-                 "(tolerance = %9.4g)\n",
-                 info.primal_dual_objective_error,
-                 options.complementarity_tolerance);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "                          "
+                 "                    %9.4g  P-D objective error        "
+                 "(tolerance = %4.0e)\n",
+                 info.primal_dual_objective_error, complementarity_tolerance);
   }
   if (printf_kkt) {
     printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",

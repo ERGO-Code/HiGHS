@@ -306,6 +306,7 @@ struct HighsOptionsStruct {
   double infinite_bound;
   double small_matrix_value;
   double large_matrix_value;
+  double kkt_tolerance;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
@@ -474,6 +475,7 @@ struct HighsOptionsStruct {
         infinite_bound(0.0),
         small_matrix_value(0.0),
         large_matrix_value(0.0),
+        kkt_tolerance(0.0),
         primal_feasibility_tolerance(0.0),
         dual_feasibility_tolerance(0.0),
         ipm_optimality_tolerance(0.0),
@@ -722,34 +724,41 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &large_matrix_value, 1e0, 1e15, kHighsInf);
     records.push_back(record_double);
 
+    record_double = new OptionRecordDouble("kkt_tolerance", "KKT tolerance",
+                                           advanced, &kkt_tolerance, 1e-10,
+                                           kDefaultKktTolerance, kHighsInf);
+    records.push_back(record_double);
+
     record_double = new OptionRecordDouble(
         "primal_feasibility_tolerance", "Primal feasibility tolerance",
-        advanced, &primal_feasibility_tolerance, 1e-10, 1e-7, kHighsInf);
+        advanced, &primal_feasibility_tolerance, 1e-10, kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_feasibility_tolerance", "Dual feasibility tolerance", advanced,
-        &dual_feasibility_tolerance, 1e-10, 1e-7, kHighsInf);
+        &dual_feasibility_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "ipm_optimality_tolerance", "IPM optimality tolerance", advanced,
-        &ipm_optimality_tolerance, 1e-12, 1e-8, kHighsInf);
+        &ipm_optimality_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "primal_residual_tolerance", "Primal residual tolerance", advanced,
-        &primal_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+        &primal_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "complementarity_tolerance", "Complementarity tolerance", advanced,
-        &complementarity_tolerance, 1e-10, 1e-7, kHighsInf);
+        &complementarity_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "dual_residual_tolerance", "Dual residual tolerance", advanced,
-        &dual_residual_tolerance, 1e-10, 1e-7, kHighsInf);
+        &dual_residual_tolerance, 1e-10, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -1196,9 +1205,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
-        "pdlp_d_gap_tol",
-        "Duality gap tolerance for PDLP solver: Default = 1e-7", advanced,
-        &pdlp_d_gap_tol, 1e-12, 1e-7, kHighsInf);
+        "pdlp_d_gap_tol", "Duality gap tolerance for PDLP solver", advanced,
+        &pdlp_d_gap_tol, 1e-12, kDefaultKktTolerance, kHighsInf);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt(
@@ -1471,7 +1479,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
         "Tolerance to be satisfied before IPM crossover will start", advanced,
-        &start_crossover_tolerance, 1e-12, 1e-8, kHighsInf);
+        &start_crossover_tolerance, 1e-12, 1e-1 * kDefaultKktTolerance,
+        kHighsInf);
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(

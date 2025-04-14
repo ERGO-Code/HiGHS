@@ -276,6 +276,9 @@ enum IisStrategy {
   kIisStrategyMax = kIisStrategyFromLpColPriority
 };
 
+// Default KKT tolerance
+const double kDefaultKktTolerance = 1e-7;
+
 // Default and max allowed power-of-two matrix scale factor
 const HighsInt kDefaultAllowedMatrixPow2Scale = 20;
 const HighsInt kMaxAllowedMatrixPow2Scale = 30;

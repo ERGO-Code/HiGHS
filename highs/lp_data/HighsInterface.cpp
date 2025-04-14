@@ -2584,6 +2584,18 @@ HighsStatus Highs::lpKktCheck() {
   const HighsOptions& options = this->options_;
   const HighsSolution& solution = this->solution_;
   const HighsLogOptions& log_options = options.log_options;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  double primal_residual_tolerance = options.primal_residual_tolerance;
+  double dual_residual_tolerance = options.dual_residual_tolerance;
+  double complementarity_tolerance = options.complementarity_tolerance;
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    primal_feasibility_tolerance = options.kkt_tolerance;
+    dual_feasibility_tolerance = options.kkt_tolerance;
+    primal_residual_tolerance = options.kkt_tolerance;
+    dual_residual_tolerance = options.kkt_tolerance;
+    complementarity_tolerance = options.kkt_tolerance;
+  }
   info.objective_function_value =
       model_.lp_.objectiveValue(solution_.col_value);
   HighsPrimalDualErrors primal_dual_errors;
@@ -2617,29 +2629,28 @@ HighsStatus Highs::lpKktCheck() {
     if (was_optimal) {
       if (info.num_primal_infeasibilities > 0) {
         foundOptimalityError();
-        highsLogUser(log_options, HighsLogType::kError,
-                     "   num/max/sum %6d / %9.4g / %9.4g primal "
-                     "infeasibilities       (tolerance = %9.4g)\n",
-                     int(info.num_primal_infeasibilities),
-                     info.max_primal_infeasibility,
-                     info.sum_primal_infeasibilities,
-                     options.primal_feasibility_tolerance);
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "   num/max/sum %6d / %9.4g / %9.4g primal "
+            "infeasibilities       (tolerance = %4.0e)\n",
+            int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+            info.sum_primal_infeasibilities, primal_feasibility_tolerance);
       }
       if (info.num_dual_infeasibilities > 0) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max/sum %6d / %9.4g / %9.4g   dual "
-                     "infeasibilities       (tolerance = %9.4g)\n",
+                     "infeasibilities       (tolerance = %4.0e)\n",
                      int(info.num_dual_infeasibilities),
                      info.max_dual_infeasibility, info.sum_dual_infeasibilities,
-                     options.dual_feasibility_tolerance);
+                     dual_feasibility_tolerance);
       }
       // An optimal basic solution has no complementarity violations
       // by construction, and can be assumed to have no primal or dual
       // residual errors or meaningful primal dual objective error
       bool unexpected_error =
           info.num_complementarity_violations != 0 ||
-          info.primal_dual_objective_error > options.complementarity_tolerance;
+          info.primal_dual_objective_error > complementarity_tolerance;
       if (have_residual_errors)
         unexpected_error = unexpected_error ||
                            info.num_primal_residual_errors != 0 ||
@@ -2660,30 +2671,27 @@ HighsStatus Highs::lpKktCheck() {
             info.primal_dual_objective_error);
         printf(
             "   num/max %6d / %9.4g          primal residual errors         "
-            "(tolerance = %9.4g)\n",
+            "(tolerance = %4.0e)\n",
             int(info.num_primal_residual_errors),
-            info.max_primal_residual_error, options.primal_residual_tolerance);
+            info.max_primal_residual_error, primal_residual_tolerance);
         printf(
             "   num/max %6d / %9.4g  relative primal residual errors         "
-            "(tolerance = %9.4g)\n",
+            "(tolerance = %4.0e)\n",
             int(info.num_relative_primal_residual_errors),
-            info.max_relative_primal_residual_error,
-            options.primal_residual_tolerance);
+            info.max_relative_primal_residual_error, primal_residual_tolerance);
         printf(
             "   num/max %6d / %9.4g            dual residual errors         "
-            "(tolerance = %9.4g)\n",
+            "(tolerance = %4.0e)\n",
             int(info.num_dual_residual_errors), info.max_dual_residual_error,
-            options.dual_residual_tolerance);
+            dual_residual_tolerance);
         printf(
             "   num/max %6d / %9.4g  relative   dual residual errors         "
-            "(tolerance = %9.4g)\n",
+            "(tolerance = %4.0e)\n",
             int(info.num_relative_dual_residual_errors),
-            info.max_relative_dual_residual_error,
-            options.dual_residual_tolerance);
+            info.max_relative_dual_residual_error, dual_residual_tolerance);
       }
       assert(info.num_complementarity_violations == 0);
-      assert(info.primal_dual_objective_error <=
-             options.complementarity_tolerance);
+      assert(info.primal_dual_objective_error <= complementarity_tolerance);
       if (have_residual_errors) {
         assert(info.num_primal_residual_errors == 0);
         assert(info.num_relative_primal_residual_errors == 0);
@@ -2699,49 +2707,47 @@ HighsStatus Highs::lpKktCheck() {
     if (was_optimal) {
       if (info.num_relative_primal_infeasibilities > 0) {
         foundOptimalityError();
-        highsLogUser(log_options, HighsLogType::kError,
-                     "   num/max %6d / %9.4g relative primal infeasibilities "
-                     "(tolerance = %9.4g)\n",
-                     int(info.num_primal_infeasibilities),
-                     info.max_primal_infeasibility,
-                     info.sum_primal_infeasibilities,
-                     options.primal_feasibility_tolerance);
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "   num/max %6d / %9.4g relative primal infeasibilities "
+            "(tolerance = %4.0e)\n",
+            int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
+            info.sum_primal_infeasibilities, primal_feasibility_tolerance);
       }
       if (info.num_relative_dual_infeasibilities > 0) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max %6d / %9.4g relative   dual infeasibilities "
-                     "(tolerance = %9.4g)\n",
+                     "(tolerance = %4.0e)\n",
                      int(info.num_dual_infeasibilities),
                      info.max_dual_infeasibility, info.sum_dual_infeasibilities,
-                     options.dual_feasibility_tolerance);
+                     dual_feasibility_tolerance);
       }
       if (info.num_relative_primal_residual_errors > 0) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative primal residual errors "
-                     "(tolerance = %9.4g)\n",
+                     "(tolerance = %4.0e)\n",
                      int(info.num_relative_primal_residual_errors),
                      info.max_relative_primal_residual_error,
-                     options.primal_residual_tolerance);
+                     primal_residual_tolerance);
       }
       if (info.num_relative_dual_residual_errors > 0) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kWarning,
                      "   num/max %6d / %9.4g relative   dual residual errors "
-                     "(tolerance = %9.4g)\n",
+                     "(tolerance = %4.0e)\n",
                      int(info.num_relative_dual_residual_errors),
                      info.max_relative_dual_residual_error,
-                     options.dual_residual_tolerance);
+                     dual_residual_tolerance);
       }
-      if (info.primal_dual_objective_error >
-          options.complementarity_tolerance) {
+      if (info.primal_dual_objective_error > complementarity_tolerance) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kWarning,
                      "                 %9.4g relative P-D objective error    "
-                     "(tolerance = %9.4g)\n",
+                     "(tolerance = %4.0e)\n",
                      info.primal_dual_objective_error,
-                     options.complementarity_tolerance);
+                     complementarity_tolerance);
       }
     }
   }

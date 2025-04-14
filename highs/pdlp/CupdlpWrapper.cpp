@@ -710,6 +710,12 @@ void getUserParamsFromOptions(const HighsOptions& options,
   //
   ifChangeFloatParam[D_GAP_TOL] = true;
   floatParam[D_GAP_TOL] = options.pdlp_d_gap_tol;
+  // Possibly over-write with uniform KKT tolerance
+  if (options.kkt_tolerance != kDefaultKktTolerance) {
+    floatParam[D_PRIMAL_TOL] = options.kkt_tolerance;
+    floatParam[D_DUAL_TOL] = options.kkt_tolerance;
+    floatParam[D_GAP_TOL] = options.kkt_tolerance;
+  }
   //
   ifChangeFloatParam[D_TIME_LIM] = true;
   floatParam[D_TIME_LIM] = options.time_limit;
