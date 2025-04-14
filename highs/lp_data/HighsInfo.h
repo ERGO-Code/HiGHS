@@ -275,24 +275,28 @@ class HighsInfo : public HighsInfoStruct {
         &sum_dual_infeasibilities, 0);
     records.push_back(record_double);
 
-    record_int = new InfoRecordInt("num_relative_primal_infeasibilities",
-                                   "Number of relative primal infeasibilities", advanced,
-                                   &num_relative_primal_infeasibilities, -1);
+    record_int =
+        new InfoRecordInt("num_relative_primal_infeasibilities",
+                          "Number of relative primal infeasibilities", advanced,
+                          &num_relative_primal_infeasibilities, -1);
     records.push_back(record_int);
 
-    record_double = new InfoRecordDouble(
-        "max_relative_primal_infeasibility", "Maximum relative primal infeasibility", advanced,
-        &max_relative_primal_infeasibility, 0);
+    record_double =
+        new InfoRecordDouble("max_relative_primal_infeasibility",
+                             "Maximum relative primal infeasibility", advanced,
+                             &max_relative_primal_infeasibility, 0);
     records.push_back(record_double);
 
-    record_int = new InfoRecordInt("num_relative_dual_infeasibilities",
-                                   "Number of relative dual infeasibilities", advanced,
-                                   &num_relative_dual_infeasibilities, -1);
+    record_int =
+        new InfoRecordInt("num_relative_dual_infeasibilities",
+                          "Number of relative dual infeasibilities", advanced,
+                          &num_relative_dual_infeasibilities, -1);
     records.push_back(record_int);
 
-    record_double = new InfoRecordDouble("max_relative_dual_infeasibility",
-                                         "Maximum relative dual infeasibility", advanced,
-                                         &max_relative_dual_infeasibility, 0);
+    record_double =
+        new InfoRecordDouble("max_relative_dual_infeasibility",
+                             "Maximum relative dual infeasibility", advanced,
+                             &max_relative_dual_infeasibility, 0);
     records.push_back(record_double);
 
     record_int = new InfoRecordInt("num_primal_residual_errors",
@@ -315,24 +319,28 @@ class HighsInfo : public HighsInfoStruct {
                                          advanced, &max_dual_residual_error, 0);
     records.push_back(record_double);
 
-    record_int = new InfoRecordInt("num_relative_primal_residual_errors",
-                                   "Number of relative primal residual errors", advanced,
-                                   &num_relative_primal_residual_errors, -1);
+    record_int =
+        new InfoRecordInt("num_relative_primal_residual_errors",
+                          "Number of relative primal residual errors", advanced,
+                          &num_relative_primal_residual_errors, -1);
     records.push_back(record_int);
 
-    record_double = new InfoRecordDouble(
-        "max_relative_primal_residual_error", "Maximum relative primal residual error", advanced,
-        &max_relative_primal_residual_error, 0);
+    record_double =
+        new InfoRecordDouble("max_relative_primal_residual_error",
+                             "Maximum relative primal residual error", advanced,
+                             &max_relative_primal_residual_error, 0);
     records.push_back(record_double);
 
-    record_int = new InfoRecordInt("num_relative_dual_residual_errors",
-                                   "Number of relative dual residual errors", advanced,
-                                   &num_relative_dual_residual_errors, -1);
+    record_int =
+        new InfoRecordInt("num_relative_dual_residual_errors",
+                          "Number of relative dual residual errors", advanced,
+                          &num_relative_dual_residual_errors, -1);
     records.push_back(record_int);
 
-    record_double = new InfoRecordDouble("max_relative_dual_residual_error",
-                                         "Maximum relative dual residual error",
-                                         advanced, &max_relative_dual_residual_error, 0);
+    record_double =
+        new InfoRecordDouble("max_relative_dual_residual_error",
+                             "Maximum relative dual residual error", advanced,
+                             &max_relative_dual_residual_error, 0);
     records.push_back(record_double);
 
     record_double = new InfoRecordDouble(

@@ -153,7 +153,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
                    solver_object.solution_, solver_object.basis_,
                    solver_object.highs_info_, primal_dual_errors,
                    get_residuals);
-  reportLpKktFailures(solver_object.lp_, solver_object.options_, solver_object.highs_info_);
+  reportLpKktFailures(solver_object.lp_, solver_object.options_,
+                      solver_object.highs_info_);
   solver_object.highs_info_ = save_highs_info;
   return return_status;
 }

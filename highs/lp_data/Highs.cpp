@@ -312,6 +312,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
+  lp.origin_name_ = "Original";
   assert(lp.a_matrix_.formatOk());
   if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
@@ -1392,6 +1393,7 @@ HighsStatus Highs::optimizeModel() {
       }
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
+        reduced_lp.origin_name_ = "Reduced LP";
         reduced_lp.setMatrixDimensions();
         if (kAllowDeveloperAssert) {
           // Validate the reduced LP

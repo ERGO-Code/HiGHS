@@ -179,6 +179,7 @@ void HighsLp::clear() {
   this->offset_ = 0;
 
   this->model_name_ = "";
+  this->origin_name_ = "";
   this->objective_name_ = "";
 
   this->new_col_name_ix_ = 0;

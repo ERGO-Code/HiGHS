@@ -112,8 +112,9 @@ HighsStatus solveLpCupdlp(const HighsOptions& options, HighsTimer& timer,
   // H_Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
   Init_Scaling(local_log_level, scaling, nCols, nRows, cost, rhs);
 
-  if (local_log_level) cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
-				     scaling->dNormCost, scaling->dNormRhs);
+  if (local_log_level)
+    cupdlp_printf("Using cost norm = %9.3g and RHS norm = %9.3g\n",
+                  scaling->dNormCost, scaling->dNormRhs);
 
   cupdlp_int ifScaling = 1;
 
