@@ -45,6 +45,8 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
     solution[iRow] = random.fraction();
   rhs.setup(num_row);
   REQUIRE(testSolveDense());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
@@ -106,7 +108,10 @@ TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
     if (num_test == max_num_test) break;
     highs.changeColBounds(iCol, save_lower, save_upper);
   }
+
+  highs.resetGlobalScheduler(true);
 }
+
 TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   std::string filename;
   const bool avgas = false;  // true;//
@@ -177,6 +182,8 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   for (basis_change = from_basis_change; basis_change < to_basis_change;
        basis_change++)
     REQUIRE(iterate(variable_out[basis_change], variable_in[basis_change]));
+
+  highs.resetGlobalScheduler(true);
 }
 
 HighsInt rowOut(const HighsInt variable_out) {

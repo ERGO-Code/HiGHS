@@ -141,6 +141,8 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getInfo().objective_function_value == 2);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void freeFixedModelTest(const std::string model_name) {
@@ -162,6 +164,8 @@ void freeFixedModelTest(const std::string model_name) {
 
   bool are_the_same = model_free == model_fixed;
   REQUIRE(are_the_same);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("filereader-free-format-parser-qp", "[highs_filereader]") {
@@ -195,6 +199,8 @@ TEST_CASE("filereader-free-format-parser-lp", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
+
+  highs.resetGlobalScheduler(true);
 }
 
 // No commas in test case name.
@@ -257,6 +263,8 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   REQUIRE(delta < 1e-8);
 
   std::remove(filename_lp.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
@@ -296,6 +304,8 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
+
+  highs.resetGlobalScheduler(true);
 }
 
 /*
@@ -325,6 +335,8 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("filereader-dD2e", "[highs_filereader]") {
@@ -341,6 +353,8 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
+
+  highs.resetGlobalScheduler(true);
 }
 
 // TEST_CASE("filereader-comment", "[highs_filereader]") {
@@ -414,6 +428,8 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
 
   std::remove(write_model_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
@@ -438,6 +454,8 @@ TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
   h.run();
   REQUIRE(required_objective_value == h.getInfo().objective_function_value);
   std::remove(write_model_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("mps-warnings", "[highs_filereader]") {
@@ -447,6 +465,8 @@ TEST_CASE("mps-warnings", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kWarning);
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("mps-silly-names", "[highs_filereader]") {
@@ -456,4 +476,6 @@ TEST_CASE("mps-silly-names", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
+
+  h.resetGlobalScheduler(true);
 }
