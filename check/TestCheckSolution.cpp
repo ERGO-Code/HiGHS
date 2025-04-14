@@ -68,6 +68,8 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
     // Second pass uses sparse format
     write_solution_style = kSolutionStyleSparse;
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
@@ -288,6 +290,8 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   }
   assert(other_tests);
   std::remove(solution_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
@@ -314,6 +318,8 @@ TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
   highs.setSolution(solution);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
@@ -357,6 +363,8 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
   highs.run();
   double objective2 = highs.getInfo().objective_function_value;
   REQUIRE(fabs(objective1 - objective2) / max(1.0, objective1) < 1e-5);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
@@ -387,6 +395,8 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
   std::remove(solution_file_name.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
@@ -400,6 +410,8 @@ TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
   REQUIRE(highs.setSolution(solution) == HighsStatus::kError);
   solution.col_value.assign(lp.num_col_, 0);
   REQUIRE(highs.setSolution(solution) == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
@@ -447,6 +459,8 @@ TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
   REQUIRE(h.readSolution(miplib_sol_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   std::remove(miplib_sol_file.c_str());
+
+  h.resetGlobalScheduler(true);
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
@@ -499,6 +513,8 @@ void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
   REQUIRE(status == require_model_status);
 
   std::remove(solution_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 void runSetLpSolution(const std::string model) {
@@ -566,4 +582,6 @@ void runSetLpSolution(const std::string model) {
   highs.clear();
 
   std::remove(solution_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
