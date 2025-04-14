@@ -25,6 +25,8 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
+const bool printf_kkt = false;
+
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info) {
@@ -294,13 +296,21 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         if (have_dual_solution) dual = solution.row_dual[iRow];
         integrality = HighsVarType::kContinuous;
         if (pass == 0) {
-          if (lower > -kHighsInf) {
+          if (lower == upper) {
+            // FX, so only count the bound once
             ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
             pdlp_norm_bounds += lower * lower;
-          }
-          if (upper < kHighsInf) {
-            ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
-            pdlp_norm_bounds += upper * upper;
+          } else {
+            // BX constraints will be separated into two constraints
+            // by IPC and PDLP, so count both bounds
+            if (lower > -kHighsInf) {
+              ipx_norm_bounds = std::max(std::fabs(lower), ipx_norm_bounds);
+              pdlp_norm_bounds += lower * lower;
+            }
+            if (upper < kHighsInf) {
+              ipx_norm_bounds = std::max(std::fabs(upper), ipx_norm_bounds);
+              pdlp_norm_bounds += upper * upper;
+            }
           }
         }
       }
@@ -538,8 +548,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     primal_dual_objective_error = pdlp_relative_primal_dual_objective_error;
   }
 
-  const bool report_kkt = false;
-  if (report_kkt) {
+  if (printf_kkt || options.log_dev_level > 0) {
     printf("\ngetKktFailures:: IPX   cost norm = %9.2e; bound norm = %9.2e\n",
            ipx_norm_costs, ipx_norm_bounds);
     printf("getKktFailures:: PDLP  cost norm = %9.2e; bound norm = %9.2e\n",
@@ -1900,8 +1909,7 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                  info.primal_dual_objective_error,
                  options.complementarity_tolerance);
   }
-  const bool report_kkt = false;
-  if (report_kkt) {
+  if (printf_kkt) {
     printf("grepLpKktFailures,%s,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%g\n",
            options.solver.c_str(), lp.model_name_.c_str(),
            lp.origin_name_.c_str(), int(info.num_primal_infeasibilities),

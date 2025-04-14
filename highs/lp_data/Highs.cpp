@@ -943,7 +943,8 @@ HighsStatus Highs::run() {
       this->getHighsFiles();
       this->files_.clear();
       if (this->options_.solution_file != "")
-        status = this->writeSolution(this->options_.solution_file);
+        status = this->writeSolution(this->options_.solution_file,
+                                     this->options_.write_solution_style);
       if (this->options_.write_basis_file != "")
         status = this->writeBasis(this->options_.write_basis_file);
     }
