@@ -68,8 +68,6 @@ TEST_CASE("check-solution", "[highs_check_solution]") {
     // Second pass uses sparse format
     write_solution_style = kSolutionStyleSparse;
   }
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
@@ -410,8 +408,6 @@ TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
   REQUIRE(highs.setSolution(solution) == HighsStatus::kError);
   solution.col_value.assign(lp.num_col_, 0);
   REQUIRE(highs.setSolution(solution) == HighsStatus::kOk);
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("read-miplib-solution", "[highs_check_solution]") {

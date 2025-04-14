@@ -1980,8 +1980,6 @@ TEST_CASE("resize-integrality", "[highs_data]") {
       REQUIRE(int(integrality.size()) == int(original_num_col + 1));
     }
   }
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("modify-empty-model", "[highs_data]") {
@@ -1992,8 +1990,6 @@ TEST_CASE("modify-empty-model", "[highs_data]") {
   REQUIRE(highs.changeColCost(0, 1) == HighsStatus::kError);
   REQUIRE(highs.changeColBounds(0, 1, 1) == HighsStatus::kError);
   REQUIRE(highs.changeRowBounds(0, 1, 1) == HighsStatus::kError);
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("zero-matrix-entries", "[highs_data]") {
@@ -2011,8 +2007,6 @@ TEST_CASE("zero-matrix-entries", "[highs_data]") {
   lp.a_matrix_.index_ = {0, 1, 0, 1};
   lp.a_matrix_.value_ = {1, 0, 0, 1};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-
-  highs.resetGlobalScheduler(true);
 }
 
 void testAvgasGetRow(Highs& h) {
@@ -2295,8 +2289,6 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   h.ensureColwise();
   testAvgasGetRow(h);
   testAvgasGetCol(h);
-
-  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("hot-start-after-delete", "[highs_data]") {

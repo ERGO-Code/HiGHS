@@ -182,8 +182,6 @@ TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
   for (basis_change = from_basis_change; basis_change < to_basis_change;
        basis_change++)
     REQUIRE(iterate(variable_out[basis_change], variable_in[basis_change]));
-
-  highs.resetGlobalScheduler(true);
 }
 
 HighsInt rowOut(const HighsInt variable_out) {

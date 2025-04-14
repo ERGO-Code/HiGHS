@@ -58,6 +58,4 @@ TEST_CASE("sizeof-highs-int", "[highs_version]") {
 #else
   REQUIRE(sizeof_highs_int == 4);
 #endif
-
-  highs.resetGlobalScheduler(true);
 }

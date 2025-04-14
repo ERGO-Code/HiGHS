@@ -637,8 +637,6 @@ TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
   lp.a_matrix_.start_ = {1};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-row-wise", "[highs_data]") {

@@ -164,8 +164,6 @@ void freeFixedModelTest(const std::string model_name) {
 
   bool are_the_same = model_free == model_fixed;
   REQUIRE(are_the_same);
-
-  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("filereader-free-format-parser-qp", "[highs_filereader]") {
@@ -199,8 +197,6 @@ TEST_CASE("filereader-free-format-parser-lp", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
-
-  highs.resetGlobalScheduler(true);
 }
 
 // No commas in test case name.
@@ -304,8 +300,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
-
-  highs.resetGlobalScheduler(true);
 }
 
 /*
@@ -428,8 +422,6 @@ TEST_CASE("writeLocalModel", "[highs_filereader]") {
   REQUIRE(h.writeLocalModel(model, write_model_file) == HighsStatus::kError);
 
   std::remove(write_model_file.c_str());
-
-  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
@@ -465,8 +457,6 @@ TEST_CASE("mps-warnings", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kWarning);
-
-  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("mps-silly-names", "[highs_filereader]") {
@@ -476,6 +466,4 @@ TEST_CASE("mps-silly-names", "[highs_filereader]") {
   h.setOptionValue("output_flag", dev_run);
   HighsStatus return_status = h.readModel(model_file);
   REQUIRE(return_status == HighsStatus::kOk);
-
-  h.resetGlobalScheduler(true);
 }

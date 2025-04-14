@@ -43,7 +43,6 @@ TEST_CASE("simplest-ill-conditioning", "[highs_model_properties]") {
                                    ill_conditioning_bound) == HighsStatus::kOk);
   REQUIRE(highs.getIllConditioning(ill_conditioning, constraint, 1, 10) ==
           HighsStatus::kOk);
-
   highs.resetGlobalScheduler(true);
 }
 
@@ -140,6 +139,4 @@ TEST_CASE("afiro-ill-conditioning", "[highs_model_properties]") {
   const bool constraint = true;
   highs.getIllConditioning(ill_conditioning, constraint);
   highs.getIllConditioning(ill_conditioning, !constraint);
-
-  highs.resetGlobalScheduler(true);
 }

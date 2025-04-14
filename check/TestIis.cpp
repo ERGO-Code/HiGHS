@@ -457,8 +457,6 @@ void testMps(std::string& model, const HighsInt iis_strategy,
     REQUIRE(num_iis_col == 0);
     REQUIRE(num_iis_row == 0);
   }
-
-  highs.resetGlobalScheduler(true);
 }
 
 void testFeasibilityRelaxation(
@@ -474,6 +472,4 @@ void testFeasibilityRelaxation(
           HighsStatus::kOk);
   REQUIRE(h.getInfo().objective_function_value ==
           require_feasibility_objective_function_value);
-
-  h.resetGlobalScheduler(true);
 }

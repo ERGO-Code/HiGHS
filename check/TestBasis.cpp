@@ -190,8 +190,6 @@ TEST_CASE("Basis-singular", "[highs_basis_data]") {
   basis.col_status = {HighsBasisStatus::kBasic, HighsBasisStatus::kBasic};
   basis.row_status = {HighsBasisStatus::kLower, HighsBasisStatus::kLower};
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
-
-  highs.resetGlobalScheduler(true);
 }
 
 // No commas in test case name.
