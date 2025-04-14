@@ -87,9 +87,9 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,
                             const double lower, const double upper,
                             const double value, const double dual,
-                            const HighsVarType integrality, uint8_t& at_status,
-                            uint8_t& mid_status, double& primal_infeasibility,
-                            double& dual_infeasibility);
+                            const HighsVarType integrality,
+			    double& primal_infeasibility, double& dual_infeasibility,
+			    uint8_t& at_status, uint8_t& mid_status);
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
                                const std::vector<double>& gradient,
@@ -148,7 +148,8 @@ bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
-void reportLpKktFailures(const HighsOptions& options,
+void reportLpKktFailures(const HighsLp& lp,
+			 const HighsOptions& options,
                          const HighsInfo& highs_info,
                          const std::string& solver = "");
 

@@ -2592,7 +2592,7 @@ HighsStatus Highs::lpKktCheck() {
   const bool get_residuals = true;
   getLpKktFailures(options, model_.lp_, solution, basis_, info,
                    primal_dual_errors, get_residuals);
-  reportLpKktFailures(options, info, "LP");
+  reportLpKktFailures(model_.lp_, options, info, "LP");
   if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
       info.num_primal_infeasibilities == 0 &&
       info.num_primal_residual_errors == 0)
