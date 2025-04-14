@@ -392,6 +392,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {

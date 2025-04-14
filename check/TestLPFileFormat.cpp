@@ -19,4 +19,6 @@ TEST_CASE("lp-file-format-quad-no-space", "[LpFileFormat]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kError);
 
   // todo: read the coefficients/variables off the highs model
+
+  highs.resetGlobalScheduler(true);
 }

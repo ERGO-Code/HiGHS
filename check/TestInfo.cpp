@@ -102,4 +102,6 @@ TEST_CASE("highs-info", "[highs_info]") {
            highs_info.ipm_iteration_count);
   }
   std::remove(highs_info_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }

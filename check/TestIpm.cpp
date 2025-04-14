@@ -23,6 +23,8 @@ TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   highs.setOptionValue("ipm_optimality_tolerance", 1e-2);
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
@@ -46,6 +48,8 @@ TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
@@ -80,6 +84,8 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   }
   REQUIRE(solution_norm < 1e-6);
   if (dev_run) printf("Analytic centre solution norm is %g\n", solution_norm);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-1966", "[highs_ipm]") {
@@ -133,6 +139,8 @@ TEST_CASE("test-1966", "[highs_ipm]") {
     printf("Max   dual infeasibility   = %g\n", info.max_dual_infeasibility);
     printf("Sum   dual infeasibilities = %g\n", info.sum_dual_infeasibilities);
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-2087", "[highs_ipm]") {
@@ -152,4 +160,7 @@ TEST_CASE("test-2087", "[highs_ipm]") {
 
   h.run();
   REQUIRE(first_ipm_iteration_count == h.getInfo().ipm_iteration_count);
+
+  h.resetGlobalScheduler(true);
+
 }

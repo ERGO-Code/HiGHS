@@ -123,4 +123,6 @@ TEST_CASE("Sparse-matrix-products", "[highs_sparse_matrix]") {
 
     highs.clear();
   }
+
+  highs.resetGlobalScheduler(true);
 }
