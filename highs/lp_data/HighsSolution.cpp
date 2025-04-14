@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = false;
+const bool printf_kkt = true;
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -259,6 +259,29 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double ipx_norm_costs = 0.0;
   double pdlp_norm_costs = 0.0;
   double highs_norm_costs = 0.0;
+
+  auto updateHighsNorm = [&](const double value, double& norm) {
+    double abs_value = std::fabs(value);
+    if (options.relative_kkt_error_norm == 0) {
+      norm = std::max(abs_value, norm);
+    } else if (options.relative_kkt_error_norm == 1) {
+      norm += abs_value;
+    } else if (options.relative_kkt_error_norm == 2)  {
+      norm += value * value;
+    }
+  };
+  auto updateRelativeMeasure = [&](const double value, double& relative_measure) {
+    double abs_value = std::fabs(value);
+    if (options.relative_kkt_error_norm == 0) {
+      relative_measure = std::max(abs_value, relative_measure);
+    } else if (options.relative_kkt_error_norm == 1) {
+      relative_measure += abs_value;
+    } else {
+      relative_measure *= relative_measure;
+      relative_measure += value * value;
+      relative_measure = std::sqrt(relative_measure);
+    }
+  };
   // Pass twice through this loop, once to determine the bound and
   // cost norms, and once to use them to assess relative
   // infeasibilities and residual errors
@@ -278,7 +301,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           pdlp_norm_costs += cost * cost;
           if (dual * dual < dual_feasibility_tolerance) {
             // Dual close to zero
-            highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+            updateHighsNorm(cost, highs_norm_costs);
           }
           if (get_residuals && have_dual_solution) {
             // Subtract off the gradient value
@@ -339,10 +362,10 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         double residual = 0;
         if (at_status == kHighsSolutionLo) {
           residual = std::fabs(lower - value);
-          highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
+          updateHighsNorm(lower, highs_norm_bounds);
         } else if (at_status == kHighsSolutionUp) {
           residual = std::fabs(value - upper);
-          highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
+          updateHighsNorm(upper, highs_norm_bounds);
         }
       } else {
         if (primal_infeasibility > 0) {
@@ -368,8 +391,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
                 mid_status == kHighsSolutionLo) {
               // Bound interval is short, or variable is below the
               // midpoint (which is only possible lower is finite)
-              relative_bound_measure =
-                  std::max(std::fabs(lower), relative_bound_measure);
+              updateRelativeMeasure(lower, relative_bound_measure);
             } else {
               assert(mid_status == kHighsSolutionUp);
               // Variable is above the midpoint of the bound interval
@@ -377,14 +399,16 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               relative_bound_measure =
                   std::max(std::fabs(upper), relative_bound_measure);
             }
-            assert(relative_bound_measure < kHighsInf);
+            assert(0 < relative_bound_measure && relative_bound_measure < kHighsInf);
           }
           double relative_primal_infeasibility =
               primal_infeasibility / (1.0 + relative_bound_measure);
           if (relative_primal_infeasibility > primal_feasibility_tolerance)
             num_relative_primal_infeasibility++;
-          if (max_relative_primal_infeasibility < relative_primal_infeasibility)
+          if (max_relative_primal_infeasibility <
+              relative_primal_infeasibility) {
             max_relative_primal_infeasibility = relative_primal_infeasibility;
+          }
         }
         if (have_dual_solution) {
           if (dual_infeasibility > 0) {
@@ -407,9 +431,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               // are not small. hence the cost has not been included in
               // highs_norm_costs, but should be used for local relative
               // infeasiblility.
-              relative_cost_measure =
-                  std::max(std::fabs(cost), relative_cost_measure);
+              updateRelativeMeasure(cost, relative_cost_measure);
             }
+            assert(0 < relative_cost_measure && relative_cost_measure < kHighsInf);
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
             if (relative_dual_infeasibility > dual_feasibility_tolerance)
@@ -467,6 +491,14 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
       pdlp_norm_costs = std::sqrt(pdlp_norm_costs);
       pdlp_norm_bounds = std::sqrt(pdlp_norm_bounds);
+
+      if (options.relative_kkt_error_norm == 2) {
+        highs_norm_costs = std::sqrt(highs_norm_costs);
+        highs_norm_bounds = std::sqrt(highs_norm_bounds);
+      } else if (options.relative_kkt_error_norm < 0) {
+        highs_norm_costs = pdlp_norm_costs;
+        highs_norm_bounds = pdlp_norm_bounds;
+      }
     }
   }
 
@@ -1871,14 +1903,14 @@ void reportLpKktFailures(const HighsLp& lp, const HighsOptions& options,
                info.max_primal_infeasibility,
                int(info.num_relative_primal_infeasibilities),
                info.max_relative_primal_infeasibility,
-               options.primal_residual_tolerance);
+               options.primal_feasibility_tolerance);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "num/max %6d / %9.4g (relative %6d / %9.4g)   dual "
                "infeasibilities     (tolerance = %9.4g)\n",
                int(info.num_dual_infeasibilities), info.max_dual_infeasibility,
                int(info.num_relative_dual_infeasibilities),
                info.max_relative_dual_infeasibility,
-               options.dual_residual_tolerance);
+               options.dual_feasibility_tolerance);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "num/max %6d / %9.4g (relative %6d / %9.4g) primal residual "
                "errors     (tolerance = %9.4g)\n",

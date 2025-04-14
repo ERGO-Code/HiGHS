@@ -314,6 +314,7 @@ struct HighsOptionsStruct {
   double complementarity_tolerance;
   double objective_bound;
   double objective_target;
+  HighsInt relative_kkt_error_norm;
   HighsInt threads;
   HighsInt user_bound_scale;
   HighsInt user_cost_scale;
@@ -481,6 +482,7 @@ struct HighsOptionsStruct {
         complementarity_tolerance(0.0),
         objective_bound(0.0),
         objective_target(0.0),
+        relative_kkt_error_norm(0),
         threads(0),
         user_bound_scale(0),
         user_cost_scale(0),
@@ -766,6 +768,13 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt(kRandomSeedString, "Random seed used in HiGHS",
                             advanced, &random_seed, 0, 0, kHighsIInf);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "relative_kkt_error_norm",
+        "Norm used in measures for relative KKT errors: -1 => PDLP 2-norm; 0 "
+        "=> infinity (default); 1 => 1-norm; 2 => 2-norm",
+        advanced, &relative_kkt_error_norm, -1, 0, 2);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

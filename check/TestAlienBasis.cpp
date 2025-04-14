@@ -432,12 +432,11 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
-    highs.setOptionValue("output_flag", true);
-    highs.setOptionValue("log_dev_level", 3);
-    highs.setOptionValue("highs_analysis_level",
-                         kHighsAnalysisLevelSolverRuntimeData);
-    printf("\n\n!!!! testAlienBasis: avgas = %d; seed = %d\n", avgas, int(seed));
-
+  highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("log_dev_level", 3);
+  highs.setOptionValue("highs_analysis_level",
+                       kHighsAnalysisLevelSolverRuntimeData);
+  printf("\n\n!!!! testAlienBasis: avgas = %d; seed = %d\n", avgas, int(seed));
 
   highs.readModel(filename);
   HighsLp lp = highs.getLp();
