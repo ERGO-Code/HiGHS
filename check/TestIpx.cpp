@@ -54,10 +54,6 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
 
   highs::parallel::initialize_scheduler();
 
-  HighsCallback callback;
-  // Set pointer to null callback
-  lps.SetCallback(&callback);
-
   Int status = lps.Solve();
   bool is_solved = status == IPX_STATUS_solved;
   REQUIRE(is_solved);

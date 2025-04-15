@@ -47,7 +47,7 @@ HighsInt highsVersionPatch() { return HIGHS_VERSION_PATCH; }
 const char* highsGithash() { return HIGHS_GITHASH; }
 const char* highsCompilationDate() { return "deprecated"; }
 
-Highs::Highs() {}
+Highs::Highs() : callback_(this) {}
 
 HighsStatus Highs::clear() {
   resetOptions();
@@ -2228,14 +2228,10 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
   this->callback_.clear();
   this->callback_.user_callback = [c_callback](
                                       int a, const std::string& b,
-                                      const HighsCallbackDataOut* cb_out,
-                                      HighsCallbackDataIn* cb_in, void* e) {
-    HighsCCallbackDataOut cc_out = static_cast<HighsCCallbackDataOut>(*cb_out);
-    HighsCCallbackDataIn cc_in;
-    cc_in.user_interrupt = 0;
-    cc_in.user_solution_size = 0;
-    cc_in.user_solution = nullptr;
-
+                                      const HighsCallbackOutput* cb_out,
+                                      HighsCallbackInput* cb_in, void* e) {
+    HighsCallbackDataOut cc_out = static_cast<HighsCallbackDataOut>(*cb_out);
+    HighsCallbackDataIn cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
     c_callback(a, b.c_str(), &cc_out, &cc_in, e);
     *cb_in = cc_in;  // copy the data in
   };

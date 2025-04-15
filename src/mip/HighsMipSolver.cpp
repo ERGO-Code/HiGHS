@@ -848,7 +848,7 @@ presolve::HighsPostsolveStack HighsMipSolver::getPostsolveStack() const {
 void HighsMipSolver::callbackGetCutPool() const {
   assert(callback_->user_callback);
   assert(callback_->callbackActive(kCallbackMipGetCutPool));
-  HighsCallbackDataOut& data_out = callback_->data_out;
+  HighsCallbackOutput& data_out = callback_->data_out;
 
   HighsSparseMatrix cut_matrix;
   mipdata_->lp.getCutPool(data_out.cutpool_num_col, data_out.cutpool_num_cut,

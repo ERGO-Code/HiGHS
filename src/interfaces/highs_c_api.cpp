@@ -1433,7 +1433,7 @@ void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
 }
 
-const void* Highs_getCallbackDataOutItem(const HighsCCallbackDataOut* data_out,
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
                                          const char* item_name) {
   // Accessor function for HighsCallbackDataOut
   //
@@ -1483,6 +1483,34 @@ const void* Highs_getCallbackDataOutItem(const HighsCCallbackDataOut* data_out,
     return (void*)(data_out->cutpool_upper);
   }
   return nullptr;
+}
+
+int Highs_setCallbackSolution(HighsCallbackDataIn* data_in,
+                              HighsInt num_entries, const double* value) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->setSolution(num_entries, value));
+  } else
+    return static_cast<int>(HighsStatus::kError);
+}
+
+int Highs_setCallbackSparseSolution(HighsCallbackDataIn* data_in,
+                                     HighsInt num_entries,
+                                     const HighsInt* index,
+                                     const double* value) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->setSolution(num_entries, index, value));
+  } else
+    return static_cast<int>(HighsStatus::kError);
+}
+
+int Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
+  if (data_in != nullptr && data_in->cbdata != nullptr) {
+    HighsCallbackInput* obj = static_cast<HighsCallbackInput*>(data_in->cbdata);
+    return static_cast<int>(obj->repairSolution());
+  } else
+    return static_cast<int>(HighsStatus::kError);
 }
 
 // *********************

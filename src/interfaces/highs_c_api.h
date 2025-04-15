@@ -105,6 +105,7 @@ const HighsInt kHighsCallbackMipLogging = 5;
 const HighsInt kHighsCallbackMipInterrupt = 6;
 const HighsInt kHighsCallbackMipGetCutPool = 7;
 const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
+const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
 
 const char* const kHighsCallbackDataOutLogTypeName = "log_type";
 const char* const kHighsCallbackDataOutRunningTimeName = "running_time";
@@ -2359,8 +2360,51 @@ void Highs_resetGlobalScheduler(const HighsInt blocking);
  * @returns A void* pointer to the callback data item, or NULL if item_name not
  * valid
  */
-const void* Highs_getCallbackDataOutItem(const HighsCCallbackDataOut* data_out,
+const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
                                          const char* item_name);
+
+/**
+ * Set a solution within a callback by passing a subset of the values.
+ *
+ * For any values that are unavailable/unknown, pass kHighsUndefined.
+ *
+ * @param data_in     A pointer to the callback input data instance.
+ * @param num_entries Number of variables in the set
+ * @param value       An array of length [num_entries <= num_col] with
+ *                    column solution values.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallbackSolution(HighsCallbackDataIn* data_in,
+                                   const HighsInt num_entries,
+                                   const double* value);
+
+/**
+ * Set a partial primal solution by passing values for a set of variables,
+ * within a valid callback.
+ *
+ * @param data_in     A pointer to the callback input data instance.
+ * @param num_entries Number of variables in the set
+ * @param index       Indices of variables in the set
+ * @param value       Values of variables in the set
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_setCallbackSparseSolution(HighsCallbackDataIn* data_in,
+                                         const HighsInt num_entries,
+                                         const HighsInt* index,
+                                         const double* value);
+
+/**
+ * Finds a feasible solution for a given (partial) primal user solution,
+ * within a valid callback.
+ *
+ * On success, the user solution is updated within the callback input data
+ * instance.
+ *
+ * @returns A `kHighsStatus` constant indicating whether the call succeeded.
+ */
+HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 
 // *********************
 // * Deprecated methods*
