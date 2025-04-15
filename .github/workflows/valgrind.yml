@@ -32,7 +32,7 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: valgrind ./bin/unit_tests 
+        run: valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s ./bin/unit_tests 
 
   instance_tests:
     runs-on: ${{ matrix.os }}
@@ -63,4 +63,4 @@ jobs:
       - name: Test
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: valgrind ctest -E unit.* --timeout 1000 --output-on-failure 
+        run: valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s ctest -E unit.* --timeout 1000 --output-on-failure 
