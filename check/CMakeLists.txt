@@ -28,57 +28,57 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # Make test executable
   set(TEST_SOURCES
-      TestHighsVersion.cpp
       TestAlienBasis.cpp
-      TestDualize.cpp
-      TestCallbacks.cpp
-      TestCheckSolution.cpp
-      TestEkk.cpp
-      TestFactor.cpp
-      TestMain.cpp
-      TestNames.cpp
-      TestOptions.cpp
-      TestIO.cpp
-      TestSort.cpp
-      TestSetup.cpp
-      TestFilereader.cpp
-      TestHighsGFkSolve.cpp
-      TestInfo.cpp
       TestBasis.cpp
       TestBasisSolves.cpp
+      TestCallbacks.cpp
+      TestCheckSolution.cpp
       TestCrossover.cpp
+      TestDualize.cpp
+      TestEkk.cpp
+      TestFactor.cpp
+      TestFilereader.cpp
       TestHighsCDouble.cpp
+      TestHighsGFkSolve.cpp
       TestHighsHash.cpp
+      TestHighsHessian.cpp
       TestHighsIntegers.cpp
+      TestHighsModel.cpp
       TestHighsParallel.cpp
       TestHighsRbTree.cpp
-      TestHighsHessian.cpp
-      TestHighsModel.cpp
       TestHighsSparseMatrix.cpp
+      TestHighsVersion.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
+      TestInfo.cpp
+      TestIO.cpp
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
       TestLPFileFormat.cpp
-      TestLpValidation.cpp
       TestLpModification.cpp
       TestLpOrientation.cpp
+      TestLpSolvers.cpp
+      TestLpValidation.cpp
+      TestMain.cpp
+      TestMipSolver.cpp
       TestModelProperties.cpp
       TestMultiObjective.cpp
+      TestNames.cpp
+      TestOptions.cpp
       TestPdlp.cpp
       TestPresolve.cpp
       TestQpSolver.cpp
-      TestRays.cpp
       TestRanging.cpp
+      TestRays.cpp
       TestSemiVariables.cpp
+      TestSetup.cpp
+      TestSort.cpp
+      TestSpecialLps.cpp
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      TestSpecialLps.cpp
-      TestLpSolvers.cpp
-      TestMipSolver.cpp
       Avgas.cpp)
 
   set(OPT_LEVEL_CHANGED OFF)

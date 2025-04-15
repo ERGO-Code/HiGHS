@@ -41,4 +41,6 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
   // assert residual is below threshold
   REQUIRE(info.final_residual_norm_2 >= -1e08);
   REQUIRE(info.final_residual_norm_2 < 1e08);
+
+  highs.resetGlobalScheduler(true);
 }

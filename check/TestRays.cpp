@@ -305,6 +305,8 @@ void testInfeasibleMpsLp(const std::string model,
   REQUIRE(!has_primal_ray);
 
   // Now test with presolve on, and forcing ray calculation if possible
+
+  highs.resetGlobalScheduler(true);
 }
 
 void testInfeasibleMpsMip(const std::string model) {
@@ -368,6 +370,8 @@ void testInfeasibleMpsMip(const std::string model) {
   REQUIRE(highs.getPrimalRay(has_primal_ray, primal_ray_value.data()) ==
           HighsStatus::kOk);
   REQUIRE(!has_primal_ray);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void testUnboundedMpsLp(const std::string model,
@@ -421,6 +425,8 @@ void testUnboundedMpsLp(const std::string model,
           HighsStatus::kOk);
   REQUIRE(has_primal_ray);
   REQUIRE(checkPrimalRayValue(highs, primal_ray_value));
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays", "[highs_test_rays]") {
@@ -649,6 +655,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
             HighsStatus::kOk);
     REQUIRE(!has_primal_ray);
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays-gas11", "[highs_test_rays]") { testUnboundedMpsLp("gas11"); }
@@ -774,6 +782,8 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
             HighsStatus::kOk);
     highs.clearSolver();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays-464b", "[highs_test_rays]") {
@@ -869,6 +879,8 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
             HighsStatus::kOk);
     highs.clearSolver();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
@@ -917,4 +929,6 @@ TEST_CASE("Rays-infeasible-qp", "[highs_test_rays]") {
   REQUIRE(has_dual_unboundedness_direction);
   REQUIRE(checkDualUnboundednessDirection(highs,
                                           dual_unboundedness_direction_value));
+
+  highs.resetGlobalScheduler(true);
 }

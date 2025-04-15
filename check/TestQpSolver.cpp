@@ -19,6 +19,8 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
@@ -30,6 +32,8 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -153,6 +157,8 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   highs.setOptionValue("solve_relaxation", true);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -296,6 +302,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
           double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -404,6 +412,8 @@ TEST_CASE("test-qjh", "[qpsolver]") {
             double_equal_tolerance);
     return_status = highs.clearModel();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-min-negative-definite", "[qpsolver]") {
@@ -425,6 +435,8 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
   REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   // Run should fail since objective is non-convex
   REQUIRE(highs.run() == HighsStatus::kError);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
@@ -475,6 +487,8 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
   REQUIRE(fabs(solution.col_value[2] - 2.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
   REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
@@ -514,6 +528,8 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
@@ -552,6 +568,8 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
@@ -590,6 +608,8 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
   REQUIRE(fabs(objective_function_value + 1.5) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] + 1) < double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void hessianProduct(const HighsHessian& hessian, const std::vector<double>& arg,
@@ -711,6 +731,8 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
   }
   highs.run();
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qp-delete-col", "[qpsolver]") {
@@ -984,6 +1006,8 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
       REQUIRE(info.qp_iteration_count == 1);
     }
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
@@ -1011,6 +1035,8 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
   highs.setOptionValue("qp_nullspace_limit", 4000);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("rowless-qp", "[qpsolver]") {
@@ -1050,4 +1076,6 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   REQUIRE(dl_solution < 1e-6);
   dl_solution = std::fabs(col_value[1] - 1.5);
   REQUIRE(dl_solution < 1e-6);
+
+  highs.resetGlobalScheduler(true);
 }

@@ -21,6 +21,8 @@ TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   distillationMIP(highs);
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
