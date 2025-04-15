@@ -258,9 +258,10 @@ HighsStatus zeroCostColSing() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+
+  return status;
 }
 
 // handled by doubleton equality
@@ -317,9 +318,9 @@ HighsStatus colSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+  return status;
 }
 
 HighsStatus colSingDoubletonInequality() {
@@ -375,9 +376,9 @@ HighsStatus colSingDoubletonInequality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+  return status;
 }
 
 // handled by doubleton equality
@@ -414,9 +415,9 @@ HighsStatus twoColSingDoubletonEquality() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+  return status;
 }
 
 // handled by special case.
@@ -454,9 +455,9 @@ HighsStatus twoColSingDoubletonInequality() {
 
   highs.run();
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+  return status;
 }
 
 // No commas in test case name.
@@ -543,9 +544,9 @@ HighsStatus issue425() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
-  return status;
 
   highs.resetGlobalScheduler(true);
+  return status;
 }
 
 TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
