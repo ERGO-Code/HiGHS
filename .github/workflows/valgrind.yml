@@ -1,0 +1,66 @@
+ame: valgrind
+
+on: [push, pull_request]
+
+jobs:
+  unit_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Valgrind
+        run: apt-get install -y valgrind
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --parallel 
+
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: valgrind ./bin/unit_tests 
+
+  instance_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Valgrind
+        run: apt-get install -y valgrind
+      
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake All
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DALL_TESTS=ON
+
+      - name: Build All
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --parallel 
+
+      - name: Test
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: valgrind ctest -E unit.* --timeout 1000 --output-on-failure 
