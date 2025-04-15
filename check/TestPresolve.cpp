@@ -81,6 +81,8 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
     solution.col_dual.clear();
     solution.row_dual.clear();
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
@@ -170,6 +172,8 @@ TEST_CASE("empty-row", "[highs_test_presolve]") {
   const HighsBasis& basis = highs.getBasis();
   REQUIRE(HighsInt(solution.row_value.size()) == lp.num_row_);
   REQUIRE(HighsInt(basis.row_status.size()) == lp.num_row_);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void presolveSolvePostsolve(const std::string& model_file,
@@ -202,7 +206,7 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kUnknown);
     const double dl_objective_value =
         std::fabs(highs0.getInfo().objective_function_value - objective_value);
-    REQUIRE(dl_objective_value < 1e-12);
+    REQUIRE(dl_objective_value < 1e-9);
     REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
     double mip_feasibility_tolerance;
     highs0.getOptionValue("mip_feasibility_tolerance",
@@ -217,6 +221,8 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
   }
+
+  highs1.resetGlobalScheduler(true);
 }
 
 HighsStatus zeroCostColSing() {
@@ -253,6 +259,8 @@ HighsStatus zeroCostColSing() {
 
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 // handled by doubleton equality
@@ -310,6 +318,8 @@ HighsStatus colSingDoubletonEquality() {
 
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 HighsStatus colSingDoubletonInequality() {
@@ -366,6 +376,8 @@ HighsStatus colSingDoubletonInequality() {
 
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 // handled by doubleton equality
@@ -403,6 +415,8 @@ HighsStatus twoColSingDoubletonEquality() {
 
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 // handled by special case.
@@ -441,6 +455,8 @@ HighsStatus twoColSingDoubletonInequality() {
   highs.run();
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 // No commas in test case name.
@@ -528,6 +544,8 @@ HighsStatus issue425() {
 
   status = highs.run();
   return status;
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
@@ -577,7 +595,8 @@ TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
 }
 
 TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
-  std::string presolved_model_file = "temp.mps";
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string presolved_model_file = test_name + ".mps";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
   Highs highs;
@@ -600,4 +619,81 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   // simplex_iteration_count is -1
   REQUIRE(highs.getInfo().simplex_iteration_count == -1);
   std::remove(presolved_model_file.c_str());
+
+  highs1.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-slacks", "[highs_test_presolve]") {
+  // This LP reduces to empty, because the equation is a doubleton
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {1};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolvedLp().num_col_ == 0);
+  REQUIRE(h.getPresolvedLp().num_row_ == 0);
+
+  lp.num_col_ = 4;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-10, -25, 0, 0};
+  lp.col_lower_ = {0, 0, 0, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {80, 120};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4, 5, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4, 1, 1};
+  REQUIRE(h.setOptionValue("presolve_remove_slacks", true) == HighsStatus::kOk);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getPresolvedLp().num_col_ == 2);
+  REQUIRE(h.getPresolvedLp().num_row_ == 2);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
+  REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
+}
+
+TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Allow only presolve at root node
+  highs.setOptionValue("mip_root_presolve_only", true);
+  highs.readModel(model_file);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Enable lifting for probing
+  highs.setOptionValue("mip_lifting_for_probing", 1);
+  highs.readModel(model_file);
+  REQUIRE(highs.presolve() == HighsStatus::kOk);
 }

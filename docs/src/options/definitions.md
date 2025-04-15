@@ -1,6 +1,6 @@
 # [List of options](@id option-definitions)
 
-## presolve
+## [presolve](@id option-presolve)
 - Presolve option: "off", "choose" or "on"
 - Type: string
 - Default: "choose"
@@ -73,6 +73,18 @@
 - Range: [1e-12, inf]
 - Default: 1e-08
 
+## primal\_residual\_tolerance
+- Primal residual tolerance
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
+## dual\_residual\_tolerance
+- Dual residual tolerance
+- Type: double
+- Range: [1e-10, inf]
+- Default: 1e-07
+
 ## objective\_bound
 - Objective bound for termination of the dual simplex solver
 - Type: double
@@ -110,13 +122,13 @@
 - Default: 0
 
 ## [simplex\_strategy](@id option-simplex_strategy)
-- Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (PAMI); 3 => Dual (SIP); 4 => Primal
+- Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (SIP); 3 => Dual (PAMI); 4 => Primal
 - Type: integer
 - Range: {0, 4}
 - Default: 1
 
 ## simplex\_scale\_strategy
-- Simplex scaling strategy: off / choose / equilibration / forced equilibration / max value 0 / max value 1 (0/1/2/3/4/5)
+- Simplex scaling strategy: off / choose / equilibration (default) / forced equilibration / max value (0/1/2/3/4)
 - Type: integer
 - Range: {0, 5}
 - Default: 1
@@ -198,6 +210,16 @@
 - Type: boolean
 - Default: "false"
 
+## write\_presolved\_model\_file
+- Write presolved model file
+- Type: string
+- Default: ""
+
+## write\_presolved\_model\_to\_file
+- Write the presolved model to a file
+- Type: boolean
+- Default: "false"
+
 ## mip\_detect\_symmetry
 - Whether MIP symmetry should be detected
 - Type: boolean
@@ -220,6 +242,12 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
+## mip\_max\_start\_nodes
+- MIP solver max number of nodes when completing a partial MIP start
+- Type: integer
+- Range: {0, 2147483647}
+- Default: 500
+
 ## mip\_improving\_solution\_save
 - Whether improving MIP solutions should be saved
 - Type: boolean
@@ -236,7 +264,7 @@
 - Default: ""
 
 ## mip\_max\_leaves
-- MIP solver max number of leave nodes
+- MIP solver max number of leaf nodes
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 2147483647
@@ -352,4 +380,9 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 4000
+
+## blend\_multi\_objectives
+- Blend multiple objectives or apply lexicographically: Default = true
+- Type: boolean
+- Default: "true"
 

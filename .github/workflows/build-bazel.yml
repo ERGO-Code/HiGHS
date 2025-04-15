@@ -12,20 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: bazelbuild/setup-bazelisk@v2
-
-      - name: Mount bazel cache # Optional
-        uses: actions/cache@v3
-        with:
-          path: "~/.cache/bazel"
-          key: bazel
+      - uses: bazelbuild/setup-bazelisk@v3
 
       - name: bazel clean
         run: bazel clean
       
       - name: build bazel
-        run: |
-          bazel build //...
+        run: bazel build //...
       
-      - name: test
+      - name: test all
+        run: bazel test //...
+
+      - name: test example
         run: ./bazel-bin/call-highs-example

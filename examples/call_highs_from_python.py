@@ -54,6 +54,13 @@ h.run()
 solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
+# basis.col_status and basis.row_status are already lists, but
+# accessing values in solution.col_value and solution.row_value
+# directly is very inefficient, so convert them to lists
+col_status = basis.col_status
+row_status = basis.row_status
+col_value = list(solution.col_value)
+row_value = list(solution.row_value)
 model_status = h.getModelStatus()
 print("Model status = ", h.modelStatusToString(model_status))
 print("Optimal objective = ", info.objective_function_value)
@@ -69,12 +76,12 @@ num_var = h.getNumCol()
 num_row = h.getNumRow()
 print("Variables")
 for icol in range(num_var):
-    print(icol, solution.col_value[icol],
-          h.basisStatusToString(basis.col_status[icol]))
+    print(icol, col_value[icol],
+          h.basisStatusToString(col_status[icol]))
 print("Constraints")
 for irow in range(num_row):
-    print(irow, solution.row_value[irow],
-          h.basisStatusToString(basis.row_status[irow]))
+    print(irow, row_value[irow],
+          h.basisStatusToString(row_status[irow]))
 
 # ~~~
 # Clear so that incumbent model is empty
@@ -320,6 +327,12 @@ num_var = h.getNumCol()
 solution = h.getSolution()
 basis = h.getBasis()
 info = h.getInfo()
+#
+col_status = basis.col_status
+col_value = list(solution.col_value)
+# basis.col_status is already a list, but accessing values in
+# solution.col_value directly is very inefficient, so convert it to a
+# list
 model_status = h.getModelStatus()
 print("Model status = ", h.modelStatusToString(model_status))
 print("Optimal objective = ", info.objective_function_value)
@@ -333,164 +346,13 @@ print("Dual solution status = ",
 print("Basis validity = ", h.basisValidityToString(info.basis_validity))
 print("Variables:")
 for icol in range(0, 5):
-    print(icol, solution.col_value[icol],
-          h.basisStatusToString(basis.col_status[icol]))
+    print(icol, col_value[icol],
+          h.basisStatusToString(col_status[icol]))
 print("...")
 for icol in range(num_var-2, num_var):
-    print(icol, solution.col_value[icol],
-          h.basisStatusToString(basis.col_status[icol]))
+    print(icol, col_value[icol],
+          h.basisStatusToString(col_status[icol]))
 
-print("computing IIS for lp-incompatible-bounds")
-"""
-LP has row0 and col2 with inconsistent bounds.
-
-When prioritising rows, row0 and its constituent columns (1, 2) should be found
-When prioritising columns, col2 and its constituent rows (0, 1) should be found
-"""
-# Define the LP
-lp = highspy.HighsLp()
-lp.num_col_ = 3
-lp.num_row_ = 2
-lp.col_cost_ = np.array([0, 0, 0], dtype=np.double)
-lp.col_lower_ = np.array([0, 0, 0], dtype=np.double)
-lp.col_upper_ = np.array([1, 1, -1], dtype=np.double)
-lp.row_lower_ = np.array([1, 0], dtype=np.double)
-lp.row_upper_ = np.array([0, 1], dtype=np.double)
-lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-lp.a_matrix_.start_ = np.array([0, 2, 4])
-lp.a_matrix_.index_ = np.array([1, 2, 0, 2])
-lp.a_matrix_.value_ = np.array([1, 1, 1, 1], dtype=np.double)
-
+# ~~~
+# Clear so that incumbent model is empty
 h.clear()
-h.passModel(lp)
-h.run()
-assert h.getModelStatus() == highspy.HighsModelStatus.kInfeasible
-
-# Set IIS strategy to row priority and get IIS
-h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyFromLpRowPriority)
-
-iis = highspy.HighsIis()
-assert h.getIis(iis) == highspy.HighsStatus.kOk
-assert len(iis.col_index) == 0
-assert len(iis.row_index) == 1
-assert iis.row_index[0] == 0
-assert iis.row_bound[0] == highspy.IisBoundStatus.kIisBoundStatusBoxed
-
-# Set IIS strategy to column priority and get IIS
-h.setOptionValue("iis_strategy", highspy.IisStrategy.kIisStrategyFromLpColPriority)
-iis.invalidate()
-assert h.getIis(iis) == highspy.HighsStatus.kOk
-assert len(iis.col_index) == 1
-assert len(iis.row_index) == 0
-assert iis.col_index[0] == 2
-assert iis.col_bound[0] == highspy.IisBoundStatus.kIisBoundStatusBoxed
-
-print("IIS computation completed successfully")
-
-print("computing feasibility relaxation")
-h.clear()
-inf = h.getInfinity()
-
-num_col = 2
-num_row = 3
-num_nz = 6
-a_format = highspy.MatrixFormat.kColwise
-sense = highspy.ObjSense.kMinimize
-offset = 0
-col_cost = np.array([1, -2], dtype=np.double)
-col_lower = np.array([5, -inf], dtype=np.double)
-col_upper = np.array([inf, inf], dtype=np.double)
-row_lower = np.array([2, -inf, -inf], dtype=np.double)
-row_upper = np.array([inf, 1, 20], dtype=np.double)
-a_start = np.array([0, 3])
-a_index = np.array([0, 1, 2, 0, 1, 2])
-a_value = np.array([-1, -3, 20, 21, 2, 1], dtype=np.double)
-integrality = np.array([highspy.HighsVarType.kInteger, highspy.HighsVarType.kInteger])
-
-h.passModel(
-    num_col, num_row, num_nz, a_format, sense, offset,
-    col_cost, col_lower, col_upper,
-    row_lower, row_upper,
-    a_start, a_index, a_value,
-    integrality
-)
-
-assert h.feasibilityRelaxation(1, 1, 1) == highspy.HighsStatus.kOk
-
-info = h.getInfo()
-objective_function_value = info.objective_function_value
-
-solution = h.getSolution()
-
-assert abs(objective_function_value - 5) < 1e-6, f"Expected objective value 5, got {objective_function_value}"
-assert abs(solution.col_value[0] - 1) < 1e-6, f"Expected solution[0] = 1, got {solution.col_value[0]}"
-assert abs(solution.col_value[1] - 1) < 1e-6, f"Expected solution[1] = 1, got {solution.col_value[1]}"
-
-print("Feasibility Relaxation Test Passed")
-
-# Using infeasible LP from AMPL documentation
-h = highspy.Highs()
-lp = highspy.HighsLp()
-lp.num_col_ = 2
-lp.num_row_ = 3
-lp.col_cost_ = np.array([1, -2], dtype=np.double)
-lp.col_lower_ = np.array([5, -h.getInfinity()], dtype=np.double)
-lp.col_upper_ = np.array([h.getInfinity(), h.getInfinity()], dtype=np.double)
-lp.col_names_ = ["X", "Y"]
-lp.row_lower_ = np.array([2, -h.getInfinity(), -h.getInfinity()], dtype=np.double)
-lp.row_upper_ = np.array([h.getInfinity(), 1, 20], dtype=np.double)
-lp.row_names_ = ["R0", "R1", "R2"]
-lp.a_matrix_.start_ = np.array([0, 3, 6])
-lp.a_matrix_.index_ = np.array([0, 1, 2, 0, 1, 2])
-lp.a_matrix_.value_ = np.array([-1, -3, 20, 21, 2, 1], dtype=np.double)
-lp.integrality_ = np.array([highspy.HighsVarType.kInteger, highspy.HighsVarType.kInteger])
-h.setOptionValue("output_flag", False)
-h.passModel(lp)
-
-# Vanilla feasibility relaxation
-print("Vanilla feasibility relaxation")
-h.feasibilityRelaxation(1, 1, 1)
-solution = h.getSolution()
-print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]})")
-print(f"Slacks: ({solution.row_value[0] - lp.row_lower_[0]}, "
-      f"{lp.row_upper_[1] - solution.row_value[1]}, "
-      f"{lp.row_upper_[2] - solution.row_value[2]})")
-
-# Respect all lower bounds
-print("\nRespect all lower bounds")
-h.feasibilityRelaxation(-1, 1, 1)
-solution = h.getSolution()
-print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]})")
-print(f"Slacks: ({solution.row_value[0] - lp.row_lower_[0]}, "
-      f"{lp.row_upper_[1] - solution.row_value[1]}, "
-      f"{lp.row_upper_[2] - solution.row_value[2]})")
-
-# Local penalties RHS {1, -1, 10}
-print("\nLocal penalties RHS {1, -1, 10}")
-local_rhs_penalty = np.array([1, -1, 10], dtype=np.double)
-h.feasibilityRelaxation(1, 1, 0, None, None, local_rhs_penalty)
-solution = h.getSolution()
-print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]})")
-print(f"Slacks: ({solution.row_value[0] - lp.row_lower_[0]}, "
-      f"{lp.row_upper_[1] - solution.row_value[1]}, "
-      f"{lp.row_upper_[2] - solution.row_value[2]})")
-
-# Local penalties RHS {10, 1, 1}
-print("\nLocal penalties RHS {10, 1, 1}")
-local_rhs_penalty = np.array([10, 1, 1], dtype=np.double)
-h.feasibilityRelaxation(1, 1, 0, None, None, local_rhs_penalty)
-solution = h.getSolution()
-print(f"Solution: ({solution.col_value[0]}, {solution.col_value[1]})")
-print(f"Slacks: ({solution.row_value[0] - lp.row_lower_[0]}, "
-      f"{lp.row_upper_[1] - solution.row_value[1]}, "
-      f"{lp.row_upper_[2] - solution.row_value[2]})")
-
-iis = highspy.HighsIis()
-assert h.getIis(iis) == highspy.HighsStatus.kOk
-
-print("\nIIS")
-print("row_index:", iis.row_index)
-print("row_bound:", iis.row_bound)
-
-print("col_index:", iis.col_index)
-print("col_bound:", iis.col_bound)

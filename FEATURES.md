@@ -2,27 +2,17 @@
 
 ## Code changes
 
-Added `int64_t mip_total_lp_iterations` to `HighsCallbackDataOut` and modified accessor function
+Fixed incorrect assertion in `HighsMipSolver::solutionFeasible()` (fixing [#2204](https://github.com/ERGO-Code/HiGHS/issues/2204)))
 
-`Highs::writeSolution` and `Highs::writeBasis` now being done via `HighsIO` logging, so can be redirected to logging callback.
+getColIntegrality now returns `HighsVarType::kContinuous` when `model_.lp_.integrality_` is empty (fixing [#2261](https://github.com/ERGO-Code/HiGHS/issues/2261))
 
-Introduced `const double kHighsUndefined` as value of undefined values in a user solution. It's equal to `kHighsInf`
+Now ensuring that when solving a scaled LP with useful but unvalidated basis, it does not lose its scaling after validation, since the scaling factors will be applied to the solution (fixing [#2267](https://github.com/ERGO-Code/HiGHS/issues/2267))
 
-Added `Highs::setSolution(const HighsInt num_entries, const HighsInt* index, const double* value);` to allow a sparse primal solution to be defined. When a MIP is solved to do this, the value of (new) option `mip_max_start_nodes` is used for `mip_max_nodes` to avoid excessive cost
+By setting non-empty values of options `read_solution_file`, `read_basis_file`, `write_model_file` (with extension `.lp` or `.mps`), `write_solution_file`, `solution_file`, `write_basis_file`, these files will be read or written when calling `Highs::run()`. Hence options previously only available via the command line interface can be use (for example) by modelling languages that only call `Highs::run()` (fixing [#2269](https://github.com/ERGO-Code/HiGHS/issues/2269)).
 
-Added options `write_presolved_model_to_file` and `write_presolved_model_file` so that presolved model can be written via a command line option
+Bug [#2273](https://github.com/ERGO-Code/HiGHS/issues/2273)) fixed
 
-Added `Highs::feasibilityRelaxation` to solve the problem of minimizing a (possibly weighted) sum of (allowable) infeasibilities in an LP/MIP.
+As part of [#2286](https://github.com/ERGO-Code/HiGHS/pull/2286)), the root of the HiGHS source files is now `highs/`, rather than `src/`
 
-Added Python utility `examples/plot_highs_log.py` (due to @Thell) to visualise progress of the MIP solver.
-
-Added minimal documentation of solvers and how simplex variants can be run
-
-Methods receiving matrix data where only small values are explicit zeros (so removed internally) are now silent and return HighsStatus::kOk (since internal matrix is exact)
-
-
-
-
-
-
+ZI rounding and shifting MIP primal heuristics have been added (see [#2287](https://github.com/ERGO-Code/HiGHS/pull/2287)). They are off by default, but can be activated by setting the options `mip_heuristic_run_zi_round` and `mip_heuristic_run_shifting` to be true. Options `mip_heuristic_run_rins`, `mip_heuristic_run_rens` and `mip_heuristic_run_root_reduced_cost` to run the RINS, RENS and rootReducedCost heuristics have been added. These are true by default, but setting them to be false can accelerate the MIP solver on easy problems.
 

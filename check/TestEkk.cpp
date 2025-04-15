@@ -30,6 +30,9 @@ void ekk_solve(Highs& highs, std::string presolve,
   }
 
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
+  highs.setOptionValue("output_flag", dev_run);
+
+  highs.resetGlobalScheduler(true);
 }
 
 void ekk_distillation(Highs& highs) {
@@ -84,6 +87,8 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     ekk_blending(highs);
     //    ekk_scipLpi3(highs);
   }
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {

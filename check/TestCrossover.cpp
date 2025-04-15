@@ -91,7 +91,10 @@ void test_crossover(Highs& highs, HighsLp& lp) {
   }
   report("After crossover", lp, solution, basis);
   report("From Highs", lp, highs.getSolution(), highs.getBasis());
+
+  highs.resetGlobalScheduler(true);
 }
+
 void report(const std::string message, const HighsLp& lp,
             const HighsSolution& solution, const HighsBasis& basis) {
   if (!dev_run) return;

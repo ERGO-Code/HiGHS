@@ -6,6 +6,8 @@
 
 const bool dev_run = false;
 TEST_CASE("highs-names", "[highs_names]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string solution_file = test_name + ".sol";
   std::string name;
   const std::string model = "avgas";
   const std::string model_file =
@@ -109,7 +111,6 @@ TEST_CASE("highs-names", "[highs_names]") {
   local_lp.col_names_.clear();
   local_lp.row_names_.clear();
   highs.passModel(local_lp);
-  const std::string solution_file = "temp.sol";
   REQUIRE(highs.writeSolution(solution_file, 1) == HighsStatus::kOk);
 
   // Cannot get name of column or row 0
@@ -117,4 +118,16 @@ TEST_CASE("highs-names", "[highs_names]") {
   REQUIRE(highs.getRowName(0, name) == HighsStatus::kError);
 
   std::remove(solution_file.c_str());
+}
+
+TEST_CASE("highs-model-name", "[model_names]") {
+  Highs highs;
+  const HighsLp& lp = highs.getLp();
+
+  std::string name = lp.model_name_;
+  REQUIRE(name == "");
+
+  highs.passModelName("new_name");
+  name = lp.model_name_;
+  REQUIRE(name == "new_name");
 }

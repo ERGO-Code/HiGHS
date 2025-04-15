@@ -21,8 +21,8 @@ J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
 
 * Setting the option [__solver__](@ref option-solver) to "simplex" forces the simplex solver to be used
 * The option [__simplex\_strategy__](@ref option-simplex_strategy)
-determines whether the primal solver or one of the parallel solvers is
-to be used.
+  determines whether the primal solver or one of the parallel solvers is
+  to be used.
 
 #### Interior point
 
