@@ -44,6 +44,8 @@ TEST_CASE("logging", "[highs_logging]") {
   highs.run();
 
   if (!dev_run) std::remove(log_file.c_str());
+
+  highs.resetGlobalScheduler(true);
 }
 
 TEST_CASE("no-logging", "[highs_logging]") {
@@ -62,4 +64,6 @@ TEST_CASE("no-logging", "[highs_logging]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.resetGlobalScheduler(true);
 }

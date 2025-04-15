@@ -193,4 +193,6 @@ TEST_CASE("multi-objective", "[util]") {
       }
     }
   }
+
+  h.resetGlobalScheduler(true);
 }
