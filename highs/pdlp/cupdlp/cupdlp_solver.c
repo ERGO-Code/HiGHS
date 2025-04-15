@@ -1319,7 +1319,7 @@ cupdlp_retcode LP_SolvePDHG(
     PDHG_PrintHugeCUPDHG();
 
 #if !defined(CUPDLP_CPU)
-  if (pdhg->settings->nLogLevel > 1) 
+  if (pdhg->settings->nLogLevel > 0)
     print_cuda_info(pdhg->cusparsehandle);
 #endif
 

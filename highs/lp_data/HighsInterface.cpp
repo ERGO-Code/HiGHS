@@ -2707,20 +2707,20 @@ HighsStatus Highs::lpKktCheck() {
     if (was_optimal) {
       if (info.num_relative_primal_infeasibilities > 0) {
         foundOptimalityError();
-        highsLogUser(
-            log_options, HighsLogType::kError,
-            "   num/max %6d / %9.4g relative primal infeasibilities "
-            "(tolerance = %4.0e)\n",
-            int(info.num_primal_infeasibilities), info.max_primal_infeasibility,
-            info.sum_primal_infeasibilities, primal_feasibility_tolerance);
+        highsLogUser(log_options, HighsLogType::kError,
+                     "   num/max %6d / %9.4g relative primal infeasibilities "
+                     "(tolerance = %4.0e)\n",
+                     int(info.num_relative_primal_infeasibilities),
+                     info.max_relative_primal_infeasibility,
+                     primal_feasibility_tolerance);
       }
       if (info.num_relative_dual_infeasibilities > 0) {
         foundOptimalityError();
         highsLogUser(log_options, HighsLogType::kError,
                      "   num/max %6d / %9.4g relative   dual infeasibilities "
                      "(tolerance = %4.0e)\n",
-                     int(info.num_dual_infeasibilities),
-                     info.max_dual_infeasibility, info.sum_dual_infeasibilities,
+                     int(info.num_relative_dual_infeasibilities),
+                     info.max_relative_dual_infeasibility,
                      dual_feasibility_tolerance);
       }
       if (info.num_relative_primal_residual_errors > 0) {

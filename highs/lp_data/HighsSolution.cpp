@@ -25,7 +25,7 @@ const uint8_t kHighsSolutionLo = -1;
 const uint8_t kHighsSolutionNo = 0;
 const uint8_t kHighsSolutionUp = 1;
 
-const bool printf_kkt = false;
+const bool printf_kkt = true;
 
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
@@ -413,12 +413,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           }
           double relative_primal_infeasibility =
               primal_infeasibility / (1.0 + relative_bound_measure);
+
           if (relative_primal_infeasibility > primal_feasibility_tolerance)
             num_relative_primal_infeasibility++;
-          if (max_relative_primal_infeasibility <
-              relative_primal_infeasibility) {
+          if (max_relative_primal_infeasibility < relative_primal_infeasibility)
             max_relative_primal_infeasibility = relative_primal_infeasibility;
-          }
         }
         if (have_dual_solution) {
           if (dual_infeasibility > 0) {
@@ -447,6 +446,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
             assert(relative_cost_measure < kHighsInf);
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
+
             if (relative_dual_infeasibility > dual_feasibility_tolerance)
               num_relative_dual_infeasibility++;
             if (max_relative_dual_infeasibility < relative_dual_infeasibility)
@@ -460,13 +460,18 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               std::fabs(primal_activity[iRow] - solution.row_value[iRow]);
           double relative_primal_residual_error =
               primal_residual_error / (1.0 + highs_norm_bounds);
+
           if (primal_residual_error > primal_residual_tolerance)
             num_primal_residual_error++;
           if (max_primal_residual_error < primal_residual_error)
             max_primal_residual_error = primal_residual_error;
+
+          if (relative_primal_residual_error > primal_residual_tolerance)
+            num_relative_primal_residual_error++;
           if (max_relative_primal_residual_error <
               relative_primal_residual_error)
             max_relative_primal_residual_error = relative_primal_residual_error;
+
           pdlp_primal_residual += primal_residual_error * primal_residual_error;
         }
         if (is_col && get_residuals && have_dual_solution) {
@@ -476,12 +481,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
               std::fabs(dual_activity[iCol] + solution.col_dual[iCol]);
           double relative_dual_residual_error =
               dual_residual_error / (1.0 + highs_norm_costs);
+
           if (dual_residual_error > dual_residual_tolerance)
             num_dual_residual_error++;
           if (max_dual_residual_error < dual_residual_error)
             max_dual_residual_error = dual_residual_error;
+
+          if (relative_dual_residual_error > dual_residual_tolerance)
+            num_relative_dual_residual_error++;
           if (max_relative_dual_residual_error < relative_dual_residual_error)
             max_relative_dual_residual_error = relative_dual_residual_error;
+
           pdlp_dual_residual += dual_residual_error * dual_residual_error;
         }
       }
@@ -666,6 +676,27 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       printf("getKktFailures:: PDLP objective gap        %9.2e / %9.2e\n",
              pdlp_primal_dual_objective_error,
              pdlp_relative_primal_dual_objective_error);
+
+    printf("\ngetKktFailures:: HiGHS	                    LP  (abs / rel)\n");
+    printf("getKktFailures::      primal infeasibility %9.2e / %9.2e\n",
+           highs_info.max_primal_infeasibility,
+           highs_info.max_relative_primal_infeasibility);
+    if (have_dual_solution)
+      printf("getKktFailures::        dual infeasibility %9.2e / %9.2e\n",
+             highs_info.max_dual_infeasibility,
+             highs_info.max_relative_dual_infeasibility);
+    if (get_residuals) {
+      printf("getKktFailures::      primal residual      %9.2e / %9.2e\n",
+             highs_info.max_primal_residual_error,
+             highs_info.max_relative_primal_residual_error);
+      if (have_dual_solution)
+        printf("getKktFailures::        dual residual      %9.2e / %9.2e\n",
+               highs_info.max_dual_residual_error,
+               highs_info.max_relative_dual_residual_error);
+    }
+    if (!is_qp && have_dual_solution)
+      printf("getKktFailures::      objective gap        %9.2e\n",
+             highs_info.primal_dual_objective_error);
   }
 
   // Assign primal solution status

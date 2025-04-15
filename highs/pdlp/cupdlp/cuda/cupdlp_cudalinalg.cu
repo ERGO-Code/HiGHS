@@ -352,9 +352,9 @@ cupdlp_int print_cuda_info(cusparseHandle_t handle)
   CHECK_CUDA(cudaDriverGetVersion(&v_cuda_driver))
   CHECK_CUSPARSE(cusparseGetVersion(handle, &v_cusparse))
 
-  printf("Cuda runtime %d\n", v_cuda_runtime);
-  printf("Cuda driver %d\n", v_cuda_driver);
-  printf("cuSparse %d\n", v_cusparse);
+  printf("Cuda runtime version %d\n", v_cuda_runtime);
+  printf("Cuda driver  version %d\n", v_cuda_driver);
+  printf("cuSparse     version %d\n", v_cusparse);
 
   int n_devices = 0;
   CHECK_CUDA(cudaGetDeviceCount(&n_devices))
